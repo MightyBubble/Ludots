@@ -661,6 +661,8 @@ namespace Ludots.Tests.GAS
         {
             string json = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
+            GraphIdRegistry.Clear();
+            int lifecycleGraphId = GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
 
             var reg = new PresetTypeRegistry();
             PresetTypeLoader.LoadFromJson(reg, json);
@@ -682,6 +684,8 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Displacement), Is.True);
             That(reg.IsRegistered(EffectPresetType.Relation), Is.True);
             That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
+            That(reg.IsRegistered(EffectPresetType.DeployConsumeSource), Is.True);
+            That(reg.IsRegistered(EffectPresetType.RevealArea), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -703,6 +707,19 @@ namespace Ludots.Tests.GAS
             ref readonly var exchange = ref reg.Get(EffectPresetType.Exchange);
             That(exchange.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
                 Is.EqualTo((int)BuiltinHandlerId.ExecuteExchange));
+
+            ref readonly var deploy = ref reg.Get(EffectPresetType.DeployConsumeSource);
+            That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId, Is.EqualTo(lifecycleGraphId));
+
+            ref readonly var reveal = ref reg.Get(EffectPresetType.RevealArea);
+            That(reveal.HasComponent(ComponentFlags.RevealAreaParams), Is.True);
+            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
+                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
+            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
+                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
+            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnRemove].HandlerId,
+                Is.EqualTo((int)BuiltinHandlerId.DecayRevealArea));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -714,11 +731,11 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.Directory.Exists(System.IO.Path.Combine(dir, "assets")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))
                     return dir;
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
-            throw new InvalidOperationException("Cannot find repo root (looking for assets/ directory).");
+            throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
         }
     }
 }

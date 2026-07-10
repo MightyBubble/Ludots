@@ -1,7 +1,7 @@
 {
   "name": "CoreInputMod",
   "version": "1.0.0",
-  "description": "Generic input systems: entity click-select, GAS selection/input response. Compose with CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod for camera behavior.",
+  "description": "Generic input systems: entity command-source acquisition and GAS input response. Compose with CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod for camera behavior.",
   "main": "bin/net8.0/CoreInputMod.dll",
   "priority": 0,
   "dependencies": {

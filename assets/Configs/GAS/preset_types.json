@@ -127,5 +127,34 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "CompleteProgression" }
     }
+  },
+  {
+    "id": "SubmitOrderFromBlackboard",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "SubmitOrderFromBlackboard" }
+    }
+  },
+  {
+    "id": "DeployConsumeSource",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "graph", "id": "Graph.Lifecycle.DeployConsumeSource" }
+    }
+  },
+  {
+    "id": "RevealArea",
+    "components": ["RevealAreaParams", "DurationParams"],
+    "activePhases": ["OnApply", "OnPeriod", "OnRemove"],
+    "allowedLifetimes": ["Instant", "After"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "RevealArea" },
+      "OnPeriod": { "type": "builtin", "id": "RevealArea" },
+      "OnRemove": { "type": "builtin", "id": "DecayRevealArea" }
+    }
   }
 ]

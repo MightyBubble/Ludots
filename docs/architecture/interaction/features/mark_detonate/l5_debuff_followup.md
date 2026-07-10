@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "SkillQ"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 
 Skill B (碎裂/增强后续):
@@ -25,7 +25,7 @@ InputOrderMapping:
   actionId: "SkillR"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
 ```
 

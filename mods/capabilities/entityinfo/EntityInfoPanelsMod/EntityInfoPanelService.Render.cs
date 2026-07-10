@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -202,7 +201,6 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInfoPanelTargetKind.FixedEntity => target.FixedEntity,
             EntityInfoPanelTargetKind.GlobalEntityKey when globals.TryGetValue(target.Key, out object? value) && value is Entity resolved => resolved,
-            EntityInfoPanelTargetKind.CurrentSelectionView when SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out Entity currentPrimary) => currentPrimary,
             _ => Entity.Null,
         };
 

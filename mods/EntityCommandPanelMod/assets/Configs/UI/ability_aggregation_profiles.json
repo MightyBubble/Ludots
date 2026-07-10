@@ -1,0 +1,3 @@
+[
+  { "id": "aggregation.by_family", "groupBy": "catalog.castFamily", "overflow": "nextPanelSlot" }
+]

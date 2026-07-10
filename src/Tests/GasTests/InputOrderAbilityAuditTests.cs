@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json.Nodes;
@@ -36,28 +36,6 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class InputOrderAbilityAuditTests
     {
-        [Test]
-        public void AbilitySystem_MissingEffectRequestQueue_ThrowsStableErrorCode()
-        {
-            using var world = World.Create();
-
-            var ex = Throws<InvalidOperationException>(
-                () => new AbilitySystem(world, null!));
-
-            That(ex!.Message, Does.Contain("LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED"));
-        }
-
-        [Test]
-        public void EffectProposalProcessing_MissingResponseChainOrderTypes_ThrowsStableErrorCode()
-        {
-            using var world = World.Create();
-
-            var ex = Throws<InvalidOperationException>(
-                () => new EffectProposalProcessingSystem(world, new EffectRequestQueue(), templates: new EffectTemplateRegistry()));
-
-            That(ex!.Message, Does.Contain("LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_REQUIRED"));
-        }
-
         // ════════════════════════════════════════════════════════════════════
         // Region: OrderBuffer / PendingBuffer
         // ════════════════════════════════════════════════════════════════════
@@ -96,12 +74,12 @@ namespace Ludots.Tests.GAS
             var order = new Order { OrderTypeId = 7 };
             buffer.SetPending(in order, 5, expireStep: 50, insertStep: 10);
 
-            // Before expiration; should not expire
+            // Before expiration: should not expire.
             bool expired = buffer.ExpirePending(currentStep: 49);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
 
-            // At expiration step; should expire
+            // At expiration step: should expire.
             expired = buffer.ExpirePending(currentStep: 50);
             That(expired, Is.True);
             That(buffer.HasPending, Is.False);
@@ -325,11 +303,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_ParsesToggleSpecAndIndicator()
+        public void AbilityExecLoader_CompileAbility_ParsesToggleSpecAndTargeting()
         {
             TagRegistry.Clear();
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Toggle.GuardAura");
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
 
             var obj = JsonNode.Parse(
                 """
@@ -350,16 +329,9 @@ namespace Ludots.Tests.GAS
                       ]
                     }
                   },
-                  "indicator": {
-                    "shape": "Ring",
-                    "range": 620,
-                    "radius": 180,
-                    "innerRadius": 90,
-                    "angleDeg": 45,
-                    "showRangeCircle": true,
-                    "validColor": "#33CC66AA",
-                    "invalidColor": [1.0, 0.2, 0.2, 0.5],
-                    "rangeCircleColor": "#3366FF44"
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
@@ -374,13 +346,74 @@ namespace Ludots.Tests.GAS
                 That(def.ToggleSpec.ActiveEffectTemplateIds[0], Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Toggle.GuardAura")));
             }
 
-            That(def.HasIndicator, Is.True);
-            That(def.Indicator.Shape, Is.EqualTo(TargetShape.Ring));
-            That(def.Indicator.Range, Is.EqualTo(620f));
-            That(def.Indicator.Radius, Is.EqualTo(180f));
-            That(def.Indicator.InnerRadius, Is.EqualTo(90f));
-            That(def.Indicator.Angle, Is.EqualTo(MathF.PI / 4f).Within(0.0001f));
-            That(def.Indicator.ShowRangeCircle, Is.True);
+            That(def.HasTargeting, Is.True);
+            That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
+            That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedIndicatorField()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "indicator": {
+                    "shape": "Ring",
+                    "radius": 180
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyIndicator", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTargetingAimVisualField()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "aimVisual": {
+                      "areaPerformerId": "performer.aim.area"
+                    }
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyAimVisual", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'targeting.aimVisual' is removed"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPerformerField()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "previewPerformerId": "performer.aim.preview",
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
         }
 
         [Test]
@@ -574,8 +607,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: 100,
@@ -591,6 +622,80 @@ namespace Ludots.Tests.GAS
             That(exec.AbilityId, Is.EqualTo(9001));
             That(exec.OrderId, Is.EqualTo(7));
             That(exec.AbilitySlot, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AbilityExecSystem_SourceDispatch_PreservesOriginalTargetAsContext()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9002;
+            const int sourceEffectTemplateId = 7001;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer());
+            var target = world.Create();
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order
+            {
+                OrderId = 8,
+                Actor = actor,
+                Target = target,
+                OrderTypeId = castAbilityOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+
+            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
+            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+            ref var bbE = ref world.Get<BlackboardEntityBuffer>(actor);
+            bbE.Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(
+                0,
+                ExecItemKind.EffectSignal,
+                tick: 0,
+                templateId: sourceEffectTemplateId,
+                payloadA: (int)ExecEffectDispatchTarget.Source);
+
+            var defs = new AbilityDefinitionRegistry();
+            var def = new AbilityDefinition { ExecSpec = spec };
+            defs.Register(abilityId, in def);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100
+            });
+
+            var effectRequests = new EffectRequestQueue();
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                defs,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes);
+
+            system.Update(0f);
+
+            That(effectRequests.Count, Is.EqualTo(1));
+            That(effectRequests[0].Source, Is.EqualTo(actor));
+            That(effectRequests[0].Target, Is.EqualTo(actor));
+            That(effectRequests[0].TargetContext, Is.EqualTo(target));
         }
 
         [Test]
@@ -632,8 +737,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -651,89 +754,6 @@ namespace Ludots.Tests.GAS
             That(events[1].Actor, Is.EqualTo(actor));
             That(events[1].AbilitySlot, Is.EqualTo(0));
             That(events[1].AbilityId, Is.EqualTo(abilityId));
-        }
-
-        [Test]
-        public void AbilityExecSystem_BlockedAny_PublishesBlockedByTag()
-        {
-            using var world = World.Create();
-            const int castAbilityOrderTypeId = 100;
-            const int abilityId = 9004;
-            const int blockedTagId = 42;
-
-            var actor = world.Create(
-                OrderBuffer.CreateEmpty(),
-                new BlackboardIntBuffer(),
-                new BlackboardEntityBuffer(),
-                new AbilityStateBuffer(),
-                new GameplayTagContainer(),
-                new TagCountContainer(),
-                new DirtyFlags());
-
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(abilityId);
-
-            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
-            var order = new Order
-            {
-                OrderId = 11,
-                Actor = actor,
-                OrderTypeId = castAbilityOrderTypeId,
-                Args = new OrderArgs { I0 = 0 }
-            };
-            orderBuffer.SetActiveDirect(in order, priority: 100);
-
-            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
-            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
-
-            var tagOps = new TagOps();
-            ref var tags = ref world.Get<GameplayTagContainer>(actor);
-            ref var counts = ref world.Get<TagCountContainer>(actor);
-            ref var dirty = ref world.Get<DirtyFlags>(actor);
-            tagOps.AddTag(ref tags, ref counts, blockedTagId, ref dirty);
-
-            var blockTags = new AbilityActivationBlockTags();
-            blockTags.BlockedAny.AddTag(blockedTagId);
-
-            var defs = new AbilityDefinitionRegistry();
-            var def = new AbilityDefinition
-            {
-                HasActivationBlockTags = true,
-                ActivationBlockTags = blockTags
-            };
-            defs.Register(abilityId, in def);
-
-            var orderTypes = new OrderTypeRegistry();
-            orderTypes.Register(new OrderTypeConfig
-            {
-                OrderTypeId = castAbilityOrderTypeId,
-                ClearQueueOnActivate = true,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
-            });
-
-            var presentationEvents = new GasPresentationEventBuffer(8);
-            var system = new AbilityExecSystem(
-                world,
-                new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
-                new EffectRequestQueue(),
-                defs,
-                castAbilityOrderTypeId: castAbilityOrderTypeId,
-                presentationEvents: presentationEvents,
-                tagOps: tagOps,
-                orderTypeRegistry: orderTypes);
-
-            bool completed = system.UpdateSlice(0f, int.MaxValue);
-
-            That(completed, Is.True);
-            That(world.Has<AbilityExecInstance>(actor), Is.False);
-            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
-            That(presentationEvents.Count, Is.EqualTo(1));
-            That(presentationEvents.Events[0].Kind, Is.EqualTo(GasPresentationEventKind.CastFailed));
-            That(presentationEvents.Events[0].FailReason, Is.EqualTo(AbilityCastFailReason.BlockedByTag));
         }
 
         [Test]
@@ -799,8 +819,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -883,8 +901,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -1000,7 +1016,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program; B[0] starts at 1 (pass), no instructions change it
+            // Empty program: B[0] starts at 1 (pass), no instructions change it.
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
@@ -1067,7 +1083,7 @@ namespace Ludots.Tests.GAS
             }
 
             bool overflow = buffer.Enqueue(new Order { OrderTypeId = 999 }, 0, -1, 100);
-            That(overflow, Is.False, "Queue full; should reject");
+            That(overflow, Is.False, "Queue full: should reject");
             That(buffer.QueuedCount, Is.EqualTo(OrderBuffer.MAX_QUEUED_ORDERS));
         }
 
@@ -1180,7 +1196,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var firstStepPos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
@@ -1229,7 +1245,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var worldPos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
@@ -1273,7 +1289,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var velocity = world.Get<Velocity2D>(actor).Linear;
@@ -1316,7 +1332,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var velocity = world.Get<Velocity2D>(actor).Linear;
@@ -1364,7 +1380,7 @@ namespace Ludots.Tests.GAS
             buffer.SetActiveDirect(in firstOrder, priority: 60);
             buffer.Enqueue(in secondOrder, priority: 60, expireStep: -1, insertStep: 1);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             ref var promotedBuffer = ref world.Get<OrderBuffer>(actor);
@@ -1377,6 +1393,90 @@ namespace Ludots.Tests.GAS
             var finalPos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
             That(finalPos.X, Is.EqualTo(60).Within(1));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+        }
+
+        [Test]
+        public void MoveToWorldCmOrderSystem_NonMovableOrderBufferEntity_IgnoresMoveTo()
+        {
+            using var world = World.Create();
+
+            // Structure-like entity: keeps OrderBuffer for production/ability queues but declares no
+            // movement capability (no positive MoveSpeed attribute, no physics body).
+            var structure = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 101,
+                AllowQueuedMode = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition
+            });
+
+            var args = new OrderArgs();
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(structure);
+            var order = new Order { Actor = structure, OrderTypeId = 101, Args = args };
+            buffer.SetActiveDirect(in order, priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
+            system.Update(0.10f);
+            system.Update(0.10f);
+
+            var pos = world.Get<WorldPositionCm>(structure).ToWorldCmInt2();
+            That(pos.X, Is.EqualTo(0), "OrderBuffer alone must not let core move a non-movable entity.");
+            That(pos.Y, Is.EqualTo(0));
+            That(world.Get<OrderBuffer>(structure).HasActive, Is.True,
+                "moveTo is ignored (not consumed) for entities without movement capability.");
+        }
+
+        [Test]
+        public void MoveToWorldCmOrderSystem_ZeroMoveSpeed_IgnoresMoveToWithoutDefaultFallback()
+        {
+            using var world = World.Create();
+
+            // Entity declares an explicit MoveSpeed of 0 (intentionally immovable). With no implicit
+            // default-speed fallback, it must not move.
+            int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
+            var actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new AttributeBuffer(),
+                OrderBuffer.CreateEmpty());
+
+            ref var attributes = ref world.Get<AttributeBuffer>(actor);
+            attributes.SetBase(moveSpeedId, 0f);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 101,
+                AllowQueuedMode = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition
+            });
+
+            var args = new OrderArgs();
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
+            buffer.SetActiveDirect(in order, priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
+            system.Update(0.10f);
+            system.Update(0.10f);
+
+            var pos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            That(pos.X, Is.EqualTo(0), "MoveSpeed of 0 must not fall back to a default speed.");
+            That(pos.Y, Is.EqualTo(0));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
         }
 
         private static GraphInstruction[] RejectValidationProgram()

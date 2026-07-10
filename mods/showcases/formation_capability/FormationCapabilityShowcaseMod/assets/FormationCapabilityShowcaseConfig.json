@@ -4,8 +4,8 @@
     "templateId": "formation_capability_showcase_formation_agent",
     "profileId": "formation"
   },
-  "initialSelectionFormationId": "shu_left_vanguard",
-  "initialSelectionEntityCapacity": 1,
+  "initialCommandSourceFormationId": "shu_left_vanguard",
+  "initialCommandSourceEntityCapacity": 1,
   "obstacleOverlay": {
     "templateId": "formation_capability_showcase_obstacle_overlay",
     "heightOffsetM": 0.28,

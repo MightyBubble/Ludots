@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillQ"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 
@@ -45,7 +45,7 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (Direction) | ✅ 已有 | selectionType: Direction |
+| InputOrderMapping (Direction) | ✅ 已有 | targetType: Direction |
 | ProjectileRuntimeSystem | ✅ 已有 | 弹道推进+碰撞 |
 | ProjectileState component | ✅ 已有 | Speed, TraveledCm, MaxRange |
 | Physics2D overlap | ✅ 已有 | 碰撞检测 |

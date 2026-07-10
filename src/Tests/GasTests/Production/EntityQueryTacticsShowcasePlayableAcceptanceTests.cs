@@ -102,14 +102,14 @@ namespace Ludots.Tests.GAS.Production
             AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, 0);
             AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, 0);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CurrentSelectionApplySystem wrote only the UI acquisition collection and left formal SelectionRuntime empty.");
+            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote the UI acquisition collection and kept command-source publishing explicit.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);
             AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, friendlyNames.Length);
             AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "formal_selection_committed");
-            timeline.Add("[T+003] Configured commit action copied the UI acquisition collection into SelectionRuntime live primary and refreshed the formation command source.");
+            timeline.Add("[T+003] Configured commit action copied the UI acquisition collection into command-source and refreshed the formation collection.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.ExecuteGraphs), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadSummaryInt(engine, owner, config.SummaryKeys.SelectedCount) > 0, maxFrames: 30);
@@ -2097,7 +2097,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Intent");
             sb.AppendLine("- Player goal: drag-select allies, run query graphs, inspect hostile relation threat, rotate formation cache, probe retained diff, and mutate pressure under a production mod path.");
-            sb.AppendLine("- Gameplay domain: SelectionRuntime, UI acquisition collection, formal selection mirror, EntityCollectionStore, GraphReturnWriter, EntitySetQueryRuntime, RelationshipRuntime, tags, attrs, templates, sorting, extremes, and aggregates.");
+            sb.AppendLine("- Gameplay domain: command-source collection, UI acquisition collection, formation collection, EntityCollectionStore, GraphReturnWriter, EntitySetQueryRuntime, RelationshipRuntime, tags, attrs, templates, sorting, extremes, and aggregates.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
             sb.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `NarrativeFrontendMod`, `EntityQueryTacticsShowcaseMod`");
@@ -2125,7 +2125,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final threat max: `{final.ThreatMax}`");
             sb.AppendLine($"- final formation count: `{final.FormationCount}`");
             sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, formal `{final.FormalRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CurrentSelectionApplySystem`, `SelectionRuntime`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
             return sb.ToString();
         }
 
@@ -2246,9 +2246,9 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[ConfigPipeline loads EntityQueryTacticsShowcaseMod] --> B[MapLoader spawns teams, templates, attrs, tags]",
                 "    B --> C[Player drags UI box selection]",
-                "    C --> D[CurrentSelectionApplySystem writes UI acquisition collection]",
-                "    D --> E[Configured commit action copies acquisition into SelectionRuntime live primary]",
-                "    E --> F[Showcase mirrors formal selection and formation snapshots to EntityCollectionStore]",
+                "    C --> D[CommandSourceAcquisitionSystem writes UI acquisition collection]",
+                "    D --> E[Configured commit action copies acquisition into command source]",
+                "    E --> F[Showcase publishes command and formation snapshots to EntityCollectionStore]",
                 "    F --> G[GraphReturnWriter executes graph ops through shared C# EntitySetQueryRuntime API]",
                 "    G --> H[Selection graph filters team/template/tag/attr and writes aggregate summaries]",
                 "    G --> I[Relationship graph filters metric/flag and sorts hostile threat]",

@@ -2,13 +2,15 @@ using System.Numerics;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
@@ -47,15 +49,15 @@ namespace Ludots.Tests.ThreeC
         {
             public Vector2? PositionCm { get; set; }
 
-            public bool TryGetPosition(out Vector2 positionCm)
+            public bool TryGetTransform(out CameraTargetTransformSnapshot transform)
             {
                 if (PositionCm.HasValue)
                 {
-                    positionCm = PositionCm.Value;
+                    transform = new CameraTargetTransformSnapshot(PositionCm.Value);
                     return true;
                 }
 
-                positionCm = default;
+                transform = default;
                 return false;
             }
         }
@@ -126,15 +128,87 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        private sealed class NullInputBackend : IInputBackend
+        private sealed class PlaneRaycastHeightmap : IVisualHeightmap
         {
-            public float GetAxis(string devicePath) => 0f;
-            public bool GetButton(string devicePath) => false;
-            public Vector2 GetMousePosition() => Vector2.Zero;
-            public float GetMouseWheel() => 0f;
-            public void EnableIME(bool enable) { }
-            public void SetIMECandidatePosition(int x, int y) { }
-            public string GetCharBuffer() => string.Empty;
+            public int RaycastCount { get; private set; }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+            {
+                heightCm = 0f;
+                return layerIndex == 0;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
+                {
+                    throw new ArgumentException("PlaneRaycastHeightmap spans must have identical lengths.");
+                }
+
+                if (layerIndex != 0)
+                {
+                    return false;
+                }
+
+                outHeightCm.Clear();
+                return true;
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+            {
+                RaycastCount++;
+                hit = default;
+                if (layerIndex != 0 ||
+                    !float.IsFinite(ray.Direction.Y) ||
+                    MathF.Abs(ray.Direction.Y) < 0.000001f ||
+                    !float.IsFinite(ray.Origin.Y))
+                {
+                    return false;
+                }
+
+                float distanceMeters = -ray.Origin.Y / ray.Direction.Y;
+                if (!float.IsFinite(distanceMeters) || distanceMeters < 0f)
+                {
+                    return false;
+                }
+
+                Vector3 point = ray.Origin + (ray.Direction * distanceMeters);
+                if (!float.IsFinite(point.X) || !float.IsFinite(point.Z))
+                {
+                    return false;
+                }
+
+                hit = new VisualGroundHit(
+                    point.X * 100f,
+                    point.Z * 100f,
+                    0f,
+                    0,
+                    distanceMeters,
+                    Vector3.UnitY);
+                return true;
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                outHitMask.Clear();
+                return false;
+            }
         }
 
         private sealed class StubViewController : IViewController
@@ -175,44 +249,49 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void SelectedGroupFollowTarget_UsesViewedSelectionCentroid_AndTracksViewedPrimarySelection()
+        public void EntityCollectionGroupFollowTarget_UsesExplicitCollectionCentroid_AndTracksPrimary()
         {
             using var world = World.Create();
             var globals = new Dictionary<string, object>();
-            var selectionRuntime = new SelectionRuntime(
-                world,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
             globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionRuntime.Name] = selectionRuntime;
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });
             Entity heavy = world.Create(
                 new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(4000, 5000) },
                 new CameraFollowWeight { Value = 3f });
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light, heavy }), Is.True);
-            Assert.That(selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.LivePrimary), Is.True);
+            ReplaceCommandSource(collections, selector, light, heavy);
 
-            var target = new SelectedGroupFollowTarget(world, globals);
+            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, EntityCollectionKeys.CommandSource);
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light }), Is.True);
-            Assert.That(SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
+            ReplaceCommandSource(collections, selector, light);
+            Assert.That(collections.TryGet(selector, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+            Assert.That(collections.TryGetEntityAt(handle, 0, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 
-            Assert.That(target.TryGetPosition(out var fallback), Is.True);
-            Assert.That(fallback.X, Is.EqualTo(1000f).Within(0.01f));
-            Assert.That(fallback.Y, Is.EqualTo(2000f).Within(0.01f));
+            Assert.That(target.TryGetTransform(out var fallback), Is.True);
+            Assert.That(fallback.PositionCm.X, Is.EqualTo(1000f).Within(0.01f));
+            Assert.That(fallback.PositionCm.Y, Is.EqualTo(2000f).Within(0.01f));
+        }
+
+        private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, params Entity[] entities)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Camera runtime command source",
+                summary: "Test-owned command source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
         }
 
         [Test]
@@ -536,7 +615,7 @@ namespace Ludots.Tests.ThreeC
             });
 
             manager.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController(),
                 visualHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("HeightmapCamera", blendDurationSeconds: 0f);
@@ -584,7 +663,7 @@ namespace Ludots.Tests.ThreeC
                 });
 
             manager.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController(),
                 visualHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("BaseHeight", 0f);
@@ -626,7 +705,7 @@ namespace Ludots.Tests.ThreeC
             });
 
             manager.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController(),
                 visualHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("InputHeight", blendDurationSeconds: 0f);
@@ -641,6 +720,105 @@ namespace Ludots.Tests.ThreeC
 
             Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(4000f, 2000f)));
             Assert.That(manager.State.TargetHeightCm, Is.EqualTo(330f).Within(0.001f));
+        }
+
+        [Test]
+        public void CameraManager_VisualHeightmapConfine_UsesLookFootprintAfterDragRotate()
+        {
+            var behaviorInput = new CameraBehaviorInputState();
+            var heightmap = new PlaneRaycastHeightmap();
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "VisualLookClamp",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(2500f, 1200f),
+                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                DistanceCm = 1000f,
+                Pitch = 60f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 80f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 1f,
+                EnableZoom = false,
+                ConfineTargetToWorldBounds = true,
+                AllowUserInput = true
+            });
+
+            manager.ConfigureRuntime(
+                behaviorInput,
+                new StubViewController(),
+                targetBoundsProvider: () => new WorldAabbCm(0, 0, 5000, 2000),
+                visualHeightmapProvider: () => heightmap);
+            manager.ActivateVirtualCamera("VisualLookClamp", blendDurationSeconds: 0f);
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(2500f, 1200f)));
+
+            behaviorInput.Clear();
+            behaviorInput.Apply(CameraBehaviorInputChannels.LookX, -90f, AttributeBindingMode.Override);
+            behaviorInput.Apply(CameraBehaviorInputChannels.RotateHold, 1f, AttributeBindingMode.Override);
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.Yaw, Is.EqualTo(90f).Within(0.001f));
+            Assert.That(manager.State.TargetCm.X, Is.EqualTo(2500f).Within(5f));
+            Assert.That(manager.State.TargetCm.Y, Is.EqualTo(1000f).Within(5f));
+            Assert.That(heightmap.RaycastCount, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void CameraManager_VisualHeightmapConfine_ToleratesViewportCornersThatMissBoundedHeightmap()
+        {
+            var behaviorInput = new CameraBehaviorInputState();
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 10000, 10000),
+                    sampleColumns: 33,
+                    sampleRows: 33,
+                    new short[33 * 33]));
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "BoundedHeightmapLookClamp",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(5000f, 5000f),
+                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightLayerIndex = 0,
+                TargetHeightOffsetCm = 100f,
+                DistanceCm = 3000f,
+                Pitch = 62f,
+                Yaw = 220f,
+                FovYDeg = 42f,
+                MinPitchDeg = 42f,
+                MaxPitchDeg = 76f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 0.16f,
+                EnableZoom = false,
+                ConfineTargetToWorldBounds = true,
+                ConfinePaddingCm = 600f,
+                AllowUserInput = true
+            });
+
+            manager.ConfigureRuntime(
+                behaviorInput,
+                new StubViewController(),
+                targetBoundsProvider: () => new WorldAabbCm(0, 0, 10000, 10000),
+                visualHeightmapProvider: () => heightmap);
+            manager.ActivateVirtualCamera("BoundedHeightmapLookClamp", blendDurationSeconds: 0f);
+            manager.Update(0.016f);
+
+            behaviorInput.Clear();
+            behaviorInput.Apply(CameraBehaviorInputChannels.LookY, -200f, AttributeBindingMode.Override);
+            behaviorInput.Apply(CameraBehaviorInputChannels.RotateHold, 1f, AttributeBindingMode.Override);
+
+            Assert.DoesNotThrow(() => manager.Update(0.016f));
+            Assert.That(manager.State.Pitch, Is.EqualTo(42f).Within(0.001f));
         }
 
         [Test]
@@ -678,7 +856,7 @@ namespace Ludots.Tests.ThreeC
                 });
 
             manager.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController(),
                 targetBoundsProvider: () => new WorldAabbCm(-1000, -500, 2000, 1000));
             manager.ActivateVirtualCamera("BaseConfine", 0f);
@@ -712,7 +890,7 @@ namespace Ludots.Tests.ThreeC
                 DistanceCm = 5000f
             });
             missing.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController());
             missing.ActivateVirtualCamera("MissingHeightmapCamera", blendDurationSeconds: 0f);
             Assert.That(
@@ -726,7 +904,7 @@ namespace Ludots.Tests.ThreeC
                 DistanceCm = 5000f
             });
             miss.ConfigureRuntime(
-                new PlayerInputHandler(new NullInputBackend(), new InputConfigRoot()),
+                new CameraBehaviorInputState(),
                 new StubViewController(),
                 visualHeightmapProvider: () => new TestHeightmap(0f, hit: false));
             miss.ActivateVirtualCamera("MissHeightmapCamera", blendDurationSeconds: 0f);
@@ -757,6 +935,135 @@ namespace Ludots.Tests.ThreeC
             Assert.That(float.IsNaN(renderState.Target.Y), Is.False);
             Assert.That(float.IsNaN(renderState.Target.Z), Is.False);
             Assert.That(Vector3.DistanceSquared(renderState.Position, renderState.Target), Is.GreaterThan(0.1f));
+        }
+
+        [Test]
+        public void CameraViewportUtil_ThirdPersonRigOffsets_MovePivotAndSocket()
+        {
+            var baseState = new CameraState
+            {
+                RigKind = CameraRigKind.ThirdPerson,
+                TargetCm = new Vector2(1000f, 2000f),
+                TargetHeightCm = 150f,
+                DistanceCm = 900f,
+                Pitch = 18f,
+                Yaw = 180f,
+                FovYDeg = 60f
+            };
+
+            CameraRenderState3D baseRender = CameraViewportUtil.StateToRenderState(baseState);
+
+            var shoulderState = new CameraState
+            {
+                RigKind = baseState.RigKind,
+                TargetCm = baseState.TargetCm,
+                TargetHeightCm = baseState.TargetHeightCm,
+                DistanceCm = baseState.DistanceCm,
+                Pitch = baseState.Pitch,
+                Yaw = baseState.Yaw,
+                FovYDeg = baseState.FovYDeg,
+                RigPivotOffsetCm = new Vector3(65f, 35f, 90f),
+                RigCameraOffsetCm = new Vector3(70f, 10f, -20f)
+            };
+
+            CameraRenderState3D shoulderRender = CameraViewportUtil.StateToRenderState(shoulderState);
+
+            Assert.That(Vector3.Distance(shoulderRender.Target, baseRender.Target), Is.GreaterThan(0.5f));
+            Assert.That(shoulderRender.Target.Y, Is.EqualTo(baseRender.Target.Y + 0.35f).Within(0.001f));
+            Assert.That(Vector3.Distance(shoulderRender.Position, baseRender.Position), Is.GreaterThan(1f));
+            Assert.That(
+                Vector3.Distance(shoulderRender.Position - shoulderRender.Target, baseRender.Position - baseRender.Target),
+                Is.GreaterThan(0.5f));
+        }
+
+        [Test]
+        public void CameraImpulseRuntime_SamplesDistanceFalloffAndMixesSources()
+        {
+            var runtime = new CameraImpulseRuntime();
+            var listener = new CameraImpulseListener(new Vector2(500f, 0f), 0f, 180f);
+
+            runtime.Emit(new CameraImpulseSource
+            {
+                PositionCm = Vector2.Zero,
+                RadiusCm = 1000f,
+                DurationSeconds = 1f,
+                FrequencyHz = 0f,
+                PhaseRadians = MathF.PI * 0.5f,
+                PositionAmplitudeCm = 100f,
+                Falloff = CameraImpulseFalloff.Linear
+            });
+            runtime.Emit(new CameraImpulseSource
+            {
+                PositionCm = Vector2.Zero,
+                RadiusCm = 1000f,
+                DurationSeconds = 1f,
+                FrequencyHz = 0f,
+                PhaseRadians = MathF.PI * 0.5f,
+                PositionAmplitudeCm = 50f,
+                Falloff = CameraImpulseFalloff.Linear
+            });
+
+            CameraImpulseSample mixed = runtime.Sample(in listener, 0f);
+
+            Assert.That(mixed.PositionOffsetCm.X, Is.EqualTo(75f).Within(0.001f));
+            Assert.That(mixed.PositionOffsetCm.Y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(mixed.PositionOffsetCm.Z, Is.EqualTo(0f).Within(0.001f));
+
+            runtime.Clear();
+            runtime.Emit(new CameraImpulseSource
+            {
+                PositionCm = Vector2.Zero,
+                RadiusCm = 1000f,
+                DurationSeconds = 1f,
+                FrequencyHz = 0f,
+                PhaseRadians = MathF.PI * 0.5f,
+                PositionAmplitudeCm = 100f,
+                Falloff = CameraImpulseFalloff.Linear
+            });
+
+            CameraImpulseSample outside = runtime.Sample(
+                new CameraImpulseListener(new Vector2(1500f, 0f), 0f, 180f),
+                0f);
+            Assert.That(outside.HasValue, Is.False);
+        }
+
+        [Test]
+        public void CameraManager_ImpulseRuntime_WritesListenerSampleIntoState()
+        {
+            var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
+            {
+                Id = "ImpulseCamera",
+                RigKind = CameraRigKind.Orbit,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(500f, 0f),
+                DistanceCm = 1200f,
+                Pitch = 35f,
+                Yaw = 180f,
+                FovYDeg = 60f
+            });
+            var runtime = new CameraImpulseRuntime();
+            manager.SetImpulseRuntime(runtime);
+            manager.ConfigureRuntime(new CameraBehaviorInputState(), new StubViewController());
+            manager.ActivateVirtualCamera("ImpulseCamera", blendDurationSeconds: 0f);
+
+            runtime.Emit(new CameraImpulseSource
+            {
+                PositionCm = Vector2.Zero,
+                RadiusCm = 1000f,
+                DurationSeconds = 1f,
+                FrequencyHz = 0f,
+                PhaseRadians = MathF.PI * 0.5f,
+                PositionAmplitudeCm = 100f,
+                YawAmplitudeDeg = 3f,
+                PitchAmplitudeDeg = 2f,
+                Falloff = CameraImpulseFalloff.Linear
+            });
+
+            manager.Update(0f);
+
+            Assert.That(manager.State.ImpulsePositionOffsetCm.X, Is.EqualTo(50f).Within(0.001f));
+            Assert.That(manager.State.ImpulseYawOffsetDeg, Is.EqualTo(1.5f).Within(0.001f));
+            Assert.That(manager.State.ImpulsePitchOffsetDeg, Is.EqualTo(0f).Within(0.001f));
         }
 
         [Test]

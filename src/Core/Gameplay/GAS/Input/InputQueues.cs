@@ -119,14 +119,4 @@
     {
         public InputResponseBuffer(int capacity = 1024) : base(capacity) { }
     }
-
-    public sealed class SelectionRequestQueue : RingBuffer<SelectionRequest>
-    {
-        public SelectionRequestQueue(int capacity = 1024) : base(capacity) { }
-    }
-
-    public sealed class SelectionResponseBuffer : SwapRemoveBuffer<SelectionResponse>
-    {
-        public SelectionResponseBuffer(int capacity = 1024) : base(capacity) { }
-    }
 }

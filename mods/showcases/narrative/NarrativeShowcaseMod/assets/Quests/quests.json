@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Quest.Narrative.AshenOath",
+    "displayName": "Ashen Oath",
+    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
+    "tags": [ "quest.narrative" ],
+    "attributes": [
+      { "attributeId": "QuestUrgency", "baseValue": 1.0 }
+    ],
+    "stages": [
+      {
+        "id": "briefing",
+        "title": "Hear The Warden",
+        "objectiveText": "Speak with Warden Mirelle beside the lantern dais.",
+        "objectiveHint": "Press E near Mirelle after the intro camera pass ends."
+      },
+      {
+        "id": "trial",
+        "title": "Wake The Shrine",
+        "objectiveText": "Inspect the Ember Shrine and defeat the Ashen Beast once it answers.",
+        "objectiveHint": "Press E near the shrine, then use Arcweaver's combat kit.",
+        "requiredSignals": [ "showcase.beast_defeated" ]
+      },
+      {
+        "id": "return",
+        "title": "Deliver Your Verdict",
+        "objectiveText": "Return to Warden Mirelle and choose how the valley should remember the trial.",
+        "objectiveHint": "Elder dialogue outcome applies a GAS blessing via trigger callback."
+      }
+    ]
+  }
+]

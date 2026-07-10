@@ -33,14 +33,14 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | `assets/Maps/<map>.json` | `Boards[].GridCellSizeCm` | `CellCm` 输入，决定每个 sim cell 的厘米边长 |
 | `assets/Maps/<map>.json` | `Boards[].HexEdgeLengthCm` | HexGrid 专属 hex 边长；Grid / NodeGraph 不受它影响 |
 | `assets/Maps/<map>.json` | `Boards[].ChunkSizeCells` | `PartitionChunkCells`，只控制 spatial query/AOI 分区 |
-| `assets/game.json` | `startupMapId` | 启动地图 id |
-| `assets/game.json` | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
-| `assets/game.json` | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
-| `assets/game.json` | `presentation.minimap.*` | 小地图缩放、full-map/follow-camera 等表现策略 |
-| `assets/MassNavigationConfig.json` | `world.solverWindowWidthCm` / `solverWindowHeightCm` | MassNavigationFlow 工作窗口，必须和 solver field 宽高一致 |
-| `assets/MassNavigationConfig.json` | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
-| `assets/MassNavigationConfig.json` | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
-| `assets/MassNavigationConfig.json` | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
+| Mod-local assets/game.json | `startupMapId` | 启动地图 id |
+| Mod-local assets/game.json | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
+| Mod-local assets/game.json | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
+| Mod-local assets/game.json | `presentation.minimap.*` | 小地图缩放、full-map/follow-camera 等表现策略 |
+| Mod-local assets/MassNavigationConfig.json | `world.solverWindowWidthCm` / `solverWindowHeightCm` | MassNavigationFlow 工作窗口，必须和 solver field 宽高一致 |
+| Mod-local assets/MassNavigationConfig.json | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
+| Mod-local assets/MassNavigationConfig.json | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
+| Mod-local assets/MassNavigationConfig.json | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
 | `assets/Configs/Navigation/agent_profiles.json` | `radiusCm` / `heightCm` / `clearanceCm` / `draftCm` / `beamCm` / `mass` / `layer` | agent 几何、避障身份与 NodeGraph 运输容量 SSOT |
 | `assets/Configs/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | `assets/Configs/Navigation/pathing.json` | `agentTypes[].profileId` / `selection.mode` | 哪些 profile 走精确 route，哪些继续 MassNavigationFlow |

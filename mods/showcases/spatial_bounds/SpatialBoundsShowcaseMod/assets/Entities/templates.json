@@ -5,7 +5,7 @@
       "Name": {
         "Value": "PointPin"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -28,7 +28,7 @@
       "Name": {
         "Value": "RectFootprint"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -71,7 +71,7 @@
       "Name": {
         "Value": "DiamondFootprint"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -117,7 +117,7 @@
       "Name": {
         "Value": "TwinPads"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -180,7 +180,7 @@
       "Name": {
         "Value": "BoxTower"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -206,7 +206,7 @@
       "Name": {
         "Value": "OverlapPad"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -249,7 +249,7 @@
       "Name": {
         "Value": "OverlapPoint"
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,

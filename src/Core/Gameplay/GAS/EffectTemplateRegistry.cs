@@ -3,7 +3,9 @@ using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -30,6 +32,12 @@ namespace Ludots.Core.Gameplay.GAS
         Exchange = 13,
         /// <summary>Completes an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 14,
+        /// <summary>Reads configured blackboard stored target keys and submits orders to a spawned unit.</summary>
+        SubmitOrderFromBlackboard = 15,
+        /// <summary>Atomic entity template replacement with inheritance profile.</summary>
+        DeployConsumeSource = 16,
+        /// <summary>Timed area reveal through Vision/Fog/Knowledge projection.</summary>
+        RevealArea = 17,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -275,6 +283,7 @@ namespace Ludots.Core.Gameplay.GAS
         None = 0,
         SetParent = 1,
         RemoveParent = 2,
+        EnsureLink = 3,
     }
 
     public enum RelationEntitySlot : byte
@@ -291,6 +300,21 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationEntitySlot Subject;
         public RelationEntitySlot Parent;
         public bool SnapSubjectToParentPosition;
+        public int RelationshipTypeId;
+    }
+
+    /// <summary>
+    /// Parameters for on-spawn order dispatch from configured blackboard stored target keys.
+    /// </summary>
+    public struct SubmitOrderFromBlackboardDescriptor
+    {
+        public RelationEntitySlot SourceSlot;
+        public RelationEntitySlot TargetSlot;
+        public BlackboardStoredTargetKeys StoredTargetKeys;
+        public string PointMoveOrderTypeKey;
+        public string EntityOrderTypeKey;
+        public int EntityOrderIntArg0;
+        public OrderSubmitMode SubmitMode;
     }
 
     // ── EffectTemplateData ──
@@ -320,6 +344,8 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public KnowledgeAreaRevealDescriptor RevealArea;
+        public SubmitOrderFromBlackboardDescriptor SubmitOrderFromBlackboard;
         public ScopeKey ProgressionScope;
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
         public int ProgressionId;

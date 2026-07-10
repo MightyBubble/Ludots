@@ -15,8 +15,11 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 	private readonly GameEngine _engine;
 	private readonly BrowserMinimapCompositedOverlayLayoutState _layoutState;
 	private readonly HashSet<Entity> _disclosedOwners = new();
+	private MinimapKnowledgeViewerProvider? _previousKnowledgeViewerProvider;
 	private Entity _viewer = Entity.Null;
 	private string _mapId = string.Empty;
+	private bool _knowledgeViewerProviderInstalled;
+	private bool _hasPreviousKnowledgeViewerProvider;
 	private bool _disposed;
 
 	public BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem(
@@ -30,6 +33,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 	public void Initialize()
 	{
 		_viewer = _engine.World.Create();
+		InstallMinimapKnowledgeViewerProvider();
 	}
 
 	public void BeforeUpdate(in float dt)
@@ -55,6 +59,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 	public void Dispose()
 	{
 		_disposed = true;
+		RestoreMinimapKnowledgeViewerProvider();
 		if (_engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime runtime)
 		{
 			runtime.NativeChromeVisible = true;
@@ -104,7 +109,6 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 			return;
 		}
 
-		_engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, viewer);
 		ReadOnlySpan<Entity> owners = markers.Owners;
 		int currentTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
 		var record = new KnowledgeDisclosureRecord(
@@ -181,8 +185,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 
 	private Entity ResolveOrCreateViewer()
 	{
-		if (TryResolveViewer(CoreServiceKeys.SelectionViewViewerEntity.Name, out Entity viewer) ||
-			TryResolveViewer(CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
+		if (TryResolveViewer(CoreServiceKeys.LocalPlayerEntity.Name, out Entity viewer))
 		{
 			_viewer = viewer;
 			return viewer;
@@ -194,6 +197,42 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 		}
 
 		return _viewer;
+	}
+
+	private void InstallMinimapKnowledgeViewerProvider()
+	{
+		_hasPreviousKnowledgeViewerProvider = _engine.TryGetService(
+			CoreServiceKeys.MinimapKnowledgeViewerProvider,
+			out _previousKnowledgeViewerProvider);
+		_engine.SetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, TryResolveMinimapKnowledgeViewer);
+		_knowledgeViewerProviderInstalled = true;
+	}
+
+	private bool TryResolveMinimapKnowledgeViewer(GameEngine engine, out Entity viewer)
+	{
+		viewer = ResolveOrCreateViewer();
+		return viewer != Entity.Null && engine.World.IsAlive(viewer);
+	}
+
+	private void RestoreMinimapKnowledgeViewerProvider()
+	{
+		if (!_knowledgeViewerProviderInstalled)
+		{
+			return;
+		}
+
+		if (_hasPreviousKnowledgeViewerProvider && _previousKnowledgeViewerProvider != null)
+		{
+			_engine.SetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, _previousKnowledgeViewerProvider);
+		}
+		else
+		{
+			_engine.RemoveService(CoreServiceKeys.MinimapKnowledgeViewerProvider);
+		}
+
+		_knowledgeViewerProviderInstalled = false;
+		_hasPreviousKnowledgeViewerProvider = false;
+		_previousKnowledgeViewerProvider = null;
 	}
 
 	private bool TryResolveViewer(string key, out Entity viewer)

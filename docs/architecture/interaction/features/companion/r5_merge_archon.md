@@ -5,7 +5,7 @@
 
 ## 交互层设计
 - **Input**: Down
-- **Selection**: SelectionGate → 选 2 个特定类型单位
+- **Target**: TargetCollectionGate → 选 2 个特定类型单位
 - **Resolution**: Explicit
 
 ## 实现要点
@@ -15,13 +15,13 @@
 ```
 InputOrderMapping:
   actionId: "MergeUnits"
-  selectionType: SelectionGate
-  selectionGate:
+  targetType: Entities
+  targetCollectionGate:
     requiredCount: 2
     requiredTag: "high_templar"
 
 Phase Graph (OnCalculate):
-  1. SelectionGate: 等待玩家选择 2 个 High Templar
+  1. TargetCollectionGate: 等待玩家选择 2 个 High Templar
   2. ValidatePrecondition: 两个单位都 HasTag("high_templar")
   3. 计算 midpoint = (pos_a + pos_b) / 2
   4. WriteBlackboardFloat(E[effect], "merge_x", midpoint.x)
@@ -38,7 +38,7 @@ OnApply → BuiltinHandler: MergeUnits:
 ## 新增需求
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| SelectionGate | P3 | 多步骤选择交互，等待玩家选择多个特定单位 |
+| TargetCollectionGate | P3 | 多步骤目标集合确认，等待玩家选择多个特定单位 |
 | MergeUnits BuiltinHandler | P2 | 通过 RuntimeEntitySpawnQueue 销毁源单位并创建合并单位 |
 
 ## 参考案例

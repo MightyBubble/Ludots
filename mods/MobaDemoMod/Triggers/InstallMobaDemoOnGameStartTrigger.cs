@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod;
@@ -8,17 +7,13 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using MobaDemoMod.GAS;
 using MobaDemoMod.Systems;
@@ -49,13 +44,13 @@ namespace MobaDemoMod.Triggers
             {
                 return Task.CompletedTask;
             }
+
             engine.GlobalContext[InstalledKey] = true;
 
-            // Load MobaConfig via VFS
             var mobaConfig = MobaConfig.Load(_ctx);
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
-            // GameConfig is required; it must be loaded before GameStart.
+
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             _ = config.Constants.OrderTypeIds["stop"];
 
@@ -77,64 +72,40 @@ namespace MobaDemoMod.Triggers
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
             }
 
-            // Selection feedback hooks are provided by CoreInputMod; MOBA injects only the visual callbacks here.
-            TransientMarkerBuffer markerBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
-                markerBuffer = tmb;
-
+            // Command-source acquisition feedback hooks are provided by CoreInputMod; MOBA injects only visual callbacks here.
             PerformerCommandBuffer cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
                 cmdBuffer = pcb;
 
-            if (CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> selectionCallbacks))
+            if (CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> commandSourceAcquiredCallbacks))
             {
                 var capturedCmdBuffer = cmdBuffer;
                 var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
-                int selectionIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.SelectionIndicatorDefKey) ?? 0;
-                selectionCallbacks.Add((worldCm, entity) =>
+                int commandSourceIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.CommandSourceIndicatorDefKey) ?? 0;
+                commandSourceAcquiredCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
                     capturedCmdBuffer.TryAdd(new PerformerCommand
                     {
                         CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                        ScopeTag = mobaConfig.Presentation.SelectionScopeId
+                        ScopeTag = mobaConfig.Presentation.CommandSourceScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
                         capturedCmdBuffer.TryAdd(new PerformerCommand
                         {
                             CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = selectionIndicatorDefId,
-                            ScopeTag = mobaConfig.Presentation.SelectionScopeId,
+                            PerformerDefinitionId = commandSourceIndicatorDefId,
+                            ScopeTag = mobaConfig.Presentation.CommandSourceScopeId,
                             Source = entity
                         });
                     }
                 });
             }
 
-            if (CoreInputRuntimeServices.TryGetSelectionTriggeredCallbacks(engine, out List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks))
-            {
-                var capturedMarkerBuffer = markerBuffer;
-                var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
-                int sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
-                triggeredCallbacks.Add((req, worldCm) =>
-                {
-                    if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
-                    {
-                        var mk = mobaConfig.Presentation.CircleEnemyMarker;
-                        var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
-                        var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
-                        var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAddMesh(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
-                    }
-                });
-            }
-
-            // 鍗曚綅娓叉煋鐢?performers.json 瀹氫箟 moba_unit_marker锛坋ntity-scoped Marker3D锛夐┍鍔?
-            // 鍥㈤槦棰滆壊鐢?EntityColor 缁戝畾瑙ｆ瀽
-
+            // Unit rendering is defined by performers.json and entity-scoped Marker3D rules.
+            // Colors come from EntityColor instead of trigger-owned presentation logic.
             return Task.CompletedTask;
         }
     }
 }
-

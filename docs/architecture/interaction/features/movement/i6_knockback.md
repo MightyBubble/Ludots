@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Unit
+  targetType: Unit
   isSkillMapping: true
 ```
 
@@ -41,6 +41,6 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (Unit) | ✅ 已有 | selectionType: Unit |
+| InputOrderMapping (Unit) | ✅ 已有 | targetType: Unit |
 | DisplacementPreset | ✅ 已有 | DisplacementRuntimeSystem |
 | DisplacementDirectionMode.AwayFromSource | ✅ 已有 | 推离源点模式 |

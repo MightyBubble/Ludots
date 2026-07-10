@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillSpace"
   trigger: Down + WhileHeld + Up
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
   precondition: is_airborne == true
 ```

@@ -214,18 +214,18 @@
     "defaultColor": [0.38, 0.72, 1.0, 1.0],
     "rules": [
       {
-        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
         "command": {
           "kind": "CreatePerformer",
-          "definitionId": "mass_navigation_agent_selection_marker_light",
+          "definitionId": "mass_navigation_agent_command_marker_light",
           "scopeSource": "SourceStableId"
         }
       },
       {
-        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
         "command": {
           "kind": "DestroyScopedPerformer",
-          "definitionId": "mass_navigation_agent_selection_marker_light",
+          "definitionId": "mass_navigation_agent_command_marker_light",
           "scopeSource": "SourceStableId"
         }
       }
@@ -296,18 +296,18 @@
     "defaultColor": [0.95, 0.58, 0.28, 1.0],
     "rules": [
       {
-        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
         "command": {
           "kind": "CreatePerformer",
-          "definitionId": "mass_navigation_agent_selection_marker_heavy",
+          "definitionId": "mass_navigation_agent_command_marker_heavy",
           "scopeSource": "SourceStableId"
         }
       },
       {
-        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
         "command": {
           "kind": "DestroyScopedPerformer",
-          "definitionId": "mass_navigation_agent_selection_marker_heavy",
+          "definitionId": "mass_navigation_agent_command_marker_heavy",
           "scopeSource": "SourceStableId"
         }
       }
@@ -374,7 +374,7 @@
     ]
   },
   {
-    "id": "mass_navigation_agent_selection_marker_light",
+    "id": "mass_navigation_agent_command_marker_light",
     "defaultColor": [0.72, 0.92, 1.0, 0.95],
     "behaviors": [
       {
@@ -383,7 +383,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "mass_navigation.selection.marker",
+          "assetId": "mass_navigation.command.marker",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
@@ -404,8 +404,8 @@
     ]
   },
   {
-    "id": "mass_navigation_agent_selection_marker_heavy",
-    "extends": "mass_navigation_agent_selection_marker_light",
+    "id": "mass_navigation_agent_command_marker_heavy",
+    "extends": "mass_navigation_agent_command_marker_light",
     "behaviors": [
       {
         "slot": "body",
@@ -413,7 +413,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "mass_navigation.selection.marker",
+          "assetId": "mass_navigation.command.marker",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",

@@ -16,7 +16,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: 技能决定
+- **TargetType**: 技能决定
 - **InteractionMode**: 技能决定
 
 ```json5
@@ -26,7 +26,7 @@
   "actionId": "ability_Q_charged",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true
 }
 ```

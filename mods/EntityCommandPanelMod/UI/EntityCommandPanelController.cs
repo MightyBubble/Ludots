@@ -216,7 +216,7 @@ namespace EntityCommandPanelMod.UI
                 return BuildShowcasePanel(showcaseThemeId, state, sourceContext, group, groupCount, source, slotSnapshot, left, top);
             }
 
-            RtsHudTheme theme = ResolveHudTheme(state.TargetEntity);
+            RtsHudTheme theme = ResolveHudTheme();
             return state.LayoutPreset switch
             {
                 EntityCommandPanelLayoutPreset.CommandDeck => BuildCommandDeckPanel(
@@ -1154,15 +1154,22 @@ namespace EntityCommandPanelMod.UI
             EntityCommandPanelGroupView group,
             int groupCount)
         {
-            string title = _runtime.ResolveEntityTitle(state.TargetEntity);
             string groupLabel = string.IsNullOrWhiteSpace(group.GroupLabel) ? "Unavailable" : group.GroupLabel;
             string groupCounter = groupCount <= 0 ? "0/0" : $"{state.GroupIndex + 1}/{groupCount}";
+            bool collectionSource = string.Equals(
+                state.SourceId,
+                CollectionGasEntityCommandPanelSource.SourceId,
+                StringComparison.Ordinal);
+            string title = collectionSource ? groupLabel : _runtime.ResolveEntityTitle(state.TargetEntity);
+            string subtitle = collectionSource
+                ? $"CommandSource collection · {group.SlotCount.ToString(System.Globalization.CultureInfo.InvariantCulture)} cards · {groupCounter}"
+                : $"{groupLabel} · {groupCounter}";
             EntityCommandPanelHandle handle = state.Handle;
 
             return Ui.Row(
                     Ui.Column(
                             Ui.Text(title).FontSize(18f).Bold().Color("#F5F7FA"),
-                            Ui.Text($"{groupLabel} · {groupCounter}")
+                            Ui.Text(subtitle)
                                 .FontSize(11f)
                                 .Color("#90A5BA"))
                         .Gap(4f),
@@ -1623,7 +1630,7 @@ namespace EntityCommandPanelMod.UI
             string actionKey = ResolveActionKeyLabel(slot.ActionId);
             if (!string.IsNullOrWhiteSpace(actionKey))
             {
-                return actionKey;
+                return ShortenGlyph(actionKey);
             }
 
             if (slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
@@ -1633,6 +1640,17 @@ namespace EntityCommandPanelMod.UI
 
             string label = ResolveAbilityLabel(in slot);
             return !string.IsNullOrWhiteSpace(label) ? label[..1].ToUpperInvariant() : "?";
+        }
+
+        private static string ShortenGlyph(string value)
+        {
+            string trimmed = value.Trim();
+            if (trimmed.Length <= 3)
+            {
+                return trimmed.ToUpperInvariant();
+            }
+
+            return trimmed[..1].ToUpperInvariant();
         }
 
         private static string ResolveActionKeyLabel(string actionId)
@@ -1797,74 +1815,10 @@ namespace EntityCommandPanelMod.UI
             return string.Empty;
         }
 
-        private RtsHudTheme ResolveHudTheme(Entity target)
+        private static RtsHudTheme ResolveHudTheme()
         {
-            var tags = _engine.CurrentMapSession?.MapConfig?.Tags;
-            bool war3 = false;
-            bool cnc = false;
-            bool sc2 = false;
-            if (tags != null)
-            {
-                for (int i = 0; i < tags.Count; i++)
-                {
-                    string tag = tags[i];
-                    if (string.Equals(tag, "war3", StringComparison.OrdinalIgnoreCase))
-                    {
-                        war3 = true;
-                    }
-                    else if (string.Equals(tag, "cnc", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cnc = true;
-                    }
-                    else if (string.Equals(tag, "sc2", StringComparison.OrdinalIgnoreCase))
-                    {
-                        sc2 = true;
-                    }
-                }
-            }
-
-            string entityTitle = _runtime.ResolveEntityTitle(target);
-            if (war3 || entityTitle.Contains("Barracks", StringComparison.OrdinalIgnoreCase))
-            {
-                return new RtsHudTheme(
-                    "WAR3",
-                    "Upfront cost",
-                    "Command deck for classic Barracks training.",
-                    "Watch the barracks run, then look for the Footman stepping out.",
-                    "Queue a Footman to see the full train -> exit loop.",
-                    "Hotkeys stay pinned to the cards below.",
-                    "#7BC96F",
-                    "#365D42");
-            }
-
-            if (cnc || entityTitle.Contains("Factory", StringComparison.OrdinalIgnoreCase))
-            {
-                return new RtsHudTheme(
-                    "C&C",
-                    "Pay over time",
-                    "Command deck for staged-funding factory production.",
-                    "Watch credits drain in pulses while the War Factory keeps working.",
-                    "Queue a Rhino to see pulse payments and rollout timing.",
-                    "The right monitor tracks each pulse-driven order.",
-                    "#F28F45",
-                    "#6A4427");
-            }
-
-            if (sc2 || entityTitle.Contains("Gateway", StringComparison.OrdinalIgnoreCase))
-            {
-                return new RtsHudTheme(
-                    "SC2",
-                    "Gateway training",
-                    "Command deck for Protoss gateway production.",
-                    "Watch the gateway charge up, then the Zealot materialize on completion.",
-                    "Queue a Zealot to see the upfront-cost training flow.",
-                    "The right monitor stays focused on the active training loop.",
-                    "#3AC7F5",
-                    "#235A70");
-            }
-
             return new RtsHudTheme(
-                "RTS",
+                "COMMAND",
                 "Production rule",
                 "Command deck",
                 "Production monitor",
@@ -1876,21 +1830,6 @@ namespace EntityCommandPanelMod.UI
 
         private static string ResolveToolbarAccent(string title)
         {
-            if (title.Contains("War3", StringComparison.OrdinalIgnoreCase))
-            {
-                return "#7BC96F";
-            }
-
-            if (title.Contains("C&C", StringComparison.OrdinalIgnoreCase))
-            {
-                return "#F28F45";
-            }
-
-            if (title.Contains("SC2", StringComparison.OrdinalIgnoreCase))
-            {
-                return "#3AC7F5";
-            }
-
             return "#58B7FF";
         }
 

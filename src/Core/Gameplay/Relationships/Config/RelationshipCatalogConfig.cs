@@ -14,6 +14,19 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         public List<RelationshipCallbackConfig> Callbacks { get; set; } = new();
         public List<RelationshipSynergyConfig> Synergies { get; set; } = new();
         public List<RelationshipKnowledgeGrantConfig> KnowledgeGrants { get; set; } = new();
+        public DomainStanceConfig? Stance { get; set; }
+    }
+
+    /// <summary>
+    /// Data-declared domain stance keys (RFC-0065 DEC-3). Stance names exist only in JSON;
+    /// they are resolved to relationship type ids at install time.
+    /// </summary>
+    public sealed class DomainStanceConfig
+    {
+        public List<string> StanceTypes { get; set; } = new();
+        public string SameDomainStance { get; set; } = string.Empty;
+        public string SameTeamStance { get; set; } = string.Empty;
+        public string DefaultStance { get; set; } = string.Empty;
     }
 
     public sealed class RelationshipTypeConfig : IIdentifiable

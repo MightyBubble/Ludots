@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -20,8 +24,17 @@ namespace Ludots.Core.Gameplay.GAS
         public List<FanOutCommand>? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
+        public RuntimeEntityLifecycleQueue? LifecycleRequests { get; set; }
+        public EntityLifecycleRuntimeServices? LifecycleServices { get; set; }
+        public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
+        public RelationshipRuntime? Relationships { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
+        public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
+        public OrderTypeRegistry? OrderTypeRegistry { get; set; }
+        public OrderRuleRegistry? OrderRuleRegistry { get; set; }
+        public int CurrentStep { get; set; }
+        public int StepRateHz { get; set; }
 
         public int ResolvedCandidateCount { get; private set; }
         public int DroppedCount { get; private set; }

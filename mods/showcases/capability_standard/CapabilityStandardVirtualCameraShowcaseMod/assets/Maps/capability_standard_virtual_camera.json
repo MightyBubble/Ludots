@@ -1,0 +1,54 @@
+{
+  "Id": "capability_standard_virtual_camera",
+  "VisualHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.vhtm",
+  "Tags": [
+    "capability_standard",
+    "capability_standard.virtual_camera",
+    "camera.bootstrap.center_bounds",
+    "camera.shot:CapabilityStandard.VirtualCamera.Shot.Reveal"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.Tactical"
+  },
+  "Entities": [
+    {
+      "InstanceId": "camera_player_1",
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "CapabilityStandardCameraAnchor" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } },
+        "FacingDirection": { "AngleRad": 0.0 },
+        "VisualHeightmapSampleState": {}
+      }
+    },
+    {
+      "InstanceId": "camera_team_1",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CapabilityStandardCameraNorthWest" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": 800, "Y": 600 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CapabilityStandardCameraSouthEast" },
+        "WorldPositionCm": { "Value": { "X": 7600, "Y": 4600 } }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "camera_team_1"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "camera_player_1"
+    }
+  ]
+}

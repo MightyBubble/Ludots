@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
@@ -303,7 +303,7 @@ internal sealed class ParticipantViewPanelController
             return new[]
             {
                 Ui.Card(
-                        Ui.Text("No members projected into SelectionRuntime.LivePrimary.")
+                        Ui.Text("No members projected into the command source.")
                             .FontSize(11f)
                             .Color("#92A0B1")
                             .WhiteSpace(UiWhiteSpace.Normal))
@@ -373,16 +373,34 @@ internal sealed class ParticipantViewPanelController
             ? BuildPlayerSelectionDetail(engine, session, _runtime.SelectedPlayerId)
             : BuildTeamSelectionDetail(engine, session, _runtime.SelectedTeamId);
 
-        int currentMemberCount = SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+        int commandSourceMemberCount = TryResolveLocalCommandSourceOwner(engine, out Entity commandSourceOwner)
+            ? EntityCollectionContextRuntime.GetCount(
+                engine.GlobalContext,
+                commandSourceOwner,
+                EntityCollectionKeys.CommandSource)
+            : 0;
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,
             MapLabel: $"Map: {session.MapId.Value}",
-            Summary: "View mode swaps formal selection between map-owned player/team representative projections.",
+            Summary: "View mode swaps the command source between map-owned player/team representative projections.",
             Mode: _runtime.Mode,
             ParticipantCount: options.Length,
-            CurrentMemberCount: currentMemberCount,
+            CurrentMemberCount: commandSourceMemberCount,
             Participants: options,
             Selection: selection);
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private ParticipantOption[] BuildPlayerOptions(GameEngine engine, MapSession session)
@@ -481,7 +499,7 @@ internal sealed class ParticipantViewPanelController
         string[] representativeLines =
         {
             DescribeIdentity(engine.World, representative),
-            DescribeResourceSummary(engine.World, representative),
+            DescribeKnowledgeMaskSummary(engine, representative),
             DescribeRelationshipSummary(engine, representative)
         };
 
@@ -489,15 +507,15 @@ internal sealed class ParticipantViewPanelController
         {
             $"Map session: {session.MapId.Value}",
             $"Representative excluded from projection: yes",
-            $"SelectionRuntime.LivePrimary count: {members.Length}"
+            $"Command source count: {members.Length}"
         };
 
         KnowledgeRowSnapshot[] knowledgeRows = BuildKnowledgeSnapshots(engine, session, representative);
         string[] knowledgeLines = BuildKnowledgeSummaryLines(knowledgeRows);
-        string[] resourceLines = BuildResourceLines(engine.World, representative);
+        string[] disclosureLines = BuildDisclosureLines(engine, knowledgeRows);
         string memberHeader = members.Length == 0
             ? "No runtime members were projected."
-            : $"{members.Length} entity(s) currently projected into SelectionRuntime.LivePrimary.";
+            : $"{members.Length} entity(s) currently projected into the command source.";
         string[] memberLines =
         {
             "Each row below is a live ECS entity, not an authored string list."
@@ -514,10 +532,10 @@ internal sealed class ParticipantViewPanelController
                 ? "No map member entities available for knowledge projection."
                 : $"{knowledgeRows.Length} map member entity(s) evaluated through KnowledgeProjectionResolver.",
             KnowledgeLines: knowledgeLines,
-            ResourceHeader: resourceLines.Length == 0
-                ? "Representative has no authored resources or tags."
-                : "Representative resources live directly on the ECS entity.",
-            ResourceLines: resourceLines.Length == 0 ? new[] { "AttributeBuffer / GameplayTagContainer / TagCountContainer are empty." } : resourceLines,
+            ResourceHeader: disclosureLines.Length == 0
+                ? "No disclosed resource or tag facts."
+                : "Disclosed resource and tag facts from KnowledgeProjectionResolver.",
+            ResourceLines: disclosureLines.Length == 0 ? new[] { "No finite attribute/tag disclosure in the current knowledge projection." } : disclosureLines,
             MemberHeader: memberHeader,
             MemberLines: memberLines,
             Members: BuildMemberSnapshots(engine.World, members),
@@ -730,13 +748,6 @@ internal sealed class ParticipantViewPanelController
         return $"world ({cm.X}, {cm.Y}) cm";
     }
 
-    private static string DescribeResourceSummary(World world, Entity entity)
-    {
-        int attributeCount = CountAttributes(world, entity);
-        int gameplayTagCount = CountGameplayTags(world, entity);
-        return $"attrs {attributeCount}  |  tags {gameplayTagCount}";
-    }
-
     private static string DescribeRelationshipSummary(GameEngine engine, Entity entity)
     {
         if (engine.GetService(CoreServiceKeys.RelationshipRuntime) is not RelationshipRuntime relationships)
@@ -751,81 +762,47 @@ internal sealed class ParticipantViewPanelController
         return $"relationship links out {outgoingCount}  |  in {incomingCount}";
     }
 
-    private static string[] BuildResourceLines(World world, Entity representative)
+    private static string DescribeKnowledgeMaskSummary(GameEngine engine, Entity representative)
     {
-        var lines = new List<string>();
-        if (world.TryGet(representative, out AttributeBuffer attributes))
+        if (engine.CurrentMapSession is not MapSession session)
         {
-            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            return "knowledge masks unavailable";
+        }
+
+        KnowledgeRowSnapshot[] rows = BuildKnowledgeSnapshots(engine, session, representative);
+        int attr = 0;
+        int tags = 0;
+        for (int i = 0; i < rows.Length; i++)
+        {
+            if (rows[i].Knowledge.HasFiniteAttributes)
             {
-                if (!attributes.HasAttribute(attributeId))
-                {
-                    continue;
-                }
+                attr++;
+            }
 
-                string name = AttributeRegistry.GetName(attributeId);
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    name = $"Attribute {attributeId}";
-                }
-
-                lines.Add($"{name}: base {attributes.GetBase(attributeId):0.##}  current {attributes.GetCurrent(attributeId):0.##}");
+            if (rows[i].Knowledge.HasFiniteTags)
+            {
+                tags++;
             }
         }
 
-        if (world.TryGet(representative, out GameplayTagContainer tags))
-        {
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
-            {
-                if (!tags.HasTag(tagId))
-                {
-                    continue;
-                }
+        return $"disclosed attrs {attr}  |  disclosed tags {tags}";
+    }
 
-                string name = TagRegistry.GetName(tagId);
-                lines.Add(string.IsNullOrWhiteSpace(name) ? $"Tag {tagId}" : name);
+    private static string[] BuildDisclosureLines(GameEngine engine, KnowledgeRowSnapshot[] rows)
+    {
+        var lines = new List<string>();
+        for (int i = 0; i < rows.Length; i++)
+        {
+            ParticipantKnowledgeSnapshot knowledge = rows[i].Knowledge;
+            if (!knowledge.HasFiniteAttributes && !knowledge.HasFiniteTags)
+            {
+                continue;
             }
+
+            lines.Add($"{rows[i].Row.Label}: {DescribeFiniteDisclosure(engine, knowledge)}");
         }
 
         return lines.ToArray();
-    }
-
-    private static int CountAttributes(World world, Entity entity)
-    {
-        if (!world.TryGet(entity, out AttributeBuffer attributes))
-        {
-            return 0;
-        }
-
-        int count = 0;
-        for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
-        {
-            if (attributes.HasAttribute(attributeId))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int CountGameplayTags(World world, Entity entity)
-    {
-        if (!world.TryGet(entity, out GameplayTagContainer tags))
-        {
-            return 0;
-        }
-
-        int count = 0;
-        for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
-        {
-            if (tags.HasTag(tagId))
-            {
-                count++;
-            }
-        }
-
-        return count;
     }
 
     private static string ResolveEntityLabel(World world, Entity entity, string fallback)

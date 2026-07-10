@@ -1,39 +1,77 @@
-{
-  "Id": "camera_acceptance_stack",
-  "Tags": ["camera.acceptance", "camera.acceptance.stack"],
-  "Boards": [
-    {
-      "Name": "default",
-      "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100
-    }
-  ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim"
-  },
-  "Entities": [
-    {
-      "Template": "moba_hero",
-      "Overrides": {
-        "Name": { "Value": "CameraAcceptanceHero" },
-        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
-      }
-    },
-    {
-      "Template": "moba_dummy",
-      "Overrides": {
-        "Name": { "Value": "CameraAcceptanceDummy" },
-        "WorldPositionCm": { "Value": { "X": 4800, "Y": 2600 } }
-      }
-    },
-    {
-      "Template": "moba_dummy",
-      "Overrides": {
-        "Name": { "Value": "CameraAcceptanceAlarmDummy" },
-        "WorldPositionCm": { "Value": { "X": 6800, "Y": 3200 } }
-      }
-    }
-  ]
+﻿{
+    "Id":  "camera_acceptance_stack",
+    "Tags":  [
+                 "camera.acceptance",
+                 "camera.acceptance.stack"
+             ],
+    "Boards":  [
+                   {
+                       "Name":  "default",
+                       "SpatialType":  "Grid",
+                       "WidthInMacroTiles":  1,
+                       "HeightInMacroTiles":  1,
+                       "GridCellSizeCm":  100
+                   }
+               ],
+    "DefaultCamera":  {
+                          "VirtualCameraId":  "Camera.Acceptance.Profile.TpsAim"
+                      },
+    "Entities":  [
+                     {
+                         "Template":  "moba_hero",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraAcceptanceHero"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  1200,
+                                                                                 "Y":  800
+                                                                             }
+                                                               }
+                                       },
+                         "InstanceId":  "camera-acceptance-local-player"
+                     },
+                     {
+                         "Template":  "moba_dummy",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraAcceptanceDummy"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  4800,
+                                                                                 "Y":  2600
+                                                                             }
+                                                               }
+                                       }
+                     },
+                     {
+                         "Template":  "moba_dummy",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraAcceptanceAlarmDummy"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  6800,
+                                                                                 "Y":  3200
+                                                                             }
+                                                               }
+                                       }
+                     }
+                 ],
+    "Teams":  [
+                  {
+                      "TeamId":  1,
+                      "RepresentativeInstanceId":  "camera-acceptance-local-player"
+                  }
+              ],
+    "Players":  [
+                    {
+                        "PlayerId":  1,
+                        "TeamId":  1,
+                        "RepresentativeInstanceId":  "camera-acceptance-local-player"
+                    }
+                ]
 }

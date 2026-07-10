@@ -34,7 +34,6 @@ namespace Ludots.Core.Engine.TimeFlow
         {
             EnsureDomain(TimeFlowDomainIds.Simulation, parentName: null, baseScalePermille: DefaultScalePermille);
             EnsureDomain(TimeFlowDomainIds.Gas, TimeFlowDomainIds.Simulation, DefaultScalePermille);
-            EnsureDomain(TimeFlowDomainIds.Physics2D, TimeFlowDomainIds.Simulation, DefaultScalePermille);
         }
 
         public int EnsureDomain(string name, string? parentName = null, int baseScalePermille = DefaultScalePermille)
@@ -44,11 +43,17 @@ namespace Ludots.Core.Engine.TimeFlow
                 throw new ArgumentException("Domain name must not be empty.", nameof(name));
             }
 
+            ValidateRequestedScalePermille(baseScalePermille, "Time domain baseScalePermille");
+
             bool hasExplicitParent = !string.IsNullOrWhiteSpace(parentName);
             int parentId = 0;
             if (hasExplicitParent)
             {
-                parentId = EnsureDomain(parentName!, parentName: null, baseScalePermille: DefaultScalePermille);
+                if (!_domainIds.TryGetId(parentName!, out parentId))
+                {
+                    throw new InvalidOperationException(
+                        $"Time domain parent '{parentName}' must be registered before '{name}'.");
+                }
             }
 
             if (_domainIds.TryGetId(name, out int existingId))
@@ -58,6 +63,12 @@ namespace Ludots.Core.Engine.TimeFlow
                 {
                     throw new InvalidOperationException(
                         $"Time domain '{name}' is already registered under parent '{GetDomainName(existing.ParentDomainId)}'.");
+                }
+
+                if (existing.BaseScalePermille != baseScalePermille)
+                {
+                    throw new InvalidOperationException(
+                        $"Time domain '{name}' is already registered with baseScalePermille {existing.BaseScalePermille}.");
                 }
 
                 return existingId;
@@ -73,8 +84,8 @@ namespace Ludots.Core.Engine.TimeFlow
             {
                 Name = name,
                 ParentDomainId = parentId,
-                BaseScalePermille = ClampScalePermille(baseScalePermille),
-                EffectiveScalePermille = ClampScalePermille(baseScalePermille),
+                BaseScalePermille = baseScalePermille,
+                EffectiveScalePermille = baseScalePermille,
                 Paused = false,
                 ModifierCount = 0
             };
@@ -95,13 +106,21 @@ namespace Ludots.Core.Engine.TimeFlow
 
         public TimeFlowToken AcquireScaleToken(string domainName, int scalePermille, string owner, string reason = "")
         {
-            int domainId = EnsureDomain(domainName);
+            if (scalePermille <= 0)
+            {
+                throw new InvalidOperationException("TimeFlow scale token requires scalePermille > 0. Use a pause token to pause a domain.");
+            }
+
+            ValidateRequestedScalePermille(scalePermille, "TimeFlow scale token scalePermille");
+            ValidateOwner(owner);
+
+            int domainId = RequireDomain(domainName);
             int tokenId = _tokens.Count;
             _tokens.Add(new TokenState
             {
                 DomainId = domainId,
                 Kind = TokenKind.Scale,
-                ScalePermille = ClampScalePermille(scalePermille),
+                ScalePermille = scalePermille,
                 Owner = owner ?? string.Empty,
                 Reason = reason ?? string.Empty,
                 Active = true
@@ -113,7 +132,9 @@ namespace Ludots.Core.Engine.TimeFlow
 
         public TimeFlowToken AcquirePauseToken(string domainName, string owner, string reason = "")
         {
-            int domainId = EnsureDomain(domainName);
+            ValidateOwner(owner);
+
+            int domainId = RequireDomain(domainName);
             int tokenId = _tokens.Count;
             _tokens.Add(new TokenState
             {
@@ -133,7 +154,7 @@ namespace Ludots.Core.Engine.TimeFlow
         {
             if (!TryGetActiveToken(token, out int tokenIndex))
             {
-                return;
+                throw new InvalidOperationException($"TimeFlow token '{token.Value}' is not active.");
             }
 
             TokenState state = _tokens[tokenIndex];
@@ -143,13 +164,31 @@ namespace Ludots.Core.Engine.TimeFlow
 
         public int GetEffectiveScalePermille(string domainName)
         {
-            int domainId = EnsureDomain(domainName);
+            int domainId = RequireDomain(domainName);
             return _domains[domainId].EffectiveScalePermille;
+        }
+
+        public int GetScalePermilleRelativeToParent(string domainName)
+        {
+            int domainId = RequireDomain(domainName);
+            DomainState domain = _domains[domainId];
+            if (domain.ParentDomainId <= 0)
+            {
+                return domain.EffectiveScalePermille;
+            }
+
+            DomainState parent = _domains[domain.ParentDomainId];
+            if (parent.Paused || parent.EffectiveScalePermille <= 0 || domain.Paused)
+            {
+                return 0;
+            }
+
+            return domain.LocalScalePermille;
         }
 
         public bool IsPaused(string domainName)
         {
-            int domainId = EnsureDomain(domainName);
+            int domainId = RequireDomain(domainName);
             return _domains[domainId].Paused;
         }
 
@@ -239,6 +278,42 @@ namespace Ludots.Core.Engine.TimeFlow
             return _tokens[tokenIndex].Active;
         }
 
+        private int RequireDomain(string domainName)
+        {
+            if (string.IsNullOrWhiteSpace(domainName))
+            {
+                throw new ArgumentException("Domain name must not be empty.", nameof(domainName));
+            }
+
+            if (!_domainIds.TryGetId(domainName, out int domainId))
+            {
+                throw new InvalidOperationException($"Time domain '{domainName}' is not registered.");
+            }
+
+            return domainId;
+        }
+
+        private static void ValidateOwner(string owner)
+        {
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                throw new ArgumentException("TimeFlow token owner must not be empty.", nameof(owner));
+            }
+        }
+
+        private static void ValidateRequestedScalePermille(int scalePermille, string label)
+        {
+            if (scalePermille <= 0)
+            {
+                throw new InvalidOperationException($"{label} must be > 0. Use a pause token to pause a domain.");
+            }
+
+            if (scalePermille > MaxScalePermille)
+            {
+                throw new InvalidOperationException($"{label} must be <= {MaxScalePermille}.");
+            }
+        }
+
         private void RecalculateAllDomains()
         {
             for (int domainId = 1; domainId < _domains.Count; domainId++)
@@ -273,6 +348,10 @@ namespace Ludots.Core.Engine.TimeFlow
                 localScalePermille = ClampScalePermille(localScalePermille);
             }
 
+            domain.LocalScalePermille = localPaused
+                ? 0
+                : ClampScalePermille(localScalePermille);
+
             if (domain.ParentDomainId > 0)
             {
                 DomainState parent = _domains[domain.ParentDomainId];
@@ -287,7 +366,7 @@ namespace Ludots.Core.Engine.TimeFlow
                 : ClampScalePermille(localScalePermille);
         }
 
-        private static int ClampScalePermille(long scalePermille)
+        public static int ClampScalePermille(long scalePermille)
         {
             if (scalePermille <= 0)
             {
@@ -313,6 +392,7 @@ namespace Ludots.Core.Engine.TimeFlow
             public string? Name;
             public int ParentDomainId;
             public int BaseScalePermille;
+            public int LocalScalePermille;
             public int EffectiveScalePermille;
             public bool Paused;
             public int ModifierCount;

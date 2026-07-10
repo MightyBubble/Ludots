@@ -11,8 +11,8 @@ using GenreInfoShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -275,7 +275,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
 
     private static string ReadSelectedEntityName(GameEngine engine)
     {
-        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+        return Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                engine.World.TryGet(selected, out Name name)
             ? name.Value
             : string.Empty;

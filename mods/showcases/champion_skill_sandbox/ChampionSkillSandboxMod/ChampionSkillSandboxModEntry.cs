@@ -17,8 +17,7 @@ namespace ChampionSkillSandboxMod
             var runtime = new ChampionSkillSandboxRuntime();
             var toolbarProvider = new ChampionSkillCastModeToolbarProvider();
 
-            context.OnEvent(GameEvents.GameStart, new InstallChampionSkillSandboxOnGameStartTrigger(context, runtime, toolbarProvider).ExecuteAsync);
-            context.OnEvent(GameEvents.GameStart, ctx =>
+            Task RegisterViewModesAsync(ScriptContext ctx)
             {
                 var engine = ctx.GetEngine();
                 if (engine == null)
@@ -33,7 +32,12 @@ namespace ChampionSkillSandboxMod
                     sourceModId: context.ModId,
                     activateWhenUnset: false);
                 return Task.CompletedTask;
-            });
+            }
+
+            context.OnEvent(GameEvents.GameStart, new InstallChampionSkillSandboxOnGameStartTrigger(context, runtime, toolbarProvider).ExecuteAsync);
+            context.OnEvent(GameEvents.GameStart, RegisterViewModesAsync);
+            context.OnEvent(GameEvents.MapLoaded, RegisterViewModesAsync);
+            context.OnEvent(GameEvents.MapResumed, RegisterViewModesAsync);
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);

@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
@@ -22,6 +24,7 @@ namespace Ludots.Tests.Presentation
         private const string HealthRatioParamKey = "massNavigation.agent.health.ratio";
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
+        private const string LargeWorldCameraId = "MassNavigation.Camera.LargeWorldHeightmap";
 
         [Test]
         public void AgentPerformers_UseMassNavigationOwnedGpuSkinnedAsset()
@@ -117,17 +120,17 @@ namespace Ludots.Tests.Presentation
             Assert.That(presentation.ContainsKey("selectionVisibilityParamKey"), Is.False,
                 "Selection visibility must not keep a hidden mesh inside every agent root performer.");
             Assert.That(presentation.ContainsKey("selectionMarkerLightPerformerId"), Is.False,
-                "Selection marker performer ownership belongs to performer rules, not MassNavigation presentation config fields.");
+                "Command marker performer ownership belongs to performer rules, not MassNavigation presentation config fields.");
             Assert.That(presentation.ContainsKey("selectionMarkerHeavyPerformerId"), Is.False,
-                "Selection marker performer ownership belongs to performer rules, not MassNavigation presentation config fields.");
+                "Command marker performer ownership belongs to performer rules, not MassNavigation presentation config fields.");
 
-            const string lightMarkerId = "mass_navigation_agent_selection_marker_light";
-            const string heavyMarkerId = "mass_navigation_agent_selection_marker_heavy";
+            const string lightMarkerId = "mass_navigation_agent_command_marker_light";
+            const string heavyMarkerId = "mass_navigation_agent_command_marker_heavy";
 
             JsonObject lightAgent = FindObjectById(performers, "mass_navigation_agent_light");
             JsonObject heavyAgent = FindObjectById(performers, "mass_navigation_agent_heavy");
-            AssertPerformerDoesNotBindMeshAsset(lightAgent, "mass_navigation_agent_light", "mass_navigation.selection.marker");
-            AssertPerformerDoesNotBindMeshAsset(heavyAgent, "mass_navigation_agent_heavy", "mass_navigation.selection.marker");
+            AssertPerformerDoesNotBindMeshAsset(lightAgent, "mass_navigation_agent_light", "mass_navigation.command.marker");
+            AssertPerformerDoesNotBindMeshAsset(heavyAgent, "mass_navigation_agent_heavy", "mass_navigation.command.marker");
             AssertSelectionMarkerLifecycleRules(lightAgent, "mass_navigation_agent_light", lightMarkerId);
             AssertSelectionMarkerLifecycleRules(heavyAgent, "mass_navigation_agent_heavy", heavyMarkerId);
             AssertSelectionMarkerDefinition(
@@ -150,7 +153,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPerformerSyncSystem.cs")),
                 Is.False,
-                "MassNavigation must not own selection marker lifecycle in a private presentation sync system.");
+                "MassNavigation must not own command marker lifecycle in a private presentation sync system.");
         }
 
         [Test]
@@ -251,8 +254,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("mass_navigation_local_player must author components.");
             Assert.That(localPlayerComponents.ContainsKey("PlayerOwner"), Is.True,
                 "MassNavigation must not create a hidden PlayerOwner at runtime.");
-            Assert.That(localPlayerComponents.ContainsKey("SelectionDragState"), Is.True,
-                "MassNavigation local selection owner must author SelectionDragState via the formal component registry.");
+            Assert.That(localPlayerComponents.ContainsKey("CommandSourceDragState"), Is.True,
+                "MassNavigation local command-source owner must author CommandSourceDragState via the formal component registry.");
 
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonArray entities = map["Entities"]?.AsArray()
@@ -273,6 +276,38 @@ namespace Ludots.Tests.Presentation
                     ?? throw new InvalidOperationException("MassNavigation blocker map entity must author component overrides.");
                 AssertObstacleAuthoring(overrides, entity["InstanceId"]?.GetValue<string>() ?? "mass_navigation_blocker entity");
             }
+        }
+
+        [Test]
+        public void ScenarioRuntimeCapacity_CoversAuthoredScenarioCommandActors()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject scenario = config["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario missing.");
+            JsonArray teams = scenario["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams missing.");
+            int authoredAgentCount = checked(teams.Count * (scenario["agentsPerTeam"]?.GetValue<int>()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam missing.")));
+            JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime missing.");
+            JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
+
+            Assert.That(
+                scenarioRuntime["initialCommandActorSnapshotCapacity"]?.GetValue<int>(),
+                Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                scenarioRuntime["initialCommandActorScratchCapacity"]?.GetValue<int>(),
+                Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                runtimeCapacity["commandActorScratchCapacity"]?.GetValue<int>(),
+                Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
+                Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                runtimeCapacity["orderIngestionMemberCapacity"]?.GetValue<int>(),
+                Is.EqualTo(authoredAgentCount));
         }
 
         [Test]
@@ -384,7 +419,7 @@ namespace Ludots.Tests.Presentation
                 Does.Contain("attackTarget"));
 
             JsonObject game = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
-            string[] previewOrderKeys = game["selection"]?["movePathPreviewOrderTypeKeys"]?.AsArray()
+            string[] previewOrderKeys = game["commandSource"]?["movePathPreviewOrderTypeKeys"]?.AsArray()
                 ?.Select(node => node?.GetValue<string>() ?? string.Empty)
                 .ToArray()
                 ?? throw new InvalidOperationException("MassNavigation game.json must author move path preview keys.");
@@ -394,7 +429,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPerformerSyncSystem.cs")),
                 Is.False,
-                "Selection marker lifecycle is now generic selection presentation events plus performer rules.");
+                "Command marker lifecycle is now generic entity-collection presentation events plus performer rules.");
             Assert.That(File.Exists(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs")), Is.False);
             Assert.That(File.Exists(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "MassNavigationSelectionPerformerSyncSystem.cs")), Is.False);
         }
@@ -525,6 +560,49 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+        }
+
+        [Test]
+        public void LargeWorldMap_UsesVisualHeightmapCameraProfile()
+        {
+            string modRoot = MassNavigationModRoot();
+            JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
+            JsonObject defaultCamera = map["DefaultCamera"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigation map must declare DefaultCamera.");
+
+            Assert.That(RequireString(defaultCamera, "VirtualCameraId"), Is.EqualTo(LargeWorldCameraId));
+            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(0f));
+            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(0f));
+
+            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "Configs", "config_catalog.json"));
+            Assert.That(
+                catalog.Select(node => node?.AsObject()).Any(entry =>
+                    string.Equals(entry?["Path"]?.GetValue<string>(), "Camera/virtual_cameras.json", StringComparison.Ordinal) &&
+                    string.Equals(entry?["Policy"]?.GetValue<string>(), "ArrayById", StringComparison.Ordinal) &&
+                    string.Equals(entry?["IdField"]?.GetValue<string>(), "id", StringComparison.Ordinal)),
+                Is.True,
+                "MassNavigation camera profiles must be registered through ConfigPipeline, not by host-loop defaults.");
+
+            JsonArray cameras = ReadArray(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json"));
+            JsonObject camera = FindObjectById(cameras, LargeWorldCameraId);
+            Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("VisualHeightmap"));
+            Assert.That(camera["targetHeightLayerIndex"]?.GetValue<int>(), Is.EqualTo(0));
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("MassNavigationMod", modRoot);
+            var modLoader = new Ludots.Core.Modding.ModLoader(
+                vfs,
+                new Ludots.Core.Scripting.FunctionRegistry(),
+                new Ludots.Core.Scripting.TriggerManager());
+            modLoader.LoadedModIds.Add("MassNavigationMod");
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            ConfigCatalog loadedCatalog = ConfigCatalogLoader.Load(pipeline);
+            var registry = new VirtualCameraRegistry();
+            new VirtualCameraDefinitionLoader(pipeline, registry).Load(loadedCatalog, new ConfigConflictReport());
+
+            Assert.That(registry.TryGet(LargeWorldCameraId, out VirtualCameraDefinition? definition), Is.True);
+            Assert.That(definition!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(definition.TargetHeightLayerIndex, Is.EqualTo(0));
         }
 
         [Test]
@@ -730,47 +808,47 @@ namespace Ludots.Tests.Presentation
             float expectedOffsetY)
         {
             JsonArray behaviors = definition["behaviors"]?.AsArray()
-                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare behaviors.");
+                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must declare behaviors.");
 
             JsonObject assetBinding = behaviors
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
-                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare an AssetBinding behavior.");
+                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must declare an AssetBinding behavior.");
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
-            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.selection.marker"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.command.marker"));
             Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
             Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
             Assert.That(assetBinding.ContainsKey("localOffset"), Is.False,
-                $"Selection marker '{definitionId}' position must come from parent Attachment, not duplicated mesh localOffset.");
+                $"Command marker '{definitionId}' position must come from parent Attachment, not duplicated mesh localOffset.");
             Assert.That(assetBinding.ContainsKey("visibilityParamKey"), Is.False,
-                $"Selection marker '{definitionId}' visibility is controlled by scoped create/destroy, not a root visibility param.");
-            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScaleX, expectedScaleY, expectedScaleZ, $"Selection marker '{definitionId}' scale");
+                $"Command marker '{definitionId}' visibility is controlled by scoped create/destroy, not a root visibility param.");
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScaleX, expectedScaleY, expectedScaleZ, $"Command marker '{definitionId}' scale");
 
             JsonObject attachment = behaviors
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "Attachment")?["attachment"]?.AsObject()
-                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must follow the agent root through an Attachment behavior.");
+                ?? throw new InvalidOperationException($"Command marker '{definitionId}' must follow the agent root through an Attachment behavior.");
             Assert.That(attachment["target"]?.GetValue<string>(), Is.EqualTo("Parent"));
-            AssertVector3(attachment["offset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Selection marker '{definitionId}' attachment offset");
+            AssertVector3(attachment["offset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Command marker '{definitionId}' attachment offset");
             Assert.That(attachment["inheritScale"]?.GetValue<bool>(), Is.False);
         }
 
         private static void AssertSelectionMarkerLifecycleRules(JsonObject definition, string definitionId, string markerDefinitionId)
         {
             JsonArray rules = definition["rules"]?.AsArray()
-                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare selection marker lifecycle rules.");
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare command marker lifecycle rules.");
 
             AssertSelectionMarkerLifecycleRule(
                 rules,
                 definitionId,
                 markerDefinitionId,
-                eventKind: "SelectionMemberAdded",
+                eventKind: "EntityCollectionMemberAdded",
                 commandKind: "CreatePerformer");
             AssertSelectionMarkerLifecycleRule(
                 rules,
                 definitionId,
                 markerDefinitionId,
-                eventKind: "SelectionMemberRemoved",
+                eventKind: "EntityCollectionMemberRemoved",
                 commandKind: "DestroyScopedPerformer");
         }
 
@@ -788,16 +866,16 @@ namespace Ludots.Tests.Presentation
                     JsonObject? evt = rule?["event"]?.AsObject();
                     JsonObject? command = rule?["command"]?.AsObject();
                     return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
-                           string.Equals(evt?["key"]?.GetValue<string>(), SelectionSetKeys.LivePrimary, StringComparison.Ordinal) &&
+                           string.Equals(evt?["key"]?.GetValue<string>(), EntityCollectionKeys.CommandSource, StringComparison.Ordinal) &&
                            string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
                            string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
                 });
 
             Assert.That(match, Is.Not.Null,
-                $"Performer '{definitionId}' must map {eventKind} for {SelectionSetKeys.LivePrimary} to {commandKind} '{markerDefinitionId}'.");
+                $"Performer '{definitionId}' must map {eventKind} for {EntityCollectionKeys.CommandSource} to {commandKind} '{markerDefinitionId}'.");
             JsonObject commandObj = match!["command"]!.AsObject();
             Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
-                $"Performer '{definitionId}' must scope selection marker lifecycle by source stable id.");
+                $"Performer '{definitionId}' must scope command marker lifecycle by source stable id.");
         }
 
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)

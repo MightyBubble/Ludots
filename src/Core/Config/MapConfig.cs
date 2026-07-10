@@ -15,6 +15,15 @@ namespace Ludots.Core.Config
         public string ParentId { get; set; }
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string VisualHeightmapAsset { get; set; }
+
+        /// <summary>Path to the cooked structure collision asset for building surfaces, blockers, portals, and grounding.</summary>
+        public string StructureCollisionAsset { get; set; } = string.Empty;
+
+        /// <summary>When true, missing <see cref="StructureCollisionAsset"/> is a map-load error.</summary>
+        public bool StructureAwareGrounding { get; set; }
+
+        /// <summary>When true, missing <see cref="StructureCollisionAsset"/> is a map-load error.</summary>
+        public bool StructureAwareNavigation { get; set; }
         public List<string> Tags { get; set; } = new List<string>();
         public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
@@ -88,7 +97,6 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string RepresentativeInstanceId { get; set; }
-        public bool IsLocal { get; set; }
     }
 
     public class ParticipantRelationshipConfig
@@ -120,6 +128,8 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string TypeId { get; set; } = string.Empty;
+        /// <summary>Optional stance name for the playerRep→teamRep edge; empty means no stance is declared.</summary>
+        public string Attitude { get; set; } = string.Empty;
         public bool Symmetric { get; set; }
     }
 

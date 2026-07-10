@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "SelfDestruct"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 AbilityExecSpec:
@@ -34,7 +34,7 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | AbilityExecSpec | ✅ 已有 | EffectSignal item |
 | Search preset | ✅ 已有 | SpatialQuery + FanOut |
 | Attribute system | ✅ 已有 | 修改自身生命值 |

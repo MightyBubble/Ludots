@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -80,7 +79,7 @@ namespace Ludots.Core.Commands
         {
             if (string.IsNullOrWhiteSpace(contextKey))
             {
-                return ResolveViewedPrimary(context);
+                return Entity.Null;
             }
 
             if (string.Equals(contextKey, CoreServiceKeys.LocalPlayerEntity.Name, StringComparison.Ordinal))
@@ -89,25 +88,6 @@ namespace Ludots.Core.Commands
             }
 
             return context.Get<Entity>(contextKey);
-        }
-
-        private static Entity ResolveViewedPrimary(ScriptContext context)
-        {
-            World world = context.Get(CoreServiceKeys.World);
-            SelectionRuntime? selection = context.Get(CoreServiceKeys.SelectionRuntime);
-            var globals = context.GetEngine()?.GlobalContext;
-            if (world == null || selection == null)
-            {
-                return Entity.Null;
-            }
-
-            if (globals != null &&
-                SelectionViewRuntime.TryGetViewedPrimary(world, globals, selection, out Entity primary))
-            {
-                return primary;
-            }
-
-            return Entity.Null;
         }
     }
 

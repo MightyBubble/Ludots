@@ -1,5 +1,7 @@
 using System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 
@@ -49,6 +51,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SnapToNearestInCollection:
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.ApplyEffectTemplate:
                     case GraphNodeOp.FanOutApplyEffect:
                     case GraphNodeOp.RemoveEffectTemplate:
@@ -71,6 +76,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadConfigInt:
                     case GraphNodeOp.LoadConfigEffectId:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.InvokeBuiltin:
+                        ins.Imm = (int)GasEnumParser.ParseBuiltinHandlerId(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.RelationshipSetMetric:
                     case GraphNodeOp.RelationshipAddMetric:
@@ -132,6 +140,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         else if (ins.Dst != byte.MaxValue)
                         {
                             ins.Dst = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        }
+                        break;
+                    case GraphNodeOp.RelationshipHasLink:
+                        if (ins.Flags != byte.MaxValue)
+                        {
+                            ins.Flags = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
                         }
                         break;
                     case GraphNodeOp.RelationshipEnsureLink:

@@ -29,6 +29,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "Relation", EffectPresetType.Relation },
             { "Exchange", EffectPresetType.Exchange },
             { "CompleteProgression", EffectPresetType.CompleteProgression },
+            { "SubmitOrderFromBlackboard", EffectPresetType.SubmitOrderFromBlackboard },
+            { "DeployConsumeSource", EffectPresetType.DeployConsumeSource },
+            { "RevealArea", EffectPresetType.RevealArea },
         };
 
         /// <summary>
@@ -181,8 +184,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateUnit", BuiltinHandlerId.CreateUnit },
             { "ApplyDisplacement", BuiltinHandlerId.ApplyDisplacement },
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
+            { "RevealArea", BuiltinHandlerId.RevealArea },
+            { "DecayRevealArea", BuiltinHandlerId.DecayRevealArea },
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
+            { "SubmitOrderFromBlackboard", BuiltinHandlerId.SubmitOrderFromBlackboard },
+            { "MaterializeTemplate", BuiltinHandlerId.MaterializeTemplate },
+            { "CopyIdentityComponents", BuiltinHandlerId.CopyIdentityComponents },
+            { "CopyAttributeSlice", BuiltinHandlerId.CopyAttributeSlice },
+            { "ClearActiveEffects", BuiltinHandlerId.ClearActiveEffects },
+            { "TransferStableId", BuiltinHandlerId.TransferStableId },
+            { "ConsumeEntity", BuiltinHandlerId.ConsumeEntity },
         };
 
         /// <summary>
@@ -217,6 +229,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ProjectileParams", ComponentFlags.ProjectileParams },
             { "UnitCreationParams", ComponentFlags.UnitCreationParams },
             { "RelationParams", ComponentFlags.RelationParams },
+            { "RevealAreaParams", ComponentFlags.RevealAreaParams },
             { "PhaseGraphBindings", ComponentFlags.PhaseGraphBindings },
             { "PhaseListenerSetup", ComponentFlags.PhaseListenerSetup },
         };

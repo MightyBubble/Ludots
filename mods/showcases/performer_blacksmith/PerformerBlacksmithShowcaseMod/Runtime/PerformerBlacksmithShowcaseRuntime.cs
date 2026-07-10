@@ -1537,8 +1537,19 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             {
                 ApplyScatterLayout(requested);
             }
+            else if (IsDedicatedScatterBenchmarkMode(engine) && _scatterTargetTotal > 1)
+            {
+                ApplyScatterLayout(_scatterTargetTotal);
+            }
 
             _autoScatterApplied = true;
+        }
+
+        private static bool IsDedicatedScatterBenchmarkMode(GameEngine engine)
+        {
+            return IsScatterBenchmarkMode(engine) ||
+                   IsScatterHudBarBenchmarkMode(engine) ||
+                   IsScatterHudTextBenchmarkMode(engine);
         }
 
         private void ResetControlState(GameEngine engine)

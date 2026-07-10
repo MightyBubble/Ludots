@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 Narrative — Ludots Wiki</title>
+    <base href="/Ludots/">
+<style>:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+.container { display: flex; min-height: 100vh; }
+.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
+.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
+.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
+.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.sidebar .group { margin-bottom: 18px; }
+.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
+.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
+.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
+.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
+.main h4 { font-size: 16px; margin-top: 24px; }
+.main p { margin: 12px 0; }
+.main a { color: var(--accent); text-decoration: none; }
+.main a:hover { text-decoration: underline; }
+.main ul, .main ol { margin: 12px 0; padding-left: 24px; }
+.main li { margin: 4px 0; }
+.main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.main th, .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.main th { background: var(--accent-light); font-weight: 600; }
+.main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
+.main pre code { padding: 0; background: transparent; }
+.main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
+.main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }
+.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
+.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div class="container">
+<nav class="sidebar" id="nav"></nav>
+<main class="main" id="content"></main>
+</div>
+<script>
+const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
+const currentPage = "prd/06-narrative.html";
+const mdContent = "# Narrative System PRD\n\n## 1. 概述\n\nNarrative System 负责把任务、对话、过场、叙事变量和事件回调组织成玩家可感知的剧情流程。Quest 长期进度已经拆入 Core `QuestRuntimeService`，NarrativeDirector 不再持有第二份任务状态，只负责编排对话、镜头、变量、动作派发和事件转发。\n\nQuest instance 是 ECS entity：通过 `(ScopeHost, DefinitionId)` 索引解析，携带 `QuestInstanceCm`、`AttributeBuffer`、`GameplayTagContainer`、`ActiveEffectContainer`，因此任务本身可以被现有 GAS buff、tag、effect 命中。对话和过场仍属于 Narrative 呈现与交互层。\n\n## 2. 结构\n\n| 模块 | 职责 |\n|------|------|\n| `src/Core/Gameplay/Quests` | Quest definition registry、config loader、runtime service、quest entity state。 |\n| `src/Core/Gameplay/Narrative` | 叙事变量、dialogue session、cinematic session、action/condition 编排、事件回调。 |\n| `CoreSaveParticipants` | Quest signals 存入 `quests` domain；Quest entity state 随 ECS world snapshot 保存。 |\n| `NarrativeFrontend` | 只读展示当前任务、对话、过场状态，不拥有业务状态。 |\n\n配置路径：\n\n- Quest：`Quests/quests.json`\n- Narrative variables/dialogues/cinematics：`Narrative/*.json`\n\n## 3. 详情\n\nQuest runtime 命令入口包括 `StartQuest`、`AdvanceQuestStage`、`CompleteQuest`、`FailQuest`、`EmitSignal`。命令遇到未注册 quest id、未注册 stage id、非 live scope host 时必须 fail-fast；查询类 `Try*` API 保持布尔返回。\n\nNarrativeDirector 只通过 QuestRuntimeService 访问任务状态：\n\n- `StartQuest` / `AdvanceQuestStage` 等动作委托给 Core Quest。\n- `QuestState` 条件通过 Core Quest 查询。\n- signal 先发 narrative event，再交给 Quest runtime 统计并推进 stage。\n- UI view 从 runtime view 组装，不保存第二份任务状态。\n\n存档规则：\n\n- Quest entity state 存在 ECS world snapshot。\n- signal counts 存在 `quests` save participant。\n- `QuestInstanceCm.ScopeHost` 必须参与 save reference validation 和 WorldId normalization。\n- restore 后重建 quest index，scoped quest 必须能通过 restored scope host 解析。\n\n## 4. 场景\n\n| 场景 | 玩家看到什么 | 系统如何支持 |\n|------|--------------|--------------|\n| 接任务 | 任务出现在追踪面板，目标进入第一阶段。 | Narrative action 调用 Core Quest runtime 创建 quest entity。 |\n| 完成目标 | 击败敌人或交互后，目标自动推进。 | Narrative signal 被 Quest runtime 统计，满足 stage required signals 后推进。 |\n| 任务被 buff | 任务压力、紧迫度、计时等属性被效果改变。 | Quest entity 直接作为 GAS target，属性由 AttributeBuffer 承载。 |\n| 局部任务 | 某个 NPC、据点或地图对象拥有自己的任务实例。 | ScopeHost 参与 quest index 和 save/load。 |\n| 读档 | 任务面板、目标、任务属性和信号计数恢复。 | ECS snapshot + quest participant restore 后重建 index。 |\n\n## 5. 边界\n\n- Quest 负责长期目标、阶段、信号条件、任务 entity 和 GAS 承载。\n- Dialogue 负责局部文本、角色表达、选项和分支操作。\n- Cinematic 负责镜头化呈现和步进。\n- Narrative variables 负责剧情变量，不替代 Quest state。\n- UI、showcase mod、trigger handler 禁止持有第二份任务状态。\n- 不新增 parallel runtime，不把 Quest 重新塞回 Narrative definition registry。\n\n## 6. UAT\n\n```gherkin\nFeature: Quest progress is owned by Core while Narrative presents it\n\n  Scenario: Player accepts a quest from dialogue\n    Given the player is talking to an NPC with an available quest\n    When the player chooses the accept option\n    Then the quest appears in the objective panel\n    And the first objective text is shown\n    And the quest is backed by a live ECS entity\n\n  Scenario: Player completes a signal-gated objective\n    Given the player has an active quest objective requiring a beast defeat\n    When the player defeats the beast\n    Then the objective advances or completes\n    And the dialogue/cinematic layer does not store a duplicate quest state\n\n  Scenario: Quest receives a gameplay effect\n    Given a quest has a tracked urgency attribute\n    When a gameplay effect targets the quest entity\n    Then the quest urgency value changes through the GAS pipeline\n    And the effect is visible through the quest entity\u0027s active effects\n\n  Scenario: Scoped quest survives save and load\n    Given a quest is scoped to a specific live host entity\n    When the player saves and reloads the game\n    Then the quest can still be resolved through the restored host entity\n    And the quest stage and signals remain correct\n\n  Scenario: Invalid quest content fails fast\n    Given a narrative action references a quest or stage id that is not registered\n    When the action is executed\n    Then the game reports a content error immediately\n    And the action is not silently ignored\n```";
+
+function buildNav() {
+  let html = '';
+  const pathParts = window.location.pathname.split('/');
+  // 提取项目根路径（如 /Ludots 或 /）
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
+  for (const [group, items] of Object.entries(navData)) {
+    if (items.length === 0) continue;
+    html += '<div class="group"><div class="group-title">' + group + '</div>';
+    for (const [href, title] of items) {
+      const cls = href === currentPage ? 'active' : '';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('nav').innerHTML = html;
+}
+
+function render() {
+  buildNav();
+  document.getElementById('content').innerHTML = marked.parse(mdContent);
+}
+render();
+</script>
+</body>
+</html>

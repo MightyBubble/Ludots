@@ -43,13 +43,7 @@ namespace Ludots.Core.Scripting
         public const string TagOps = "TagOps";
         public const string InputRequestQueue = "InputRequestQueue";
         public const string InputResponseBuffer = "InputResponseBuffer";
-        public const string SelectionRequestQueue = "SelectionRequestQueue";
-        public const string SelectionResponseBuffer = "SelectionResponseBuffer";
         public const string RuntimeEntitySpawnQueue = "RuntimeEntitySpawnQueue";
-        public const string SelectionRuleRegistry = "SelectionRuleRegistry";
-        public const string SelectionRuntime = "SelectionRuntime";
-        public const string SelectionConfig = "SelectionConfig";
-        public const string SelectionSetKeyRegistry = "SelectionSetKeyRegistry";
         public const string InteractionActionBindings = "InteractionActionBindings";
         public const string ActiveInputOrderMapping = "ActiveInputOrderMapping";
         public const string OrderQueue = "OrderQueue";
@@ -93,10 +87,7 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
-        public const string HoveredEntity = "HoveredEntity";
         public const string TabTargetEntity = "TabTargetEntity";
-        public const string SelectionViewViewerEntity = "SelectionViewViewerEntity";
-        public const string SelectionViewKey = "SelectionViewKey";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";

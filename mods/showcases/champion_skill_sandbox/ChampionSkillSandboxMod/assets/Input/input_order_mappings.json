@@ -6,8 +6,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 0 },
-      "requireSelection": false,
-      "selectionType": "Position",
+      "requireTarget": false,
+      "targetType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -16,8 +16,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 1 },
-      "requireSelection": false,
-      "selectionType": "Position",
+      "requireTarget": false,
+      "targetType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -26,8 +26,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 2 },
-      "requireSelection": false,
-      "selectionType": "Position",
+      "requireTarget": false,
+      "targetType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -36,8 +36,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 3 },
-      "requireSelection": false,
-      "selectionType": "Direction",
+      "requireTarget": false,
+      "targetType": "Direction",
       "cursorTargetPolicy": "NearestEnemyInRange",
       "cursorTargetRangeCm": 320,
       "isSkillMapping": true,
@@ -45,28 +45,31 @@
     },
     {
       "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
       "argsTemplate": {},
-      "requireSelection": true,
-      "selectionType": "Position",
+      "requireTarget": true,
+      "targetType": "Position",
       "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier"
     },
     {
       "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "argsTemplate": {},
-      "requireSelection": false,
-      "selectionType": "None",
+      "requireTarget": false,
+      "targetType": "None",
       "isSkillMapping": false,
       "modifierBehavior": "IgnoreModifier"
     }
   ],
   "groupMoveFormation": {
     "mode": "Grid",
-    "spacingCm": 140
+    "spacingCm": 140,
+    "orderTypeKeys": [ "moveTo" ]
   },
   "userOverrides": {
     "enabled": true,

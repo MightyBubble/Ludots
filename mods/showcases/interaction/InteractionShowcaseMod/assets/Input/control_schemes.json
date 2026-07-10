@@ -1,0 +1,30 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": [],
+      "defaults": {
+        "commandIntentId": "intent.command.default",
+        "castDispatchProfileId": "dispatch.all_together"
+      }
+    },
+    {
+      "id": "scheme.wasd_move",
+      "inputContexts": [],
+      "defaults": {
+        "commandIntentId": "intent.command.default",
+        "castDispatchProfileId": "dispatch.all_together"
+      },
+      "axisMove": {
+        "actionId": "Move",
+        "orderTypeKey": "moveTo",
+        "throttleTicks": 6,
+        "stepDistanceCm": 400
+      }
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.default",
+    "scheme.wasd_move"
+  ]
+}

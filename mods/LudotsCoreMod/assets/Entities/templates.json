@@ -2,7 +2,7 @@
   {
     "id": "orc_grunt",
     "components": {
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "Health": {
         "Current": 100,
         "Max": 100
@@ -48,7 +48,7 @@
       "Team": {
         "Id": 1
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -57,7 +57,8 @@
       },
       "AttributeBuffer": {
         "base": {
-          "Health": 100
+          "Health": 100,
+          "MoveSpeed": 600
         }
       },
       "AbilityStateBuffer": {
@@ -79,7 +80,7 @@
       "Team": {
         "Id": 2
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 600,

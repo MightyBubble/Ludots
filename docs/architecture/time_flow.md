@@ -1,23 +1,73 @@
 # Time Flow
 
-TimeFlow provides domain-level time scaling without introducing a second simulation scheduler. It lives under `src/Core/Engine/TimeFlow/` and is applied by `GameEngine` through the existing main loop and explicit domain policies.
+`gitbook/architecture/time-system.md` 是正式口径。本页是仓库深度材料，记录当前实现挂靠点、语义边界和验证路径。
 
-## Current Domains
+TimeFlow 提供 domain-level 时间缩放，但不引入第二套 simulation scheduler。所有推进仍由唯一的 `GameEngine.Tick()` 和 Pacemaker 固定步长链路驱动。
 
-| Domain | Owner | Notes |
-|---|---|---|
-| `simulation` | Core main loop | Root simulation cadence |
-| `gas` | GAS clock policy | Ability/order/effect cadence |
-| `physics2d` | Physics clock policy | Physics integration cadence |
+`simulation` 暂停的落点是 scaled `dt=0`：Pacemaker 必须冻结新 FixedStep、回合队列和未完成的 cooperative slice。
 
-The retired navigation execution domain has been removed. Navigation-domain movement now runs through MassNavigationFlow execution and the normal physics/GAS cadence as wired by the active runtime.
+## 1 内建 Domain
 
-## Rules
+| Domain | 常量 | Owner | 语义 |
+|---|---|---|---|
+| `simulation` | `TimeFlowDomainIds.Simulation` | Core main loop | 根模拟倍率 / 暂停 |
+| `simulation.gas` | `TimeFlowDomainIds.Gas` | `GasClockStepPolicy` | GAS Step 消费速率 |
 
-- Domain ids are strict strings registered in `TimeFlowDomainIds`.
-- Missing or wrong-case domains fail through normal config validation.
-- No removed domain should be reintroduced for compatibility.
+不再有 `simulation.physics2d` 或 `simulation.navigation2d` 内建 TimeFlow domain。Physics / navigation 的 Hz 与 cadence 是分辨率或执行节奏，不承诺时间倍率；单独缩放它们不会被解释为“物理世界变快 / 变慢”。
 
-## Verification
+## 2 GAS 全局时钟
 
-Use `src/Tests/TimeFlowCoreTests/` for domain registration, scale changes, and config validation.
+GAS 使用 `GasClockStepPolicy` 消费全局 Step：
+
+- `Auto`：按 `StepEveryFixedTicks` 和 `simulation.gas` 有效倍率累加。
+- `Manual`：只消费 `RequestStep()` 的 pending step。
+- `Paused`：不消费 step。
+
+`simulation.gas` 的 effective scale 包含父域 `simulation`，用于快照、存档和 UI 观测。`GasClockStepPolicy` 运行在 simulation Pacemaker 的 FixedStep 内，因此 `GameEngine` 写入 policy 时使用 GAS 子域相对父域的倍率，避免全局 simulation 变速被 GAS 再乘一次。
+
+`PermilleStepAccumulator` 是全局 Step 与 entity-local Step 的共同算法 SSOT。
+
+## 3 Entity-local 时间
+
+单体逻辑时间由 `EntityLocalClock` 承载：
+
+- 组件：`src/Core/Gameplay/GAS/Components/EntityLocalClock.cs`
+- 系统：`src/Core/Gameplay/GAS/Systems/EntityLocalClockSystem.cs`
+- 属性名：`time.scale_permille`
+- 时钟 ID：`GasClockId.EntityLocal`
+
+数据流：
+
+```text
+GAS clock config + TimeFlow simulation.gas
+  -> GasClockStepPolicy.LastConsumedSteps
+  -> AttributeBuffer.time.scale_permille
+  -> EntityLocalClockSystem
+  -> EntityLocalClock.LocalStep
+  -> EffectLifetimeSystem / TimedTagExpirationSystem / AbilityExecSystem
+```
+
+`EntityLocalClockSystem` 只推进显式 opt-in 的 entity。缺少 `time.scale_permille`、非整数 permille、负数、超过 `8000`、非有限值都 fail-fast。`EntityLocal` 不是全局 `ClockDomainId`，调用 `GasClockId.EntityLocal.ToDomainId()` 会失败。
+
+## 4 回合语义
+
+全局 `Turn` 时钟域已删除。回合拆成两个正交概念：
+
+- 持续 N 回合：使用 `Step`，并把 GAS clock 配成 `Manual`。
+- 回合边界反应：订阅 `GameEvents.TurnAdvanced`。
+
+`GasClockSystem` 在消费 manual Step 后推进 `ClockDomainId.Step`，并触发 `TurnAdvanced`。配置中声明 `"Turn"` 时钟会被 loader 拒绝，避免旧路径永不过期。
+
+## 5 Physics / Navigation 边界
+
+`Physics2DTickPolicy.TargetHz` 和 navigation cadence 控制子步分辨率 / 执行节奏，不是 TimeFlow 时间倍率。全局变速使用 `simulation`；GAS 变速使用 `simulation.gas`；单体 GAS 变速使用 `EntityLocalClock`。
+
+这一约束消除两个真相：不会再把 TimeFlow scale 映射成 physics target Hz，也不会把 physics Hz 文档成时间倍率。
+
+## 6 验证
+
+- TimeFlow domain / Turn 删除：`src/Tests/TimeFlowCoreTests/`
+- Entity-local 时钟：`src/Tests/GasTests/EntityLocalClockTests.cs`
+- Loader fail-fast：`src/Tests/GasTests/*FailFastTests.cs`
+- 存档覆盖：`src/Tests/PersistenceTests/ArchPersistenceCharacterizationTests.cs`
+- Controller burst 契约：`src/Tests/GasTests/BurstControllerContractTests.cs`

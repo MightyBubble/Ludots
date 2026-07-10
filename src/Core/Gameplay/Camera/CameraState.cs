@@ -42,6 +42,22 @@ namespace Ludots.Core.Gameplay.Camera
         public float FovYDeg { get; set; } = 60.0f;
 
         /// <summary>
+        /// Rig-local pivot offset in centimeters. X = screen-right shoulder, Y = up, Z = camera-forward.
+        /// </summary>
+        public Vector3 RigPivotOffsetCm { get; set; } = Vector3.Zero;
+
+        /// <summary>
+        /// Rig-local camera socket offset in centimeters. X = screen-right, Y = up, Z = camera-forward.
+        /// </summary>
+        public Vector3 RigCameraOffsetCm { get; set; } = Vector3.Zero;
+
+        public Vector3 ImpulsePositionOffsetCm { get; set; } = Vector3.Zero;
+
+        public float ImpulseYawOffsetDeg { get; set; }
+
+        public float ImpulsePitchOffsetDeg { get; set; }
+
+        /// <summary>
         /// True when camera is following a target entity (pan behaviors should skip).
         /// </summary>
         public bool IsFollowing { get; set; }

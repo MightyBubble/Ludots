@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillW"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Position
+  targetType: Position
   // 唯一差别: Range 不做限制, 或 Range=Global
   // 小地图点击: 需要 InputOrderMappingSystem 支持 minimap click → world position 转换
 ```

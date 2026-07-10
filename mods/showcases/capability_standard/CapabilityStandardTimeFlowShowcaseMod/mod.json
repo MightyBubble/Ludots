@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardTimeFlowShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard TimeFlow showcase for pause and scale token stacks across settings, menu, skill indicator, system guide, MassNavigation, Physics2D, and GAS clocks.",
+  "main": "bin/net8.0/CapabilityStandardTimeFlowShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "timeflow", "capability-standard", "mass-navigation", "physics2d", "gas"]
+}

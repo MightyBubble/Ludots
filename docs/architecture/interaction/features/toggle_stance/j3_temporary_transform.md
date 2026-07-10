@@ -25,7 +25,7 @@ Down → Execute:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | GameplayTagContainer | ✅ 已有 | form tag 添加（带 duration） |
 | Tag duration / expiry | ✅ 已有 | tag 到期自动移除 |
 | AbilityStateBuffer | ⚠️ 需要扩展 | form-based ability mapping，与 J2 共用需求 |

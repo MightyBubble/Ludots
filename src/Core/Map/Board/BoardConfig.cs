@@ -34,6 +34,12 @@ namespace Ludots.Core.Map.Board
 
         public string VisualHeightmapAsset { get; set; }
 
+        public string StructureCollisionAsset { get; set; } = string.Empty;
+
+        public bool StructureAwareGrounding { get; set; }
+
+        public bool StructureAwareNavigation { get; set; }
+
         /// <summary>Whether navigation is enabled for this board.</summary>
         public bool NavigationEnabled { get; set; }
 
@@ -53,6 +59,9 @@ namespace Ludots.Core.Map.Board
                 ChunkSizeCells = ChunkSizeCells,
                 DataFile = DataFile,
                 VisualHeightmapAsset = VisualHeightmapAsset,
+                StructureCollisionAsset = StructureCollisionAsset,
+                StructureAwareGrounding = StructureAwareGrounding,
+                StructureAwareNavigation = StructureAwareNavigation,
                 NavigationEnabled = NavigationEnabled
             };
         }

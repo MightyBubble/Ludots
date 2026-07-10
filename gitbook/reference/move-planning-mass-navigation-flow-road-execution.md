@@ -72,12 +72,12 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter "RoadNetworkShowcase_Pla
 | Operation | Visible/test feedback |
 |---|---|
 | Load `RoadNetworkShowcaseMod` with `road_network_showcase_chunked` | Tactical camera opens on Blue Vanguard and map participant binding sets local player 1 |
-| Drag-select Blue Vanguard, Blue North Column, and Blue South Column | Formal selection count becomes 3 through `CurrentSelectionApplySystem` |
+| Drag-select Blue Vanguard, Blue North Column, and Blue South Column | `collection.command.source` count becomes 3 through the command-source collection path |
 | Right-click a visible ground point | Road orders are submitted through the real input/order bridge |
 | Let fixed steps run | Selected columns receive MassNavigationFlow per-agent navigation targets |
 | Inspect road entities | No retired execution components are required |
 
-The showcase uses the real nav bake/pathing, input bridge, selection runtime, road planning, and MassNavigationFlow execution. It is not a script stub.
+The showcase uses the real nav bake/pathing, input bridge, command-source collection, road planning, and MassNavigationFlow execution. It is not a script stub.
 
 ## Configuration
 
@@ -90,7 +90,7 @@ Road map authoring must bind the local participant through the formal map schema
     { "TeamId": 2, "RepresentativeInstanceId": "road.team.red" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue", "IsLocal": true }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue" }
   ]
 }
 ```
@@ -101,7 +101,7 @@ Road-specific MassNavigationFlow tuning remains in `RoadNetworkShowcaseMod/asset
 
 | Configuration or code fact | Behavior | Contract test |
 |---|---|---|
-| `Players[].IsLocal = true` for `road.player.blue` | `LocalPlayerEntityResolverSystem` keeps a valid selection owner before the confirm press frame | `RoadNetworkShowcase_PlayableInitialDragSelectRightClick_StartsRoadMoveWithoutReset` |
+| `game.json.startupSelectedPlayerId = 1` for `road.player.blue` | `LoadStartupMap()` injects launch context so `LocalPlayerEntityResolverSystem` keeps a valid selection owner before the confirm press frame | `RoadNetworkShowcase_PlayableInitialDragSelectRightClick_StartsRoadMoveWithoutReset` |
 | Road execution source contains no retired execution component references | Road movement is not coupled to the deprecated sink | `RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceLegacyExecutionComponents` |
 | Core `MovePlanning` source contains no road/corridor/fort names | Core seam remains reusable outside the road showcase | `CoreMovePlanningSeam_DoesNotReferenceRoadShowcasePolicy` |
 | Road execution source contains no `.A0` cursor usage | Runtime waypoint cursor lives in `MovePlanRuntime.CurrentWaypointIndex` | `RoadMovePlanRuntimeCursor_DoesNotUseOrderSpatialA0` |

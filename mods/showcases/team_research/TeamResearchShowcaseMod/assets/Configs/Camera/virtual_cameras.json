@@ -1,14 +1,18 @@
 [
   {
     "id": "TeamResearch.Camera.Overview",
-    "viewMode": "MapDefault",
-    "targetXCm": 6400,
-    "targetYCm": 6400,
-    "yawDeg": 180,
-    "pitchDeg": 48,
+    "displayName": "Team Research Overview",
+    "priority": 100,
+    "rigKind": "Orbit",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 6400, "y": 6400 },
+    "yaw": 180,
+    "pitch": 48,
     "distanceCm": 9800,
     "fovYDeg": 60,
-    "nearCm": 20,
-    "farCm": 400000
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableZoom": false,
+    "allowUserInput": false
   }
 ]

@@ -67,7 +67,7 @@ public sealed class BrowserMinimapBridgeCompareShowcaseAcceptanceTests
 		Assert.That(launcherConfig, Does.Contain($"\"name\": \"{BindingName}\""));
 		Assert.That(launcherConfig, Does.Contain("mods/showcases/browser_minimap_bridge_compare/BrowserMinimapBridgeCompareShowcaseMod"));
 		Assert.That(launcherPresets, Does.Contain($"\"id\": \"{PresetId}\""));
-		Assert.That(launcherPresets, Does.Contain("\"$browser_cef_runtime\""));
+		AssertPresetUsesCefBrowserRuntime(launcherPresets, PresetId);
 		Assert.That(launcherPresets, Does.Contain($"\"${BindingName}\""));
 	}
 
@@ -84,7 +84,7 @@ public sealed class BrowserMinimapBridgeCompareShowcaseAcceptanceTests
 			Assert.That(launcherConfig, Does.Contain(showcase.ModPath));
 			Assert.That(launcherConfig, Does.Contain(showcase.Project));
 			Assert.That(launcherPresets, Does.Contain($"\"id\": \"{showcase.Preset}\""));
-			Assert.That(launcherPresets, Does.Contain("\"$browser_cef_runtime\""));
+			AssertPresetUsesCefBrowserRuntime(launcherPresets, showcase.Preset);
 			Assert.That(launcherPresets, Does.Contain($"\"${showcase.Binding}\""));
 		}
 	}
@@ -102,7 +102,7 @@ public sealed class BrowserMinimapBridgeCompareShowcaseAcceptanceTests
 			Assert.That(launcherConfig, Does.Contain(showcase.ModPath));
 			Assert.That(launcherConfig, Does.Contain(showcase.Project));
 			Assert.That(launcherPresets, Does.Contain($"\"id\": \"{showcase.Preset}\""));
-			Assert.That(launcherPresets, Does.Contain("\"$browser_cef_runtime\""));
+			AssertPresetUsesCefBrowserRuntime(launcherPresets, showcase.Preset);
 			Assert.That(launcherPresets, Does.Contain("\"$performer_blacksmith_large_world_nohud\""));
 			Assert.That(launcherPresets, Does.Contain($"\"${showcase.Binding}\""));
 		}
@@ -518,6 +518,27 @@ public sealed class BrowserMinimapBridgeCompareShowcaseAcceptanceTests
 		Assert.That(readme, Does.Not.Contain("JSON baseline"));
 		Assert.That(readme, Does.Not.Contain("markersJson"));
 		Assert.That(readme, Does.Not.Contain("zero-copy"));
+	}
+
+	private static void AssertPresetUsesCefBrowserRuntime(string launcherPresets, string presetId)
+	{
+		JsonObject root = JsonNode.Parse(launcherPresets)?.AsObject()
+			?? throw new AssertionException("launcher.presets.json must contain a JSON object.");
+		JsonArray presets = root["presets"]?.AsArray()
+			?? throw new AssertionException("launcher.presets.json must contain a presets array.");
+		JsonObject preset = presets
+			.Select(node => node?.AsObject())
+			.FirstOrDefault(node => string.Equals(node?["id"]?.GetValue<string>(), presetId, StringComparison.Ordinal))
+			?? throw new AssertionException($"launcher.presets.json must contain preset '{presetId}'.");
+		JsonObject browserRuntime = preset["browserRuntime"]?.AsObject()
+			?? throw new AssertionException($"Preset '{presetId}' must declare browserRuntime.");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(browserRuntime["enabled"]?.GetValue<bool>(), Is.True, $"Preset '{presetId}' must enable browserRuntime.");
+			Assert.That(browserRuntime["required"]?.GetValue<bool>(), Is.True, $"Preset '{presetId}' must require browserRuntime.");
+			Assert.That(browserRuntime["provider"]?.GetValue<string>(), Is.EqualTo("cef"), $"Preset '{presetId}' must use the CEF provider.");
+		});
 	}
 
 	private static string FindRepoRoot()

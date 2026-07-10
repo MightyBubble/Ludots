@@ -41,8 +41,8 @@
     { "TeamId": 2, "RepresentativeInstanceId": "combat-stance-team-two" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "combat-stance-player-one", "IsLocal": true },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "combat-stance-player-two", "IsLocal": false }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "combat-stance-player-one" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "combat-stance-player-two" }
   ],
   "ParticipantRelationships": {
     "Teams": [

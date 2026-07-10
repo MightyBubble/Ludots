@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -75,7 +75,7 @@ public sealed class MinimapKnowledgeProjectionTests
         runtime.Visible = true;
         runtime.UseRtsFullMapPreset();
 
-        engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, playerViewer);
+        engine.SetService(CoreServiceKeys.LocalPlayerEntity, playerViewer);
         runtime.Refresh(engine, markers, screenMarkers);
         MinimapDebugSnapshot playerSnapshot = runtime.CaptureDebugSnapshot();
         Assert.That(playerSnapshot.VisibleMarkerCount, Is.EqualTo(3));
@@ -84,7 +84,7 @@ public sealed class MinimapKnowledgeProjectionTests
         Assert.That(CountState(playerSnapshot, MinimapKnowledgeState.Disclosed), Is.EqualTo(1));
         Assert.That(playerSnapshot.VisibleMarkers.Any(marker => MathF.Abs(marker.WorldXcm - 4000f) <= 0.001f), Is.False);
 
-        engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, teamViewer);
+        engine.SetService(CoreServiceKeys.LocalPlayerEntity, teamViewer);
         runtime.Refresh(engine, markers, screenMarkers);
         MinimapDebugSnapshot teamSnapshot = runtime.CaptureDebugSnapshot();
         Assert.That(teamSnapshot.VisibleMarkerCount, Is.EqualTo(2));
@@ -110,7 +110,7 @@ public sealed class MinimapKnowledgeProjectionTests
             expiringTarget,
             CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer, expiryTick: 2));
         InstallKnowledgeServices(engine, store, null);
-        engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, viewer);
+        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
 
         markers.BeginFrame();
         var color = new Vector4(0.2f, 0.8f, 1f, 1f);
@@ -127,6 +127,41 @@ public sealed class MinimapKnowledgeProjectionTests
         runtime.Refresh(engine, markers, screenMarkers);
         MinimapDebugSnapshot afterExpiry = runtime.CaptureDebugSnapshot();
         Assert.That(afterExpiry.VisibleMarkerCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Issue581_RefreshUsesExplicitMinimapKnowledgeViewerProvider()
+    {
+        using GameEngine engine = CreateEngine();
+        MinimapRuntime runtime = CreateRuntime();
+        var markers = new MinimapMarkerBuffer(4);
+        var screenMarkers = new MinimapScreenMarkerBuffer(4);
+
+        Entity viewer = engine.World.Create();
+        Entity target = engine.World.Create();
+        var store = new KnowledgeProjectionStore(initialCapacity: 4);
+        store.Upsert(viewer, target, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
+        InstallKnowledgeServices(engine, store, null);
+        engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
+        engine.SetService(
+            CoreServiceKeys.MinimapKnowledgeViewerProvider,
+            (MinimapKnowledgeViewerProvider)((GameEngine _, out Entity resolvedViewer) =>
+            {
+                resolvedViewer = viewer;
+                return true;
+            }));
+
+        markers.BeginFrame();
+        var color = new Vector4(0.2f, 0.8f, 1f, 1f);
+        Assert.That(markers.TryAdd(7001, target, 1200f, 0f, in color, 8f), Is.True);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+
+        runtime.Refresh(engine, markers, screenMarkers);
+        MinimapDebugSnapshot snapshot = runtime.CaptureDebugSnapshot();
+
+        Assert.That(snapshot.VisibleMarkerCount, Is.EqualTo(1));
+        Assert.That(snapshot.VisibleMarkers[0].KnowledgeState, Is.EqualTo(MinimapKnowledgeState.LiveVisible));
     }
 
     [Test]
@@ -151,7 +186,7 @@ public sealed class MinimapKnowledgeProjectionTests
         }
 
         InstallKnowledgeServices(engine, store, null);
-        engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, viewer);
+        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
         runtime.Visible = true;
         runtime.UseRtsFullMapPreset();
         for (int i = 0; i < 32; i++)

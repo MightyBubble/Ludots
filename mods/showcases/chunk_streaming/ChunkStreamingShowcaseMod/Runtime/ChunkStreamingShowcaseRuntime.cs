@@ -213,7 +213,12 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 engine.GameSession.Camera.ActivateVirtualCamera(
                     TacticalCameraId,
                     blendDurationSeconds: 0f,
-                    followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+                    followTarget: CameraFollowTargetFactory.Build(
+                        engine.World,
+                        engine.GlobalContext,
+                        definition.FollowTargetKind,
+                        Arch.Core.Entity.Null,
+                        definition.FollowCollectionKey),
                     snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
             }
 

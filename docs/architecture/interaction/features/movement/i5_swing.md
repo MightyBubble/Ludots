@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: Down + WhileHeld + Up
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 ```
 

@@ -33,7 +33,7 @@ Grip 切换复用 J2/J4 的 form-based ability mapping，grip tag 作为 form ta
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | GameplayTagContainer | ✅ 已有 | grip tag 切换 |
 | AbilityStateBuffer | ⚠️ 需要扩展 | form-based ability mapping，与 J2/J3/J4 共用需求 |
 

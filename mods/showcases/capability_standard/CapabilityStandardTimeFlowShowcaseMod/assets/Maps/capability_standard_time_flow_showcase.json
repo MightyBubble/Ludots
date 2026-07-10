@@ -1,0 +1,14 @@
+{
+  "Id": "capability_standard_time_flow_showcase",
+  "Tags": ["showcase", "capability-standard", "timeflow"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1800,
+    "TargetYCm": 1000,
+    "DistanceCm": 9500,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

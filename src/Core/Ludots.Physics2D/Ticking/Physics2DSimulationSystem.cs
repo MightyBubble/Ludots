@@ -102,6 +102,7 @@ namespace Ludots.Core.Physics2D.Ticking
         {
             if (!Enabled) return;
             if (_tickPolicy.TargetHz == 0) return;
+            if (fixedDeltaTime <= 0f) return;
 
             EnsureSchedulerInitialized(fixedDeltaTime);
 

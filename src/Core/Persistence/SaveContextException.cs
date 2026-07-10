@@ -8,5 +8,10 @@ namespace Ludots.Core.Persistence
             : base(message)
         {
         }
+
+        public SaveContextException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
     }
 }

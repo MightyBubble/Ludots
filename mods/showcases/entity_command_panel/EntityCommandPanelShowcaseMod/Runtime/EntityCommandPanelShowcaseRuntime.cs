@@ -1,12 +1,15 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod.Systems;
+using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using InteractionShowcaseMod;
+using Ludots.Core.Components;
 using Ludots.Core.Commands;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -14,14 +17,28 @@ namespace EntityCommandPanelShowcaseMod.Runtime
 {
     internal sealed class EntityCommandPanelShowcaseRuntime
     {
-        private const string GasSourceId = "gas.ability-slots";
+        private const string AggregationAlias = EntityCommandPanelShowcaseIds.AggregationAlias;
+        private const string ByTemplateProfileId = EntityCommandPanelShowcaseIds.ByTemplateProfileId;
+        private const string ByFamilyProfileId = EntityCommandPanelShowcaseIds.ByFamilyProfileId;
+        private const string ByAbilityIdProfileId = EntityCommandPanelShowcaseIds.ByAbilityIdProfileId;
         private const string ArcweaverAlias = "showcase.arcweaver";
         private const string VanguardAlias = "showcase.vanguard";
         private const string CommanderAlias = "showcase.commander";
         private const string FormsAlias = "showcase.forms";
         private const string FocusAlias = "showcase.focus";
+        private const string AutoProfileTimelineEnvKey = "LUDOTS_ENTITY_COMMAND_PANEL_AUTO_PROFILE_TIMELINE";
+        private const int AutoProfileSegmentFrames = 90;
+        private const string ProjectionTitle = "A2 Aggregation Profile Projection";
+        private const string TemplateProjectionSummary = "Template profile projects the same command owners as separate unit-template lanes.";
+        private const string FamilyProjectionSummary = "Family profile projects the command owners contributing to command-family groups.";
+        private const string AbilityProjectionSummary = "Ability profile projects the command owners contributing to distinct ability buttons.";
+        private const string InactiveProjectionSummary = "Inactive aggregation profile projection.";
 
-        private Entity _lastFocusTarget = Entity.Null;
+        private readonly AggregationProfileToolbarProvider _aggregationToolbar = new();
+        private IEntityCommandPanelToolbarProvider? _previousToolbarProvider;
+        private bool _toolbarInstalled;
+        private bool _showcaseHudSuppressed;
+        private int _autoProfileTimelineFrame;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
         {
@@ -57,100 +74,60 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         {
             if (engine == null || !InteractionShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
             {
-                _lastFocusTarget = Entity.Null;
                 return;
             }
 
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
-
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
-                ? current
-                : Entity.Null;
-            if (selected == Entity.Null || !engine.World.IsAlive(selected))
+            UpdateAutoProfileTimeline();
+            if (TryPublishAggregationCommandCollection(engine, out Entity aggregationOwner))
             {
-                if (_lastFocusTarget != Entity.Null)
-                {
-                    var context = engine.CreateContext();
-                    Execute(context, new SetEntityCommandPanelVisibilityCommand(FocusAlias, visible: false));
-                    _lastFocusTarget = Entity.Null;
-                }
-
-                return;
+                PublishActiveProfileProjection(engine, aggregationOwner);
             }
-
-            if (_lastFocusTarget == selected)
-            {
-                return;
-            }
-
-            var updateContext = engine.CreateContext();
-            Execute(updateContext, new SetEntityCommandPanelAnchorCommand(
-                FocusAlias,
-                new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.Center, 0f, -28f)));
-            Execute(updateContext, new SetEntityCommandPanelSizeCommand(
-                FocusAlias,
-                new EntityCommandPanelSize(420f, 250f)));
-            updateContext.Set("EntityCommandPanelShowcase.SelectedTarget", selected);
-            Execute(updateContext, new RebindEntityCommandPanelTargetCommand(FocusAlias, "EntityCommandPanelShowcase.SelectedTarget"));
-            Execute(updateContext, new SetEntityCommandPanelVisibilityCommand(FocusAlias, visible: true));
-            _lastFocusTarget = selected;
         }
 
         private void EnableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
+            SuppressNonEssentialHud(engine);
             CloseInteractionEntityInfoPanels(context);
-            OpenPinnedPanels(context, engine);
-            _lastFocusTarget = Entity.Null;
+            ClosePinnedPanels(context);
+            _autoProfileTimelineFrame = 0;
+            InstallAggregationProfileToolbar(engine);
+            if (ReadEnvBoolOrDefault(AutoProfileTimelineEnvKey, defaultValue: false))
+            {
+                _aggregationToolbar.ActivateByIndex(0);
+            }
+
+            if (TryPublishAggregationCommandCollection(engine, out Entity aggregationOwner))
+            {
+                PublishActiveProfileProjection(engine, aggregationOwner);
+            }
+
+            _aggregationToolbar.SetVisible(false);
         }
 
         private void DisableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
+            RestoreSuppressedHud(engine);
+            ClearProfileProjectionCollections(engine);
+            UninstallAggregationProfileToolbar(engine);
             ClosePinnedPanels(context);
-            _lastFocusTarget = Entity.Null;
+            _autoProfileTimelineFrame = 0;
         }
 
-        private void OpenPinnedPanels(ScriptContext context, GameEngine engine)
+        private void UpdateAutoProfileTimeline()
         {
-            ExecuteOpen(context, engine, ArcweaverAlias, InteractionShowcaseIds.ArcweaverName,
-                new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopLeft, 16f, 64f),
-                new EntityCommandPanelSize(340f, 280f),
-                initialGroupIndex: 0,
-                startVisible: true);
-
-            ExecuteOpen(context, engine, VanguardAlias, InteractionShowcaseIds.VanguardName,
-                new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomLeft, 16f, 16f),
-                new EntityCommandPanelSize(340f, 280f),
-                initialGroupIndex: 0,
-                startVisible: true);
-
-            ExecuteOpen(context, engine, CommanderAlias, InteractionShowcaseIds.CommanderName,
-                new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopRight, 16f, 16f),
-                new EntityCommandPanelSize(360f, 292f),
-                initialGroupIndex: 0,
-                startVisible: true);
-
-            ExecuteOpen(context, engine, FormsAlias, InteractionShowcaseIds.ArcweaverFormsDemoName,
-                new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 16f),
-                new EntityCommandPanelSize(420f, 300f),
-                initialGroupIndex: 2,
-                startVisible: true);
-
-            Entity focusTarget = ResolveTargetEntity(engine, InteractionShowcaseIds.ArcweaverName);
-            if (focusTarget != Entity.Null)
+            if (!ReadEnvBoolOrDefault(AutoProfileTimelineEnvKey, defaultValue: false))
             {
-                context.Set("EntityCommandPanelShowcase.FocusTarget", focusTarget);
-                Execute(context, new OpenEntityCommandPanelCommand(
-                    FocusAlias,
-                    "EntityCommandPanelShowcase.FocusTarget",
-                    GasSourceId,
-                    FocusAlias,
-                    new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.Center, 0f, -28f),
-                    new EntityCommandPanelSize(420f, 250f),
-                    initialGroupIndex: 0,
-                    startVisible: false));
+                return;
             }
+
+            _autoProfileTimelineFrame++;
+            int profileIndex = Math.Min(
+                (_autoProfileTimelineFrame - 1) / AutoProfileSegmentFrames,
+                AggregationProfileToolbarProvider.ProfileCount - 1);
+            _aggregationToolbar.ActivateByIndex(profileIndex);
         }
 
         private static void ClosePinnedPanels(ScriptContext context)
@@ -160,6 +137,264 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             Execute(context, new CloseEntityCommandPanelCommand(CommanderAlias));
             Execute(context, new CloseEntityCommandPanelCommand(FormsAlias));
             Execute(context, new CloseEntityCommandPanelCommand(FocusAlias));
+            Execute(context, new CloseEntityCommandPanelCommand(AggregationAlias));
+        }
+
+        private void SuppressNonEssentialHud(GameEngine engine)
+        {
+            if (_showcaseHudSuppressed)
+            {
+                return;
+            }
+
+            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = false;
+            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
+            _showcaseHudSuppressed = true;
+        }
+
+        private void RestoreSuppressedHud(GameEngine engine)
+        {
+            if (!_showcaseHudSuppressed)
+            {
+                return;
+            }
+
+            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = true;
+            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
+            _showcaseHudSuppressed = false;
+        }
+
+        private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return defaultValue;
+            }
+
+            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void InstallAggregationProfileToolbar(GameEngine engine)
+        {
+            CollectionGasEntityCommandPanelSource source = ResolveCollectionSource(engine);
+            _aggregationToolbar.Bind(source);
+            _aggregationToolbar.SetVisible(false);
+
+            if (_toolbarInstalled)
+            {
+                return;
+            }
+
+            IEntityCommandPanelToolbarProvider? existing = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
+            if (!ReferenceEquals(existing, _aggregationToolbar))
+            {
+                _previousToolbarProvider = existing;
+            }
+
+            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _aggregationToolbar);
+            _toolbarInstalled = true;
+        }
+
+        private void UninstallAggregationProfileToolbar(GameEngine engine)
+        {
+            _aggregationToolbar.SetVisible(false);
+            if (!_toolbarInstalled)
+            {
+                return;
+            }
+
+            IEntityCommandPanelToolbarProvider? current = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
+            if (ReferenceEquals(current, _aggregationToolbar))
+            {
+                if (_previousToolbarProvider != null)
+                {
+                    engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _previousToolbarProvider);
+                }
+                else
+                {
+                    engine.RemoveService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
+                }
+            }
+
+            _previousToolbarProvider = null;
+            _toolbarInstalled = false;
+        }
+
+        private static CollectionGasEntityCommandPanelSource ResolveCollectionSource(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry)
+                ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry must be registered before the showcase publishes aggregation profiles.");
+            if (!registry.TryGet(CollectionGasEntityCommandPanelSource.SourceId, out IEntityCommandPanelSource source))
+            {
+                throw new InvalidOperationException(
+                    $"Entity command panel source '{CollectionGasEntityCommandPanelSource.SourceId}' is not registered.");
+            }
+
+            return source as CollectionGasEntityCommandPanelSource
+                ?? throw new InvalidOperationException(
+                    $"Entity command panel source '{CollectionGasEntityCommandPanelSource.SourceId}' must be CollectionGasEntityCommandPanelSource.");
+        }
+
+        private static bool TryPublishAggregationCommandCollection(GameEngine engine, out Entity aggregationOwner)
+        {
+            aggregationOwner = Entity.Null;
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+                localPlayer == Entity.Null ||
+                !engine.World.IsAlive(localPlayer))
+            {
+                return false;
+            }
+
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore must be registered before the showcase publishes aggregation collections.");
+
+            Span<Entity> members = stackalloc Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+            int count = ResolveShowcaseCommandOwners(engine, members);
+            if (count == 0)
+            {
+                return false;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                localPlayer,
+                members[0],
+                "M6 Aggregation Profiles",
+                $"{count.ToString(System.Globalization.CultureInfo.InvariantCulture)} showcase command owners");
+            collections.Replace(localPlayer, descriptor, members[..count]);
+            aggregationOwner = localPlayer;
+            return true;
+        }
+
+        private void PublishActiveProfileProjection(GameEngine engine, Entity owner)
+        {
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore must be registered before the showcase publishes profile projections.");
+
+            Span<Entity> members = stackalloc Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+            int count = ResolveShowcaseCommandOwners(engine, members);
+            if (count == 0)
+            {
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    TemplateProjectionSummary);
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    FamilyProjectionSummary);
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    AbilityProjectionSummary);
+                return;
+            }
+
+            ReadOnlySpan<Entity> activeMembers = members[..count];
+            bool templateActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByTemplateProfileId, StringComparison.Ordinal);
+            bool familyActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByFamilyProfileId, StringComparison.Ordinal);
+            bool abilityActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByAbilityIdProfileId, StringComparison.Ordinal);
+
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                templateActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                templateActive ? TemplateProjectionSummary : InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                familyActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                familyActive ? FamilyProjectionSummary : InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                abilityActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                abilityActive ? AbilityProjectionSummary : InactiveProjectionSummary);
+        }
+
+        private static void ClearProfileProjectionCollections(GameEngine engine)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+                localPlayer == Entity.Null ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+            {
+                return;
+            }
+
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+        }
+
+        private static void ReplaceProfileProjection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
+            ReadOnlySpan<Entity> members,
+            string summary)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                collectionKey,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.Display,
+                owner,
+                members.Length == 0 ? Entity.Null : members[0],
+                ProjectionTitle,
+                summary);
+            collections.Replace(owner, descriptor, members);
+        }
+
+        private static int ResolveShowcaseCommandOwners(GameEngine engine, Span<Entity> destination)
+        {
+            int count = 0;
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.ArcweaverName, destination, ref count);
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.VanguardName, destination, ref count);
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.CommanderName, destination, ref count);
+            return count;
+        }
+
+        private static void AddIfResolved(GameEngine engine, string entityName, Span<Entity> destination, ref int count)
+        {
+            if ((uint)count >= (uint)destination.Length)
+            {
+                return;
+            }
+
+            Entity entity = ResolveTargetEntity(engine, entityName);
+            if (entity != Entity.Null)
+            {
+                destination[count++] = entity;
+            }
         }
 
         private static void CloseInteractionEntityInfoPanels(ScriptContext context)
@@ -192,40 +427,11 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             }.ExecuteAsync(context).GetAwaiter().GetResult();
         }
 
-        private static void ExecuteOpen(
-            ScriptContext context,
-            GameEngine engine,
-            string alias,
-            string entityName,
-            EntityCommandPanelAnchor anchor,
-            EntityCommandPanelSize size,
-            int initialGroupIndex,
-            bool startVisible)
-        {
-            Entity target = ResolveTargetEntity(engine, entityName);
-            if (target == Entity.Null)
-            {
-                return;
-            }
-
-            string contextKey = $"EntityCommandPanelShowcase.Target.{alias}";
-            context.Set(contextKey, target);
-            Execute(context, new OpenEntityCommandPanelCommand(
-                alias,
-                contextKey,
-                GasSourceId,
-                alias,
-                anchor,
-                size,
-                initialGroupIndex,
-                startVisible));
-        }
-
         private static Entity ResolveTargetEntity(GameEngine engine, string entityName)
         {
             Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Ludots.Core.Components.Name>();
-            engine.World.Query(in query, (Entity entity, ref Ludots.Core.Components.Name name) =>
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (Entity entity, ref Name name) =>
             {
                 if (string.Equals(name.Value, entityName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -239,5 +445,134 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         {
             command.ExecuteAsync(context).GetAwaiter().GetResult();
         }
+
+        private sealed class AggregationProfileToolbarProvider : IEntityCommandPanelToolbarProvider
+        {
+            private static readonly AggregationProfileOption[] Profiles =
+            {
+                new("profile.by_template", "Template", ByTemplateProfileId, "#6EC6FF"),
+                new("profile.by_family", "Family", ByFamilyProfileId, "#F6D37A"),
+                new("profile.by_ability_id", "Ability", ByAbilityIdProfileId, "#9EE493")
+            };
+
+            public static int ProfileCount => Profiles.Length;
+
+            private CollectionGasEntityCommandPanelSource? _source;
+            private int _activeIndex = 1;
+            private uint _revision = 1;
+            private bool _visible;
+
+            public bool IsVisible => _visible;
+            public uint Revision => _revision;
+            public string Title => "Aggregation Profile";
+            public string Subtitle => $"M6/P3 grouping: {Profiles[_activeIndex].Label}";
+            public string ActiveProfileLabel => Profiles[_activeIndex].Label;
+            public string ActiveProfileId => Profiles[_activeIndex].ProfileId;
+
+            public void Bind(CollectionGasEntityCommandPanelSource source)
+            {
+                _source = source ?? throw new ArgumentNullException(nameof(source));
+                ApplyActiveProfile();
+            }
+
+            public void SetVisible(bool visible)
+            {
+                if (_visible == visible)
+                {
+                    return;
+                }
+
+                _visible = visible;
+                BumpRevision();
+            }
+
+            public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
+            {
+                int count = Math.Min(destination.Length, Profiles.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    AggregationProfileOption profile = Profiles[i];
+                    destination[i] = new EntityCommandPanelToolbarButtonView(
+                        profile.ButtonId,
+                        profile.Label,
+                        i == _activeIndex,
+                        profile.AccentColorHex);
+                }
+
+                return count;
+            }
+
+            public void Activate(string buttonId)
+            {
+                for (int i = 0; i < Profiles.Length; i++)
+                {
+                    if (!string.Equals(Profiles[i].ButtonId, buttonId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    ActivateByIndex(i);
+                    return;
+                }
+
+                throw new InvalidOperationException($"Unknown entity command panel aggregation profile button '{buttonId}'.");
+            }
+
+            public void ActivateByIndex(int index)
+            {
+                if ((uint)index >= (uint)Profiles.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                }
+
+                if (_activeIndex == index)
+                {
+                    return;
+                }
+
+                _activeIndex = index;
+                ApplyActiveProfile();
+                BumpRevision();
+            }
+
+            private void ApplyActiveProfile()
+            {
+                if (_source == null)
+                {
+                    throw new InvalidOperationException("Aggregation profile toolbar is not bound to a collection source.");
+                }
+
+                _source.SetAggregationProfile(Profiles[_activeIndex].ProfileId);
+            }
+
+            private void BumpRevision()
+            {
+                unchecked
+                {
+                    _revision++;
+                    if (_revision == 0)
+                    {
+                        _revision = 1;
+                    }
+                }
+            }
+
+            private readonly struct AggregationProfileOption
+            {
+                public AggregationProfileOption(string buttonId, string label, string profileId, string accentColorHex)
+                {
+                    ButtonId = buttonId;
+                    Label = label;
+                    ProfileId = profileId;
+                    AccentColorHex = accentColorHex;
+                }
+
+                public string ButtonId { get; }
+                public string Label { get; }
+                public string ProfileId { get; }
+                public string AccentColorHex { get; }
+            }
+        }
+
     }
 }

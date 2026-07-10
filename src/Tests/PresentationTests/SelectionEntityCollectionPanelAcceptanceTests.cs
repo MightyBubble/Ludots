@@ -6,11 +6,11 @@ using Arch.Core;
 using InteractionShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -24,7 +24,7 @@ namespace Ludots.Tests.Presentation;
 
 [TestFixture]
 [NonParallelizable]
-public sealed class SelectionEntityCollectionPanelAcceptanceTests
+public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
 {
     private const string InteractionShowcaseHubMapId = "interaction_showcase_hub";
 
@@ -38,10 +38,10 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
     };
 
     [Test]
-    public void InteractionShowcase_SelectionEntityCollectionPanel_VirtualizesAndWritesScreenshotArtifacts()
+    public void InteractionShowcase_CommandSourceEntityCollectionPanel_VirtualizesAndWritesScreenshotArtifacts()
     {
         string repoRoot = FindRepoRoot();
-        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "selection-entity-collection-panel");
+        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "command-source-entity-collection-panel");
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 
@@ -55,14 +55,14 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         Entity local = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) && localObj is Entity entity
             ? entity
             : throw new InvalidOperationException("Local player entity is missing.");
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("SelectionRuntime service is missing.");
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
 
-        const int selectionCount = 72;
-        int healthId = AttributeRegistry.Register("Acceptance.Selection.Health");
-        int manaId = AttributeRegistry.Register("Acceptance.Selection.Mana");
-        var selected = new Entity[selectionCount];
-        for (int i = 0; i < selectionCount; i++)
+        const int commandSourceCount = 72;
+        int healthId = AttributeRegistry.Register("Acceptance.CommandSource.Health");
+        int manaId = AttributeRegistry.Register("Acceptance.CommandSource.Mana");
+        var selected = new Entity[commandSourceCount];
+        for (int i = 0; i < commandSourceCount; i++)
         {
             string unitName = (i % 3) switch
             {
@@ -80,40 +80,25 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
                 attributes);
         }
 
-        Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, selected), Is.True);
-        selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-        Assert.That(
-            SelectionControlGroupRuntime.TrySaveViewedSelectionToGroup(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                local,
-                1,
-                mirrorToFormation: true),
-            Is.True);
-        engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 1;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+        ReplaceCommandSource(collections, local, selected);
         Tick(engine, 4);
 
         UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Interaction showcase scene should be mounted.");
         scene.Layout(uiRoot.Width, uiRoot.Height);
 
         UiNode host = FindNodeByIdPrefix(scene.Root, "entity-info-collection-grid-")
-            ?? throw new InvalidOperationException("Selection entity collection host should exist.");
-        string hostId = host.ElementId ?? throw new InvalidOperationException("Selection entity collection host should carry a stable element id.");
+            ?? throw new InvalidOperationException("Command-source entity collection host should exist.");
+        string hostId = host.ElementId ?? throw new InvalidOperationException("Command-source entity collection host should carry a stable element id.");
         Assert.That(scene.TryGetVirtualWindow(hostId, out UiVirtualWindow initialWindow), Is.True);
-        Assert.That(initialWindow.TotalCount, Is.LessThan(selectionCount));
+        Assert.That(initialWindow.TotalCount, Is.LessThan(commandSourceCount));
         Assert.That(initialWindow.VisibleCount, Is.GreaterThan(0));
         Assert.That(initialWindow.VisibleCount, Is.LessThan(initialWindow.TotalCount), "Large selection panels should virtualize instead of composing every row.");
 
         string sceneText = ExtractUiSceneText(scene);
-        Assert.That(sceneText, Does.Contain("Current viewed selection"));
+        Assert.That(sceneText, Does.Contain("Acceptance command source"));
         Assert.That(sceneText, Does.Contain("Spearman x24 *"));
-        Assert.That(sceneText, Does.Contain("FORM 72"));
-        Assert.That(sceneText, Does.Contain("G1 72u Spearman"));
-        Assert.That(sceneText, Does.Contain("Acceptance.Selection.Health"));
+        Assert.That(sceneText, Does.Contain("LIVE 72"));
+        Assert.That(sceneText, Does.Contain("Acceptance.CommandSource.Health"));
 
         float x = host.LayoutRect.X + (host.LayoutRect.Width * 0.5f);
         float y = host.LayoutRect.Y + (host.LayoutRect.Height * 0.5f);
@@ -140,17 +125,16 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
             Path.Combine(artifactRoot, "battle-report.md"),
             string.Join(Environment.NewLine, new[]
             {
-                "# Selection Entity Collection Panel Battle Report",
+                "# Command Source Entity Collection Panel Battle Report",
                 string.Empty,
                 "## Scenario Card",
-                "- Goal: prove the selection entity collection panel reads the active viewed selection and virtualizes a large entity list.",
+                "- Goal: prove the command-source entity collection panel reads the active collection and virtualizes a large entity list.",
                 "- Viewport: 1600x900 headless Skia UI capture.",
-                "- Selection: 72 deterministic entities across Spearman / Archer / Knight categories with id, name, and GAS attributes.",
-                "- Control groups: current viewed selection saved into group 1 and mirrored into formation view before capture.",
+                "- Command source: 72 deterministic entities across Spearman / Archer / Knight categories with id, name, and GAS attributes.",
                 string.Empty,
                 "## Outcome",
                 "- success: yes",
-                "- verdict: the interaction showcase mounts a bottom-left RTS selection dock that renders category chips, dense unit tiles, control-group recall affordances, and a formation-backed current viewed selection without composing every entity tile each frame.",
+                "- verdict: the interaction showcase mounts a bottom-left command roster that renders category chips and dense unit tiles without composing every entity tile each frame.",
                 $"- screenshot: `screens/{Path.GetFileName(screenshotPath)}`",
             }));
 
@@ -159,8 +143,7 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
             string.Join(Environment.NewLine, new[]
             {
                 "{\"step\":\"load-map\",\"action\":\"capture\",\"detail\":\"Loaded interaction_showcase_hub with UIRoot enabled.\"}",
-                $"{{\"step\":\"seed-selection\",\"action\":\"mutate\",\"detail\":\"Bound {selectionCount} categorized entities to selection.live.primary.\"}}",
-                "{\"step\":\"save-control-group\",\"action\":\"mutate\",\"detail\":\"Saved the current viewed selection into control group 1 and mirrored selection.formation.primary.\"}",
+                $"{{\"step\":\"seed-command-source\",\"action\":\"mutate\",\"detail\":\"Bound {commandSourceCount} categorized entities to collection.command.source.\"}}",
                 "{\"step\":\"scroll-panel\",\"action\":\"scroll\",\"detail\":\"Scrolled the entity collection panel and advanced the virtual window.\"}",
                 $"{{\"step\":\"export-screenshot\",\"action\":\"capture\",\"detail\":\"Wrote screens/{Path.GetFileName(screenshotPath)}.\"}}",
             }));
@@ -170,14 +153,26 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
             string.Join(Environment.NewLine, new[]
             {
                 "flowchart TD",
-                "    A[Load interaction_showcase_hub] --> B[Seed 72 categorized selection entities]",
-                "    B --> C[Bind selection.view.primary to selection.live.primary]",
-                "    C --> D[Save current viewed selection into control group 1 and formation view]",
-                "    D --> E[Mount RTS selection dock in Interaction showcase UI]",
-                "    E --> F[Verify virtual window total rows > visible rows]",
-                "    F --> G[Scroll collection host]",
-                "    G --> H[Export screenshot artifact]",
+                "    A[Load interaction_showcase_hub] --> B[Seed 72 categorized command-source entities]",
+                "    B --> C[Publish collection.command.source]",
+                "    C --> D[Mount command roster dock in Interaction showcase UI]",
+                "    D --> E[Verify virtual window total rows > visible rows]",
+                "    E --> F[Scroll collection host]",
+                "    F --> G[Export screenshot artifact]",
             }));
+    }
+
+    private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
+    {
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            members.Length > 0 ? members[0] : Entity.Null,
+            "Acceptance command source",
+            $"{members.Length} entities ready for commands");
+        collections.Replace(owner, descriptor, members, owner);
     }
 
     private static GameEngine CreateEngine(params string[] modIds)

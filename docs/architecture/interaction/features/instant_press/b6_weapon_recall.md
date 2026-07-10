@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "RecallWeapon"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 实现方案:
@@ -37,7 +37,7 @@ InputOrderMapping:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | AbilityExecSpec | ✅ 已有 | EffectSignal item |
 | DisplacementRuntimeSystem | ✅ 已有 | 控制武器移动 |
 | CreateUnit handler | ✅ 已有 | 创建武器实体 |

@@ -3,9 +3,10 @@ using Ludots.Core.Components;
 using System.Threading.Tasks;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
@@ -21,6 +22,12 @@ namespace RoadNetworkShowcaseMod.Runtime
 {
     internal sealed class RoadNetworkShowcaseRuntime
     {
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription()
+            .WithAll<CommandSourceSelectableTag, MapEntity>();
+
+        private const string PrimaryPlayerColumnName = "Blue Vanguard";
+        private const string TacticalCameraModeId = "Camera.Mode.Tactical";
+        private const string TacticalCameraId = "Camera.Profile.Tactical";
         private string? _activeMapId;
         private readonly RoadNetworkShowcasePanelController _panelController;
         private readonly RoadNetworkShowcaseDebugLogWriter _debugLogWriter;
@@ -42,7 +49,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         public NodeGraphBoard? ActiveBoard { get; private set; }
         public RoadNetworkScenarioDefinition? Scenario { get; private set; }
         public bool IsActive => ActiveBoard != null && Scenario != null;
-        public string LastSubmitStatus { get; private set; } = "Road command ready. Right-click near a road or fort.";
+        public string LastSubmitStatus { get; private set; } = "Road command ready. Use the command action near a road or fort.";
         public string? LatestDebugSnapshotPath => _debugLogWriter.SnapshotPath;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -73,10 +80,11 @@ namespace RoadNetworkShowcaseMod.Runtime
             engine.GlobalContext[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = board.LoadedChunksSource;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
-            ApplyInitialPlayableCamera(engine);
-            PrimeInitialChunkWindow(engine);
+            EnsureShowcaseProfiles(engine.World);
+            Vector2 initialCameraTargetCm = ApplyInitialPlayableCamera(engine);
+            PrimeInitialChunkWindow(engine, initialCameraTargetCm);
             EnsurePrimaryPlayerControl(engine);
-            PublishLocalRoadColumnKnowledge(engine);
+            PublishSelectableKnowledge(engine);
             RefreshPanel(engine);
 
             return Task.CompletedTask;
@@ -106,7 +114,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             EnsurePrimaryPlayerControl(engine);
-            PublishLocalRoadColumnKnowledge(engine);
+            PublishSelectableKnowledge(engine);
 
             if (engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out var statusObj) &&
                 statusObj is string status &&
@@ -134,7 +142,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             ApplyInitialPlayableCamera(engine);
-            LastSubmitStatus = "Camera reset to local staging view.";
+            LastSubmitStatus = "Camera reset to blue staging view.";
             return true;
         }
 
@@ -145,14 +153,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return false;
             }
 
-            ActivateTacticalCamera(engine);
-            string cameraId = ResolveConfiguredVirtualCameraId(engine);
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
-            {
-                VirtualCameraId = cameraId,
-                TargetCm = new Vector2(landmarkWorldCm.X, landmarkWorldCm.Z)
-            });
-            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            RequestTacticalCameraTarget(engine, new Vector2(landmarkWorldCm.X, landmarkWorldCm.Z));
             LastSubmitStatus = status;
             RefreshPanel(engine);
             return true;
@@ -189,17 +190,12 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return false;
             }
 
-            if (!TryResolveLocalPlayerId(engine, out int playerId))
-            {
-                return false;
-            }
-
             var expander = new RoadMoveOrderExpander(engine.World, engine.GlobalContext, orders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = new Order
             {
                 OrderTypeId = moveToOrderTypeId,
                 Actor = actor,
-                PlayerId = playerId,
+                PlayerId = 1,
                 SubmitMode = OrderSubmitMode.Immediate
             };
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
@@ -220,94 +216,44 @@ namespace RoadNetworkShowcaseMod.Runtime
             return new RoadNetworkShowcasePanelStateBuilder(engine, this).Build();
         }
 
-        private static void PublishLocalRoadColumnKnowledge(GameEngine engine)
+        private static void ActivateTacticalViewMode(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Entity viewer ||
-                !engine.World.IsAlive(viewer) ||
-                !engine.World.TryGet(viewer, out Team viewerTeam))
-            {
-                return;
-            }
-
-            KnowledgeProjectionStore store = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
-                ?? throw new System.InvalidOperationException("Road Network showcase requires KnowledgeProjectionStore before publishing local road column knowledge.");
-            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
-            var empty = KnowledgeIdMask256.Empty;
-            var query = new QueryDescription().WithAll<RoadColumnTag, Team, SelectionSelectableTag>();
-            engine.World.Query(in query, (Entity entity, ref RoadColumnTag roadColumn, ref Team team, ref SelectionSelectableTag selectable) =>
-            {
-                if (team.Id != viewerTeam.Id)
-                {
-                    return;
-                }
-
-                store.Upsert(
-                    viewer,
-                    entity,
-                    new KnowledgeDisclosureRecord(
-                        KnowledgePresence.LiveVisible,
-                        KnowledgePositionAccess.Live,
-                        empty,
-                        empty,
-                        empty,
-                        viewer,
-                        observedTick,
-                        expiryTick: 0,
-                        confidencePermille: 1000,
-                        revision: 0));
-            });
-        }
-
-        private void ActivateTacticalCamera(GameEngine engine)
-        {
-            string cameraId = ResolveConfiguredVirtualCameraId(engine);
             if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out object? managerObj) &&
-                managerObj is ViewModeManager viewModeManager &&
-                TryResolveViewModeId(viewModeManager, cameraId, out string modeId))
+                managerObj is ViewModeManager viewModeManager)
             {
-                viewModeManager.SwitchTo(modeId, applyCamera: false);
+                viewModeManager.SwitchTo(TacticalCameraModeId);
             }
-
-            ClearPendingCameraRequests(engine);
-
-            if (engine.GetService(CoreServiceKeys.VirtualCameraRegistry) is not VirtualCameraRegistry registry ||
-                !registry.TryGet(cameraId, out VirtualCameraDefinition? definition) ||
-                definition == null)
-            {
-                return;
-            }
-
-            engine.GameSession.Camera.ResetVirtualCameras();
-            engine.GameSession.Camera.ActivateVirtualCamera(
-                cameraId,
-                blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
-                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
         }
 
-        private static void ClearPendingCameraRequests(GameEngine engine)
+        private static void RequestTacticalCameraTarget(GameEngine engine, Vector2 targetCm)
         {
-            engine.GlobalContext.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
-            engine.GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
-        }
-
-        private void ApplyInitialPlayableCamera(GameEngine engine)
-        {
-            ActivateTacticalCamera(engine);
-            Vector2 target = ResolveInitialCameraTarget(engine);
-            string cameraId = ResolveConfiguredVirtualCameraId(engine);
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ActivateTacticalViewMode(engine);
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
             {
-                VirtualCameraId = cameraId,
-                TargetCm = target
+                Id = TacticalCameraId,
+                BlendDurationSeconds = 0f,
+                FollowTargetKindOverride = CameraFollowTargetKind.None,
+                SnapToFollowTargetWhenAvailable = false,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
             });
-            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+            {
+                VirtualCameraId = TacticalCameraId,
+                TargetCm = targetCm
+            });
+        }
+
+        private Vector2 ApplyInitialPlayableCamera(GameEngine engine)
+        {
+            Vector2 targetCm = ResolveInitialCameraTarget(engine);
+            RequestTacticalCameraTarget(engine, targetCm);
+            return targetCm;
         }
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
-            Entity owner = ResolveLocalPlayerEntity(engine);
+            Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
             if (owner == Entity.Null)
             {
                 return;
@@ -319,28 +265,29 @@ namespace RoadNetworkShowcaseMod.Runtime
                 engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
 
-            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection)
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
             {
-                EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
-                if (ShouldSeedLivePrimarySelection(engine.World, selection, owner))
+                EnsureCommandSourceComponents(engine.World, owner);
+                if (ShouldSeedCommandSource(engine.World, collections, owner))
                 {
-                    Span<Entity> initialSelection = stackalloc Entity[1];
-                    initialSelection[0] = owner;
-                    selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, initialSelection);
+                    Span<Entity> initialCommandSource = stackalloc Entity[1];
+                    initialCommandSource[0] = owner;
+                    var descriptor = EntityCollectionDescriptor.Create(
+                        EntityCollectionKeys.CommandSource,
+                        EntityCollectionSourceKind.Explicit,
+                        EntityCollectionRoleKind.CommandSource,
+                        owner,
+                        owner,
+                        "Road network command source",
+                        "Primary road-network actor.");
+                    collections.Replace(owner, descriptor, initialCommandSource, owner);
                 }
             }
         }
 
         private Vector2 ResolveInitialCameraTarget(GameEngine engine)
         {
-            CameraConfig? configuredCamera = engine.CurrentMapSession?.MapConfig.DefaultCamera;
-            if (configuredCamera?.TargetXCm.HasValue == true &&
-                configuredCamera.TargetYCm.HasValue)
-            {
-                return new Vector2(configuredCamera.TargetXCm.Value, configuredCamera.TargetYCm.Value);
-            }
-
-            Entity owner = ResolveLocalPlayerEntity(engine);
+            Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
             if (owner != Entity.Null &&
                 engine.World.IsAlive(owner) &&
                 engine.World.Has<WorldPositionCm>(owner))
@@ -357,44 +304,16 @@ namespace RoadNetworkShowcaseMod.Runtime
             return Vector2.Zero;
         }
 
-        private static string ResolveConfiguredVirtualCameraId(GameEngine engine)
-        {
-            string? cameraId = engine.CurrentMapSession?.MapConfig.DefaultCamera?.VirtualCameraId;
-            if (string.IsNullOrWhiteSpace(cameraId))
-            {
-                throw new InvalidOperationException("Road Network showcase requires map DefaultCamera.VirtualCameraId.");
-            }
-
-            return cameraId;
-        }
-
-        private static bool TryResolveViewModeId(ViewModeManager viewModeManager, string virtualCameraId, out string modeId)
-        {
-            for (int i = 0; i < viewModeManager.Modes.Count; i++)
-            {
-                ViewModeConfig mode = viewModeManager.Modes[i];
-                if (string.Equals(mode.VirtualCameraId, virtualCameraId, StringComparison.Ordinal))
-                {
-                    modeId = mode.Id;
-                    return true;
-                }
-            }
-
-            modeId = string.Empty;
-            return false;
-        }
-
-        private void PrimeInitialChunkWindow(GameEngine engine)
+        private void PrimeInitialChunkWindow(GameEngine engine, Vector2 cameraTargetCm)
         {
             if (!IsActive || Scenario == null || ActiveBoard == null)
             {
                 return;
             }
 
-            var target = engine.GameSession.Camera.State.TargetCm;
             ActiveBoard.LoadedChunksSource.Update(
-                (int)target.X,
-                (int)target.Y,
+                (int)cameraTargetCm.X,
+                (int)cameraTargetCm.Y,
                 Scenario.StreamingRadiusCm);
 
             foreach (long chunkKey in ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
@@ -403,34 +322,67 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
         }
 
-        private static void EnsureSelectionComponents(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
+        private static void EnsureCommandSourceComponents(World world, Entity owner)
         {
-            if (!world.Has<SelectionDragState>(owner))
+            if (!world.Has<CommandSourceDragState>(owner))
             {
-                world.Add(owner, default(SelectionDragState));
+                world.Add(owner, default(CommandSourceDragState));
             }
-
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
-        private static bool ShouldSeedLivePrimarySelection(World world, SelectionRuntime selection, Entity owner)
+        private void PublishSelectableKnowledge(GameEngine engine)
         {
-            if (!selection.TryGetSelectionEntity(owner, SelectionSetKeys.LivePrimary, out Entity container))
+            if (string.IsNullOrWhiteSpace(_activeMapId) ||
+                !engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new System.InvalidOperationException("RoadNetwork showcase requires KnowledgeProjectionStore before publishing selectable visibility.");
+            var empty = KnowledgeIdMask256.Empty;
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+            string activeMapId = _activeMapId;
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
+            {
+                if (!string.Equals(mapEntity.MapId.Value, activeMapId, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                knowledge.Upsert(
+                    viewer,
+                    target,
+                    new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        empty,
+                        empty,
+                        empty,
+                        viewer,
+                        observedTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0));
+            });
+        }
+
+        private static bool ShouldSeedCommandSource(World world, EntityCollectionStore collections, Entity owner)
+        {
+            if (!collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
             {
                 return true;
             }
 
-            int count = selection.GetSelectionCount(container);
-            if (count <= 0)
+            if (view.Count <= 0)
             {
                 return true;
             }
 
-            var selected = new Entity[count];
-            int written = selection.CopySelection(container, selected);
+            var selected = new Entity[view.Count];
+            int written = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, selected);
             for (int i = 0; i < written; i++)
             {
                 if (world.IsAlive(selected[i]))
@@ -442,34 +394,69 @@ namespace RoadNetworkShowcaseMod.Runtime
             return true;
         }
 
-        private static Entity ResolveLocalPlayerEntity(GameEngine engine)
+        private static Entity ResolveNamedEntity(GameEngine engine, string entityName)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
-                engine.World.IsAlive(local))
+            Entity resolved = Entity.Null;
+            engine.World.Query(new QueryDescription().WithAll<Name, PlayerOwner>(), (Entity entity, ref Name name, ref PlayerOwner owner) =>
             {
-                return local;
-            }
+                if (resolved != Entity.Null ||
+                    owner.PlayerId != 1 ||
+                    !string.Equals(name.Value, entityName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
 
-            Entity sessionLocal = engine.CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
-            return sessionLocal != Entity.Null && engine.World.IsAlive(sessionLocal)
-                ? sessionLocal
-                : Entity.Null;
+                resolved = entity;
+            });
+            return resolved;
         }
 
-        private static bool TryResolveLocalPlayerId(GameEngine engine, out int playerId)
+        private static void EnsureShowcaseProfiles(World world)
         {
-            playerId = 0;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? localIdObj) &&
-                localIdObj is int localId &&
-                localId > 0)
+            world.Query(new QueryDescription().WithAll<Name, RoadColumnTag>(), (Entity entity, ref Name name, ref RoadColumnTag roadColumn) =>
             {
-                playerId = localId;
-                return true;
-            }
+                RoadMoveProfileRef? profile = name.Value switch
+                {
+                    "Blue North Column" => new RoadMoveProfileRef
+                    {
+                        PlannerPresetId = RoadRouteProfileCatalog.PlannerNorthScout,
+                        ExecutionPresetId = RoadRouteProfileCatalog.ExecutionCourier,
+                        PreviewPaletteId = RoadRouteProfileCatalog.PreviewCyan,
+                    },
+                    "Blue South Column" => new RoadMoveProfileRef
+                    {
+                        PlannerPresetId = RoadRouteProfileCatalog.PlannerSouthGuard,
+                        ExecutionPresetId = RoadRouteProfileCatalog.ExecutionSiege,
+                        PreviewPaletteId = RoadRouteProfileCatalog.PreviewCrimson,
+                    },
+                    "Red North Column" => new RoadMoveProfileRef
+                    {
+                        PlannerPresetId = RoadRouteProfileCatalog.PlannerNorthScout,
+                        ExecutionPresetId = RoadRouteProfileCatalog.ExecutionCourier,
+                        PreviewPaletteId = RoadRouteProfileCatalog.PreviewCyan,
+                    },
+                    "Red South Column" => new RoadMoveProfileRef
+                    {
+                        PlannerPresetId = RoadRouteProfileCatalog.PlannerSouthGuard,
+                        ExecutionPresetId = RoadRouteProfileCatalog.ExecutionSiege,
+                        PreviewPaletteId = RoadRouteProfileCatalog.PreviewCrimson,
+                    },
+                    "Blue Vanguard" or "Red Vanguard" => new RoadMoveProfileRef
+                    {
+                        PlannerPresetId = RoadRouteProfileCatalog.PlannerDefault,
+                        ExecutionPresetId = RoadRouteProfileCatalog.ExecutionVanguard,
+                        PreviewPaletteId = RoadRouteProfileCatalog.PreviewAmber,
+                    },
+                    _ => null,
+                };
 
-            playerId = engine.CurrentMapSession?.LocalPlayerId ?? 0;
-            return playerId > 0;
+                if (!profile.HasValue || world.Has<RoadMoveProfileRef>(entity))
+                {
+                    return;
+                }
+
+                world.Add(entity, profile.Value);
+            });
         }
 
         private void HandleChunkLoaded(long chunkKey)
@@ -519,7 +506,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             _activeMapId = null;
             ActiveBoard = null;
             Scenario = null;
-            LastSubmitStatus = "Road command ready. Right-click near a road or fort.";
+            LastSubmitStatus = "Road command ready. Use the command action near a road or fort.";
         }
 
         private bool TryResolvePreset(GameEngine engine, ShowcaseCommandPreset preset, out Entity actor, out Vector3 targetWorldCm, out string status)
@@ -566,7 +553,13 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    engine.World,
+                    engine.GlobalContext,
+                    owner,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity selected) &&
                 engine.World.IsAlive(selected))
             {
                 return selected;
@@ -579,7 +572,20 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return actor;
             }
 
-            return ResolveLocalPlayerEntity(engine);
+            return ResolveNamedEntity(engine, PrimaryPlayerColumnName);
+        }
+
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private static string DescribeActor(GameEngine engine, Entity actor)

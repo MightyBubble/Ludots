@@ -1,11 +1,12 @@
 {
   "startupMapId": "formation_capability_showcase",
+  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Formation Capability Showcase Movement",
   "targetFps": 0,
   "windowWidth": 1600,
   "windowHeight": 900,
   "windowResizable": true,
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
@@ -32,6 +33,11 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "runtimeEntityLifecycleQueueCapacity": 131072,
+    "runtimeEntityLifecycleReceiptQueueCapacity": 131072,
+    "globalFieldVisualRecordCapacity": 256,
+    "globalFieldVisualCellCapacity": 262144,
+    "globalFieldVisualDirtyRectCapacity": 4096,
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,

@@ -39,6 +39,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         CompareLtInt      = 31,   // B[Dst] = I[A] < I[B] ? 1 : 0
         CompareEqInt      = 32,   // B[Dst] = I[A] == I[B] ? 1 : 0
         HasTag            = 33,   // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
+        CompareEqEntity   = 35,   // B[Dst] = E[A] == E[B] ? 1 : 0
 
         SelectEntity = 40,
         QueryRadius = 100,
@@ -130,6 +131,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMinMetric = 394,
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
+        RelationshipHasLink = 397,          // B[Dst] = HasLink(E[A], E[B], type=Flags symbol)
+
+        // ── Entity lifecycle composition (400-401) ──
+        BeginLifecycleTransaction = 400,
+        InvokeBuiltin = 401,
+
+        // ── Placement validation (402-406) ──
+        LoadTargetPosX = 402,
+        LoadTargetPosY = 403,
+        ClampTargetToRange = 404,
+        IsPointInCircle = 405,
+        SnapToNearestInCollection = 406,
+        SnapToNearestGraphEdge = 407,
+
+        // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
+        LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)
+        LoadEventPayloadInt  = 411,  // I[Dst] = EventPayload int slot (Imm: 0=PayloadA, 1=PayloadB)
+        LoadEventPayloadFloat = 412, // F[Dst] = EventPayload float slot (Imm: 0..3 = FloatA..FloatD)
+
+        // ── Topology predicates (420-422, RFC-0065 DEC-5 viewer-relative semantics) ──
+        ControlDomainResolve  = 420, // E[Dst] = control domain rep of E[A], Entity.Null when none
+        ControlDomainControls = 421, // B[Dst] = IsControllableBy(controllerRep=E[A], target=E[B])
+        KnowledgeHasProjection = 422, // B[Dst] = viewer E[A] has knowledge projection of target E[B]
     }
 
     public static class GraphNodeOpParser
@@ -149,4 +173,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-

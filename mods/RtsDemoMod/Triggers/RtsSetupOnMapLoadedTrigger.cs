@@ -6,7 +6,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
@@ -45,20 +46,35 @@ namespace RtsDemoMod.Triggers
                 if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
                 if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
                 if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
-                if (world.Has<SelectionSelectableTag>(e) && !world.Has<SelectionSelectableState>(e))
+                if (world.Has<CommandSourceSelectableTag>(e) && !world.Has<CommandSourceSelectableState>(e))
                 {
-                    world.Add(e, SelectionSelectableState.EnabledByDefault);
+                    world.Add(e, CommandSourceSelectableState.EnabledByDefault);
                 }
             });
 
             RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
-            EnsureLocalSelectionOwner(engine, world);
-            EnsureSelectionViewBinding(engine, world);
-            EnsureDefaultSelection(engine, world);
+            EnsureLocalCommandSourceOwner(engine, world);
+            EnsurePlayerOwnership(world);
+            RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
+            EnsureDefaultCommandSource(engine, world);
             return Task.CompletedTask;
         }
 
-        private static void EnsureLocalSelectionOwner(GameEngine engine, World world)
+        private static void EnsurePlayerOwnership(World world, int playerId = 1)
+        {
+            var query = new QueryDescription().WithAll<Team>();
+            world.Query(in query, (Entity entity, ref Team team) =>
+            {
+                if (team.Id != playerId || world.Has<PlayerOwner>(entity))
+                {
+                    return;
+                }
+
+                world.Add(entity, new PlayerOwner { PlayerId = playerId });
+            });
+        }
+
+        private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (world.IsAlive(owner))
@@ -71,35 +87,10 @@ namespace RtsDemoMod.Triggers
             engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
         }
 
-        private static void EnsureSelectionViewBinding(GameEngine engine, World world)
+        private static void EnsureDefaultCommandSource(GameEngine engine, World world)
         {
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null)
-            {
-                return;
-            }
-
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!world.IsAlive(owner))
-            {
-                return;
-            }
-
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-        }
-
-        private static void EnsureDefaultSelection(GameEngine engine, World world)
-        {
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null)
-            {
-                return;
-            }
-
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!world.IsAlive(owner) || SelectionContextRuntime.GetCurrentCount(world, engine.GlobalContext) > 0)
+            if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
             {
                 return;
             }
@@ -110,9 +101,7 @@ namespace RtsDemoMod.Triggers
                 return;
             }
 
-            Span<Entity> next = stackalloc Entity[1];
-            next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
+            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(engine, target, snapCamera: false);
         }
 
         private static bool HasTag(List<string> tags, string t)

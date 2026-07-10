@@ -150,7 +150,7 @@
         "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
       },
       {
-        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "entityquery.tactics.visual.selection.marker",
@@ -158,7 +158,7 @@
         }
       },
       {
-        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "entityquery.tactics.visual.selection.marker",
@@ -459,6 +459,219 @@
           "rotationOffset": [0, 0, 0, 1],
           "inheritScale": false
         }
+      }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.base",
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 2.1 },
+      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 1.68 },
+      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.055 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [2.1, 1.68, 0.055]
+        }
+      }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.ally",
+    "extends": "entityquery.tactics.highlight.base",
+    "defaultColor": [0.38, 0.68, 1.0, 0.92],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.1 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.55 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.12 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.38 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.68 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.92 }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.enemy",
+    "extends": "entityquery.tactics.highlight.base",
+    "defaultColor": [1.0, 0.43, 0.5, 0.78],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.2 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.26 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.08 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.43 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.5 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.78 }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.selected_best",
+    "extends": "entityquery.tactics.highlight.base",
+    "defaultColor": [0.43, 0.91, 0.72, 0.96],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.17 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.95 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.65 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.16 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.43 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.91 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.72 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.96 }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.threat_best",
+    "extends": "entityquery.tactics.highlight.base",
+    "defaultColor": [1.0, 0.3, 0.42, 1.0],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.18 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.2 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.18 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.3 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.42 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.formation_best",
+    "extends": "entityquery.tactics.highlight.base",
+    "defaultColor": [0.66, 0.55, 0.98, 0.9],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.52 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.38 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.13 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.66 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.55 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.98 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.9 }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.highlight.rules",
+    "rules": [
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.ally" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "entityquery.tactics.highlight.ally",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.ally" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.ally", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.ally" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.ally", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.ally" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.ally", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "entityquery.tactics.highlight.ally" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "entityquery.tactics.highlight.ally", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.enemy" },
+        "command": { "kind": "CreatePerformer", "definitionId": "entityquery.tactics.highlight.enemy", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.enemy" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.enemy", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.enemy" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.enemy", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.enemy" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.enemy", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "entityquery.tactics.highlight.enemy" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "entityquery.tactics.highlight.enemy", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.selected_best" },
+        "command": { "kind": "CreatePerformer", "definitionId": "entityquery.tactics.highlight.selected_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.selected_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.selected_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.selected_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.selected_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.selected_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.selected_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "entityquery.tactics.highlight.selected_best" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "entityquery.tactics.highlight.selected_best", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.threat_best" },
+        "command": { "kind": "CreatePerformer", "definitionId": "entityquery.tactics.highlight.threat_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.threat_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.threat_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.threat_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.threat_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.threat_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.threat_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "entityquery.tactics.highlight.threat_best" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "entityquery.tactics.highlight.threat_best", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.formation_best" },
+        "command": { "kind": "CreatePerformer", "definitionId": "entityquery.tactics.highlight.formation_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.formation_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.formation_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.formation_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.formation_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "entityquery.tactics.highlight.formation_best" },
+        "command": { "kind": "SetParam", "definitionId": "entityquery.tactics.highlight.formation_best", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "entityquery.tactics.highlight.formation_best" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "entityquery.tactics.highlight.formation_best", "scopeSource": "EventPayloadA" }
       }
     ]
   }

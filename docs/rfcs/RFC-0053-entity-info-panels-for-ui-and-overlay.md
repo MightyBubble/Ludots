@@ -195,7 +195,7 @@ public readonly record struct EntityInfoPanelTarget(
 说明：
 
 * `FixedEntity` 用于直接绑定某个实体。
-* `ServiceKeyEntity` 用于绑定 `CoreServiceKeys.SelectedEntity`、`CoreServiceKeys.HoveredEntity` 等正式游戏状态。
+* `ServiceKeyEntity` 用于绑定 `CoreServiceKeys.SelectedEntity`、collection-backed hover 等正式游戏状态。
 * `ScriptContextEntity` 用于 trigger / command 在上下文里传目标实体。
 
 ### 6.3 明细开关

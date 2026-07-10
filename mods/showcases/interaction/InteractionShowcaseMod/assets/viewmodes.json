@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "Id": "Interaction.Mode.WoW",
     "DisplayName": "WoW / Target First",
@@ -43,7 +43,8 @@
     "Id": "Interaction.Mode.Action",
     "DisplayName": "Action / Context Scored",
     "VirtualCameraId": "Camera.Profile.Follow",
-    "FollowTargetKind": "SelectedEntity",
+    "FollowTargetKind": "EntityCollectionPrimary",
+    "FollowCollectionKey": "collection.command.source",
     "InteractionMode": "ContextScored",
     "SkillBarKeyLabels": ["Q", "W", "E", "R", "Z", "F", "Space", "X+C"],
     "SkillBarEnabled": true,

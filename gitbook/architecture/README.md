@@ -8,7 +8,11 @@
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
+- [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
+- [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**
+- [时间体系](time-system.md)
 - [Exchange Operations](exchange-operations.md)
+- [Quest Core Infrastructure](../../docs/architecture/quest_core_infra.md)
 - [通用存档系统](save-system.md)
 - [AI Utility Autocast 契约](ai-utility-autocast-contract.md)
 - [实体仿真分层与车道](entity-simulation-layering.md)
@@ -17,11 +21,13 @@
 - [能力标准 Showcase](capability-standard-showcases.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
+- [Structure Collision Surfaces](structure-collision-surfaces.md)
 - [Core Minimap Authoring](core-minimap-authoring.md)
 - [Core Field2D](core-field2d.md)
 - [Global Field Rendering](global-field-rendering.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
 - [Transport Network SSOT](transport-network-ssot.md)
+- [Placement Validation SSOT](placement-validation-ssot.md)
 - [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
 - [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)
@@ -35,6 +41,7 @@
 - [Performer 现有基建收尾整合](performer-legacy-consolidation.md)
 - [Performer 开发看板](performer-development-kanban.md)
 - [Performer 编译式执行分层](performer-compiled-lanes.md)
+- [Browser Runtime Provider Adapter Guide](browser-runtime-provider-adapter-guide.md)
 - Browser UI Runtime：正式 contract 位于 `docs/architecture/browser_ui_runtime.md`，用于把真实 Web App 作为平台无关 browser surface 嵌入 Ludots UI；它不改变 native Markup 无 JS 的边界
 - WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
 
@@ -42,7 +49,7 @@
 
 - Entity Association Core 的计划与 ADR SSOT 是 GitHub issue #239；ADR 正本是 #244（AAC-1）。不要在 `docs/adr/` 为 AAC 新增平行 ADR 文件；AAC-2~AAC-12 必须引用 #244 的存储策略、ScopeKey、组合契约、红线与 2.5 UAT showcase capability mod 标准。需要玩家可见 showcase 的子单是 #245、#246、#247、#248、#249、#250、#251、#253；meta/卫生/护栏例外是 #244、#252、#254、#255。
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
-- Core 现已包含 `TimeFlow`、`Items`、`Exchange`、`Narrative`、`Relationships` 等正式运行时能力
+- Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Narrative`、`Relationships` 等正式运行时能力
 - 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
 - Raylib 侧已补充一个“脱离 performer/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw

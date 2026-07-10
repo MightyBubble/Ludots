@@ -22,7 +22,7 @@
 ## 交互层设计
 
 - **Trigger**: 无（被动触发）
-- **SelectionType**: `None`（或根据具体响应类型）
+- **TargetType**: `None`（或根据具体响应类型）
 - **InteractionMode**: 不适用
 
 ```json5

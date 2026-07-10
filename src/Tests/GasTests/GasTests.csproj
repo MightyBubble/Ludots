@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
+    <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
@@ -46,6 +47,7 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
@@ -58,6 +60,8 @@
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceHotpathEntryMod\CameraAcceptanceHotpathEntryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\SuperweaponContextShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
@@ -86,7 +90,9 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />
@@ -105,6 +111,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\SharedVisionSnapshotShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\FogOfWarShowcaseMod\FogOfWarShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\UtilityAutocastShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>

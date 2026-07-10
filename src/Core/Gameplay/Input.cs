@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay
         /// <summary>
         /// Generic digital buttons (64 bits).
         /// Meanings are defined by the upper-level InputMap.
-        /// e.g., Bit0=Select, Bit1=Cancel, Bit2=Group1...
+        /// e.g., Bit0=CommandSourceAcquire, Bit1=Cancel, Bit2=Group1...
         /// </summary>
         public ulong Buttons;
 

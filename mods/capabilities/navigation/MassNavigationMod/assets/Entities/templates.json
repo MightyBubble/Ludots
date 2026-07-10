@@ -1,5 +1,13 @@
 [
   {
+    "id": "mass_navigation_player_team",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.PlayerTeam"
+      }
+    }
+  },
+  {
     "id": "mass_navigation_local_player",
     "components": {
       "Name": {
@@ -8,7 +16,7 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
-      "SelectionDragState": {}
+      "CommandSourceDragState": {}
     }
   },
   {
@@ -32,8 +40,8 @@
         "Id": 1
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -80,8 +88,8 @@
         "Id": 1
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -128,8 +136,8 @@
         "Id": 2
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -176,8 +184,8 @@
         "Id": 2
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -224,8 +232,8 @@
         "Id": 3
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -272,8 +280,8 @@
         "Id": 3
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -320,8 +328,8 @@
         "Id": 4
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {
@@ -368,8 +376,8 @@
         "Id": 4
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {

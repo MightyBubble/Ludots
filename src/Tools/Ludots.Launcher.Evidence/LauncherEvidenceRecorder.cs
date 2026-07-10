@@ -10,6 +10,7 @@ using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -17,7 +18,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.MassNavigation;
@@ -75,7 +76,7 @@ public static class LauncherEvidenceRecorder
         .WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
 
     private static readonly QueryDescription OrderableMassNavigationAgentQuery = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer, WorldPositionCm, CommandSourceSelectableTag, PresentationOwnerHasPerformerPayload>();
 
     private static readonly QueryDescription MassNavigationBlockerQuery = new QueryDescription()
         .WithAll<MassNavigationBlocker, MassNavigationBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
@@ -97,6 +98,19 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationRemoteSettleTicks = 20;
     private const int MassNavigationReturnSettleTicks = 20;
     private const int MassNavigationSelectionSampleCount = 128;
+    private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
+    private const int MassNavigationAvoidanceExtraOrderTicks = 210;
+    private const int MassNavigationAvoidanceCrossingTicks = 420;
+    private const int MassNavigationAvoidanceCrowdSettleTicks = 1800;
+    private const int MassNavigationAvoidanceImageWidth = 1280;
+    private const int MassNavigationAvoidanceImageHeight = 720;
+    private const float MassNavigationAvoidanceZoomWidthCm = 4000f;
+    private const float MassNavigationAvoidanceZoomAspectWidth = 16f;
+    private const float MassNavigationAvoidanceZoomAspectHeight = 9f;
+    private const float MassNavigationAvoidanceCrossingScale = 0.2f;
+    private const float MassNavigationAvoidanceCrowdSettleFraction = 0.8f;
+    private const float MassNavigationAvoidanceDeepOverlapRatio = 0.10f;
+    private const float MassNavigationAvoidanceFinalMaxPenetrationRatio = 0.10f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
     private static readonly Vector2 RoadSelectionWorldCm = new(-9800f, 0f);
     private static readonly Vector2 RoadCommandWorldCm = new(0f, 0f);
@@ -135,6 +149,7 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.MassNavigationLargeWorld => Task.FromResult(RecordMassNavigationLargeWorld(request)),
+            EvidenceScenario.Rfc0065ShowcaseArtifacts => Task.FromResult(RecordRfc0065ShowcaseArtifacts(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
     }
@@ -146,7 +161,9 @@ public static class LauncherEvidenceRecorder
             return EvidenceScenario.CameraAcceptanceProjectionClick;
         }
 
-        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase)))
+        if (plan.RootModIds.Any(id =>
+                string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(id, "CapabilityStandardMassNavigationLargeWorld10kMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.MassNavigationLargeWorld;
         }
@@ -159,6 +176,11 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "ChunkStreamingShowcaseMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.ChunkStreamingShowcaseCameraWindows;
+        }
+
+        if (TryResolveRfc0065ShowcaseProfile(plan, out _))
+        {
+            return EvidenceScenario.Rfc0065ShowcaseArtifacts;
         }
 
         return EvidenceScenario.None;
@@ -235,7 +257,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -310,7 +332,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -339,6 +361,361 @@ public static class LauncherEvidenceRecorder
             {
                 inputHandler.PushContext(contextId);
             }
+        }
+    }
+
+    private static LauncherRecordingResult RecordRfc0065ShowcaseArtifacts(LauncherRecordingRequest request)
+    {
+        if (!TryResolveRfc0065ShowcaseProfile(request.Plan, out Rfc0065ShowcaseProfile profile))
+        {
+            throw new InvalidOperationException($"No RFC0065 showcase recorder profile is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}");
+        }
+
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        string normalizedSignature = BuildRfc0065NormalizedSignature(request, profile);
+        var snapshots = new List<Rfc0065ArtifactSnapshot>
+        {
+            new(
+                Tick: 0,
+                Step: "000_launch_plan",
+                Title: "Launch plan resolved",
+                Status: "supported",
+                Detail: $"Root mod '{profile.ModId}' matched RFC0065 recorder profile '{profile.ScenarioKey}'.",
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: profile.RecorderSignals),
+            new(
+                Tick: 1,
+                Step: "001_showcase_contract",
+                Title: "Showcase contract captured",
+                Status: "documented",
+                Detail: profile.Intent,
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: profile.ExpectedArtifacts),
+            new(
+                Tick: 2,
+                Step: "002_evidence_bundle",
+                Title: "Evidence bundle written",
+                Status: "complete",
+                Detail: "Standard launcher evidence files are emitted without claiming real Raylib or CEF framebuffer recording.",
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: ["battle-report.md", "trace.jsonl", "path.mmd", "summary.json", "visible-checklist.md", "screens/timeline.png"])
+        };
+
+        var captureFrames = new List<CaptureFrame>();
+        foreach (Rfc0065ArtifactSnapshot snapshot in snapshots)
+        {
+            string fileName = $"{snapshot.Step}.png";
+            captureFrames.Add(new CaptureFrame(snapshot.Tick, snapshot.Step, fileName, 0, 0, 0f, 0f));
+            WriteRfc0065ArtifactFrameImage(profile, request, snapshot, Path.Combine(screensDir, fileName));
+        }
+
+        WriteTimelineSheet($"RFC0065 showcase artifact timeline - {profile.ModId}", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildRfc0065BattleReport(request, profile, snapshots, captureFrames, normalizedSignature));
+        File.WriteAllText(tracePath, BuildRfc0065TraceJsonl(request, profile, snapshots));
+        File.WriteAllText(pathPath, BuildRfc0065PathMermaid(profile));
+        File.WriteAllText(visibleChecklistPath, BuildRfc0065VisibleChecklist(profile, captureFrames));
+        File.WriteAllText(summaryPath, BuildRfc0065SummaryJson(request, profile, snapshots, normalizedSignature));
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            normalizedSignature);
+    }
+
+    private static bool TryResolveRfc0065ShowcaseProfile(LauncherLaunchPlan plan, out Rfc0065ShowcaseProfile profile)
+    {
+        foreach (Rfc0065ShowcaseProfile candidate in Rfc0065ShowcaseProfiles)
+        {
+            if (plan.RootModIds.Any(id => string.Equals(id, candidate.ModId, StringComparison.OrdinalIgnoreCase)))
+            {
+                profile = candidate;
+                return true;
+            }
+        }
+
+        profile = Rfc0065ShowcaseProfiles[0];
+        return false;
+    }
+
+    private static string BuildRfc0065NormalizedSignature(LauncherRecordingRequest request, Rfc0065ShowcaseProfile profile)
+    {
+        string rootMods = string.Join("+", request.Plan.RootModIds.Select(id => id.Trim()).Where(id => id.Length > 0));
+        string selectors = string.Join("+", request.Plan.Selectors.Select(id => id.Trim()).Where(id => id.Length > 0));
+        return $"{profile.ScenarioKey}|adapter={request.Plan.AdapterId}|roots={rootMods}|selectors={selectors}|mode=launcher-recorder-artifacts";
+    }
+
+    private static string BuildRfc0065BattleReport(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots,
+        IReadOnlyList<CaptureFrame> captureFrames,
+        string normalizedSignature)
+    {
+        string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Scenario Card: {profile.ScenarioKey}");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine($"- Player goal: {profile.Intent}");
+        sb.AppendLine($"- Gameplay domain: RFC0065 showcase mod `{profile.ModId}` recorded through launcher evidence artifact support.");
+        sb.AppendLine("- Recorder scope: launcher-side deterministic artifact bundle; this does not claim real Raylib or CEF framebuffer recording.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine("- Seed: none");
+        sb.AppendLine($"- Map/config hint: `{profile.MapHint}`");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Root mods: `{string.Join(", ", request.Plan.RootModIds)}`");
+        sb.AppendLine($"- Ordered mods: `{string.Join(", ", request.Plan.OrderedModIds)}`");
+        sb.AppendLine($"- Evidence images: {evidenceImages}");
+        sb.AppendLine();
+        sb.AppendLine("## Action Script");
+        sb.AppendLine("1. Resolve the launcher plan and root mod list.");
+        sb.AppendLine("2. Match the root mod against the RFC0065 showcase recorder profiles.");
+        sb.AppendLine("3. Emit the standard launcher evidence files for review and automation.");
+        sb.AppendLine("4. Emit simple PNG frames and a timeline sheet that visualize recorder artifact stages.");
+        sb.AppendLine();
+        sb.AppendLine("## Expected Outcomes");
+        foreach (string artifact in profile.ExpectedArtifacts)
+        {
+            sb.AppendLine($"- {artifact}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (Rfc0065ArtifactSnapshot snapshot in snapshots)
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] {profile.ModId}.{snapshot.Step} -> status={snapshot.Status} | adapter={snapshot.AdapterId} | mode={snapshot.ArtifactMode}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine("- success: yes");
+        sb.AppendLine("- verdict: RFC0065 showcase has a registered launcher evidence recorder artifact profile.");
+        sb.AppendLine("- reason: the unsupported-scenario branch was avoided and standard evidence files were written.");
+        sb.AppendLine();
+        sb.AppendLine("## Summary Stats");
+        sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
+        sb.AppendLine($"- root mod count: `{request.Plan.RootModIds.Count}`");
+        sb.AppendLine($"- ordered mod count: `{request.Plan.OrderedModIds.Count}`");
+        sb.AppendLine($"- normalized signature: `{normalizedSignature}`");
+        sb.AppendLine("- reusable wiring: `LauncherLaunchPlan`, evidence recorder scenario dispatch, Skia PNG artifact writer");
+        return sb.ToString();
+    }
+
+    private static string BuildRfc0065TraceJsonl(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots)
+    {
+        var lines = new List<string>(snapshots.Count);
+        for (int index = 0; index < snapshots.Count; index++)
+        {
+            Rfc0065ArtifactSnapshot snapshot = snapshots[index];
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                event_id = $"rfc0065-{profile.ScenarioKey}-{index + 1:000}",
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                scenario = profile.ScenarioKey,
+                root_mod = profile.ModId,
+                adapter = request.Plan.AdapterId,
+                artifact_mode = snapshot.ArtifactMode,
+                status = snapshot.Status,
+                detail = snapshot.Detail,
+                root_mod_count = snapshot.RootModCount,
+                ordered_mod_count = snapshot.OrderedModCount
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildRfc0065PathMermaid(Rfc0065ShowcaseProfile profile)
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            $"    A[Resolve launch plan for {profile.ModId}] --> B[Match RFC0065 recorder profile]",
+            "    B --> C[Capture launch selectors and mod ordering]",
+            "    C --> D[Write standard evidence files]",
+            "    D --> E[Write simple PNG artifact frames]",
+            "    E --> F[Return launcher recording result]",
+            "    B -->|missing| X[Unsupported scenario]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildRfc0065VisibleChecklist(Rfc0065ShowcaseProfile profile, IReadOnlyList<CaptureFrame> frames)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Visible Checklist: {profile.ScenarioKey}");
+        sb.AppendLine();
+        sb.AppendLine("- `screens/000_launch_plan.png` should identify the matched root mod and adapter.");
+        sb.AppendLine("- `screens/001_showcase_contract.png` should show the RFC0065 showcase contract and expected artifact signals.");
+        sb.AppendLine("- `screens/002_evidence_bundle.png` should state that standard evidence files were written.");
+        sb.AppendLine("- `screens/timeline.png` should show all recorder artifact frames in one sheet.");
+        sb.AppendLine("- These PNGs are recorder artifact visuals, not real Raylib or CEF framebuffer captures.");
+        sb.AppendLine();
+        foreach (CaptureFrame frame in frames)
+        {
+            sb.AppendLine($"- `{frame.FileName}`: step={frame.Step}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildRfc0065SummaryJson(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots,
+        string normalizedSignature)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = profile.ScenarioKey,
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            ordered_mods = request.Plan.OrderedModIds,
+            artifact_mode = "launcher-recorder-artifacts",
+            claims_real_raylib_or_cef_recording = false,
+            root_mod = profile.ModId,
+            showcase_scope = profile.ShowcaseScope,
+            map_hint = profile.MapHint,
+            expected_artifacts = profile.ExpectedArtifacts,
+            steps = snapshots.Select(snapshot => new
+            {
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                status = snapshot.Status
+            }),
+            normalized_signature = normalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static void WriteRfc0065ArtifactFrameImage(
+        Rfc0065ShowcaseProfile profile,
+        LauncherRecordingRequest request,
+        Rfc0065ArtifactSnapshot snapshot,
+        string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(CameraImageWidth, CameraImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(10, 14, 20));
+
+        using var titlePaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 38f };
+        using var subTitlePaint = new SKPaint { Color = new SKColor(190, 210, 230), IsAntialias = true, TextSize = 22f };
+        using var labelPaint = new SKPaint { Color = new SKColor(125, 170, 220), IsAntialias = true, TextSize = 18f };
+        using var valuePaint = new SKPaint { Color = new SKColor(232, 238, 246), IsAntialias = true, TextSize = 21f };
+        using var mutedPaint = new SKPaint { Color = new SKColor(150, 160, 172), IsAntialias = true, TextSize = 18f };
+        using var accentPaint = new SKPaint { Color = new SKColor(92, 196, 154), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var panelPaint = new SKPaint { Color = new SKColor(21, 29, 40), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var borderPaint = new SKPaint { Color = new SKColor(64, 82, 104), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var headerPaint = new SKPaint { Color = new SKColor(16, 24, 34), Style = SKPaintStyle.Fill };
+
+        canvas.DrawRect(new SKRect(0, 0, CameraImageWidth, 92), headerPaint);
+        canvas.DrawCircle(44, 46, 14, accentPaint);
+        canvas.DrawText("RFC0065 launcher evidence recorder", 72, 43, titlePaint);
+        canvas.DrawText(profile.ModId, 72, 73, subTitlePaint);
+
+        SKRect leftPanel = new(44, 132, 760, 780);
+        SKRect rightPanel = new(820, 132, 1556, 780);
+        canvas.DrawRoundRect(leftPanel, 8, 8, panelPaint);
+        canvas.DrawRoundRect(leftPanel, 8, 8, borderPaint);
+        canvas.DrawRoundRect(rightPanel, 8, 8, panelPaint);
+        canvas.DrawRoundRect(rightPanel, 8, 8, borderPaint);
+
+        canvas.DrawText(snapshot.Title, 76, 178, titlePaint);
+        DrawRfc0065LabelValue(canvas, "scenario", profile.ScenarioKey, 76, 232, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "adapter", request.Plan.AdapterId, 76, 284, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "status", snapshot.Status, 76, 336, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "artifact mode", snapshot.ArtifactMode, 76, 388, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "root mods", string.Join(", ", request.Plan.RootModIds), 76, 440, labelPaint, valuePaint);
+        DrawRfc0065WrappedText(canvas, snapshot.Detail, 76, 506, 640, valuePaint, lineHeight: 28f, maxLines: 5);
+
+        canvas.DrawText("Recorder signals", 852, 178, titlePaint);
+        float y = 236;
+        foreach (string signal in snapshot.Signals.Take(12))
+        {
+            canvas.DrawCircle(866, y - 7, 5, accentPaint);
+            DrawRfc0065WrappedText(canvas, signal, 884, y, 620, valuePaint, lineHeight: 25f, maxLines: 2);
+            y += 54;
+        }
+
+        canvas.DrawText("This image is a recorder artifact visual, not a real Raylib or CEF capture.", 48, 842, mutedPaint);
+        canvas.DrawText($"tick={snapshot.Tick} | roots={snapshot.RootModCount} | ordered={snapshot.OrderedModCount}", 48, 872, mutedPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void DrawRfc0065LabelValue(SKCanvas canvas, string label, string value, float x, float y, SKPaint labelPaint, SKPaint valuePaint)
+    {
+        canvas.DrawText(label.ToUpperInvariant(), x, y, labelPaint);
+        DrawRfc0065WrappedText(canvas, value, x + 170, y, 500, valuePaint, lineHeight: 25f, maxLines: 2);
+    }
+
+    private static void DrawRfc0065WrappedText(SKCanvas canvas, string text, float x, float y, float maxWidth, SKPaint paint, float lineHeight, int maxLines)
+    {
+        if (string.IsNullOrWhiteSpace(text) || maxLines <= 0)
+        {
+            return;
+        }
+
+        var line = new StringBuilder();
+        int linesDrawn = 0;
+        foreach (string word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = line.Length == 0 ? word : $"{line} {word}";
+            if (paint.MeasureText(candidate) <= maxWidth)
+            {
+                line.Clear();
+                line.Append(candidate);
+                continue;
+            }
+
+            if (line.Length > 0)
+            {
+                canvas.DrawText(line.ToString(), x, y + linesDrawn * lineHeight, paint);
+                linesDrawn++;
+                if (linesDrawn >= maxLines)
+                {
+                    return;
+                }
+            }
+
+            line.Clear();
+            line.Append(word);
+        }
+
+        if (line.Length > 0 && linesDrawn < maxLines)
+        {
+            canvas.DrawText(line.ToString(), x, y + linesDrawn * lineHeight, paint);
         }
     }
 
@@ -881,9 +1258,9 @@ public static class LauncherEvidenceRecorder
         AssertRoadOverlay(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
         CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "000_start", null);
 
-        ClickPrimaryUntilSelected(runtime, "Blue Vanguard", frameTimesMs);
+        ClickPrimaryUntilCommandSource(runtime, "Blue Vanguard", frameTimesMs);
         Tick(runtime, 6, frameTimesMs);
-        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_selected", null);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_command_source", null);
 
         Vector2 commandScreen = runtime.ProjectWorldCm(RoadCommandWorldCm);
         ClickSecondary(runtime, commandScreen, frameTimesMs);
@@ -941,7 +1318,7 @@ public static class LauncherEvidenceRecorder
         timeline.Add(snapshot);
         string fileName = $"{step}.png";
         WriteRoadSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SelectedNames.Count, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.CommandActorNames.Count, 0f, 0f));
     }
 
     private static RoadSnapshot SampleRoadSnapshot(RecordingRuntime runtime, string step, double tickMs, Vector2? commandTargetWorldCm)
@@ -955,19 +1332,24 @@ public static class LauncherEvidenceRecorder
             }
         });
 
-        var selectedNames = new List<string>();
-        Entity[] selectedEntities = SelectionContextRuntime.SnapshotCurrentSelection(runtime.Engine.World, runtime.Engine.GlobalContext);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        var commandActorNames = new List<string>();
+        Entity[] commandActors = TryResolveLocalCommandSourceOwner(runtime.Engine, out Entity commandSourceOwner)
+            ? EntityCollectionContextRuntime.Snapshot(
+                runtime.Engine.GlobalContext,
+                commandSourceOwner,
+                EntityCollectionKeys.CommandSource)
+            : Array.Empty<Entity>();
+        for (int i = 0; i < commandActors.Length; i++)
         {
-            Entity selected = selectedEntities[i];
-            if (!runtime.Engine.World.IsAlive(selected) || !runtime.Engine.World.Has<Name>(selected))
+            Entity commandActor = commandActors[i];
+            if (!runtime.Engine.World.IsAlive(commandActor) || !runtime.Engine.World.Has<Name>(commandActor))
             {
                 continue;
             }
 
-            selectedNames.Add(runtime.Engine.World.Get<Name>(selected).Value);
+            commandActorNames.Add(runtime.Engine.World.Get<Name>(commandActor).Value);
         }
-        selectedNames.Sort(StringComparer.OrdinalIgnoreCase);
+        commandActorNames.Sort(StringComparer.OrdinalIgnoreCase);
 
         PrimitiveDrawBuffer? primitives = runtime.Engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
         bool cueMarkerPresent = false;
@@ -1027,7 +1409,7 @@ public static class LauncherEvidenceRecorder
             ActiveChunkSignature: string.Join(",", activeChunkKeys),
             RoadSplineCount: roads?.Count ?? 0,
             NamedEntities: namedEntities,
-            SelectedNames: selectedNames,
+            CommandActorNames: commandActorNames,
             CueMarkerPresent: cueMarkerPresent,
             CueMarkerWorldCm: cueMarkerWorldCm,
             ControlledActorName: controlledActorName,
@@ -1085,14 +1467,14 @@ public static class LauncherEvidenceRecorder
     private static RoadAcceptanceResult EvaluateRoadAcceptance(IReadOnlyList<RoadSnapshot> timeline)
     {
         RoadSnapshot start = timeline[0];
-        RoadSnapshot selected = timeline[1];
+        RoadSnapshot commandSource = timeline[1];
         RoadSnapshot accepted = timeline[2];
         RoadSnapshot moved = timeline[3];
         RoadSnapshot shifted = timeline[4];
 
         var failures = new List<string>();
-        AddAcceptanceCheck(selected.SelectedNames.Contains("Blue Vanguard", StringComparer.OrdinalIgnoreCase),
-            "Left-click should select Blue Vanguard before the road command is issued.", failures);
+        AddAcceptanceCheck(commandSource.CommandActorNames.Contains("Blue Vanguard", StringComparer.OrdinalIgnoreCase),
+            "Left-click should publish Blue Vanguard as the command actor before the road command is issued.", failures);
         AddAcceptanceCheck(string.Equals(accepted.ControlledActorName, "Blue Vanguard", StringComparison.OrdinalIgnoreCase),
             $"Road showcase should route local commands through Blue Vanguard, but controlled actor was '{accepted.ControlledActorName}'.", failures);
         AddAcceptanceCheck(IsAcceptedRoadStatus(accepted.StatusLine),
@@ -1115,7 +1497,7 @@ public static class LauncherEvidenceRecorder
         string normalizedSignature = string.Join("|", new[]
         {
             "road_network_showcase_command_and_chunking",
-            $"selected:{string.Join("+", selected.SelectedNames)}",
+            $"commandActors:{string.Join("+", commandSource.CommandActorNames)}",
             $"controlled:{accepted.ControlledActorName}",
             $"status:{accepted.StatusLine}",
             $"blue:{MathF.Round(accepted.ControlledActorWorldCm.X):F0}->{MathF.Round(moved.ControlledActorWorldCm.X):F0}",
@@ -1125,8 +1507,8 @@ public static class LauncherEvidenceRecorder
         });
 
         string verdict = failures.Count == 0
-            ? "Road showcase passes: selection, road command feedback, spline rendering, movement, and chunk-window migration all behaved as designed."
-            : "Road showcase fails: selection, road command acceptance, movement, or chunk streaming diverged from the intended playable demo.";
+            ? "Road showcase passes: command source acquisition, road command feedback, spline rendering, movement, and chunk-window migration all behaved as designed."
+            : "Road showcase fails: command source acquisition, road command acceptance, movement, or chunk streaming diverged from the intended playable demo.";
         string failureSummary = failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures);
 
         return new RoadAcceptanceResult(
@@ -1134,7 +1516,7 @@ public static class LauncherEvidenceRecorder
             Verdict: verdict,
             FailureSummary: failureSummary,
             FailedChecks: failures,
-            SelectedNames: selected.SelectedNames,
+            CommandActorNames: commandSource.CommandActorNames,
             ControlledActorName: accepted.ControlledActorName,
             AcceptedStatus: accepted.StatusLine,
             StartControlledActorWorldCm: accepted.ControlledActorWorldCm,
@@ -1160,7 +1542,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Scenario Card: road-network-showcase-command-and-chunking");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: select a road column, right-click a fort along the road network, see immediate command feedback, and watch chunk streaming react when the camera shifts east.");
+        sb.AppendLine("- Player goal: focus a road column as the command source, right-click a fort along the road network, see immediate command feedback, and watch chunk streaming react when the camera shifts east.");
         sb.AppendLine("- Gameplay domain: real launcher bootstrap, real input mapping, real graph-only auto path service, real road spline performer, and real loaded-chunk window updates.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
@@ -1168,7 +1550,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Map: `mods/showcases/road_network/RoadNetworkShowcaseMod/assets/Maps/road_network_showcase_chunked.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
         sb.AppendLine($"- Launch command: `{request.CommandText}`");
-        sb.AppendLine($"- Selection point: `{FormatPoint(RoadSelectionWorldCm)}`");
+        sb.AppendLine($"- Command-source click point: `{FormatPoint(RoadSelectionWorldCm)}`");
         sb.AppendLine($"- Command target: `{FormatPoint(RoadCommandWorldCm)}`");
         sb.AppendLine($"- Chunk probe camera target: `{FormatPoint(RoadChunkShiftTargetCm)}`");
         sb.AppendLine("- Clock profile: fixed `1/60s`");
@@ -1177,7 +1559,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | selected={string.Join(", ", snapshot.SelectedNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | commandActors={string.Join(", ", snapshot.CommandActorNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -1189,14 +1571,14 @@ public static class LauncherEvidenceRecorder
             sb.AppendLine($"- failed-check: {failedCheck}");
         }
 
-        sb.AppendLine($"- reason: selected=`{string.Join(", ", acceptance.SelectedNames)}` controlled=`{acceptance.ControlledActorName}` status=`{acceptance.AcceptedStatus}` controlled actor `{FormatPoint(acceptance.StartControlledActorWorldCm)}` -> `{FormatPoint(acceptance.FinalControlledActorWorldCm)}` chunk signature `{acceptance.StartChunkSignature}` -> `{acceptance.FinalChunkSignature}` cue={(acceptance.CueMarkerVisible ? "visible" : "hidden")}.");
+        sb.AppendLine($"- reason: commandActors=`{string.Join(", ", acceptance.CommandActorNames)}` controlled=`{acceptance.ControlledActorName}` status=`{acceptance.AcceptedStatus}` controlled actor `{FormatPoint(acceptance.StartControlledActorWorldCm)}` -> `{FormatPoint(acceptance.FinalControlledActorWorldCm)}` chunk signature `{acceptance.StartChunkSignature}` -> `{acceptance.FinalChunkSignature}` cue={(acceptance.CueMarkerVisible ? "visible" : "hidden")}.");
         sb.AppendLine();
         sb.AppendLine("## Summary Stats");
         sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CurrentSelectionApplySystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
         return sb.ToString();
     }
 
@@ -1212,7 +1594,7 @@ public static class LauncherEvidenceRecorder
                 tick = snapshot.Tick,
                 step = snapshot.Step,
                 status_line = snapshot.StatusLine,
-                selected = snapshot.SelectedNames,
+                command_actors = snapshot.CommandActorNames,
                 controlled_actor = snapshot.ControlledActorName,
                 controlled_actor_x = Math.Round(snapshot.ControlledActorWorldCm.X, 2),
                 controlled_actor_y = Math.Round(snapshot.ControlledActorWorldCm.Y, 2),
@@ -1243,13 +1625,13 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot launcher runtime for RoadNetworkShowcaseMod] --> B[Settle tactical camera and chunk window]",
             "    B --> C[Project Blue Vanguard visual pivot and inject left-click]",
-            "    C --> D{Selection contains Blue Vanguard?}",
+            "    C --> D{Command source contains Blue Vanguard?}",
             "    D -->|yes| E[Project Central Crossing and inject right-click]",
-            "    E --> F{HUD shows an accepted route selection and cue marker is visible?}",
+            "    E --> F{HUD shows an accepted route command and cue marker is visible?}",
             "    F -->|yes| G[Advance simulation until the controlled blue column moves east]",
             "    G --> H[Apply east camera target and wait for loaded chunk signature to change]",
             "    H --> I[Write battle-report + trace + path + PNG timeline]",
-            "    D -->|no| X[Fail acceptance: selection bridge diverged]",
+            "    D -->|no| X[Fail acceptance: command source bridge diverged]",
             "    F -->|no| Y[Fail acceptance: road command still invalid or marker missing]"
         }) + Environment.NewLine;
     }
@@ -1260,14 +1642,14 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Visible Checklist: road-network-showcase-command-and-chunking");
         sb.AppendLine();
         sb.AppendLine("- `000_start` should show the initial central loaded chunk window and visible road splines.");
-        sb.AppendLine("- `001_selected` should highlight Blue Vanguard as selected.");
+        sb.AppendLine("- `001_command_source` should highlight Blue Vanguard as the command actor.");
         sb.AppendLine("- `002_command_accepted` should show a cue marker at Central Crossing and a valid accepted route HUD status instead of `error 2`.");
         sb.AppendLine("- `003_column_advancing` should show the controlled blue column shifted east along the road.");
         sb.AppendLine("- `004_chunk_shifted` should show the camera moved east and a different loaded chunk window.");
         sb.AppendLine();
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` selected=`{string.Join(", ", snapshot.SelectedNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` commandActors=`{string.Join(", ", snapshot.CommandActorNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
         }
 
         return sb.ToString();
@@ -1281,7 +1663,7 @@ public static class LauncherEvidenceRecorder
             adapter = request.Plan.AdapterId,
             selectors = request.Plan.Selectors,
             root_mods = request.Plan.RootModIds,
-            selected = acceptance.SelectedNames,
+            command_actors = acceptance.CommandActorNames,
             controlled_actor = acceptance.ControlledActorName,
             accepted_status = acceptance.AcceptedStatus,
             cue_visible = acceptance.CueMarkerVisible,
@@ -1352,7 +1734,7 @@ public static class LauncherEvidenceRecorder
                 ? 10f
                 : 7f;
             canvas.DrawCircle(point.X, point.Y, radius, fill);
-            if (snapshot.SelectedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            if (snapshot.CommandActorNames.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 canvas.DrawCircle(point.X, point.Y, radius + 5f, selectedPaint);
             }
@@ -1369,7 +1751,7 @@ public static class LauncherEvidenceRecorder
 
         canvas.DrawText($"Road Network Showcase | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, labelPaint);
         canvas.DrawText($"Status={snapshot.StatusLine}", 24, 64, minorTextPaint);
-        canvas.DrawText($"Selected={string.Join(", ", snapshot.SelectedNames)}", 24, 92, minorTextPaint);
+        canvas.DrawText($"CommandActors={string.Join(", ", snapshot.CommandActorNames)}", 24, 92, minorTextPaint);
         canvas.DrawText($"Controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)}  Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 120, minorTextPaint);
         canvas.DrawText($"BlueVanguard={FormatPoint(snapshot.BlueVanguardWorldCm)}  North={FormatPoint(snapshot.BlueNorthWorldCm)}  South={FormatPoint(snapshot.BlueSouthWorldCm)}", 24, 148, minorTextPaint);
         canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 176, minorTextPaint);
@@ -1422,6 +1804,19 @@ public static class LauncherEvidenceRecorder
         return false;
     }
 
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
+    }
+
     private static bool IsAcceptedRoadStatus(string statusLine)
     {
         if (string.IsNullOrWhiteSpace(statusLine))
@@ -1462,10 +1857,10 @@ public static class LauncherEvidenceRecorder
         }
     }
 
-    private static void ClickPrimaryUntilSelected(RecordingRuntime runtime, string targetName, List<double> frameTimesMs)
+    private static void ClickPrimaryUntilCommandSource(RecordingRuntime runtime, string targetName, List<double> frameTimesMs)
     {
         if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
-            .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+            .CommandActorNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
         {
             return;
         }
@@ -1479,7 +1874,7 @@ public static class LauncherEvidenceRecorder
             ClickPrimary(runtime, baseScreen + offset, frameTimesMs);
             Tick(runtime, 2, frameTimesMs);
             if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
-                .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+                .CommandActorNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -1930,7 +2325,7 @@ public static class LauncherEvidenceRecorder
                 throw new InvalidOperationException("MassNavigation UAT requires a configured startup map.");
             }
 
-            runtime.Engine.LoadMap(runtime.Config.StartupMapId);
+            runtime.Engine.LoadStartupMap();
         }
 
         PresentationTimingDiagnostics timings = runtime.Engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
@@ -1941,16 +2336,37 @@ public static class LauncherEvidenceRecorder
         MassNavigationSimulationRuntime simulation = runtime.Engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new InvalidOperationException("MassNavigation UAT requires MassNavigationSimulationRuntime.");
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
+        MassNavigationSolverRuntimeConfigSnapshot solverSnapshot = simulation.CaptureSolverRuntimeConfig();
+        var avoidanceScratch = new MassNavigationAvoidanceScratch(
+            simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity,
+            solverSnapshot.MaxObstacleCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
         Entity[] selected = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
+        // The flow work area follows command focus, so capture the pre-command center now:
+        // the later crossing order mirrors the first target through this fixed point.
+        Vector2 initialWorkAreaCenter = new(simulation.FlowWorkAreaCenterXCm, simulation.FlowWorkAreaCenterYCm);
         Vector2 commandTarget = new(
-            simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
-            simulation.FlowWorkAreaCenterYCm + (simulation.SolverWindowHeightCm * 0.18f));
+            initialWorkAreaCenter.X + (simulation.SolverWindowWidthCm * 0.34f),
+            initialWorkAreaCenter.Y + (simulation.SolverWindowHeightCm * 0.18f));
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, commandTarget);
-        Tick(runtime, MassNavigationCommandSettleTicks, frameTimesMs);
+        string avoidanceDir = Path.Combine(screensDir, "avoidance");
+        Directory.CreateDirectory(avoidanceDir);
+        var avoidanceMetrics = new List<MassNavigationAvoidanceFrameMetrics>();
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_selection_order", captureImage: true);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
+
+        WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
+        // March the commanded group back across the settled central crowd. The crossing target
+        // mirrors the first order target through the pre-command work-area center, scaled down so
+        // the destination-following solver window keeps the whole march inside the active play
+        // area (hard resolve is intentionally skipped outside it).
+        Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
+        SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, crossingTarget);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
+        WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
         Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
         MassNavigationHotZoneConfig remoteZone = ResolveRemoteHotZone(simulation);
@@ -1966,18 +2382,18 @@ public static class LauncherEvidenceRecorder
 
         WriteTimelineSheet("MassNavigation performer + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
-        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation);
+        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation, avoidanceMetrics);
         string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
         string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
         string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
         string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
         string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
 
-        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
+        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, avoidanceMetrics, acceptance));
         File.WriteAllText(tracePath, BuildMassNavigationTraceJsonl(request.Plan.AdapterId, timeline));
         File.WriteAllText(pathPath, BuildMassNavigationPathMermaid());
         File.WriteAllText(visibleChecklistPath, BuildMassNavigationVisibleChecklist(captureFrames));
-        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline));
+        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline, avoidanceMetrics));
 
         if (!acceptance.Success)
         {
@@ -2001,7 +2417,7 @@ public static class LauncherEvidenceRecorder
         List<double> frameTimesMs,
         int maxTicks)
     {
-        int expectedAgents = checked(simulation.AgentsPerTeam * simulation.TeamCount);
+        int expectedAgents = ExpectedMassNavigationScenarioAgentCount(simulation);
         int expectedBlockers = simulation.NavigationObstacleCount;
         int expectedMarkers = simulation.HotZones.Length;
         for (int i = 0; i < maxTicks; i++)
@@ -2020,10 +2436,15 @@ public static class LauncherEvidenceRecorder
             $"MassNavigation scenario did not finish core-authored MassNavigation binding: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
     }
 
+    private static int ExpectedMassNavigationScenarioAgentCount(MassNavigationSimulationRuntime simulation)
+    {
+        return checked(simulation.AgentsPerTeam * simulation.TeamCount);
+    }
+
     private static Entity[] SelectFirstOrderableMassNavigationAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
 
         Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
         if (owner == Entity.Null || !engine.World.IsAlive(owner))
@@ -2043,10 +2464,15 @@ public static class LauncherEvidenceRecorder
             selected[i] = simulation.AgentState.ControllableAgentSlots[i];
         }
 
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected))
-        {
-            throw new InvalidOperationException("MassNavigation UAT failed to write SelectionRuntime LivePrimary selection.");
-        }
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.UiAcquisition,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            selected.Length > 0 ? selected[0] : Entity.Null,
+            "MassNavigation command source",
+            $"{selected.Length} agent(s)");
+        collections.Replace(owner, descriptor, selected, owner);
 
         return selected;
     }
@@ -2074,12 +2500,6 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
         }
 
-        SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
-        if (selectionContainer == Entity.Null)
-        {
-            throw new InvalidOperationException("MassNavigation UAT requires a current SelectionRuntime container.");
-        }
-
         int sharedOrderId = simulation.AllocateSharedOrderId();
         int submitted = 0;
         for (int i = 0; i < selected.Length; i++)
@@ -2097,21 +2517,7 @@ public static class LauncherEvidenceRecorder
                 PlayerId = 1,
                 Actor = entity,
                 SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
-                {
-                    I0 = (int)MassNavigationFormationMode.Square,
-                    F0 = 0f,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetCm.X, 0f, targetCm.Y),
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selectionContainer
-                    }
-                }
+                Args = MassNavigationMoveOrderArgs.Encode(targetCm, MassNavigationFormationMode.Square, rotationRadians: 0f)
             };
 
             if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.InvalidEntity)
@@ -2126,6 +2532,293 @@ public static class LauncherEvidenceRecorder
         }
 
         simulation.FocusCommandTarget(targetCm, selected);
+    }
+
+    private static void WaitForMassNavigationCrowdSettle(
+        RecordingRuntime runtime,
+        MassNavigationSimulationRuntime simulation,
+        List<double> frameTimesMs,
+        float minSettledFraction,
+        int maxTicks)
+    {
+        for (int i = 0; i < maxTicks; i++)
+        {
+            int unitCount = simulation.NavigationAgentCount;
+            if (unitCount > 0 && simulation.NavigationSettledAgentCount >= unitCount * minSettledFraction)
+            {
+                return;
+            }
+
+            Tick(runtime, 1, frameTimesMs);
+        }
+    }
+
+    private static void CaptureMassNavigationAvoidanceSequence(
+        RecordingRuntime runtime,
+        MassNavigationSimulationRuntime simulation,
+        MassNavigationAvoidanceScratch scratch,
+        Vector2 commandTargetCm,
+        string framesDir,
+        List<double> frameTimesMs,
+        List<MassNavigationAvoidanceFrameMetrics> metrics,
+        int tickCount)
+    {
+        for (int i = 0; i < tickCount; i++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            if (i % MassNavigationAvoidanceFrameIntervalTicks != 0)
+            {
+                continue;
+            }
+
+            CaptureMassNavigationAvoidanceZoomFrame(simulation, scratch, commandTargetCm, framesDir, metrics);
+        }
+    }
+
+    private static void CaptureMassNavigationAvoidanceZoomFrame(
+        MassNavigationSimulationRuntime simulation,
+        MassNavigationAvoidanceScratch scratch,
+        Vector2 commandTargetCm,
+        string framesDir,
+        List<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        MassNavigationAvoidanceSnapshot snapshot = scratch.Capture(simulation);
+        if (snapshot.UnitCount <= 0)
+        {
+            return;
+        }
+
+        ReadOnlySpan<MassNavigationAvoidanceAgentSnapshot> agents = scratch.Agents(snapshot.UnitCount);
+        ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles = scratch.Obstacles(snapshot.ObstacleCount);
+        float centroidX = 0f;
+        float centroidY = 0f;
+        int selectedCount = 0;
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in agents)
+        {
+            if (!agent.Selected)
+            {
+                continue;
+            }
+
+            centroidX += agent.WorldXCm;
+            centroidY += agent.WorldYCm;
+            selectedCount++;
+        }
+
+        if (selectedCount <= 0)
+        {
+            return;
+        }
+
+        centroidX /= selectedCount;
+        centroidY /= selectedCount;
+
+        float zoomWidthCm = MassNavigationAvoidanceZoomWidthCm;
+        float zoomHeightCm = zoomWidthCm * MassNavigationAvoidanceZoomAspectHeight / MassNavigationAvoidanceZoomAspectWidth;
+        float minXCm = centroidX - (zoomWidthCm * 0.5f);
+        float maxXCm = centroidX + (zoomWidthCm * 0.5f);
+        float minYCm = centroidY - (zoomHeightCm * 0.5f);
+        float maxYCm = centroidY + (zoomHeightCm * 0.5f);
+
+        float pxPerCm = MassNavigationAvoidanceImageWidth / zoomWidthCm;
+
+        Span<MassNavigationAvoidanceAgentSnapshot> visibleAgents = scratch.VisibleAgents(snapshot.UnitCount);
+        Span<MassNavigationAvoidanceAgentSnapshot> playAreaAgents = scratch.PlayAreaAgents(snapshot.UnitCount);
+        int visibleAgentCount = 0;
+        int playAreaAgentCount = 0;
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in agents)
+        {
+            if (agent.WorldXCm >= minXCm && agent.WorldXCm <= maxXCm && agent.WorldYCm >= minYCm && agent.WorldYCm <= maxYCm)
+            {
+                visibleAgents[visibleAgentCount++] = agent;
+                if (agent.InsidePlayArea)
+                {
+                    playAreaAgents[playAreaAgentCount++] = agent;
+                }
+            }
+        }
+
+        // Hard resolve intentionally skips agents outside the solver play area
+        // (IsInsideTacticalField), so overlap metrics only cover play-area agents;
+        // outside-play-area agents are drawn dimmed so frame review preserves that distinction.
+        float maxPenetrationCm = 0f;
+        float maxPenetrationRatio = 0f;
+        int deepOverlapPairs = 0;
+        for (int a = 0; a < playAreaAgentCount; a++)
+        {
+            MassNavigationAvoidanceAgentSnapshot first = playAreaAgents[a];
+            for (int b = a + 1; b < playAreaAgentCount; b++)
+            {
+                MassNavigationAvoidanceAgentSnapshot second = playAreaAgents[b];
+                float dx = first.LocalXCm - second.LocalXCm;
+                float dy = first.LocalYCm - second.LocalYCm;
+                float minDistance = first.BodyRadiusCm + second.BodyRadiusCm;
+                float distanceSq = (dx * dx) + (dy * dy);
+                if (distanceSq >= minDistance * minDistance)
+                {
+                    continue;
+                }
+
+                float penetration = minDistance - MathF.Sqrt(distanceSq);
+                float ratio = penetration / minDistance;
+                maxPenetrationCm = MathF.Max(maxPenetrationCm, penetration);
+                maxPenetrationRatio = MathF.Max(maxPenetrationRatio, ratio);
+                if (ratio > MassNavigationAvoidanceDeepOverlapRatio)
+                {
+                    deepOverlapPairs++;
+                }
+            }
+        }
+
+        int settledCount = 0;
+        int heavyCount = 0;
+        int selectedVisibleCount = 0;
+        for (int a = 0; a < playAreaAgentCount; a++)
+        {
+            MassNavigationAvoidanceAgentSnapshot agent = playAreaAgents[a];
+            if (agent.Settled)
+            {
+                settledCount++;
+            }
+
+            if (agent.HeavyProfile)
+            {
+                heavyCount++;
+            }
+
+            if (agent.Selected)
+            {
+                selectedVisibleCount++;
+            }
+        }
+
+        int frameIndex = metrics.Count;
+        metrics.Add(new MassNavigationAvoidanceFrameMetrics(
+            frameIndex,
+            centroidX,
+            centroidY,
+            snapshot.UnitCount,
+            visibleAgentCount,
+            playAreaAgentCount,
+            selectedVisibleCount,
+            heavyCount,
+            settledCount,
+            maxPenetrationCm,
+            maxPenetrationRatio,
+            deepOverlapPairs));
+
+        using var surface = SKSurface.Create(new SKImageInfo(MassNavigationAvoidanceImageWidth, MassNavigationAvoidanceImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(8, 12, 18));
+
+        using var obstaclePaint = new SKPaint { Color = new SKColor(120, 128, 138, 210), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var heavyRingPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var targetPaint = new SKPaint { Color = new SKColor(255, 92, 92), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
+        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 205, 216), IsAntialias = true };
+        using var textFont = new SKFont { Size = 22f };
+        using var minorTextFont = new SKFont { Size = 17f };
+
+        float ToScreenX(float worldXCm) => (worldXCm - minXCm) * pxPerCm;
+        float ToScreenY(float worldYCm) => MassNavigationAvoidanceImageHeight - ((worldYCm - minYCm) * pxPerCm);
+
+        foreach (MassNavigationObstacleSnapshot obstacle in obstacles)
+        {
+            if (obstacle.WorldXCm + obstacle.RadiusCm < minXCm ||
+                obstacle.WorldXCm - obstacle.RadiusCm > maxXCm ||
+                obstacle.WorldYCm + obstacle.RadiusCm < minYCm ||
+                obstacle.WorldYCm - obstacle.RadiusCm > maxYCm)
+            {
+                continue;
+            }
+
+            canvas.DrawCircle(ToScreenX(obstacle.WorldXCm), ToScreenY(obstacle.WorldYCm), obstacle.RadiusCm * pxPerCm, obstaclePaint);
+        }
+
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in visibleAgents[..visibleAgentCount])
+        {
+            float radiusPx = MathF.Max(1.5f, agent.BodyRadiusCm * pxPerCm);
+            SKColor teamColor = ResolveMassNavigationTeamColor(agent.TeamId);
+            using var agentPaint = new SKPaint { Color = teamColor.WithAlpha(agent.InsidePlayArea ? (byte)220 : (byte)70), IsAntialias = true, Style = SKPaintStyle.Fill };
+            float screenX = ToScreenX(agent.WorldXCm);
+            float screenY = ToScreenY(agent.WorldYCm);
+            canvas.DrawCircle(screenX, screenY, radiusPx, agentPaint);
+            if (agent.InsidePlayArea && agent.HeavyProfile)
+            {
+                canvas.DrawCircle(screenX, screenY, radiusPx + 1.5f, heavyRingPaint);
+            }
+        }
+
+        if (commandTargetCm.X >= minXCm && commandTargetCm.X <= maxXCm && commandTargetCm.Y >= minYCm && commandTargetCm.Y <= maxYCm)
+        {
+            DrawCrosshair(canvas, new SKPoint(ToScreenX(commandTargetCm.X), ToScreenY(commandTargetCm.Y)), 14f, targetPaint);
+        }
+
+        canvas.DrawText($"MassNavigation avoidance zoom | frame={frameIndex:D4} | window {zoomWidthCm:F0}x{zoomHeightCm:F0} cm @ ({centroidX:F0}, {centroidY:F0})", 24, 34, SKTextAlign.Left, textFont, textPaint);
+        canvas.DrawText($"Agents={visibleAgentCount}/{snapshot.UnitCount} playArea={playAreaAgentCount} selected={selectedVisibleCount} heavyProfile(ringed)={heavyCount} settled={settledCount}", 24, 62, SKTextAlign.Left, minorTextFont, minorTextPaint);
+        canvas.DrawText($"maxPenetration={maxPenetrationCm:F1}cm ({maxPenetrationRatio:P1} of pair radius) deepOverlapPairs(>{MassNavigationAvoidanceDeepOverlapRatio:P0})={deepOverlapPairs}", 24, 86, SKTextAlign.Left, minorTextFont, minorTextPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(Path.Combine(framesDir, $"frame_{frameIndex:D4}.png"), FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void WriteMassNavigationAvoidanceMetrics(string path, IReadOnlyList<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < metrics.Count; i++)
+        {
+            sb.AppendLine(JsonSerializer.Serialize(metrics[i]));
+        }
+
+        File.WriteAllText(path, sb.ToString());
+    }
+
+    private static MassNavigationAvoidanceSummary SummarizeMassNavigationAvoidance(IReadOnlyList<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        if (metrics.Count == 0)
+        {
+            return new MassNavigationAvoidanceSummary(
+                FrameCount: 0,
+                MaxVisibleAgentCount: 0,
+                MaxPlayAreaAgentCount: 0,
+                MaxSelectedVisibleAgentCount: 0,
+                MaxHeavyAgentCount: 0,
+                PeakDeepOverlapPairCount: 0,
+                FinalDeepOverlapPairCount: 0,
+                PeakMaxPenetrationRatio: 0f,
+                FinalMaxPenetrationRatio: 0f);
+        }
+
+        MassNavigationAvoidanceFrameMetrics final = metrics[^1];
+        int maxVisible = 0;
+        int maxPlayArea = 0;
+        int maxSelected = 0;
+        int maxHeavy = 0;
+        int peakDeepOverlap = 0;
+        float peakPenetrationRatio = 0f;
+        for (int i = 0; i < metrics.Count; i++)
+        {
+            MassNavigationAvoidanceFrameMetrics metric = metrics[i];
+            maxVisible = Math.Max(maxVisible, metric.VisibleAgentCount);
+            maxPlayArea = Math.Max(maxPlayArea, metric.PlayAreaAgentCount);
+            maxSelected = Math.Max(maxSelected, metric.SelectedVisibleAgentCount);
+            maxHeavy = Math.Max(maxHeavy, metric.HeavyAgentCount);
+            peakDeepOverlap = Math.Max(peakDeepOverlap, metric.DeepOverlapPairCount);
+            peakPenetrationRatio = MathF.Max(peakPenetrationRatio, metric.MaxPenetrationRatio);
+        }
+
+        return new MassNavigationAvoidanceSummary(
+            FrameCount: metrics.Count,
+            MaxVisibleAgentCount: maxVisible,
+            MaxPlayAreaAgentCount: maxPlayArea,
+            MaxSelectedVisibleAgentCount: maxSelected,
+            MaxHeavyAgentCount: maxHeavy,
+            PeakDeepOverlapPairCount: peakDeepOverlap,
+            FinalDeepOverlapPairCount: final.DeepOverlapPairCount,
+            PeakMaxPenetrationRatio: peakPenetrationRatio,
+            FinalMaxPenetrationRatio: final.MaxPenetrationRatio);
     }
 
     private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
@@ -2275,7 +2968,7 @@ public static class LauncherEvidenceRecorder
             MinimapCenterCm: new Vector2(minimapSnapshot.CenterXcm, minimapSnapshot.CenterYcm),
             MinimapHalfExtentCm: minimapSnapshot.HalfExtentCm,
             MinimapCameraTargetCm: new Vector2(minimapSnapshot.CameraTargetXcm, minimapSnapshot.CameraTargetYcm),
-            SelectedCount: simulation.SelectedCount,
+            CommandActorCount: simulation.CommandActorCount,
             ActiveGroups: simulation.NavGroupRuntime.ActiveGroupCount,
             ActiveOrderGroups: simulation.NavGroupRuntime.ActiveOrderGroupCount,
             ScenarioSpawnCount: simulation.ScenarioSpawnCount,
@@ -2289,11 +2982,14 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavigationMs: simulation.SelectionSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.CommandSourceSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
-    private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(IReadOnlyList<MassNavigationSnapshot> timeline, MassNavigationSimulationRuntime simulation)
+    private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(
+        IReadOnlyList<MassNavigationSnapshot> timeline,
+        MassNavigationSimulationRuntime simulation,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
     {
         var failures = new List<string>();
         MassNavigationSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
@@ -2305,7 +3001,8 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.ActiveMapId == expectedMapId, $"Expected MassNavigation map '{expectedMapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
         AddAcceptanceCheck(boot.TeamCount >= 4, $"Expected at least 4 configured teams, got {boot.TeamCount}.", failures);
-        AddAcceptanceCheck(boot.AgentCount == simulation.AgentsPerTeam * simulation.TeamCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {simulation.AgentsPerTeam * simulation.TeamCount}.", failures);
+        int expectedAgentCount = ExpectedMassNavigationScenarioAgentCount(simulation);
+        AddAcceptanceCheck(boot.AgentCount == expectedAgentCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {expectedAgentCount}.", failures);
         AddAcceptanceCheck(boot.EcsAgentCount == boot.AgentCount, $"ECS controllable agent count mismatch: {boot.EcsAgentCount} vs runtime {boot.AgentCount}.", failures);
         AddAcceptanceCheck(boot.BlockerCount == simulation.NavigationObstacleCount, $"Blocker count mismatch: {boot.BlockerCount} vs solver {simulation.NavigationObstacleCount}.", failures);
         AddAcceptanceCheck(boot.HotspotMarkerCount == simulation.HotZones.Length, $"Hotspot marker count mismatch: {boot.HotspotMarkerCount} vs config {simulation.HotZones.Length}.", failures);
@@ -2315,13 +3012,32 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(string.Equals(boot.MinimapPreset, MinimapPreset.RtsFullMap.ToString(), StringComparison.Ordinal), $"Expected core minimap RtsFullMap preset, got {boot.MinimapPreset}.", failures);
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
-        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "SelectionRuntime LivePrimary selection was not observed by MassNavigation.", failures);
+        AddAcceptanceCheck(afterOrder.CommandActorCount > 0, "Command-source agents were not observed by MassNavigation.", failures);
         AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavigationMove order did not create an active NavGroup.", failures);
         AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNavigation rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
         AddAcceptanceCheck(returned.AgentCount == boot.AgentCount, $"Returning to original area changed agent count: {boot.AgentCount} -> {returned.AgentCount}.", failures);
         AddAcceptanceCheck(returned.ScenarioSpawnCount == boot.ScenarioSpawnCount, $"Returning to original area re-ran scenario spawn: {boot.ScenarioSpawnCount} -> {returned.ScenarioSpawnCount}.", failures);
         AddAcceptanceCheck(returned.SceneResetCount == boot.SceneResetCount, $"Returning to original area reset the scene: {boot.SceneResetCount} -> {returned.SceneResetCount}.", failures);
+
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
+        AddAcceptanceCheck(avoidance.FrameCount > 0, "MassNavigation avoidance evidence captured zero metric frames.", failures);
+        AddAcceptanceCheck(avoidance.MaxVisibleAgentCount > 0, "MassNavigation avoidance evidence never observed visible agents.", failures);
+        AddAcceptanceCheck(avoidance.MaxSelectedVisibleAgentCount > 0, "MassNavigation avoidance evidence never observed selected agents in the zoom window.", failures);
+        AddAcceptanceCheck(avoidance.MaxHeavyAgentCount > 0, "MassNavigation avoidance evidence never observed heavy-profile agents in the solver play area.", failures);
+        AddAcceptanceCheck(avoidance.MaxPlayAreaAgentCount > 1, "MassNavigation avoidance evidence did not observe enough play-area agents to validate overlap resolution.", failures);
+        AddAcceptanceCheck(avoidance.FinalDeepOverlapPairCount == 0, $"MassNavigation avoidance ended with {avoidance.FinalDeepOverlapPairCount} deep overlap pairs.", failures);
+        AddAcceptanceCheck(
+            avoidance.FinalMaxPenetrationRatio <= MassNavigationAvoidanceFinalMaxPenetrationRatio,
+            $"MassNavigation avoidance final penetration ratio {avoidance.FinalMaxPenetrationRatio:P2} exceeded {MassNavigationAvoidanceFinalMaxPenetrationRatio:P2}.",
+            failures);
+        if (avoidance.FrameCount >= 2 && avoidance.PeakDeepOverlapPairCount > 0)
+        {
+            AddAcceptanceCheck(
+                avoidance.FinalDeepOverlapPairCount < avoidance.PeakDeepOverlapPairCount,
+                $"MassNavigation avoidance deep overlaps did not reduce from peak {avoidance.PeakDeepOverlapPairCount} to final {avoidance.FinalDeepOverlapPairCount}.",
+                failures);
+        }
 
         string normalizedSignature = string.Join("|", new[]
         {
@@ -2332,11 +3048,12 @@ public static class LauncherEvidenceRecorder
             $"markers:{boot.MinimapBufferCount}/{boot.MinimapDroppedTotal}",
             $"remote:{MathF.Round(remote.CameraTargetCm.X):F0},{MathF.Round(remote.CameraTargetCm.Y):F0}",
             $"spawns:{boot.ScenarioSpawnCount}->{returned.ScenarioSpawnCount}",
-            $"resets:{boot.SceneResetCount}->{returned.SceneResetCount}"
+            $"resets:{boot.SceneResetCount}->{returned.SceneResetCount}",
+            $"avoidance:{avoidance.FrameCount}/{avoidance.MaxVisibleAgentCount}/{avoidance.MaxHeavyAgentCount}/{avoidance.FinalDeepOverlapPairCount}/{avoidance.FinalMaxPenetrationRatio:0.0000}"
         });
 
         string verdict = failures.Count == 0
-            ? $"MassNavigation passes large-world performer/minimap UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers and {boot.MinimapBufferCount} minimap markers."
+            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and {avoidance.FrameCount} avoidance frames."
             : "MassNavigation large-world performer/minimap UAT failed.";
 
         return new MassNavigationAcceptanceResult(
@@ -2352,10 +3069,12 @@ public static class LauncherEvidenceRecorder
         IReadOnlyList<MassNavigationSnapshot> timeline,
         IReadOnlyList<CaptureFrame> captureFrames,
         IReadOnlyList<double> frameTimesMs,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics,
         MassNavigationAcceptanceResult acceptance)
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         double medianTickMs = Median(frameTimesMs.ToArray());
         double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
         string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
@@ -2365,7 +3084,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Intent");
         sb.AppendLine("- Player goal: verify MassNavigation is the MassNavigationFlow SSOT and runs through performer + core minimap on a 64km RTS map.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, EntityCollectionStore command source, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
@@ -2375,14 +3094,14 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
+        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
         foreach (MassNavigationSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
+            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} commandActors={snapshot.CommandActorCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -2404,10 +3123,14 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- minimap markers at boot: `{boot.MinimapBufferCount}` droppedTotal=`{boot.MinimapDroppedTotal}`");
         sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
         sb.AppendLine($"- scene reset count boot/final: `{boot.SceneResetCount}` / `{final.SceneResetCount}`");
+        sb.AppendLine($"- avoidance frames: `{avoidance.FrameCount}`");
+        sb.AppendLine($"- avoidance max visible/play-area/selected/heavy-profile agents: `{avoidance.MaxVisibleAgentCount}` / `{avoidance.MaxPlayAreaAgentCount}` / `{avoidance.MaxSelectedVisibleAgentCount}` / `{avoidance.MaxHeavyAgentCount}`");
+        sb.AppendLine($"- avoidance peak/final deep overlap pairs: `{avoidance.PeakDeepOverlapPairCount}` / `{avoidance.FinalDeepOverlapPairCount}`");
+        sb.AppendLine($"- avoidance peak/final max penetration ratio: `{avoidance.PeakMaxPenetrationRatio:P2}` / `{avoidance.FinalMaxPenetrationRatio:P2}`");
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
+        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `EntityCollectionStore`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
     }
 
@@ -2430,7 +3153,7 @@ public static class LauncherEvidenceRecorder
                 agents = snapshot.AgentCount,
                 ecs_agents = snapshot.EcsAgentCount,
                 teams = snapshot.TeamCount,
-                selected = snapshot.SelectedCount,
+                command_actors = snapshot.CommandActorCount,
                 groups = snapshot.ActiveGroups,
                 order_groups = snapshot.ActiveOrderGroups,
                 blockers = snapshot.BlockerCount,
@@ -2468,7 +3191,7 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify performer owners and minimap markers]",
-            "    C --> D[Write LivePrimary selection]",
+            "    C --> D[Seed collection.command.source]",
             "    D --> E[Submit massNavigationMove through OrderBuffer]",
             "    E --> F[Jump core minimap camera to remote 64km coordinate]",
             "    F --> G[Jump back to original area]",
@@ -2497,10 +3220,15 @@ public static class LauncherEvidenceRecorder
         return sb.ToString();
     }
 
-    private static string BuildMassNavigationSummaryJson(LauncherRecordingRequest request, MassNavigationAcceptanceResult acceptance, IReadOnlyList<MassNavigationSnapshot> timeline)
+    private static string BuildMassNavigationSummaryJson(
+        LauncherRecordingRequest request,
+        MassNavigationAcceptanceResult acceptance,
+        IReadOnlyList<MassNavigationSnapshot> timeline,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         return JsonSerializer.Serialize(new
         {
             scenario = "mass_navigation_large_world",
@@ -2522,6 +3250,15 @@ public static class LauncherEvidenceRecorder
             final_scenario_spawn_count = final.ScenarioSpawnCount,
             boot_scene_reset_count = boot.SceneResetCount,
             final_scene_reset_count = final.SceneResetCount,
+            avoidance_frame_count = avoidance.FrameCount,
+            avoidance_max_visible_agent_count = avoidance.MaxVisibleAgentCount,
+            avoidance_max_play_area_agent_count = avoidance.MaxPlayAreaAgentCount,
+            avoidance_max_selected_visible_agent_count = avoidance.MaxSelectedVisibleAgentCount,
+            avoidance_max_heavy_agent_count = avoidance.MaxHeavyAgentCount,
+            avoidance_peak_deep_overlap_pair_count = avoidance.PeakDeepOverlapPairCount,
+            avoidance_final_deep_overlap_pair_count = avoidance.FinalDeepOverlapPairCount,
+            avoidance_peak_max_penetration_ratio = avoidance.PeakMaxPenetrationRatio,
+            avoidance_final_max_penetration_ratio = avoidance.FinalMaxPenetrationRatio,
             failed_checks = acceptance.FailedChecks
         }, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -2561,7 +3298,7 @@ public static class LauncherEvidenceRecorder
 
         canvas.DrawText($"MassNavigation Large World | {snapshot.Step} | tick={snapshot.Tick}", 36, 38, textPaint);
         canvas.DrawText($"World={snapshot.WorldWidthCm / 100000f:F1}km x {snapshot.WorldHeightCm / 100000f:F1}km  Camera={FormatPoint(snapshot.CameraTargetCm)}", 36, 68, minorTextPaint);
-        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} Selected={snapshot.SelectedCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
+        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} CommandActors={snapshot.CommandActorCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
         canvas.DrawText($"Performers={snapshot.PerformerActiveCount} Payloads={snapshot.PerformerPayloadCount} Blockers={snapshot.BlockerCount} Hotspots={snapshot.HotspotMarkerCount}", 830, 160, minorTextPaint);
         canvas.DrawText($"Minimap visible={snapshot.MinimapVisible} preset={snapshot.MinimapPreset} markers={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} buffer={snapshot.MinimapBufferCount} dropped={snapshot.MinimapDroppedTotal}", 830, 190, minorTextPaint);
         canvas.DrawText($"Solver center={FormatPoint(snapshot.SolverWindowCenterCm)} driver={snapshot.SolverWindowDriver}", 830, 220, minorTextPaint);
@@ -2788,13 +3525,102 @@ public static class LauncherEvidenceRecorder
         return $"{point.X.ToString("F0", CultureInfo.InvariantCulture)},{point.Y.ToString("F0", CultureInfo.InvariantCulture)}";
     }
 
+    private static readonly Rfc0065ShowcaseProfile[] Rfc0065ShowcaseProfiles =
+    [
+        new(
+            ModId: "ControlPlaneProjectionShowcaseMod",
+            ScenarioKey: "rfc0065_control_plane_projection_showcase",
+            Intent: "verify the control-plane projection showcase is launchable and has standard recorder evidence for owned/proxied selection projection review.",
+            MapHint: "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/assets",
+            ShowcaseScope: "control domain projection, proxy control grants, viewer-relative marker dataplane contract",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and control-plane projection scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: ControlPlaneProjectionShowcaseMod",
+                "control-plane projection showcase profile matched",
+                "owned/proxied projection contract documented",
+                "CEF-ready dataplane claim kept as contract metadata only"
+            ]),
+        new(
+            ModId: "EntityCommandPanelShowcaseMod",
+            ScenarioKey: "rfc0065_entity_command_panel_showcase",
+            Intent: "verify the entity command panel showcase is launchable and has standard recorder evidence for trigger-owned command panel review.",
+            MapHint: "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/assets",
+            ShowcaseScope: "trigger-controlled multi-instance command panels over the interaction sandbox",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and command-panel showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: EntityCommandPanelShowcaseMod",
+                "entity command panel showcase profile matched",
+                "interaction sandbox dependency captured through ordered mod plan",
+                "trigger-owned panel contract documented"
+            ]),
+        new(
+            ModId: "SuperweaponContextShowcaseMod",
+            ScenarioKey: "rfc0065_superweapon_context_showcase",
+            Intent: "verify the superweapon context showcase is launchable and has standard recorder evidence for ability-owned interaction contexts.",
+            MapHint: "mods/showcases/superweapon_context/SuperweaponContextShowcaseMod/assets",
+            ShowcaseScope: "ability-owned interaction contexts and context-bound target collection writes",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and superweapon context showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: SuperweaponContextShowcaseMod",
+                "superweapon context showcase profile matched",
+                "ability-owned context contract documented",
+                "context-bound target collection writes captured as expected evidence scope"
+            ]),
+        new(
+            ModId: "InteractionShowcaseMod",
+            ScenarioKey: "rfc0065_interaction_showcase",
+            Intent: "verify the interaction showcase is launchable and has standard recorder evidence for RFC0065 input and interaction review.",
+            MapHint: "mods/showcases/interaction/InteractionShowcaseMod/assets",
+            ShowcaseScope: "target-first, smart-cast, RTS aim-cast, action combat, and interaction stress validation",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and interaction showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: InteractionShowcaseMod",
+                "interaction showcase profile matched",
+                "input and GAS interaction contract documented",
+                "recorder artifact mode prevents framebuffer-capture overclaiming"
+            ])
+    ];
+
     private enum EvidenceScenario
     {
         None,
         CameraAcceptanceProjectionClick,
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
-        MassNavigationLargeWorld
+        MassNavigationLargeWorld,
+        Rfc0065ShowcaseArtifacts
     }
 
     private sealed class RecordingRuntime : IDisposable
@@ -2937,7 +3763,7 @@ public static class LauncherEvidenceRecorder
         string ActiveChunkSignature,
         int RoadSplineCount,
         IReadOnlyDictionary<string, Vector2> NamedEntities,
-        IReadOnlyList<string> SelectedNames,
+        IReadOnlyList<string> CommandActorNames,
         bool CueMarkerPresent,
         Vector2 CueMarkerWorldCm,
         string ControlledActorName,
@@ -2954,7 +3780,7 @@ public static class LauncherEvidenceRecorder
         string Verdict,
         string FailureSummary,
         IReadOnlyList<string> FailedChecks,
-        IReadOnlyList<string> SelectedNames,
+        IReadOnlyList<string> CommandActorNames,
         string ControlledActorName,
         string AcceptedStatus,
         Vector2 StartControlledActorWorldCm,
@@ -2994,6 +3820,72 @@ public static class LauncherEvidenceRecorder
         int TeamId,
         Vector2 WorldCm);
 
+    private readonly record struct MassNavigationAvoidanceFrameMetrics(
+        int FrameIndex,
+        float WindowCenterXCm,
+        float WindowCenterYCm,
+        int UnitCount,
+        int VisibleAgentCount,
+        int PlayAreaAgentCount,
+        int SelectedVisibleAgentCount,
+        int HeavyAgentCount,
+        int SettledAgentCount,
+        float MaxPenetrationCm,
+        float MaxPenetrationRatio,
+        int DeepOverlapPairCount);
+
+    private readonly record struct MassNavigationAvoidanceSummary(
+        int FrameCount,
+        int MaxVisibleAgentCount,
+        int MaxPlayAreaAgentCount,
+        int MaxSelectedVisibleAgentCount,
+        int MaxHeavyAgentCount,
+        int PeakDeepOverlapPairCount,
+        int FinalDeepOverlapPairCount,
+        float PeakMaxPenetrationRatio,
+        float FinalMaxPenetrationRatio);
+
+    private sealed class MassNavigationAvoidanceScratch
+    {
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _agents;
+        private readonly MassNavigationObstacleSnapshot[] _obstacles;
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _visibleAgents;
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _playAreaAgents;
+
+        public MassNavigationAvoidanceScratch(int agentCapacity, int obstacleCapacity)
+        {
+            _agents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+            _obstacles = new MassNavigationObstacleSnapshot[obstacleCapacity];
+            _visibleAgents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+            _playAreaAgents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+        }
+
+        public MassNavigationAvoidanceSnapshot Capture(MassNavigationSimulationRuntime simulation)
+        {
+            return simulation.CaptureAvoidanceSnapshot(_agents, _obstacles);
+        }
+
+        public ReadOnlySpan<MassNavigationAvoidanceAgentSnapshot> Agents(int count)
+        {
+            return _agents.AsSpan(0, count);
+        }
+
+        public ReadOnlySpan<MassNavigationObstacleSnapshot> Obstacles(int count)
+        {
+            return _obstacles.AsSpan(0, count);
+        }
+
+        public Span<MassNavigationAvoidanceAgentSnapshot> VisibleAgents(int count)
+        {
+            return _visibleAgents.AsSpan(0, count);
+        }
+
+        public Span<MassNavigationAvoidanceAgentSnapshot> PlayAreaAgents(int count)
+        {
+            return _playAreaAgents.AsSpan(0, count);
+        }
+    }
+
     private readonly record struct MassNavigationSnapshot(
         int Tick,
         string Step,
@@ -3031,7 +3923,7 @@ public static class LauncherEvidenceRecorder
         Vector2 MinimapCenterCm,
         float MinimapHalfExtentCm,
         Vector2 MinimapCameraTargetCm,
-        int SelectedCount,
+        int CommandActorCount,
         int ActiveGroups,
         int ActiveOrderGroups,
         int ScenarioSpawnCount,
@@ -3054,6 +3946,27 @@ public static class LauncherEvidenceRecorder
         string FailureSummary,
         IReadOnlyList<string> FailedChecks,
         string NormalizedSignature);
+
+    private sealed record Rfc0065ShowcaseProfile(
+        string ModId,
+        string ScenarioKey,
+        string Intent,
+        string MapHint,
+        string ShowcaseScope,
+        IReadOnlyList<string> ExpectedArtifacts,
+        IReadOnlyList<string> RecorderSignals);
+
+    private readonly record struct Rfc0065ArtifactSnapshot(
+        int Tick,
+        string Step,
+        string Title,
+        string Status,
+        string Detail,
+        int RootModCount,
+        int OrderedModCount,
+        string AdapterId,
+        string ArtifactMode,
+        IReadOnlyList<string> Signals);
 
     private readonly record struct CaptureFrame(
         int Tick,

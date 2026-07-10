@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\performer_blacksmith\PerformerBlacksmithShowcaseMod\PerformerBlacksmithShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\FormationCapabilityShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\RaylibIsmBenchmarkShowcaseMod.csproj" />
   </ItemGroup>
@@ -50,6 +51,7 @@
   <ItemGroup>
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
+    <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

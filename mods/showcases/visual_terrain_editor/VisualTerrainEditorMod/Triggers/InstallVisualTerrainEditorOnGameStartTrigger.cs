@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using VisualTerrainEditorMod.Runtime;
 using VisualTerrainEditorMod.Systems;
@@ -32,7 +33,7 @@ internal sealed class InstallVisualTerrainEditorOnGameStartTrigger : Trigger
         }
 
         engine.GlobalContext[InstalledKey] = true;
-        engine.RegisterPresentationSystem(new VisualTerrainEditorPresentationSystem(engine, _runtime));
+        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new VisualTerrainEditorPresentationSystem(engine, _runtime));
         return Task.CompletedTask;
     }
 }

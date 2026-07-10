@@ -3,7 +3,7 @@
   "presentation": {
     "requiredMeshAssetIds": [
       "mass_navigation.agent.soldier",
-      "mass_navigation.selection.marker"
+      "mass_navigation.command.marker"
     ],
     "blockerPerformerId": null,
     "hotspotPerformerId": null,
@@ -26,12 +26,12 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
-    "initialSelectionScratchCapacity": 512,
-    "initialSelectedEntityCapacity": 128,
+    "initialCommandActorScratchCapacity": 512,
+    "initialCommandActorSnapshotCapacity": 128,
     "runtimeCapacity": {
       "navigationGroupCapacity": 512,
       "groupMembershipAgentCapacity": 80000,
-      "selectionMemberScratchCapacity": 512,
+      "commandActorScratchCapacity": 512,
       "groupMemberCapacity": 512,
       "orderIngestionTokenCapacity": 512,
       "orderIngestionMemberCapacity": 512,

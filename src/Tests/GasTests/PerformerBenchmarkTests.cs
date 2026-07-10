@@ -216,6 +216,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(entity, Is.Not.EqualTo(Entity.Null));
                 ref var state = ref _world.Get<PerformerState>(entity);
                 state.BehaviorActiveMask = 1u;
+                _instances.SetParam(entity, WellKnownPerformerParamKeys.TextValue0, ParamLane.Float, -25f, 0, Vector4.Zero);
             }
 
             WarmUpGC();
@@ -248,6 +249,13 @@ namespace Ludots.Tests.Presentation
                 Assert.That(entity, Is.Not.EqualTo(Entity.Null));
                 ref var state = ref _world.Get<PerformerState>(entity);
                 state.BehaviorActiveMask = 0b11u;
+                _instances.SetParam(
+                    entity,
+                    WellKnownPerformerParamKeys.BarFillRatio,
+                    ParamLane.Float,
+                    attrBuf.GetCurrent(_healthAttrId) / attrBuf.GetBase(_healthAttrId),
+                    0,
+                    Vector4.Zero);
             }
 
             WarmUpGC();
@@ -281,6 +289,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(entity, Is.Not.EqualTo(Entity.Null));
                 ref var state = ref _world.Get<PerformerState>(entity);
                 state.BehaviorActiveMask = 0b11u;
+                _instances.SetParam(entity, WellKnownPerformerParamKeys.BarFillRatio, ParamLane.Float, 0.8f, 0, Vector4.Zero);
             }
 
             WarmUpGC();

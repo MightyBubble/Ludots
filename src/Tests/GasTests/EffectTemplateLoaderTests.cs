@@ -4,6 +4,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -150,6 +151,59 @@ namespace Ludots.Tests.GAS
                 var loader = CreateLoader(root, out _);
 
                 Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_BuiltinSpatialCircle_RequiresOnlyRadius()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry);
+
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Search");
+                That(tplId, Is.GreaterThan(0));
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.TargetQuery.Kind, Is.EqualTo(TargetResolverKind.BuiltinSpatial));
+                That(tpl.TargetQuery.Spatial.Shape, Is.EqualTo(SpatialShape.Circle));
+                That(tpl.TargetQuery.Spatial.RadiusCm, Is.EqualTo(100));
+                That(tpl.TargetQuery.Spatial.InnerRadiusCm, Is.EqualTo(0));
+                That(tpl.TargetQuery.Spatial.HalfAngleDeg, Is.EqualTo(0));
+                That(tpl.TargetQuery.Spatial.HalfWidthCm, Is.EqualTo(0));
+                That(tpl.TargetQuery.Spatial.HalfHeightCm, Is.EqualTo(0));
+                That(tpl.TargetQuery.Spatial.RotationDeg, Is.EqualTo(0));
+                That(tpl.TargetQuery.Spatial.LengthCm, Is.EqualTo(0));
             }
             finally
             {
@@ -702,6 +756,175 @@ namespace Ludots.Tests.GAS
                 That(tpl.PresetType, Is.EqualTo(EffectPresetType.ApplyForce2D));
                 That(tpl.PresetAttribute0, Is.GreaterThanOrEqualTo(0));
                 That(tpl.PresetAttribute1, Is.GreaterThanOrEqualTo(0));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_GraphProgramTargetQuery_RequiresGraphProgramId()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Graph_Query",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "GraphProgram"
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SubmitOrderFromBlackboard_RequiresEntityOrderIntArg0()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Kind");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Position");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Entity");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
+
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Test.SubmitOrderMissingIntArg0",
+                        "tags": ["Effect.Test.SubmitOrder"],
+                        "presetType": "SubmitOrderFromBlackboard",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "submitOrderFromBlackboard": {
+                          "source": "Source",
+                          "target": "Target",
+                          "storedTarget": {
+                            "targetKindKey": "Test.SpawnTarget.Kind",
+                            "targetPositionKey": "Test.SpawnTarget.Position",
+                            "targetEntityKey": "Test.SpawnTarget.Entity",
+                            "hexQKey": "Test.SpawnTarget.HexQ",
+                            "hexRKey": "Test.SpawnTarget.HexR"
+                          },
+                          "pointMoveOrderTypeKey": "moveTo",
+                          "entityOrderTypeKey": "castAbility",
+                          "submitMode": "Immediate"
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+                That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_InfiniteDuration_AllowsMissingAndPartialDurationBlocks()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Infinite_NoDuration",
+                        "tags": ["Event.Infinite.NoDuration"],
+                        "presetType": "Buff",
+                        "lifetime": "Infinite",
+                        "participatesInResponse": false
+                      },
+                      {
+                        "id": "Effect_Infinite_PeriodOnly",
+                        "tags": ["Event.Infinite.PeriodOnly"],
+                        "presetType": "Buff",
+                        "lifetime": "Infinite",
+                        "duration": { "periodTicks": 20 },
+                        "participatesInResponse": false
+                      },
+                      {
+                        "id": "Effect_Infinite_FullDuration",
+                        "tags": ["Event.Infinite.FullDuration"],
+                        "presetType": "Buff",
+                        "lifetime": "Infinite",
+                        "duration": { "durationTicks": 0, "periodTicks": 60, "clockId": "FixedFrame" },
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var registry = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, registry);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int noDurationId = EffectTemplateIdRegistry.GetId("Effect_Infinite_NoDuration");
+                int periodOnlyId = EffectTemplateIdRegistry.GetId("Effect_Infinite_PeriodOnly");
+                int fullDurationId = EffectTemplateIdRegistry.GetId("Effect_Infinite_FullDuration");
+
+                That(noDurationId, Is.GreaterThan(0));
+                That(periodOnlyId, Is.GreaterThan(0));
+                That(fullDurationId, Is.GreaterThan(0));
+
+                That(registry.TryGet(noDurationId, out var noDuration), Is.True);
+                That(registry.TryGet(periodOnlyId, out var periodOnly), Is.True);
+                That(registry.TryGet(fullDurationId, out var fullDuration), Is.True);
+
+                That(noDuration.LifetimeKind, Is.EqualTo(EffectLifetimeKind.Infinite));
+                That(noDuration.DurationTicks, Is.EqualTo(0));
+                That(noDuration.PeriodTicks, Is.EqualTo(0));
+                That(noDuration.ClockId, Is.EqualTo(GasClockId.FixedFrame));
+
+                That(periodOnly.LifetimeKind, Is.EqualTo(EffectLifetimeKind.Infinite));
+                That(periodOnly.DurationTicks, Is.EqualTo(0));
+                That(periodOnly.PeriodTicks, Is.EqualTo(20));
+                That(periodOnly.ClockId, Is.EqualTo(GasClockId.FixedFrame));
+
+                That(fullDuration.LifetimeKind, Is.EqualTo(EffectLifetimeKind.Infinite));
+                That(fullDuration.DurationTicks, Is.EqualTo(0));
+                That(fullDuration.PeriodTicks, Is.EqualTo(60));
+                That(fullDuration.ClockId, Is.EqualTo(GasClockId.FixedFrame));
             }
             finally
             {

@@ -20,7 +20,7 @@
 ## 交互层设计
 
 - **Trigger**: 无（被动触发）
-- **SelectionType**: `Entity`（需选择新目标）或 `None`（自动重定向）
+- **TargetType**: `Entity`（需选择新目标）或 `None`（自动重定向）
 - **InteractionMode**: 不适用
 
 ```json5
@@ -56,7 +56,7 @@
 
 // 手动重定向（玩家选择新目标）
 Graph.Redirect.Manual:
-  // 假设玩家通过 SelectionGate 选择了新目标，存储在 Blackboard
+  // 假设玩家通过 TargetCollectionGate 确认了新目标，存储在 Blackboard
   ReadBlackboardEntity      E[effect], "NewTarget" → E[2]
   WriteBlackboardEntity     E[effect], "EffectTarget", E[2]  // 修改目标
 
@@ -111,7 +111,7 @@ Effect 模板示例（反射护盾）：
 | ResponseChainListener | `src/Core/Gameplay/GAS/Components/ResponseChainListener.cs` | ✅ 已有 |
 | BlackboardEntityBuffer | `src/Core/Gameplay/GAS/Components/BlackboardComponents.cs` | ✅ 已有 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
-| SelectionGate | `src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs` | ✅ 已有 |
+| TargetCollectionGate | `src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs` | ✅ 已有 |
 | GraphOps (WriteBlackboardEntity) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 
 ---
@@ -121,7 +121,7 @@ Effect 模板示例（反射护盾）：
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
 | EffectContext.Target 可变性 | P1 | 当前 EffectContext.Target 在 Proposal 阶段后不可修改；需支持 OnPropose Listener 修改目标 |
-| SelectionGate 集成到 ResponseChain | P2 | 当前 SelectionGate 仅用于 AbilityExec；需支持在 ResponseChain 窗口内打开 SelectionGate |
+| TargetCollectionGate 集成到 ResponseChain | P2 | 当前 TargetCollectionGate 仅用于 AbilityExec；需支持在 ResponseChain 窗口内打开显式目标集合确认 |
 
 ---
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -10,6 +11,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
 {
+    [NonParallelizable]
     [TestFixture]
     public sealed class ProductionAllModsValidationTests
     {
@@ -57,6 +59,12 @@ namespace Ludots.Tests.GAS.Production
                     new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_CapabilityStandardPhysics2DShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "CapabilityStandardVirtualCameraShowcaseMod",
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CapabilityStandardVirtualCameraShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_CapabilityStandardVirtualCameraShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "TerrainBenchmarkMod",
@@ -262,7 +270,7 @@ namespace Ludots.Tests.GAS.Production
                 InstallDummyInput(engine);
 
                 engine.Start();
-                engine.LoadMap(engine.MergedConfig.StartupMapId);
+                engine.LoadStartupMap();
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -275,6 +283,15 @@ namespace Ludots.Tests.GAS.Production
             {
                 engine.Dispose();
             }
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
 
         private static void InstallDummyInput(GameEngine engine)

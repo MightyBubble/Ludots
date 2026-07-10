@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -195,8 +196,8 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void CameraManager_ConfiguredVirtualCamera_UpdatesStateFromInput()
         {
-            var (backend, handler) = BuildOrbitInputHandler();
-            var manager = CreateOrbitCameraManager(handler, new VirtualCameraDefinition
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
             {
                 Id = "ManagerRotate",
                 Priority = 0,
@@ -213,8 +214,7 @@ namespace Ludots.Tests.ThreeC
                 MaxPitchDeg = 85f
             });
 
-            backend.Buttons["<Keyboard>/e"] = true;
-            handler.Update();
+            SetBehaviorInput(behaviorInput, rotateRight: true);
             manager.Update(1f);
 
             That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
@@ -267,8 +267,8 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_Zoom_ClampsToMinMax()
         {
-            var (backend, handler) = BuildOrbitInputHandler();
-            var manager = CreateOrbitCameraManager(handler, new VirtualCameraDefinition
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
             {
                 Id = "TestZoom",
                 Priority = 0,
@@ -285,23 +285,21 @@ namespace Ludots.Tests.ThreeC
                 ZoomCmPerWheel = 2000f
             });
 
-            backend.MouseWheel = 10f;
-            handler.Update();
+            SetBehaviorInput(behaviorInput, zoom: 10f);
             manager.Update(0.016f);
             That(manager.State.DistanceCm, Is.EqualTo(500f), "Should clamp to MinDistanceCm");
 
             manager.ApplyPose(new CameraPoseRequest { DistanceCm = 4000f });
-            backend.MouseWheel = -10f;
-            handler.Update();
+            SetBehaviorInput(behaviorInput, zoom: -10f);
             manager.Update(0.016f);
             That(manager.State.DistanceCm, Is.EqualTo(5000f), "Should clamp to MaxDistanceCm");
         }
 
         [Test]
-        public void VirtualCameraRuntime_Zoom_AccumulatesAcrossVisualFrames_AndConsumesOncePerFixedTick()
+        public void VirtualCameraRuntime_Zoom_ConsumesBehaviorStateThenStopsAfterClear()
         {
-            var (backend, handler) = BuildOrbitInputHandler();
-            var manager = CreateOrbitCameraManager(handler, new VirtualCameraDefinition
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
             {
                 Id = "AccumulatedZoom",
                 Priority = 0,
@@ -318,30 +316,20 @@ namespace Ludots.Tests.ThreeC
                 ZoomCmPerWheel = 500f
             });
 
-            backend.MouseWheel = 1f;
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.MouseWheel = 1f;
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.MouseWheel = 0f;
-            handler.Update();
-            manager.CaptureVisualInput();
-
+            SetBehaviorInput(behaviorInput, zoom: 2f);
             manager.Update(0.016f);
-            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Two visual-frame wheel steps should be consumed by the next fixed-step camera tick");
+            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Zoom behavior should read the attribute-sink state for this logic tick.");
 
+            behaviorInput.Clear();
             manager.Update(0.016f);
-            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Wheel delta should not be consumed again without a new visual input sample");
+            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Cleared behavior state must not replay old zoom input.");
         }
 
         [Test]
         public void VirtualCameraRuntime_KeyboardRotate_YawWraps360()
         {
-            var (backend, handler) = BuildOrbitInputHandler();
-            var manager = CreateOrbitCameraManager(handler, new VirtualCameraDefinition
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
             {
                 Id = "TestRotate",
                 Priority = 0,
@@ -358,8 +346,7 @@ namespace Ludots.Tests.ThreeC
                 MaxPitchDeg = 85f
             });
 
-            backend.Buttons["<Keyboard>/e"] = true;
-            handler.Update();
+            SetBehaviorInput(behaviorInput, rotateRight: true);
             manager.Update(1f);
 
             That(manager.State.Yaw, Is.GreaterThanOrEqualTo(0f));
@@ -370,8 +357,8 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_PitchClamp_RespectsMaxBound()
         {
-            var (backend, handler) = BuildOrbitInputHandler();
-            var manager = CreateOrbitCameraManager(handler, new VirtualCameraDefinition
+            var behaviorInput = new CameraBehaviorInputState();
+            var manager = CreateOrbitCameraManager(behaviorInput, new VirtualCameraDefinition
             {
                 Id = "TestPitch",
                 Priority = 0,
@@ -388,28 +375,40 @@ namespace Ludots.Tests.ThreeC
                 EnableZoom = false
             });
 
-            backend.Buttons["<Mouse>/MiddleButton"] = true;
-            backend.MousePos = new Vector2(100f, 500f);
-            handler.Update();
-            manager.Update(0.016f);
-
-            backend.MousePos = new Vector2(100f, 100f);
-            handler.Update();
+            SetBehaviorInput(behaviorInput, look: new Vector2(0f, 400f), rotateHold: true);
             manager.Update(0.016f);
 
             That(manager.State.Pitch, Is.EqualTo(85f).Within(0.01f), "Upward drag should raise pitch until MaxPitchDeg");
         }
 
-        private static CameraManager CreateOrbitCameraManager(PlayerInputHandler handler, VirtualCameraDefinition definition)
+        private static CameraManager CreateOrbitCameraManager(CameraBehaviorInputState behaviorInput, VirtualCameraDefinition definition)
         {
             var manager = new CameraManager();
             var registry = new VirtualCameraRegistry();
             definition.AllowUserInput = true;
             registry.Register(definition);
             manager.SetVirtualCameraRegistry(registry);
-            manager.ConfigureRuntime(handler, new StubViewController());
+            manager.ConfigureRuntime(behaviorInput, new StubViewController());
             manager.ActivateVirtualCamera(definition.Id, blendDurationSeconds: 0f);
             return manager;
+        }
+
+        private static void SetBehaviorInput(
+            CameraBehaviorInputState input,
+            Vector2? look = null,
+            float zoom = 0f,
+            bool rotateHold = false,
+            bool rotateLeft = false,
+            bool rotateRight = false)
+        {
+            input.Clear();
+            Vector2 lookValue = look ?? Vector2.Zero;
+            input.Apply(CameraBehaviorInputChannels.LookX, lookValue.X, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.LookY, lookValue.Y, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.Zoom, zoom, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateHold, rotateHold ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateLeft, rotateLeft ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateRight, rotateRight ? 1f : 0f, AttributeBindingMode.Override);
         }
         //  C. Camera Presenter
         // ------------------------------------------------------------
@@ -1203,8 +1202,8 @@ namespace Ludots.Tests.ThreeC
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         IsSkillMapping = false,
-                        SelectionType = OrderSelectionType.Position,
-                        RequireSelection = false
+                        TargetType = OrderTargetType.Position,
+                        RequireTarget = false
                     }
                 }
             };
@@ -1243,5 +1242,4 @@ namespace Ludots.Tests.ThreeC
         }
     }
 }
-
 

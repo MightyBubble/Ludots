@@ -4,7 +4,7 @@
     "components": {
       "Name": { "Value": "Governor" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Production": 0, "Gold": 0, "TechProgress": 0, "FoodProduction": 0 } },
       "AbilityStateBuffer": {
@@ -28,7 +28,7 @@
     "components": {
       "Name": { "Value": "OutpostSite" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 9999 } }
     }
@@ -38,7 +38,7 @@
     "components": {
       "Name": { "Value": "FederationCity" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 3000, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 200, "Production": 5, "Gold": 10 } }
     }
@@ -48,7 +48,7 @@
     "components": {
       "Name": { "Value": "HordeCamp" },
       "Team": { "Id": 3 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -3000, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 150 } }
     }
@@ -58,7 +58,7 @@
     "components": {
       "Name": { "Value": "NomadCaravan" },
       "Team": { "Id": 4 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 3000 } },
       "AttributeBuffer": { "base": { "Health": 80, "Gold": 50 } }
     }

@@ -8,7 +8,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         DelayTicks = 1,
         WaitEvent = 2,
         WaitInputResponse = 3,
-        WaitSelectionResponse = 4,
+        WaitTargetResponse = 4,
         SendEvent = 5,
         CommitOnActivateEffects = 6,
         AddTag = 7,

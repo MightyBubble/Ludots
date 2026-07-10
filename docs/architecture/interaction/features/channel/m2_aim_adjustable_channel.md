@@ -15,14 +15,14 @@ InputOrderMapping (激活):
   actionId: "SkillR"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 InputOrderMapping (射击):
   actionId: "SkillR_Fire"
   trigger: PressedThisFrame
   orderTypeKey: "channelFire"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 

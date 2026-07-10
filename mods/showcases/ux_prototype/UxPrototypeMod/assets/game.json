@@ -1,6 +1,6 @@
 {
   "startupMapId": "ux_prototype_battle",
-  "selection": {
+  "commandSource": {
     "clickPickRadiusPixels": 72,
     "dragThresholdPixels": 6
   }

@@ -78,13 +78,75 @@ namespace Ludots.Core.Presentation.Systems
                                     LogicTickStamp = tick,
                                     Kind = PresentationEventKind.EffectApplied,
                                     KeyId = ge.EffectTemplateId,
-                                    Source = ge.Actor,
-                                    Target = ge.Target,
+                                    Source = ge.Target,
+                                    Target = ge.Actor,
                                     Magnitude = ge.Delta,
                                     PayloadA = ge.AttributeId,
                                     PayloadB = ge.AbilitySlot,
                                 },
                                 nameof(GasPresentationEventKind.EffectApplied));
+                            break;
+                        case GasPresentationEventKind.EffectActivated:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.EffectActivated,
+                                    KeyId = ge.EffectTemplateId,
+                                    Source = ge.Target,
+                                    Target = ge.Actor,
+                                    Magnitude = ge.Delta,
+                                    PayloadA = ge.AttributeId,
+                                    PayloadB = ge.AbilitySlot,
+                                },
+                                nameof(GasPresentationEventKind.EffectActivated));
+                            break;
+                        case GasPresentationEventKind.EffectExpired:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.EffectExpired,
+                                    KeyId = ge.EffectTemplateId,
+                                    Source = ge.Actor,
+                                    Target = ge.Target,
+                                    Magnitude = 0f,
+                                    PayloadA = ge.EffectTemplateId,
+                                },
+                                nameof(GasPresentationEventKind.EffectExpired));
+                            break;
+                        case GasPresentationEventKind.EffectCancelled:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.EffectCancelled,
+                                    KeyId = ge.EffectTemplateId,
+                                    Source = ge.Actor,
+                                    Target = ge.Target,
+                                    Magnitude = 0f,
+                                    PayloadA = ge.EffectTemplateId,
+                                },
+                                nameof(GasPresentationEventKind.EffectCancelled));
+                            break;
+                        case GasPresentationEventKind.CastStarted:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.CastStarted,
+                                    KeyId = ge.AbilityId,
+                                    Source = ge.Actor,
+                                    Target = ge.Target,
+                                    Magnitude = 0f,
+                                    PayloadA = ge.AbilitySlot,
+                                    PayloadB = ge.AbilityId,
+                                },
+                                nameof(GasPresentationEventKind.CastStarted));
                             break;
                         case GasPresentationEventKind.CastCommitted:
                             AddEventOrThrow(
@@ -118,8 +180,42 @@ namespace Ludots.Core.Presentation.Systems
                                 },
                                 nameof(GasPresentationEventKind.CastFailed));
                             break;
+                        case GasPresentationEventKind.CastFinished:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.CastFinished,
+                                    KeyId = ge.AbilityId,
+                                    Source = ge.Actor,
+                                    Target = ge.Target,
+                                    Magnitude = 0f,
+                                    PayloadA = ge.AbilitySlot,
+                                    PayloadB = ge.AbilityId,
+                                },
+                                nameof(GasPresentationEventKind.CastFinished));
+                            break;
+                        case GasPresentationEventKind.CastInterrupted:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.CastInterrupted,
+                                    KeyId = ge.AbilityId,
+                                    Source = ge.Actor,
+                                    Target = ge.Target,
+                                    Magnitude = 0f,
+                                    PayloadA = ge.AbilitySlot,
+                                    PayloadB = ge.AbilityId,
+                                },
+                                nameof(GasPresentationEventKind.CastInterrupted));
+                            break;
                     }
                 }
+
+                _gasEvents.Clear();
             }
 
             // Project owner fact changes into both the event stream and the owner-change index.

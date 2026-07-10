@@ -1,0 +1,582 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Text.Json;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Registry;
+using Ludots.Platform.Abstractions;
+using NUnit.Framework;
+
+namespace Ludots.Tests.GAS
+{
+    /// <summary>
+    /// RFC-0065 INT-5/INT-7 (Section 5.11, DEC-14/DEC-15): control scheme catalog + hot switch
+    /// (IMC push/pop, allowed set, preference persistence, headless null handler) and the frame
+    /// command intent arbiter's three branches. Scheme/intent/context names are test data, never
+    /// Core concepts.
+    /// </summary>
+    [TestFixture]
+    [NonParallelizable]
+    public sealed class ControlSchemeRuntimeTests
+    {
+        private const string DefaultIntent = "intent.test.default";
+        private const string AltIntent = "intent.test.alt";
+        private const string DefaultDispatch = "dispatch.test.default";
+        private const string AltDispatch = "dispatch.test.alt";
+        private const string SchemeA = "scheme.test.a";
+        private const string SchemeB = "scheme.test.b";
+        private const string ContextA = "imc.test.a";
+        private const string ContextB = "imc.test.b";
+
+        [SetUp]
+        public void SetUp()
+        {
+            TagRegistry.Clear();
+            ContextGroupIdRegistry.Clear();
+        }
+
+        [Test]
+        public void Install_ActivatesFirstAllowedSchemeAndPushesItsInputContexts()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: true);
+            harness.InstallTwoSchemes();
+
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCastDispatchProfileId,
+                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(DefaultDispatch)));
+
+            harness.Backend.Buttons["<Keyboard>/q"] = true;
+            harness.Handler.Update();
+            Assert.That(harness.Handler.IsDown("CmdA"), Is.True, "the initial scheme's IMC context must be active after install.");
+
+            uint revisionBefore = harness.Runtime.Revision;
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(harness.Runtime.Revision, Is.GreaterThan(revisionBefore));
+
+            harness.Backend.Buttons["<Keyboard>/e"] = true;
+            harness.Handler.Update();
+            Assert.That(harness.Handler.IsDown("CmdA"), Is.False, "scheme A's IMC context must be popped on switch.");
+            Assert.That(harness.Handler.IsDown("CmdB"), Is.True, "scheme B's IMC context must be pushed on switch.");
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCastDispatchProfileId,
+                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
+        }
+
+        [Test]
+        public void TrySwitch_DisallowedOrUninstalledScheme_RefusedAndStateUnchanged()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: true);
+            harness.InstallTwoSchemes(allowedSchemes: new List<string> { SchemeA });
+
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
+
+            // Mod allowed-set refusal keeps the active scheme, its contexts, and its intent default.
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.False);
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
+            harness.Backend.Buttons["<Keyboard>/q"] = true;
+            harness.Handler.Update();
+            Assert.That(harness.Handler.IsDown("CmdA"), Is.True);
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCastDispatchProfileId,
+                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(DefaultDispatch)));
+
+            Assert.That(harness.Runtime.TrySwitch(schemeId: 0), Is.False, "id 0 is never installed.");
+            Assert.That(harness.Runtime.TrySwitch(schemeId: 999), Is.False, "unknown ids are refused.");
+        }
+
+        [Test]
+        public void TrySwitch_NullHandler_TracksIntentDefaultAndPersistsPreference()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            // Headless: no input handler exists; only intent default + preference bookkeeping run.
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCastDispatchProfileId,
+                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
+            Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeB),
+                "the active scheme choice must persist into the CTX-8 preference store.");
+        }
+
+        [Test]
+        public void Install_ActivatesPersistedSchemeWhenItIsAllowed()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.Preferences.SetActiveScheme(SchemeB);
+
+            harness.InstallTwoSchemes();
+
+            Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCommandIntentId,
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)));
+            Assert.That(
+                harness.Runtime.ActiveDefaultCastDispatchProfileId,
+                Is.EqualTo(harness.Dispatch.ProfileIdRegistry.GetId(AltDispatch)));
+        }
+
+        [Test]
+        public void Install_PersistedUnknownScheme_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.Preferences.SetActiveScheme("scheme.test.removed");
+
+            Assert.Throws<InvalidOperationException>(() => harness.InstallTwoSchemes());
+        }
+
+        [Test]
+        public void Install_UnknownCommandIntentDispatchOrDuplicateScheme_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    Harness.Scheme("scheme.test.bad", "intent.test.not_installed"),
+                },
+            }));
+
+            ControlSchemeDefinition unknownDispatch = Harness.Scheme("scheme.test.bad_dispatch", DefaultIntent);
+            unknownDispatch.Defaults.CastDispatchProfileId = "dispatch.test.not_installed";
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { unknownDispatch },
+            }));
+
+            harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent) },
+            });
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, DefaultIntent) },
+            }));
+
+            Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeB, AltIntent) },
+                    AllowedSchemes = new List<string> { "scheme.test.undeclared" },
+                }, "test"),
+                "allowedSchemes must reference declared schemes.");
+        }
+
+        [Test]
+        public void TryGetActiveAxisMove_TracksActiveSchemeDeclaration()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
+            ControlSchemeDefinition withAxis = Harness.Scheme(SchemeA, DefaultIntent);
+            withAxis.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "Move",
+                OrderTypeKey = "moveTo",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+            harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { withAxis, Harness.Scheme(SchemeB, AltIntent) },
+            });
+
+            Assert.That(harness.Runtime.TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding binding), Is.True);
+            Assert.That(binding.ActionId, Is.EqualTo("Move"));
+            Assert.That(binding.OrderTypeId, Is.EqualTo(2), "orderTypeKey resolves to its registry id at install.");
+            Assert.That(binding.ThrottleTicks, Is.EqualTo(6));
+            Assert.That(binding.StepDistanceCm, Is.EqualTo(400));
+
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(harness.Runtime.TryGetActiveAxisMove(out _), Is.False);
+        }
+
+        [Test]
+        public void Install_AxisMoveUnknownOrNonAxis2DAction_FailsFastWhenInputConfigIsAvailable()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false, withInputConfig: true);
+
+            ControlSchemeDefinition unknownAction = Harness.Scheme(SchemeA, DefaultIntent);
+            unknownAction.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "TypoMove",
+                OrderTypeKey = "moveTo",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { unknownAction },
+            }));
+
+            ControlSchemeDefinition buttonAction = Harness.Scheme(SchemeB, DefaultIntent);
+            buttonAction.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "CmdA",
+                OrderTypeKey = "moveTo",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { buttonAction },
+            }));
+        }
+
+        [Test]
+        public void Install_AxisMoveUnknownOrderTypeKey_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            scheme.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "Move",
+                OrderTypeKey = "orders.test.unknown",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { scheme },
+            }));
+        }
+
+        [TestCase("", "moveTo", 6, 400, TestName = "Validate_AxisMoveMissingActionId_FailsFast")]
+        [TestCase("Move", "", 6, 400, TestName = "Validate_AxisMoveMissingOrderTypeKey_FailsFast")]
+        [TestCase("Move", "moveTo", 0, 400, TestName = "Validate_AxisMoveZeroThrottleTicks_FailsFast")]
+        [TestCase("Move", "moveTo", 6, 0, TestName = "Validate_AxisMoveZeroStepDistance_FailsFast")]
+        public void Validate_AxisMoveDeclarationWithMissingOrIllegalField_FailsFast(
+            string actionId, string orderTypeKey, int throttleTicks, int stepDistanceCm)
+        {
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            scheme.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = actionId,
+                OrderTypeKey = orderTypeKey,
+                ThrottleTicks = throttleTicks,
+                StepDistanceCm = stepDistanceCm,
+            };
+
+            Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { scheme },
+                }, "test"),
+                "a declared axisMove requires all four fields to be present and legal.");
+        }
+
+        [Test]
+        public void Arbiter_TopFrameExplicitIntent_WinsOverSchemeDefault()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
+                "context.test.targeting",
+                "collection.test.targeting",
+                "view.test.targeting",
+                commandIntentProfileId: AltIntent));
+
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
+                "the pushed frame's explicit intent must win over the scheme default.");
+        }
+
+        [Test]
+        public void Arbiter_DefaultFrame_UsesActiveSchemeDefault()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, scheme: null), Is.EqualTo(0));
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(DefaultIntent)),
+                "install activates the first allowed scheme, so the default frame has a scheme-owned intent.");
+
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                Is.EqualTo(harness.Stack.CommandIntentProfileIdRegistry.GetId(AltIntent)),
+                "the default frame consumes the active scheme's default intent (DEC-14).");
+        }
+
+        [Test]
+        public void Arbiter_NonDefaultFrameWithoutIntent_ReturnsZero_NoBubbling()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
+                "context.test.modal",
+                "collection.test.targeting",
+                "view.test.targeting"));
+
+            Assert.That(
+                CommandIntentArbiter.ResolveActiveCommandIntent(harness.Stack, harness.Runtime),
+                Is.EqualTo(0),
+                "a non-default frame without an explicit intent does not route and never bubbles (DEC-14).");
+        }
+
+        [Test]
+        public void Arbiter_EmptyStack_ReturnsZero()
+        {
+            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var emptyStack = new InteractionContextStack(collectionKeys);
+            Assert.That(CommandIntentArbiter.ResolveActiveCommandIntent(emptyStack, scheme: null), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void DefaultSchemesConfigFile_DeserializesAndValidates()
+        {
+            string configPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "Input", "control_schemes.json");
+            Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
+
+            var config = JsonSerializer.Deserialize<ControlSchemesConfig>(
+                File.ReadAllText(configPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.That(config, Is.Not.Null);
+            ControlSchemeConfigLoader.Validate(config, "assets");
+            ControlSchemeDefinition defaultScheme = config!.Schemes.Single(scheme => scheme.Id == "scheme.default");
+            Assert.That(defaultScheme.AxisMove, Is.Null, "default shipped scheme keeps axis movement disabled by topology.");
+            Assert.That(defaultScheme.Defaults.CastDispatchProfileId, Is.EqualTo("dispatch.all_together"));
+
+            string catalogPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "config_catalog.json");
+            Assert.That(File.ReadAllText(catalogPath), Does.Not.Contain("Input/axis_move.json"));
+        }
+
+        private static string FindRepoRoot()
+        {
+            var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            while (current != null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, "src", "Core", "Ludots.Core.csproj")))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
+        }
+
+        private sealed class Harness
+        {
+            public InteractionContextStack Stack = null!;
+            public ControlSchemeRuntime Runtime = null!;
+            public ClientCastPreferenceStore Preferences = null!;
+            public CastDispatchProfileRegistry Dispatch = null!;
+            public PlayerInputHandler Handler;
+            public TestInputBackend Backend;
+            private StringIntRegistry _schemeIds = null!;
+
+            public static Harness Create(World world, bool withHandler, bool withInputConfig = false)
+            {
+                CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
+                InstallGroundIntent(intents, DefaultIntent);
+                InstallGroundIntent(intents, AltIntent);
+
+                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var stack = new InteractionContextStack(collectionKeys);
+                stack.Push(InteractionContextFrameDescriptor.Create(
+                    InteractionContextIds.Default,
+                    "collection.test.command_source",
+                    "view.test.default"));
+
+                // Minimal CTX-8 store: this fixture only exercises active-scheme persistence.
+                var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var preferences = new ClientCastPreferenceStore(
+                    new CastCommitProfileRegistry(
+                        castCommitIds,
+                        castCommitActionIds,
+                        new InteractionContextProfileRegistry(stack.ContextIdRegistry)),
+                    templateKeys.Register,
+                    templateKeys.GetName,
+                    formSetKeys.Register,
+                    formSetKeys.GetName);
+
+                var harness = new Harness
+                {
+                    Stack = stack,
+                    Preferences = preferences,
+                    _schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                };
+
+                if (withHandler)
+                {
+                    harness.Backend = new TestInputBackend();
+                    harness.Handler = new PlayerInputHandler(harness.Backend, BuildInputConfig());
+                }
+
+                var orderTypes = new OrderTypeRegistry();
+                orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+                var dispatch = new CastDispatchProfileRegistry(
+                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                    new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+                dispatch.Install(CastDispatchProfileTests.Harness.Config(
+                    new CastDispatchProfileDefinition
+                    {
+                        Id = DefaultDispatch,
+                        Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                        Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+                    },
+                    new CastDispatchProfileDefinition
+                    {
+                        Id = AltDispatch,
+                        Selector = new CastDispatchSelectorDefinition { Kind = "cycle", AdvanceOn = "orderAccepted" },
+                        Router = new CastDispatchRouterDefinition { Kind = "sequential" },
+                    }));
+                harness.Dispatch = dispatch;
+
+                harness.Runtime = new ControlSchemeRuntime(
+                    harness._schemeIds,
+                    stack,
+                    intents.Intents,
+                    dispatch,
+                    orderTypes,
+                    withHandler ? () => harness.Handler : null,
+                    preferences,
+                    inputConfig: withInputConfig ? BuildInputConfig(includeMoveAxis: true) : null);
+                return harness;
+            }
+
+            public int SchemeId(string name) => _schemeIds.GetId(name);
+
+            public void InstallTwoSchemes(List<string> allowedSchemes = null)
+            {
+                Runtime.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        Scheme(SchemeA, DefaultIntent, ContextA),
+                        Scheme(SchemeB, AltIntent, ContextB),
+                    },
+                    AllowedSchemes = allowedSchemes,
+                });
+            }
+
+            public static ControlSchemeDefinition Scheme(string id, string commandIntentId, params string[] inputContexts)
+            {
+                string dispatchProfileId = string.Equals(commandIntentId, AltIntent, StringComparison.Ordinal)
+                    ? AltDispatch
+                    : DefaultDispatch;
+                return new ControlSchemeDefinition
+                {
+                    Id = id,
+                    InputContexts = new List<string>(inputContexts),
+                    Defaults = new ControlSchemeDefaults
+                    {
+                        CommandIntentId = commandIntentId,
+                        CastDispatchProfileId = dispatchProfileId,
+                    },
+                };
+            }
+
+            private static void InstallGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
+            {
+                intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+                {
+                    Id = profileId,
+                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                    Rules = new List<CommandIntentRuleDefinition>
+                    {
+                        CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                    },
+                }));
+            }
+
+            private static InputConfigRoot BuildInputConfig(bool includeMoveAxis = false)
+            {
+                var config = new InputConfigRoot
+                {
+                    Actions = new List<InputActionDef>
+                    {
+                        new() { Id = "CmdA", Type = InputActionType.Button },
+                        new() { Id = "CmdB", Type = InputActionType.Button },
+                    },
+                    Contexts = new List<InputContextDef>
+                    {
+                        new()
+                        {
+                            Id = ContextA,
+                            Priority = 1,
+                            Bindings = new List<InputBindingDef>
+                            {
+                                new() { ActionId = "CmdA", Path = "<Keyboard>/q", Processors = new() },
+                            },
+                        },
+                        new()
+                        {
+                            Id = ContextB,
+                            Priority = 1,
+                            Bindings = new List<InputBindingDef>
+                            {
+                                new() { ActionId = "CmdB", Path = "<Keyboard>/e", Processors = new() },
+                            },
+                        },
+                    },
+                };
+
+                if (includeMoveAxis)
+                {
+                    config.Actions.Add(new InputActionDef { Id = "Move", Type = InputActionType.Axis2D });
+                }
+
+                return config;
+            }
+        }
+
+        private sealed class TestInputBackend : IInputBackend
+        {
+            public Dictionary<string, bool> Buttons { get; } = new(StringComparer.Ordinal);
+
+            public float GetAxis(string devicePath) => 0f;
+            public bool GetButton(string devicePath) => Buttons.TryGetValue(devicePath, out bool down) && down;
+            public Vector2 GetMousePosition() => Vector2.Zero;
+            public float GetMouseWheel() => 0f;
+            public void EnableIME(bool enable) { }
+            public void SetIMECandidatePosition(int x, int y) { }
+            public string GetCharBuffer() => string.Empty;
+        }
+    }
+}

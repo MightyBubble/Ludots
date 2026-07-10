@@ -1,10 +1,12 @@
 {
   "startupMapId": "mass_navigation",
+  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
-  "selection": {
+  "commandSource": {
+    "targetFilter": { "relationFilter": "Friendly" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
   "presentation": {
@@ -31,7 +33,7 @@
       "lowLodDistanceCm": 20000.0
     },
     "minimap": {
-      "initialZoomNormalized": 1.0,
+      "initialZoomNormalized": 0.12,
       "wheelZoomNormalizedStep": 0.08,
       "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,

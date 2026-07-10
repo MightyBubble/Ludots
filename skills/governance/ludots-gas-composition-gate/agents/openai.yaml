@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots GAS Composition Gate"
+  short_description: "Self-review gate before GAS/lifecycle/preset work"
+  default_prompt: "Use $ludots-gas-composition-gate before coding any GAS entity lifecycle, effect preset, or graph op task. Fill the self-review checklist and output artifacts/gas-composition-gate.md."

@@ -26,15 +26,20 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly List<Entity> _entities = new();
-    private readonly List<MassNavigationAgentSeed> _seeds = new();
-    private readonly List<bool> _controllableFlags = new();
+    private readonly List<Entity> _entities;
+    private readonly List<MassNavigationAgentSeed> _seeds;
+    private readonly List<bool> _controllableFlags;
+    private readonly int _agentCapacity;
     private long _lastAuthoringSignature;
 
     public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _agentCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        _entities = new List<Entity>(_agentCapacity);
+        _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
+        _controllableFlags = new List<bool>(_agentCapacity);
     }
 
     public void Initialize() { }
@@ -49,8 +54,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return;
         }
 
-        int authoredCount = CountAuthoredAgents();
-        if (authoredCount <= 0)
+        AuthoredAgentBindingScan scan = ScanAuthoredAgentBindingState();
+        if (scan.AuthoredCount <= 0)
         {
             if (_simulation.AgentState.TotalAgents > 0)
             {
@@ -62,49 +67,56 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return;
         }
 
-        long authoringSignature = ComputeAuthoringSignature();
-        if (!HasUnboundAgent() &&
-            _simulation.AgentState.TotalAgents == authoredCount &&
-            _lastAuthoringSignature == authoringSignature)
+        if (scan.AuthoredCount > _agentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored binding observed {scan.AuthoredCount} agents, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_agentCapacity}.");
+        }
+
+        if (_simulation.AgentState.TotalAgents == scan.AuthoredCount &&
+            _lastAuthoringSignature == scan.AuthoringSignature)
         {
             return;
         }
 
+        if (TryAppendUnboundAuthoredAgents(in scan))
+        {
+            _lastAuthoringSignature = scan.AuthoringSignature;
+            return;
+        }
+
         RebuildAuthoredAgents();
-        _lastAuthoringSignature = authoringSignature;
+        _lastAuthoringSignature = scan.AuthoringSignature;
     }
 
-    private int CountAuthoredAgents()
+    private bool TryAppendUnboundAuthoredAgents(in AuthoredAgentBindingScan scan)
     {
-        int count = 0;
-        foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
+        int boundCount = _simulation.AgentState.TotalAgents;
+        int unboundCount = scan.UnboundCount;
+        if (unboundCount <= 0 || boundCount <= 0 || scan.AuthoredCount <= boundCount)
         {
-            count += chunk.Count;
+            return false;
         }
 
-        return count;
-    }
+        if (!_simulation.AgentState.HasBoundAgents(boundCount))
+        {
+            return false;
+        }
 
-    private bool HasUnboundAgent()
-    {
+        if (boundCount + unboundCount != scan.AuthoredCount)
+        {
+            return false;
+        }
+
+        if (scan.BoundAuthoringSignature != _lastAuthoringSignature)
+        {
+            return false;
+        }
+
+        _entities.Clear();
+        _seeds.Clear();
+        _controllableFlags.Clear();
         foreach (ref var chunk in _engine.World.Query(in UnboundAgentsQuery))
-        {
-            if (chunk.Count > 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private long ComputeAuthoringSignature()
-    {
-        long xor = 0L;
-        long sum = 0L;
-        long rotatedSum = 0L;
-        int count = 0;
-        foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
             Span<MassNavigationAgent> agents = chunk.GetSpan<MassNavigationAgent>();
@@ -112,29 +124,95 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             {
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 MassNavigationAgent agent = agents[index];
-                long entityHash = 1469598103934665603L;
-                entityHash = Mix(entityHash, entity.Id);
-                entityHash = Mix(entityHash, agent.ProfileId);
-                entityHash = Mix(entityHash, _engine.World.TryGet(entity, out Team team) ? team.Id : 0);
-                if (_engine.World.TryGet(entity, out EntityLayer layer))
-                {
-                    entityHash = Mix(entityHash, layer.Value.Category);
-                    entityHash = Mix(entityHash, layer.Value.Mask);
-                }
-                else
-                {
-                    entityHash = Mix(entityHash, 0);
-                    entityHash = Mix(entityHash, 0);
-                }
-
-                entityHash = Mix(entityHash, _engine.World.Has<OrderBuffer>(entity) ? 1 : 0);
-                xor ^= entityHash;
-                sum += entityHash;
-                rotatedSum += RotateLeft(entityHash, 17);
-                count++;
+                _entities.Add(entity);
+                _seeds.Add(CreateSeed(entity, in agent));
+                _controllableFlags.Add(_engine.World.Has<OrderBuffer>(entity));
             }
         }
 
+        if (_entities.Count != unboundCount)
+        {
+            return false;
+        }
+
+        _simulation.AppendAuthoredAgents(
+            _engine.World,
+            CollectionsMarshal.AsSpan(_entities),
+            CollectionsMarshal.AsSpan(_seeds),
+            CollectionsMarshal.AsSpan(_controllableFlags));
+        return true;
+    }
+
+    private AuthoredAgentBindingScan ScanAuthoredAgentBindingState()
+    {
+        long xor = 0L;
+        long sum = 0L;
+        long rotatedSum = 0L;
+        long boundXor = 0L;
+        long boundSum = 0L;
+        long boundRotatedSum = 0L;
+        int authoredCount = 0;
+        int unboundCount = 0;
+        int boundCount = 0;
+        foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassNavigationAgent> agents = chunk.GetSpan<MassNavigationAgent>();
+            bool chunkIsBound = chunk.Has<MassNavigationAgentIndex>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                MassNavigationAgent agent = agents[index];
+                long entityHash = ComputeEntityAuthoringHash(entity, in agent);
+                xor ^= entityHash;
+                sum += entityHash;
+                rotatedSum += RotateLeft(entityHash, 17);
+                authoredCount++;
+                if (chunkIsBound)
+                {
+                    boundXor ^= entityHash;
+                    boundSum += entityHash;
+                    boundRotatedSum += RotateLeft(entityHash, 17);
+                    boundCount++;
+                }
+                else
+                {
+                    unboundCount++;
+                }
+            }
+        }
+
+        return new AuthoredAgentBindingScan(
+            authoredCount,
+            unboundCount,
+            boundCount,
+            FinalizeAuthoringSignature(authoredCount, xor, sum, rotatedSum),
+            FinalizeAuthoringSignature(boundCount, boundXor, boundSum, boundRotatedSum));
+    }
+
+    private long ComputeEntityAuthoringHash(Entity entity, in MassNavigationAgent agent)
+    {
+        long entityHash = 1469598103934665603L;
+        entityHash = Mix(entityHash, entity.Id);
+        entityHash = Mix(entityHash, agent.ProfileId);
+        entityHash = Mix(entityHash, _engine.World.TryGet(entity, out Team team) ? team.Id : 0);
+        if (_engine.World.TryGet(entity, out EntityLayer layer))
+        {
+            entityHash = Mix(entityHash, layer.Value.Category);
+            entityHash = Mix(entityHash, layer.Value.Mask);
+        }
+        else
+        {
+            entityHash = Mix(entityHash, 0);
+            entityHash = Mix(entityHash, 0);
+        }
+
+        entityHash = Mix(entityHash, _engine.World.Has<OrderBuffer>(entity) ? 1 : 0);
+        return entityHash;
+    }
+
+    private static long FinalizeAuthoringSignature(int count, long xor, long sum, long rotatedSum)
+    {
         long hash = 1469598103934665603L;
         hash = Mix(hash, count);
         hash = Mix(hash, xor);
@@ -247,5 +325,28 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             geometry.RadiusCm,
             profile.SpeedCmPerSecond,
             new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
+    }
+
+    private readonly struct AuthoredAgentBindingScan
+    {
+        public AuthoredAgentBindingScan(
+            int authoredCount,
+            int unboundCount,
+            int boundCount,
+            long authoringSignature,
+            long boundAuthoringSignature)
+        {
+            AuthoredCount = authoredCount;
+            UnboundCount = unboundCount;
+            BoundCount = boundCount;
+            AuthoringSignature = authoringSignature;
+            BoundAuthoringSignature = boundAuthoringSignature;
+        }
+
+        public int AuthoredCount { get; }
+        public int UnboundCount { get; }
+        public int BoundCount { get; }
+        public long AuthoringSignature { get; }
+        public long BoundAuthoringSignature { get; }
     }
 }

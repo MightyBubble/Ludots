@@ -157,6 +157,7 @@ internal static class CapabilityStandardShowcaseTestHarness
         }
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+        engine.SetService(CoreServiceKeys.InputBackend, inputBackend);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
     }
 

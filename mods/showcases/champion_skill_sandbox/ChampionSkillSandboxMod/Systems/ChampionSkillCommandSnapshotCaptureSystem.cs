@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using ChampionSkillSandboxMod.Runtime;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace ChampionSkillSandboxMod.Systems
 {
@@ -11,17 +9,13 @@ namespace ChampionSkillSandboxMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly ChampionSkillSandboxRuntime _runtime;
-        private readonly OrderQueue _orders;
-        private readonly HashSet<Entity> _containers = new();
 
         public ChampionSkillCommandSnapshotCaptureSystem(
             GameEngine engine,
-            ChampionSkillSandboxRuntime runtime,
-            OrderQueue orders)
+            ChampionSkillSandboxRuntime runtime)
         {
             _engine = engine;
             _runtime = runtime;
-            _orders = orders;
         }
 
         public void Initialize() { }
@@ -36,12 +30,7 @@ namespace ChampionSkillSandboxMod.Systems
                 return;
             }
 
-            _containers.Clear();
-            _orders.CollectSelectionContainers(_containers);
-            foreach (Entity container in _containers)
-            {
-                _runtime.CaptureCommandSnapshot(_engine, container);
-            }
+            _runtime.CaptureCommandSnapshot(_engine);
         }
     }
 }

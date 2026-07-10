@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Position` / `Entity`
+- **TargetType**: `Position` / `Entity`
 - **InteractionMode**: `SmartCast`（立即施放，无确认）
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "fireball",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Position",
+  "targetType": "Position",
   "isSkillMapping": true,
   "castModeOverride": "SmartCast",                // 强制 Quick Cast
   "autoTargetPolicy": "CursorPosition"            // 使用鼠标当前位置

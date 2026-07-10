@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
@@ -78,8 +78,8 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
     {
         MapId mapId = engine.CurrentMapSession?.MapId ?? default;
         TagOps? tagOps = engine.GetService(CoreServiceKeys.TagOps);
-        SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-        if (tagOps == null || selection == null)
+        EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
+        if (tagOps == null || collections == null)
         {
             return;
         }
@@ -127,10 +127,15 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
         }
 
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerCapital;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-        selection.ReplaceSelection(playerCapital, SelectionSetKeys.LivePrimary, stackalloc[] { playerCapital });
-        selection.TryBindView(playerCapital, SelectionViewKeys.Primary, playerCapital, SelectionSetKeys.LivePrimary);
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            playerCapital,
+            playerCapital,
+            "Minimap command source",
+            "Imperial Capital is the default minimap showcase command actor.");
+        collections.Replace(playerCapital, descriptor, stackalloc[] { playerCapital }, playerCapital);
     }
 
     private static void EnsureTagComponents(World world, Entity entity)

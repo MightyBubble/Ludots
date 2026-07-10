@@ -1,0 +1,14 @@
+{
+  "name": "ControlPlaneProjectionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Control-plane showcase for temporary command grants, routed box selection, and viewer-relative owned/proxied marker projections.",
+  "main": "bin/net8.0/ControlPlaneProjectionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["control-plane", "selection", "collection", "relationship", "projection", "showcase"]
+}

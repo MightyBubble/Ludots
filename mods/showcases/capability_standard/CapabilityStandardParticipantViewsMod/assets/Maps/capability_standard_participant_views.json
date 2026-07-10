@@ -5,105 +5,18 @@
     "capability_standard_participant_views",
     "capability.participant_view"
   ],
+  "DefaultCamera": {
+    "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "TargetXCm": 250,
+    "TargetYCm": 350,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 12000,
+    "FovYDeg": 55
+  },
   "Metadata": {
     "participantViewKnowledge": {
-      "Projections": [
-        {
-          "Viewers": [
-            "player:1"
-          ],
-          "Targets": {
-            "Kind": "playerMembers",
-            "PlayerId": 1
-          },
-          "Presence": "LiveVisible",
-          "Position": "Live",
-          "Source": "viewer",
-          "Attributes": [
-            "Health"
-          ],
-          "RelationshipTypes": [
-            "Participant"
-          ],
-          "ConfidencePermille": 1000
-        },
-        {
-          "Viewers": [
-            "team:1"
-          ],
-          "Targets": {
-            "Kind": "teamMembers",
-            "TeamId": 1
-          },
-          "Presence": "LiveVisible",
-          "Position": "Live",
-          "Source": "viewer",
-          "Attributes": [
-            "Health"
-          ],
-          "RelationshipTypes": [
-            "Participant"
-          ],
-          "ConfidencePermille": 1000
-        },
-        {
-          "Viewers": [
-            "team:2"
-          ],
-          "Targets": {
-            "Kind": "teamMembers",
-            "TeamId": 2
-          },
-          "Presence": "LiveVisible",
-          "Position": "Live",
-          "Source": "viewer",
-          "Attributes": [
-            "Health"
-          ],
-          "RelationshipTypes": [
-            "Participant"
-          ],
-          "ConfidencePermille": 1000
-        },
-        {
-          "Viewers": [
-            "team:3"
-          ],
-          "Targets": {
-            "Kind": "teamMembers",
-            "TeamId": 3
-          },
-          "Presence": "LiveVisible",
-          "Position": "Live",
-          "Source": "viewer",
-          "Attributes": [
-            "Health"
-          ],
-          "RelationshipTypes": [
-            "Participant"
-          ],
-          "ConfidencePermille": 1000
-        },
-        {
-          "Viewers": [
-            "team:4"
-          ],
-          "Targets": {
-            "Kind": "teamMembers",
-            "TeamId": 4
-          },
-          "Presence": "LiveVisible",
-          "Position": "Live",
-          "Source": "viewer",
-          "Attributes": [
-            "Health"
-          ],
-          "RelationshipTypes": [
-            "Participant"
-          ],
-          "ConfidencePermille": 1000
-        }
-      ],
+      "Projections": [],
       "Relations": [
         {
           "Viewers": [
@@ -133,6 +46,162 @@
           ],
           "Title": "Neutral envoy rumor",
           "Summary": "A neutral entity discloses last-known positions for selected Amber units."
+        }
+      ],
+      "DynamicParticipants": [
+        {
+          "ViewerKind": "Player",
+          "ViewerRef": "1",
+          "CollectionKey": "participant_view.dynamic.player.1",
+          "CollectionRole": "Display",
+          "Query": {
+            "AllComponents": [
+              "MapEntity",
+              "PlayerOwner",
+              "CommandSourceSelectableTag"
+            ],
+            "NoneComponents": [
+              "PlayerIdentity"
+            ]
+          },
+          "Flags": "RequireSelectable, ExcludePlayerIdentity, RequireMapMatch",
+          "Title": "Player 1 live participants",
+          "Summary": "Config-driven player-owned selectable participants.",
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "SourceRef": "viewer",
+          "SourceKind": "Viewer",
+          "Attributes": [
+            "Health"
+          ],
+          "RelationshipTypes": [
+            "Participant"
+          ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "ViewerKind": "Team",
+          "ViewerRef": "1",
+          "CollectionKey": "participant_view.dynamic.team.1",
+          "CollectionRole": "Display",
+          "Query": {
+            "AllComponents": [
+              "MapEntity",
+              "Team",
+              "CommandSourceSelectableTag"
+            ],
+            "NoneComponents": [
+              "TeamIdentity",
+              "PlayerIdentity"
+            ]
+          },
+          "Flags": "RequireSelectable, ExcludePlayerIdentity, ExcludeTeamIdentity, RequireMapMatch",
+          "Title": "Team 1 live participants",
+          "Summary": "Config-driven team-owned selectable participants.",
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "SourceRef": "viewer",
+          "SourceKind": "Viewer",
+          "Attributes": [
+            "Health"
+          ],
+          "RelationshipTypes": [
+            "Participant"
+          ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "ViewerKind": "Team",
+          "ViewerRef": "2",
+          "CollectionKey": "participant_view.dynamic.team.2",
+          "CollectionRole": "Display",
+          "Query": {
+            "AllComponents": [
+              "MapEntity",
+              "Team",
+              "CommandSourceSelectableTag"
+            ],
+            "NoneComponents": [
+              "TeamIdentity",
+              "PlayerIdentity"
+            ]
+          },
+          "Flags": "RequireSelectable, ExcludePlayerIdentity, ExcludeTeamIdentity, RequireMapMatch",
+          "Title": "Team 2 live participants",
+          "Summary": "Config-driven team-owned selectable participants.",
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "SourceRef": "viewer",
+          "SourceKind": "Viewer",
+          "Attributes": [
+            "Health"
+          ],
+          "RelationshipTypes": [
+            "Participant"
+          ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "ViewerKind": "Team",
+          "ViewerRef": "3",
+          "CollectionKey": "participant_view.dynamic.team.3",
+          "CollectionRole": "Display",
+          "Query": {
+            "AllComponents": [
+              "MapEntity",
+              "Team",
+              "CommandSourceSelectableTag"
+            ],
+            "NoneComponents": [
+              "TeamIdentity",
+              "PlayerIdentity"
+            ]
+          },
+          "Flags": "RequireSelectable, ExcludePlayerIdentity, ExcludeTeamIdentity, RequireMapMatch",
+          "Title": "Team 3 live participants",
+          "Summary": "Config-driven team-owned selectable participants.",
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "SourceRef": "viewer",
+          "SourceKind": "Viewer",
+          "Attributes": [
+            "Health"
+          ],
+          "RelationshipTypes": [
+            "Participant"
+          ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "ViewerKind": "Team",
+          "ViewerRef": "4",
+          "CollectionKey": "participant_view.dynamic.team.4",
+          "CollectionRole": "Display",
+          "Query": {
+            "AllComponents": [
+              "MapEntity",
+              "Team",
+              "CommandSourceSelectableTag"
+            ],
+            "NoneComponents": [
+              "TeamIdentity",
+              "PlayerIdentity"
+            ]
+          },
+          "Flags": "RequireSelectable, ExcludePlayerIdentity, ExcludeTeamIdentity, RequireMapMatch",
+          "Title": "Team 4 live participants",
+          "Summary": "Config-driven team-owned selectable participants.",
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "SourceRef": "viewer",
+          "SourceKind": "Viewer",
+          "Attributes": [
+            "Health"
+          ],
+          "RelationshipTypes": [
+            "Participant"
+          ],
+          "ConfidencePermille": 1000
         }
       ]
     }
@@ -606,38 +675,32 @@
     {
       "PlayerId": 1,
       "TeamId": 1,
-      "RepresentativeInstanceId": "player-azure-alpha",
-      "IsLocal": true
+      "RepresentativeInstanceId": "player-azure-alpha"
     },
     {
       "PlayerId": 2,
       "TeamId": 1,
-      "RepresentativeInstanceId": "player-azure-beta",
-      "IsLocal": false
+      "RepresentativeInstanceId": "player-azure-beta"
     },
     {
       "PlayerId": 3,
       "TeamId": 2,
-      "RepresentativeInstanceId": "player-crimson-alpha",
-      "IsLocal": false
+      "RepresentativeInstanceId": "player-crimson-alpha"
     },
     {
       "PlayerId": 4,
       "TeamId": 2,
-      "RepresentativeInstanceId": "player-crimson-beta",
-      "IsLocal": false
+      "RepresentativeInstanceId": "player-crimson-beta"
     },
     {
       "PlayerId": 5,
       "TeamId": 3,
-      "RepresentativeInstanceId": "player-amber-alpha",
-      "IsLocal": false
+      "RepresentativeInstanceId": "player-amber-alpha"
     },
     {
       "PlayerId": 6,
       "TeamId": 4,
-      "RepresentativeInstanceId": "player-emerald-alpha",
-      "IsLocal": false
+      "RepresentativeInstanceId": "player-emerald-alpha"
     }
   ],
   "ParticipantRelationships": {

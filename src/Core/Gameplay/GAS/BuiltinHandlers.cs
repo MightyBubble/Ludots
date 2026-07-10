@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
@@ -6,10 +7,16 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -30,8 +37,12 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
+            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea);
+            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
+            EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
         public static void HandleApplyModifiers(
@@ -328,7 +339,7 @@ namespace Ludots.Core.Gameplay.GAS
                 targetPointCm = world.Get<WorldPositionCm>(context.TargetContext).Value;
                 hasTargetPoint = true;
             }
-            else if (TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
+            else if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
             {
                 hasTargetPoint = true;
             }
@@ -394,7 +405,81 @@ namespace Ludots.Core.Gameplay.GAS
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
                     break;
+                case RelationOperation.EnsureLink:
+                {
+                    Entity target = ResolveRelationEntity(in context, relation.Parent);
+                    if (!world.IsAlive(target))
+                    {
+                        return;
+                    }
+
+                    var runtime = BuiltinHandlerRuntimeScope.Current;
+                    if (runtime?.Relationships == null)
+                    {
+                        throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
+                    }
+
+                    if (relation.RelationshipTypeId < 0)
+                    {
+                        throw new InvalidOperationException("Relation operation EnsureLink requires a registered relationship type id.");
+                    }
+
+                    runtime.Relationships.EnsureLink(subject, target, relation.RelationshipTypeId);
+                    break;
+                }
             }
+        }
+
+        public static void HandleRevealArea(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.KnowledgeAreaReveal == null)
+            {
+                throw new InvalidOperationException("RevealArea requires KnowledgeAreaRevealRuntime in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryResolveRevealAreaCenter(world, in context, in mergedParams, out WorldCmInt2 center))
+            {
+                return;
+            }
+
+            runtime.KnowledgeAreaReveal.Reveal(
+                ResolveRevealViewer(world, in context),
+                context.Source,
+                center,
+                in templateData.RevealArea,
+                runtime.CurrentStep);
+        }
+
+        public static void HandleDecayRevealArea(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.KnowledgeAreaReveal == null)
+            {
+                throw new InvalidOperationException("DecayRevealArea requires KnowledgeAreaRevealRuntime in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryResolveRevealAreaCenter(world, in context, in mergedParams, out WorldCmInt2 center))
+            {
+                return;
+            }
+
+            runtime.KnowledgeAreaReveal.DecayArea(
+                ResolveRevealViewer(world, in context),
+                context.Source,
+                center,
+                in templateData.RevealArea,
+                runtime.CurrentStep);
         }
 
         public static void HandleExecuteExchange(
@@ -465,33 +550,145 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
+        public static void HandleSubmitOrderFromBlackboard(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            ref readonly SubmitOrderFromBlackboardDescriptor descriptor = ref templateData.SubmitOrderFromBlackboard;
+            Entity sourceEntity = ResolveRelationEntity(in context, descriptor.SourceSlot);
+            Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);
+            if (!world.IsAlive(sourceEntity) || !world.IsAlive(orderActor))
+            {
+                return;
+            }
+
+            if (!BlackboardStoredTargetOps.TryRead(world, sourceEntity, in descriptor.StoredTargetKeys, out BlackboardStoredTargetSnapshot storedTarget) ||
+                !storedTarget.HasTarget)
+            {
+                return;
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.OrderTypeRegistry == null)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
+            }
+
+            if (runtime.StepRateHz <= 0)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryBuildOrderFromStoredTarget(
+                    in storedTarget,
+                    in descriptor,
+                    orderActor,
+                    ResolvePlayerId(world, orderActor),
+                    runtime.OrderTypeRegistry,
+                    out Order order))
+            {
+                return;
+            }
+
+            if (!world.Has<OrderBuffer>(orderActor))
+            {
+                return;
+            }
+
+            OrderSubmitter.Submit(
+                world,
+                orderActor,
+                in order,
+                runtime.OrderTypeRegistry,
+                runtime.OrderRuleRegistry,
+                runtime.CurrentStep,
+                runtime.StepRateHz);
+        }
+
+        private static bool TryBuildOrderFromStoredTarget(
+            in BlackboardStoredTargetSnapshot storedTarget,
+            in SubmitOrderFromBlackboardDescriptor descriptor,
+            Entity orderActor,
+            int playerId,
+            OrderTypeRegistry orderTypeRegistry,
+            out Order order)
+        {
+            order = default;
+            switch (storedTarget.Kind)
+            {
+                case BlackboardStoredTargetKind.Point:
+                case BlackboardStoredTargetKind.HexCell:
+                    if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
+                        !BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = pointMoveOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs
+                        {
+                            Spatial = new OrderSpatial
+                            {
+                                Kind = OrderSpatialKind.WorldCm,
+                                Mode = OrderCollectionMode.Single,
+                                WorldCm = worldPositionCm,
+                            },
+                        },
+                    };
+                    return true;
+
+                case BlackboardStoredTargetKind.Entity:
+                    if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
+                        storedTarget.TargetEntity == Entity.Null)
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = entityOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        Target = storedTarget.TargetEntity,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
+                    };
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static int ResolvePlayerId(World world, Entity entity)
+        {
+            if (world.TryGet(entity, out PlayerOwner owner) && owner.PlayerId > 0)
+            {
+                return owner.PlayerId;
+            }
+
+            throw new InvalidOperationException(
+                $"SubmitOrderFromBlackboard requires PlayerOwner on order actor entity {entity.Id}.");
+        }
+
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)
         {
-            if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
-            {
-                return world.Get<WorldPositionCm>(context.TargetContext).Value;
-            }
-
-            if (TryResolvePreservedTargetPoint(in mergedParams, out var preservedPoint))
-            {
-                return preservedPoint;
-            }
-
-            if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
-            {
-                ref readonly var exec = ref world.Get<AbilityExecInstance>(context.Source);
-                if (exec.HasTargetPos != 0)
-                {
-                    return exec.TargetPosCm;
-                }
-            }
-
-            if (world.IsAlive(context.Source) && world.Has<WorldPositionCm>(context.Source))
-            {
-                return world.Get<WorldPositionCm>(context.Source).Value;
-            }
-
-            throw new InvalidOperationException("CreateUnit requires target point or source WorldPositionCm.");
+            return EffectTargetPointResolver.ResolveOrThrow(
+                world,
+                in context,
+                in mergedParams,
+                EffectTargetPointResolveOptions.CreateUnit,
+                "CreateUnit requires target point or source WorldPositionCm.");
         }
 
         private static Entity ResolveRelationEntity(in EffectContext context, RelationEntitySlot slot)
@@ -503,6 +700,47 @@ namespace Ludots.Core.Gameplay.GAS
                 RelationEntitySlot.TargetContext => context.TargetContext,
                 _ => Entity.Null,
             };
+        }
+
+        private static bool TryResolveRevealAreaCenter(
+            World world,
+            in EffectContext context,
+            in EffectConfigParams mergedParams,
+            out WorldCmInt2 center)
+        {
+            if (EffectTargetPointResolver.TryResolve(
+                    world,
+                    in context,
+                    in mergedParams,
+                    EffectTargetPointResolveOptions.CreateUnit,
+                    out Fix64Vec2 point))
+            {
+                center = point.ToWorldCmInt2();
+                return true;
+            }
+
+            center = default;
+            return false;
+        }
+
+        private static Entity ResolveRevealViewer(World world, in EffectContext context)
+        {
+            if (world.IsAlive(context.Source))
+            {
+                return context.Source;
+            }
+
+            if (world.IsAlive(context.Target))
+            {
+                return context.Target;
+            }
+
+            if (world.IsAlive(context.TargetContext))
+            {
+                return context.TargetContext;
+            }
+
+            return Entity.Null;
         }
 
         private static void SnapSubjectToParentPosition(World world, Entity subject, Entity parent)
@@ -538,19 +776,6 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static bool TryResolvePreservedTargetPoint(in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)
-        {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetPosX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetPosY, out float y))
-            {
-                targetPointCm = Fix64Vec2.FromFloat(x, y);
-                return true;
-            }
-
-            targetPointCm = default;
-            return false;
-        }
-
         private static bool TryResolveProjectileTargetPoint(World world, in EffectContext context, in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)
         {
             if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
@@ -559,7 +784,7 @@ namespace Ludots.Core.Gameplay.GAS
                 return true;
             }
 
-            if (TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
+            if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
             {
                 return true;
             }

@@ -201,7 +201,7 @@
     { "TeamId": 2, "RepresentativeInstanceId": "soviet_team_anchor" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_player_anchor", "IsLocal": true },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_player_anchor", "IsLocal": false }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_player_anchor" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_player_anchor" }
   ]
 }

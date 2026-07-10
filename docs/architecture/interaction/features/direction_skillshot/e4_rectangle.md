@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillR"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 
@@ -50,7 +50,7 @@ AbilityExecSpec:
 |------|------|------|
 | SpatialQuery handler | ✅ 已有 | 已支持 radius |
 | Rectangle shape (QueryRectangle op 105) | ✅ 已有 | GraphOps.cs 已支持 QueryRectangle |
-| Direction input | ✅ 已有 | selectionType: Direction |
+| Direction input | ✅ 已有 | targetType: Direction |
 
 ## 新增需求
 

@@ -24,13 +24,21 @@ namespace Ludots.Core.Presentation.Performers
         public PresentationAnchorKind AnchorKind;
         public Entity Source;
         public Entity Target;
+        public Entity Viewer;
+        public PerformerCommandEntitySource OwnerSource;
         public Vector3 Position;
+        public bool UseEventPosition;
+        public bool HasParamPayload;
         public int ParamKey;
         public ParamLane ParamLane;
         public float ParamValue;
         public int IntValue;
         public Vector4 VectorValue;
         public PerformerCommandValueSource ValueSource;
+        public PerformerCommandValueSource VectorXSource;
+        public PerformerCommandValueSource VectorYSource;
+        public PerformerCommandValueSource VectorZSource;
+        public PerformerCommandValueSource VectorWSource;
         public int ParamGraphProgramId;
         public int TargetBehaviorSlot;
     }

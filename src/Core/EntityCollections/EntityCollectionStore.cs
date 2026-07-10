@@ -28,6 +28,7 @@ namespace Ludots.Core.EntityCollections
         private int[] _rowOrdinals;
         private int[] _rowRoleIds;
         private EntityCollectionRowFlags[] _rowFlags;
+        private Entity[] _rowWriterDomains;
 
         private int _rowCursor;
 
@@ -66,18 +67,50 @@ namespace Ludots.Core.EntityCollections
             _rowOrdinals = new int[initialRowCapacity];
             _rowRoleIds = new int[initialRowCapacity];
             _rowFlags = new EntityCollectionRowFlags[initialRowCapacity];
+            _rowWriterDomains = new Entity[initialRowCapacity];
         }
 
         public StringIntRegistry KeyRegistry => _keyRegistry;
         public int CollectionCount => _collections.ActiveCount;
         public int RowCapacity => _rowEntities.Length;
 
+        public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < _active.Length && written < destination.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                destination[written++] = new EntityCollectionHandle(slot, _revisions[slot]);
+            }
+
+            return written;
+        }
+
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,
             ReadOnlySpan<Entity> entities)
         {
-            return Replace(owner, descriptor, entities, default, default);
+            return Replace(owner, descriptor, entities, default, default, Entity.Null);
+        }
+
+        /// <summary>Replace tagging every row with the maintaining writer domain (RFC-0065 PROV-1b).</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            Entity writerDomain)
+        {
+            return Replace(owner, descriptor, entities, default, default, writerDomain);
         }
 
         public EntityCollectionHandle Replace(
@@ -86,6 +119,18 @@ namespace Ludots.Core.EntityCollections
             ReadOnlySpan<Entity> entities,
             ReadOnlySpan<int> rowRoleIds,
             ReadOnlySpan<EntityCollectionRowFlags> rowFlags)
+        {
+            return Replace(owner, descriptor, entities, rowRoleIds, rowFlags, Entity.Null);
+        }
+
+        /// <summary>Full replace with per-row role/flag data and the maintaining writer domain (RFC-0065 PROV-1b).</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            ReadOnlySpan<int> rowRoleIds,
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags,
+            Entity writerDomain)
         {
             if (owner == Entity.Null)
             {
@@ -111,7 +156,7 @@ namespace Ludots.Core.EntityCollections
             EntityKeyedSoaKey tableKey = EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId);
             int slot = _collections.EnsureSlot(tableKey);
             EnsureSlotCapacity(slot + 1);
-            ulong nextSignature = ComputeSignature(in descriptor, entities, rowRoleIds, rowFlags);
+            ulong nextSignature = ComputeSignature(in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
 
             bool changed = !_active[slot] ||
                            _sourceKinds[slot] != descriptor.SourceKind ||
@@ -135,7 +180,8 @@ namespace Ludots.Core.EntityCollections
                     (_rowEntities[rowIndex] != entity ||
                      _rowOrdinals[rowIndex] != i ||
                      _rowRoleIds[rowIndex] != roleId ||
-                     _rowFlags[rowIndex] != flags))
+                     _rowFlags[rowIndex] != flags ||
+                     _rowWriterDomains[rowIndex] != writerDomain))
                 {
                     changed = true;
                 }
@@ -144,6 +190,7 @@ namespace Ludots.Core.EntityCollections
                 _rowOrdinals[rowIndex] = i;
                 _rowRoleIds[rowIndex] = roleId;
                 _rowFlags[rowIndex] = flags;
+                _rowWriterDomains[rowIndex] = writerDomain;
             }
 
             for (int i = entities.Length; i < _rowCounts[slot]; i++)
@@ -153,6 +200,7 @@ namespace Ludots.Core.EntityCollections
                 _rowOrdinals[rowIndex] = 0;
                 _rowRoleIds[rowIndex] = 0;
                 _rowFlags[rowIndex] = EntityCollectionRowFlags.None;
+                _rowWriterDomains[rowIndex] = Entity.Null;
             }
 
             _active[slot] = true;
@@ -358,6 +406,43 @@ namespace Ludots.Core.EntityCollections
             return entity != Entity.Null;
         }
 
+        /// <summary>Read the writer domain recorded for one row (RFC-0065 PROV-1b); Entity.Null when untracked.</summary>
+        public bool TryGetWriterDomainAt(EntityCollectionHandle handle, int index, out Entity writerDomain)
+        {
+            writerDomain = Entity.Null;
+            if (!TryValidateSlot(handle.Slot) || index < 0 || index >= _rowCounts[handle.Slot])
+            {
+                return false;
+            }
+
+            writerDomain = _rowWriterDomains[_rowStarts[handle.Slot] + index];
+            return true;
+        }
+
+        /// <summary>Copy the writer-domain column window; shape mirrors <see cref="CopyEntities(EntityCollectionHandle,int,Span{Entity})"/>.</summary>
+        public int CopyWriterDomains(EntityCollectionHandle handle, int startIndex, Span<Entity> destination)
+        {
+            if (!TryValidateSlot(handle.Slot) || destination.IsEmpty || startIndex < 0)
+            {
+                return 0;
+            }
+
+            int slot = handle.Slot;
+            int count = _rowCounts[slot];
+            if (startIndex >= count)
+            {
+                return 0;
+            }
+
+            int written = Math.Min(destination.Length, count - startIndex);
+            for (int i = 0; i < written; i++)
+            {
+                destination[i] = _rowWriterDomains[_rowStarts[slot] + startIndex + i];
+            }
+
+            return written;
+        }
+
         public int CopyWindow(
             EntityCollectionHandle handle,
             int startIndex,
@@ -475,6 +560,7 @@ namespace Ludots.Core.EntityCollections
                 Array.Copy(_rowOrdinals, _rowStarts[slot], _rowOrdinals, newStart, copyCount);
                 Array.Copy(_rowRoleIds, _rowStarts[slot], _rowRoleIds, newStart, copyCount);
                 Array.Copy(_rowFlags, _rowStarts[slot], _rowFlags, newStart, copyCount);
+                Array.Copy(_rowWriterDomains, _rowStarts[slot], _rowWriterDomains, newStart, copyCount);
             }
 
             _rowStarts[slot] = newStart;
@@ -499,15 +585,18 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _rowOrdinals, next);
             Array.Resize(ref _rowRoleIds, next);
             Array.Resize(ref _rowFlags, next);
+            Array.Resize(ref _rowWriterDomains, next);
         }
 
         private static ulong ComputeSignature(
             in EntityCollectionDescriptor descriptor,
             ReadOnlySpan<Entity> entities,
             ReadOnlySpan<int> rowRoleIds,
-            ReadOnlySpan<EntityCollectionRowFlags> rowFlags)
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags,
+            Entity writerDomain)
         {
             ulong hash = 14695981039346656037UL;
+            hash = HashEntity(hash, writerDomain);
             hash = HashCombine(hash, (uint)descriptor.SourceKind);
             hash = HashCombine(hash, (uint)descriptor.Role);
             hash = HashEntity(hash, descriptor.ContextEntity);

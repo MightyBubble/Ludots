@@ -13,7 +13,7 @@ public sealed class CefBrowserRuntimeSettingsTests
 		var options = new CefBrowserRuntimeOptions(
 			AppContext.BaseDirectory,
 			Path.Combine(Path.GetTempPath(), "Ludots", "CefSettingsTests", Guid.NewGuid().ToString("N")));
-		MethodInfo buildSettings = typeof(CefBrowserRuntime).GetMethod(
+		MethodInfo buildSettings = typeof(CefProcessRuntime).GetMethod(
 			"BuildSettings",
 			BindingFlags.Static | BindingFlags.NonPublic)!;
 

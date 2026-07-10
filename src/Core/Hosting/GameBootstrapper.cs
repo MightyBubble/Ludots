@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Hosting
 {
@@ -25,12 +26,17 @@ namespace Ludots.Core.Hosting
         public string? PlanFingerprint { get; set; }
         public int? PlanSchemaVersion { get; set; }
         public string? PlanGeneratedAtUtc { get; set; }
+        public BrowserRuntimeConfig? BrowserRuntime { get; set; }
     }
 
     public static class GameBootstrapper
     {
         private static readonly JsonSerializerOptions BootstrapJsonOptions = StrictJsonOptions.CreateExact();
         private static readonly JsonSerializerOptions LaunchGraphJsonOptions = StrictJsonOptions.CreateCamelCase();
+
+        private sealed record ResolvedBootstrapPlan(
+            ResolvedModLoadPlan ModLoadPlan,
+            BrowserRuntimeConfig? BrowserRuntime);
 
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory)
         {
@@ -79,10 +85,11 @@ namespace Ludots.Core.Hosting
             // Step 2 & 3: Initialize engine with launcher-resolved plan
             // Engine will internally use ConfigPipeline to merge game.json
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(resolvedPlan, assetsRoot);
+            engine.InitializeWithConfigPipeline(resolvedPlan.ModLoadPlan, assetsRoot);
 
             // Get the merged config from engine
             var mergedConfig = engine.MergedConfig;
+            ApplyHostBrowserRuntimeConfig(engine, mergedConfig, resolvedPlan.BrowserRuntime);
 
             return new GameBootstrapResult(engine, mergedConfig, assetsRoot);
         }
@@ -140,7 +147,7 @@ namespace Ludots.Core.Hosting
                 : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(bootstrapPath) ?? baseDir, candidate));
         }
 
-        private static ResolvedModLoadPlan ResolveGraphPlan(string graphPath, string bootstrapPath, AppBootstrapConfig bootstrapConfig)
+        private static ResolvedBootstrapPlan ResolveGraphPlan(string graphPath, string bootstrapPath, AppBootstrapConfig bootstrapConfig)
         {
             LauncherGraphDocument? graphConfig;
             try
@@ -234,12 +241,77 @@ namespace Ludots.Core.Hosting
                 orderedMods.Add(new ResolvedModLoadEntry(mod.Id, resolved));
             }
 
-            return new ResolvedModLoadPlan(
+            BrowserRuntimeConfig? browserRuntime = ResolveBrowserRuntimeConfig(bootstrapConfig, graphConfig);
+            var modLoadPlan = new ResolvedModLoadPlan(
                 orderedMods,
                 graphConfig.SchemaVersion,
                 graphConfig.PlanFingerprint,
                 graphConfig.GeneratedAtUtc ?? bootstrapConfig.PlanGeneratedAtUtc,
                 graphPath);
+            return new ResolvedBootstrapPlan(modLoadPlan, browserRuntime);
+        }
+
+        private static void ApplyHostBrowserRuntimeConfig(
+            GameEngine engine,
+            GameConfig mergedConfig,
+            BrowserRuntimeConfig? browserRuntime)
+        {
+            if (browserRuntime == null)
+            {
+                return;
+            }
+
+            mergedConfig.BrowserRuntime = browserRuntime;
+            engine.SetService(CoreServiceKeys.GameConfig, mergedConfig);
+        }
+
+        private static BrowserRuntimeConfig? ResolveBrowserRuntimeConfig(
+            AppBootstrapConfig bootstrapConfig,
+            LauncherGraphDocument graphConfig)
+        {
+            BrowserRuntimeConfig? bootstrapRuntime = bootstrapConfig.BrowserRuntime;
+            BrowserRuntimeConfig? graphRuntime = graphConfig.BrowserRuntime;
+            if (bootstrapRuntime != null && graphRuntime != null && !BrowserRuntimeConfigsEqual(bootstrapRuntime, graphRuntime))
+            {
+                throw new InvalidOperationException(
+                    "Launcher bootstrap browserRuntime does not match the selected launch graph browserRuntime.");
+            }
+
+            return graphRuntime ?? bootstrapRuntime;
+        }
+
+        private static bool BrowserRuntimeConfigsEqual(BrowserRuntimeConfig left, BrowserRuntimeConfig right)
+        {
+            return left.Enabled == right.Enabled &&
+                left.Required == right.Required &&
+                string.Equals(left.Provider, right.Provider, StringComparison.Ordinal) &&
+                string.Equals(left.ProviderAssemblyPath, right.ProviderAssemblyPath, StringComparison.Ordinal) &&
+                string.Equals(left.ProviderHostTypeName, right.ProviderHostTypeName, StringComparison.Ordinal) &&
+                string.Equals(left.ProviderProjectPath, right.ProviderProjectPath, StringComparison.Ordinal) &&
+                string.Equals(left.RuntimeRootPath, right.RuntimeRootPath, StringComparison.Ordinal) &&
+                string.Equals(left.CacheRootPath, right.CacheRootPath, StringComparison.Ordinal) &&
+                left.UseCollectibleLoadContext == right.UseCollectibleLoadContext &&
+                BrowserRuntimeStringArraysEqual(left.ProcessSharedAssemblyNamePrefixes, right.ProcessSharedAssemblyNamePrefixes);
+        }
+
+        private static bool BrowserRuntimeStringArraysEqual(string[]? left, string[]? right)
+        {
+            left ??= Array.Empty<string>();
+            right ??= Array.Empty<string>();
+            if (left.Length != right.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Length; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void ValidateGraphArtifactFreshness(string graphPath, string bootstrapPath, LauncherGraphDocument graphConfig)

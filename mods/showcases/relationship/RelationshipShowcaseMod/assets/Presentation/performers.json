@@ -184,5 +184,177 @@
         }
       }
     ]
+  },
+  {
+    "id": "relationship.highlight.base",
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 2.4 },
+      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 1.9 },
+      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.06 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [2.4, 1.9, 0.06]
+        }
+      }
+    ]
+  },
+  {
+    "id": "relationship.highlight.selected_hero",
+    "extends": "relationship.highlight.base",
+    "defaultColor": [0.28, 0.82, 1.0, 0.94],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.28 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.82 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.16 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.28 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.82 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.94 }
+    ]
+  },
+  {
+    "id": "relationship.highlight.enemy_focus",
+    "extends": "relationship.highlight.base",
+    "defaultColor": [1.0, 0.55, 0.35, 0.96],
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.4 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.25 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.14 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.55 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.35 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.96 }
+    ]
+  },
+  {
+    "id": "relationship.highlight.rules",
+    "rules": [
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.selected_hero" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.selected_hero" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.selected_hero" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.selected_hero" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "relationship.highlight.selected_hero" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.enemy_focus" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.enemy_focus" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.enemy_focus" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "relationship.highlight.enemy_focus" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "relationship.highlight.enemy_focus" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
   }
 ]

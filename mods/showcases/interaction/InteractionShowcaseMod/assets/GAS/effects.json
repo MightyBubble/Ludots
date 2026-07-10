@@ -145,7 +145,7 @@
     "expireCondition": {
       "kind": "TagPresent",
       "tag": "State.Arcweaver.Guarding",
-      "sense": "Raw"
+      "sense": "Effective"
     }
   },
   {
@@ -350,7 +350,7 @@
     "expireCondition": {
       "kind": "TagPresent",
       "tag": "State.Vanguard.IronWall",
-      "sense": "Raw"
+      "sense": "Effective"
     }
   },
   {
@@ -522,7 +522,7 @@
     "expireCondition": {
       "kind": "TagPresent",
       "tag": "State.Commander.ShieldNet",
-      "sense": "Raw"
+      "sense": "Effective"
     }
   },
   {
@@ -582,8 +582,14 @@
       "range": 5200,
       "arcHeight": 0,
       "impactEffect": "Effect.Interaction.Stress.FireballHit",
-      "travelMode": "Legacy",
-      "impactPolicy": "Legacy"
+      "hitEffect": "Effect.Interaction.Stress.FireballHit",
+      "presentationEffect": "Effect.Interaction.Stress.FireballHit",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {

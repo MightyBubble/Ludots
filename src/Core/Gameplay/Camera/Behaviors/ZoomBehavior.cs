@@ -4,14 +4,12 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
     internal sealed class ZoomBehavior : ICameraBehavior
     {
-        private readonly string _zoomActionId;
         private readonly float _cmPerWheel;
         private readonly float _minDistanceCm;
         private readonly float _maxDistanceCm;
 
-        public ZoomBehavior(string zoomActionId, float cmPerWheel, float minDistanceCm, float maxDistanceCm)
+        public ZoomBehavior(float cmPerWheel, float minDistanceCm, float maxDistanceCm)
         {
-            _zoomActionId = zoomActionId ?? VirtualCameraDefinition.DefaultZoomActionId;
             _cmPerWheel = cmPerWheel;
             _minDistanceCm = minDistanceCm;
             _maxDistanceCm = maxDistanceCm;
@@ -19,7 +17,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
-            float zoom = ctx.Input.ReadAction<float>(_zoomActionId);
+            float zoom = ctx.BehaviorInput.Zoom;
             if (MathF.Abs(zoom) < 0.0001f) return;
 
             state.DistanceCm -= zoom * _cmPerWheel;

@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: ContextScored
+  targetType: ContextScored
   isSkillMapping: true
 
 ContextScored 配置:

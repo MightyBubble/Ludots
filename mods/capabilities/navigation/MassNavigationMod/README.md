@@ -25,7 +25,8 @@ Foundation-owned files stay under `assets/` and are loaded through the normal co
 
 | File | Responsibility |
 | --- | --- |
-| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, camera profiles, and view residency. |
+| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, and view residency. |
+| `assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
 | `assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
 | `assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
 | `assets/Presentation/performers.json` | Foundation example performer authoring. |

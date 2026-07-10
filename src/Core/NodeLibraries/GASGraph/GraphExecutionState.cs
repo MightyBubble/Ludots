@@ -6,6 +6,21 @@ using Ludots.Core.Mathematics;
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
+    /// Event payload slots exposed to graph programs via LoadEventPayloadInt/Float
+    /// (RFC-0065 PROV-4b). Filled by presentation-event driven executors
+    /// (e.g. PerformerRuleSystem); defaults to zero elsewhere.
+    /// </summary>
+    public struct GraphEventPayload
+    {
+        public int PayloadA;
+        public int PayloadB;
+        public float FloatA;
+        public float FloatB;
+        public float FloatC;
+        public float FloatD;
+    }
+
+    /// <summary>
     /// Per-execution state for the GAS Graph VM.
     /// Passed by ref to each opcode handler.
     /// </summary>
@@ -19,6 +34,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Set from EffectContext.TargetContext when executing phase graphs.
         /// </summary>
         public Entity TargetContext;
+        /// <summary>
+        /// Viewer anchor entity for viewer-relative condition graphs (RFC-0065 DEC-12 #1).
+        /// Set from PresentationEvent.Viewer by PerformerRuleSystem; Entity.Null elsewhere.
+        /// </summary>
+        public Entity Viewer;
+        /// <summary>Event payload slots read by LoadEventPayloadInt/Float ops.</summary>
+        public GraphEventPayload EventPayload;
         public IntVector2 TargetPos;
         public uint RandomSeed;
         public IGraphRuntimeApi Api;

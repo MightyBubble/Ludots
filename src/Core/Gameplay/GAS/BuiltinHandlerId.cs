@@ -38,6 +38,10 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Entity relations ──
         /// <summary>Read RelationParams and mutate entity parent-child relationships.</summary>
         ApplyRelation = 50,
+        /// <summary>Reveal a configured area through the Vision/Fog/Knowledge runtime.</summary>
+        RevealArea = 51,
+        /// <summary>Downgrade a configured revealed area to last-known Knowledge records.</summary>
+        DecayRevealArea = 52,
 
         // ── Exchange settlement ──
         /// <summary>Read Exchange params and execute an Exchange operation.</summary>
@@ -45,5 +49,16 @@ namespace Ludots.Core.Gameplay.GAS
 
         /// <summary>Complete an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 61,
+
+        /// <summary>Read configured blackboard stored target keys and submit orders to the spawned unit.</summary>
+        SubmitOrderFromBlackboard = 62,
+
+        // ── Entity lifecycle atomic ops (Layer 0) ──
+        MaterializeTemplate = 63,
+        CopyIdentityComponents = 64,
+        CopyAttributeSlice = 65,
+        ClearActiveEffects = 66,
+        TransferStableId = 67,
+        ConsumeEntity = 69,
     }
 }

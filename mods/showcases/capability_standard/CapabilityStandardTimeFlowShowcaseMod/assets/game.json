@@ -1,0 +1,35 @@
+{
+  "startupMapId": "capability_standard_time_flow_showcase",
+  "windowTitle": "Ludots Engine - Capability Standard TimeFlow",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "physics2D": {
+    "enabled": true
+  },
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    },
+    "performerInstanceCapacity": 4096,
+    "gasPresentationEventCapacity": 4096,
+    "presentationEventStreamCapacity": 4096,
+    "presentationOwnerChangeCapacity": 4096,
+    "performerCommandCapacity": 4096,
+    "primitiveDrawBufferCapacity": 8192,
+    "visualSnapshotBufferCapacity": 8192,
+    "visualProxyBufferCapacity": 8192,
+    "presentationRequestCapacity": 8192,
+    "groundOverlayCapacity": 4096,
+    "roadSplineCapacity": 4096,
+    "worldHudCapacity": 4096,
+    "screenHudCapacity": 4096,
+    "skinnedVisualBatchCapacity": 4096,
+    "minimapMarkerCapacity": 4096,
+    "runtimeEntitySpawnQueueCapacity": 4096,
+    "runtimeEntitySpawnReceiptQueueCapacity": 4096
+  }
+}

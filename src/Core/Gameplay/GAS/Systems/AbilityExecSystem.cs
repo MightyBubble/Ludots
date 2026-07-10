@@ -30,8 +30,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly InputRequestQueue _inputRequests;
         private readonly InputResponseBuffer _inputResponses;
-        private readonly SelectionRequestQueue _selectionRequests;
-        private readonly SelectionResponseBuffer _selectionResponses;
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasPresentationEventBuffer _presentationEvents;
         private readonly EffectPhaseExecutor _phaseExecutor;
@@ -63,8 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IClock clock,
             InputRequestQueue inputRequests,
             InputResponseBuffer inputResponses,
-            SelectionRequestQueue selectionRequests,
-            SelectionResponseBuffer selectionResponses,
             EffectRequestQueue effectRequests,
             AbilityDefinitionRegistry abilityDefinitions = null,
             GameplayEventBus eventBus = null,
@@ -82,8 +78,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _clock = clock;
             _inputRequests = inputRequests;
             _inputResponses = inputResponses;
-            _selectionRequests = selectionRequests;
-            _selectionResponses = selectionResponses;
             _effectRequests = effectRequests;
             _abilityDefinitions = abilityDefinitions;
             _eventBus = eventBus;
@@ -386,7 +380,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.MultiTargetCount = 0;
                     exec.State = AbilityExecRunState.Running;
                     exec.CurrentTick = 0;
-                    exec.StartAbsoluteTick = _clock.Now(defaultClockId.ToDomainId());
+                    exec.StartAbsoluteTick = ClockNow(defaultClockId, actor);
                     exec.NextItemIndex = 0;
                     exec.GateDeadline = 0;
                     exec.WaitTagId = 0;
@@ -513,7 +507,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 // Tick advancement
                 if (instance.State == AbilityExecRunState.Running)
                 {
-                    int now = _clock.Now(instance.ActiveClockId.ToDomainId());
+                    int now = ClockNow(instance.ActiveClockId, actor);
                     instance.CurrentTick = now - instance.StartAbsoluteTick;
                     AdvanceItems(actor, ref spec, ref callerPool, hasCallerPool, hasOnActivate, ref onActivateEffects, ref instance);
                 }
@@ -642,7 +636,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             for (int i = 0; i < spec.ItemCount; i++)
             {
                 ExecItemKind kind = spec.GetKind(i);
-                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.SelectionGate)
+                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.TargetCollectionGate)
                 {
                     return true;
                 }
@@ -734,7 +728,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (inst.PendingProgressionUseRequirement != 0 &&
                     kind != ExecItemKind.InputGate &&
-                    kind != ExecItemKind.SelectionGate)
+                    kind != ExecItemKind.TargetCollectionGate)
                 {
                     FailPendingProgressionUseRequirement(actor, ref inst);
                     return;
@@ -793,7 +787,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     // Gates
                     case ExecItemKind.InputGate:
                     case ExecItemKind.EventGate:
-                    case ExecItemKind.SelectionGate:
+                    case ExecItemKind.TargetCollectionGate:
                         EnterGate(actor, ref spec, idx, ref inst);
                         // Attempt immediate resolution if response already available
                         if (inst.State == AbilityExecRunState.GateWaiting)
@@ -850,7 +844,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             else
             {
                 Entity target = ResolveEffectDispatchTarget(actor, dispatchTarget, in inst);
-                PublishEffectRequest(actor, target, inst.TargetContext, templateId,
+                Entity targetContext = ResolveEffectDispatchTargetContext(dispatchTarget, in inst);
+                PublishEffectRequest(actor, target, targetContext, templateId,
                     hasCp ? callerPool.Get(cpIdx) : default, hasCp, in inst);
             }
         }
@@ -865,6 +860,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExecEffectDispatchTarget.Default when World.IsAlive(inst.Target) => inst.Target,
                 _ => actor,
             };
+        }
+
+        private Entity ResolveEffectDispatchTargetContext(ExecEffectDispatchTarget dispatchTarget, in AbilityExecInstance inst)
+        {
+            if (World.IsAlive(inst.TargetContext))
+            {
+                return inst.TargetContext;
+            }
+
+            return dispatchTarget == ExecEffectDispatchTarget.Source && World.IsAlive(inst.Target)
+                ? inst.Target
+                : default;
         }
 
         private void PublishEffectRequest(Entity source, Entity target, Entity targetContext,
@@ -929,7 +936,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (durationTicks > 0)
             {
                 ref var timed = ref World.Get<TimedTagBuffer>(actor);
-                int expireAt = _clock.Now(clockId.ToDomainId()) + durationTicks;
+                int expireAt = ClockNow(clockId, actor) + durationTicks;
                 timed.TryAdd(tagId, expireAt, clockId);
             }
         }
@@ -1013,21 +1020,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
                         Source = actor,
+                        Target = inst.Target,
                         Context = inst.TargetContext,
                     });
                     break;
                 }
 
-                case ExecItemKind.SelectionGate:
+                case ExecItemKind.TargetCollectionGate:
                 {
                     int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
                     inst.WaitRequestId = requestId;
-                    _selectionRequests?.TryEnqueue(new SelectionRequest
+                    _inputRequests?.TryEnqueue(new InputRequest
                     {
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
-                        Origin = actor,
-                        TargetContext = inst.TargetContext,
+                        Source = actor,
+                        Target = inst.Target,
+                        Context = inst.TargetContext,
                     });
                     break;
                 }
@@ -1038,7 +1047,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     int deadlineTicks = spec.GetPayloadA(idx);
                     if (deadlineTicks > 0)
                     {
-                        inst.GateDeadline = _clock.Now(inst.ActiveClockId.ToDomainId()) + deadlineTicks;
+                        inst.GateDeadline = ClockNow(inst.ActiveClockId, actor) + deadlineTicks;
                     }
                     break;
                 }
@@ -1075,33 +1084,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     break;
                 }
 
-                case ExecItemKind.SelectionGate:
+                case ExecItemKind.TargetCollectionGate:
                 {
-                    if (_selectionResponses == null) return;
-                    if (_selectionResponses.TryConsume(inst.WaitRequestId, out var resp))
+                    if (_inputResponses == null) return;
+                    if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))
                     {
-                        int copyCount = resp.Count;
-                        if (copyCount > 64) copyCount = 64;
-                        inst.MultiTargetCount = copyCount;
-                        unsafe
+                        inst.MultiTargetCount = 0;
+                        if (World.IsAlive(resp.Target))
                         {
-                            fixed (int* idsDst = inst.MultiTargetIds)
-                            fixed (int* widsDst = inst.MultiTargetWorldIds)
-                            fixed (int* verDst = inst.MultiTargetVersions)
+                            inst.Target = resp.Target;
+                            inst.MultiTargetCount = 1;
+                            unsafe
                             {
-                                for (int i = 0; i < copyCount; i++)
+                                fixed (int* idsDst = inst.MultiTargetIds)
+                                fixed (int* widsDst = inst.MultiTargetWorldIds)
+                                fixed (int* verDst = inst.MultiTargetVersions)
                                 {
-                                    var e = resp.GetEntity(i);
-                                    idsDst[i] = e.Id;
-                                    widsDst[i] = e.WorldId;
-                                    verDst[i] = e.Version;
+                                    idsDst[0] = resp.Target.Id;
+                                    widsDst[0] = resp.Target.WorldId;
+                                    verDst[0] = resp.Target.Version;
                                 }
                             }
-                        }
-                        if (copyCount > 0)
-                        {
-                            var chosen = resp.GetEntity(0);
-                            if (World.IsAlive(chosen)) inst.Target = chosen;
                         }
                         if (World.IsAlive(resp.TargetContext))
                         {
@@ -1110,11 +1113,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
                         {
                             return;
-                        }
-                        if (resp.TryGetWorldPoint(out var worldPoint))
-                        {
-                            inst.TargetPosCm = Fix64Vec2.FromInt(worldPoint.X, worldPoint.Y);
-                            inst.HasTargetPos = 1;
                         }
                         inst.WaitRequestId = 0;
                         inst.NextItemIndex++;
@@ -1129,7 +1127,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     // Timeout check
                     if (inst.GateDeadline > 0)
                     {
-                        int now = _clock.Now(inst.ActiveClockId.ToDomainId());
+                        int now = ClockNow(inst.ActiveClockId, actor);
                         if (now >= inst.GateDeadline)
                         {
                             inst.GateDeadline = 0;
@@ -1229,7 +1227,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 exec.MultiTargetCount = 0;
                 exec.State = AbilityExecRunState.Running;
                 exec.CurrentTick = 0;
-                exec.StartAbsoluteTick = _clock.Now(toggleSpec.DeactivateExecSpec.ClockId.ToDomainId());
+                exec.StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor);
                 exec.NextItemIndex = 0;
                 exec.GateDeadline = 0;
                 exec.WaitTagId = 0;
@@ -1269,6 +1267,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!World.Has<TimedTagBuffer>(actor)) World.Add(actor, new TimedTagBuffer());
         }
 
+        private int ClockNow(GasClockId clockId, Entity actor)
+        {
+            return GasClockRuntime.Now(World, _clock, clockId, actor, "Ability execution clock");
+        }
+
         private void PublishCastStartedAndCommitted(Entity actor, Entity targetEntity, int slotIndex, int abilityId)
         {
             _presentationEvents?.Publish(new GasPresentationEvent
@@ -1304,4 +1307,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
-

@@ -5,12 +5,12 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Minimap
@@ -588,16 +588,15 @@ namespace Ludots.Core.Presentation.Minimap
             _viewportInitialized = true;
         }
 
-        public void CenterOnSelected(GameEngine engine)
+        public void CenterOnEntity(GameEngine engine, Entity entity)
         {
             ArgumentNullException.ThrowIfNull(engine);
-            Entity selected = ResolveSelectedEntity(engine);
-            if (selected == Entity.Null)
+            if (entity == Entity.Null)
             {
                 return;
             }
 
-            if (TryResolveFollowPosition(engine, selected, out float worldXcm, out float worldYcm))
+            if (TryResolveFollowPosition(engine, entity, out float worldXcm, out float worldYcm))
             {
                 _centerXcm = worldXcm;
                 _centerYcm = worldYcm;
@@ -793,6 +792,17 @@ namespace Ludots.Core.Presentation.Minimap
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            Entity knowledgeViewer = Entity.Null;
+            if (hasKnowledgeResolver &&
+                (!engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) ||
+                 !knowledgeViewerProvider(engine, out knowledgeViewer) ||
+                 knowledgeViewer == Entity.Null ||
+                 !engine.World.IsAlive(knowledgeViewer)))
+            {
+                screenMarkers.MaterializeStagedBucketKeys();
+                return;
+            }
+
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -802,12 +812,13 @@ namespace Ludots.Core.Presentation.Minimap
                 float markerSizePx = sizesPx[i];
                 bool useAuthoredStyleBucket = true;
                 Entity owner = owners[i];
-                if (hasKnowledgeResolver && owner != Entity.Null)
+                if (hasKnowledgeResolver)
                 {
-                    if (!KnowledgeProjectionConsumer.TryResolve(
+                    if (owner == Entity.Null ||
+                        !KnowledgeProjectionConsumer.TryResolveForViewer(
                             engine.World,
                             engine.GlobalContext,
-                            Entity.Null,
+                            knowledgeViewer,
                             owner,
                             out KnowledgeProjection projection) ||
                         !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))
@@ -1071,13 +1082,6 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             return false;
-        }
-
-        private static Entity ResolveSelectedEntity(GameEngine engine)
-        {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
-                ? selected
-                : Entity.Null;
         }
 
         private static WorldAabbCm ResolveRequiredWorldBounds(GameEngine engine)

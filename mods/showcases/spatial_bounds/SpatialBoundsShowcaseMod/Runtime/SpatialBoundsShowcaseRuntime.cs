@@ -6,9 +6,10 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -90,9 +91,6 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private void EnsureSelectionContext(GameEngine engine)
         {
-            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SpatialBoundsShowcaseMod requires SelectionRuntime.");
-
             if (_selectionOwner == Entity.Null || !engine.World.IsAlive(_selectionOwner))
             {
                 _selectionOwner = ResolveExistingLocalPlayer(engine);
@@ -104,26 +102,20 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 _selectionOwner = engine.World.Create(
                     new Name { Value = "SpatialBoundsViewer" },
                     new PlayerOwner { PlayerId = 1 },
-                    default(SelectionDragState));
+                    default(CommandSourceDragState));
                 _ownsSelectionOwner = true;
             }
 
-            if (!engine.World.Has<SelectionDragState>(_selectionOwner))
+            if (!engine.World.Has<CommandSourceDragState>(_selectionOwner))
             {
-                engine.World.Add(_selectionOwner, default(SelectionDragState));
+                engine.World.Add(_selectionOwner, default(CommandSourceDragState));
             }
-
-            selection.TryGetOrCreateSelectionEntity(_selectionOwner, SelectionSetKeys.LivePrimary, out _);
-            selection.TryBindView(_selectionOwner, SelectionViewKeys.Primary, _selectionOwner, SelectionSetKeys.LivePrimary);
 
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = _selectionOwner;
             if (engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
                 engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
-
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = _selectionOwner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private void DrawOverlay(GameEngine engine)
@@ -171,12 +163,12 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
             Entity hovered = ResolveHoveredEntity(engine);
             Entity primary = ResolvePrimary(engine);
-            int selectedCount = SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            int selectedCount = GetCommandSourceCount(engine);
             Span<Entity> selected = selectedCount <= 16
                 ? stackalloc Entity[Math.Max(selectedCount, 1)]
                 : new Entity[selectedCount];
             int written = selectedCount > 0
-                ? SelectionContextRuntime.CopyCurrentSelection(engine.World, engine.GlobalContext, selected)
+                ? CopyCommandSource(engine, selected)
                 : 0;
 
             for (int i = 0; i < written; i++)
@@ -326,7 +318,12 @@ namespace SpatialBoundsShowcaseMod.Runtime
             engine.GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+                followTarget: CameraFollowTargetFactory.Build(
+                    engine.World,
+                    engine.GlobalContext,
+                    definition.FollowTargetKind,
+                    _selectionOwner,
+                    definition.FollowCollectionKey),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
             engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
@@ -366,7 +363,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private string BuildSelectionPreview(GameEngine engine)
         {
-            int count = SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            int count = GetCommandSourceCount(engine);
             if (count <= 0)
             {
                 return "(empty)";
@@ -375,7 +372,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
             Span<Entity> selected = count <= 16
                 ? stackalloc Entity[count]
                 : new Entity[count];
-            int written = SelectionContextRuntime.CopyCurrentSelection(engine.World, engine.GlobalContext, selected);
+            int written = CopyCommandSource(engine, selected);
             if (written <= 0)
             {
                 return "(empty)";
@@ -407,15 +404,44 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static Entity ResolvePrimary(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary)
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out Entity primary)
                 ? primary
                 : Entity.Null;
         }
 
+        private static int GetCommandSourceCount(GameEngine engine)
+        {
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : 0;
+        }
+
+        private static int CopyCommandSource(GameEngine engine, Span<Entity> destination)
+        {
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null
+                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource, destination)
+                : 0;
+        }
+
         private static Entity ResolveHoveredEntity(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) &&
-                   hoveredObj is Entity hovered &&
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.HoveredEntity,
+                       out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
                 ? hovered
@@ -449,14 +475,6 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 local == _selectionOwner)
             {
                 engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
-            }
-
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewerObj) &&
-                viewerObj is Entity viewer &&
-                viewer == _selectionOwner)
-            {
-                engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
-                engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
             }
 
             _selectionOwner = Entity.Null;

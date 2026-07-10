@@ -2,32 +2,24 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Generic GAS input-response system.
-    /// Resolves InputRequest to InputResponse using the current interaction bindings
-    /// and the live primary selection of the active local selector.
+    /// Resolves InputRequest to InputResponse using the current interaction bindings.
+    /// Request producers must provide target/context data explicitly.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
-        private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
         private InputRequest _active;
         private bool _hasActive;
 
         public GasInputResponseSystem(World world, Dictionary<string, object> globals)
         {
-            _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : null;
         }
 
         public void Initialize() { }
@@ -48,22 +40,12 @@ namespace Ludots.Core.Input.Interaction
 
             if (!pointer.Confirm.PressedThisFrame) return;
 
-            Entity target = default;
-            if (_selection != null &&
-                _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
-                _world.IsAlive(local) &&
-                _selection.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var selected))
-            {
-                target = selected;
-            }
-
             responses.TryAdd(new InputResponse
             {
                 RequestId = _active.RequestId,
                 ResponseTagId = _active.RequestTagId,
                 Source = _active.Source,
-                Target = target,
+                Target = _active.Target,
                 TargetContext = _active.Context,
                 PayloadA = _active.PayloadA,
                 PayloadB = _active.PayloadB,

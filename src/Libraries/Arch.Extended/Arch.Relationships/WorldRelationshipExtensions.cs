@@ -5,7 +5,8 @@ using Arch.Core.Extensions;
 using Arch.Core.Extensions.Dangerous;
 using Arch.Core.Utils;
 
-[assembly:InternalsVisibleTo("Arch.Relationships.Tests")]
+[assembly: InternalsVisibleTo("Arch.Relationships.Tests")]
+[assembly: InternalsVisibleTo("Ludots.Core")]
 namespace Arch.Relationships;
 
 /// <summary>

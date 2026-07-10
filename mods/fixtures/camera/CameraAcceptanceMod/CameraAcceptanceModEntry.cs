@@ -27,16 +27,14 @@ namespace CameraAcceptanceMod
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;
-                    runtime.InstallSelectionCallbacks(engine);
+                    runtime.InstallCommandSourceAcquiredCallbacks(engine);
                     var inputOwnership = new CameraAcceptanceInputOwnershipSystem(engine);
                     engine.InsertSystemBeforeRequired<AuthoritativeInputSnapshotSystem>(inputOwnership, SystemGroup.InputCollection);
                     if (engine.GetService(CoreServiceKeys.InputFrameConsumers) is System.Collections.Generic.List<IInputFrameConsumer> consumers)
                     {
                         consumers.Add(inputOwnership);
                     }
-                    engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(
-                        new CameraAcceptanceLocalAvatarMoveSystem(engine),
-                        SystemGroup.InputCollection);
+                    engine.RegisterSystem(new CameraAcceptanceLocalAvatarMoveSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);

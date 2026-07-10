@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Runtime;
 using RtsDemoMod.Systems;
@@ -12,7 +13,7 @@ namespace RtsDemoMod.Triggers
 {
     /// <summary>
     /// Registers RTS abilities, 3-faction teams, and SC2-style order source on game start.
-    /// Camera is driven by map DefaultCamera.VirtualCameraId "Rts" 鈥?no manual setup needed.
+    /// Camera is driven by map DefaultCamera.VirtualCameraId "Rts"; no manual setup is needed.
     /// </summary>
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {
@@ -42,7 +43,7 @@ namespace RtsDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
             {
                 engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
-                _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
+                _ctx.Log("[RtsDemoMod] RTS local order source system registered");
             }
 
             engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
@@ -50,9 +51,9 @@ namespace RtsDemoMod.Triggers
             // Run after effect/spawn processing so relation-driven garrison/build/morph state
             // becomes visible in the same simulation frame.
             engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
-            engine.RegisterPresentationSystem(new RtsSelectionCommandPanelSystem(engine));
-            engine.RegisterPresentationSystem(new RtsSelectionFeedbackPresentationSystem(engine));
-            _ctx.Log("[RtsDemoMod] RTS relation runtime and selection command panel systems registered");
+            engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
+            _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 

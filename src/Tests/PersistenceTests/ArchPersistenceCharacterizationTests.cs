@@ -2,8 +2,10 @@ using Arch.Core;
 using Arch.Persistence;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Persistence;
+using MessagePack;
 using NUnit.Framework;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 
@@ -28,6 +30,25 @@ public sealed class ArchPersistenceCharacterizationTests
 
         Assert.That(position.ToWorldCmInt2(), Is.EqualTo(new WorldCmInt2(1234, -5678)));
         Assert.That(facing.AngleRad, Is.EqualTo(1.25f));
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripPreservesEntityLocalClock()
+    {
+        using World world = World.Create();
+        world.Create(new EntityLocalClock { AccumulatorPermille = 500, LocalStep = 12 });
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<EntityLocalClock>(restored);
+        ref readonly EntityLocalClock clock = ref restored.Get<EntityLocalClock>(restoredEntity);
+        int accumulatorPermille = clock.AccumulatorPermille;
+        int localStep = clock.LocalStep;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(accumulatorPermille, Is.EqualTo(500));
+            Assert.That(localStep, Is.EqualTo(12));
+        });
     }
 
     [Test]
@@ -251,6 +272,163 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void CoreBinarySerializerPreservesRelationshipRuntimeEdges()
+    {
+        using World world = World.Create();
+        Entity source = world.Create(new Name { Value = "source" });
+        Entity target = world.Create(new Name { Value = "target" });
+        RelationshipRuntime runtime = CreateRelationshipRuntime(
+            world,
+            out RelationshipTypeRegistry types,
+            out RelationshipMetricRegistry metrics,
+            out RelationshipFlagRegistry flags,
+            out RelationshipBandRegistry bands,
+            out int allianceType,
+            out int rivalryType,
+            out int trustMetric,
+            out int visibleFlag);
+
+        runtime.SetMetric(source, target, allianceType, trustMetric, 42);
+        runtime.SetFlag(source, target, allianceType, visibleFlag, enabled: true);
+        runtime.SetMetric(source, target, rivalryType, trustMetric, -17);
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredSource = FindByName(restored, "source");
+        Entity restoredTarget = FindByName(restored, "target");
+        var restoredRuntime = new RelationshipRuntime(
+            restored,
+            types,
+            metrics,
+            flags,
+            bands,
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(restored));
+
+        Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, allianceType), Is.True);
+        Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, rivalryType), Is.True);
+        Assert.That(restoredRuntime.GetMetric(restoredSource, restoredTarget, allianceType, trustMetric), Is.EqualTo(42));
+        Assert.That(restoredRuntime.GetMetric(restoredSource, restoredTarget, rivalryType, trustMetric), Is.EqualTo(-17));
+        Assert.That(restoredRuntime.HasFlag(restoredSource, restoredTarget, allianceType, visibleFlag), Is.True);
+        Span<Entity> incoming = stackalloc Entity[4];
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, allianceType, incoming), Is.EqualTo(1));
+        Assert.That(incoming[0], Is.EqualTo(restoredSource));
+
+        restoredRuntime.RemoveLink(restoredSource, restoredTarget, allianceType);
+        Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, rivalryType), Is.True);
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, allianceType, incoming), Is.EqualTo(0));
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, rivalryType, incoming), Is.EqualTo(1));
+
+        Assert.DoesNotThrow(() => restoredRuntime.RemoveLink(restoredSource, restoredTarget, rivalryType));
+        Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget), Is.False);
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, RelationshipTypeRegistry.AnyTypeId, incoming), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void ArchBinarySerializerReadsComponentArrayPayloadsThroughSignatureComponentContract()
+    {
+        var loadContext = new CrossLoadContextTypeTestHarness.DuplicateAssemblyLoadContext();
+        try
+        {
+            Type duplicateNameType = CrossLoadContextTypeTestHarness.LoadDuplicateType(loadContext, typeof(Name));
+            Assert.That(duplicateNameType, Is.Not.SameAs(typeof(Name)));
+            using World world = World.Create();
+            world.Create(new Name { Value = "cross-alc-name" });
+            var typeFormatter = new CrossLoadContextTypeTestHarness.SubstitutingTypeFormatter(
+                typeof(Name),
+                duplicateNameType);
+            var serializer = new ArchBinarySerializer(
+                new NameFormatter(),
+                typeFormatter);
+
+            byte[] bytes = serializer.Serialize(world);
+            using World restored = serializer.Deserialize(bytes);
+            Entity restoredEntity = FindSingle<Name>(restored);
+
+            Assert.That(restored.Get<Name>(restoredEntity).Value, Is.EqualTo("cross-alc-name"));
+            Assert.That(typeFormatter.SubstitutionHitCount, Is.GreaterThan(0));
+        }
+        finally
+        {
+            loadContext.Unload();
+        }
+    }
+
+    [Test]
+    public void ArchBinarySerializerRejectsComponentArrayPayloadWhenSerializedTypeContractDiffersFromSignature()
+    {
+        using World world = World.Create();
+        world.Create(new Name { Value = "wrong-contract" });
+        var typeFormatter = new CrossLoadContextTypeTestHarness.SubstitutingTypeFormatter(
+            typeof(Name),
+            typeof(WorldPositionCm));
+        var serializer = new ArchBinarySerializer(
+            new NameFormatter(),
+            typeFormatter);
+
+        byte[] bytes = serializer.Serialize(world);
+        var error = Assert.Throws<MessagePackSerializationException>(() => serializer.Deserialize(bytes));
+
+        string diagnostic = FlattenExceptionMessages(error!);
+        Assert.That(diagnostic, Does.Contain("does not match archetype component type"));
+        Assert.That(diagnostic, Does.Contain(nameof(Name)));
+        Assert.That(diagnostic, Does.Contain(nameof(WorldPositionCm)));
+        Assert.That(typeFormatter.SubstitutionHitCount, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void CoreBinarySerializerRejectsRelationshipsPointingAtExcludedEntities()
+    {
+        using World world = World.Create();
+        Entity source = world.Create(new Name { Value = "source" });
+        Entity target = world.Create(new Name { Value = "excluded-target" }, new SaveExcludedTag());
+        RelationshipRuntime runtime = CreateRelationshipRuntime(
+            world,
+            out _,
+            out _,
+            out _,
+            out _,
+            out int allianceType,
+            out _,
+            out int trustMetric,
+            out _);
+
+        runtime.SetMetric(source, target, allianceType, trustMetric, 42);
+
+        var directError = Assert.Throws<SaveContextException>(
+            () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+        var roundTripError = Assert.Throws<SaveContextException>(() => CoreRoundTrip(world));
+
+        Assert.That(directError!.Message, Does.Contain("excluded entity"));
+        Assert.That(directError.Message, Does.Contain("Relationship<RelationshipEdgeSet>"));
+        Assert.That(roundTripError!.Message, Does.Contain("missing entity"));
+        Assert.That(roundTripError.Message, Does.Contain("Relationship<RelationshipEdgeSet>"));
+    }
+
+    [Test]
+    public void CoreBinarySerializerRejectsRelationshipProjectionWithoutMatchingEdge()
+    {
+        using World world = World.Create();
+        Entity source = world.Create(new Name { Value = "source" });
+        Entity target = world.Create(new Name { Value = "target" });
+        world.Create(new RelationshipInstanceCm
+        {
+            Source = source,
+            Target = target,
+            TypeId = 1,
+            Revision = 1
+        });
+
+        var directError = Assert.Throws<SaveContextException>(
+            () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+        var roundTripError = Assert.Throws<SaveContextException>(() => CoreRoundTrip(world));
+
+        Assert.That(directError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(directError.Message, Does.Contain("no matching relationship edge"));
+        Assert.That(roundTripError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(roundTripError.Message, Does.Contain("no matching relationship edge"));
+    }
+
+    [Test]
     public void CorePersistenceFormatterRegistryCoversComponentRegistryTypes()
     {
         IReadOnlySet<Type> formatterTypes = LudotsCorePersistenceFormatters.GetFormatterComponentTypes();
@@ -327,6 +505,70 @@ public sealed class ArchPersistenceCharacterizationTests
         return result;
     }
 
+    private static string FlattenExceptionMessages(Exception exception)
+    {
+        var messages = new List<string>();
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            messages.Add(current.Message);
+        }
+
+        return string.Join(" | ", messages);
+    }
+
+    private static Entity FindByName(World world, string name)
+    {
+        var query = new QueryDescription().WithAll<Name>();
+        Entity result = Entity.Null;
+        int matches = 0;
+
+        world.Query(in query, (Entity entity, ref Name entityName) =>
+        {
+            if (entityName.Value != name)
+            {
+                return;
+            }
+
+            result = entity;
+            matches++;
+        });
+
+        Assert.That(matches, Is.EqualTo(1));
+        return result;
+    }
+
+    private static RelationshipRuntime CreateRelationshipRuntime(
+        World world,
+        out RelationshipTypeRegistry types,
+        out RelationshipMetricRegistry metrics,
+        out RelationshipFlagRegistry flags,
+        out RelationshipBandRegistry bands,
+        out int allianceType,
+        out int rivalryType,
+        out int trustMetric,
+        out int visibleFlag)
+    {
+        types = new RelationshipTypeRegistry();
+        metrics = new RelationshipMetricRegistry();
+        flags = new RelationshipFlagRegistry();
+        bands = new RelationshipBandRegistry();
+        RelationshipChangeBuffer changes = new();
+
+        allianceType = types.Register("alliance");
+        rivalryType = types.Register("rivalry");
+        trustMetric = metrics.Register("trust", minValue: -100, maxValue: 100, defaultValue: 0);
+        visibleFlag = flags.Register("visible");
+
+        return new RelationshipRuntime(
+            world,
+            types,
+            metrics,
+            flags,
+            bands,
+            changes,
+            new RelationshipReverseIndex(world));
+    }
+
     private static bool TryFindSingle<T>(World world, out Entity result)
     {
         return TryFindSingle<T>(world, out result, out _);
@@ -363,4 +605,5 @@ public sealed class ArchPersistenceCharacterizationTests
 
         public UnsupportedManagedPayload Payload { get; }
     }
+
 }

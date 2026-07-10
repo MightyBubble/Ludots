@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Persistence
 {
@@ -18,6 +22,10 @@ namespace Ludots.Core.Persistence
             ValidateActiveEffectContainer(world, policy);
             ValidateAbilityStateBuffer(world, policy);
             ValidateTeamEntityRef(world, policy);
+            ValidateQuestInstances(world, policy);
+            ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
+            ValidateRelationshipKeys<InRelationship>(world, policy);
+            ValidateRelationshipInstances(world, policy);
         }
 
         private static void ValidateBlackboardEntityBuffer(World world, SaveEntityInclusionPolicy policy)
@@ -122,6 +130,89 @@ namespace Ludots.Core.Persistence
             });
         }
 
+        private static void ValidateQuestInstances(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<QuestInstanceCm>();
+            world.Query(in query, (Entity owner, ref QuestInstanceCm quest) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                ValidateTarget(
+                    world,
+                    policy,
+                    owner,
+                    NormalizeOptionalEntity(quest.ScopeHost),
+                    nameof(QuestInstanceCm),
+                    nameof(QuestInstanceCm.ScopeHost));
+            });
+        }
+
+        private static void ValidateRelationshipInstances(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<RelationshipInstanceCm>();
+            world.Query(in query, (Entity owner, ref RelationshipInstanceCm relationship) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                ValidateTarget(world, policy, owner, relationship.Source, nameof(RelationshipInstanceCm), nameof(RelationshipInstanceCm.Source));
+                ValidateTarget(world, policy, owner, relationship.Target, nameof(RelationshipInstanceCm), nameof(RelationshipInstanceCm.Target));
+                ValidateRelationshipProjectionEdge(world, owner, relationship);
+            });
+        }
+
+        private static void ValidateRelationshipProjectionEdge(World world, Entity owner, in RelationshipInstanceCm relationship)
+        {
+            if (relationship.TypeId < 0)
+            {
+                throw new SaveContextException(
+                    $"Save entity reference validation failed: {nameof(RelationshipInstanceCm)} on entity {owner.Id}:{owner.WorldId}:{owner.Version} has invalid type id {relationship.TypeId}.");
+            }
+
+            if (relationship.Source == Entity.Null || relationship.Target == Entity.Null)
+            {
+                throw new SaveContextException(
+                    $"Save entity reference validation failed: {nameof(RelationshipInstanceCm)} on entity {owner.Id}:{owner.WorldId}:{owner.Version} must reference live source and target entities.");
+            }
+
+            if (!relationship.Source.TryGetRelationship(relationship.Target, out RelationshipEdgeSet set) ||
+                !set.HasType(relationship.TypeId))
+            {
+                throw new SaveContextException(
+                    $"Save entity reference validation failed: {nameof(RelationshipInstanceCm)} on entity {owner.Id}:{owner.WorldId}:{owner.Version} has no matching relationship edge for type {relationship.TypeId}.");
+            }
+        }
+
+        private static void ValidateRelationshipKeys<T>(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<Relationship<T>>();
+            world.Query(in query, (Entity owner, ref Relationship<T> relationships) =>
+            {
+                if (!policy.ShouldInclude(world, owner) || relationships == null)
+                {
+                    return;
+                }
+
+                int index = 0;
+                foreach (KeyValuePair<Entity, T> entry in relationships.Elements)
+                {
+                    ValidateTarget(
+                        world,
+                        policy,
+                        owner,
+                        entry.Key,
+                        $"Relationship<{typeof(T).Name}>",
+                        $"target={index}");
+                    index++;
+                }
+            });
+        }
+
         private static void ValidateTarget(
             World world,
             SaveEntityInclusionPolicy policy,
@@ -146,6 +237,13 @@ namespace Ludots.Core.Persistence
                 throw new SaveContextException(
                     $"Save entity reference validation failed: {componentName} on entity {owner.Id}:{owner.WorldId}:{owner.Version} references excluded entity {target.Id}:{target.WorldId}:{target.Version} ({lane}).");
             }
+        }
+
+        private static Entity NormalizeOptionalEntity(Entity entity)
+        {
+            return entity.Equals(default(Entity)) || entity.Equals(Entity.Null)
+                ? Entity.Null
+                : entity;
         }
     }
 }

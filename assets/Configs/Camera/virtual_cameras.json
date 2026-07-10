@@ -21,7 +21,6 @@
     "zoomCmPerWheel": 500,
     "followMode": "HoldToLock",
     "followTargetKind": "LocalPlayer",
-    "followActionId": "CameraLock",
     "allowUserInput": true
   },
   {
@@ -115,6 +114,7 @@
     "enableGrabDrag": false,
     "rotateMode": "Both",
     "rotateDegPerPixel": 0.28,
+    "rotateRequiresHold": true,
     "rotateDegPerSecond": 90,
     "enableZoom": true,
     "zoomCmPerWheel": 2000,
@@ -137,6 +137,7 @@
     "panMode": "None",
     "rotateMode": "DragRotate",
     "rotateDegPerPixel": 0.2,
+    "rotateRequiresHold": false,
     "enableZoom": true,
     "zoomCmPerWheel": 100,
     "followMode": "AlwaysFollow",
@@ -159,6 +160,7 @@
     "panMode": "None",
     "rotateMode": "DragRotate",
     "rotateDegPerPixel": 0.15,
+    "rotateRequiresHold": false,
     "enableZoom": false,
     "followMode": "AlwaysFollow",
     "followTargetKind": "LocalPlayer",

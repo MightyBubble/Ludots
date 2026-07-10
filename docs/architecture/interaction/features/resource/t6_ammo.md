@@ -21,7 +21,7 @@ Phase Graph:
 // 装填动作:
 InputOrderMapping:
   actionId: "Reload"
-  selectionType: None
+  targetType: None
 
 ReloadPhaseGraph:
   1. Animation: "reload"

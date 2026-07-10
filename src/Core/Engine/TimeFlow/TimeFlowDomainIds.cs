@@ -4,6 +4,5 @@ namespace Ludots.Core.Engine.TimeFlow
     {
         public const string Simulation = "simulation";
         public const string Gas = "simulation.gas";
-        public const string Physics2D = "simulation.physics2d";
     }
 }

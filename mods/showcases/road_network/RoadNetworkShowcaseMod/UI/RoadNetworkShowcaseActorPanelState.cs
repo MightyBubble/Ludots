@@ -5,7 +5,7 @@ namespace RoadNetworkShowcaseMod.UI
         string Queue,
         string Query,
         string Plan,
-        string Select,
+        string Pick,
         string Execute,
         string Check,
         string Path);

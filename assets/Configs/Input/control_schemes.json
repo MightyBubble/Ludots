@@ -1,0 +1,13 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": [],
+      "defaults": {
+        "commandIntentId": "intent.command.default",
+        "castDispatchProfileId": "dispatch.all_together"
+      }
+    }
+  ],
+  "allowedSchemes": []
+}

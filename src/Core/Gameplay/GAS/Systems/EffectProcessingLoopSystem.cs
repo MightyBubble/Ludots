@@ -8,8 +8,11 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -58,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
-        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null)
+        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null)
             : base(world)
         {
             _effectRequests = effectRequests;
@@ -70,8 +73,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 responseChainOrderTypes,
                 nameof(EffectProcessingLoopSystem));
             _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
-            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator);
-            _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator);
+            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime);
+            _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime);
             _runtimeStateEntity = world.Create(new GasRuntimeState());
         }
 

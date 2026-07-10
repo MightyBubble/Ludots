@@ -9,6 +9,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
+using Ludots.Core.StructureCollision;
 
 namespace Ludots.Core.Engine
 {
@@ -72,6 +73,7 @@ namespace Ludots.Core.Engine
             if (GameSession == null ||
                 MapSessions == null ||
                 GetService(CoreServiceKeys.TimeFlow) == null ||
+                GetService(CoreServiceKeys.QuestRuntimeService) == null ||
                 GetService(CoreServiceKeys.NarrativeDirector) == null)
             {
                 return;
@@ -91,7 +93,11 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
+                RemoveService(CoreServiceKeys.MapLaunchContext);
                 RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.StructureCollisionAsset);
+                RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+                RemoveService(CoreServiceKeys.GroundSurfaceSampler);
                 ParticipantBindingResolver.ClearFocused(GlobalContext);
                 PublishFocusedMapLoadState();
                 return;
@@ -101,6 +107,14 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.MapSession, session);
             SetService(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             SetService(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            if (session.LaunchContext != null && !session.LaunchContext.IsEmpty)
+            {
+                SetService(CoreServiceKeys.MapLaunchContext, session.LaunchContext);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.MapLaunchContext);
+            }
             if (session.VisualHeightmap != null)
             {
                 SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
@@ -108,6 +122,31 @@ namespace Ludots.Core.Engine
             else
             {
                 RemoveService(CoreServiceKeys.VisualHeightmap);
+            }
+            if (session.StructureCollisionAsset != null)
+            {
+                session.StructureCollisionRuntimeState ??= new StructureCollisionRuntimeState(session.StructureCollisionAsset);
+                session.GroundSurfaceSampler ??= new GroundSurfaceSampler(
+                    session.VisualHeightmap,
+                    session.StructureCollisionAsset,
+                    session.StructureCollisionRuntimeState);
+                SetService(CoreServiceKeys.StructureCollisionAsset, session.StructureCollisionAsset);
+                SetService(CoreServiceKeys.StructureCollisionRuntimeState, session.StructureCollisionRuntimeState);
+                SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.StructureCollisionAsset);
+                RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+                if (session.VisualHeightmap != null)
+                {
+                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(session.VisualHeightmap, null, null);
+                    SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
+                }
+                else
+                {
+                    RemoveService(CoreServiceKeys.GroundSurfaceSampler);
+                }
             }
             PublishSessionParticipants(session);
             PublishFocusedMapLoadState();
@@ -164,6 +203,11 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
             ctx.Set(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             ctx.Set(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            if (session.LaunchContext != null && !session.LaunchContext.IsEmpty)
+            {
+                ctx.Set(CoreServiceKeys.MapLaunchContext, session.LaunchContext);
+            }
+
             return ctx;
         }
 

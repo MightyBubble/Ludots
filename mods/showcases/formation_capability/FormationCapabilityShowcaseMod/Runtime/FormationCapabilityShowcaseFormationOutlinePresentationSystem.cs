@@ -8,8 +8,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -17,13 +17,16 @@ namespace FormationCapabilityShowcaseMod.Runtime;
 
 internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSystem : ISystem<float>
 {
+    private const string AzureOutlineKey = "formation_capability.formation_outline.azure";
+    private const string CrimsonOutlineKey = "formation_capability.formation_outline.crimson";
+
     private static readonly QueryDescription FormationOutlineQuery = new QueryDescription()
         .WithAll<FormationCapabilityShowcaseFormationAgent, FormationCapabilityShowcaseFormationState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
         .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
-    private readonly RoadSplineBuffer _splines;
+    private readonly PresentationWorldFactPublisher _facts;
     private readonly IVisualHeightmap _heightmap;
     private readonly int _stableIdCapacity;
     private readonly int _ownerCapacity;
@@ -33,6 +36,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private readonly HashSet<int> _currentOwnerStableIds;
     private readonly List<int> _staleOwnerStableIds;
     private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId;
+    private readonly Dictionary<int, string> _factKeyByStableId;
     private int _lastPublishedFormationOutlineCount = -1;
 
     public FormationCapabilityShowcaseFormationOutlinePresentationSystem(GameEngine engine, FormationCapabilityShowcaseRuntime runtime, FormationCapabilityShowcaseConfig config)
@@ -58,8 +62,12 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         _currentOwnerStableIds = new HashSet<int>(_ownerCapacity);
         _staleOwnerStableIds = new List<int>(_ownerCapacity);
         _emittedStateByOwnerStableId = new Dictionary<int, OutlineEmissionState>(_ownerCapacity);
-        _splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
-            ?? throw new InvalidOperationException("Formation Capability formation outline requires RoadSplineBuffer.");
+        _factKeyByStableId = new Dictionary<int, string>(_stableIdCapacity);
+        if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+        {
+            throw new InvalidOperationException("Formation Capability formation outline presentation requires PresentationEventStream.");
+        }
+
         _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
             ?? throw new InvalidOperationException("Formation Capability formation outline requires VisualHeightmap.");
     }
@@ -267,17 +275,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             Vector3 current = ProjectToGround(Vector3.Lerp(start, end, t), outline.HeightOffsetM);
             int stableId = CreateSegmentStableId(ownerStableId, segment, sample - 1, sampleCount);
             RequireStableIdCapacity();
-            if (!_splines.TryAddLine(
-                    stableId,
-                    previous,
-                    current,
-                    widthM,
-                    outline.FillColor,
-                    outline.BorderColor,
-                    widthM))
-            {
-                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Formation Capability formation outline for entity {entity.Id}.");
-            }
+            PublishSplineUpdated(entity, stableId, previous, current, widthM, in outline);
 
             TrackStableId(stableId);
             previous = current;
@@ -306,17 +304,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
                 outline.HeightOffsetM);
             int stableId = CreateSegmentStableId(ownerStableId, FormationCapabilityShowcaseFormationOutlineSegment.CircleRing, sample - 1, sampleCount);
             RequireStableIdCapacity();
-            if (!_splines.TryAddLine(
-                    stableId,
-                    previous,
-                    current,
-                    widthM,
-                    outline.FillColor,
-                    outline.BorderColor,
-                    widthM))
-            {
-                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Formation Capability circle formation outline for entity {entity.Id}.");
-            }
+            PublishSplineUpdated(entity, stableId, previous, current, widthM, in outline);
 
             TrackStableId(stableId);
             previous = current;
@@ -330,7 +318,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     {
         for (int i = 0; i < _previousStableIds.Count; i++)
         {
-            _splines.Remove(_previousStableIds[i]);
+            PublishSplineEnded(_previousStableIds[i]);
         }
 
         _previousStableIds.Clear();
@@ -348,12 +336,47 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             int stableId = _previousStableIds[i];
             if (!_currentStableIdSet.Contains(stableId))
             {
-                _splines.Remove(stableId);
+                PublishSplineEnded(stableId);
             }
         }
 
         _previousStableIds.Clear();
         CopyCurrentStableIdsToPrevious();
+    }
+
+    private void PublishSplineEnded(int stableId)
+    {
+        string key = _factKeyByStableId.TryGetValue(stableId, out string? resolvedKey)
+            ? resolvedKey
+            : AzureOutlineKey;
+        _facts.PublishWorldSplineEnded(key, Entity.Null, stableId);
+        _factKeyByStableId.Remove(stableId);
+    }
+
+    private void PublishSplineUpdated(
+        Entity entity,
+        int stableId,
+        in Vector3 previous,
+        in Vector3 current,
+        float widthM,
+        in FormationCapabilityShowcaseFormationOutline outline)
+    {
+        string key = ResolveOutlineKey(in outline);
+        if (_factKeyByStableId.TryGetValue(stableId, out string? previousKey) &&
+            !string.Equals(previousKey, key, StringComparison.Ordinal))
+        {
+            _facts.PublishWorldSplineEnded(previousKey, Entity.Null, stableId);
+        }
+
+        _facts.PublishWorldSplineUpdated(
+            key,
+            entity,
+            stableId,
+            previous,
+            current,
+            widthM,
+            widthM);
+        _factKeyByStableId[stableId] = key;
     }
 
     private void RemoveStaleEmissionStates()
@@ -467,6 +490,13 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private static int OutlineStableIdCount(in FormationCapabilityShowcaseFormationOutline outline)
     {
         return FormationCapabilityShowcaseFormationOutlineSegments.CountSplineSegments(in outline);
+    }
+
+    private static string ResolveOutlineKey(in FormationCapabilityShowcaseFormationOutline outline)
+    {
+        return outline.BorderColor.X >= outline.BorderColor.Z
+            ? CrimsonOutlineKey
+            : AzureOutlineKey;
     }
 
     private static int CreateSegmentStableId(int ownerStableId, FormationCapabilityShowcaseFormationOutlineSegment segment, int sampleIndex, int sampleCount)

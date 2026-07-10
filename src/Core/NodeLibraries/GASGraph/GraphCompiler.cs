@@ -50,7 +50,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int floatNext = 0;
             int intNext = 0;
             int boolNext = 0;
-            int entityNext = 2;
+            // E[0]=caster, E[1]=explicit target, E[2]=viewer are fixed context registers.
+            int entityNext = 3;
 
             var valueMap = new Dictionary<string, (GraphValueType Type, byte Reg)>(StringComparer.OrdinalIgnoreCase);
             var instructions = new List<GraphInstruction>(ordered.Count);
@@ -103,10 +104,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         break;
                     case GraphNodeOp.LoadCaster:
                     case GraphNodeOp.LoadExplicitTarget:
+                    case GraphNodeOp.LoadViewer:
                     case GraphNodeOp.LoadContextSource:
                     case GraphNodeOp.LoadContextTarget:
                     case GraphNodeOp.LoadContextTargetContext:
                     case GraphNodeOp.RandomFloat01:
+                        break;
+                    case GraphNodeOp.LoadEventPayloadInt:
+                        ins.Imm = RequireSlot(node, maxSlotExclusive: 2, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LoadEventPayloadFloat:
+                        ins.Imm = RequireSlot(node, maxSlotExclusive: 4, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.CompareEqEntity:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.ControlDomainResolve:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.ControlDomainControls:
+                    case GraphNodeOp.KnowledgeHasProjection:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipHasLink:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
                         break;
                     case GraphNodeOp.Jump:
                         ins.Imm = node.IntValue;
@@ -454,6 +479,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
+                    case GraphNodeOp.BeginLifecycleTransaction:
+                        break;
+                    case GraphNodeOp.InvokeBuiltin:
+                        ins.Imm = RequireSymbol(node.BuiltinHandler, "builtinHandler", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LoadTargetPosX:
+                    case GraphNodeOp.LoadTargetPosY:
+                        break;
+                    case GraphNodeOp.ClampTargetToRange:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.IsPointInCircle:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.SnapToNearestInCollection:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.SnapToNearestGraphEdge:
+                        ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
                 }
 
                 instructions.Add(ins);
@@ -482,6 +531,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ConstFloat => (GraphValueType.Float, null),
                 GraphNodeOp.LoadCaster => (GraphValueType.Entity, 0),
                 GraphNodeOp.LoadExplicitTarget => (GraphValueType.Entity, 1),
+                GraphNodeOp.LoadViewer => (GraphValueType.Entity, 2),
+                GraphNodeOp.LoadEventPayloadInt => (GraphValueType.Int, null),
+                GraphNodeOp.LoadEventPayloadFloat => (GraphValueType.Float, null),
+                GraphNodeOp.CompareEqEntity => (GraphValueType.Bool, null),
+                GraphNodeOp.RelationshipHasLink => (GraphValueType.Bool, null),
+                GraphNodeOp.ControlDomainResolve => (GraphValueType.Entity, null),
+                GraphNodeOp.ControlDomainControls => (GraphValueType.Bool, null),
+                GraphNodeOp.KnowledgeHasProjection => (GraphValueType.Bool, null),
                 GraphNodeOp.LoadContextSource => (GraphValueType.Entity, null),
                 GraphNodeOp.LoadContextTarget => (GraphValueType.Entity, null),
                 GraphNodeOp.LoadContextTargetContext => (GraphValueType.Entity, null),
@@ -526,6 +583,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AggMinAttribute => (GraphValueType.Float, null),
                 GraphNodeOp.AggMaxEntityByAttribute => (GraphValueType.Entity, null),
                 GraphNodeOp.AggMinEntityByAttribute => (GraphValueType.Entity, null),
+                GraphNodeOp.LoadTargetPosX => (GraphValueType.Int, null),
+                GraphNodeOp.LoadTargetPosY => (GraphValueType.Int, null),
+                GraphNodeOp.ClampTargetToRange => (GraphValueType.Bool, null),
+                GraphNodeOp.IsPointInCircle => (GraphValueType.Bool, null),
+                GraphNodeOp.SnapToNearestInCollection => (GraphValueType.Entity, null),
+                GraphNodeOp.SnapToNearestGraphEdge => (GraphValueType.Bool, null),
                 _ => (GraphValueType.Void, null)
             };
         }
@@ -811,6 +874,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Imm = constValue,
             });
             return reg;
+        }
+
+        private static int RequireSlot(
+            GraphNodeConfig node,
+            int maxSlotExclusive,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Slot < 0 || node.Slot >= maxSlotExclusive)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' slot {node.Slot} is out of range (0..{maxSlotExclusive - 1}).",
+                    graphId,
+                    node.Id));
+                return 0;
+            }
+
+            return node.Slot;
         }
 
         private static int RequireSymbol(

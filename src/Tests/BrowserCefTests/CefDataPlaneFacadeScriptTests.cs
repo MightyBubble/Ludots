@@ -11,8 +11,10 @@ public sealed class CefDataPlaneFacadeScriptTests
 	{
 		string script = CefDataPlaneFacadeScript.Create();
 
+		Assert.That(script, Does.Contain("window.ludotsBrowser"));
+		Assert.That(script, Does.Contain("name: 'ludots.browser'"));
 		Assert.That(script, Does.Contain("window.ludotsDataplane"));
-		Assert.That(script, Does.Contain("name: 'cef.ludots-dataplane'"));
+		Assert.That(script, Does.Contain("name: 'ludots.dataplane'"));
 		Assert.That(script, Does.Contain("mode: 'browser-native-bridge'"));
 		Assert.That(script, Does.Contain("postMessage(message)"));
 		Assert.That(script, Does.Contain("readSharedBuffer(descriptor)"));
@@ -58,6 +60,7 @@ public sealed class CefDataPlaneFacadeScriptTests
 	{
 		string script = CefDataPlaneFacadeScript.Create();
 
+		Assert.That(script, Does.Contain("if (!window.ludotsBrowser)"));
 		Assert.That(script, Does.Contain("if (window.ludotsDataplane)"));
 		Assert.That(script, Does.Contain("return;"));
 	}

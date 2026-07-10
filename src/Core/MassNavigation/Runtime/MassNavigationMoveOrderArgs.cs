@@ -1,6 +1,5 @@
 using System;
 using System.Numerics;
-using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.MassNavigation.Runtime;
@@ -10,47 +9,28 @@ public readonly struct MassNavigationMoveOrderArgs
     private MassNavigationMoveOrderArgs(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians,
-        Entity selectionContainer)
+        float rotationRadians)
     {
         DestinationCm = destinationCm;
         FormationMode = formationMode;
         RotationRadians = rotationRadians;
-        SelectionContainer = selectionContainer;
     }
 
     public Vector2 DestinationCm { get; }
     public MassNavigationFormationMode FormationMode { get; }
     public float RotationRadians { get; }
-    public Entity SelectionContainer { get; }
 
     public static OrderArgs Encode(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians,
-        Entity selectionContainer)
+        float rotationRadians)
     {
         ValidateFormationMode(formationMode, nameof(formationMode));
-        if (selectionContainer == Entity.Null)
-        {
-            throw new InvalidOperationException("MassNavigation move orders require an explicit selection container.");
-        }
 
-        return new OrderArgs
-        {
-            I0 = (int)formationMode,
-            F0 = rotationRadians,
-            Spatial = new OrderSpatial
-            {
-                Kind = OrderSpatialKind.WorldCm,
-                Mode = OrderCollectionMode.Single,
-                WorldCm = new Vector3(destinationCm.X, 0f, destinationCm.Y),
-            },
-            Selection = new OrderSelectionReference
-            {
-                Container = selectionContainer
-            }
-        };
+        OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(destinationCm.X, 0f, destinationCm.Y));
+        args.I0 = (int)formationMode;
+        args.F0 = rotationRadians;
+        return args;
     }
 
     public static MassNavigationMoveOrderArgs Decode(in Order order)
@@ -66,8 +46,7 @@ public readonly struct MassNavigationMoveOrderArgs
         return new MassNavigationMoveOrderArgs(
             new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z),
             formationMode,
-            order.Args.F0,
-            order.Args.Selection.Container);
+            order.Args.F0);
     }
 
     private static MassNavigationFormationMode DecodeFormationMode(int rawValue, int orderToken)

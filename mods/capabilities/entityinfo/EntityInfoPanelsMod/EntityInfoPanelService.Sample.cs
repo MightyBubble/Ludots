@@ -7,7 +7,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 
 namespace EntityInfoPanelsMod;
@@ -320,7 +320,7 @@ public sealed partial class EntityInfoPanelService
         Entity primary = Entity.Null;
         Entity owner = Entity.Null;
         EntityCollectionHandle collectionHandle = EntityCollectionHandle.Invalid;
-        EntityCollectionSourceKind sourceKind = EntityCollectionSourceKind.SelectionView;
+        EntityCollectionSourceKind sourceKind = EntityCollectionSourceKind.CollectionView;
         string sourceTitle = string.Empty;
         string sourceSummary = string.Empty;
         string viewKey = string.Empty;
@@ -329,22 +329,7 @@ public sealed partial class EntityInfoPanelService
         uint revision = 0;
 
         EntityInfoPanelTarget target = _targets[slot];
-        if (target.Kind == EntityInfoPanelTargetKind.CurrentSelectionView &&
-            SelectionContextRuntime.TryDescribeCurrentView(world, globals, out SelectionViewDescriptor descriptor))
-        {
-            container = descriptor.Container.Container;
-            primary = descriptor.Container.Primary;
-            owner = descriptor.Container.Owner;
-            sourceKind = EntityCollectionSourceKind.SelectionView;
-            viewKey = descriptor.ViewKey;
-            setKey = descriptor.Container.SetKey;
-            count = descriptor.Container.MemberCount;
-            revision = descriptor.Container.Revision;
-            sourceTitle = "Current viewed selection";
-            sourceSummary = $"{viewKey} -> {setKey} | {count} entities";
-            dirty |= SetString(_subtitles, slot, sourceSummary);
-        }
-        else if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
+        if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
                  TryResolveEntityCollectionSource(world, globals, target, out EntityCollectionView collectionView, out collectionHandle))
         {
             owner = collectionView.Owner;
@@ -358,6 +343,7 @@ public sealed partial class EntityInfoPanelService
             sourceSummary = string.IsNullOrWhiteSpace(collectionView.Summary)
                 ? $"{collectionView.Key} | {collectionView.Count} entities"
                 : collectionView.Summary;
+            viewKey = collectionView.Key;
             setKey = collectionView.Key;
             dirty |= SetString(_subtitles, slot, sourceSummary);
         }
@@ -455,14 +441,14 @@ public sealed partial class EntityInfoPanelService
     {
         return target.Kind == EntityInfoPanelTargetKind.EntityCollection
             ? "Entity collection unavailable"
-            : "Current viewed selection";
+            : "Target collection unavailable";
     }
 
     private static string ResolveMissingCollectionSummary(in EntityInfoPanelTarget target)
     {
         return target.Kind == EntityInfoPanelTargetKind.EntityCollection
             ? $"Missing collection source '{target.Key}'."
-            : "No active selection view.";
+            : "No entity collection target configured.";
     }
 
     private bool RebuildEntityCollectionCategories(int slot, World world, Entity primary, int count)

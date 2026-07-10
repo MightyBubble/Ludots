@@ -5,7 +5,7 @@
       "Name": { "Value": "Imperial Capital" },
       "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 400 } }
@@ -16,7 +16,7 @@
     "components": {
       "Name": { "Value": "Ironforge Colony" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 4800, "Y": -1200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 240 } }
@@ -27,7 +27,7 @@
     "components": {
       "Name": { "Value": "Frontier Bastion" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 9800, "Y": 3600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 260 } }
@@ -38,7 +38,7 @@
     "components": {
       "Name": { "Value": "Imperial Vanguard Fleet" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 7200, "Y": 2900 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 160 } }
@@ -49,7 +49,7 @@
     "components": {
       "Name": { "Value": "Imperial Surveyor" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 3600, "Y": -4200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 80 } }
@@ -60,7 +60,7 @@
     "components": {
       "Name": { "Value": "Imperial Relay" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -2600, "Y": 2200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 120 } }
@@ -71,7 +71,7 @@
     "components": {
       "Name": { "Value": "Federation Prime" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 15400, "Y": -600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 400 } }
@@ -82,7 +82,7 @@
     "components": {
       "Name": { "Value": "Federation Carrier Group" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 12800, "Y": 1400 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 180 } }
@@ -93,7 +93,7 @@
     "components": {
       "Name": { "Value": "Federation Border Watch" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 10400, "Y": 4200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 150 } }
@@ -104,7 +104,7 @@
     "components": {
       "Name": { "Value": "Horde Nest" },
       "Team": { "Id": 3 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -13200, "Y": 7600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 360 } }
@@ -115,7 +115,7 @@
     "components": {
       "Name": { "Value": "Horde Warpack" },
       "Team": { "Id": 3 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -9600, "Y": 5200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 170 } }
@@ -126,7 +126,7 @@
     "components": {
       "Name": { "Value": "Horde Raider Wing" },
       "Team": { "Id": 3 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -6200, "Y": 9800 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 150 } }
@@ -137,7 +137,7 @@
     "components": {
       "Name": { "Value": "Nomad Enclave" },
       "Team": { "Id": 4 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -2600, "Y": -11800 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 220 } }
@@ -148,7 +148,7 @@
     "components": {
       "Name": { "Value": "Nomad Caravan" },
       "Team": { "Id": 4 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 1800, "Y": -9200 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 110 } }
@@ -159,7 +159,7 @@
     "components": {
       "Name": { "Value": "Nomad Scout Swarm" },
       "Team": { "Id": 4 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -5400, "Y": -7600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 70 } }
@@ -170,7 +170,7 @@
     "components": {
       "Name": { "Value": "Ancient Gate" },
       "Team": { "Id": 0 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 2200, "Y": 7800 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 9999 } }
@@ -181,7 +181,7 @@
     "components": {
       "Name": { "Value": "Crystal Relay" },
       "Team": { "Id": 0 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 6200, "Y": -7600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 9999 } }
@@ -192,7 +192,7 @@
     "components": {
       "Name": { "Value": "Helium Well" },
       "Team": { "Id": 0 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -8200, "Y": -1600 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 9999 } }
@@ -203,7 +203,7 @@
     "components": {
       "Name": { "Value": "Void Rift" },
       "Team": { "Id": 0 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -10800, "Y": -9800 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 9999 } }
@@ -214,7 +214,7 @@
     "components": {
       "Name": { "Value": "Ember Storm" },
       "Team": { "Id": 0 },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 11800, "Y": 8800 } },
       "GameplayTagContainer": {},
       "AttributeBuffer": { "base": { "Health": 9999 } }

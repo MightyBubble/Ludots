@@ -17,7 +17,8 @@
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "assaultMove": {
       "orderTypeId": "assaultMove",
@@ -35,7 +36,8 @@
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "guard": {
       "orderTypeId": "guard",
@@ -53,7 +55,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "Generic.TargetEntity",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "setCombatStance": {
       "orderTypeId": "setCombatStance",
@@ -71,7 +74,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "scatter": {
       "orderTypeId": "scatter",
@@ -89,34 +93,59 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
     "attackMove": {
       "orderTypeKey": "attackMove",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget"]
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget"
+      ]
     },
     "assaultMove": {
       "orderTypeKey": "assaultMove",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget", "attackMove"]
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove"
+      ]
     },
     "guard": {
       "orderTypeKey": "guard",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget", "attackMove", "assaultMove"]
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove"
+      ]
     },
     "setCombatStance": {
       "orderTypeKey": "setCombatStance",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget", "attackMove", "assaultMove", "guard"]
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove",
+        "guard"
+      ]
     },
     "scatter": {
       "orderTypeKey": "scatter",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["moveTo", "attackTarget", "attackMove", "assaultMove", "guard"]
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove",
+        "guard"
+      ]
     }
   }
 }

@@ -39,8 +39,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         InputGate = 20,
         /// <summary>Wait for a specific GameplayEvent.</summary>
         EventGate = 21,
-        /// <summary>Wait for target selection response.</summary>
-        SelectionGate = 22,
+        /// <summary>Wait for an externally provided target collection response.</summary>
+        TargetCollectionGate = 22,
 
         // ── Control ──
 
@@ -111,7 +111,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed int ItemTemplateIds[MAX_ITEMS];
         /// <summary>Index into the CallerParams pool (0xFF = none).</summary>
         public fixed byte ItemCallerParamsIdx[MAX_ITEMS];
-        /// <summary>Extra payload (graph program ID for GraphSignal, selection kind for SelectionGate, etc.).</summary>
+        /// <summary>Extra payload (graph program ID for GraphSignal, target collection kind for TargetCollectionGate, etc.).</summary>
         public fixed int ItemPayloadA[MAX_ITEMS];
 
         public ExecItemKind GetKind(int index) { fixed (byte* p = ItemKinds) return (ExecItemKind)p[index]; }
@@ -198,7 +198,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public Fix64Vec2 TargetOriginPosCm;
         public byte HasTargetOriginPos;
 
-        /// <summary>Multi-target storage for SelectionGate results.</summary>
+        /// <summary>Multi-target storage for TargetCollectionGate results.</summary>
         public int MultiTargetCount;
         public fixed int MultiTargetIds[64];
         public fixed int MultiTargetWorldIds[64];
@@ -215,13 +215,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public int GateDeadline;
         /// <summary>Tag ID the EventGate is waiting for.</summary>
         public int WaitTagId;
-        /// <summary>Request ID for InputGate/SelectionGate.</summary>
+        /// <summary>Request ID for InputGate/TargetCollectionGate.</summary>
         public int WaitRequestId;
         /// <summary>Active clock for this execution.</summary>
         public GasClockId ActiveClockId;
         /// <summary>True when this instance is executing a toggle ability's deactivate timeline.</summary>
         public bool IsToggleDeactivating;
-        /// <summary>Progression Use requirement needs target context from a later input/selection gate.</summary>
+        /// <summary>Progression Use requirement needs target context from a later input or target collection gate.</summary>
         public byte PendingProgressionUseRequirement;
         public int PendingProgressionRequirementId;
 

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "Graph.Lifecycle.DeployConsumeSource",
+    "kind": "Effect",
+    "entry": "begin",
+    "nodes": [
+      { "id": "begin", "op": "BeginLifecycleTransaction", "next": "materialize" },
+      { "id": "materialize", "op": "InvokeBuiltin", "builtinHandler": "MaterializeTemplate", "next": "copyIdentity" },
+      { "id": "copyIdentity", "op": "InvokeBuiltin", "builtinHandler": "CopyIdentityComponents", "next": "copyAttrs" },
+      { "id": "copyAttrs", "op": "InvokeBuiltin", "builtinHandler": "CopyAttributeSlice", "next": "clearFx" },
+      { "id": "clearFx", "op": "InvokeBuiltin", "builtinHandler": "ClearActiveEffects", "next": "transferId" },
+      { "id": "transferId", "op": "InvokeBuiltin", "builtinHandler": "TransferStableId", "next": "consume" },
+      { "id": "consume", "op": "InvokeBuiltin", "builtinHandler": "ConsumeEntity" }
+    ]
+  }
+]

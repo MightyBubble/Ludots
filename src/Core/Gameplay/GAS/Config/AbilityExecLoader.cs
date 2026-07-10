@@ -22,6 +22,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly ConfigPipeline _pipeline;
         private readonly AbilityDefinitionRegistry _registry;
         private const int MaxToggleActiveEffects = 4;
+        private static readonly string[] RemovedAimVisualFieldNames =
+        {
+            "aimVisual",
+            "areaPerformerId",
+            "rangeCirclePerformerId",
+            "previewPerformerId",
+            "performerId",
+        };
 
         public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
         {
@@ -90,40 +98,36 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var def = new AbilityDefinition();
 
             // ── exec block ──
-            if (obj["exec"] is not JsonObject execObj)
+            if (obj["exec"] is JsonObject execObj)
+            {
+                def.ExecSpec = CompileExecSpec(execObj, id, path);
+                CompileCallerParamsPool(execObj, id, path, out var pool, out bool hasPool);
+                def.ExecCallerParamsPool = pool;
+                def.HasExecCallerParamsPool = hasPool;
+            }
+            else
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' field 'exec' is required in '{path}'.");
+                    $"Ability '{id}' in '{path}' field 'exec' is required.");
             }
-
-            def.ExecSpec = CompileExecSpec(execObj, id, path);
-            CompileCallerParamsPool(execObj, id, path, out var pool, out bool hasPool);
-            def.ExecCallerParamsPool = pool;
-            def.HasExecCallerParamsPool = hasPool;
 
             // ── onActivateEffects ──
             if (obj["onActivateEffects"] is JsonArray effectArr)
             {
                 var onActivate = default(AbilityOnActivateEffects);
-                for (int effectIndex = 0; effectIndex < effectArr.Count; effectIndex++)
+                for (int i = 0; i < effectArr.Count; i++)
                 {
-                    var item = effectArr[effectIndex];
-                    string effectName = item?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(effectName))
-                    {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' field 'onActivateEffects[{effectIndex}]' in '{path}' must be a non-empty effect template key.");
-                    }
-
+                    string effectName = RequireNonEmptyString(effectArr[i], $"onActivateEffects[{i}]", id, path);
                     int tid = EffectTemplateIdRegistry.GetId(effectName);
                     if (tid <= 0)
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' field 'onActivateEffects[{effectIndex}]' in '{path}' references unknown effect template '{effectName}'.");
+                            $"Ability '{id}' in '{path}' field 'onActivateEffects[{i}]' references unknown effect template '{effectName}'.");
                     }
 
                     onActivate.Add(tid);
                 }
+
                 def.HasOnActivateEffects = onActivate.Count > 0;
                 def.OnActivateEffects = onActivate;
             }
@@ -140,22 +144,58 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var blockTags = default(AbilityActivationBlockTags);
                 if (blockObj["requiredAll"] is JsonArray reqArr)
                 {
-                    for (int tagIndex = 0; tagIndex < reqArr.Count; tagIndex++)
+                    for (int i = 0; i < reqArr.Count; i++)
                     {
-                        string tag = RequireString(reqArr[tagIndex], id, path, $"blockTags.requiredAll[{tagIndex}]");
+                        string tag = RequireNonEmptyString(reqArr[i], $"blockTags.requiredAll[{i}]", id, path);
                         blockTags.RequiredAll.AddTag(TagRegistry.Register(tag));
                     }
                 }
                 if (blockObj["blockedAny"] is JsonArray blkArr)
                 {
-                    for (int tagIndex = 0; tagIndex < blkArr.Count; tagIndex++)
+                    for (int i = 0; i < blkArr.Count; i++)
                     {
-                        string tag = RequireString(blkArr[tagIndex], id, path, $"blockTags.blockedAny[{tagIndex}]");
+                        string tag = RequireNonEmptyString(blkArr[i], $"blockTags.blockedAny[{i}]", id, path);
                         blockTags.BlockedAny.AddTag(TagRegistry.Register(tag));
                     }
                 }
                 def.HasActivationBlockTags = true;
                 def.ActivationBlockTags = blockTags;
+            }
+
+            // ── catalogTags (RFC-0065 DEC-14) ──
+            if (obj["catalogTags"] is JsonArray catalogArr)
+            {
+                var catalogTags = default(GameplayTagContainer);
+                bool hasCatalogTags = false;
+                foreach (var t in catalogArr)
+                {
+                    string tag = t?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(tag))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' catalogTags entries must be non-empty strings.");
+                    }
+
+                    catalogTags.AddTag(TagRegistry.Register(tag));
+                    hasCatalogTags = true;
+                }
+
+                def.CatalogTags = catalogTags;
+                def.HasCatalogTags = hasCatalogTags;
+            }
+
+            // ── interactionContextProfile (RFC-0065 CTX-6) ──
+            if (obj["interactionContextProfile"] != null)
+            {
+                string contextProfileId = obj["interactionContextProfile"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(contextProfileId))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' interactionContextProfile must be a non-empty string.");
+                }
+
+                def.InteractionContextProfileId = contextProfileId.Trim();
+                def.HasInteractionContextProfile = true;
             }
 
             if (obj["activationPrecondition"] is JsonObject preconditionObj)
@@ -171,11 +211,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasToggleSpec = def.ToggleSpec.ToggleTagId > 0;
             }
 
-            // ── indicator ──
-            if (obj["indicator"] is JsonObject indicatorObj)
+            // ── targeting ──
+            if (obj["indicator"] != null)
             {
-                def.Indicator = CompileIndicator(indicatorObj, id, path);
-                def.HasIndicator = true;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+            }
+
+            RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
+
+            if (obj["targeting"] is JsonObject targetingObj)
+            {
+                def.Targeting = CompileTargeting(targetingObj, id, path);
+                def.HasTargeting = true;
             }
 
             if (obj["presentation"] is JsonObject presentationObj)
@@ -223,15 +271,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var spec = default(AbilityExecSpec);
 
             // clockId
-            string clockStr = RequireString(execObj, "clockId", id, path, "exec.clockId");
+            string clockStr = RequireNonEmptyString(execObj["clockId"], "exec.clockId", id, path);
             spec.ClockId = ParseClockId(clockStr);
 
             // interruptAny
             if (execObj["interruptAny"] is JsonArray intArr)
             {
-                for (int tagIndex = 0; tagIndex < intArr.Count; tagIndex++)
+                for (int i = 0; i < intArr.Count; i++)
                 {
-                    string tag = RequireString(intArr[tagIndex], id, path, $"exec.interruptAny[{tagIndex}]");
+                    string tag = RequireNonEmptyString(intArr[i], $"exec.interruptAny[{i}]", id, path);
                     spec.InterruptAny.AddTag(TagRegistry.Register(tag));
                 }
             }
@@ -242,19 +290,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (itemsArr.Count > AbilityExecSpec.MAX_ITEMS)
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' field 'exec.items' in '{path}' contains {itemsArr.Count} items, max {AbilityExecSpec.MAX_ITEMS}.");
+                        $"Ability '{id}' in '{path}' field 'exec.items' contains {itemsArr.Count} items, max {AbilityExecSpec.MAX_ITEMS}.");
                 }
 
                 int idx = 0;
-                for (int sourceIndex = 0; sourceIndex < itemsArr.Count; sourceIndex++)
+                foreach (var itemNode in itemsArr)
                 {
-                    if (itemsArr[sourceIndex] is not JsonObject itemObj)
+                    if (itemNode is not JsonObject itemObj)
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' field 'exec.items[{sourceIndex}]' in '{path}' must be an object.");
+                            $"Ability '{id}' in '{path}' field 'exec.items[{idx}]' must be an object.");
                     }
 
-                    CompileItem(itemObj, ref spec, idx, sourceIndex, id, path);
+                    CompileItem(itemObj, ref spec, idx, id, path);
                     idx++;
                 }
             }
@@ -320,13 +368,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return cooldown;
         }
 
-        private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, int sourceIndex, string id, string path)
+        private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)
         {
-            string itemPath = $"exec.items[{sourceIndex}]";
-            string kindStr = RequireString(itemObj, "kind", id, path, $"{itemPath}.kind");
+            string kindStr = itemObj["kind"]?.GetValue<string>() ?? "None";
             var kind = ParseItemKind(kindStr);
-            int tick = RequireInt(itemObj, "tick", id, path, $"{itemPath}.tick");
-            int durationTicks = TryGetInt(itemObj, "duration", out int durationValue) ? durationValue : 0;
+            if (itemObj["tick"] is not JsonNode tickNode)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'exec.items[{idx}].tick' is required.");
+            }
+
+            int tick = tickNode.GetValue<int>();
+            int durationTicks = itemObj["duration"]?.GetValue<int>() ?? 0;
 
             GasClockId clockId = default;
             string clockStr = itemObj["clock"]?.GetValue<string>();
@@ -354,8 +407,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 callerParamsIdx = (byte)cpNode.GetValue<int>();
             }
 
-            int payloadA = TryGetInt(itemObj, "payloadA", out int payloadValue) ? payloadValue : 0;
-            bool hasPayloadA = itemObj["payloadA"] is JsonNode;
+            int payloadA = itemObj["payloadA"]?.GetValue<int>() ?? 0;
+
+            if (kind == ExecItemKind.InputGate && itemObj["payloadA"] is null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'exec.items[{idx}].payloadA' is required for InputGate.");
+            }
 
             if ((kind == ExecItemKind.EffectClip || kind == ExecItemKind.EffectSignal) &&
                 itemObj["dispatchTarget"] is JsonValue dispatchTargetNode)
@@ -367,73 +425,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // For GraphSignal, "graph" field maps to payloadA via GraphIdRegistry
             if (kind == ExecItemKind.GraphSignal)
             {
-                string graphName = RequireString(itemObj, "graph", id, path, $"{itemPath}.graph");
+                string graphName = RequireNonEmptyString(itemObj["graph"], $"exec.items[{idx}].graph", id, path);
                 payloadA = GraphIdRegistry.GetId(graphName);
                 if (payloadA <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' field '{itemPath}.graph' in '{path}' references unknown graph '{graphName}'.");
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].graph' references unknown graph '{graphName}'.");
                 }
             }
 
-            ValidateItemFields(kind, templateId, tagId, durationTicks, hasPayloadA, id, path, itemPath);
-
             spec.SetItem(idx, kind, tick, durationTicks, clockId, tagId, templateId, callerParamsIdx, payloadA);
-        }
-
-        private static void ValidateItemFields(
-            ExecItemKind kind,
-            int templateId,
-            int tagId,
-            int durationTicks,
-            bool hasPayloadA,
-            string id,
-            string path,
-            string itemPath)
-        {
-            switch (kind)
-            {
-                case ExecItemKind.EffectClip:
-                    if (templateId <= 0) throw RequiredItemField(id, path, itemPath, "template", kind);
-                    if (durationTicks <= 0) throw RequiredItemField(id, path, itemPath, "duration", kind);
-                    break;
-                case ExecItemKind.TagClip:
-                case ExecItemKind.TagClipTarget:
-                    if (tagId <= 0) throw RequiredItemField(id, path, itemPath, "tag", kind);
-                    if (durationTicks <= 0) throw RequiredItemField(id, path, itemPath, "duration", kind);
-                    break;
-                case ExecItemKind.EffectSignal:
-                    if (templateId <= 0) throw RequiredItemField(id, path, itemPath, "template", kind);
-                    break;
-                case ExecItemKind.EventSignal:
-                case ExecItemKind.TagSignal:
-                case ExecItemKind.TagSignalTarget:
-                    if (tagId <= 0) throw RequiredItemField(id, path, itemPath, "tag", kind);
-                    break;
-                case ExecItemKind.InputGate:
-                case ExecItemKind.SelectionGate:
-                    if (tagId <= 0) throw RequiredItemField(id, path, itemPath, "tag", kind);
-                    if (!hasPayloadA) throw RequiredItemField(id, path, itemPath, "payloadA", kind);
-                    break;
-                case ExecItemKind.EventGate:
-                    if (tagId <= 0 && !hasPayloadA)
-                    {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' field '{itemPath}' in '{path}' requires either 'tag' or 'payloadA' for item kind '{kind}'.");
-                    }
-                    break;
-            }
-        }
-
-        private static InvalidOperationException RequiredItemField(
-            string id,
-            string path,
-            string itemPath,
-            string fieldName,
-            ExecItemKind kind)
-        {
-            return new InvalidOperationException(
-                $"Ability '{id}' field '{itemPath}.{fieldName}' in '{path}' is required for item kind '{kind}'.");
         }
 
         private static ExecEffectDispatchTarget ParseExecEffectDispatchTarget(string rawValue, string abilityId, int itemIndex, string path)
@@ -463,44 +464,32 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (paramsArr[setIndex] is not JsonObject setObj)
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' field 'exec.callerParams[{setIndex}]' in '{path}' must be an object.");
+                        $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}]' must be an object.");
                 }
 
                 var cp = default(EffectConfigParams);
 
-                if (setObj["entries"] is not JsonArray entriesArr)
+                if (setObj["entries"] is JsonArray entriesArr)
                 {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' field 'exec.callerParams[{setIndex}].entries' in '{path}' must be a non-empty array.");
-                }
-
-                if (entriesArr.Count == 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' field 'exec.callerParams[{setIndex}].entries' in '{path}' must be a non-empty array.");
-                }
-
-                for (int entryIndex = 0; entryIndex < entriesArr.Count; entryIndex++)
-                {
-                    if (entriesArr[entryIndex] is not JsonObject entryObj)
+                    for (int entryIndex = 0; entryIndex < entriesArr.Count; entryIndex++)
                     {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' field 'exec.callerParams[{setIndex}].entries[{entryIndex}]' in '{path}' must be an object.");
+                        if (entriesArr[entryIndex] is not JsonObject entryObj)
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries[{entryIndex}]' must be an object.");
+                        }
+
+                        string key = RequireNonEmptyString(entryObj["key"], $"exec.callerParams[{setIndex}].entries[{entryIndex}].key", id, path);
+                        int keyId = ConfigKeyRegistry.Register(key);
+
+                        if (entryObj["value"] is JsonNode valNode)
+                        {
+                            float val = valNode.GetValue<JsonElement>().ValueKind == JsonValueKind.Number
+                                ? valNode.GetValue<float>()
+                                : float.Parse(valNode.GetValue<string>(), CultureInfo.InvariantCulture);
+                            cp.TryAddFloat(keyId, val);
+                        }
                     }
-
-                    string key = RequireString(entryObj, "key", id, path, $"exec.callerParams[{setIndex}].entries[{entryIndex}].key");
-                    int keyId = ConfigKeyRegistry.Register(key);
-
-                    if (entryObj["value"] is not JsonNode valNode)
-                    {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' field 'exec.callerParams[{setIndex}].entries[{entryIndex}].value' is required in '{path}'.");
-                    }
-
-                    float val = valNode.GetValue<JsonElement>().ValueKind == JsonValueKind.Number
-                        ? valNode.GetValue<float>()
-                        : float.Parse(valNode.GetValue<string>(), CultureInfo.InvariantCulture);
-                    cp.TryAddFloat(keyId, val);
                 }
 
                 if (!pool.TryAdd(in cp))
@@ -512,7 +501,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        // ──────────────── Toggle / Indicator ────────────────
+        // ──────────────── Toggle / Targeting ────────────────
 
         private static AbilityToggleSpec CompileToggleSpec(JsonObject toggleObj, string id, string path)
         {
@@ -538,9 +527,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
 
                 int activeCount = 0;
-                for (int effectIndex = 0; effectIndex < activeEffects.Count; effectIndex++)
+                for (int i = 0; i < activeEffects.Count; i++)
                 {
-                    string effectId = RequireString(activeEffects[effectIndex], id, path, $"toggleSpec.activeEffects[{effectIndex}]");
+                    string effectId = RequireNonEmptyString(activeEffects[i], $"toggleSpec.activeEffects[{i}]", id, path);
 
                     int templateId = EffectTemplateIdRegistry.GetId(effectId);
                     if (templateId <= 0)
@@ -568,112 +557,86 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return toggleSpec;
         }
 
-        private static AbilityIndicatorConfig CompileIndicator(JsonObject indicatorObj, string id, string path)
+        private static AbilityTargetingConfig CompileTargeting(JsonObject targetingObj, string id, string path)
         {
-            string shapeValue = RequireString(indicatorObj, "shape", id, path, "indicator.shape");
-            TargetShape shape = ParseTargetShape(shapeValue, id, path);
-            bool showRangeCircle = RequireBool(indicatorObj, "showRangeCircle", id, path, "indicator.showRangeCircle");
-            if (!showRangeCircle)
+            if (targetingObj["range"] != null)
             {
-                RequireAbsent(indicatorObj, "rangeCircleColor", id, path, "indicator.rangeCircleColor");
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.range' is deprecated; use 'targeting.castRangeCm'.");
             }
 
-            bool requiresRange = showRangeCircle || ShapeRequiresRange(shape);
-            bool requiresRadius = ShapeRequiresRadius(shape);
-            float range = requiresRange
-                ? RequirePositiveFloat(indicatorObj, "range", id, path, "indicator.range")
-                : ReadOptionalPositiveFloat(indicatorObj, "range", id, path, "indicator.range");
-            float radius = requiresRadius
-                ? RequirePositiveFloat(indicatorObj, "radius", id, path, "indicator.radius")
-                : ReadOptionalPositiveFloat(indicatorObj, "radius", id, path, "indicator.radius");
-            float innerRadius = TryGetFloat(indicatorObj, "innerRadius", out float innerRadiusValue) ? innerRadiusValue : 0f;
-            float angle = TryGetFloat(indicatorObj, "angle", out float angleValue) ? angleValue : 0f;
-
-            var indicator = new AbilityIndicatorConfig
+            if (targetingObj["castRangeCm"] == null)
             {
-                Shape = shape,
-                Range = range,
-                Radius = radius,
-                InnerRadius = innerRadius,
-                Angle = angle,
-                ValidColor = ParseColor(
-                    indicatorObj["validColor"],
-                    new System.Numerics.Vector4(0.20f, 0.85f, 0.45f, 0.35f),
-                    id,
-                    path,
-                    "indicator.validColor"),
-                InvalidColor = ParseColor(
-                    indicatorObj["invalidColor"],
-                    new System.Numerics.Vector4(0.95f, 0.30f, 0.25f, 0.35f),
-                    id,
-                    path,
-                    "indicator.invalidColor"),
-                RangeCircleColor = showRangeCircle ? ParseColor(indicatorObj["rangeCircleColor"], id, path, "indicator.rangeCircleColor") : default,
-                ShowRangeCircle = showRangeCircle
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.castRangeCm' is required when 'targeting' is present.");
+            }
+
+            if (targetingObj["impactEffect"] == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' is required when 'targeting' is present.");
+            }
+
+            string impactEffect = targetingObj["impactEffect"]!.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(impactEffect))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' must be a non-empty effect template id.");
+            }
+
+            int impactEffectTemplateId = EffectTemplateIdRegistry.GetId(impactEffect);
+            if (impactEffectTemplateId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' references unknown effect template '{impactEffect}'.");
+            }
+
+            var targeting = new AbilityTargetingConfig
+            {
+                CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
+                ImpactEffectTemplateId = impactEffectTemplateId
             };
 
-            if (indicatorObj["preview"] is JsonObject previewObj)
+            if (targeting.CastRangeCm < 0f)
             {
-                indicator.Preview = new AbilityIndicatorPreviewConfig
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.castRangeCm' must be non-negative.");
+            }
+
+            return targeting;
+        }
+
+        private static void RejectRemovedAimVisualFields(JsonNode? node, string id, string path, string currentPath)
+        {
+            if (node is JsonObject obj)
+            {
+                foreach ((string key, JsonNode? child) in obj)
                 {
-                    PerformerId = previewObj["performerId"]?.GetValue<string>() ?? string.Empty,
-                    ScaleX = previewObj["scaleX"]?.GetValue<float>() ?? 0f,
-                    ScaleY = previewObj["scaleY"]?.GetValue<float>() ?? 0f,
-                    ScaleZ = previewObj["scaleZ"]?.GetValue<float>() ?? 0f,
-                    OffsetY = previewObj["offsetY"]?.GetValue<float>() ?? 0f,
-                };
+                    string fieldPath = string.IsNullOrEmpty(currentPath) ? key : $"{currentPath}.{key}";
+                    for (int i = 0; i < RemovedAimVisualFieldNames.Length; i++)
+                    {
+                        if (string.Equals(key, RemovedAimVisualFieldNames[i], StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Performer event-condition-action rules.");
+                        }
+                    }
+
+                    RejectRemovedAimVisualFields(child, id, path, fieldPath);
+                }
+
+                return;
             }
 
-            if (indicatorObj["angleDeg"] is JsonNode angleDegNode)
+            if (node is not JsonArray arr)
             {
-                indicator.Angle = MathF.PI * angleDegNode.GetValue<float>() / 180f;
+                return;
             }
 
-            ValidateIndicatorShapeSemantics(indicator, id, path);
-            return indicator;
-        }
-
-        private static void ValidateIndicatorShapeSemantics(AbilityIndicatorConfig indicator, string id, string path)
-        {
-            if (indicator.Shape == TargetShape.Single && indicator.Radius > 0f)
+            for (int i = 0; i < arr.Count; i++)
             {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field 'indicator.radius' in '{path}' is not valid for shape 'Single'.");
+                RejectRemovedAimVisualFields(arr[i], id, path, $"{currentPath}[{i}]");
             }
-
-            if (indicator.InnerRadius < 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field 'indicator.innerRadius' in '{path}' must be non-negative.");
-            }
-
-            if (indicator.Shape == TargetShape.Ring && indicator.InnerRadius <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field 'indicator.innerRadius' in '{path}' is required and must be > 0 for shape 'Ring'.");
-            }
-
-            if (indicator.Shape == TargetShape.Ring && indicator.InnerRadius >= indicator.Radius)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field 'indicator.innerRadius' in '{path}' must be less than indicator.radius for shape 'Ring'.");
-            }
-
-            if (indicator.Shape == TargetShape.Cone && indicator.Angle <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field 'indicator.angleDeg' in '{path}' is required for shape 'Cone'.");
-            }
-        }
-
-        private static bool ShapeRequiresRange(TargetShape shape)
-        {
-            return shape is TargetShape.Cone or TargetShape.Line or TargetShape.Rectangle;
-        }
-
-        private static bool ShapeRequiresRadius(TargetShape shape)
-        {
-            return shape is TargetShape.Circle or TargetShape.Cone or TargetShape.Line or TargetShape.Ring or TargetShape.Rectangle;
         }
 
         private static AbilityPresentationConfig? CompilePresentation(JsonObject presentationObj, string id, string path)
@@ -705,9 +668,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeIconGlyphs)
                 {
-                    string canonicalModeKey = RequireInteractionModeKey(modeKey, id, path, "presentation.modeIconGlyphs");
-                    string glyph = RequireString(valueNode, id, path, $"presentation.modeIconGlyphs.{canonicalModeKey}");
-                    config.ModeIconGlyphOverrides[canonicalModeKey] = glyph;
+                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeIconGlyphs.{modeKey}", id, path);
+                    string glyph = RequireNonEmptyString(valueNode, $"presentation.modeIconGlyphs.{modeKey}", id, path);
+                    config.ModeIconGlyphOverrides[modeName] = glyph;
                 }
             }
 
@@ -715,13 +678,48 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeHints)
                 {
-                    string canonicalModeKey = RequireInteractionModeKey(modeKey, id, path, "presentation.modeHints");
-                    string hint = RequireString(valueNode, id, path, $"presentation.modeHints.{canonicalModeKey}");
-                    config.ModeHintOverrides[canonicalModeKey] = hint;
+                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHints.{modeKey}", id, path);
+                    string hint = RequireNonEmptyString(valueNode, $"presentation.modeHints.{modeKey}", id, path);
+                    config.ModeHintOverrides[modeName] = hint;
                 }
             }
 
             return config;
+        }
+
+        private static string RequireNonEmptyString(JsonNode? node, string fieldPath, string id, string path)
+        {
+            if (node is null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' is required and must be a non-empty string.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must be a non-empty string.");
+            }
+
+            return value.Trim();
+        }
+
+        private static string RequireKnownInteractionMode(string? modeKey, string fieldPath, string id, string path)
+        {
+            if (string.IsNullOrWhiteSpace(modeKey))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty interaction mode key.");
+            }
+
+            if (!Enum.TryParse(modeKey, ignoreCase: true, out InteractionModeType parsed))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' uses unknown interaction mode '{modeKey}'.");
+            }
+
+            return parsed.ToString();
         }
 
         private static AbilityInputBindingOverride CompileInputBindingOverride(JsonObject inputObj, string id, string path)
@@ -800,87 +798,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return result;
         }
 
-        private static TargetShape ParseTargetShape(string value, string id, string path)
-        {
-            return value switch
-            {
-                "Self" => TargetShape.Self,
-                "Single" => TargetShape.Single,
-                "Circle" => TargetShape.Circle,
-                "Cone" => TargetShape.Cone,
-                "Line" => TargetShape.Line,
-                "Ring" => TargetShape.Ring,
-                "Rectangle" => TargetShape.Rectangle,
-                _ => throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' indicator uses unsupported shape '{value}'.")
-            };
-        }
-
-        private static System.Numerics.Vector4 ParseColor(
-            JsonNode? node,
-            System.Numerics.Vector4 defaultValue,
-            string id,
-            string path,
-            string fieldPath)
-        {
-            return node is null
-                ? defaultValue
-                : ParseColor(node, id, path, fieldPath);
-        }
-
-        private static System.Numerics.Vector4 ParseColor(JsonNode? node, string id, string path, string fieldPath)
-        {
-            if (node is JsonArray arr)
-            {
-                if (arr.Count != 4)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' field '{fieldPath}' in '{path}' must contain exactly four numeric components.");
-                }
-
-                float r = arr[0]?.GetValue<float>() ?? throw RequiredField(id, path, $"{fieldPath}[0]");
-                float g = arr[1]?.GetValue<float>() ?? throw RequiredField(id, path, $"{fieldPath}[1]");
-                float b = arr[2]?.GetValue<float>() ?? throw RequiredField(id, path, $"{fieldPath}[2]");
-                float a = arr[3]?.GetValue<float>() ?? throw RequiredField(id, path, $"{fieldPath}[3]");
-                return new System.Numerics.Vector4(r, g, b, a);
-            }
-
-            string? hex = node?.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(hex))
-            {
-                throw RequiredField(id, path, fieldPath);
-            }
-
-            hex = hex.Trim();
-            if (hex.StartsWith('#'))
-            {
-                hex = hex[1..];
-            }
-
-            if (hex.Length != 6 && hex.Length != 8)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field '{fieldPath}' in '{path}' must be #RRGGBB or #RRGGBBAA.");
-            }
-
-            if (!byte.TryParse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte rByte) ||
-                !byte.TryParse(hex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte gByte) ||
-                !byte.TryParse(hex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte bByte) ||
-                (hex.Length == 8 && !byte.TryParse(hex.Substring(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _)))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' field '{fieldPath}' in '{path}' contains invalid hex color '{node.GetValue<string>()}'.");
-            }
-
-            byte aByte = hex.Length == 8 ? byte.Parse(hex.Substring(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) : (byte)255;
-
-            return new System.Numerics.Vector4(
-                rByte / 255f,
-                gByte / 255f,
-                bByte / 255f,
-                aByte / 255f);
-        }
-
         // ──────────────── Parsing helpers ────────────────
 
         private static GasClockId ParseClockId(string str)
@@ -889,8 +806,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 "FixedFrame" => GasClockId.FixedFrame,
                 "Step" => GasClockId.Step,
-                "Turn" => GasClockId.Turn,
-                _ => throw new InvalidOperationException($"Unknown GasClockId '{str}'. Valid values: FixedFrame, Step, Turn."),
+                "EntityLocal" => GasClockId.EntityLocal,
+                "Turn" => throw new InvalidOperationException("GasClockId 'Turn' has been removed. Use Step for turn durations or EntityLocal for entity-scoped logic time."),
+                _ => throw new InvalidOperationException($"Unknown GasClockId '{str}'. Valid values: FixedFrame, Step, EntityLocal."),
             };
         }
 
@@ -908,172 +826,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "TagSignalTarget" => ExecItemKind.TagSignalTarget,
                 "InputGate" => ExecItemKind.InputGate,
                 "EventGate" => ExecItemKind.EventGate,
-                "SelectionGate" => ExecItemKind.SelectionGate,
+                "TargetCollectionGate" => ExecItemKind.TargetCollectionGate,
                 "End" => ExecItemKind.End,
-                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, SelectionGate, End."),
+                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
             };
-        }
-
-        private static string RequireString(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (obj[propertyName] is not JsonNode node)
-            {
-                throw RequiredField(abilityId, path, fieldPath);
-            }
-
-            string value = node.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw RequiredField(abilityId, path, fieldPath);
-            }
-
-            return value;
-        }
-
-        private static string RequireString(JsonNode? node, string abilityId, string path, string fieldPath)
-        {
-            if (node is not JsonValue valueNode ||
-                !valueNode.TryGetValue<string>(out string? value) ||
-                string.IsNullOrWhiteSpace(value))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}' in '{path}' must be a non-empty string.");
-            }
-
-            return value;
-        }
-
-        private static string RequireInteractionModeKey(string? modeKey, string abilityId, string path, string fieldPath)
-        {
-            if (string.IsNullOrWhiteSpace(modeKey))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}' in '{path}' must use non-empty interaction mode keys.");
-            }
-
-            if (!string.Equals(modeKey, modeKey.Trim(), StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}.{modeKey}' in '{path}' must not contain leading or trailing whitespace.");
-            }
-
-            if (!Enum.TryParse(modeKey, ignoreCase: true, out InteractionModeType mode) ||
-                !Enum.IsDefined(typeof(InteractionModeType), mode))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}.{modeKey}' in '{path}' references unknown interaction mode '{modeKey}'.");
-            }
-
-            return mode.ToString();
-        }
-
-        private static int RequireInt(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (!TryGetInt(obj, propertyName, out int value))
-            {
-                throw RequiredField(abilityId, path, fieldPath);
-            }
-
-            return value;
-        }
-
-        private static bool TryGetInt(JsonObject obj, string propertyName, out int value)
-        {
-            value = 0;
-            if (obj[propertyName] is not JsonNode node)
-            {
-                return false;
-            }
-
-            value = node.GetValue<int>();
-            return true;
-        }
-
-        private static float RequireFloat(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (!TryGetFloat(obj, propertyName, out float value))
-            {
-                throw RequiredField(abilityId, path, fieldPath);
-            }
-
-            return value;
-        }
-
-        private static float RequirePositiveFloat(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            float value = RequireFloat(obj, propertyName, abilityId, path, fieldPath);
-            if (value <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}' in '{path}' must be > 0.");
-            }
-
-            return value;
-        }
-
-        private static float ReadOptionalPositiveFloat(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (!TryGetFloat(obj, propertyName, out float value))
-            {
-                return 0f;
-            }
-
-            if (value <= 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}' in '{path}' must be omitted or > 0.");
-            }
-
-            return value;
-        }
-
-        private static bool TryGetFloat(JsonObject obj, string propertyName, out float value)
-        {
-            value = 0f;
-            if (obj[propertyName] is not JsonNode node)
-            {
-                return false;
-            }
-
-            value = node.GetValue<float>();
-            return true;
-        }
-
-        private static bool RequireBool(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (obj[propertyName] is not JsonNode node)
-            {
-                throw RequiredField(abilityId, path, fieldPath);
-            }
-
-            return node.GetValue<bool>();
-        }
-
-        private static bool TryGetBool(JsonObject obj, string propertyName, out bool value)
-        {
-            value = false;
-            if (obj[propertyName] is not JsonNode node)
-            {
-                return false;
-            }
-
-            value = node.GetValue<bool>();
-            return true;
-        }
-
-        private static void RequireAbsent(JsonObject obj, string propertyName, string abilityId, string path, string fieldPath)
-        {
-            if (obj[propertyName] is not null)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{abilityId}' field '{fieldPath}' in '{path}' is only valid when indicator.showRangeCircle is true.");
-            }
-        }
-
-        private static InvalidOperationException RequiredField(string abilityId, string path, string fieldPath)
-        {
-            return new InvalidOperationException(
-                $"Ability '{abilityId}' field '{fieldPath}' is required in '{path}'.");
         }
     }
 }

@@ -121,8 +121,6 @@ namespace Ludots.Tests.GAS
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
                 var inputResp = new InputResponseBuffer();
-                var selReq = new SelectionRequestQueue();
-                var selResp = new SelectionResponseBuffer();
                 var incomingOrders = new OrderQueue();
                 var chainOrders = new OrderQueue();
                 var eventBus = new GameplayEventBus();
@@ -135,7 +133,7 @@ namespace Ludots.Tests.GAS
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var timedTags = new TimedTagExpirationSystem(world, clock);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, selReq, selResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -199,7 +197,7 @@ namespace Ludots.Tests.GAS
 
                 var empExec = default(AbilityExecSpec);
                 empExec.ClockId = GasClockId.Step;
-                empExec.SetItem(0, ExecItemKind.SelectionGate, tick: 0);
+                empExec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0);
                 empExec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
                 empExec.SetItem(2, ExecItemKind.End, tick: 0);
                 var empAbility = world.Create(new AbilityTemplate(), empExec);
@@ -268,22 +266,15 @@ namespace Ludots.Tests.GAS
                 sb.AppendLine("[MUD][SC2] 敌方探测对你施加【显形】。");
                 RunFrame(2);
 
-                var resp = default(SelectionResponse);
-                resp.RequestId = 4;
-                resp.ResponseTagId = 900;
-                resp.Count = 2;
-                unsafe
+                var resp = new InputResponse
                 {
-                    resp.EntityIds[0] = enemy.Id;
-                    resp.WorldIds[0] = enemy.WorldId;
-                    resp.Versions[0] = enemy.Version;
-                    resp.EntityIds[1] = enemy2.Id;
-                    resp.WorldIds[1] = enemy2.WorldId;
-                    resp.Versions[1] = enemy2.Version;
-                }
-                selResp.TryAdd(resp);
+                    RequestId = 4,
+                    ResponseTagId = 900,
+                    Target = enemy,
+                };
+                inputResp.TryAdd(resp);
                 incomingOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = orderCastAbility, Actor = player, Target = enemy, Args = new OrderArgs { I0 = 2 } });
-                sb.AppendLine("[MUD][SC2] 你投掷【EMP】覆盖两名敌人。");
+                sb.AppendLine("[MUD][SC2] 你投掷【EMP】命中目标敌人。");
                 RunFrame(3);
 
                 incomingOrders.TryEnqueue(new Order { OrderId = 5, OrderTypeId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 3 } });
@@ -348,7 +339,6 @@ namespace Ludots.Tests.GAS
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
                 var inputResp = new InputResponseBuffer();
-                var selResp = new SelectionResponseBuffer();
                 var incomingOrders = new OrderQueue();
                 var chainOrders = new OrderQueue();
                 var eventBus = new GameplayEventBus();
@@ -477,16 +467,14 @@ namespace Ludots.Tests.GAS
                 var chainOrders = new OrderQueue();
                 var eventBus = new GameplayEventBus();
                 var inputResp = new InputResponseBuffer();
-                var selResp = new SelectionResponseBuffer();
                 var abilityDefs = new AbilityDefinitionRegistry();
 
                 const int orderCastAbility = 100;
 
                 var inputReq = new InputRequestQueue();
-                var selReq = new SelectionRequestQueue();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, incomingOrders, 30);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, selReq, selResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,

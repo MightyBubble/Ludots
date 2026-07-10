@@ -1,8 +1,9 @@
 using System;
 using System.Numerics;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -12,18 +13,17 @@ namespace Ludots.Core.Gameplay.Camera
     /// </summary>
     public class CameraManager
     {
-        private readonly CameraInputAccumulator _pendingInput = new();
-        private readonly FrozenInputActionReader _logicInput = new();
+        private const int VisualHeightmapFootprintConfinePasses = 3;
+        private const float TargetConfineEpsilonSq = 0.0001f;
 
-        private PlayerInputHandler? _liveInput;
+        private CameraBehaviorInputState? _behaviorInput;
         private CameraBehaviorContext? _runtimeContext;
         private CompositeCameraController? _controller;
         private PlatformManagedCameraDriverRegistry? _platformManagedCameraDrivers;
+        private CameraImpulseRuntime? _impulseRuntime;
         private string _controllerCameraId = string.Empty;
-        private long _lastCapturedInputRevision = -1;
         private Func<WorldAabbCm>? _targetBoundsProvider;
         private Func<IVisualHeightmap?>? _visualHeightmapProvider;
-        private bool _userInputSuppressed;
 
         /// <summary>
         /// The current fixed-step logic state of the camera.
@@ -52,18 +52,16 @@ namespace Ludots.Core.Gameplay.Camera
         }
 
         public void ConfigureRuntime(
-            PlayerInputHandler input,
+            CameraBehaviorInputState behaviorInput,
             Presentation.Camera.IViewController view,
             Func<WorldAabbCm>? targetBoundsProvider = null,
             Func<IVisualHeightmap?>? visualHeightmapProvider = null)
         {
-            _liveInput = input ?? throw new ArgumentNullException(nameof(input));
-            _runtimeContext = new CameraBehaviorContext(_logicInput, view ?? throw new ArgumentNullException(nameof(view)));
+            _behaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
+            _runtimeContext = new CameraBehaviorContext(_behaviorInput, view ?? throw new ArgumentNullException(nameof(view)));
             _targetBoundsProvider = targetBoundsProvider;
             _visualHeightmapProvider = visualHeightmapProvider;
             InvalidateController();
-            ResetInputTracking();
-            CaptureVisualInput(force: true);
             CopyState(State, PreviousState);
         }
 
@@ -79,18 +77,9 @@ namespace Ludots.Core.Gameplay.Camera
             _platformManagedCameraDrivers = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
-        /// <summary>
-        /// Suppresses controller-driven user input for the current runtime boundary.
-        /// Virtual camera follow/blend logic still advances normally.
-        /// </summary>
-        public void SetUserInputSuppressed(bool suppressed)
+        public void SetImpulseRuntime(CameraImpulseRuntime runtime)
         {
-            _userInputSuppressed = suppressed;
-            if (suppressed)
-            {
-                _pendingInput.Clear();
-                _logicInput.Clear();
-            }
+            _impulseRuntime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
         public bool IsVirtualCameraActive(string id)
@@ -121,7 +110,7 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             ApplyActiveVirtualCameraBoundsAndHeight();
-            VirtualCameraBrain.ApplyToState(State, _logicInput, 0f);
+            VirtualCameraBrain.ApplyToState(State, _behaviorInput, 0f);
             CopyState(State, PreviousState);
             FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
         }
@@ -145,7 +134,6 @@ namespace Ludots.Core.Gameplay.Camera
                 snapToFollowTargetWhenAvailable,
                 resetRuntimeState);
 
-            ResetInputTracking();
             InvalidateController();
         }
 
@@ -159,7 +147,6 @@ namespace Ludots.Core.Gameplay.Camera
             bool removed = VirtualCameraBrain.Deactivate(id, State, blendDurationSeconds);
             if (removed)
             {
-                ResetInputTracking();
                 InvalidateController();
                 FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
             }
@@ -185,7 +172,6 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             VirtualCameraBrain.ClearAll();
-            ResetInputTracking();
             InvalidateController();
             FollowTargetPositionCm = null;
         }
@@ -208,33 +194,23 @@ namespace Ludots.Core.Gameplay.Camera
         }
 
         /// <summary>
-        /// Captures the latest visual-frame input sample.
-        /// This should run once per render-frame after PlayerInputHandler.Update().
-        /// </summary>
-        public void CaptureVisualInput()
-        {
-            CaptureVisualInput(force: false);
-        }
-
-        /// <summary>
         /// Advances the authoritative camera logic by one fixed-step tick.
         /// </summary>
         public void Update(float dt)
         {
-            CaptureVisualInput(force: false);
-            _pendingInput.BuildTickSnapshot(_logicInput);
             CopyState(State, PreviousState);
 
             if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
             {
                 FollowTargetPositionCm = null;
+                ClearImpulseState();
                 return;
             }
 
             ApplyActiveVirtualCameraBoundsAndHeight();
-            VirtualCameraBrain.ApplyToState(State, _logicInput, dt);
+            VirtualCameraBrain.ApplyToState(State, _behaviorInput, dt);
             var activeDefinition = VirtualCameraBrain.ActiveDefinition;
-            bool allowsUserInput = VirtualCameraBrain.AllowsInput && !_userInputSuppressed;
+            bool allowsUserInput = VirtualCameraBrain.AllowsInput;
 
             bool runtimeStateNeedsCapture = false;
             if (activeDefinition != null && activeDefinition.ControlMode == VirtualCameraControlMode.PlatformManaged)
@@ -254,8 +230,7 @@ namespace Ludots.Core.Gameplay.Camera
 
             if (runtimeStateNeedsCapture && VirtualCameraBrain.AllowsInput)
             {
-                ApplyWorldBoundsConfineToState(activeDefinition);
-                ApplyTargetHeightToState(activeDefinition);
+                ApplyWorldBoundsAndHeightToState(activeDefinition);
                 VirtualCameraBrain.ApplyPose(new CameraPoseRequest
                 {
                     VirtualCameraId = activeDefinition?.Id ?? string.Empty,
@@ -265,7 +240,31 @@ namespace Ludots.Core.Gameplay.Camera
                 VirtualCameraBrain.CapturePostControllerState(State);
             }
 
+            ApplyImpulseState(dt);
             FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
+        }
+
+        private void ApplyImpulseState(float dt)
+        {
+            ClearImpulseState();
+            if (_impulseRuntime == null)
+            {
+                return;
+            }
+
+            CameraImpulseSample sample = _impulseRuntime.Sample(
+                new CameraImpulseListener(State.TargetCm, State.TargetHeightCm, State.Yaw),
+                dt);
+            State.ImpulsePositionOffsetCm = sample.PositionOffsetCm;
+            State.ImpulseYawOffsetDeg = sample.YawOffsetDeg;
+            State.ImpulsePitchOffsetDeg = sample.PitchOffsetDeg;
+        }
+
+        private void ClearImpulseState()
+        {
+            State.ImpulsePositionOffsetCm = Vector3.Zero;
+            State.ImpulseYawOffsetDeg = 0f;
+            State.ImpulsePitchOffsetDeg = 0f;
         }
 
         private bool UpdatePlatformManagedCamera(VirtualCameraDefinition definition, float dt, bool allowsUserInput)
@@ -287,7 +286,7 @@ namespace Ludots.Core.Gameplay.Camera
             return driver.Update(new PlatformManagedCameraUpdateContext(
                 definition,
                 State,
-                _logicInput,
+                _behaviorInput ?? throw new InvalidOperationException("Camera behavior input state is not configured."),
                 dt,
                 allowsUserInput));
         }
@@ -298,50 +297,6 @@ namespace Ludots.Core.Gameplay.Camera
             var previous = CameraStateSnapshot.FromState(PreviousState);
             var current = CameraStateSnapshot.FromState(State);
             return CameraStateSnapshot.Lerp(previous, current, alpha);
-        }
-
-        private void CaptureVisualInput(bool force)
-        {
-            if (_liveInput == null || VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
-            {
-                return;
-            }
-
-            if (!force && _liveInput.UpdateRevision == _lastCapturedInputRevision)
-            {
-                return;
-            }
-
-            _lastCapturedInputRevision = _liveInput.UpdateRevision;
-
-            if (!VirtualCameraBrain.AllowsInput)
-            {
-                _pendingInput.Clear();
-                return;
-            }
-
-            if (_userInputSuppressed)
-            {
-                _pendingInput.Clear();
-                return;
-            }
-
-            var definition = VirtualCameraBrain.ActiveDefinition;
-            if (definition == null)
-            {
-                return;
-            }
-
-            _pendingInput.CaptureContinuous(definition.MoveActionId, _liveInput.ReadAction<Vector2>(definition.MoveActionId));
-            _pendingInput.AccumulateOneShot(definition.ZoomActionId, _liveInput.ReadAction<float>(definition.ZoomActionId));
-            _pendingInput.CaptureContinuous(definition.PointerPosActionId, _liveInput.ReadAction<Vector2>(definition.PointerPosActionId));
-            _pendingInput.AccumulateOneShot(definition.PointerDeltaActionId, _liveInput.ReadAction<Vector2>(definition.PointerDeltaActionId));
-            _pendingInput.AccumulateOneShot(definition.LookActionId, _liveInput.ReadAction<Vector2>(definition.LookActionId));
-            _pendingInput.CaptureContinuous(definition.RotateHoldActionId, _liveInput.ReadAction<bool>(definition.RotateHoldActionId));
-            _pendingInput.CaptureContinuous(definition.RotateLeftActionId, _liveInput.ReadAction<bool>(definition.RotateLeftActionId));
-            _pendingInput.CaptureContinuous(definition.RotateRightActionId, _liveInput.ReadAction<bool>(definition.RotateRightActionId));
-            _pendingInput.CaptureContinuous(definition.GrabDragHoldActionId, _liveInput.ReadAction<bool>(definition.GrabDragHoldActionId));
-            _pendingInput.CaptureContinuous(definition.FollowActionId, _liveInput.ReadAction<bool>(definition.FollowActionId));
         }
 
         private void EnsureController()
@@ -374,19 +329,12 @@ namespace Ludots.Core.Gameplay.Camera
             _controllerCameraId = string.Empty;
         }
 
-        private void ResetInputTracking()
-        {
-            _pendingInput.Clear();
-            _logicInput.Clear();
-            _lastCapturedInputRevision = -1;
-        }
-
         private bool TryResolveWorldBoundsConfine(
             VirtualCameraDefinition? definition,
-            Vector2 targetCm,
+            in CameraStateSnapshot state,
             out Vector2 clamped)
         {
-            clamped = targetCm;
+            clamped = state.TargetCm;
             if (definition == null ||
                 !definition.ConfineTargetToWorldBounds ||
                 _targetBoundsProvider == null)
@@ -395,45 +343,247 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             WorldAabbCm bounds = ExpandBounds(_targetBoundsProvider(), definition.ConfinePaddingCm);
-            clamped = new Vector2(
-                Math.Clamp(targetCm.X, bounds.Left, bounds.Right),
-                Math.Clamp(targetCm.Y, bounds.Top, bounds.Bottom));
+            var candidate = state;
+            candidate.TargetCm = ClampTargetToBounds(candidate.TargetCm, in bounds);
+            bool changed = Vector2.DistanceSquared(candidate.TargetCm, state.TargetCm) > TargetConfineEpsilonSq;
 
-            return Vector2.DistanceSquared(clamped, targetCm) > 0.0001f;
+            if (definition.TargetHeightMode == VirtualCameraTargetHeightMode.VisualHeightmap)
+            {
+                candidate.TargetHeightCm = ResolveTargetHeight(definition, candidate.TargetCm);
+                if (TryResolveVisualHeightmapFootprintConfine(
+                        definition,
+                        in bounds,
+                        candidate,
+                        out Vector2 footprintClamped))
+                {
+                    candidate.TargetCm = footprintClamped;
+                    changed = true;
+                }
+            }
+
+            clamped = candidate.TargetCm;
+            return changed;
         }
 
-        private bool ApplyWorldBoundsConfineToState(VirtualCameraDefinition? definition)
+        private void ApplyWorldBoundsAndHeightToState(VirtualCameraDefinition? definition)
         {
-            if (!TryResolveWorldBoundsConfine(definition, State.TargetCm, out Vector2 clamped))
+            State.TargetHeightCm = ResolveTargetHeight(definition, State.TargetCm);
+            CameraStateSnapshot snapshot = CameraStateSnapshot.FromState(State);
+            if (!TryResolveWorldBoundsConfine(definition, in snapshot, out Vector2 clamped))
             {
-                return false;
+                return;
             }
 
             State.TargetCm = clamped;
-            return true;
-        }
-
-        private void ApplyTargetHeightToState(VirtualCameraDefinition? definition)
-        {
             State.TargetHeightCm = ResolveTargetHeight(definition, State.TargetCm);
         }
 
         private void ApplyActiveVirtualCameraBoundsAndHeight()
         {
             if (VirtualCameraBrain == null ||
-                !VirtualCameraBrain.TryGetActiveRuntimeTarget(_logicInput, out var definition, out Vector2 targetCm))
+                !VirtualCameraBrain.TryGetActiveRuntimeState(_behaviorInput, out var definition, out CameraStateSnapshot runtimeState) ||
+                definition == null)
             {
                 return;
             }
 
-            if (TryResolveWorldBoundsConfine(definition, targetCm, out Vector2 clampedTargetCm))
+            runtimeState.TargetHeightCm = ResolveTargetHeight(definition, runtimeState.TargetCm);
+            if (TryResolveWorldBoundsConfine(definition, in runtimeState, out Vector2 clampedTargetCm))
             {
-                targetCm = clampedTargetCm;
-                VirtualCameraBrain.SetActiveRuntimeTarget(targetCm);
+                runtimeState.TargetCm = clampedTargetCm;
+                runtimeState.TargetHeightCm = ResolveTargetHeight(definition, runtimeState.TargetCm);
             }
 
-            float targetHeightCm = ResolveTargetHeight(definition, targetCm);
-            VirtualCameraBrain.SetActiveRuntimeTargetHeight(targetHeightCm);
+            VirtualCameraBrain.ApplyPose(new CameraPoseRequest
+            {
+                VirtualCameraId = definition.Id,
+                TargetCm = runtimeState.TargetCm,
+                TargetHeightCm = runtimeState.TargetHeightCm
+            });
+        }
+
+        private bool TryResolveVisualHeightmapFootprintConfine(
+            VirtualCameraDefinition definition,
+            in WorldAabbCm bounds,
+            CameraStateSnapshot initialState,
+            out Vector2 clamped)
+        {
+            clamped = initialState.TargetCm;
+            var candidate = initialState;
+            bool changed = false;
+
+            for (int pass = 0; pass < VisualHeightmapFootprintConfinePasses; pass++)
+            {
+                ResolveVisualHeightmapFootprintAabb(
+                    definition,
+                    in candidate,
+                    out float minX,
+                    out float minY,
+                    out float maxX,
+                    out float maxY);
+
+                var correction = new Vector2(
+                    ResolveBoundsCorrection(minX, maxX, bounds.Left, bounds.Right),
+                    ResolveBoundsCorrection(minY, maxY, bounds.Top, bounds.Bottom));
+                if (correction.LengthSquared() <= TargetConfineEpsilonSq)
+                {
+                    break;
+                }
+
+                Vector2 nextTarget = ClampTargetToBounds(candidate.TargetCm + correction, in bounds);
+                if (Vector2.DistanceSquared(nextTarget, candidate.TargetCm) <= TargetConfineEpsilonSq)
+                {
+                    break;
+                }
+
+                candidate.TargetCm = nextTarget;
+                candidate.TargetHeightCm = ResolveTargetHeight(definition, candidate.TargetCm);
+                changed = true;
+            }
+
+            clamped = candidate.TargetCm;
+            return changed;
+        }
+
+        private void ResolveVisualHeightmapFootprintAabb(
+            VirtualCameraDefinition definition,
+            in CameraStateSnapshot state,
+            out float minX,
+            out float minY,
+            out float maxX,
+            out float maxY)
+        {
+            IVisualHeightmap heightmap = RequireVisualHeightmap(definition);
+            if (_runtimeContext == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' requires a configured camera viewport to clamp VisualHeightmap look footprint.");
+            }
+
+            Vector2 resolution = _runtimeContext.Viewport.Resolution;
+            if (!float.IsFinite(resolution.X) ||
+                !float.IsFinite(resolution.Y) ||
+                resolution.X <= 0f ||
+                resolution.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' cannot clamp VisualHeightmap look footprint because the active viewport resolution is invalid.");
+            }
+
+            float aspectRatio = _runtimeContext.Viewport.AspectRatio;
+            if (!float.IsFinite(aspectRatio) || aspectRatio <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' cannot clamp VisualHeightmap look footprint because the active viewport aspect ratio is invalid.");
+            }
+
+            CameraRenderState3D camera = CameraViewportUtil.StateToRenderState(in state);
+            float right = MathF.Max(0f, resolution.X - 1f);
+            float bottom = MathF.Max(0f, resolution.Y - 1f);
+
+            minX = float.PositiveInfinity;
+            minY = float.PositiveInfinity;
+            maxX = float.NegativeInfinity;
+            maxY = float.NegativeInfinity;
+            int hitCount = 0;
+
+            if (TryAccumulateVisualHeightmapFootprintCorner(
+                definition,
+                heightmap,
+                in camera,
+                resolution,
+                aspectRatio,
+                new Vector2(0f, 0f),
+                ref minX,
+                ref minY,
+                ref maxX,
+                ref maxY))
+            {
+                hitCount++;
+            }
+
+            if (TryAccumulateVisualHeightmapFootprintCorner(
+                definition,
+                heightmap,
+                in camera,
+                resolution,
+                aspectRatio,
+                new Vector2(right, 0f),
+                ref minX,
+                ref minY,
+                ref maxX,
+                ref maxY))
+            {
+                hitCount++;
+            }
+
+            if (TryAccumulateVisualHeightmapFootprintCorner(
+                definition,
+                heightmap,
+                in camera,
+                resolution,
+                aspectRatio,
+                new Vector2(right, bottom),
+                ref minX,
+                ref minY,
+                ref maxX,
+                ref maxY))
+            {
+                hitCount++;
+            }
+
+            if (TryAccumulateVisualHeightmapFootprintCorner(
+                definition,
+                heightmap,
+                in camera,
+                resolution,
+                aspectRatio,
+                new Vector2(0f, bottom),
+                ref minX,
+                ref minY,
+                ref maxX,
+                ref maxY))
+            {
+                hitCount++;
+            }
+
+            if (hitCount == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' could not raycast any VisualHeightmap look footprint sample on layer {definition.TargetHeightLayerIndex}.");
+            }
+        }
+
+        private bool TryAccumulateVisualHeightmapFootprintCorner(
+            VirtualCameraDefinition definition,
+            IVisualHeightmap heightmap,
+            in CameraRenderState3D camera,
+            Vector2 resolution,
+            float aspectRatio,
+            Vector2 screenPoint,
+            ref float minX,
+            ref float minY,
+            ref float maxX,
+            ref float maxY)
+        {
+            ScreenRay ray = CameraViewportUtil.ScreenToRay(
+                screenPoint,
+                in camera,
+                resolution,
+                aspectRatio);
+
+            if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit, definition.TargetHeightLayerIndex) ||
+                !float.IsFinite(hit.WorldXCm) ||
+                !float.IsFinite(hit.WorldYCm))
+            {
+                return false;
+            }
+
+            minX = MathF.Min(minX, hit.WorldXCm);
+            minY = MathF.Min(minY, hit.WorldYCm);
+            maxX = MathF.Max(maxX, hit.WorldXCm);
+            maxY = MathF.Max(maxY, hit.WorldYCm);
+            return true;
         }
 
         private float ResolveTargetHeight(VirtualCameraDefinition? definition, Vector2 targetCm)
@@ -460,12 +610,7 @@ namespace Ludots.Core.Gameplay.Camera
 
         private float SampleRequiredVisualHeightmapHeight(VirtualCameraDefinition definition, Vector2 targetCm)
         {
-            IVisualHeightmap? heightmap = _visualHeightmapProvider?.Invoke();
-            if (heightmap == null)
-            {
-                throw new InvalidOperationException(
-                    $"Virtual camera '{definition.Id}' requires CoreServiceKeys.VisualHeightmap for target height, but no focused map visual heightmap service is bound.");
-            }
+            IVisualHeightmap heightmap = RequireVisualHeightmap(definition);
 
             if (!heightmap.TrySampleHeightCm(
                     targetCm.X,
@@ -478,6 +623,52 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             return heightCm;
+        }
+
+        private IVisualHeightmap RequireVisualHeightmap(VirtualCameraDefinition definition)
+        {
+            IVisualHeightmap? heightmap = _visualHeightmapProvider?.Invoke();
+            if (heightmap == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' requires CoreServiceKeys.VisualHeightmap for target height, but no focused map visual heightmap service is bound.");
+            }
+
+            return heightmap;
+        }
+
+        private static Vector2 ClampTargetToBounds(Vector2 targetCm, in WorldAabbCm bounds)
+        {
+            return new Vector2(
+                Math.Clamp(targetCm.X, bounds.Left, bounds.Right),
+                Math.Clamp(targetCm.Y, bounds.Top, bounds.Bottom));
+        }
+
+        private static float ResolveBoundsCorrection(float min, float max, float boundsMin, float boundsMax)
+        {
+            if (!float.IsFinite(min) || !float.IsFinite(max))
+            {
+                throw new InvalidOperationException("Camera VisualHeightmap footprint resolved non-finite bounds.");
+            }
+
+            float span = max - min;
+            float allowed = boundsMax - boundsMin;
+            if (span <= allowed)
+            {
+                if (min < boundsMin)
+                {
+                    return boundsMin - min;
+                }
+
+                if (max > boundsMax)
+                {
+                    return boundsMax - max;
+                }
+
+                return 0f;
+            }
+
+            return ((boundsMin + boundsMax) * 0.5f) - ((min + max) * 0.5f);
         }
 
         private static WorldAabbCm ExpandBounds(WorldAabbCm bounds, float paddingCm)
@@ -510,6 +701,11 @@ namespace Ludots.Core.Gameplay.Camera
             destination.RigKind = source.RigKind;
             destination.ZoomLevel = source.ZoomLevel;
             destination.FovYDeg = source.FovYDeg;
+            destination.RigPivotOffsetCm = source.RigPivotOffsetCm;
+            destination.RigCameraOffsetCm = source.RigCameraOffsetCm;
+            destination.ImpulsePositionOffsetCm = source.ImpulsePositionOffsetCm;
+            destination.ImpulseYawOffsetDeg = source.ImpulseYawOffsetDeg;
+            destination.ImpulsePitchOffsetDeg = source.ImpulsePitchOffsetDeg;
             destination.IsFollowing = source.IsFollowing;
         }
     }

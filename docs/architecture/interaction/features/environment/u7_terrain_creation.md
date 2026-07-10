@@ -5,14 +5,14 @@
 
 ## 交互层设计
 - **Input**: Down
-- **Selection**: Point / Line
+- **Target**: Point / Line
 - **Resolution**: Explicit
 
 ## 实现要点
 ```
 Phase Graph:
-  1. SelectionGate: 选择墙壁起点
-  2. SelectionGate: 选择墙壁终点
+  1. TargetCollectionGate: 选择墙壁起点
+  2. TargetCollectionGate: 选择墙壁终点
   3. 计算墙壁段数: segments = distance / segment_length
   4. Loop: CreateUnit("wall_segment", position=interpolate(start, end, i))
 

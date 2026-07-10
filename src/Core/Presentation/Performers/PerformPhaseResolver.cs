@@ -6,7 +6,8 @@ using Ludots.Core.Presentation.Components;
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
-    /// Sole translator from raw visibility, ownership, and relationship hints into perform phase contracts.
+    /// Sole translator from visibility/cull and knowledge projection facts into perform phase contracts.
+    /// Team/ownership facts remain available for styling; they do not gate world HUD projection.
     /// </summary>
     public sealed class PerformPhaseResolver
     {
@@ -205,7 +206,8 @@ namespace Ludots.Core.Presentation.Performers
         public PerformPhaseResult Resolve(in PerformPhaseInput input)
         {
             bool revealHidden = input.Audience.RevealHidden;
-            bool hasVision = revealHidden || input.HasVision;
+            bool hasVision = revealHidden || input.HasVision ||
+                             (input.AllowVisibleTransientWorldText && input.IsVisible);
             bool isCulled = !revealHidden && input.IsCulled;
             bool isVisible = revealHidden || (input.IsVisible && hasVision && !isCulled);
             LODLevel lod = revealHidden && input.LOD == LODLevel.Culled
@@ -216,9 +218,9 @@ namespace Ludots.Core.Presentation.Performers
                 || (input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Friendly);
             bool isHostile = input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Hostile;
             bool shouldPresent = isVisible && !isCulled;
-            bool allowWorldHudProjection = shouldPresent &&
-                                           input.HasAttributeProjection &&
-                                           (input.IsOwnedByAudience || isFriendly || input.Audience.RevealHidden);
+            // Knowledge projection is the sole readability authority for attribute HUD.
+            // Team/ownership remain styling facts only (see IsFriendly/IsHostile/IsOwnedByAudience).
+            bool allowWorldHudProjection = shouldPresent && input.HasAttributeProjection;
 
             return new PerformPhaseResult
             {

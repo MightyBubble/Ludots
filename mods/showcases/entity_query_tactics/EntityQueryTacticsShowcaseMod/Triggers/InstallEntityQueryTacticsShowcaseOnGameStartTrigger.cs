@@ -4,8 +4,8 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
 using EntityQueryTacticsShowcaseMod.Systems;
@@ -52,11 +52,9 @@ namespace EntityQueryTacticsShowcaseMod.Triggers
             RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, lookup, config.Scenario.EnemyTeamId, config.Scenario.EnemyTeamName);
             TeamManager.SetRelationshipSymmetric(config.Scenario.PlayerTeamId, config.Scenario.EnemyTeamId, TeamRelationship.Hostile);
 
-            engine.InsertSystemBeforeRequired<CurrentSelectionApplySystem>(
-                new EntityQueryTacticsSelectionBindingSystem(engine, state),
-                SystemGroup.InputCollection);
+            engine.RegisterSystem(new EntityQueryTacticsSelectionBindingSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterSystem(new EntityQueryTacticsSimulationSystem(engine, state), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new EntityQueryTacticsPresentationSystem(engine, state));
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new EntityQueryTacticsPresentationSystem(engine, state));
 
             _context.Log(config.Logs.SystemInstalled);
             return Task.CompletedTask;

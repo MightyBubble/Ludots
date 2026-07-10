@@ -63,16 +63,6 @@
     "blockTags": {
       "requiredAll": ["State.Rts.RedAlert.Ready.PowerPlant"]
     },
-    "indicator": {
-      "shape": "Circle",
-      "radius": 280,
-      "showRangeCircle": false,
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 0.82,
-        "offsetY": 0.02
-      }
-    },
     "presentation": {
       "displayName": "Place Power Plant",
       "iconGlyph": "PP",
@@ -127,16 +117,6 @@
     },
     "blockTags": {
       "requiredAll": ["State.Rts.RedAlert.Ready.Refinery"]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "radius": 300,
-      "showRangeCircle": false,
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.25,
-        "offsetY": 0.06
-      }
     },
     "presentation": {
       "displayName": "Place Ore Refinery",
@@ -195,16 +175,6 @@
     "blockTags": {
       "requiredAll": ["State.Rts.RedAlert.Ready.WarFactory"]
     },
-    "indicator": {
-      "shape": "Circle",
-      "radius": 340,
-      "showRangeCircle": false,
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.4,
-        "offsetY": 0.08
-      }
-    },
     "presentation": {
       "displayName": "Place War Factory",
       "iconGlyph": "WF",
@@ -252,18 +222,6 @@
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.DeployMcv" },
         { "kind": "End", "tick": 0 }
       ]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 600,
-      "radius": 300,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.4,
-        "offsetY": 0.08
-      }
     },
     "presentation": {
       "displayName": "Deploy MCV",

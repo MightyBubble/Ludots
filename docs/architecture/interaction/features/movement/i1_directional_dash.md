@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 
@@ -39,6 +39,6 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (Direction) | ✅ 已有 | selectionType: Direction |
+| InputOrderMapping (Direction) | ✅ 已有 | targetType: Direction |
 | DisplacementPreset | ✅ 已有 | DisplacementRuntimeSystem |
 | DisplacementDirectionMode.Fixed | ✅ 已有 | 固定方向模式 |

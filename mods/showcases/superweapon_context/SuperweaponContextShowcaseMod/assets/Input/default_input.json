@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "SuperweaponConfirm", "name": "Superweapon_Confirm", "type": "Button" },
+    { "id": "SuperweaponCancel", "name": "Superweapon_Cancel", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "imc.ability.confirm",
+      "name": "Ability Confirm",
+      "priority": 120,
+      "bindings": [
+        { "actionId": "SuperweaponConfirm", "path": "<Keyboard>/enter" },
+        { "actionId": "SuperweaponConfirm", "path": "<Mouse>/LeftButton" },
+        { "actionId": "SuperweaponCancel", "path": "<Keyboard>/escape" },
+        { "actionId": "SuperweaponCancel", "path": "<Mouse>/RightButton" }
+      ]
+    }
+  ]
+}

@@ -17,19 +17,19 @@
 ### Direction (E1-E7):
 ```
 InputOrderMapping:
-  selectionType: Direction
+  targetType: Direction
   // InputOrderMappingSystem 计算 caster→cursor 方向写入 OrderArgs.Spatial
 ```
 
 ### Vector (E8):
 ```
 InputOrderMapping:
-  selectionType: Vector
-  // VectorAimPhase: Origin → Direction
+  targetType: Vector
+  // Targeting input slots: origin point → direction point
   // Two clicks: origin stored in Spatial[0], endpoint in Spatial[1]
 ```
 
-已有: `OrderSelectionType.Direction`, `OrderSelectionType.Vector`, vector aiming state machine
+已有: `OrderTargetType.Direction`, `OrderTargetType.Vector`, vector aiming state machine
 
 ## 实现方案
 
@@ -127,7 +127,7 @@ Phase Graph:
 
 ```
 InputOrderMapping:
-  selectionType: Vector
+  targetType: Vector
 
 AbilityExecSpec:
   Item[0]: EffectSignal → vector_damage

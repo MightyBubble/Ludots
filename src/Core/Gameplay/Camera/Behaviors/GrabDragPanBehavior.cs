@@ -6,26 +6,16 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
     internal sealed class GrabDragPanBehavior : ICameraBehavior
     {
-        private readonly string _holdActionId;
-        private readonly string _pointerDeltaActionId;
-
-        public GrabDragPanBehavior(string holdActionId, string pointerDeltaActionId)
-        {
-            _holdActionId = holdActionId ?? "OrbitRotateHold";
-            _pointerDeltaActionId = pointerDeltaActionId ?? "PointerDelta";
-        }
-
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
             if (state.IsFollowing || dt <= 0f) return;
 
-            bool hold = ctx.Input.ReadAction<bool>(_holdActionId);
-            if (!hold)
+            if (!ctx.BehaviorInput.GrabDragHold)
             {
                 return;
             }
 
-            Vector2 delta = ctx.Input.ReadAction<Vector2>(_pointerDeltaActionId);
+            Vector2 delta = ctx.BehaviorInput.PointerDelta;
             if (MathF.Abs(delta.X) < 0.01f && MathF.Abs(delta.Y) < 0.01f)
             {
                 return;

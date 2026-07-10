@@ -76,7 +76,7 @@ public sealed partial class MassNavigationFlowSolverState
     private float[] _unitTargetsCm = Array.Empty<float>();
     private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
-    private byte[] _selectedFlags = Array.Empty<byte>();
+    private byte[] _commandActorFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
@@ -149,7 +149,7 @@ public sealed partial class MassNavigationFlowSolverState
     public float PlayAreaMaxYCm => _playAreaMaxYCm;
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
-    public ReadOnlySpan<byte> SelectedFlags => _selectedFlags.AsSpan(0, UnitCount);
+    public ReadOnlySpan<byte> CommandActorFlags => _commandActorFlags.AsSpan(0, UnitCount);
     public float WorldOriginXCm => _worldOriginXCm;
     public float WorldOriginYCm => _worldOriginYCm;
 
@@ -201,6 +201,16 @@ public sealed partial class MassNavigationFlowSolverState
         _stepHandles = new JobHandle[_parallelWorkerCount];
     }
 
+    internal void PreallocateAgentCapacity(int unitCapacity)
+    {
+        if (unitCapacity < 0)
+        {
+            throw new InvalidOperationException("MassNavigationFlowSolverState agent capacity preallocation requires unitCapacity >= 0.");
+        }
+
+        EnsureCapacity(unitCapacity);
+    }
+
     public Vector2 WorldToLocalCm(Vector2 worldCm)
     {
         return new Vector2(worldCm.X - _worldOriginXCm, worldCm.Y - _worldOriginYCm);
@@ -231,7 +241,7 @@ public sealed partial class MassNavigationFlowSolverState
     public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
     public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
-    public bool IsSelected(int index) => _selectedFlags[index] != 0;
+    public bool IsCommandActor(int index) => _commandActorFlags[index] != 0;
     public bool HasUnitTarget(int index) => (uint)index < (uint)UnitCount && _hasUnitTarget[index] != 0;
     public bool IsUnitSettled(int index) => (uint)index < (uint)UnitCount && _unitSettledFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
@@ -354,6 +364,87 @@ public sealed partial class MassNavigationFlowSolverState
         _frameCount = 0;
         SettledUnitCount = 0;
         _arrivalEventCount = 0;
+    }
+
+    public void AppendAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> newAgentSeeds)
+    {
+        if (newAgentSeeds.Length <= 0)
+        {
+            return;
+        }
+
+        int startIndex = UnitCount;
+        int newTotal = checked(startIndex + newAgentSeeds.Length);
+        EnsureCapacity(newTotal);
+        for (int i = 0; i < newAgentSeeds.Length; i++)
+        {
+            MassNavigationAgentSeed seed = newAgentSeeds[i];
+            int teamId = seed.TeamId;
+            if (!_teamStateIndexById.TryGetValue(teamId, out _))
+            {
+                var state = new TeamRuntimeState(teamId)
+                {
+                    UnitCount = 0,
+                    TargetX = seed.LocalPositionXCm,
+                    TargetY = seed.LocalPositionYCm,
+                };
+                _teamStateIndexById[teamId] = _teamStates.Count;
+                _teamStates.Add(state);
+                _teamRelationshipRevision = int.MinValue;
+            }
+        }
+
+        for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
+        {
+            MassNavigationAgentSeed seed = newAgentSeeds[unitIndex - startIndex];
+            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            {
+                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.TeamId}.");
+            }
+
+            int localIndex = _teamStates[teamStateIndex].UnitCount;
+            _teamStates[teamStateIndex].UnitCount++;
+            int i2 = unitIndex << 1;
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
+            _teams[unitIndex] = seed.TeamId;
+            _teamRuntimeIndices[unitIndex] = teamStateIndex;
+            _teamLocalIndices[unitIndex] = localIndex;
+            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer);
+            _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
+            _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
+            _navMasses[unitIndex] = seed.NavMass;
+            _visualScales[unitIndex] = seed.VisualScale;
+            _bodyRadiiCm[unitIndex] = seed.BodyRadiusCm;
+            _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
+            _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
+            _heavyProfileFlags[unitIndex] = seed.Heavy ? (byte)1 : (byte)0;
+            _positionsCm[i2] = ClampXPosition(seed.LocalPositionXCm);
+            _positionsCm[i2 + 1] = ClampYPosition(seed.LocalPositionYCm);
+            _velocitiesCm[i2] = 0f;
+            _velocitiesCm[i2 + 1] = 0f;
+            _unitTargetsCm[i2] = 0f;
+            _unitTargetsCm[i2 + 1] = 0f;
+            _unitTargetStopThresholdsCm[unitIndex] = 0f;
+            _hasUnitTarget[unitIndex] = 0;
+            _commandActorFlags[unitIndex] = 0;
+            _unitProgressAnchorCm[i2] = _positionsCm[i2];
+            _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledAnchorCm[i2] = _positionsCm[i2];
+            _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledFlags[unitIndex] = 0;
+            _arrivalEventEmittedFlags[unitIndex] = 0;
+            _unitRetryCounts[unitIndex] = 0;
+            _unitStuckSeconds[unitIndex] = 0f;
+        }
+
+        UnitCount = newTotal;
+        for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
+        {
+            MarkEntityDirty(unitIndex);
+        }
+
+        _maxInteractingBodyRadiiDirty = true;
+        MarkFlowDirty();
     }
 
     public void SetTeamTarget(int teamId, Vector2 targetCm)
@@ -770,23 +861,24 @@ public sealed partial class MassNavigationFlowSolverState
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
+        EnqueueArrivalEvent(index);
         MarkEntityDirty(index);
     }
 
-    public void SetSelectedFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> selectedEntities)
+    public void SetCommandActorFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors)
     {
         if (UnitCount <= 0)
         {
             return;
         }
 
-        Array.Clear(_selectedFlags, 0, UnitCount);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        Array.Clear(_commandActorFlags, 0, UnitCount);
+        for (int i = 0; i < commandActors.Length; i++)
         {
-            if (agentState.TryGetControllableIndex(selectedEntities[i], out int index) &&
+            if (agentState.TryGetControllableIndex(commandActors[i], out int index) &&
                 (uint)index < (uint)UnitCount)
             {
-                _selectedFlags[index] = 1;
+                _commandActorFlags[index] = 1;
             }
         }
     }
@@ -1088,7 +1180,7 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _unitTargetStopThresholdsCm, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
-            Array.Resize(ref _selectedFlags, unitCount);
+            Array.Resize(ref _commandActorFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
             Array.Resize(ref _heavyProfileFlags, unitCount);
             Array.Resize(ref _entitySyncDirtyFlags, unitCount);
@@ -1213,7 +1305,7 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -1412,7 +1504,9 @@ public sealed partial class MassNavigationFlowSolverState
                     continue;
                 }
 
-                float penalty = (ox == 0 && oy == 0) ? 8f : 3f;
+                float penalty = (ox == 0 && oy == 0)
+                    ? Semantics.Solver.CrowdStampCenterCost
+                    : Semantics.Solver.CrowdStampNeighborCost;
                 _cost[idx] += penalty;
             }
         }
@@ -1430,7 +1524,7 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -1564,7 +1658,7 @@ public sealed partial class MassNavigationFlowSolverState
                             float ovx = -offsetX;
                             float ovy = -offsetY;
                             float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.EntitySyncVelocityEpsilonSq)
+                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
                             {
                                 float invObstacleDist = FastInvSqrt(obstacleDistSq);
                                 float obstacleDist = obstacleDistSq * invObstacleDist;
@@ -1666,193 +1760,198 @@ public sealed partial class MassNavigationFlowSolverState
             bool hasUnitNavigationTarget = false;
             float activeTargetStopThresholdSq = unitTargetStopThresholdSq;
             float speed = _speedsCmPerSecond[i];
+            float agentDt = clampedDt;
+            bool simulationTimeActive = agentDt > 0f;
 
-            if (_hasUnitTarget[i] != 0)
+            if (simulationTimeActive)
             {
-                hasGoalTarget = true;
-                hasUnitNavigationTarget = true;
-                targetX = _unitTargetsCm[i2];
-                targetY = _unitTargetsCm[i2 + 1];
-                float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
-                activeTargetStopThresholdSq = targetStopThresholdSq;
-                float toTargetX = targetX - px;
-                float toTargetY = targetY - py;
-                float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
-                if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
+                if (_hasUnitTarget[i] != 0)
                 {
-                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
+                    hasGoalTarget = true;
+                    hasUnitNavigationTarget = true;
+                    targetX = _unitTargetsCm[i2];
+                    targetY = _unitTargetsCm[i2 + 1];
+                    float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
+                    activeTargetStopThresholdSq = targetStopThresholdSq;
+                    float toTargetX = targetX - px;
+                    float toTargetY = targetY - py;
+                    float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
+                    if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
                     {
-                        ExitSettledState(i, px, py);
+                        if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
+                        {
+                            ExitSettledState(i, px, py);
+                        }
+                        else
+                        {
+                            suppressTargetMotion = true;
+                        }
                     }
-                    else
-                    {
-                        suppressTargetMotion = true;
-                    }
-                }
 
-                if (!suppressTargetMotion && ArrivalTuning.Enabled)
-                {
-                    if (targetDistSq <= targetStopThresholdSq)
+                    if (!suppressTargetMotion && ArrivalTuning.Enabled)
                     {
-                        EnterSettledState(i, px, py);
-                        suppressTargetMotion = true;
-                    }
-                    else
-                    {
-                        UpdateUnitStuckTimer(i, px, py, clampedDt);
-                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        if (targetDistSq <= targetStopThresholdSq)
                         {
                             EnterSettledState(i, px, py);
                             suppressTargetMotion = true;
                         }
+                        else
+                        {
+                            UpdateUnitStuckTimer(i, px, py, agentDt);
+                            if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                            {
+                                EnterSettledState(i, px, py);
+                                suppressTargetMotion = true;
+                            }
+                        }
+                    }
+                    else if (!suppressTargetMotion)
+                    {
+                        ResetUnitProgressAnchor(i, px, py);
+                    }
+
+                    if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
+                    {
+                        float invDist = FastInvSqrt(targetDistSq);
+                        desiredX = toTargetX * invDist;
+                        desiredY = toTargetY * invDist;
+
+                        int gx = (int)(px / _flowCellSizeCm);
+                        int gy = (int)(py / _flowCellSizeCm);
+                        float avoidX = 0f;
+                        float avoidY = 0f;
+                        for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
+                        {
+                            int ny = gy + oy;
+                            if ((uint)ny >= (uint)_gridHeight)
+                            {
+                                continue;
+                            }
+
+                            int rowOffset = ny * _gridWidth;
+                            for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
+                            {
+                                if (ox == 0 && oy == 0)
+                                {
+                                    continue;
+                                }
+
+                                int nx = gx + ox;
+                                if ((uint)nx >= (uint)_gridWidth)
+                                {
+                                    continue;
+                                }
+
+                                if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                                {
+                                    float obstacleDistanceSq = ox * ox + oy * oy;
+                                    float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
+                                    float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
+                                    avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                    avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                }
+                            }
+                        }
+
+                        desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
+                        desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
+                        float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
+                        if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                        {
+                            float invFlow = FastInvSqrt(flowLengthSq);
+                            desiredX *= invFlow;
+                            desiredY *= invFlow;
+                        }
+                    }
+
+                    float targetDistance = MathF.Sqrt(targetDistSq);
+                    float arriveThreshold = inFormation
+                        ? Semantics.Group.FormationArriveThresholdCm
+                        : Semantics.Group.LooseArriveThresholdCm;
+                    if (targetDistance < arriveThreshold)
+                    {
+                        unitArrivalFactor = targetDistance / arriveThreshold;
+                    }
+                    else if (suppressTargetMotion)
+                    {
+                        unitArrivalFactor = 0f;
                     }
                 }
-                else if (!suppressTargetMotion)
+                else
                 {
-                    ResetUnitProgressAnchor(i, px, py);
-                }
-
-                if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
-                {
-                    float invDist = FastInvSqrt(targetDistSq);
-                    desiredX = toTargetX * invDist;
-                    desiredY = toTargetY * invDist;
-
+                    hasGoalTarget = true;
                     int gx = (int)(px / _flowCellSizeCm);
                     int gy = (int)(py / _flowCellSizeCm);
-                    float avoidX = 0f;
-                    float avoidY = 0f;
-                    for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
+                    float flowX = 0f;
+                    float flowY = 0f;
+                    if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
                     {
-                        int ny = gy + oy;
-                        if ((uint)ny >= (uint)_gridHeight)
+                        int flowOffset = ((gy * _gridWidth) + gx) << 1;
+                        flowX = flowState.Flow[flowOffset];
+                        flowY = flowState.Flow[flowOffset + 1];
+                    }
+
+                    ComputeTeamSlotTarget(i, team, out targetX, out targetY);
+                    float toSlotX = targetX - px;
+                    float toSlotY = targetY - py;
+                    float slotDistSq = toSlotX * toSlotX + toSlotY * toSlotY;
+                    if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
+                    {
+                        if (ShouldRetryTargetAfterPush(i, px, py, slotDistSq, unitTargetStopThresholdSq))
                         {
-                            continue;
+                            ExitSettledState(i, px, py);
                         }
-
-                        int rowOffset = ny * _gridWidth;
-                        for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
+                        else
                         {
-                            if (ox == 0 && oy == 0)
-                            {
-                                continue;
-                            }
-
-                            int nx = gx + ox;
-                            if ((uint)nx >= (uint)_gridWidth)
-                            {
-                                continue;
-                            }
-
-                            if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                            {
-                                float obstacleDistanceSq = ox * ox + oy * oy;
-                                float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
-                                float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
-                                avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
-                                avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
-                            }
+                            suppressTargetMotion = true;
                         }
                     }
 
-                    desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
-                    desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
-                    float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                    if (!suppressTargetMotion && ArrivalTuning.Enabled)
                     {
-                        float invFlow = FastInvSqrt(flowLengthSq);
-                        desiredX *= invFlow;
-                        desiredY *= invFlow;
-                    }
-                }
-
-                float targetDistance = MathF.Sqrt(targetDistSq);
-                float arriveThreshold = inFormation
-                    ? Semantics.Group.FormationArriveThresholdCm
-                    : Semantics.Group.LooseArriveThresholdCm;
-                if (targetDistance < arriveThreshold)
-                {
-                    unitArrivalFactor = targetDistance / arriveThreshold;
-                }
-                else if (suppressTargetMotion)
-                {
-                    unitArrivalFactor = 0f;
-                }
-            }
-            else
-            {
-                hasGoalTarget = true;
-                int gx = (int)(px / _flowCellSizeCm);
-                int gy = (int)(py / _flowCellSizeCm);
-                float flowX = 0f;
-                float flowY = 0f;
-                if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
-                {
-                    int flowOffset = ((gy * _gridWidth) + gx) << 1;
-                    flowX = flowState.Flow[flowOffset];
-                    flowY = flowState.Flow[flowOffset + 1];
-                }
-
-                ComputeTeamSlotTarget(i, team, out targetX, out targetY);
-                float toSlotX = targetX - px;
-                float toSlotY = targetY - py;
-                float slotDistSq = toSlotX * toSlotX + toSlotY * toSlotY;
-                if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
-                {
-                    if (ShouldRetryTargetAfterPush(i, px, py, slotDistSq, unitTargetStopThresholdSq))
-                    {
-                        ExitSettledState(i, px, py);
-                    }
-                    else
-                    {
-                        suppressTargetMotion = true;
-                    }
-                }
-
-                if (!suppressTargetMotion && ArrivalTuning.Enabled)
-                {
-                    if (slotDistSq <= unitTargetStopThresholdSq)
-                    {
-                        EnterSettledState(i, px, py);
-                        suppressTargetMotion = true;
-                    }
-                    else
-                    {
-                        UpdateUnitStuckTimer(i, px, py, clampedDt);
-                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        if (slotDistSq <= unitTargetStopThresholdSq)
                         {
                             EnterSettledState(i, px, py);
                             suppressTargetMotion = true;
                         }
+                        else
+                        {
+                            UpdateUnitStuckTimer(i, px, py, agentDt);
+                            if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                            {
+                                EnterSettledState(i, px, py);
+                                suppressTargetMotion = true;
+                            }
+                        }
                     }
-                }
-                else if (!suppressTargetMotion)
-                {
-                    ResetUnitProgressAnchor(i, px, py);
-                }
-
-                if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
-                {
-                    float invSlot = FastInvSqrt(slotDistSq);
-                    float slotDirX = toSlotX * invSlot;
-                    float slotDirY = toSlotY * invSlot;
-                    float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
-                        ? Semantics.Group.NearSlotBlend
-                        : Semantics.Group.FarSlotBlend;
-                    desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
-                    desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
-                    float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                    else if (!suppressTargetMotion)
                     {
-                        float invDesired = FastInvSqrt(desiredLengthSq);
-                        desiredX *= invDesired;
-                        desiredY *= invDesired;
+                        ResetUnitProgressAnchor(i, px, py);
                     }
-                }
-                else if (!suppressTargetMotion)
-                {
-                    desiredX = flowX;
-                    desiredY = flowY;
+
+                    if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
+                    {
+                        float invSlot = FastInvSqrt(slotDistSq);
+                        float slotDirX = toSlotX * invSlot;
+                        float slotDirY = toSlotY * invSlot;
+                        float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
+                            ? Semantics.Group.NearSlotBlend
+                            : Semantics.Group.FarSlotBlend;
+                        desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
+                        desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
+                        float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
+                        if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                        {
+                            float invDesired = FastInvSqrt(desiredLengthSq);
+                            desiredX *= invDesired;
+                            desiredY *= invDesired;
+                        }
+                    }
+                    else if (!suppressTargetMotion)
+                    {
+                        desiredX = flowX;
+                        desiredY = flowY;
+                    }
                 }
             }
 
@@ -1969,6 +2068,21 @@ public sealed partial class MassNavigationFlowSolverState
                 }
             }
 
+            // Settled agents hold position and velocity to avoid post-arrival jitter, but only
+            // after the scans above have marked hard-resolve candidates: real body overlap must
+            // still be separated by ResolveHardPenetration, which can wake them via the
+            // arrival-recovery push threshold.
+            // TimeFlow pause uses the same hold path after the scans, so navigation cannot move
+            // while simulation time is blocked.
+            if (!simulationTimeActive || suppressTargetMotion)
+            {
+                _velocitiesCm[i2] = 0f;
+                _velocitiesCm[i2 + 1] = 0f;
+                _positionsCm[i2] = px;
+                _positionsCm[i2 + 1] = py;
+                continue;
+            }
+
             float separationScale = (inFormation
                 ? Semantics.Steering.FormationSeparationScale
                 : Semantics.Steering.LooseSeparationScale) * unitArrivalFactor;
@@ -1989,18 +2103,18 @@ public sealed partial class MassNavigationFlowSolverState
                 px,
                 py,
                 speed,
-                clampedDt,
+                agentDt,
                 ref desiredVelocityX,
                 ref desiredVelocityY);
 
-            float mix = MathF.Min(clampedDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
+            float mix = MathF.Min(agentDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
             float velocityX = _readVelocitiesCm[i2] + ((desiredVelocityX - _readVelocitiesCm[i2]) * mix);
             float velocityY = _readVelocitiesCm[i2 + 1] + ((desiredVelocityY - _readVelocitiesCm[i2 + 1]) * mix);
             _velocitiesCm[i2] = velocityX;
             _velocitiesCm[i2 + 1] = velocityY;
 
-            float nextX = px + velocityX * clampedDt;
-            float nextY = py + velocityY * clampedDt;
+            float nextX = px + velocityX * agentDt;
+            float nextY = py + velocityY * agentDt;
             _positionsCm[i2] = nextX;
             _positionsCm[i2 + 1] = nextY;
         }
@@ -2354,6 +2468,7 @@ public sealed partial class MassNavigationFlowSolverState
             if (_unitSettledFlags[i] != 0)
             {
                 settled++;
+                EnqueueArrivalEvent(i);
             }
         }
 
@@ -2368,6 +2483,7 @@ public sealed partial class MassNavigationFlowSolverState
             return;
         }
 
+        RecomputeMaxInteractingBodyRadiiCmIfDirty();
         BuildHardResolveHash(_positionsCm);
         float invHashCell = 1f / _hardResolveHashCellSizeCm;
         int hwm1 = _hardResolveHashWidth - 1;
@@ -2375,11 +2491,6 @@ public sealed partial class MassNavigationFlowSolverState
 
         for (int i = 0; i < UnitCount; i++)
         {
-            if (_useCandidateGating && _hardResolveCandidates[i] == 0)
-            {
-                continue;
-            }
-
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
@@ -2399,6 +2510,13 @@ public sealed partial class MassNavigationFlowSolverState
             int minX = Math.Max(0, cellX - hardResolveSearchRadius);
             int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);
 
+            if (_useCandidateGating &&
+                _hardResolveCandidates[i] == 0 &&
+                !HasHardResolveAgentPenetrationCandidate(i, minX, maxX, minY, maxY))
+            {
+                continue;
+            }
+
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
                 int rowBase = neighborY * _hardResolveHashWidth;
@@ -2412,7 +2530,7 @@ public sealed partial class MassNavigationFlowSolverState
                         int j = _hardResolveAgents[hashIndex];
                         if (j > i)
                         {
-                            if (!CanAgentsInteract(i, j))
+                            if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))
                             {
                                 continue;
                             }
@@ -2425,6 +2543,45 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         ResolveObstaclePenetration();
+    }
+
+    private bool HasHardResolveAgentPenetrationCandidate(int i, int minX, int maxX, int minY, int maxY)
+    {
+        for (int neighborY = minY; neighborY <= maxY; neighborY++)
+        {
+            int rowBase = neighborY * _hardResolveHashWidth;
+            for (int neighborX = minX; neighborX <= maxX; neighborX++)
+            {
+                int cell = rowBase + neighborX;
+                int start = _hardResolveCellOffsets[cell];
+                int end = start + _hardResolveCellCounts[cell];
+                for (int hashIndex = start; hashIndex < end; hashIndex++)
+                {
+                    int j = _hardResolveAgents[hashIndex];
+                    if (j <= i || !CanAgentsInteract(i, j))
+                    {
+                        continue;
+                    }
+
+                    if (AreAgentsPenetrating(i, j))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool AreAgentsPenetrating(int i, int j)
+    {
+        int i2 = i << 1;
+        int j2 = j << 1;
+        float dx = _positionsCm[i2] - _positionsCm[j2];
+        float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
+        float minDistance = ResolvePairBodyRadiusSumCm(i, j);
+        return (dx * dx) + (dy * dy) < minDistance * minDistance;
     }
 
     private void SeparateAgents(int i, int j)

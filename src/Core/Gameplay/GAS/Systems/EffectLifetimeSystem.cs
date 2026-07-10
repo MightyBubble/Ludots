@@ -2,14 +2,20 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.Buffer;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Vision;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -31,12 +37,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasConditionRegistry _conditions;
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
+        private readonly GasPresentationEventBuffer _presentationEvents;
 
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly TagOps _tagOps;
+        private readonly OrderTypeRegistry? _orderTypeRegistry;
+        private readonly OrderRuleRegistry? _orderRuleRegistry;
+        private readonly int _stepRateHz;
 
         private readonly CommandBuffer _commandBuffer = new CommandBuffer();
 
@@ -80,7 +90,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<PhaseGraphEntry> _expirePhaseGraphs = new(64);
         private readonly List<PhaseGraphEntry> _removePhaseGraphs = new(64);
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, GasPresentationEventBuffer presentationEvents = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -88,6 +98,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _conditions = conditions;
             _templates = templates;
             _spatialQueries = spatialQueries;
+            _presentationEvents = presentationEvents;
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
@@ -97,13 +108,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
+            _builtinRuntime.LifecycleRequests = lifecycleRequests;
+            _builtinRuntime.LifecycleServices = lifecycleServices;
             _builtinRuntime.Exchange = exchangeRuntime;
+            _builtinRuntime.Relationships = relationshipRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
+            _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _orderTypeRegistry = orderTypeRegistry;
+            _orderRuleRegistry = orderRuleRegistry;
+            _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+        }
 
+        private void RefreshBuiltinOrderContext()
+        {
+            _builtinRuntime.OrderTypeRegistry = _orderTypeRegistry;
+            _builtinRuntime.OrderRuleRegistry = _orderRuleRegistry;
+            _builtinRuntime.StepRateHz = _stepRateHz;
+            _builtinRuntime.CurrentStep = _clock?.Now(Ludots.Core.Engine.ClockDomainId.Step) ?? 0;
         }
 
         public override void Update(in float dt)
         {
+            RefreshBuiltinOrderContext();
             _callbackCreateBudget.NextFrame();
             _callbackDropped = 0;
             _fanOutDropped = 0;
@@ -138,6 +164,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 OnRemoveCallbacks = _onRemoveCallbacks,
                 ExpirePhaseGraphs = _expirePhaseGraphs,
                 RemovePhaseGraphs = _removePhaseGraphs,
+                PresentationEvents = _presentationEvents,
                 Budget = _callbackCreateBudget,
                 TagOps = _tagOps,
                 GasBudget = _budget
@@ -186,7 +213,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public void Update(Entity entity, ref GameplayEffect effect, ref EffectContext context)
             {
                 if (effect.State < EffectState.Committed) return;
-                int now = Clock.Now(effect.ClockId.ToDomainId());
+                int now = GasClockRuntime.Now(World, Clock, effect.ClockId, context.Target, "Effect period");
 
                 if ((effect.LifetimeKind == EffectLifetimeKind.After || effect.LifetimeKind == EffectLifetimeKind.Infinite) && effect.PeriodTicks > 0)
                 {
@@ -243,6 +270,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public List<CallbackCommand> OnRemoveCallbacks;
             public List<PhaseGraphEntry> ExpirePhaseGraphs;
             public List<PhaseGraphEntry> RemovePhaseGraphs;
+            public GasPresentationEventBuffer PresentationEvents;
             public RootBudgetTable Budget;
             public TagOps TagOps;
             public GasBudget GasBudget;
@@ -254,7 +282,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (effect.State < EffectState.Committed) return;
                 bool shouldExpire = false;
                 bool cancelled = effect.CancelRequested || World.Has<EffectCancelled>(entity);
-                int now = Clock.Now(effect.ClockId.ToDomainId());
+                int now = GasClockRuntime.Now(World, Clock, effect.ClockId, context.Target, "Effect expiration");
 
                 if (!cancelled && effect.LifetimeKind == EffectLifetimeKind.After)
                 {
@@ -298,6 +326,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int tplId = World.Get<EffectTemplateRef>(entity).TemplateId;
                     var entry = new PhaseGraphEntry { TemplateId = tplId, EffectEntityId = entity.Id, ClockTick = now, EffectEntity = entity, Context = context };
+                    PresentationEvents?.Publish(new GasPresentationEvent
+                    {
+                        Kind = cancelled ? GasPresentationEventKind.EffectCancelled : GasPresentationEventKind.EffectExpired,
+                        Actor = context.Source,
+                        Target = context.Target,
+                        EffectTemplateId = tplId
+                    });
                     if (!cancelled)
                     {
                         ExpirePhaseGraphs.Add(entry);

@@ -95,7 +95,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 graphPrograms,
                 new StubSpatialQueryService(targetNormal, targetDowned),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                AllowAllCandidates);
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -109,8 +110,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity,
                         IsSkillMapping = true,
                     }
                 }
@@ -187,7 +188,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(target),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                AllowAllCandidates);
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -263,7 +265,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                AllowAllCandidates);
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -274,6 +277,76 @@ namespace Ludots.Tests.GAS
             Assert.That(resolved, Is.True);
             Assert.That(resolution.Target, Is.EqualTo(lowerEntityIdTarget));
             Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ContextScoredResolver_CandidateGate_FiltersDeniedSpatialCandidateBeforeScoring()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1300;
+            const int candidateAbilityId = 1301;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(candidateAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+
+            // Without the gate, the lower-id target would win the entity-id tie break
+            // (see ContextScoredResolver_TiesBreakByEntityIdThenSlot).
+            var deniedTarget = world.Create();
+            world.Add(deniedTarget, WorldPositionCm.FromCm(100, 0));
+            world.Add(deniedTarget, new GameplayTagContainer());
+
+            var allowedTarget = world.Create();
+            world.Add(allowedTarget, WorldPositionCm.FromCm(100, 0));
+            world.Add(allowedTarget, new GameplayTagContainer());
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: candidateAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true)
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(deniedTarget, allowedTarget),
+                new StubGraphApi(world),
+                candidateGate: (viewer, candidate) =>
+                {
+                    Assert.That(viewer, Is.EqualTo(actor), "the resolver gates with the acting entity as viewer.");
+                    return candidate != deniedTarget;
+                });
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                default,
+                out var resolution);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(resolution.Target, Is.EqualTo(allowedTarget),
+                "the gate-denied candidate must never reach scoring; only the allowed one is evaluated.");
         }
 
         private static InputConfigRoot CreateInputConfig()
@@ -297,6 +370,11 @@ namespace Ludots.Tests.GAS
                     }
                 }
             };
+        }
+
+        private static bool AllowAllCandidates(Entity viewer, Entity candidate)
+        {
+            return true;
         }
 
         private sealed class NullInputBackend : IInputBackend

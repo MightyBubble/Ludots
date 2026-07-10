@@ -22,6 +22,8 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "runtimeEntityLifecycleQueueCapacity": 131072,
+    "runtimeEntityLifecycleReceiptQueueCapacity": 131072,
     "cameraCulling": {
       "highLodDistanceCm": 4000.0,
       "mediumLodDistanceCm": 10000.0,
@@ -57,12 +59,10 @@
       "health": "Health"
     }
   },
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "All" },
     "acquisition": {
-      "collectionKey": "collection.ui.selection.acquisition",
-      "commitToFormalSelection": true,
-      "formalSelectionSetKey": "selection.live.primary",
+      "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
     },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]

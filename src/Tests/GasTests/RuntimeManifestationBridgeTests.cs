@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -409,12 +409,12 @@ namespace Ludots.Tests.GAS
                 "unsupported property 'Shape'");
             AssertRejects(
                 world,
-                "SelectionSelectableState",
+                "CommandSourceSelectableState",
                 """{ "isEnabled": true }""",
                 "unsupported property 'isEnabled'");
             AssertRejects(
                 world,
-                "SelectionSelectableState",
+                "CommandSourceSelectableState",
                 """true""",
                 "requires an object payload");
             AssertRejects(

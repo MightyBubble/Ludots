@@ -1,0 +1,32 @@
+[
+  {
+    "id": "MassNavigation.Camera.LargeWorldHeightmap",
+    "displayName": "MassNavigation Large World Heightmap",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 12000,
+    "pitch": 42,
+    "fovYDeg": 55,
+    "yaw": 45,
+    "targetHeightMode": "VisualHeightmap",
+    "targetHeightLayerIndex": 0,
+    "targetHeightOffsetCm": 0,
+    "minDistanceCm": 2500,
+    "maxDistanceCm": 50000,
+    "minPitchDeg": 20,
+    "maxPitchDeg": 80,
+    "panMode": "Keyboard",
+    "edgePanMarginPx": 10,
+    "edgePanSpeedCmPerSec": 12000,
+    "panCmPerSecond": 12000,
+    "enableGrabDrag": true,
+    "rotateMode": "Both",
+    "rotateDegPerPixel": 0.28,
+    "rotateRequiresHold": true,
+    "rotateDegPerSecond": 90,
+    "enableZoom": true,
+    "zoomCmPerWheel": 2000,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]

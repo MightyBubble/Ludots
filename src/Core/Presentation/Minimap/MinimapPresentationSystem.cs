@@ -1,15 +1,21 @@
 using System.Numerics;
 using System.Diagnostics;
+using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Minimap
 {
+    public delegate bool MinimapFocusCollectionProvider(GameEngine engine, out Entity owner, out string collectionKey);
+    public delegate bool MinimapKnowledgeViewerProvider(GameEngine engine, out Entity viewer);
+
     public sealed class MinimapPresentationSystem : ISystem<float>
     {
         private readonly GameEngine _engine;
@@ -84,8 +90,9 @@ namespace Ludots.Core.Presentation.Minimap
     public sealed class MinimapInputConsumer : IInputFrameConsumer
     {
         private readonly MinimapRuntime _runtime;
+        private readonly MinimapFocusCollectionProvider _focusCollectionProvider;
         private bool _prevToggle;
-        private bool _prevCenterOnSelection;
+        private bool _prevCenterOnFocusPrimary;
         private bool _prevZoomIn;
         private bool _prevZoomOut;
         private bool _prevPresetToggle;
@@ -93,9 +100,12 @@ namespace Ludots.Core.Presentation.Minimap
         private bool _dragging;
         private bool _zoomSliderDragging;
 
-        public MinimapInputConsumer(MinimapRuntime runtime)
+        public MinimapInputConsumer(
+            MinimapRuntime runtime,
+            MinimapFocusCollectionProvider focusCollectionProvider)
         {
             _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
+            _focusCollectionProvider = focusCollectionProvider ?? throw new System.ArgumentNullException(nameof(focusCollectionProvider));
         }
 
         public void Consume(GameEngine engine, PlayerInputHandler input, float deltaTime)
@@ -148,13 +158,15 @@ namespace Ludots.Core.Presentation.Minimap
             _prevZoomIn = zoomIn;
             _prevZoomOut = zoomOut;
 
-            bool centerOnSelection = input.PressedThisFrame(MinimapInputActions.CenterOnSelection);
-            if (centerOnSelection && !_prevCenterOnSelection)
+            bool centerOnFocusPrimary = input.PressedThisFrame(MinimapInputActions.CenterOnFocusPrimary);
+            if (centerOnFocusPrimary &&
+                !_prevCenterOnFocusPrimary &&
+                TryResolveFocusPrimary(engine, out Entity focusPrimary))
             {
-                _runtime.CenterOnSelected(engine);
+                _runtime.CenterOnEntity(engine, focusPrimary);
             }
 
-            _prevCenterOnSelection = centerOnSelection;
+            _prevCenterOnFocusPrimary = centerOnFocusPrimary;
 
             Vector2 pan = input.ReadAction<Vector2>(MinimapInputActions.Pan);
             if (pan.X != 0f || pan.Y != 0f)
@@ -285,13 +297,30 @@ namespace Ludots.Core.Presentation.Minimap
 
         private static void SuppressCameraZoom(GameEngine engine, PlayerInputHandler input)
         {
-            string? zoomActionId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveDefinition?.ZoomActionId;
-            if (!string.IsNullOrWhiteSpace(zoomActionId))
+            if (engine.GetService(CoreServiceKeys.InputActionAttributeBindingRegistry) is not InputActionAttributeBindingRegistry registry)
             {
-                input.SuppressActionThisFrame(zoomActionId);
+                return;
             }
 
-            input.SuppressActionThisFrame(VirtualCameraDefinition.DefaultZoomActionId);
+            InputActionAttributeBindingEntry[] entries = registry.Entries;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].SuppressOnUiWheelCaptured)
+                {
+                    input.SuppressActionThisFrame(entries[i].ActionId);
+                }
+            }
+        }
+
+        private bool TryResolveFocusPrimary(GameEngine engine, out Entity focusPrimary)
+        {
+            focusPrimary = Entity.Null;
+            return _focusCollectionProvider(engine, out Entity owner, out string collectionKey) &&
+                   engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections) &&
+                   collections.TryGet(owner, collectionKey, out EntityCollectionHandle handle) &&
+                   collections.TryGetEntityAt(handle, 0, out focusPrimary) &&
+                   focusPrimary != Entity.Null &&
+                   engine.World.IsAlive(focusPrimary);
         }
     }
 
@@ -304,6 +333,6 @@ namespace Ludots.Core.Presentation.Minimap
         public const string ZoomIn = "Minimap.ZoomIn";
         public const string ZoomOut = "Minimap.ZoomOut";
         public const string Pan = "Minimap.Pan";
-        public const string CenterOnSelection = "Minimap.CenterOnSelection";
+        public const string CenterOnFocusPrimary = "Minimap.CenterOnFocusPrimary";
     }
 }

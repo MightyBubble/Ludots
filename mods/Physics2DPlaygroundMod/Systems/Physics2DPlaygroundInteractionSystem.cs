@@ -7,11 +7,12 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
@@ -43,11 +44,13 @@ namespace Physics2DPlaygroundMod.Systems
                 new PresentationLodEntry(maxDistanceCm: 50000f, minScreenCoverage01: 0.002f));
 
         private const string SpawnedBoxPerformerId = "physics2d_playground.spawned_box";
+        private const int InitialSelectedScratchCapacity = 64;
 
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly Physics2DSimulationSystem _sim;
         private readonly List<Entity> _selectedEntities = new(1024);
+        private Entity[] _selectedScratch = new Entity[InitialSelectedScratchCapacity];
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerCommandBuffer _performerCommands;
         private readonly PerformerDefinitionRegistry _performerDefinitions;
@@ -284,25 +287,23 @@ namespace Physics2DPlaygroundMod.Systems
         {
             selected.Clear();
 
-            if (_engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selectionRuntime)
+            if (!TryResolveLocalCommandSourceOwner(out Entity owner))
             {
                 return 0;
             }
 
-            Entity localPlayer = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!_world.IsAlive(localPlayer))
-            {
-                return 0;
-            }
-
-            int count = selectionRuntime.GetSelectionCount(localPlayer, SelectionSetKeys.LivePrimary);
+            int count = EntityCollectionContextRuntime.GetCount(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
             if (count <= 0)
             {
                 return 0;
             }
 
-            Entity[] members = new Entity[count];
-            int written = selectionRuntime.CopySelection(localPlayer, SelectionSetKeys.LivePrimary, members);
+            EnsureSelectedScratchCapacity(count);
+            int written = EntityCollectionContextRuntime.Copy(
+                _engine.GlobalContext,
+                owner,
+                EntityCollectionKeys.CommandSource,
+                _selectedScratch.AsSpan(0, count));
             if (written <= 0)
             {
                 return 0;
@@ -310,10 +311,43 @@ namespace Physics2DPlaygroundMod.Systems
 
             for (int i = 0; i < written; i++)
             {
-                selected.Add(members[i]);
+                Entity entity = _selectedScratch[i];
+                if (_world.IsAlive(entity))
+                {
+                    selected.Add(entity);
+                }
             }
 
             return selected.Count;
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !_world.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
+        }
+
+        private void EnsureSelectedScratchCapacity(int required)
+        {
+            if (_selectedScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _selectedScratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _selectedScratch, next);
         }
 
         private void ApplyImpulseToSelected(in WorldCmInt2 targetWorldCm)
@@ -405,8 +439,8 @@ namespace Physics2DPlaygroundMod.Systems
                 SpawnedBoxBounds,
                 SpawnedBoxLodProfile,
                 new CullState { IsVisible = true, LOD = LODLevel.High, DistanceToCameraSq = 0f },
-                default(SelectionSelectableTag),
-                SelectionSelectableState.EnabledByDefault);
+                default(CommandSourceSelectableTag),
+                CommandSourceSelectableState.EnabledByDefault);
 
             if (!_performerCommands.TryAdd(new PerformerCommand
                 {

@@ -11,6 +11,7 @@ using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -18,13 +19,16 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -48,12 +52,14 @@ namespace Ludots.Tests.GAS.Production
         private const string ActionModeId = "Interaction.Mode.Action";
         private const string StressTelemetryKey = "InteractionShowcaseMod.StressTelemetry";
         private const string TestInputBackendKey = "Tests.InteractionShowcase.InputBackend";
+        private const string HeadlessCameraKey = "Tests.InteractionShowcase.HeadlessCamera";
 
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
             "CoreInputMod",
             "CameraProfilesMod",
+            "EntityInfoPanelsMod",
             "InteractionShowcaseMod"
         };
 
@@ -118,7 +124,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+002] Arcweaver selected | switched F1 WoW then F2 LoL");
 
             float skirmisherAHealthBeforeQ = ReadHealth(engine.World, "EnemySkirmisherA");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "EnemySkirmisherA"), frameTimesMs);
+            SetMouseScreen(engine, backend, GetEntityScreen(engine, "EnemySkirmisherA"), frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             Tick(engine, 4, frameTimesMs);
             float skirmisherAHealthAfterQ = ReadHealth(engine.World, "EnemySkirmisherA");
@@ -214,7 +220,7 @@ namespace Ludots.Tests.GAS.Production
             string vanguardTarget = FindNearestEnemy(engine.World, "Vanguard");
             PressButton(engine, backend, "<Keyboard>/f4", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
+            SetMouseScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             int baselineRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             int ringOverlays = CountOverlays(overlays, GroundOverlayShape.Ring);
@@ -228,12 +234,15 @@ namespace Ludots.Tests.GAS.Production
             ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             Tick(engine, 4, frameTimesMs);
             float vanguardTargetHealthAfterR = ReadHealth(engine.World, vanguardTarget);
-            Assert.That(vanguardTargetHealthAfterR, Is.LessThan(vanguardTargetHealthBeforeR));
+            Assert.That(
+                vanguardTargetHealthAfterR,
+                Is.LessThan(vanguardTargetHealthBeforeR),
+                BuildVanguardShockwaveDiagnostics(engine, vanguardTarget, overlays));
 
             PressButton(engine, backend, "<Keyboard>/f3", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(Sc2ModeId));
             float vanguardTargetHealthBeforeCancel = ReadHealth(engine.World, vanguardTarget);
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
+            SetMouseScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             int baselineAimCastOverlays = overlays.Count;
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             Tick(engine, 1, frameTimesMs);
@@ -243,7 +252,7 @@ namespace Ludots.Tests.GAS.Production
                 BuildSelectionStateDiagnostics(engine),
                 BuildOverlayDiagnostics(overlays));
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Cone), Is.GreaterThan(0), vanguardAimDiagnostics);
-            RightClickWorld(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
+            RightClickScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             Tick(engine, 2, frameTimesMs);
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Cone), Is.EqualTo(0), BuildOverlayDiagnostics(overlays));
             Assert.That(overlays.Count, Is.EqualTo(baselineAimCastOverlays), BuildOverlayDiagnostics(overlays));
@@ -252,7 +261,7 @@ namespace Ludots.Tests.GAS.Production
 
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             Tick(engine, 1, frameTimesMs);
-            LeftClickWorld(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
+            LeftClickScreen(engine, backend, GetEntityScreen(engine, vanguardTarget), frameTimesMs);
             Tick(engine, 4, frameTimesMs);
             float vanguardTargetHealthAfterConfirm = ReadHealth(engine.World, vanguardTarget);
             Assert.That(vanguardTargetHealthAfterConfirm, Is.LessThan(vanguardTargetHealthAfterCancel));
@@ -264,7 +273,7 @@ namespace Ludots.Tests.GAS.Production
             PressButton(engine, backend, "<Keyboard>/f5", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(ActionModeId));
             string commanderTarget = FindNearestEnemy(engine.World, "Commander");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, commanderTarget), frameTimesMs);
+            SetMouseScreen(engine, backend, GetEntityScreen(engine, commanderTarget), frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/space", frameTimesMs);
             Tick(engine, 3, frameTimesMs);
             Assert.That(HasAnyTag(engine.World, "Commander", "Cooldown.Commander.Z", "Cooldown.Commander.E", "Cooldown.Commander.R"), Is.True);
@@ -610,7 +619,7 @@ namespace Ludots.Tests.GAS.Production
             PressButton(engine, backend, "<Keyboard>/f2", frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(LolModeId));
 
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "EnemySkirmisherA"), frameTimesMs);
+            SetMouseScreen(engine, backend, GetEntityScreen(engine, "EnemySkirmisherA"), frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             Tick(engine, 4, frameTimesMs);
 
@@ -700,18 +709,31 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
 
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            AcceptanceUiHostInstaller.Install(engine);
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
-            engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
+            if (engine.GlobalContext[TestInputBackendKey] is TestInputBackend backend)
+            {
+                backend.SetMousePosition(view.Resolution * 0.5f);
+            }
+
+            var cameraAdapter = new StubCameraAdapter();
+            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
             var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
+            engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
+                cameraPresenter,
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
 
             engine.Start();
             return engine;
@@ -722,6 +744,7 @@ namespace Ludots.Tests.GAS.Production
             engine.LoadMap(mapId);
             Assert.That(engine.CurrentMapSession, Is.Not.Null, $"{mapId} should create a live map session.");
             Tick(engine, frames, frameTimesMs);
+            WaitForCameraBlendToComplete(engine, frameTimesMs);
         }
 
         private static void InstallInput(GameEngine engine)
@@ -745,12 +768,19 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < frames; i++)
             {
                 long t0 = Stopwatch.GetTimestamp();
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
                 engine.Tick(DeltaTime);
+                UpdateHeadlessCamera(engine);
                 frameTimesMs.Add((Stopwatch.GetTimestamp() - t0) * 1000d / Stopwatch.Frequency);
             }
         }
 
-        private static void TickUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames = 60)
+        private static void TickUntil(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            Func<bool> predicate,
+            int maxFrames = 60,
+            Func<string>? describeFailure = null)
         {
             for (int i = 0; i < maxFrames; i++)
             {
@@ -762,7 +792,21 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 1, frameTimesMs);
             }
 
-            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
+            Assert.That(
+                predicate(),
+                Is.True,
+                $"Predicate was not satisfied within {maxFrames} frames. {describeFailure?.Invoke()}");
+        }
+
+        private static void TickUntilFixedTickAdvances(GameEngine engine, List<double> frameTimesMs, int fixedTicks = 1)
+        {
+            int targetTick = engine.GameSession.CurrentTick + Math.Max(1, fixedTicks);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => engine.GameSession.CurrentTick >= targetTick,
+                maxFrames: 16 * Math.Max(1, fixedTicks),
+                describeFailure: () => $"currentTick={engine.GameSession.CurrentTick}, targetTick={targetTick}");
         }
 
         private static TestInputBackend GetInputBackend(GameEngine engine)
@@ -773,13 +817,15 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SelectNamedEntity(GameEngine engine, TestInputBackend backend, string name, List<double> frameTimesMs)
         {
-            LeftClickWorld(engine, backend, GetEntityScreen(engine, name), frameTimesMs);
+            Vector2 screenPoint = GetEntityScreen(engine, name);
+            LeftClickScreen(engine, backend, screenPoint, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
                 () => string.Equals(GetSelectedEntityName(engine), name, StringComparison.Ordinal) &&
                       GetSelectionCount(engine) == 1,
-                maxFrames: 12);
+                maxFrames: 12,
+                describeFailure: () => BuildClickSelectionDiagnostics(engine, name, screenPoint));
         }
 
         private static void AssertSelectedEntity(GameEngine engine, string expectedName)
@@ -799,43 +845,43 @@ namespace Ludots.Tests.GAS.Production
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
         {
             backend.SetButton(path, true);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void HoldButton(GameEngine engine, TestInputBackend backend, string path, int holdFrames, List<double> frameTimesMs)
         {
             backend.SetButton(path, true);
-            Tick(engine, Math.Max(1, holdFrames), frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs, Math.Max(1, holdFrames));
         }
 
         private static void ReleaseButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
         {
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void PressChord(GameEngine engine, TestInputBackend backend, string primaryPath, string secondaryPath, List<double> frameTimesMs)
         {
             backend.SetButton(primaryPath, true);
             backend.SetButton(secondaryPath, true);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(primaryPath, false);
             backend.SetButton(secondaryPath, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void DoubleTapKey(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
         {
             backend.SetButton(path, true);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(path, true);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void ExecuteArcweaverBlinkDashPrelude(GameEngine engine, TestInputBackend backend, List<double> frameTimesMs)
@@ -843,7 +889,7 @@ namespace Ludots.Tests.GAS.Production
             Vector2 beforeBlink = ReadPosition(engine.World, "Arcweaver");
             SetMouseWorld(engine, backend, beforeBlink + new Vector2(400f, 0f), frameTimesMs);
             backend.SetButton("<Keyboard>/w", true);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton("<Keyboard>/w", false);
             Tick(engine, 12, frameTimesMs);
 
@@ -853,34 +899,56 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 12, frameTimesMs);
         }
 
-        private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
-        {
-            SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
-            backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2, frameTimesMs);
-            backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2, frameTimesMs);
-        }
-
-        private static void RightClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
-        {
-            SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
-            backend.SetButton("<Mouse>/RightButton", true);
-            Tick(engine, 2, frameTimesMs);
-            backend.SetButton("<Mouse>/RightButton", false);
-            Tick(engine, 2, frameTimesMs);
-        }
-
-        private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        private static void LeftClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
         {
             backend.SetMousePosition(screenPosition);
-            Tick(engine, 1, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", true);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            LeftClickScreen(engine, backend, WorldCmToScreen(engine, worldCm), frameTimesMs);
+        }
+
+        private static void RightClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        {
+            backend.SetMousePosition(screenPosition);
+            backend.SetButton("<Mouse>/RightButton", true);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void RightClickWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            RightClickScreen(engine, backend, WorldCmToScreen(engine, worldCm), frameTimesMs);
+        }
+
+        private static void SetMouseScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        {
+            backend.SetMousePosition(screenPosition);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            SetMouseScreen(engine, backend, WorldCmToScreen(engine, worldCm), frameTimesMs);
+        }
+
+        private static Vector2 WorldCmToScreen(GameEngine engine, Vector2 worldCm)
+        {
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(worldCm.X, worldCm.Y, yMeters: 0f));
         }
 
         private static void HoldModifier(GameEngine engine, TestInputBackend backend, string path, bool isDown, List<double> frameTimesMs)
         {
             backend.SetButton(path, isDown);
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void DragSelectNamed(GameEngine engine, TestInputBackend backend, List<double> frameTimesMs, params string[] names)
@@ -894,15 +962,21 @@ namespace Ludots.Tests.GAS.Production
             float maxY = points.Max(p => p.Y) + 40f;
 
             backend.SetMousePosition(new Vector2(minX, minY));
-            Tick(engine, 1, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetMousePosition(new Vector2(maxX, maxY));
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
 
-            TickUntil(engine, frameTimesMs, () => GetSelectionCount(engine) == names.Length, maxFrames: 12);
+            var marquee = new ScreenRect(minX, minY, maxX, maxY);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => GetSelectionCount(engine) == names.Length,
+                maxFrames: 12,
+                describeFailure: () => BuildDragSelectionDiagnostics(engine, marquee, names));
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -1299,7 +1373,7 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"mappingAiming={mapping.IsAiming}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
-                    details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"TargetType={actionMapping.TargetType}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
                 else
@@ -1320,6 +1394,21 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" | ", details);
         }
 
+        private static string BuildVanguardShockwaveDiagnostics(GameEngine engine, string targetName, GroundOverlayBuffer overlays)
+        {
+            Vector2 vanguardPosition = ReadPosition(engine.World, "Vanguard");
+            Vector2 targetPosition = ReadPosition(engine.World, targetName);
+            return string.Join(" || ",
+                $"shockwaveTarget={targetName}",
+                $"vanguard=({vanguardPosition.X:0.##},{vanguardPosition.Y:0.##})",
+                $"target=({targetPosition.X:0.##},{targetPosition.Y:0.##})",
+                $"distance={Vector2.Distance(vanguardPosition, targetPosition):0.##}",
+                BuildInputActionDiagnostics(engine, "SkillR"),
+                BuildAbilityDiagnostics(engine, "Vanguard"),
+                BuildSelectionStateDiagnostics(engine),
+                BuildOverlayDiagnostics(overlays));
+        }
+
         private static string BuildSelectionStateDiagnostics(GameEngine engine)
         {
             var details = new List<string>();
@@ -1327,8 +1416,7 @@ namespace Ludots.Tests.GAS.Production
             details.Add($"selected={string.Join(",", GetSelectedNames(engine))}");
             details.Add($"primary={GetSelectedEntityName(engine)}");
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) &&
-                hoveredObj is Entity hovered &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -1340,9 +1428,9 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Entity localPlayer = GetLocalPlayer(engine);
-            if (engine.World.Has<SelectionDragState>(localPlayer))
+            if (engine.World.Has<CommandSourceDragState>(localPlayer))
             {
-                ref var drag = ref engine.World.Get<SelectionDragState>(localPlayer);
+                ref var drag = ref engine.World.Get<CommandSourceDragState>(localPlayer);
                 details.Add($"dragActive={drag.Active}");
                 details.Add($"dragStart=({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})");
                 details.Add($"dragCurrent=({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})");
@@ -1354,6 +1442,115 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return string.Join(" | ", details);
+        }
+
+        private static string BuildClickSelectionDiagnostics(GameEngine engine, string entityName, Vector2 screenPoint)
+        {
+            var details = new List<string>
+            {
+                $"click=({screenPoint.X:0.##},{screenPoint.Y:0.##})",
+                BuildSelectionStateDiagnostics(engine)
+            };
+
+            Entity entity = FindEntityByName(engine.World, entityName);
+            details.Add($"entityAlive={engine.World.IsAlive(entity)}");
+            if (engine.World.TryGet(entity, out CullState cull))
+            {
+                details.Add($"cullVisible={cull.IsVisible}");
+                details.Add($"lod={cull.LOD}");
+                details.Add($"coverage={cull.ScreenCoverage01:0.###}");
+            }
+            else
+            {
+                details.Add("cull=<missing>");
+            }
+
+            if (engine.World.TryGet(entity, out VisualTransform transform))
+            {
+                details.Add($"visual=({transform.Position.X:0.##},{transform.Position.Y:0.##},{transform.Position.Z:0.##})");
+            }
+            else
+            {
+                details.Add("visual=<missing>");
+            }
+
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            bool hasBounds = SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect bounds);
+            details.Add(hasBounds
+                ? $"bounds=({bounds.MinX:0.##},{bounds.MinY:0.##})-({bounds.MaxX:0.##},{bounds.MaxY:0.##})"
+                : "bounds=<none>");
+            details.Add($"pointerHits={SpatialBoundsUtility.PointerHitsEntity(engine.World, entity, projector, screenPoint, 36f)}");
+
+            if (engine.GetService(CoreServiceKeys.InputHandler) is PlayerInputHandler liveInput)
+            {
+                Vector2 pointer = liveInput.ReadAction<Vector2>("PointerPos");
+                details.Add($"inputPointer=({pointer.X:0.##},{pointer.Y:0.##})");
+            }
+            else
+            {
+                details.Add("input=<missing>");
+            }
+
+            bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
+                              uiCapturedObj is bool captured &&
+                              captured;
+            details.Add($"uiCaptured={uiCaptured}");
+            return string.Join(" | ", details);
+        }
+
+        private static string BuildDragSelectionDiagnostics(GameEngine engine, ScreenRect marquee, IReadOnlyList<string> names)
+        {
+            var details = new List<string>
+            {
+                $"marquee=({marquee.MinX:0.##},{marquee.MinY:0.##})-({marquee.MaxX:0.##},{marquee.MaxY:0.##})",
+                BuildSelectionStateDiagnostics(engine),
+                BuildCameraDiagnostics(engine)
+            };
+
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            for (int i = 0; i < names.Count; i++)
+            {
+                Entity entity = FindEntityByName(engine.World, names[i]);
+                if (entity == Entity.Null || !engine.World.IsAlive(entity))
+                {
+                    details.Add($"{names[i]}=<missing>");
+                    continue;
+                }
+
+                Vector2 screen = GetEntityScreen(engine, names[i]);
+                bool visible = engine.World.TryGet(entity, out CullState cull) && cull.IsVisible;
+                bool hasBounds = SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect bounds);
+                bool intersects = SpatialBoundsUtility.EntityIntersectsScreenRect(engine.World, entity, projector, in marquee);
+                details.Add(hasBounds
+                    ? $"{names[i]} screen=({screen.X:0.##},{screen.Y:0.##}) visible={visible} intersects={intersects} bounds=({bounds.MinX:0.##},{bounds.MinY:0.##})-({bounds.MaxX:0.##},{bounds.MaxY:0.##})"
+                    : $"{names[i]} screen=({screen.X:0.##},{screen.Y:0.##}) visible={visible} intersects={intersects} bounds=<none>");
+            }
+
+            if (Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView view))
+            {
+                details.Add(
+                    $"commandSource owner={view.Owner.Id} key={view.Key} source={view.SourceKind} role={view.Role} primary={view.PrimaryEntity.Id} members={view.Count}");
+            }
+            else
+            {
+                details.Add("commandSource=<none>");
+            }
+
+            bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
+                              uiCapturedObj is bool captured &&
+                              captured;
+            details.Add($"uiCaptured={uiCaptured}");
+            return string.Join(" | ", details);
+        }
+
+        private static string BuildCameraDiagnostics(GameEngine engine)
+        {
+            var state = engine.GameSession.Camera.State;
+            var previous = engine.GameSession.Camera.PreviousState;
+            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            return $"cameraActive={brain?.ActiveCameraId ?? "<none>"} | cameraBlend={brain?.IsBlending.ToString() ?? "<none>"} | state=({state.TargetCm.X:0.##},{state.TargetCm.Y:0.##}) d={state.DistanceCm:0.##} p={state.Pitch:0.##} fov={state.FovYDeg:0.##} | prev=({previous.TargetCm.X:0.##},{previous.TargetCm.Y:0.##}) d={previous.DistanceCm:0.##} p={previous.Pitch:0.##} fov={previous.FovYDeg:0.##}";
         }
 
         private static string BuildRuneBurstResolverDiagnostics(GameEngine engine, Entity actor, Vector2 originWorldCm, Vector2 endpointWorldCm)
@@ -1452,8 +1649,43 @@ namespace Ludots.Tests.GAS.Production
 
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
+            if (SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect bounds))
+            {
+                return new Vector2(
+                    (bounds.MinX + bounds.MaxX) * 0.5f,
+                    (bounds.MinY + bounds.MaxY) * 0.5f);
+            }
+
+            if (engine.World.TryGet(entity, out VisualTransform transform))
+            {
+                return projector.WorldToScreen(transform.Position);
+            }
+
             ref var position = ref engine.World.Get<WorldPositionCm>(entity);
             return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+        }
+
+        private static void WaitForCameraBlendToComplete(GameEngine engine, List<double> frameTimesMs)
+        {
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => engine.GameSession.Camera.VirtualCameraBrain?.IsBlending != true,
+                maxFrames: 60,
+                describeFailure: () => $"activeCamera={engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "<none>"}");
+
+            Tick(engine, 1, frameTimesMs);
+        }
+
+        private static void UpdateHeadlessCamera(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(HeadlessCameraKey, out object? runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                return;
+            }
+
+            runtime.CameraPresenter.Update(engine.GameSession.Camera, interpolationAlpha: 1f);
         }
 
         private static List<string> ExtractUiText(UIRoot root)
@@ -1719,7 +1951,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `CurrentSelectionApplySystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 
@@ -1769,7 +2001,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -1780,7 +2012,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity[] GetSelectionSnapshot(GameEngine engine)
         {
-            return SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            return Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)
@@ -2005,21 +2237,25 @@ namespace Ludots.Tests.GAS.Production
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
         }
 
-        private sealed class WorldMappedScreenRayProvider : IScreenRayProvider
+        private sealed class HeadlessCameraRuntime
         {
-            public ScreenRay GetRay(Vector2 screenPosition)
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
             {
-                return new ScreenRay(
-                    new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
-                    -Vector3.UnitY);
+                CameraPresenter = cameraPresenter;
+                PresentationFrameSetup = presentationFrameSetup;
             }
+
+            public CameraPresenter CameraPresenter { get; }
+            public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
         }
 
-        private sealed class WorldMappedScreenProjector : IScreenProjector
+        private sealed class StubCameraAdapter : ICameraAdapter
         {
-            public Vector2 WorldToScreen(Vector3 worldPosition)
+            public CameraRenderState3D LastState { get; private set; }
+
+            public void UpdateCamera(in CameraRenderState3D state)
             {
-                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
+                LastState = state;
             }
         }
     }

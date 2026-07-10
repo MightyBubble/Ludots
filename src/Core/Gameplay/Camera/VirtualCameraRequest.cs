@@ -1,3 +1,5 @@
+using Arch.Core;
+
 namespace Ludots.Core.Gameplay.Camera
 {
     public sealed class VirtualCameraRequest
@@ -8,6 +10,8 @@ namespace Ludots.Core.Gameplay.Camera
         public bool ReplaceActiveStack { get; set; }
         public int? PriorityOverride { get; set; }
         public CameraFollowTargetKind? FollowTargetKindOverride { get; set; }
+        public Entity FollowCollectionOwnerOverride { get; set; } = Entity.Null;
+        public string FollowCollectionKeyOverride { get; set; } = string.Empty;
         public bool SnapToFollowTargetWhenAvailable { get; set; } = true;
         public bool ResetRuntimeState { get; set; } = true;
     }

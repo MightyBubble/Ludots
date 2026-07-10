@@ -1,8 +1,18 @@
 # Entity Collection Query Infrastructure
 
+Status: Current architecture.
+
+Selection retirement boundary:
+
+- Formal `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, `OrderSelectionReference`, `SelectionRequest`, and `SelectionResponse` are retired as official selection APIs.
+- User-facing copy may still say "selection" as shorthand for the default command source, but runtime authority is `EntityCollectionStore`.
+- The default commandable set is `(owner, EntityCollectionKeys.CommandSource)` / `collection.command.source`.
+- UI acquisition may keep a preview collection, but committed command intent writes `collection.command.source`; it must not fall back to `SelectionRuntime`.
+- Presentation rules use `EntityCollectionMemberAdded` / `EntityCollectionMemberRemoved` with collection keys such as `collection.command.source`.
+
 ## Scope
 
-Entity collections are reusable query/display state for ordered sets of entities. They are not formal selection truth and they do not replace domain-specific ECS state.
+Entity collections are reusable query/display state for ordered sets of entities. They are the authoritative home for command-source sets, and they do not replace domain-specific ECS state such as ownership, teams, or relationships.
 
 The infrastructure exists so UI acquisition previews, EntityInfo inspectors, command panels, spatial query results, GAS graph results, debug views, and future derived collections can share one high-performance store instead of each feature keeping a private entity list.
 
@@ -39,8 +49,8 @@ Hot reads are span-based and do not allocate after capacity warmup. Growth is ex
 
 - `Explicit`
 - `UiAcquisition`
-- `SelectionView`
-- `SelectionContainer`
+- `CollectionView`
+- `CollectionSnapshot`
 - `RelationDerived`
 - `SpatialQuery`
 - `GasGraphResult`
@@ -50,31 +60,30 @@ Hot reads are span-based and do not allocate after capacity warmup. Growth is ex
 
 - `Display`
 - `AcquisitionPreview`
-- `FormalSelection`
 - `CommandSource`
 - `Debug`
 
 These are descriptors for collection consumers. They are not permission checks and they do not create a second source of truth.
 
-## Selection Boundary
+## Command Source Boundary
 
-Formal selection remains owned by `SelectionRuntime`.
+`EntityCollectionStore` is the authoritative model for reusable entity sets. The default command source is `EntityCollectionKeys.CommandSource` (`collection.command.source`).
 
-UI click and box acquisition now write acquisition results into `EntityCollectionStore` first. The selection acquisition config decides whether those hits are only a preview collection or whether they are also committed through `SelectionRuntime` into a formal selection container.
+UI click and box acquisition write acquisition results into `EntityCollectionStore`. Replace/add/toggle command-source mutations publish the committed actor set to `(owner, collection.command.source)` with `EntityCollectionRoleKind.CommandSource`.
 
 This separation is intentional:
 
 - UI acquisition is input/query state.
-- Formal selection is gameplay-facing state.
-- Display/query collections can be inspected or sampled without mutating selection.
+- `collection.command.source` is the gameplay-facing default command set.
+- Display/query collections can be inspected or sampled without mutating command authority.
 
-Missing collection services or missing collection keys must fail explicitly at the consuming boundary. Silent fallback to current selection is forbidden.
+Missing collection services or missing collection keys must fail explicitly at the consuming boundary. Silent fallback to `SelectionRuntime`, `SelectionSetKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, or old global selected-entity state is forbidden.
 
 ## EntityInfo Boundary
 
-EntityInfo can target an explicit entity collection through `EntityInfoPanelTargetKind.EntityCollection`.
+EntityInfo targets explicit entity collections through `EntityInfoPanelTargetKind.EntityCollection`.
 
-The panel service resolves the collection from `EntityCollectionStore`, copies a window into its existing sampled panel state, and renders rows through the same insight profile, text catalog, and `UIRoot` path used by entity panels. Inspecting a collection does not mutate viewed selection.
+The panel service resolves the collection from `EntityCollectionStore`, copies a window into its existing sampled panel state, and renders rows through the same insight profile, text catalog, and `UIRoot` path used by entity panels. Inspecting a collection does not mutate the command-source collection.
 
 Reusable EntityInfo templates are presentation descriptors over the same sampling path. A missing template id fails explicitly; templates do not introduce a second profile system or text system.
 
@@ -131,7 +140,6 @@ Primary tests:
 
 Related docs:
 
-- `docs/architecture/entity_selection_architecture.md`
 - `docs/architecture/entity_insight_panel_architecture.md`
 - `docs/architecture/entity_command_panel_infrastructure.md`
 - `docs/architecture/ecs_soa.md`

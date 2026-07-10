@@ -1,12 +1,15 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Threading;
 using Arch.Core;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -19,8 +22,8 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
-using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Hosting;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -62,6 +65,8 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
+        private const string ActiveCollectionKey = "ChampionSkillSandbox.Collection.ActiveKey";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
@@ -223,7 +228,7 @@ namespace Ludots.Tests.GAS.Production
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
             AssertEntityHasTag(engine.World, "Jayce Hammer", "State.Champion.Jayce.Hammer");
 
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+            Entity selected = Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity currentPrimary)
                 ? currentPrimary
                 : Entity.Null;
             Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
@@ -268,7 +273,7 @@ namespace Ludots.Tests.GAS.Production
             var mapping = WaitForActiveInputOrderMapping(engine);
             var ezrealRMapping = mapping.GetMapping("SkillR");
             Assert.That(ezrealRMapping, Is.Not.Null);
-            Assert.That(ezrealRMapping!.SelectionType, Is.EqualTo(OrderSelectionType.Direction));
+            Assert.That(ezrealRMapping!.TargetType, Is.EqualTo(OrderTargetType.Direction));
             Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
             Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
 
@@ -380,17 +385,12 @@ namespace Ludots.Tests.GAS.Production
             InputOrderMapping? command = mapping.GetMapping("Command");
             Assert.That(command, Is.Not.Null);
             Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
-            Assert.That(command.SelectionType, Is.EqualTo(OrderSelectionType.Position));
+            Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
 
             Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { ezreal, garenAlpha });
-            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            ReplaceCommandSource(engine, localPlayer, ezreal, garenAlpha);
 
             engine.World.Add(ezreal, new CameraFollowWeight { Value = 1f });
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });
@@ -433,6 +433,7 @@ namespace Ludots.Tests.GAS.Production
             });
             Tick(engine, 1);
 
+            CenterMouse(engine.GetService(CoreServiceKeys.InputBackend));
             toolbar.Activate(ResetCameraToolbarButtonId);
             Tick(engine, 4);
 
@@ -610,8 +611,6 @@ namespace Ludots.Tests.GAS.Production
 
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
 
             TickUntil(engine, () =>
             {
@@ -626,13 +625,13 @@ namespace Ludots.Tests.GAS.Production
                 FindEntityByName(engine.World, "StressPriestA"),
                 FindEntityByName(engine.World, "StressWarriorA"),
             };
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, teamASelection);
+            ReplaceCommandSource(engine, localPlayer, teamASelection);
             Tick(engine, 2);
 
             toolbar.Activate(PlayerSelectionToolbarButtonId);
             Tick(engine, 2);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
-            Assert.That(ReadEntityName(engine.World, SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
+            Assert.That(ReadEntityName(engine.World, Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
 
             toolbar.Activate(PlayerFormationToolbarButtonId);
             Tick(engine, 2);
@@ -673,24 +672,18 @@ namespace Ludots.Tests.GAS.Production
                         Kind = OrderSpatialKind.WorldCm,
                         Mode = OrderCollectionMode.Single,
                         WorldCm = new Vector3(2200f, 0f, 1480f)
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshot)
-                            ? snapshot
-                            : Entity.Null
                     }
                 }
             };
 
-            Assert.That(order.Args.Selection.HasContainer, Is.True);
+            Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(orderQueue.TryEnqueue(in order), Is.True);
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            ReplaceCommandSource(engine, localPlayer, FindEntityByName(engine.World, "StressLaserMageA"));
             Tick(engine, 4);
 
             toolbar.Activate(CommandSnapshotToolbarButtonId);
             Tick(engine, 2);
-            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressLaserMageA" }));
         }
 
         [Test]
@@ -703,22 +696,34 @@ namespace Ludots.Tests.GAS.Production
             var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
 
-            AssertProjectileUsesDirectPrimitiveFeedback(
+            AssertProjectileEffect(
                 effects,
+                performers,
                 projectileEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
-                hitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit");
-            AssertProjectileUsesDirectPrimitiveFeedback(
+                bindingEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
+                hitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
+                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_e");
+            AssertProjectileEffect(
                 effects,
+                performers,
                 projectileEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
-                hitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit");
-            AssertProjectileUsesDirectPrimitiveFeedback(
+                bindingEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
+                hitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit",
+                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_w");
+            AssertProjectileEffect(
                 effects,
+                performers,
                 projectileEffectKey: "Effect.Champion.Ezreal.MysticShot",
-                hitEffectKey: "Effect.Champion.Ezreal.MysticShotHit");
-            AssertProjectileUsesDirectPrimitiveFeedback(
+                bindingEffectKey: "Effect.Champion.Ezreal.MysticShot",
+                hitEffectKey: "Effect.Champion.Ezreal.MysticShotHit",
+                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_q");
+            AssertProjectileEffect(
                 effects,
+                performers,
                 projectileEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
-                hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit");
+                bindingEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
+                hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit",
+                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_r");
             AssertProjectileEffect(
                 effects,
                 performers,
@@ -767,6 +772,36 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_hit"), Is.GreaterThan(0));
+
+            AssertSkillCueRule(
+                performers,
+                PresentationEventKind.CastCommitted,
+                "Ability.Champion.Ezreal.EssenceFlux",
+                "champion_skill_sandbox.cue.ezreal_essence_flux_cast");
+            AssertSkillCueRule(
+                performers,
+                PresentationEventKind.EffectActivated,
+                "Effect.Champion.Ezreal.EssenceFluxHit",
+                "champion_skill_sandbox.cue.ezreal_essence_flux_hit");
+            AssertSkillCueRule(
+                performers,
+                PresentationEventKind.EffectApplied,
+                "Effect.Champion.Garen.DemacianJusticeHit",
+                "champion_skill_sandbox.cue.garen_demacian_justice_hit");
+            AssertSkillCueRule(
+                performers,
+                PresentationEventKind.EffectApplied,
+                "Effect.ChampionStress.FireMage.FireballHit",
+                "champion_skill_sandbox.cue.stress_fireball_hit");
+            AssertSkillCueRule(
+                performers,
+                PresentationEventKind.EffectApplied,
+                "Effect.Champion.SpellEngineer.GuidedLaserHit",
+                "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
+            AssertTagLifecycleRule(
+                performers,
+                "State.Champion.Ezreal.WMark",
+                "champion_skill_sandbox.mark.ezreal_essence_flux");
         }
 
         [Test]
@@ -838,6 +873,115 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(effects.TryGet(spellGuidedLaserPersistentId, out var spellGuidedLaserPersistent), Is.True);
             Assert.That(spellGuidedLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
             Assert.That(spellGuidedLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(spellGuidedLaserHitId));
+        }
+
+        [Test]
+        public void InitializeWithConfigPipeline_WhenStartupFails_UnloadsPartialModStateBeforeRetry()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots_epic322_initfail_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempRoot);
+
+            try
+            {
+                string modId = "Epic322InitFailMod";
+                string modDir = Path.Combine(tempRoot, modId);
+                Directory.CreateDirectory(modDir);
+                File.WriteAllText(Path.Combine(modDir, "mod.json"), """
+                {
+                  "name": "Epic322InitFailMod",
+                  "version": "1.0.0",
+                  "description": "temp failure mod",
+                  "main": "bin/net8.0/Epic322InitFailMod.dll",
+                  "priority": 0,
+                  "dependencies": {
+                    "LudotsCoreMod": "^1.0.0"
+                  }
+                }
+                """);
+                File.WriteAllText(Path.Combine(modDir, "Epic322InitFailMod.csproj"), $$"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net8.0</TargetFramework>
+                    <ImplicitUsings>enable</ImplicitUsings>
+                    <Nullable>enable</Nullable>
+                    <BaseOutputPath>bin\</BaseOutputPath>
+                    <OutputPath>bin\</OutputPath>
+                    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <ProjectReference Include="{{Path.Combine(repoRoot, "src", "Core", "Ludots.Core.csproj")}}">
+                      <Private>false</Private>
+                    </ProjectReference>
+                  </ItemGroup>
+                </Project>
+                """);
+                Directory.CreateDirectory(Path.Combine(modDir, "assets"));
+                File.WriteAllText(Path.Combine(modDir, "Epic322InitFailMod.cs"), """
+                using System;
+                using Ludots.Core.Config;
+                using Ludots.Core.Modding;
+                using Ludots.Core.Scripting;
+
+                namespace Epic322InitFailMod;
+
+                public sealed class Epic322InitFailModEntry : IMod
+                {
+                    public void OnLoad(IModContext context)
+                    {
+                        ComponentRegistry.Register("Epic322InitFailComponent", (_, __) => { }, context.ModId);
+                    }
+
+                    public void OnUnload()
+                    {
+                    }
+                }
+                """);
+                File.WriteAllText(Path.Combine(modDir, "assets", "game.json"), """
+                {
+                  "presentation": {
+                    "performerInstanceCapacity": 0
+                  }
+                }
+                """);
+
+                BuildProject(Path.Combine(modDir, "Epic322InitFailMod.csproj"));
+
+                var firstEngine = new GameEngine();
+                SynchronizationContext? originalSyncContext = SynchronizationContext.Current;
+                var failingPlan = new ResolvedModLoadPlan(
+                    new[]
+                    {
+                        new Ludots.Core.Hosting.ResolvedModLoadEntry("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod")),
+                        new Ludots.Core.Hosting.ResolvedModLoadEntry(modId, modDir)
+                    },
+                    SchemaVersion: null,
+                    PlanFingerprint: null,
+                    GeneratedAtUtc: null,
+                    GraphPath: null);
+
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                    firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot))!;
+                Assert.That(ex.Message, Does.Contain("presentation.performerInstanceCapacity"));
+                Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, originalSyncContext), Is.True);
+
+                File.WriteAllText(Path.Combine(modDir, "assets", "game.json"), """
+                {
+                  "presentation": {
+                    "performerInstanceCapacity": 64
+                  }
+                }
+                """);
+
+                using var secondEngine = new GameEngine();
+                Assert.DoesNotThrow(() => secondEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot));
+                Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, secondEngine.SyncContext), Is.True);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
         }
 
         private static GameEngine CreateEngine()
@@ -941,6 +1085,17 @@ namespace Ludots.Tests.GAS.Production
                 UpdateHeadlessCamera(engine);
                 engine.Tick(DeltaTime);
             }
+        }
+
+        private static void CenterMouse(IInputBackend backend)
+        {
+            if (backend is NullInputBackend nullBackend)
+            {
+                nullBackend.SetMousePosition(new Vector2(960f, 540f));
+                return;
+            }
+
+            throw new InvalidOperationException("ChampionSkillSandboxConfigTests expected a NullInputBackend service.");
         }
 
         private static void UpdateHeadlessCamera(GameEngine engine)
@@ -1298,22 +1453,6 @@ namespace Ludots.Tests.GAS.Production
                 PerformerCommandKind.DestroyPerformerScope);
         }
 
-        private static void AssertProjectileUsesDirectPrimitiveFeedback(
-            EffectTemplateRegistry effects,
-            string projectileEffectKey,
-            string hitEffectKey)
-        {
-            int projectileEffectId = EffectTemplateIdRegistry.GetId(projectileEffectKey);
-            int hitEffectId = EffectTemplateIdRegistry.GetId(hitEffectKey);
-
-            Assert.That(projectileEffectId, Is.GreaterThan(0), $"{projectileEffectKey} should be registered.");
-            Assert.That(hitEffectId, Is.GreaterThan(0), $"{hitEffectKey} should be registered.");
-            Assert.That(effects.TryGet(projectileEffectId, out var projectileEffect), Is.True);
-            Assert.That(projectileEffect.PresetType, Is.EqualTo(EffectPresetType.LaunchProjectile));
-            Assert.That(projectileEffect.Projectile.PresentationEffectTemplateId, Is.EqualTo(projectileEffectId));
-            Assert.That(projectileEffect.Projectile.HitEffectTemplateId, Is.EqualTo(hitEffectId));
-        }
-
         private static void AssertProjectileLifecycleRule(
             PerformerDefinition performer,
             int performerId,
@@ -1344,6 +1483,116 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Assert.Fail($"Expected performer lifecycle rule kind={eventKind}, command={commandKind}.");
+        }
+
+        private static void AssertSkillCueRule(
+            PerformerDefinitionRegistry performers,
+            PresentationEventKind eventKind,
+            string eventKey,
+            string cuePerformerKey)
+        {
+            Assert.That(
+                eventKind,
+                Is.EqualTo(PresentationEventKind.CastCommitted)
+                    .Or.EqualTo(PresentationEventKind.EffectApplied)
+                    .Or.EqualTo(PresentationEventKind.EffectActivated),
+                "Skill cue rules should be cast/effect events. Tag lifecycle presentation uses dedicated scoped rules.");
+
+            const string eventRulePerformerKey = "champion_skill_sandbox.event_rules";
+            int eventRulePerformerId = performers.GetId(eventRulePerformerKey);
+            int cuePerformerId = performers.GetId(cuePerformerKey);
+            int eventKeyId = ResolvePresentationEventKey(eventKind, eventKey);
+
+            Assert.That(eventRulePerformerId, Is.GreaterThan(0), $"{eventRulePerformerKey} should be registered.");
+            Assert.That(cuePerformerId, Is.GreaterThan(0), $"{cuePerformerKey} should be registered.");
+            Assert.That(eventKeyId, Is.GreaterThan(0), $"{eventKey} should resolve for event kind {eventKind}.");
+            Assert.That(performers.TryGet(eventRulePerformerId, out var rulePerformer), Is.True);
+
+            for (int i = 0; i < rulePerformer.Rules.Length; i++)
+            {
+                PerformerRule rule = rulePerformer.Rules[i];
+                if (rule.Event.Kind != eventKind ||
+                    rule.Event.KeyId != eventKeyId ||
+                    rule.Command.CommandKind != PerformerCommandKind.CreatePerformer ||
+                    rule.Command.PerformerDefinitionId != cuePerformerId)
+                {
+                    continue;
+                }
+
+                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.Fixed));
+                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+                Assert.That(rule.Condition.Inline, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
+                return;
+            }
+
+            Assert.Fail($"Expected sandbox performer rule {eventKind}:{eventKey} -> {cuePerformerKey}.");
+        }
+
+        private static void AssertTagLifecycleRule(
+            PerformerDefinitionRegistry performers,
+            string tagKey,
+            string performerKey)
+        {
+            int performerId = performers.GetId(performerKey);
+            int tagId = TagRegistry.GetId(tagKey);
+
+            Assert.That(performerId, Is.GreaterThan(0), $"{performerKey} should be registered.");
+            Assert.That(tagId, Is.GreaterThan(0), $"{tagKey} should be registered.");
+            Assert.That(performers.TryGet(performerId, out var performer), Is.True);
+
+            AssertTagLifecycleRule(
+                performer,
+                tagId,
+                performerId,
+                InlineConditionKind.TagGained,
+                PerformerCommandKind.CreatePerformer);
+            AssertTagLifecycleRule(
+                performer,
+                tagId,
+                performerId,
+                InlineConditionKind.TagLost,
+                PerformerCommandKind.DestroyScopedPerformer);
+        }
+
+        private static void AssertTagLifecycleRule(
+            PerformerDefinition performer,
+            int tagId,
+            int performerId,
+            InlineConditionKind condition,
+            PerformerCommandKind commandKind)
+        {
+            for (int i = 0; i < performer.Rules.Length; i++)
+            {
+                PerformerRule rule = performer.Rules[i];
+                if (rule.Event.Kind != PresentationEventKind.TagEffectiveChanged ||
+                    rule.Event.KeyId != tagId ||
+                    rule.Condition.Inline != condition ||
+                    rule.Command.CommandKind != commandKind ||
+                    rule.Command.PerformerDefinitionId != performerId)
+                {
+                    continue;
+                }
+
+                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.SourceStableId));
+                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+                return;
+            }
+
+            Assert.Fail($"Expected tag lifecycle rule tagId={tagId}, condition={condition}, command={commandKind}.");
+        }
+
+        private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)
+        {
+            return eventKind switch
+            {
+                PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
+                PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
+                PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
+                PresentationEventKind.EffectActivated => EffectTemplateIdRegistry.GetId(key),
+                PresentationEventKind.ProjectileSpawned => EffectTemplateIdRegistry.GetId(key),
+                PresentationEventKind.TagEffectiveChanged => TagRegistry.GetId(key),
+                _ => 0,
+            };
         }
 
         private static void AssertEzrealProjectileEffect(
@@ -1433,12 +1682,66 @@ namespace Ludots.Tests.GAS.Production
                 : string.Empty;
         }
 
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, params Entity[] entities)
+        {
+            ReplaceCommandSource(engine, owner, entities.AsSpan());
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> entities)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Champion command source",
+                summary: "Test-owned command-source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+        }
+
         private static string[] ReadViewedSelectionNames(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotActiveCollection(engine);
             return selected.Select(entity => ReadEntityName(engine.World, entity))
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToArray();
+        }
+
+        private static Entity[] SnapshotActiveCollection(GameEngine engine)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Entity owner = engine.GlobalContext.TryGetValue(ActiveCollectionOwnerKey, out object? ownerObj) &&
+                           ownerObj is Entity activeOwner &&
+                           engine.World.IsAlive(activeOwner)
+                ? activeOwner
+                : engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            string key = engine.GlobalContext.TryGetValue(ActiveCollectionKey, out object? keyObj) &&
+                         keyObj is string activeKey &&
+                         !string.IsNullOrWhiteSpace(activeKey)
+                ? activeKey
+                : EntityCollectionKeys.CommandSource;
+
+            if (owner == Entity.Null ||
+                !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            var members = new Entity[view.Count];
+            int written = collections.CopyEntities(handle, 0, members);
+            if (written != members.Length)
+            {
+                Array.Resize(ref members, written);
+            }
+
+            return members;
         }
 
         private static float ReadHealth(World world, string entityName)
@@ -1538,6 +1841,63 @@ namespace Ludots.Tests.GAS.Production
             throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
         }
 
+        private static void BuildProject(string projectPath)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"build \"{projectPath}\" -c Debug --nologo -p:BuildInParallel=false -m:1 -nodeReuse:false",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                throw new InvalidOperationException("Failed to start dotnet build process.");
+            }
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(TimeSpan.FromMinutes(2)))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                }
+
+                throw new TimeoutException($"dotnet build timed out for '{projectPath}'.");
+            }
+
+            string output = outputTask.GetAwaiter().GetResult();
+            string error = errorTask.GetAwaiter().GetResult();
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"dotnet build failed for '{projectPath}'.\nSTDOUT:\n{output}\nSTDERR:\n{error}");
+            }
+        }
+
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, recursive: true);
+                }
+            }
+            catch
+            {
+            }
+        }
+
         private readonly record struct StressCounts(
             int TeamA,
             int TeamB,
@@ -1562,7 +1922,11 @@ namespace Ludots.Tests.GAS.Production
 
         private sealed class NullInputBackend : IInputBackend
         {
-            private readonly Vector2 _mousePosition;
+            private Vector2 _mousePosition;
+
+            public NullInputBackend()
+            {
+            }
 
             public NullInputBackend(Vector2 mousePosition)
             {
@@ -1575,6 +1939,7 @@ namespace Ludots.Tests.GAS.Production
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
+            public void SetMousePosition(Vector2 position) => _mousePosition = position;
             public string GetCharBuffer() => string.Empty;
         }
     }

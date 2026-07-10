@@ -56,7 +56,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
             Require(Actions.PressurePulse, nameof(Actions.PressurePulse));
             Require(Actions.CacheProbe, nameof(Actions.CacheProbe));
             Require(Collections.UiBox, nameof(Collections.UiBox));
-            Require(Collections.FormalSelectionMirror, nameof(Collections.FormalSelectionMirror));
+            Require(Collections.CommandSourceMirror, nameof(Collections.CommandSourceMirror));
             Require(Collections.FormationPrimary, nameof(Collections.FormationPrimary));
             Require(Collections.SelectedFriendliesResult, nameof(Collections.SelectedFriendliesResult));
             Require(Collections.HostileThreatResult, nameof(Collections.HostileThreatResult));
@@ -181,7 +181,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
     public sealed class EntityQueryTacticsCollectionConfig
     {
         public string UiBox { get; set; } = string.Empty;
-        public string FormalSelectionMirror { get; set; } = string.Empty;
+        public string CommandSourceMirror { get; set; } = string.Empty;
         public string FormationPrimary { get; set; } = string.Empty;
         public string SelectedFriendliesResult { get; set; } = string.Empty;
         public string HostileThreatResult { get; set; } = string.Empty;

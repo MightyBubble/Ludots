@@ -33,7 +33,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             text.AppendLine($"timestamp: {DateTimeOffset.Now:O}");
             text.AppendLine($"title: {state.Title}");
             text.AppendLine($"status: {state.Status}");
-            text.AppendLine($"selection: {state.Selection}");
+            text.AppendLine($"commandSource: {state.CommandSource}");
             text.AppendLine("input:");
             AppendIndentedBlock(text, state.Input, 2);
             text.AppendLine($"chunks: {state.Chunks}");
@@ -48,7 +48,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 text.AppendLine(actor.Queue);
                 text.AppendLine(actor.Query);
                 text.AppendLine(actor.Plan);
-                text.AppendLine(actor.Select);
+                text.AppendLine(actor.Pick);
                 text.AppendLine(actor.Execute);
                 text.AppendLine(actor.Check);
                 AppendIndentedBlock(text, actor.Path, 2);

@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphQuery;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -254,6 +255,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph relationship query runtime is not available.");
         }
+
+        // ── Topology predicates (RFC-0065 PROV-4b / DEC-5) ──
+
+        /// <summary>Edge-existence predicate over RelationshipRuntime.HasLink.</summary>
+        bool HasRelationshipLink(Entity source, Entity target, int typeId)
+        {
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
+        }
+
+        /// <summary>Resolves the control domain rep of a target; returns Entity.Null when no domain exists.</summary>
+        Entity ResolveControlDomain(Entity target)
+        {
+            throw new InvalidOperationException("Graph control-domain runtime is not available.");
+        }
+
+        /// <summary>Controls-reachability predicate (owns subtree ∪ Controls grants).</summary>
+        bool IsControllableBy(Entity controllerRep, Entity target)
+        {
+            throw new InvalidOperationException("Graph control-domain runtime is not available.");
+        }
+
+        /// <summary>True when the viewer holds a live knowledge projection of the target.</summary>
+        bool HasKnowledgeProjection(Entity viewer, Entity target)
+        {
+            throw new InvalidOperationException("Graph knowledge runtime is not available.");
+        }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
@@ -262,6 +289,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void RemoveEffectTemplate(Entity target, int templateId);
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
+
+        // ── Entity lifecycle graph composition ──
+        void BeginLifecycleTransaction()
+        {
+            throw new InvalidOperationException("Graph lifecycle transaction runtime is not available.");
+        }
+
+        void InvokeBuiltin(int builtinHandlerId)
+        {
+            throw new InvalidOperationException("Graph builtin invocation runtime is not available.");
+        }
 
         // ── Blackboard immediate read/write ──
 
@@ -276,6 +314,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         bool TryLoadConfigFloat(int keyId, out float value);
         bool TryLoadConfigInt(int keyId, out int value);
+
+        bool TrySnapTargetToNearestInCollection(
+            Entity owner,
+            int collectionKeyId,
+            ref IntVector2 targetPosCm,
+            float maxDistanceCm,
+            out Entity snappedEntity)
+        {
+            snappedEntity = Entity.Null;
+            return false;
+        }
+
+        bool TrySnapTargetToNearestGraphEdge(
+            ref IntVector2 targetPosCm,
+            float searchRadiusCm,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
+            return false;
+        }
     }
 
     /// <summary>

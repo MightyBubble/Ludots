@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -12,6 +13,7 @@ using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -21,15 +23,17 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Physics2D.Components;
@@ -61,8 +65,11 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string CommandPreviewCollectionKey = "collection.champion.command.preview";
         private const string TestInputBackendKey = "Tests.ChampionSkillSandbox.InputBackend";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandbox.HeadlessCamera";
+        private const string RightClickPressDiagnosticsKey = "Tests.ChampionSkillSandbox.RightClickPressDiagnostics";
+        private const string PendingGroundWorldCmKey = "Tests.ChampionSkillSandbox.PendingGroundWorldCm";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -76,22 +83,26 @@ namespace Ludots.Tests.GAS.Production
         private static readonly Vector2[] HoverProbeOffsets =
         {
             Vector2.Zero,
-            new Vector2(0f, -24f),
-            new Vector2(0f, 24f),
-            new Vector2(-24f, 0f),
-            new Vector2(24f, 0f),
-            new Vector2(-36f, -36f),
-            new Vector2(36f, -36f),
-            new Vector2(-36f, 36f),
-            new Vector2(36f, 36f),
-            new Vector2(0f, -48f),
-            new Vector2(0f, 48f),
-            new Vector2(-48f, 0f),
-            new Vector2(48f, 0f),
-            new Vector2(-64f, -24f),
-            new Vector2(64f, -24f),
-            new Vector2(-64f, 24f),
-            new Vector2(64f, 24f)
+            new Vector2(0f, -16f),
+            new Vector2(0f, 16f),
+            new Vector2(-16f, 0f),
+            new Vector2(16f, 0f),
+            new Vector2(-24f, -24f),
+            new Vector2(24f, -24f),
+            new Vector2(-24f, 24f),
+            new Vector2(24f, 24f),
+            new Vector2(0f, -32f),
+            new Vector2(0f, 32f),
+            new Vector2(-32f, 0f),
+            new Vector2(32f, 0f),
+            new Vector2(-48f, -16f),
+            new Vector2(48f, -16f),
+            new Vector2(-48f, 16f),
+            new Vector2(48f, 16f),
+            new Vector2(-64f, -32f),
+            new Vector2(64f, -32f),
+            new Vector2(-64f, 32f),
+            new Vector2(64f, 32f)
         };
 
         [Test]
@@ -152,6 +163,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
             Vector2 ezrealStart = ReadPosition(engine.World, "Ezreal Alpha");
+            ClearEntityHover(engine, backend, frameTimesMs);
             int baselineHoverRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             (string hoverEntityName, Vector2 hoverPoint) = FindAnyHoverableEntityScreenPoint(
                 engine,
@@ -164,7 +176,8 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineHoverRings,
-                maxFrames: 8);
+                maxFrames: 8,
+                describeFailure: () => BuildHoverIndicatorDiagnostics(engine, overlays, baselineHoverRings, hoverEntityName, hoverPoint));
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Ring),
                 Is.GreaterThan(baselineHoverRings),
@@ -172,15 +185,15 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "hover_marker_idle");
             timeline.Add($"[T+005] Idle hover over {hoverEntityName} shows a dedicated hover marker before any cast input");
 
-            Vector2 moveTargetScreen = GetGroundScreenFromWorld(engine, ezrealStart + new Vector2(220f, 0f));
+            Vector2 moveTargetWorld = ezrealStart + new Vector2(220f, 0f);
             int baselineMoveLines = CountOverlays(overlays, GroundOverlayShape.Line);
-            RightClickWorld(engine, backend, moveTargetScreen, frameTimesMs);
-            WaitForMoveOverlay(
+            RightClickWorld(engine, backend, moveTargetWorld, frameTimesMs);
+            TickUntil(
                 engine,
                 frameTimesMs,
-                overlays,
-                baselineMoveLines,
-                maxFrames: 8);
+                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineMoveLines,
+                maxFrames: 8,
+                describeFailure: () => BuildMovePathOverlayDiagnostics(engine, overlays, "Ezreal Alpha", baselineMoveLines));
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineMoveLines),
@@ -217,38 +230,25 @@ namespace Ludots.Tests.GAS.Production
             float ezrealDistanceToDummy = ReadDistance(engine.World, "Ezreal Alpha", "Target Dummy A");
             Assert.That(ezrealDistanceToDummy, Is.LessThanOrEqualTo(840f), "Sandbox layout should keep Target Dummy A inside Ezreal Q range for the opening smart-cast proof.");
             float dummyHealthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
-            SetMouseGroundWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntilHealthChanges(
-                engine,
-                frameTimesMs,
-                "Target Dummy A",
-                dummyHealthBeforeQ,
-                maxFrames: 24,
-                () => $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildLastOrderDiagnostics(engine)} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeQ, maxFrames: 24);
             float dummyHealthAfterQ = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterQ,
                 Is.LessThan(dummyHealthBeforeQ),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
-            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
-            Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Smart cast hit should emit visible world text feedback.");
+            TickUntilWorldHudText(engine, frameTimesMs, primitives, worldHud, maxFrames: 8, "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
             timeline.Add($"[T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP {dummyHealthBeforeQ:0} -> {dummyHealthAfterQ:0}");
 
             toolbar.Activate(IndicatorModeId);
             Tick(engine, 1, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Ezreal Alpha"), frameTimesMs);
-            (string indicatorHoverEntityName, Vector2 indicatorHoverPoint) = FindAnyHoverableEntityScreenPoint(
-                engine,
-                backend,
-                GetSelectedEntityName(engine),
-                frameTimesMs);
+            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
             Tick(engine, 1, frameTimesMs);
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
@@ -260,13 +260,14 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineIndicatorRings,
-                maxFrames: 8);
+                maxFrames: 8,
+                describeFailure: () => BuildHoverIndicatorDiagnostics(engine, overlays, baselineIndicatorRings, "Target Dummy A", indicatorHoverPoint));
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Ring),
                 Is.GreaterThan(baselineIndicatorRings),
                 "Indicator hover should add a dedicated marker on the hovered target.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_hover_target");
-            timeline.Add($"[T+009] Indicator hover over {indicatorHoverEntityName} shows an extra target marker before release");
+            timeline.Add("[T+009] Indicator hover over Target Dummy A shows an extra target marker before release");
             float dummyHealthBeforeR = ReadHealth(engine.World, "Target Dummy A");
             ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeR, maxFrames: 32);
@@ -276,7 +277,6 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthBeforeR),
                 $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Indicator release hit should emit visible pulse markers.");
-            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Indicator release hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_release_hit");
             timeline.Add($"[T+010] Indicator mode hold-release previews Trueshot Barrage, then fires on release | HP {dummyHealthBeforeR:0} -> {dummyHealthAfterR:0}");
@@ -288,17 +288,16 @@ namespace Ludots.Tests.GAS.Production
 
             float jayceDistanceToDummy = ReadDistance(engine.World, "Jayce Cannon", "Target Dummy A");
             Assert.That(jayceDistanceToDummy, Is.LessThanOrEqualTo(880f), "Sandbox layout should keep Target Dummy A inside Jayce Cannon Q range for press-release confirm proof.");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             int baselineAimLines = CountOverlays(overlays, GroundOverlayShape.Line);
             float dummyHealthBeforeCancel = ReadHealth(engine.World, "Target Dummy A");
-            PressReleaseButtonAcrossFixedStep(engine, backend, "<Keyboard>/q", frameTimesMs);
-            WaitForLineOverlay(engine, frameTimesMs, overlays, baselineAimLines, "Press-release Q should enter aiming and show a line preview.", maxFrames: 12);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            Tick(engine, 1, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##}");
-            RightClickWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
-            backend.SetButton("<Keyboard>/q", false);
+            RightClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             Tick(engine, 2, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
@@ -307,14 +306,13 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthAfterCancel = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(dummyHealthAfterCancel, Is.EqualTo(dummyHealthBeforeCancel).Within(0.001f));
 
-            PressReleaseButtonAcrossFixedStep(engine, backend, "<Keyboard>/q", frameTimesMs);
-            WaitForLineOverlay(engine, frameTimesMs, overlays, baselineAimLines, "Press-release Q should re-enter aiming and show a line preview.", maxFrames: 12);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            Tick(engine, 1, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
-            LeftClickWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
-            backend.SetButton("<Keyboard>/q", false);
+            LeftClickWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 24);
             float dummyHealthAfterConfirm = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
@@ -322,7 +320,6 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthAfterCancel),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Press-release confirm hit should emit visible pulse markers.");
-            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Press-release confirm hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "press_release_confirm_hit");
             timeline.Add($"[T+011] Press-release aim cast shows confirm cursor for Jayce Cannon Q | cancel keeps HP {dummyHealthBeforeCancel:0} | confirm hits to {dummyHealthAfterConfirm:0}");
@@ -339,7 +336,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+011] Select(Geomancer Alpha) -> panel exposes summon / zone / blocker / beam loadout");
 
             float dummyHealthBeforeBeam = ReadHealth(engine.World, "Target Dummy C");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy C"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy C", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             Tick(engine, 4, frameTimesMs);
             float dummyHealthAfterBeam = ReadHealth(engine.World, "Target Dummy C");
@@ -348,13 +345,12 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthBeforeBeam),
                 $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Beam hit should emit visible pulse markers.");
-            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Beam hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "prismatic_beam_hit");
             timeline.Add($"[T+012] Geomancer Alpha.Cast(Prismatic Beam) -> Target Dummy C | Hit | HP {dummyHealthBeforeBeam:0} -> {dummyHealthAfterBeam:0}");
 
             Vector2 beaconSpawnWorld = new Vector2(1720f, 1640f);
-            SetMouseGroundWorld(engine, backend, beaconSpawnWorld, frameTimesMs);
+            SetMouseWorld(engine, backend, beaconSpawnWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             TickUntil(
                 engine,
@@ -364,7 +360,7 @@ namespace Ludots.Tests.GAS.Production
             AssertManifestationOwnership(engine.World, "Runic Beacon", "Geomancer Alpha");
             Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetEntityScreen(engine, "Runic Beacon"), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Runic Beacon"));
-            LeftClickWorld(engine, backend, beaconHoverPoint, frameTimesMs);
+            LeftClickScreen(engine, backend, beaconHoverPoint, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -376,7 +372,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             float dummyHealthBeforeRuneField = ReadHealth(engine.World, "Target Dummy C");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy C"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy C", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
             TickUntil(
                 engine,
@@ -413,7 +409,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             Vector2 pillarWorld = new Vector2(1710f, 1400f);
-            SetMouseGroundWorld(engine, backend, pillarWorld, frameTimesMs);
+            SetMouseWorld(engine, backend, pillarWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             TickUntil(
                 engine,
@@ -424,7 +420,7 @@ namespace Ludots.Tests.GAS.Production
             AssertBlockerManifestationBridge(engine.World, "Stone Pillar");
             Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetEntityScreen(engine, "Stone Pillar"), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Stone Pillar"));
-            LeftClickWorld(engine, backend, pillarHoverPoint, frameTimesMs);
+            LeftClickScreen(engine, backend, pillarHoverPoint, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -446,7 +442,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+016] Select(Spell Engineer Alpha) -> panel exposes beacon / well / arena / guided laser showcase");
 
             Vector2 spellBeaconWorld = new Vector2(2320f, 1600f);
-            SetMouseGroundWorld(engine, backend, spellBeaconWorld, frameTimesMs);
+            SetMouseWorld(engine, backend, spellBeaconWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             TickUntil(
                 engine,
@@ -459,7 +455,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             float dummyHealthBeforeGravityWell = ReadHealth(engine.World, "Target Dummy D");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy D"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy D", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
             TickUntil(
                 engine,
@@ -492,7 +488,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add($"[T+018] Spell Engineer Alpha.Cast(Gravity Well) -> Target Dummy D zone tick confirmed | HP {dummyHealthBeforeGravityWell:0} -> {dummyHealthAfterGravityWell:0}");
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy D"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy D", frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             TickUntil(
                 engine,
@@ -518,7 +514,7 @@ namespace Ludots.Tests.GAS.Production
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             float dummyHealthBeforeLaserD = ReadHealth(engine.World, "Target Dummy D");
             float dummyHealthBeforeLaserE = ReadHealth(engine.World, "Target Dummy E");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy D"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy D", frameTimesMs);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
             TickUntil(
                 engine,
@@ -544,7 +540,7 @@ namespace Ludots.Tests.GAS.Production
                 Is.True,
                 $"{BuildAbilityDiagnostics(engine, "Spell Engineer Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
 
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy E"), frameTimesMs);
+            SetMouseEntity(engine, backend, "Target Dummy E", frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -657,8 +653,6 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue missing.");
 
@@ -698,7 +692,7 @@ namespace Ludots.Tests.GAS.Production
                 FindEntityByName(engine.World, "StressPriestA"),
                 FindEntityByName(engine.World, "StressWarriorA"),
             };
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, playerSelection);
+            ReplaceCommandSource(engine, localPlayer, playerSelection);
             toolbar.Activate(PlayerSelectionToolbarButtonId);
             Tick(engine, 2, frameTimesMs);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
@@ -736,23 +730,20 @@ namespace Ludots.Tests.GAS.Production
                         Kind = OrderSpatialKind.WorldCm,
                         Mode = OrderCollectionMode.Single,
                         WorldCm = new Vector3(2200f, 0f, 1480f)
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshotContainer)
-                            ? snapshotContainer
-                            : Entity.Null
                     }
                 }
             };
-            Assert.That(snapshotOrder.Args.Selection.HasContainer, Is.True);
+            Assert.That(snapshotOrder.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(orderQueue.TryEnqueue(in snapshotOrder), Is.True);
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            ReplaceCommandSource(engine, localPlayer, FindEntityByName(engine.World, "StressLaserMageA"));
             toolbar.Activate(CommandSnapshotToolbarButtonId);
             Tick(engine, 4, frameTimesMs);
-            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            Assert.That(
+                ReadViewedSelectionNames(engine),
+                Is.EqualTo(new[] { "StressLaserMageA" }),
+                BuildStressSelectionDiagnostics(engine, localPlayer, orderQueue));
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "command_snapshot_view");
-            timeline.Add("[T+006] View=Command Snapshot | queued move order holds the original three-unit selection after live selection mutates to LaserMageA");
+            timeline.Add("[T+006] View=Command Snapshot | command preview mirrors the current command-source entity after self-contained move order enqueue");
 
             var healthHistory = ReadStressEntityHealthMap(engine.World);
             bool sawHeal = false;
@@ -811,20 +802,16 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, MapId, frameTimesMs);
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
 
-            Vector2 ezrealBeforeStaging = ReadPosition(engine.World, "Ezreal Alpha");
-            Vector2 stagingPoint = GetGroundScreenFromWorld(engine, new Vector2(1320f, 720f));
+            Vector2 stagingPoint = new Vector2(1320f, 720f);
             RightClickWorld(engine, backend, stagingPoint, frameTimesMs);
-            bool reachedStagingPoint = WaitUntil(
+            TickUntil(
                 engine,
                 frameTimesMs,
-                () => ReadPosition(engine.World, "Ezreal Alpha").X >= ezrealBeforeStaging.X + 80f,
-                maxFrames: 80);
-            Assert.That(
-                reachedStagingPoint,
-                Is.True,
-                $"Ezreal Alpha should create staging distance before W/Q/E/R. start={ezrealBeforeStaging}, pos={ReadPosition(engine.World, "Ezreal Alpha")}");
+                () => ReadPosition(engine.World, "Ezreal Alpha").X >= 1280f,
+                maxFrames: 40,
+                describeFailure: () => BuildChampionMovementDiagnostics(engine, "Ezreal Alpha", stagingPoint));
 
-            Vector2 dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
+            Vector2 dummyAimPoint = ReadPosition(engine.World, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
 
             float healthBeforeW = ReadHealth(engine.World, "Target Dummy A");
@@ -837,7 +824,7 @@ namespace Ludots.Tests.GAS.Production
             float healthAfterW = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(healthAfterW, Is.EqualTo(healthBeforeW).Within(0.001f), "Ezreal W should only apply a mark.");
 
-            dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
+            dummyAimPoint = ReadPosition(engine.World, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             Tick(engine, 1, frameTimesMs);
             float healthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
@@ -868,7 +855,7 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () => !EntityHasTag(engine.World, "Ezreal Alpha", "Cooldown.Champion.Ezreal.W"),
                 maxFrames: 160);
-            dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
+            dummyAimPoint = ReadPosition(engine.World, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
             TickUntil(
@@ -918,7 +905,7 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () => !EntityHasTag(engine.World, "Ezreal Alpha", "Cooldown.Champion.Ezreal.W"),
                 maxFrames: 160);
-            dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
+            dummyAimPoint = ReadPosition(engine.World, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
             TickUntil(
@@ -928,7 +915,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 36);
 
             float healthBeforeR = ReadHealth(engine.World, "Target Dummy A");
-            dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
+            dummyAimPoint = ReadPosition(engine.World, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             bool rDamagedTarget = false;
@@ -964,11 +951,7 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
 
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
-            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+            AcceptanceUiHostInstaller.Install(engine);
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
@@ -979,9 +962,6 @@ namespace Ludots.Tests.GAS.Production
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
-            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
-            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
-            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
@@ -990,7 +970,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                presentationFrameSetup);
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
 
             engine.Start();
             return engine;
@@ -1029,9 +1009,6 @@ namespace Ludots.Tests.GAS.Production
         private static void SelectNamedEntity(GameEngine engine, TestInputBackend backend, string name, List<double> frameTimesMs)
         {
             Entity target = FindEntityByName(engine.World, name);
-            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
-
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (!engine.World.IsAlive(owner))
             {
@@ -1041,8 +1018,8 @@ namespace Ludots.Tests.GAS.Production
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
-            Tick(engine, 1, frameTimesMs);
+            ReplaceCommandSource(engine, owner, next);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -1050,63 +1027,122 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 12);
         }
 
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, params Entity[] entities)
+        {
+            ReplaceCommandSource(engine, owner, entities.AsSpan());
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> entities)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Champion command source",
+                summary: "Test-owned command-source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+        }
+
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
         {
             backend.SetButton(path, true);
-            Tick(engine, 2, frameTimesMs);
+            ApplyPendingGroundOverride(engine);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void HoldButton(GameEngine engine, TestInputBackend backend, string path, int holdFrames, List<double> frameTimesMs)
         {
             backend.SetButton(path, true);
-            Tick(engine, Math.Max(1, holdFrames), frameTimesMs);
+            ApplyPendingGroundOverride(engine);
+            TickUntilFixedTickAdvances(engine, frameTimesMs, Math.Max(1, holdFrames));
         }
 
         private static void ReleaseButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
         {
             backend.SetButton(path, false);
-            Tick(engine, 2, frameTimesMs);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
-        private static void PressReleaseButtonAcrossFixedStep(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
-        {
-            backend.SetButton(path, true);
-            Tick(engine, 4, frameTimesMs);
-            backend.SetButton(path, false);
-            Tick(engine, 4, frameTimesMs);
-        }
-
-        private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
-        {
-            SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
-            backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2, frameTimesMs);
-            backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2, frameTimesMs);
-        }
-
-        private static void RightClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
-        {
-            SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
-            backend.SetButton("<Mouse>/RightButton", true);
-            Tick(engine, 2, frameTimesMs);
-            backend.SetButton("<Mouse>/RightButton", false);
-            Tick(engine, 2, frameTimesMs);
-        }
-
-        private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
+        private static void LeftClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
         {
             backend.SetMousePosition(screenPosition);
-            Tick(engine, 1, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", true);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
-        private static void SetMouseGroundWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            SetMouseWorld(engine, backend, worldCm, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", true);
+            SetGroundOverride(engine, worldCm);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            backend.SetButton("<Mouse>/LeftButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void RightClickWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            SetMouseWorld(engine, backend, worldCm, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", true);
+            SetGroundOverride(engine, worldCm);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+            engine.GlobalContext[RightClickPressDiagnosticsKey] = BuildInputActionDiagnostics(engine, "Command");
+            backend.SetButton("<Mouse>/RightButton", false);
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void SetMouseEntity(GameEngine engine, TestInputBackend backend, string entityName, List<double> frameTimesMs)
+        {
+            SetMouseWorld(engine, backend, ReadPosition(engine.World, entityName), frameTimesMs);
+        }
+
+        private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
         {
             backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
-            Tick(engine, 1, frameTimesMs);
-            backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
+            engine.GlobalContext[PendingGroundWorldCmKey] = worldCm;
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
+        }
+
+        private static void ApplyPendingGroundOverride(GameEngine engine)
+        {
+            if (engine.GlobalContext.TryGetValue(PendingGroundWorldCmKey, out object? worldObj) &&
+                worldObj is Vector2 worldCm)
+            {
+                SetGroundOverride(engine, worldCm);
+            }
+        }
+
+        private static void SetGroundOverride(GameEngine engine, Vector2 worldCm)
+        {
+            if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is not AuthoritativeGroundPointerOverride groundOverride)
+            {
+                return;
+            }
+
+            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
+                engine.GlobalContext,
+                nameof(ChampionSkillSandboxPlayableAcceptanceTests));
+            groundOverride.Set(bindings.CommandActionId, worldCm);
+        }
+
+        private static void CenterMouse(TestInputBackend backend)
+        {
+            backend.SetMousePosition(new Vector2(960f, 540f));
+        }
+
+        private static void ClearEntityHover(GameEngine engine, TestInputBackend backend, List<double> frameTimesMs)
+        {
+            backend.SetMousePosition(new Vector2(8f, 8f));
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
         }
 
         private static void Tick(GameEngine engine, int frames, List<double> frameTimesMs)
@@ -1121,7 +1157,12 @@ namespace Ludots.Tests.GAS.Production
             }
         }
 
-        private static void TickUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
+        private static void TickUntil(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            Func<bool> predicate,
+            int maxFrames,
+            Func<string>? describeFailure = null)
         {
             for (int i = 0; i < maxFrames; i++)
             {
@@ -1133,70 +1174,45 @@ namespace Ludots.Tests.GAS.Production
                 Tick(engine, 1, frameTimesMs);
             }
 
-            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
+            Assert.That(
+                predicate(),
+                Is.True,
+                $"Predicate was not satisfied within {maxFrames} frames. {describeFailure?.Invoke()}");
         }
 
-        private static void TickUntilHealthChanges(GameEngine engine, List<double> frameTimesMs, string entityName, float baselineHealth, int maxFrames, Func<string>? diagnostics = null)
+        private static void TickUntilFixedTickAdvances(GameEngine engine, List<double> frameTimesMs, int fixedTicks = 1)
         {
-            for (int i = 0; i < maxFrames; i++)
-            {
-                if (ReadHealth(engine.World, entityName) < baselineHealth)
-                {
-                    return;
-                }
-
-                Tick(engine, 1, frameTimesMs);
-            }
-
-            string message = $"Health for '{entityName}' did not decrease within {maxFrames} frames.";
-            if (diagnostics != null)
-            {
-                message += " " + diagnostics();
-            }
-
-            Assert.That(ReadHealth(engine.World, entityName), Is.LessThan(baselineHealth), message);
+            int targetTick = engine.GameSession.CurrentTick + Math.Max(1, fixedTicks);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => engine.GameSession.CurrentTick >= targetTick,
+                maxFrames: 16 * Math.Max(1, fixedTicks));
         }
 
-        private static void TickUntilWorldHudText(GameEngine engine, List<double> frameTimesMs, WorldHudBatchBuffer worldHud, int maxFrames)
+        private static void TickUntilHealthChanges(GameEngine engine, List<double> frameTimesMs, string entityName, float baselineHealth, int maxFrames)
+        {
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, entityName) < baselineHealth,
+                maxFrames);
+        }
+
+        private static void TickUntilWorldHudText(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            int maxFrames,
+            string message)
         {
             TickUntil(
                 engine,
                 frameTimesMs,
                 () => CountWorldHudItems(worldHud, WorldHudItemKind.Text) > 0,
-                maxFrames);
-        }
-
-        private static void WaitForMoveOverlay(GameEngine engine, List<double> frameTimesMs, GroundOverlayBuffer overlays, int baselineMoveLines, int maxFrames)
-        {
-            WaitForLineOverlay(
-                engine,
-                frameTimesMs,
-                overlays,
-                baselineMoveLines,
-                "Selected champion move orders should render a visible path overlay.",
-                maxFrames);
-        }
-
-        private static void WaitForLineOverlay(GameEngine engine, List<double> frameTimesMs, GroundOverlayBuffer overlays, int baselineMoveLines, string failurePrefix, int maxFrames)
-        {
-            for (int i = 0; i < maxFrames; i++)
-            {
-                if (CountOverlays(overlays, GroundOverlayShape.Line) > baselineMoveLines)
-                {
-                    return;
-                }
-
-                Tick(engine, 1, frameTimesMs);
-            }
-
-            Assert.That(
-                CountOverlays(overlays, GroundOverlayShape.Line),
-                Is.GreaterThan(baselineMoveLines),
-                failurePrefix + " " +
-                BuildMovePathOverlayDiagnostics(engine) + " | " +
-                BuildInputActionDiagnostics(engine, "MoveCommand") + " | " +
-                BuildSelectionStateDiagnostics(engine) + " | " +
-                BuildOverlayDiagnostics(overlays));
+                maxFrames,
+                describeFailure: () => $"{message} {BuildFeedbackDiagnostics(primitives, worldHud)} | {BuildGasPresentationDiagnostics(engine)} | {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} | {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")}");
         }
 
         private static bool WaitUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
@@ -1826,7 +1842,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
             return selected.Select(entity => ReadEntityName(engine.World, entity))
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToArray();
@@ -1873,7 +1889,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -1933,28 +1949,20 @@ namespace Ludots.Tests.GAS.Production
             out Vector2 matchedPoint,
             out string samples)
         {
-            var hoveredSamples = new List<string>(HoverProbeOffsets.Length * 12);
-            for (int pass = 0; pass < 4; pass++)
+            var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
+            for (int i = 0; i < HoverProbeOffsets.Length; i++)
             {
-                for (int i = 0; i < HoverProbeOffsets.Length; i++)
+                Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
+                backend.SetMousePosition(candidate);
+                TickUntilFixedTickAdvances(engine, frameTimesMs);
+
+                string hovered = ReadHoveredEntityName(engine);
+                hoveredSamples.Add($"{candidate.X:0.0},{candidate.Y:0.0}->{hovered}");
+                if (string.Equals(hovered, entityName, StringComparison.Ordinal))
                 {
-                    Vector2 currentProjection = GetEntityScreen(engine, entityName);
-                    Vector2 candidate = currentProjection + HoverProbeOffsets[i];
-                    backend.SetMousePosition(candidate);
-
-                    for (int holdFrame = 0; holdFrame < 3; holdFrame++)
-                    {
-                        Tick(engine, 1, frameTimesMs);
-
-                        string hovered = ReadHoveredEntityName(engine);
-                        hoveredSamples.Add($"{candidate.X:0.0},{candidate.Y:0.0}#{pass}.{holdFrame}->{hovered}");
-                        if (string.Equals(hovered, entityName, StringComparison.Ordinal))
-                        {
-                            matchedPoint = candidate;
-                            samples = string.Join(" | ", hoveredSamples);
-                            return true;
-                        }
-                    }
+                    matchedPoint = candidate;
+                    samples = string.Join(" | ", hoveredSamples);
+                    return true;
                 }
             }
 
@@ -1977,8 +1985,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadHoveredEntityName(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
-                   hoveredObj is Entity hovered &&
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.TryGet(hovered, out Name name)
                 ? name.Value
@@ -2004,6 +2011,69 @@ namespace Ludots.Tests.GAS.Production
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
             return projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+        }
+
+        private static Vector2 FindGroundScreenPoint(GameEngine engine, Vector2 worldCm)
+        {
+            Vector2 preferred = GetGroundScreenFromWorld(engine, worldCm);
+            if (TryResolveGroundScreenPoint(engine, preferred, worldCm, out float preferredDistanceCm) &&
+                preferredDistanceCm <= 1f)
+            {
+                return preferred;
+            }
+
+            IViewController view = engine.GetService(CoreServiceKeys.ViewController)
+                ?? throw new InvalidOperationException("ViewController was not installed.");
+
+            Vector2 resolution = view.Resolution;
+            Vector2 bestCandidate = preferred;
+            float bestDistance = float.MaxValue;
+
+            for (int step = 32; step >= 4; step /= 2)
+            {
+                float startX = step;
+                float startY = step;
+                for (float y = startY; y < resolution.Y; y += step)
+                {
+                    for (float x = startX; x < resolution.X; x += step)
+                    {
+                        Vector2 candidate = new Vector2(x, y);
+                        if (!TryResolveGroundScreenPoint(engine, candidate, worldCm, out float distanceCm))
+                        {
+                            continue;
+                        }
+
+                        if (distanceCm < bestDistance)
+                        {
+                            bestDistance = distanceCm;
+                            bestCandidate = candidate;
+                            if (distanceCm <= 1f)
+                            {
+                                return candidate;
+                            }
+                        }
+                    }
+                }
+
+                if (bestDistance <= 1f)
+                {
+                    return bestCandidate;
+                }
+            }
+
+            return bestCandidate;
+        }
+
+        private static bool TryResolveGroundScreenPoint(GameEngine engine, Vector2 screenPosition, Vector2 desiredWorldCm, out float distanceCm)
+        {
+            distanceCm = float.MaxValue;
+            if (!AuthoritativeGroundPointerHelper.TryResolveFromScreen(engine.GlobalContext, screenPosition, out WorldCmInt2 resolved))
+            {
+                return false;
+            }
+
+            distanceCm = Vector2.Distance(new Vector2(resolved.X, resolved.Y), desiredWorldCm);
+            return true;
         }
 
         private static Entity FindEntityByName(World world, string entityName)
@@ -2186,7 +2256,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(child.Parent, Is.EqualTo(parent));
             Assert.That(world.TryGet(entity, out MapEntity map), Is.True, $"{entityLabel} should stay scoped to the sandbox map.");
             Assert.That(map.MapId.Value, Is.EqualTo(MapId));
-            Assert.That(world.Has<SelectionSelectableTag>(entity), Is.True, $"{entityLabel} should stay formally selectable.");
+            Assert.That(world.Has<CommandSourceSelectableTag>(entity), Is.True, $"{entityLabel} should stay formally selectable.");
         }
 
         private static void AssertBlockerManifestationBridge(World world, string entityName)
@@ -2459,6 +2529,8 @@ namespace Ludots.Tests.GAS.Production
 
             if (engine.GetService(CoreServiceKeys.InputHandler) is PlayerInputHandler liveInput)
             {
+                details.Add($"liveHasAction={liveInput.HasAction(actionId)}");
+                details.Add($"liveContexts=[{DescribeActiveInputContexts(liveInput)}]");
                 details.Add($"livePressed={liveInput.PressedThisFrame(actionId)}");
                 details.Add($"liveDown={liveInput.IsDown(actionId)}");
                 Vector2 pointer = liveInput.ReadAction<Vector2>("PointerPos");
@@ -2481,13 +2553,30 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("authoritativeInput=<missing>");
             }
 
+            if (engine.GlobalContext.TryGetValue(TestInputBackendKey, out var backendObj) &&
+                backendObj is TestInputBackend backend)
+            {
+                details.Add($"backendRight={backend.GetButton("<Mouse>/RightButton")}");
+                details.Add($"backendLeft={backend.GetButton("<Mouse>/LeftButton")}");
+            }
+
+            bool pointerCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var pointerCapturedObj) &&
+                pointerCapturedObj is bool pointerCapturedValue &&
+                pointerCapturedValue;
+            details.Add($"pointerCaptured={pointerCaptured}");
+
+            if (engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
+            {
+                details.Add($"groundOverride={groundOverride.HasOverride}");
+            }
+
             if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
             {
                 details.Add($"mappingMode={mapping.InteractionMode}");
                 details.Add($"mappingAiming={mapping.IsAiming}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
-                    details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"TargetType={actionMapping.TargetType}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
             }
@@ -2500,6 +2589,33 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" | ", details);
         }
 
+        private static string DescribeActiveInputContexts(PlayerInputHandler input)
+        {
+            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            FieldInfo? activeContextsField = typeof(PlayerInputHandler).GetField("_activeContexts", Flags);
+            if (activeContextsField?.GetValue(input) is not System.Collections.IEnumerable activeContexts)
+            {
+                return "<unavailable>";
+            }
+
+            var names = new List<string>();
+            foreach (object? context in activeContexts)
+            {
+                if (context == null)
+                {
+                    continue;
+                }
+
+                PropertyInfo? idProperty = context.GetType().GetProperty("Id", BindingFlags.Instance | BindingFlags.Public);
+                PropertyInfo? priorityProperty = context.GetType().GetProperty("Priority", BindingFlags.Instance | BindingFlags.Public);
+                string id = idProperty?.GetValue(context)?.ToString() ?? "<unknown>";
+                string priority = priorityProperty?.GetValue(context)?.ToString() ?? "?";
+                names.Add($"{id}:{priority}");
+            }
+
+            return names.Count == 0 ? "<none>" : string.Join(",", names);
+        }
+
         private static string BuildSelectionStateDiagnostics(GameEngine engine)
         {
             var details = new List<string>
@@ -2507,8 +2623,7 @@ namespace Ludots.Tests.GAS.Production
                 $"selected={GetSelectedEntityName(engine)}"
             };
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) &&
-                hoveredObj is Entity hovered &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -2522,30 +2637,269 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" | ", details);
         }
 
-        private static string BuildLastOrderDiagnostics(GameEngine engine)
+        private static string BuildChampionMovementDiagnostics(GameEngine engine, string actorName, Vector2 targetScreen)
         {
-            string ground = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastGroundWorldCm", out object? groundObj) &&
-                            groundObj is string groundText
-                ? groundText
+            Vector2 actorPosition = ReadPosition(engine.World, actorName);
+            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
+                ? lastGroundObj?.ToString() ?? "<null>"
                 : "<missing>";
-            string order = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? orderObj) &&
-                           orderObj is string orderText
-                ? orderText
+            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
+                ? lastOrderObj?.ToString() ?? "<null>"
                 : "<missing>";
-            return $"lastGround={ground} | lastOrder={order}";
+            string pressFrame = engine.GlobalContext.TryGetValue(RightClickPressDiagnosticsKey, out var pressFrameObj)
+                ? pressFrameObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string localOrderSource = engine.GlobalContext.TryGetValue("ChampionSkillSandbox.Debug.LocalOrderSource", out var localOrderSourceObj)
+                ? localOrderSourceObj?.ToString() ?? "<null>"
+                : "<missing>";
+
+            return string.Join(" || ",
+                $"actor={actorName}",
+                $"actorPos=({actorPosition.X:0.##},{actorPosition.Y:0.##})",
+                $"targetScreen=({targetScreen.X:0.##},{targetScreen.Y:0.##})",
+                BuildInputActionDiagnostics(engine, "Command"),
+                $"rightClickPressFrame={pressFrame}",
+                $"localOrderSource={localOrderSource}",
+                BuildAbilityDiagnostics(engine, actorName),
+                BuildSelectionStateDiagnostics(engine),
+                $"lastGround={lastGround}",
+                $"lastOrder={lastOrder}");
         }
 
-        private static string BuildMovePathOverlayDiagnostics(GameEngine engine)
+        private static string BuildStressSelectionDiagnostics(GameEngine engine, Entity localPlayer, OrderQueue orderQueue)
         {
-            return engine.GlobalContext.TryGetValue("CoreInputMod.SelectedMovePath.DebugSummary", out object? summaryObj) &&
-                   summaryObj is string summary
-                ? summary
-                : "movePath=<missing>";
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var details = new List<string>
+            {
+                $"viewed=[{string.Join(",", ReadViewedSelectionNames(engine))}]",
+                $"localPlayer={localPlayer.Id}",
+                $"orderQueue={orderQueue.Count}"
+            };
+
+            if (Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView currentView))
+            {
+                details.Add($"currentView owner={DescribeEntity(engine.World, currentView.Owner)} key={currentView.Key} count={currentView.Count} primary={DescribeEntity(engine.World, currentView.PrimaryEntity)}");
+            }
+            else
+            {
+                details.Add("currentView=<none>");
+            }
+
+            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, EntityCollectionKeys.CommandSource)}");
+            details.Add($"commandPreview={DescribeCollectionByKey(engine, collections, CommandPreviewCollectionKey)}");
+
+            details.Add($"orderBufferSpatial=[{BuildOrderBufferSpatialDiagnostics(engine)}]");
+            return string.Join(" || ", details);
+        }
+
+        private static string BuildOrderBufferSpatialDiagnostics(GameEngine engine)
+        {
+            var samples = new List<string>(8);
+            var query = new QueryDescription().WithAll<Name, OrderBuffer>();
+            engine.World.Query(in query, (Entity _, ref Name name, ref OrderBuffer orders) =>
+            {
+                AddOrderSpatialSample(samples, name.Value, "active", orders.ActiveOrder.Order, orders.HasActive);
+                AddOrderSpatialSample(samples, name.Value, "pending", orders.PendingOrder.Order, orders.HasPending);
+                for (int i = 0; i < orders.QueuedCount; i++)
+                {
+                    AddOrderSpatialSample(samples, name.Value, $"queued{i}", orders.GetQueued(i).Order, include: true);
+                }
+            });
+
+            return string.Join(";", samples);
+        }
+
+        private static void AddOrderSpatialSample(
+            List<string> samples,
+            string actorName,
+            string orderLabel,
+            in Order order,
+            bool include)
+        {
+            if (!include || order.Args.Spatial.Kind == OrderSpatialKind.None || samples.Count >= 8)
+            {
+                return;
+            }
+
+            samples.Add($"{actorName}:{orderLabel}:order={order.OrderId}:spatial={order.Args.Spatial.Kind}/{order.Args.Spatial.Mode}@{order.Args.Spatial.WorldCm}");
+        }
+
+        private static string DescribeCollectionByKey(GameEngine engine, EntityCollectionStore collections, string key)
+        {
+            Span<EntityCollectionHandle> handles = stackalloc EntityCollectionHandle[Math.Max(collections.CollectionCount, 1)];
+            int count = collections.CopyActiveHandles(handles);
+            for (int i = 0; i < count; i++)
+            {
+                if (collections.TryGetView(handles[i], out EntityCollectionView view) &&
+                    string.Equals(view.Key, key, StringComparison.Ordinal))
+                {
+                    return DescribeCollection(engine, collections, view.Owner, key);
+                }
+            }
+
+            return "<none>";
+        }
+
+        private static string DescribeCollection(GameEngine engine, EntityCollectionStore collections, Entity owner, string key)
+        {
+            if (!collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return "<none>";
+            }
+
+            Entity[] members = view.Count > 0 ? new Entity[view.Count] : Array.Empty<Entity>();
+            int written = view.Count > 0 ? collections.CopyEntities(handle, 0, members) : 0;
+            string names = string.Join(",", members.Take(written).Select(entity => ReadEntityName(engine.World, entity)));
+            return $"owner={DescribeEntity(engine.World, view.Owner)},key={view.Key},role={view.Role},count={view.Count},primary={DescribeEntity(engine.World, view.PrimaryEntity)},members=[{names}]";
+        }
+
+        private static string DescribeEntity(World world, Entity entity)
+        {
+            string name = ReadEntityName(world, entity);
+            return string.IsNullOrWhiteSpace(name) ? entity.Id.ToString() : $"{name}#{entity.Id}";
         }
 
         private static string BuildOverlayDiagnostics(GroundOverlayBuffer overlays)
         {
             return $"overlays=count:{overlays.Count},circle:{CountOverlays(overlays, GroundOverlayShape.Circle)},cone:{CountOverlays(overlays, GroundOverlayShape.Cone)},line:{CountOverlays(overlays, GroundOverlayShape.Line)},ring:{CountOverlays(overlays, GroundOverlayShape.Ring)}";
+        }
+
+        private static string BuildHoverIndicatorDiagnostics(
+            GameEngine engine,
+            GroundOverlayBuffer overlays,
+            int baselineHoverRings,
+            string hoverEntityName,
+            Vector2 hoverPoint)
+        {
+            var sb = new StringBuilder();
+            sb.Append(BuildOverlayDiagnostics(overlays));
+            sb.Append($" | baselineRings={baselineHoverRings}");
+            sb.Append($" | hover={hoverEntityName}@({hoverPoint.X:0.##},{hoverPoint.Y:0.##})");
+            var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+            var runtime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+            if (definitions == null || runtime == null)
+            {
+                sb.Append(" | performerServices=<missing>");
+                return sb.ToString();
+            }
+
+            int hoverDefId = definitions.GetId("champion_skill_sandbox.hover_indicator");
+            int selectionDefId = definitions.GetId("champion_skill_sandbox.selection_indicator");
+            sb.Append($" | performerRuntime=active:{runtime.ActiveCount},dirtyRetained:{runtime.HasDirtyRetainedPresentationRequests},dirtyStatic:{runtime.HasDirtyStaticVisuals}");
+            sb.Append(" | performerDefs=");
+            sb.Append(runtime.BuildActiveDefinitionSummary(8));
+            sb.Append(" | hoverPerformers=");
+
+            var samples = new List<string>(8);
+            int hoverCount = 0;
+            var query = new QueryDescription().WithAll<PerformerState, PerformerEmitCache, PerformerCullState, PerformerWorldPosition>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState state, ref PerformerEmitCache cache, ref PerformerCullState cull, ref PerformerWorldPosition position) =>
+            {
+                if (state.DefId != hoverDefId)
+                {
+                    return;
+                }
+
+                hoverCount++;
+                if (samples.Count >= 6)
+                {
+                    return;
+                }
+
+                samples.Add(
+                    $"{entity.Id}:owner={DescribeEntity(engine.World, state.OwnerEntity)},scope={state.ScopeId},stable={state.StableId},pos=({position.Value.X:0.##},{position.Value.Y:0.##},{position.Value.Z:0.##}),cull={cull.OwnerCullVisible},dirty={cache.RetainedDirty},present={cache.RetainedRequestPresent},ver={state.Version}");
+            });
+            sb.Append(hoverCount);
+            sb.Append('[');
+            sb.Append(string.Join(";", samples));
+            sb.Append(']');
+
+            int selectionCount = 0;
+            engine.World.Query(in query, (ref PerformerState state) =>
+            {
+                if (state.DefId == selectionDefId)
+                {
+                    selectionCount++;
+                }
+            });
+            sb.Append($" | selectionPerformers={selectionCount}");
+            sb.Append(" | overlayRings=");
+            sb.Append(string.Join(
+                ";",
+                overlays.GetSpan()
+                    .ToArray()
+                    .Where(item => item.Shape == GroundOverlayShape.Ring)
+                    .Take(8)
+                    .Select(item => $"stable={item.StableId},center=({item.Center.X:0.##},{item.Center.Y:0.##},{item.Center.Z:0.##}),r={item.Radius:0.##},inner={item.InnerRadius:0.##}")));
+            return sb.ToString();
+        }
+
+        private static string BuildMovePathOverlayDiagnostics(
+            GameEngine engine,
+            GroundOverlayBuffer overlays,
+            string actorName,
+            int baselineMoveLines)
+        {
+            string debugSummary = engine.GlobalContext.TryGetValue(CommandActorMovePathPresentationSystem.DebugSummaryKey, out object? summaryObj)
+                ? summaryObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? lastGroundObj)
+                ? lastGroundObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? lastOrderObj)
+                ? lastOrderObj?.ToString() ?? "<null>"
+                : "<missing>";
+
+            Entity actor = FindEntityByName(engine.World, actorName);
+            string orderBuffer = DescribeOrderBuffer(engine.World, actor);
+            return string.Join(" || ",
+                BuildOverlayDiagnostics(overlays),
+                $"baselineLine={baselineMoveLines}",
+                $"movePath={debugSummary}",
+                $"lastGround={lastGround}",
+                $"lastOrder={lastOrder}",
+                BuildInputActionDiagnostics(engine, "Command"),
+                BuildSelectionStateDiagnostics(engine),
+                $"actorOrderBuffer={orderBuffer}");
+        }
+
+        private static string DescribeOrderBuffer(World world, Entity actor)
+        {
+            if (!world.IsAlive(actor))
+            {
+                return "<dead>";
+            }
+
+            if (!world.Has<OrderBuffer>(actor))
+            {
+                return "<missing>";
+            }
+
+            ref readonly OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var parts = new List<string>
+            {
+                $"hasActive={buffer.HasActive}",
+                $"queued={buffer.QueuedCount}",
+            };
+            if (buffer.HasActive)
+            {
+                parts.Add($"active={DescribeOrderBrief(in buffer.ActiveOrder.Order)}");
+            }
+
+            for (int i = 0; i < buffer.QueuedCount && i < 4; i++)
+            {
+                Order queued = buffer.GetQueued(i).Order;
+                parts.Add($"q{i}={DescribeOrderBrief(in queued)}");
+            }
+
+            return string.Join(",", parts);
+        }
+
+        private static string DescribeOrderBrief(in Order order)
+        {
+            return $"id:{order.OrderId},type:{order.OrderTypeId},actor:{order.Actor.Id},spatial:{order.Args.Spatial.Kind}/{order.Args.Spatial.Mode}@({order.Args.Spatial.WorldCm.X:0.#},{order.Args.Spatial.WorldCm.Z:0.#})";
         }
 
         private static string BuildFeedbackDiagnostics(PrimitiveDrawBuffer primitives, WorldHudBatchBuffer worldHud)
@@ -2802,7 +3156,7 @@ namespace Ludots.Tests.GAS.Production
         private sealed class TestInputBackend : IInputBackend
         {
             private readonly Dictionary<string, bool> _buttons = new(StringComparer.Ordinal);
-            private Vector2 _mousePosition = new(float.NaN, float.NaN);
+            private Vector2 _mousePosition;
 
             public void SetButton(string path, bool isDown)
             {

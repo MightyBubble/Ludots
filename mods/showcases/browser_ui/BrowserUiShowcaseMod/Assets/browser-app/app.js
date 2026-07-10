@@ -18,16 +18,22 @@ function render() {
   status.textContent = active ? 'Highlight state enabled.' : 'Idle host state.';
 }
 
-function postHostMessage(payload) {
-  if (window.CefSharp && typeof window.CefSharp.PostMessage === 'function') {
-    window.CefSharp.PostMessage({
+function postHostMessage(payload, attempt = 0) {
+  const host = window.ludotsBrowser;
+  if (host && typeof host.postMessage === 'function') {
+    host.postMessage({
       source: 'browser-ui-showcase',
       payload
     });
     return;
   }
 
-  bridge.textContent = 'CEF host bridge is not exposed yet.';
+  if (attempt < 20) {
+    window.setTimeout(() => postHostMessage(payload, attempt + 1), 25);
+    return;
+  }
+
+  bridge.textContent = 'Ludots browser host bridge is not exposed yet.';
 }
 
 refresh.addEventListener('click', () => {

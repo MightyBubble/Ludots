@@ -11,7 +11,7 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -44,7 +44,7 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -77,7 +77,7 @@
       "PlayerOwner": {
         "PlayerId": 1
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -107,7 +107,7 @@
       "Team": {
         "Id": 2
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -137,7 +137,7 @@
       "Team": {
         "Id": 2
       },
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,

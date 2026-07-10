@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Arch.Core;
 using CoreInputMod.Systems;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -15,22 +18,38 @@ namespace CoreInputMod.ViewMode
 
         private readonly List<ViewModeConfig> _modes = new();
         private readonly Dictionary<string, ViewModeConfig> _modeMap = new(StringComparer.OrdinalIgnoreCase);
+        private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private int _activeIndex = -1;
 
         public ViewModeConfig? ActiveMode => _activeIndex >= 0 && _activeIndex < _modes.Count ? _modes[_activeIndex] : null;
         public IReadOnlyList<ViewModeConfig> Modes => _modes;
 
-        public ViewModeManager(Dictionary<string, object> globals)
+        public ViewModeManager(World world, Dictionary<string, object> globals)
         {
-            _globals = globals;
+            _world = world ?? throw new ArgumentNullException(nameof(world));
+            _globals = globals ?? throw new ArgumentNullException(nameof(globals));
         }
 
         public void Register(ViewModeConfig mode)
         {
-            if (string.IsNullOrWhiteSpace(mode.Id) || _modeMap.ContainsKey(mode.Id))
+            ArgumentNullException.ThrowIfNull(mode);
+            if (string.IsNullOrWhiteSpace(mode.Id))
             {
-                return;
+                throw new InvalidOperationException("ViewMode config requires a non-empty Id.");
+            }
+
+            if (_modeMap.ContainsKey(mode.Id))
+            {
+                throw new InvalidOperationException($"ViewMode '{mode.Id}' is registered more than once.");
+            }
+
+            RequireInteractionMode(mode);
+            if (!string.IsNullOrWhiteSpace(mode.FollowTargetKind) &&
+                !Enum.TryParse<CameraFollowTargetKind>(mode.FollowTargetKind, ignoreCase: true, out _))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' declared unsupported FollowTargetKind '{mode.FollowTargetKind}'.");
             }
 
             _modes.Add(mode);
@@ -133,11 +152,16 @@ namespace CoreInputMod.ViewMode
             }
 
             if (!_globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out var registryObj) ||
-                registryObj is not VirtualCameraRegistry registry ||
-                !registry.TryGet(next.VirtualCameraId, out var definition) ||
-                definition == null)
+                registryObj is not VirtualCameraRegistry registry)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared virtual camera '{next.VirtualCameraId}', but VirtualCameraRegistry is not available.");
+            }
+
+            if (!registry.TryGet(next.VirtualCameraId, out var definition) || definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared unknown virtual camera '{next.VirtualCameraId}'.");
             }
 
             if (!Enum.TryParse<CameraFollowTargetKind>(next.FollowTargetKind, ignoreCase: true, out var followTargetKind))
@@ -150,6 +174,10 @@ namespace CoreInputMod.ViewMode
             {
                 Id = next.VirtualCameraId,
                 FollowTargetKindOverride = followTargetKind,
+                FollowCollectionOwnerOverride = ResolveFollowCollectionOwner(next.Id, followTargetKind),
+                FollowCollectionKeyOverride = string.IsNullOrWhiteSpace(next.FollowCollectionKey)
+                    ? definition.FollowCollectionKey
+                    : next.FollowCollectionKey,
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true
@@ -158,17 +186,57 @@ namespace CoreInputMod.ViewMode
             _globals[CoreServiceKeys.VirtualCameraRequest.Name] = request;
         }
 
+        private Entity ResolveFollowCollectionOwner(string modeId, CameraFollowTargetKind followTargetKind)
+        {
+            if (!CameraFollowTargetFactory.RequiresEntityCollection(followTargetKind))
+            {
+                return Entity.Null;
+            }
+
+            if (TryResolveLocalCommandSourceOwner(out Entity owner))
+            {
+                return owner;
+            }
+
+            throw new InvalidOperationException(
+                $"ViewMode '{modeId}' requires an explicit entity collection owner before activating collection camera follow.");
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                   localObj is Entity local &&
+                   local != Entity.Null &&
+                   _world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
+        }
+
         private void ApplyInteractionMode(ViewModeConfig mode)
         {
-            if (!Enum.TryParse<InteractionModeType>(mode.InteractionMode, true, out var interactionMode))
-            {
-                return;
-            }
+            InteractionModeType interactionMode = RequireInteractionMode(mode);
 
             if (_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) && mappingObj is InputOrderMappingSystem mapping)
             {
                 mapping.SetInteractionMode(interactionMode);
             }
+        }
+
+        private static InteractionModeType RequireInteractionMode(ViewModeConfig mode)
+        {
+            if (string.IsNullOrWhiteSpace(mode.InteractionMode))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' must declare InteractionMode explicitly.");
+            }
+
+            if (!Enum.TryParse<InteractionModeType>(mode.InteractionMode, true, out var interactionMode))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' declared unsupported InteractionMode '{mode.InteractionMode}'.");
+            }
+
+            return interactionMode;
         }
 
         private void ApplySkillBar(ViewModeConfig mode)

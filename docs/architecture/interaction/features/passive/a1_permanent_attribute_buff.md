@@ -13,7 +13,7 @@
 ## 交互层设计
 
 - **Trigger**: N/A（被动，无输入触发）
-- **SelectionType**: N/A
+- **TargetType**: N/A
 - **InteractionMode**: N/A
 
 ```json5

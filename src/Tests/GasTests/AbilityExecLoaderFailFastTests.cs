@@ -289,7 +289,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_InvalidIndicatorColor_IsRejected()
+        public void CompileAbility_LegacyIndicatorField_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -313,61 +313,58 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.validColor"));
-            That(ex.Message, Does.Contain("invalid hex"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
-        public void CompileAbility_CircleIndicatorWithoutRangeCircle_DoesNotRequireRangeOrRangeCircleColor()
+        public void CompileAbility_CircleIndicatorWithoutRangeCircle_IsRejected()
         {
-            var ability = Compile(
-                """
-                {
-                  "exec": {
-                    "clockId": "FixedFrame",
-                    "items": [
-                      { "kind": "End", "tick": 0 }
-                    ]
-                  },
-                  "indicator": {
-                    "shape": "Circle",
-                    "radius": 120,
-                    "showRangeCircle": false,
-                    "validColor": "#33CC66",
-                    "invalidColor": "#FF3333"
-                  }
-                }
-                """);
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "indicator": {
+                        "shape": "Circle",
+                        "radius": 120,
+                        "showRangeCircle": false,
+                        "validColor": "#33CC66",
+                        "invalidColor": "#FF3333"
+                      }
+                    }
+                    """));
 
-            That(ability.Indicator.Range, Is.EqualTo(0f));
-            That(ability.Indicator.Radius, Is.EqualTo(120f));
-            That(ability.Indicator.ShowRangeCircle, Is.False);
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
-        public void CompileAbility_IndicatorStateColorsAreOptionalDefaults()
+        public void CompileAbility_IndicatorStateColorsAreRejectedWithLegacyField()
         {
-            var ability = Compile(
-                """
-                {
-                  "exec": {
-                    "clockId": "FixedFrame",
-                    "items": [
-                      { "kind": "End", "tick": 0 }
-                    ]
-                  },
-                  "indicator": {
-                    "shape": "Single",
-                    "range": 500,
-                    "showRangeCircle": true,
-                    "rangeCircleColor": "#3366FF"
-                  }
-                }
-                """);
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "indicator": {
+                        "shape": "Single",
+                        "range": 500,
+                        "showRangeCircle": true,
+                        "rangeCircleColor": "#3366FF"
+                      }
+                    }
+                    """));
 
-            That(ability.Indicator.Range, Is.EqualTo(500f));
-            That(ability.Indicator.Radius, Is.EqualTo(0f));
-            That(ability.Indicator.ShowRangeCircle, Is.True);
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -394,8 +391,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.range"));
-            That(ex.Message, Does.Contain("omitted or > 0"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -423,8 +419,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.radius"));
-            That(ex.Message, Does.Contain("Single"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -451,7 +446,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.rangeCircleColor"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -478,8 +473,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.radius"));
-            That(ex.Message, Does.Contain("> 0"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -506,8 +500,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("indicator.rangeCircleColor"));
-            That(ex.Message, Does.Contain("showRangeCircle"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]

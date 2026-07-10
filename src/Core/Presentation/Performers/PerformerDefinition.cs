@@ -559,7 +559,8 @@ namespace Ludots.Core.Presentation.Performers
                 VisibilityCondition.GraphProgramId <= 0;
             SupportsSingleRequestReplay =
                 AssetBehaviorIndices.Length == 1 &&
-                SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind);
+                SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind) &&
+                !RequestOutputDependsOnElapsed();
             UsesRetainedPresentationRequest =
                 (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
                 DefaultLifetime <= 0f &&
@@ -586,6 +587,12 @@ namespace Ludots.Core.Presentation.Performers
             SupportsFastParentAttachmentTick =
                 SupportsRetainedParentAttachmentFastTick(Behaviors, TickBehaviorIndices, out int fastParentAttachmentBehaviorIndex);
             FastParentAttachmentBehaviorIndex = fastParentAttachmentBehaviorIndex;
+        }
+
+        private bool RequestOutputDependsOnElapsed()
+        {
+            return PositionYDriftPerSecond != 0f ||
+                   (AlphaFadeOverLifetime && DefaultLifetime > 0f);
         }
 
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)
@@ -784,7 +791,49 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            if (asset.AssetKind == AssetKind.GroundOverlay)
+            {
+                CollectGroundOverlayParams(floatParams);
+            }
+            else if (asset.AssetKind == AssetKind.Spline)
+            {
+                CollectSplineParams(floatParams, vectorParams);
+            }
+
             CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
+        }
+
+        private static void CollectGroundOverlayParams(System.Collections.Generic.HashSet<int> floatParams)
+        {
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayRadius);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayInnerRadius);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayAngle);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayRotation);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillR);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillG);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillB);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillA);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderR);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderG);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderB);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderA);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderWidth);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayLength);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayWidth);
+        }
+
+        private static void CollectSplineParams(
+            System.Collections.Generic.HashSet<int> floatParams,
+            System.Collections.Generic.HashSet<int> vectorParams)
+        {
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP0);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP1);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP2);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP3);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.SplineWidth);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineFillColor);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineBorderColor);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.SplineBorderWidth);
         }
 
         private static void CollectMaterialCustomDataParams(

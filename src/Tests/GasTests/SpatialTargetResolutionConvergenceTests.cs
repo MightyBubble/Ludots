@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -221,8 +221,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: 100,

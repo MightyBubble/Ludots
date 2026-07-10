@@ -1,0 +1,80 @@
+﻿{
+    "Id":  "camera_showcase_command_source_follow",
+    "Tags":  [
+                 "camera.showcase",
+                 "camera.showcase.selection"
+             ],
+    "DefaultCamera":  {
+                          "VirtualCameraId":  "Camera.Profile.Tactical"
+                      },
+    "Entities":  [
+                     {
+                         "Template":  "moba_hero",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraShowcaseHero"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  1600,
+                                                                                 "Y":  1200
+                                                                             }
+                                                               }
+                                       },
+                         "InstanceId":  "camera-showcase-local-player"
+                     },
+                     {
+                         "Template":  "moba_dummy",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraShowcaseScout"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  2600,
+                                                                                 "Y":  1600
+                                                                             }
+                                                               },
+                                           "PlayerOwner":  {
+                                                               "PlayerId":  1
+                                                           },
+                                           "Team":  {
+                                                        "Id":  1
+                                                    }
+                                       }
+                     },
+                     {
+                         "Template":  "moba_dummy",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraShowcaseCaptain"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  3400,
+                                                                                 "Y":  2200
+                                                                             }
+                                                               },
+                                           "PlayerOwner":  {
+                                                               "PlayerId":  1
+                                                           },
+                                           "Team":  {
+                                                        "Id":  1
+                                                    }
+                                       }
+                     }
+                 ],
+    "Teams":  [
+                  {
+                      "TeamId":  1,
+                      "RepresentativeInstanceId":  "camera-showcase-local-player"
+                  }
+              ],
+    "Players":  [
+                    {
+                        "PlayerId":  1,
+                        "TeamId":  1,
+                        "RepresentativeInstanceId":  "camera-showcase-local-player"
+                    }
+                ]
+}
