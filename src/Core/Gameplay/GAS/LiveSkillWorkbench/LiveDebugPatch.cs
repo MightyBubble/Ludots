@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 {
@@ -161,12 +162,21 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     public sealed class LiveDebugPatch
     {
         private readonly List<LiveDebugPatchOperation> _operations = new();
+        private readonly ReadOnlyCollection<LiveDebugPatchOperation> _operationsView;
+
+        public LiveDebugPatch()
+        {
+            _operationsView = _operations.AsReadOnly();
+        }
 
         public int Count => _operations.Count;
 
         public bool IsEmpty => _operations.Count == 0;
 
-        public IReadOnlyList<LiveDebugPatchOperation> Operations => _operations;
+        /// <summary>
+        /// Read-only view of staged operations. Not castable to the internal mutable list.
+        /// </summary>
+        public IReadOnlyList<LiveDebugPatchOperation> Operations => _operationsView;
 
         internal void Add(in LiveDebugPatchOperation operation)
         {

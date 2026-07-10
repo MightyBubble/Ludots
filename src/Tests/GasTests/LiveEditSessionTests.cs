@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -259,6 +260,31 @@ namespace Ludots.Tests.GAS
             That(result.Succeeded, Is.False);
             That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingProvenanceSourceUri));
             That(session.Patch.IsEmpty, Is.True);
+        }
+
+        [Test]
+        public void Operations_CannotBeCastToMutableListAndMutated()
+        {
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench, createdUtc: T0);
+            var provenance = new LiveEditProvenance(
+                LiveEditSource.ManualWorkbench,
+                sourceUri: "workbench://ability/Fireball/damage");
+
+            That(session.TryStage(
+                LiveDebugPatchOperation.SkillEffectNumeric("Fireball", "damage", 80d, provenance),
+                updatedUtc: T1).Succeeded,
+                Is.True);
+
+            IReadOnlyList<LiveDebugPatchOperation> operations = session.Patch.Operations;
+
+            That(operations, Is.Not.InstanceOf<List<LiveDebugPatchOperation>>());
+            That(operations as List<LiveDebugPatchOperation>, Is.Null,
+                "Exposed Operations must not be the internal List; cast-and-mutate would bypass TryStage.");
+
+            That(operations.Count, Is.EqualTo(1));
+            That(operations[0].DefinitionId, Is.EqualTo("Fireball"));
+            That(session.Patch.Count, Is.EqualTo(1));
+            That(session.Revision, Is.EqualTo(1u));
         }
     }
 }
