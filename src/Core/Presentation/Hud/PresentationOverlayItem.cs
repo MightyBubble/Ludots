@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -19,5 +20,6 @@ namespace Ludots.Core.Presentation.Hud
         public float Value0;
         public float Value1;
         public float Value2;
+        public PresentationClipShape ClipShape;
     }
 }

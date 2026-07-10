@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Minimap
 {
@@ -108,6 +109,8 @@ namespace Ludots.Core.Presentation.Minimap
 
         public int FieldSize => _fieldSize;
 
+        public PresentationClipShape ClipShape { get; private set; }
+
         public int DroppedSinceClear { get; private set; }
 
         public int DroppedTotal { get; private set; }
@@ -119,6 +122,7 @@ namespace Ludots.Core.Presentation.Minimap
             _bucketCount = 0;
             _bucketedReservedCount = 0;
             _bucketLayoutMaterialized = false;
+            ClipShape = PresentationClipShape.None;
             AdvanceLookupStamp();
             DroppedSinceClear = 0;
         }
@@ -133,6 +137,11 @@ namespace Ludots.Core.Presentation.Minimap
             _fieldX = x;
             _fieldY = y;
             _fieldSize = Math.Max(0, size);
+        }
+
+        public void SetClipShape(PresentationClipShape clipShape)
+        {
+            ClipShape = clipShape.IsActive ? clipShape : PresentationClipShape.None;
         }
 
         public bool TryAdd(
