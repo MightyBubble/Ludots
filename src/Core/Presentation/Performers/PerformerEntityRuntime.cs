@@ -1748,6 +1748,7 @@ namespace Ludots.Core.Presentation.Performers
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
                 !_world.Has<VisualHeightmapSampleState>(state.OwnerEntity) ||
+                _world.Get<VisualHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
                 !_world.Has<PerformerTransformSource>(performer) ||
                 _world.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform)
             {
@@ -1847,7 +1848,8 @@ namespace Ludots.Core.Presentation.Performers
                 if (owner == Entity.Null ||
                     !_world.IsAlive(owner) ||
                     !_world.Has<VisualTransform>(owner) ||
-                    !_world.Has<VisualHeightmapSampleState>(owner))
+                    !_world.Has<VisualHeightmapSampleState>(owner) ||
+                    _world.Get<VisualHeightmapSampleState>(owner).Sampled == 0)
                 {
                     return true;
                 }

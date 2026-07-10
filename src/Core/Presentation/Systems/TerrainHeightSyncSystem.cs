@@ -6,6 +6,7 @@ using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Diagnostics;
@@ -23,6 +24,8 @@ namespace Ludots.Core.Presentation.Systems
     /// 表现层需将实体贴附到地形表面，避免悬浮或穿地。
     /// 
     /// 仅处理带 WorldPositionCm 的实体，避免影响输入/相机等锚点实体。
+    /// Static Once 高度：未声明 visual heightmap 时允许缺服务落平 y=0；
+    /// 已声明时须 heightmap 可采样有限值，否则保持 PresentationStaticHeightPending。
     /// </summary>
     public sealed class TerrainHeightSyncSystem : ISystem<float>
     {
@@ -63,6 +66,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
             _sampledThisFrame = 0;
+            bool declaresVisualHeightmap = FocusedMapDeclaresVisualHeightmap();
             IVisualHeightmap? heightmap =
                 _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj)
                     ? heightmapObj as IVisualHeightmap
@@ -70,7 +74,13 @@ namespace Ludots.Core.Presentation.Systems
             if (heightmap is null)
             {
                 WarnMissingHeightmap();
-                SyncStaticPendingToZeroHeight();
+                // Undeclared maps may finalize static Once pending to flat y=0.
+                // Declared maps must keep pending until a sampleable heightmap is bound.
+                if (!declaresVisualHeightmap)
+                {
+                    SyncStaticPendingToZeroHeight();
+                }
+
                 ObserveTiming(start);
                 return;
             }
@@ -78,6 +88,7 @@ namespace Ludots.Core.Presentation.Systems
             ReadFrameState(out float alpha, out int frameId);
             TrySyncFromHeightmap(heightmap, alpha, frameId, in _query);
             TrySyncStaticPendingFromHeightmap(heightmap, alpha, frameId);
+
             ObserveTiming(start);
         }
 
@@ -157,22 +168,23 @@ namespace Ludots.Core.Presentation.Systems
                         _projectedYs.AsSpan(0, count),
                         _projectedHeights.AsSpan(0, count)))
                 {
+                    MarkHeightSamplesUnresolved(heightSampleStates, frameId, count);
                     continue;
                 }
 
-                any = true;
-                _sampledThisFrame += count;
                 if (heightSampleStates.IsEmpty)
                 {
                     for (int index = 0; index < count; index++)
                     {
                         float heightCm = _projectedHeights[index];
-                        if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                        if (!float.IsFinite(heightCm))
                         {
                             continue;
                         }
 
                         visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
+                        _sampledThisFrame++;
+                        any = true;
                     }
                 }
                 else
@@ -180,16 +192,24 @@ namespace Ludots.Core.Presentation.Systems
                     for (int index = 0; index < count; index++)
                     {
                         float heightCm = _projectedHeights[index];
-                        if (!float.IsNaN(heightCm) && !float.IsInfinity(heightCm))
+                        if (!float.IsFinite(heightCm))
                         {
-                            visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
+                            heightSampleStates[index] = new VisualHeightmapSampleState
+                            {
+                                FrameId = frameId,
+                                Sampled = 0,
+                            };
+                            continue;
                         }
 
+                        visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
                         heightSampleStates[index] = new VisualHeightmapSampleState
                         {
                             FrameId = frameId,
                             Sampled = 1,
                         };
+                        _sampledThisFrame++;
+                        any = true;
                     }
                 }
             }
@@ -272,20 +292,25 @@ namespace Ludots.Core.Presentation.Systems
                         _projectedYs.AsSpan(0, count),
                         _projectedHeights.AsSpan(0, count)))
                 {
+                    MarkHeightSamplesUnresolved(heightSampleStates, frameId, count);
                     continue;
                 }
 
-                any = true;
-                _sampledThisFrame += count;
                 if (heightSampleStates.IsEmpty)
                 {
                     for (int index = 0; index < count; index++)
                     {
                         float heightCm = _projectedHeights[index];
-                        visuals[index].Position.Y = float.IsNaN(heightCm) || float.IsInfinity(heightCm)
-                            ? 0f
-                            : WorldUnits.CmToM(heightCm);
+                        if (!float.IsFinite(heightCm))
+                        {
+                            // Non-finite samples must not resolve PresentationStaticHeightPending.
+                            continue;
+                        }
+
+                        visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
                         AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
+                        _sampledThisFrame++;
+                        any = true;
                     }
                 }
                 else
@@ -293,20 +318,47 @@ namespace Ludots.Core.Presentation.Systems
                     for (int index = 0; index < count; index++)
                     {
                         float heightCm = _projectedHeights[index];
-                        visuals[index].Position.Y = float.IsNaN(heightCm) || float.IsInfinity(heightCm)
-                            ? 0f
-                            : WorldUnits.CmToM(heightCm);
+                        if (!float.IsFinite(heightCm))
+                        {
+                            heightSampleStates[index] = new VisualHeightmapSampleState
+                            {
+                                FrameId = frameId,
+                                Sampled = 0,
+                            };
+                            continue;
+                        }
+
+                        visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
                         heightSampleStates[index] = new VisualHeightmapSampleState
                         {
                             FrameId = frameId,
                             Sampled = 1,
                         };
                         AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
+                        _sampledThisFrame++;
+                        any = true;
                     }
                 }
             }
 
             return any;
+        }
+
+        private static void MarkHeightSamplesUnresolved(Span<VisualHeightmapSampleState> heightSampleStates, int frameId, int count)
+        {
+            if (heightSampleStates.IsEmpty)
+            {
+                return;
+            }
+
+            for (int index = 0; index < count; index++)
+            {
+                heightSampleStates[index] = new VisualHeightmapSampleState
+                {
+                    FrameId = frameId,
+                    Sampled = 0,
+                };
+            }
         }
 
         private void RemoveStaticPendingMarkers(ReadOnlySpan<Entity> entities)
@@ -332,6 +384,19 @@ namespace Ludots.Core.Presentation.Systems
             _staticPendingEntities[count++] = entity;
         }
 
+        private bool FocusedMapDeclaresVisualHeightmap()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.MapSession.Name, out object? sessionObj) ||
+                sessionObj is not MapSession session ||
+                session.MapConfig is null)
+            {
+                return false;
+            }
+
+            return !string.IsNullOrWhiteSpace(
+                MapVisualHeightmapLoader.ResolveDeclaredAssetPath(session.MapConfig));
+        }
+
         private void WarnMissingHeightmap()
         {
             if (_warnedMissingHeightmap)
@@ -339,7 +404,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Terrain height sync requested VisualHeightmap, but none is registered; static projection writes height 0.");
+            Log.Warn(in LogChannels.Presentation, "Terrain height sync requested VisualHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.");
             _warnedMissingHeightmap = true;
         }
 
