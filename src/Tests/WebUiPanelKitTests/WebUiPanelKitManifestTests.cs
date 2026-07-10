@@ -14,7 +14,7 @@ namespace Ludots.Tests.WebUiPanelKit;
 public sealed class WebUiPanelKitManifestTests
 {
 	[Test]
-	public void LoadSampleManifest_RegistersThreePanels_OnSameUiSurfaceHost()
+	public void LoadSampleManifest_RegistersFourPanels_OnSameUiSurfaceHost()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();
 		RegisterSampleTopics(runtime);
@@ -23,23 +23,25 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(3));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(4));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
 			"hud.command-deck",
-			"hud.objective"
+			"hud.objective",
+			"hud.production-overview"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(3));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(4));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.objective"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.production-overview"), Is.Not.Null);
 	}
 
 	[Test]
@@ -142,7 +144,8 @@ public sealed class WebUiPanelKitManifestTests
 		{
 			WebUiPanelKitSampleCatalog.ResourceTopic,
 			WebUiPanelKitSampleCatalog.CommandTopic,
-			WebUiPanelKitSampleCatalog.ObjectiveTopic
+			WebUiPanelKitSampleCatalog.ObjectiveTopic,
+			WebUiPanelKitSampleCatalog.ProductionTopic
 		}));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(manifest.DeclaredTopics, Is.EqualTo(binder.BrowserSubscriptionTopics));
@@ -179,6 +182,7 @@ public sealed class WebUiPanelKitManifestTests
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ResourceTopic));
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ProductionTopic));
 	}
 
 	private static string BuildManifestJson(params (string panelId, string panelType, string region, string topic, string profile, string layout)[] panels)

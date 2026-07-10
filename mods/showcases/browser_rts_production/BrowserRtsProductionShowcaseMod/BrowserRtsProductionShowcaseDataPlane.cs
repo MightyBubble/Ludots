@@ -308,6 +308,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private BrowserRtsProductionResourceChipView[] BuildResourceChips()
     {
+        // WPK-4 / WPK-2 debt: flavor resource-name switch + ReadTeamAttributeTotal hand-sum.
+        // Migrate to WebUiResourceAttributeDescriptor + GraphOutputValueStore; delete this switch.
         string flavor = ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty);
         string[] names = flavor switch
         {
@@ -345,6 +347,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private BrowserRtsProductionQueueItemView[] BuildProductionQueue(BrowserRtsProductionCommandPanelView commands)
     {
+        // WPK-4: queue truth must stay on EntityCommandPanel status/queue (or ProductionOverviewProjector).
+        // Do not invent a parallel production store in the browser showcase.
         if (commands.Queue.Length == 0 && commands.Statuses.Length == 0)
         {
             return Array.Empty<BrowserRtsProductionQueueItemView>();
@@ -790,6 +794,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private static string[] PreferredCommandTargetTokens(string flavor)
     {
+        // WPK-4 debt: preferred command-target names are flavor switches.
+        // Migrate to production overview / CommandDeck profile sourceRef + collection query; delete this switch.
         return flavor switch
         {
             "red-alert-like" => ["Construction Yard", "ConYard", "War Factory", "Ore Refinery"],
@@ -875,6 +881,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private static string ResolveFlavor(string mapId)
     {
+        // WPK-4 debt: mapId→flavor switch drives presentation labels. Prefer profile/data-driven contract ids.
         return mapId switch
         {
             "rts_red_alert_like" => "red-alert-like",
@@ -887,6 +894,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private static string ResolveEntityKind(string name)
     {
+        // WPK-4 debt: entity kind inferred from display name. Prefer tag/attribute/collection role projection.
         string lower = name.ToLowerInvariant();
         if (lower.Contains("yard") || lower.Contains("factory") || lower.Contains("barracks") ||
             lower.Contains("gateway") || lower.Contains("pool") || lower.Contains("mill") ||
@@ -913,6 +921,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private static string TeamName(int teamId)
     {
+        // WPK-4 debt: hardcoded team labels. Prefer profile/token-driven faction display.
         return teamId switch
         {
             1 => "Allied",
@@ -924,6 +933,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private static string TeamColor(int teamId)
     {
+        // WPK-4 debt: hardcoded team colors. Prefer profile/token-driven faction display.
         return teamId switch
         {
             1 => "#59A7FF",

@@ -9,24 +9,27 @@ public static class WebUiPanelKitSampleCatalog
 	public const string ResourceTopic = "panel-kit.sample.resource";
 	public const string CommandTopic = "panel-kit.sample.command";
 	public const string ObjectiveTopic = "panel-kit.sample.objective";
+	public const string ProductionTopic = "panel-kit.sample.production";
 
 	public const string CommandDeckGlobalProfileId = "profile.command-deck.global";
 	public const string CommandDeckEntityProfileId = "profile.command-deck.entity";
 	public const string CommandDeckAggregateProfileId = "profile.command-deck.aggregate";
 	public const string CommandDeckPinnedProfileId = "profile.command-deck.conditional-pinned";
+	public const string ProductionOverviewProfileId = "profile.production-overview.generic";
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
 	{
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
-		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center"]);
+		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.bottom-left"]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
 		profiles.RegisterAll([
 			"profile.resource.generic",
 			"profile.command.generic",
 			"profile.objective.generic",
+			ProductionOverviewProfileId,
 			CommandDeckGlobalProfileId,
 			CommandDeckEntityProfileId,
 			CommandDeckAggregateProfileId,
@@ -34,7 +37,7 @@ public static class WebUiPanelKitSampleCatalog
 		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
-		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical"]);
+		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical", "layout.overview.split"]);
 
 		var densities = new WebUiPanelIdRegistry("density");
 		densities.RegisterAll(["density.compact", "density.comfortable"]);
