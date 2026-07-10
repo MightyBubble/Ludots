@@ -281,10 +281,149 @@ namespace Ludots.Tests.GAS
             That(operations as List<LiveDebugPatchOperation>, Is.Null,
                 "Exposed Operations must not be the internal List; cast-and-mutate would bypass TryStage.");
 
+            var forged = LiveDebugPatchOperation.SkillEffectNumeric(
+                "IceNova",
+                "radius",
+                3.5d,
+                provenance);
+
+            IList<LiveDebugPatchOperation>? asIList = operations as IList<LiveDebugPatchOperation>;
+            That(asIList, Is.Not.Null, "ReadOnlyCollection exposes IList but must reject mutation.");
+            Throws<NotSupportedException>(() => asIList!.Add(forged));
+            Throws<NotSupportedException>(() => asIList!.Insert(0, forged));
+            Throws<NotSupportedException>(() => asIList!.RemoveAt(0));
+            Throws<NotSupportedException>(() => asIList!.Clear());
+
+            ICollection<LiveDebugPatchOperation>? asCollection = operations as ICollection<LiveDebugPatchOperation>;
+            That(asCollection, Is.Not.Null);
+            Throws<NotSupportedException>(() => asCollection!.Add(forged));
+            Throws<NotSupportedException>(() => asCollection!.Clear());
+
             That(operations.Count, Is.EqualTo(1));
             That(operations[0].DefinitionId, Is.EqualTo("Fireball"));
             That(session.Patch.Count, Is.EqualTo(1));
             That(session.Revision, Is.EqualTo(1u));
+        }
+
+        [Test]
+        public void FailureDiagnostics_CallerOwnedArrayCannotMutateResultOrCastBack()
+        {
+            var owned = new[]
+            {
+                new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingDefinitionId,
+                    "definition id is required")
+            };
+
+            LiveEditStageResult result = LiveEditStageResult.Failure(
+                revision: 0,
+                isDirty: false,
+                owned);
+
+            That(result.Succeeded, Is.False);
+            That(result.Diagnostics.Count, Is.EqualTo(1));
+            That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingDefinitionId));
+
+            owned[0] = new LiveEditDiagnostic(
+                LiveEditDiagnosticSeverity.Warning,
+                LiveEditDiagnosticCodes.MissingFieldPath,
+                "mutated after Failure");
+
+            That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingDefinitionId),
+                "Caller-owned array mutation must not alter the staged failure report.");
+            That(result.Diagnostics as LiveEditDiagnostic[], Is.Null,
+                "Diagnostics must not expose the caller-owned array.");
+            That(result.Diagnostics as List<LiveEditDiagnostic>, Is.Null);
+
+            IList<LiveEditDiagnostic>? asIList = result.Diagnostics as IList<LiveEditDiagnostic>;
+            That(asIList, Is.Not.Null);
+            Throws<NotSupportedException>(() => asIList!.Clear());
+            That(result.Diagnostics.Count, Is.EqualTo(1));
+            That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingDefinitionId));
+        }
+
+        [Test]
+        public void FailureDiagnostics_CallerOwnedListCannotMutateResultOrCastBack()
+        {
+            var owned = new List<LiveEditDiagnostic>
+            {
+                new(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingFieldPath,
+                    "field path is required")
+            };
+
+            LiveEditStageResult result = LiveEditStageResult.Failure(
+                revision: 3,
+                isDirty: true,
+                owned);
+
+            That(result.Diagnostics.Count, Is.EqualTo(1));
+            That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingFieldPath));
+
+            owned[0] = new LiveEditDiagnostic(
+                LiveEditDiagnosticSeverity.Warning,
+                LiveEditDiagnosticCodes.NonFiniteNumericValue,
+                "mutated after Failure");
+            owned.Add(new LiveEditDiagnostic(
+                LiveEditDiagnosticSeverity.Error,
+                LiveEditDiagnosticCodes.MissingAttributeName,
+                "extra"));
+
+            That(result.Diagnostics.Count, Is.EqualTo(1));
+            That(result.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.MissingFieldPath));
+            That(result.Diagnostics as List<LiveEditDiagnostic>, Is.Null,
+                "Diagnostics must not expose the caller-owned list.");
+            That(result.Diagnostics as LiveEditDiagnostic[], Is.Null);
+
+            ICollection<LiveEditDiagnostic>? asCollection = result.Diagnostics as ICollection<LiveEditDiagnostic>;
+            That(asCollection, Is.Not.Null);
+            Throws<NotSupportedException>(() => asCollection!.Add(owned[0]));
+            That(result.Diagnostics.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TryStage_FailureDiagnostics_RemainImmutableAfterScratchReuse()
+        {
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench, createdUtc: T0);
+            var provenance = new LiveEditProvenance(
+                LiveEditSource.ManualWorkbench,
+                sourceUri: "workbench://ability/Fireball/damage");
+
+            LiveEditStageResult firstFailure = session.TryStage(
+                LiveDebugPatchOperation.SkillEffectNumeric(
+                    definitionId: " ",
+                    fieldPath: "",
+                    numericValue: double.NaN,
+                    provenance),
+                updatedUtc: T1);
+
+            That(firstFailure.Succeeded, Is.False);
+            That(firstFailure.Diagnostics.Count, Is.EqualTo(3));
+            string firstCode = firstFailure.Diagnostics[0].Code;
+            string secondCode = firstFailure.Diagnostics[1].Code;
+            string thirdCode = firstFailure.Diagnostics[2].Code;
+
+            LiveEditStageResult secondFailure = session.TryStage(
+                LiveDebugPatchOperation.SelectedActorAttribute(
+                    new ActorTargetSelection(selectionDescriptor: " ", entityIdSurrogate: null),
+                    attributeName: null!,
+                    mutation: (ActorAttributeMutationKind)255,
+                    numericValue: double.PositiveInfinity,
+                    provenance));
+
+            That(secondFailure.Succeeded, Is.False);
+            That(session.Patch.IsEmpty, Is.True);
+            That(session.Revision, Is.EqualTo(0u));
+
+            That(firstFailure.Diagnostics.Count, Is.EqualTo(3),
+                "A later TryStage must not mutate a prior failure diagnostics snapshot.");
+            That(firstFailure.Diagnostics[0].Code, Is.EqualTo(firstCode));
+            That(firstFailure.Diagnostics[1].Code, Is.EqualTo(secondCode));
+            That(firstFailure.Diagnostics[2].Code, Is.EqualTo(thirdCode));
+            That(firstFailure.Diagnostics as LiveEditDiagnostic[], Is.Null);
+            That(firstFailure.Diagnostics as List<LiveEditDiagnostic>, Is.Null);
         }
     }
 }

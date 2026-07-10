@@ -70,7 +70,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             Validate(in operation, _scratchDiagnostics);
             if (_scratchDiagnostics.Count > 0)
             {
-                return LiveEditStageResult.Failure(Revision, IsDirty, _scratchDiagnostics.ToArray());
+                return LiveEditStageResult.Failure(Revision, IsDirty, _scratchDiagnostics);
             }
 
             _patch.Add(in operation);

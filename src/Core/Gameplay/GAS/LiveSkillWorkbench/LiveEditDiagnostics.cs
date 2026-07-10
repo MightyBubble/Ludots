@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 {
@@ -49,6 +50,9 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
         public bool IsDirty { get; }
 
+        /// <summary>
+        /// Read-only diagnostics. Failure results snapshot input and cannot be cast back to the caller-owned mutable source.
+        /// </summary>
         public IReadOnlyList<LiveEditDiagnostic> Diagnostics { get; }
 
         public static LiveEditStageResult Success(ulong revision, bool isDirty)
@@ -66,7 +70,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 throw new ArgumentException("Failure results require at least one diagnostic.", nameof(diagnostics));
             }
 
-            return new LiveEditStageResult(false, revision, isDirty, diagnostics);
+            return new LiveEditStageResult(false, revision, isDirty, SnapshotDiagnostics(diagnostics));
         }
 
         public static LiveEditStageResult Failure(
@@ -79,7 +83,19 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 throw new ArgumentException("Failure results require at least one diagnostic.", nameof(diagnostics));
             }
 
-            return new LiveEditStageResult(false, revision, isDirty, diagnostics);
+            return new LiveEditStageResult(false, revision, isDirty, SnapshotDiagnostics(diagnostics));
+        }
+
+        private static IReadOnlyList<LiveEditDiagnostic> SnapshotDiagnostics(
+            IReadOnlyList<LiveEditDiagnostic> diagnostics)
+        {
+            var copy = new LiveEditDiagnostic[diagnostics.Count];
+            for (int i = 0; i < diagnostics.Count; i++)
+            {
+                copy[i] = diagnostics[i];
+            }
+
+            return new ReadOnlyCollection<LiveEditDiagnostic>(copy);
         }
     }
 }
