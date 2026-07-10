@@ -29,6 +29,8 @@
 - [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
 - [WebUI Panel Kit Manifest (WPK-1)](webui_panel_kit_manifest.md)
 - [WebUI Resource Attribute Panel (WPK-2)](webui_resource_attribute_panel.md)
+- [CommandDeck Multi-Display Modes (WPK-3)](command_deck_display_modes.md)
+- [WebUI Production / Worker / Queue Overview (WPK-4)](webui_production_overview_panel.md)
 
 ## Target State And Migration
 
