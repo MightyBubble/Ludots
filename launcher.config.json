@@ -202,6 +202,14 @@
       }
     },
     {
+      "name": "browser_minimap_composited_overlay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod",
+        "projectPath": "BrowserMinimapCompositedOverlayShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",
