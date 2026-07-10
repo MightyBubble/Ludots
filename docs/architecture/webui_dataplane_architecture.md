@@ -196,6 +196,7 @@ Current evidence is architectural, source-aligned, and executable:
 - DataPlane transport contracts: `src/Libraries/Ludots.WebUI.DataPlane/`
 - Panel Kit manifest (WPK-1 composition contract): `src/Libraries/Ludots.WebUI.PanelKit/` and `docs/architecture/webui_panel_kit_manifest.md`
 - Tooltip + rich text (WPK-5): `src/Libraries/Ludots.WebUI.PanelKit/WebUiTooltip*` / `WebUiRichText*` and `docs/architecture/webui_tooltip_rich_text.md`
+- Quest Objective panel projection (WPK-6): `QuestObjectiveWebUiTopicProducer` and `docs/architecture/webui_quest_objective_panel.md`
 - Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
 - Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
 - Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`
