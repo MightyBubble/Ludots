@@ -192,6 +192,21 @@
       }
     },
     {
+      "id": "browser_minimap_composited_overlay_cef_raylib",
+      "name": "Browser Minimap Composited Overlay CEF Raylib",
+      "selectors": [
+        "$performer_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [
