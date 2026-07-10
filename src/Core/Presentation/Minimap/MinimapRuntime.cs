@@ -170,6 +170,12 @@ namespace Ludots.Core.Presentation.Minimap
         private int _presetToggleY = 392;
         private int _rotateToggleX = 926;
         private int _rotateToggleY = 392;
+        private bool _externalFieldRectActive;
+        private int _externalFieldX;
+        private int _externalFieldY;
+        private int _externalFieldWidth;
+        private int _externalFieldHeight;
+        private PresentationClipShapeKind _fieldClipShapeKind;
         private int _markerCount;
         private int _visibleMarkerCount;
         private bool _cameraFrustumVisible;
@@ -199,6 +205,8 @@ namespace Ludots.Core.Presentation.Minimap
 
         public bool Visible { get; set; }
 
+        public bool NativeChromeVisible { get; set; } = true;
+
         public MinimapPreset Preset { get; private set; } = MinimapPreset.RtsFullMap;
 
         public Entity FollowEntity { get; private set; } = Entity.Null;
@@ -224,6 +232,8 @@ namespace Ludots.Core.Presentation.Minimap
         public bool ZoomSliderEnabled => _config.ZoomSliderEnabled;
 
         public string Diagnostic => _diagnostic;
+
+        public PresentationClipShapeKind FieldClipShapeKind => _fieldClipShapeKind;
 
         public int FieldX => _fieldX;
 
@@ -256,6 +266,42 @@ namespace Ludots.Core.Presentation.Minimap
         public int RotateToggleHeight => ToggleButtonHeight;
 
         public float MetricGridStepCm => _metricGridStepCm;
+
+        public void SetExternalFieldRect(int x, int y, int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(width), "External minimap field rect must have positive width and height.");
+            }
+
+            _externalFieldX = x;
+            _externalFieldY = y;
+            _externalFieldWidth = width;
+            _externalFieldHeight = height;
+            _externalFieldRectActive = true;
+        }
+
+        public void ClearExternalFieldRect()
+        {
+            _externalFieldRectActive = false;
+        }
+
+        public void SetFieldClipShape(PresentationClipShapeKind kind)
+        {
+            _fieldClipShapeKind = kind switch
+            {
+                PresentationClipShapeKind.None => PresentationClipShapeKind.None,
+                PresentationClipShapeKind.Rect => PresentationClipShapeKind.Rect,
+                PresentationClipShapeKind.Circle => PresentationClipShapeKind.Circle,
+                PresentationClipShapeKind.Diamond => PresentationClipShapeKind.Diamond,
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported minimap field clip shape."),
+            };
+        }
+
+        public void ClearFieldClipShape()
+        {
+            _fieldClipShapeKind = PresentationClipShapeKind.None;
+        }
 
         public void SetRotateWithCamera(bool enabled)
         {
@@ -362,27 +408,52 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            overlay.AddRect(
-                _panelX,
-                _panelY,
-                _panelWidth,
-                _panelHeight,
-                new Vector4(0.02f, 0.05f, 0.07f, 1f),
-                new Vector4(0.48f, 0.70f, 0.86f, 1f));
-            overlay.AddRect(
-                _fieldX,
-                _fieldY,
-                _fieldSize,
-                _fieldSize,
-                new Vector4(0.01f, 0.04f, 0.06f, 1f),
-                new Vector4(0.42f, 0.65f, 0.80f, 1f));
-            overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
-            overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
-            RenderGrid(overlay);
-            RenderCameraFrustum(overlay);
+            PresentationClipShape fieldClip = ResolveFieldClipShape();
+            if (NativeChromeVisible)
+            {
+                overlay.AddRect(
+                    _panelX,
+                    _panelY,
+                    _panelWidth,
+                    _panelHeight,
+                    new Vector4(0.02f, 0.05f, 0.07f, 1f),
+                    new Vector4(0.48f, 0.70f, 0.86f, 1f));
+                overlay.AddRect(
+                    _fieldX,
+                    _fieldY,
+                    _fieldSize,
+                    _fieldSize,
+                    new Vector4(0.01f, 0.04f, 0.06f, 1f),
+                    new Vector4(0.42f, 0.65f, 0.80f, 1f),
+                    stableId: 0,
+                    dirtySerial: 0,
+                    clipShape: fieldClip);
+                overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
+                overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
+            }
+            else
+            {
+                overlay.AddRect(
+                    _fieldX,
+                    _fieldY,
+                    _fieldSize,
+                    _fieldSize,
+                    new Vector4(0.01f, 0.04f, 0.06f, 1f),
+                    Vector4.Zero,
+                    stableId: 0,
+                    dirtySerial: 0,
+                    clipShape: fieldClip);
+            }
+
+            RenderGrid(overlay, fieldClip);
+            RenderCameraFrustum(overlay, fieldClip);
+            if (!NativeChromeVisible)
+            {
+                return;
+            }
+
             RenderZoomSlider(overlay);
             RenderToggleButtons(overlay);
-
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
                 overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
@@ -691,6 +762,7 @@ namespace Ludots.Core.Presentation.Minimap
         {
             screenMarkers.BeginBucketedFrame();
             screenMarkers.SetFieldBounds(_fieldX, _fieldY, _fieldSize);
+            screenMarkers.SetClipShape(ResolveFieldClipShape());
             int count = markers.Count;
             float centerX = _centerXcm;
             float centerY = _centerYcm;
@@ -739,9 +811,9 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector4 markerColor = colors[i];
                 float markerSizePx = sizesPx[i];
                 bool useAuthoredStyleBucket = true;
+                Entity owner = owners[i];
                 if (hasKnowledgeResolver)
                 {
-                    Entity owner = owners[i];
                     if (owner == Entity.Null ||
                         !KnowledgeProjectionConsumer.TryResolveForViewer(
                             engine.World,
@@ -1023,7 +1095,7 @@ namespace Ludots.Core.Presentation.Minimap
             return bounds;
         }
 
-        private void RenderGrid(ScreenOverlayBuffer overlay)
+        private void RenderGrid(ScreenOverlayBuffer overlay, PresentationClipShape clipShape)
         {
             _metricGridStepCm = ResolveMetricGridStepCm();
             ResolveViewportWorldAabb(out float minX, out float minY, out float maxX, out float maxY);
@@ -1037,7 +1109,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 Vector4 color = IsMajorGridLine(x, step) ? major : minor;
                 int thickness = IsMajorGridLine(x, step) ? 2 : 1;
-                AddWorldLineClipped(overlay, x, minY, x, maxY, thickness, color);
+                AddWorldLineClipped(overlay, x, minY, x, maxY, thickness, color, clipShape);
             }
 
             float startY = MathF.Ceiling(minY / step) * step;
@@ -1046,7 +1118,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 Vector4 color = IsMajorGridLine(y, step) ? major : minor;
                 int thickness = IsMajorGridLine(y, step) ? 2 : 1;
-                AddWorldLineClipped(overlay, minX, y, maxX, y, thickness, color);
+                AddWorldLineClipped(overlay, minX, y, maxX, y, thickness, color, clipShape);
             }
         }
 
@@ -1160,7 +1232,8 @@ namespace Ludots.Core.Presentation.Minimap
             float worldX1,
             float worldY1,
             int thickness,
-            Vector4 color)
+            Vector4 color,
+            PresentationClipShape clipShape)
         {
             ProjectWorldToScreenUnclipped(worldX0, worldY0, out float x0, out float y0);
             ProjectWorldToScreenUnclipped(worldX1, worldY1, out float x1, out float y1);
@@ -1175,7 +1248,10 @@ namespace Ludots.Core.Presentation.Minimap
                 (int)MathF.Round(x1),
                 (int)MathF.Round(y1),
                 thickness,
-                color);
+                color,
+                stableId: 0,
+                dirtySerial: 0,
+                clipShape: clipShape);
         }
 
         private bool TryClipScreenLineToField(ref float x0, ref float y0, ref float x1, ref float y1)
@@ -1284,7 +1360,7 @@ namespace Ludots.Core.Presentation.Minimap
             return code;
         }
 
-        private void RenderCameraFrustum(ScreenOverlayBuffer overlay)
+        private void RenderCameraFrustum(ScreenOverlayBuffer overlay, PresentationClipShape clipShape)
         {
             if (!_cameraFrustumVisible || _cameraFrustumPointCount < 4)
             {
@@ -1297,8 +1373,8 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 Vector2 a = _cameraFrustumScreenPoints[i];
                 Vector2 b = _cameraFrustumScreenPoints[(i + 1) % _cameraFrustumPointCount];
-                AddScreenLine(overlay, a, b, CameraFrustumShadowThickness, shadow);
-                AddScreenLine(overlay, a, b, CameraFrustumLineThickness, frustumColor);
+                AddScreenLine(overlay, a, b, CameraFrustumShadowThickness, shadow, clipShape);
+                AddScreenLine(overlay, a, b, CameraFrustumLineThickness, frustumColor, clipShape);
             }
 
             if (TryWorldToScreen(_cameraTargetXcm, _cameraTargetYcm, out float targetX, out float targetY))
@@ -1306,14 +1382,14 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector4 targetColor = new(1f, 0.95f, 0.55f, 1f);
                 int cx = (int)MathF.Round(targetX);
                 int cy = (int)MathF.Round(targetY);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow);
-                overlay.AddRect(cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor);
-                overlay.AddRect(cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor);
+                overlay.AddRect(cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
             }
         }
 
-        private static void AddScreenLine(ScreenOverlayBuffer overlay, Vector2 a, Vector2 b, int thickness, Vector4 color)
+        private static void AddScreenLine(ScreenOverlayBuffer overlay, Vector2 a, Vector2 b, int thickness, Vector4 color, PresentationClipShape clipShape)
         {
             overlay.AddLine(
                 (int)MathF.Round(a.X),
@@ -1321,7 +1397,10 @@ namespace Ludots.Core.Presentation.Minimap
                 (int)MathF.Round(b.X),
                 (int)MathF.Round(b.Y),
                 thickness,
-                color);
+                color,
+                stableId: 0,
+                dirtySerial: 0,
+                clipShape: clipShape);
         }
 
         private bool TryProjectCameraCorner(
@@ -1493,6 +1572,25 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void RefreshPanelLayout(GameEngine engine)
         {
+            if (_externalFieldRectActive)
+            {
+                _fieldSize = Math.Max(1, Math.Min(_externalFieldWidth, _externalFieldHeight));
+                _fieldX = _externalFieldX + Math.Max(0, (_externalFieldWidth - _fieldSize) / 2);
+                _fieldY = _externalFieldY + Math.Max(0, (_externalFieldHeight - _fieldSize) / 2);
+                _panelX = _externalFieldX;
+                _panelY = _externalFieldY;
+                _panelWidth = _externalFieldWidth;
+                _panelHeight = _externalFieldHeight;
+                _zoomSliderX = _fieldX;
+                _zoomSliderY = _fieldY + _fieldSize + 4;
+                _zoomSliderWidth = _fieldSize;
+                _presetToggleX = _panelX + _panelWidth - PanelInset - ToggleButtonWidth;
+                _rotateToggleX = _presetToggleX - ToggleButtonGap - ToggleButtonWidth;
+                _presetToggleY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 8;
+                _rotateToggleY = _presetToggleY;
+                return;
+            }
+
             int screenWidth = engine.MergedConfig?.WindowWidth > 0 ? engine.MergedConfig.WindowWidth : 1280;
             int screenHeight = engine.MergedConfig?.WindowHeight > 0 ? engine.MergedConfig.WindowHeight : 720;
             _fieldSize = ResolveFieldSize(screenWidth, screenHeight, _config.ZoomSliderEnabled);
@@ -1509,6 +1607,17 @@ namespace Ludots.Core.Presentation.Minimap
             _rotateToggleX = _presetToggleX - ToggleButtonGap - ToggleButtonWidth;
             _presetToggleY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 8;
             _rotateToggleY = _presetToggleY;
+        }
+
+        private PresentationClipShape ResolveFieldClipShape()
+        {
+            return _fieldClipShapeKind switch
+            {
+                PresentationClipShapeKind.Rect => PresentationClipShape.FromRect(_fieldX, _fieldY, _fieldSize, _fieldSize),
+                PresentationClipShapeKind.Circle => PresentationClipShape.FromCircle(_fieldX, _fieldY, _fieldSize, _fieldSize),
+                PresentationClipShapeKind.Diamond => PresentationClipShape.FromDiamond(_fieldX, _fieldY, _fieldSize, _fieldSize),
+                _ => PresentationClipShape.None,
+            };
         }
 
         private static int ResolveFieldSize(int screenWidth, int screenHeight, bool zoomSliderEnabled)

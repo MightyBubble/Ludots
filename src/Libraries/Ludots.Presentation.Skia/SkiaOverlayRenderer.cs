@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.UI.Runtime;
@@ -191,6 +192,20 @@ namespace Ludots.Presentation.Skia
                 scene.TopMostMinimapMarkers is not MinimapScreenMarkerBuffer markers ||
                 markers.Count <= 0)
             {
+                return;
+            }
+
+            if (TrySaveClipShape(canvas, markers.ClipShape, out int saveCount))
+            {
+                try
+                {
+                    DrawMinimapMarkersBatched(canvas, markers);
+                }
+                finally
+                {
+                    canvas.RestoreToCount(saveCount);
+                }
+
                 return;
             }
 
@@ -438,6 +453,25 @@ namespace Ludots.Presentation.Skia
             }
         }
 
+        private void DrawRectWithClip(SKCanvas canvas, in PresentationOverlayItem item)
+        {
+            if (TrySaveClipShape(canvas, item.ClipShape, out int saveCount))
+            {
+                try
+                {
+                    DrawRect(canvas, item);
+                }
+                finally
+                {
+                    canvas.RestoreToCount(saveCount);
+                }
+
+                return;
+            }
+
+            DrawRect(canvas, item);
+        }
+
         private void DrawBar(SKCanvas canvas, in PresentationOverlayItem item)
         {
             CachedBarSprite sprite = GetBarSprite(item);
@@ -569,6 +603,25 @@ namespace Ludots.Presentation.Skia
             }
         }
 
+        private void DrawLineWithClip(SKCanvas canvas, in PresentationOverlayItem item)
+        {
+            if (TrySaveClipShape(canvas, item.ClipShape, out int saveCount))
+            {
+                try
+                {
+                    DrawLine(canvas, item);
+                }
+                finally
+                {
+                    canvas.RestoreToCount(saveCount);
+                }
+
+                return;
+            }
+
+            DrawLine(canvas, item);
+        }
+
         private void DrawLaneImmediate(SKCanvas canvas, PresentationOverlayItemKind kind, ReadOnlySpan<PresentationOverlayItem> span)
         {
             if (kind == PresentationOverlayItemKind.Bar)
@@ -589,11 +642,11 @@ namespace Ludots.Presentation.Skia
                 switch (kind)
                 {
                     case PresentationOverlayItemKind.Rect:
-                        DrawRect(canvas, item);
+                        DrawRectWithClip(canvas, item);
                         break;
 
                     case PresentationOverlayItemKind.Line:
-                        DrawLine(canvas, item);
+                        DrawLineWithClip(canvas, item);
                         break;
                 }
             }
@@ -1280,11 +1333,11 @@ namespace Ludots.Presentation.Skia
                     switch (kind)
                     {
                         case PresentationOverlayItemKind.Rect:
-                            DrawRect(pictureCanvas, item);
+                            DrawRectWithClip(pictureCanvas, item);
                             break;
 
                         case PresentationOverlayItemKind.Line:
-                            DrawLine(pictureCanvas, item);
+                            DrawLineWithClip(pictureCanvas, item);
                             break;
                     }
                 }
@@ -2237,6 +2290,55 @@ namespace Ludots.Presentation.Skia
             IntPtr sampling,
             IntPtr cullRect,
             IntPtr paint);
+
+        private static bool TrySaveClipShape(SKCanvas canvas, in PresentationClipShape clipShape, out int saveCount)
+        {
+            saveCount = -1;
+            if (!clipShape.IsActive)
+            {
+                return false;
+            }
+
+            saveCount = canvas.Save();
+            using SKPath path = CreateClipPath(in clipShape);
+            canvas.ClipPath(path, SKClipOperation.Intersect, antialias: true);
+            return true;
+        }
+
+        private static SKPath CreateClipPath(in PresentationClipShape clipShape)
+        {
+            var path = new SKPath();
+            SKRect rect = new(
+                clipShape.X,
+                clipShape.Y,
+                clipShape.X + clipShape.Width,
+                clipShape.Y + clipShape.Height);
+            switch (clipShape.Kind)
+            {
+                case PresentationClipShapeKind.Circle:
+                {
+                    float radius = MathF.Max(0f, MathF.Min(rect.Width, rect.Height) * 0.5f);
+                    path.AddCircle((rect.Left + rect.Right) * 0.5f, (rect.Top + rect.Bottom) * 0.5f, radius);
+                    return path;
+                }
+
+                case PresentationClipShapeKind.Diamond:
+                {
+                    float midX = (rect.Left + rect.Right) * 0.5f;
+                    float midY = (rect.Top + rect.Bottom) * 0.5f;
+                    path.MoveTo(midX, rect.Top);
+                    path.LineTo(rect.Right, midY);
+                    path.LineTo(midX, rect.Bottom);
+                    path.LineTo(rect.Left, midY);
+                    path.Close();
+                    return path;
+                }
+
+                default:
+                    path.AddRect(rect);
+                    return path;
+            }
+        }
 
         private static SKColor ToSkColor(in System.Numerics.Vector4 color)
         {
