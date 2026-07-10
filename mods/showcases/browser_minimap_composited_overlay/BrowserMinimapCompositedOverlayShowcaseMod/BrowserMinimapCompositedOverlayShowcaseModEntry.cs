@@ -10,6 +10,8 @@ using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 using Ludots.WebUI.Browser;
+using Ludots.WebUI.DataPlane;
+using Ludots.WebUI.PanelKit;
 
 namespace BrowserMinimapCompositedOverlayShowcaseMod;
 
@@ -23,8 +25,11 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 	private BrowserMinimapCompositedOverlayBrowserCanvasContent? _browserContent;
 	private readonly BrowserMinimapCompositedOverlayLayoutState _layoutState = new();
 	private BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem? _nativeMarkerBridgeSystem;
-	private IUiSurfaceHost? _surfaceHost;
-	private UiSurfaceLeaseHandle _lease;
+	private BrowserMinimapCompositedOverlayDataPlaneSystem? _dataPlaneSystem;
+	private BrowserMinimapCompositedOverlayTopicProducer? _topic;
+	private WebUiDataPlaneRuntime? _dataPlaneRuntime;
+	private WebUiQueuedCommandDispatcher? _commandDispatcher;
+	private WebUiPanelKitSurfaceBinder? _panelBinder;
 
 	public void OnLoad(IModContext context)
 	{
@@ -35,6 +40,19 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 
 	public void OnUnload()
 	{
+		_dataPlaneSystem?.Dispose();
+		_dataPlaneSystem = null;
+		_panelBinder?.Dispose();
+		_panelBinder = null;
+		if (_dataPlaneRuntime != null)
+		{
+			_dataPlaneRuntime.DisposeAsync().AsTask().GetAwaiter().GetResult();
+			_dataPlaneRuntime = null;
+		}
+
+		_commandDispatcher?.Dispose();
+		_commandDispatcher = null;
+		_topic = null;
 		_nativeMarkerBridgeSystem?.Dispose();
 		_nativeMarkerBridgeSystem = null;
 		if (_surface != null)
@@ -42,12 +60,6 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 			_surface.Messages.MessageReceived -= OnBrowserMessageReceived;
 		}
 
-		if (_lease.IsValid && _surfaceHost != null)
-		{
-			_surfaceHost.ReleaseLease(ref _lease);
-		}
-
-		_surfaceHost = null;
 		_browserContent?.Dispose();
 		_browserContent = null;
 		_surface?.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -62,21 +74,17 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 			?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
 		UIRoot root = context.Get(CoreServiceKeys.UIRoot) as UIRoot
 			?? throw new InvalidOperationException("UIRoot service is missing from ScriptContext.");
-		_surfaceHost = surfaceHost;
-		_lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
-			"BrowserMinimapCompositedOverlay.Showcase",
-			UiSurfaceSegment.Main,
-			priority: 12,
-			exclusive: true));
-
-		_nativeMarkerBridgeSystem = new BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem(engine, _layoutState);
-		engine.InsertPresentationSystemBefore<MinimapPresentationSystem>(_nativeMarkerBridgeSystem);
 
 		if (!TryGetBrowserRuntime(context, out IBrowserRuntime runtime))
 		{
-			surfaceHost.Publish(_lease, UiSurfaceContribution.FromBuilder(BuildMissingRuntimeRoot));
-			return;
+			throw new InvalidOperationException(
+				"BrowserMinimapCompositedOverlayShowcaseMod requires a host-provided BrowserRuntime service.");
 		}
+
+		_nativeMarkerBridgeSystem = new BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem(engine, _layoutState);
+		engine.InsertPresentationSystemBefore<MinimapPresentationSystem>(_nativeMarkerBridgeSystem);
+		SetupDataPlane(engine);
+		WebUiPanelKitManifest manifest = LoadPanelKitManifest(engine);
 
 		string assetRoot = ResolveAssetRoot(engine);
 		var resolver = new BrowserAppResourceResolver(assetRoot);
@@ -93,19 +101,32 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 
 		_surface = await runtime.CreateSurfaceAsync(viewport, resolver).ConfigureAwait(false);
 		_surface.Messages.MessageReceived += OnBrowserMessageReceived;
+		AttachDataPlaneSession(engine, _surface, manifest);
 		_browserContent = new BrowserMinimapCompositedOverlayBrowserCanvasContent(
 			_surface,
 			_layoutState,
 			hitTestOptions: BrowserSurfaceHitTestOptions.Bounds);
-		surfaceHost.Publish(
-			_lease,
-			UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(_browserContent)));
+		_panelBinder = new WebUiPanelKitSurfaceBinder(surfaceHost, manifest);
+		_panelBinder.Bind(CreatePanelContribution);
 
-		await _surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Create("/", "route=composited-overlay"))).ConfigureAwait(false);
+		await _surface.NavigateAsync(new BrowserNavigationRequest(CreateNavigationUri(manifest))).ConfigureAwait(false);
 	}
 
-	private UiElementBuilder BuildBrowserRoot(BrowserMinimapCompositedOverlayBrowserCanvasContent browserContent)
+	private UiSurfaceContribution CreatePanelContribution(WebUiPanelDeclaration panel)
 	{
+		if (!string.Equals(panel.PanelId, BrowserMinimapCompositedOverlayPanelKitIds.PanelId, StringComparison.Ordinal))
+		{
+			throw new InvalidOperationException($"Unknown minimap panel id '{panel.PanelId}'.");
+		}
+
+		BrowserMinimapCompositedOverlayBrowserCanvasContent browserContent = _browserContent
+			?? throw new InvalidOperationException("Browser content must be created before binding the minimap panel.");
+		return UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(browserContent));
+	}
+
+	private static UiElementBuilder BuildBrowserRoot(BrowserMinimapCompositedOverlayBrowserCanvasContent browserContent)
+	{
+		ArgumentNullException.ThrowIfNull(browserContent);
 		return Ui.Canvas(browserContent)
 			.Id("browser-minimap-composited-overlay-surface")
 			.WidthPercent(100f)
@@ -114,15 +135,75 @@ public sealed class BrowserMinimapCompositedOverlayShowcaseModEntry : IMod
 			.ZIndex(24);
 	}
 
-	private static UiElementBuilder BuildMissingRuntimeRoot()
+	private static Uri CreateNavigationUri(WebUiPanelKitManifest manifest)
 	{
-		return Ui.Column(
-				Ui.Text("Browser runtime missing").FontSize(28f).Bold(),
-				Ui.Text("Run browser_minimap_composited_overlay_cef_raylib so the host can mount the transparent browser overlay."))
-			.WidthPercent(100f)
-			.HeightPercent(100f)
-			.Padding(32f)
-			.Gap(12f);
+		string topic = manifest.DeclaredTopics.Single();
+		string query =
+			"route=composited-overlay" +
+			"&panelId=" + Uri.EscapeDataString(BrowserMinimapCompositedOverlayPanelKitIds.PanelId) +
+			"&topic=" + Uri.EscapeDataString(topic);
+		return BrowserLocalAppUri.Create("/", query);
+	}
+
+	private void SetupDataPlane(GameEngine engine)
+	{
+		var router = new WebUiCommandRouter(
+			new BrowserMinimapCompositedOverlayGenerationResolver(),
+			new BrowserMinimapCompositedOverlayPermissionValidator());
+		router.Register(
+			BrowserMinimapCompositedOverlayPanelKitIds.FocusMinimapCommand,
+			new BrowserMinimapCompositedOverlayFocusCommandHandler(engine, _layoutState));
+
+		_commandDispatcher = new WebUiQueuedCommandDispatcher(router);
+		_dataPlaneRuntime = new WebUiDataPlaneRuntime(_commandDispatcher);
+		_topic = new BrowserMinimapCompositedOverlayTopicProducer();
+		_dataPlaneRuntime.RegisterTopic(_topic);
+	}
+
+	private void AttachDataPlaneSession(
+		GameEngine engine,
+		IBrowserSurface surface,
+		WebUiPanelKitManifest manifest)
+	{
+		WebUiDataPlaneRuntime runtime = _dataPlaneRuntime
+			?? throw new InvalidOperationException("DataPlane runtime must be created before attaching the browser session.");
+		WebUiQueuedCommandDispatcher dispatcher = _commandDispatcher
+			?? throw new InvalidOperationException("Command dispatcher must be created before attaching the browser session.");
+		runtime.AttachSession(
+			BrowserMinimapCompositedOverlayPanelKitIds.SessionId,
+			new BrowserMessageBridgeDataTransport(surface.Messages));
+		var pump = new WebUiDataPlaneTickPump(runtime, dispatcher);
+		foreach (string topic in manifest.DeclaredTopics)
+		{
+			pump.TrackTopic(topic);
+		}
+
+		_dataPlaneSystem = new BrowserMinimapCompositedOverlayDataPlaneSystem(pump);
+		engine.RegisterSystem(_dataPlaneSystem, SystemGroup.InputCollection);
+	}
+
+	private WebUiPanelKitManifest LoadPanelKitManifest(GameEngine engine)
+	{
+		ArgumentNullException.ThrowIfNull(engine);
+		WebUiDataPlaneRuntime runtime = _dataPlaneRuntime
+			?? throw new InvalidOperationException("DataPlane runtime must be created before loading the minimap panel kit manifest.");
+		if (engine.VFS == null ||
+			!engine.VFS.TryResolveFullPath(BrowserMinimapCompositedOverlayPanelKitIds.AssetManifestPath, out string manifestPath))
+		{
+			throw new FileNotFoundException(
+				$"Composited minimap panel kit manifest was not found: {BrowserMinimapCompositedOverlayPanelKitIds.AssetManifestPath}");
+		}
+
+		WebUiPanelKitReferenceCatalog catalog =
+			BrowserMinimapCompositedOverlayPanelKitCatalog.Create(runtime.IsTopicRegistered);
+		WebUiPanelKitManifest manifest = WebUiPanelKitManifestLoader.LoadFromFile(manifestPath, catalog);
+		if (!string.Equals(manifest.ManifestId, BrowserMinimapCompositedOverlayPanelKitIds.ManifestId, StringComparison.Ordinal))
+		{
+			throw new InvalidOperationException(
+				$"Unexpected minimap panel kit manifest id '{manifest.ManifestId}'.");
+		}
+
+		return manifest;
 	}
 
 	private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)

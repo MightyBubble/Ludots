@@ -12,6 +12,7 @@ public sealed class BrowserMinimapWebShellShowcaseAcceptanceTests
     private const string BindingName = "browser_minimap_composited_overlay_showcase";
     private const string PresetId = "browser_minimap_composited_overlay_cef_raylib";
     private const string ShowcasePath = "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod";
+    private const string ManifestRelativePath = "Assets/panel-kit/minimap_panel_manifest.json";
 
     [Test]
     public void Launcher_ExposesOnlyThePlayableCompositedMinimapShowcaseForWpk8()
@@ -69,6 +70,7 @@ public sealed class BrowserMinimapWebShellShowcaseAcceptanceTests
         Assert.That(script, Does.Contain("postDragDelta"));
         Assert.That(script, Does.Contain("window.ludotsDataplane"));
         Assert.That(script, Does.Contain("window.ludotsBrowser"));
+        Assert.That(script, Does.Contain("routeParams.get('topic')"));
 
         Assert.That(script, Does.Not.Contain("CefSharp"));
         Assert.That(script, Does.Not.Contain("acquireV8Buffer"));
@@ -81,6 +83,79 @@ public sealed class BrowserMinimapWebShellShowcaseAcceptanceTests
         Assert.That(entry, Does.Contain("BrowserRuntimeServiceNames.BrowserRuntime"));
         Assert.That(entry, Does.Not.Contain("Ludots.UI.Browser.Cef"));
         Assert.That(entry, Does.Not.Contain("CefSharp"));
+    }
+
+    [Test]
+    public void PanelKitManifest_MountsTheMinimapWebShellAsOneDeclaredPanel()
+    {
+        string modRoot = Path.Combine(FindRepoRoot(), ShowcasePath.Replace('/', Path.DirectorySeparatorChar));
+        string manifestPath = Path.Combine(modRoot, ManifestRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        string entry = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayShowcaseModEntry.cs"));
+        string catalog = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayPanelKitCatalog.cs"));
+        string ids = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayPanelKitIds.cs"));
+        string project = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayShowcaseMod.csproj"));
+
+        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+        JsonElement root = manifest.RootElement;
+        Assert.That(root.GetProperty("manifestId").GetString(), Is.EqualTo("wpk.minimap.composited-overlay"));
+        Assert.That(root.GetProperty("hostOwnerId").GetString(), Is.EqualTo("BrowserMinimapCompositedOverlay.Showcase"));
+        JsonElement panel = root.GetProperty("panels").EnumerateArray().Single();
+        Assert.That(panel.GetProperty("panelId").GetString(), Is.EqualTo("panel.minimap.web-shell"));
+        Assert.That(panel.GetProperty("panelType").GetString(), Is.EqualTo("minimap.web-shell"));
+        Assert.That(panel.GetProperty("surfaceRegionId").GetString(), Is.EqualTo("region.minimap.overlay"));
+        Assert.That(panel.GetProperty("surfaceSegment").GetString(), Is.EqualTo("Main"));
+        Assert.That(panel.GetProperty("topic").GetString(), Is.EqualTo("wpk.minimap.shell"));
+        Assert.That(panel.GetProperty("profileId").GetString(), Is.EqualTo("profile.minimap.composited-overlay"));
+        Assert.That(panel.GetProperty("layoutId").GetString(), Is.EqualTo("layout.minimap.floating"));
+        Assert.That(panel.GetProperty("inputCapabilityId").GetString(), Is.EqualTo("input.minimap.focus"));
+
+        Assert.That(ids, Does.Contain(ManifestRelativePath));
+        Assert.That(catalog, Does.Contain("WebUiPanelKitReferenceCatalog"));
+        Assert.That(catalog, Does.Contain("isTopicRegistered"));
+        Assert.That(entry, Does.Contain("WebUiPanelKitManifestLoader.LoadFromFile"));
+        Assert.That(entry, Does.Contain("BrowserMinimapCompositedOverlayPanelKitCatalog.Create(runtime.IsTopicRegistered)"));
+        Assert.That(entry, Does.Contain("new WebUiPanelKitSurfaceBinder(surfaceHost, manifest)"));
+        Assert.That(entry, Does.Contain("_panelBinder.Bind(CreatePanelContribution)"));
+        Assert.That(entry, Does.Contain("manifest.DeclaredTopics"));
+        Assert.That(entry, Does.Not.Contain("surfaceHost.Acquire(new UiSurfaceLeaseRequest"));
+        Assert.That(project, Does.Contain("Ludots.WebUI.PanelKit.csproj"));
+        Assert.That(project, Does.Contain("Ludots.WebUI.DataPlane.csproj"));
+    }
+
+    [Test]
+    public void WebShell_ClickFocus_UsesRegisteredDataPlaneCommand()
+    {
+        string modRoot = Path.Combine(FindRepoRoot(), ShowcasePath.Replace('/', Path.DirectorySeparatorChar));
+        string script = File.ReadAllText(Path.Combine(modRoot, "Assets", "overlay-app", "main.js"));
+        string entry = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayShowcaseModEntry.cs"));
+        string command = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayFocusCommand.cs"));
+        string topic = File.ReadAllText(Path.Combine(modRoot, "BrowserMinimapCompositedOverlayTopicProducer.cs"));
+
+        Assert.That(script, Does.Contain("FOCUS_MINIMAP_COMMAND = 'focusMinimap'"));
+        Assert.That(script, Does.Contain("postDataPlaneEnvelope('command', dataPlaneTopic"));
+        Assert.That(script, Does.Contain("entityRefs: []"));
+        Assert.That(script, Does.Contain("normalizedX"));
+        Assert.That(script, Does.Contain("normalizedY"));
+        Assert.That(script, Does.Contain("postFocusMinimapCommand(event)"));
+        Assert.That(script, Does.Contain("window.__LUDOTS_MINIMAP_DATAPLANE__"));
+        Assert.That(script, Does.Not.Contain("JumpCameraTo"));
+        Assert.That(script, Does.Not.Contain("ApplyPose"));
+        Assert.That(script, Does.Not.Contain("CameraPoseRequest"));
+
+        Assert.That(entry, Does.Contain("new WebUiCommandRouter"));
+        Assert.That(entry, Does.Contain("router.Register("));
+        Assert.That(entry, Does.Contain("FocusMinimapCommand"));
+        Assert.That(entry, Does.Contain("new WebUiQueuedCommandDispatcher(router)"));
+        Assert.That(entry, Does.Contain("new WebUiDataPlaneRuntime(_commandDispatcher)"));
+        Assert.That(entry, Does.Contain("new BrowserMessageBridgeDataTransport(surface.Messages)"));
+        Assert.That(entry, Does.Contain("pump.TrackTopic(topic)"));
+        Assert.That(command, Does.Contain("IWebUiCommandHandler"));
+        Assert.That(command, Does.Contain("TryScreenToWorldClamped"));
+        Assert.That(command, Does.Contain("runtime.JumpCameraTo(_engine, worldCm)"));
+        Assert.That(command, Does.Contain("Minimap focus commands must not carry entity references."));
+        Assert.That(topic, Does.Contain("nativeOwns"));
+        Assert.That(topic, Does.Contain("marker-projection"));
+        Assert.That(topic, Does.Not.Contain("markersJson"));
     }
 
     [Test]
