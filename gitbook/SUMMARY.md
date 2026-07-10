@@ -25,6 +25,7 @@
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
+  - [Map / ScenarioPlan / Ruleset / LaunchContext 边界合同](architecture/map-scenario-plan-ruleset-launch-context-contract.md)
   - [Transport Network SSOT](architecture/transport-network-ssot.md)
   - [Placement Validation SSOT](architecture/placement-validation-ssot.md)
   - [空间尺度与分辨率 SSOT](architecture/spatial-scale-and-resolution-ssot.md)
