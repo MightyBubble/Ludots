@@ -26,11 +26,36 @@ namespace Ludots.Core.Gameplay.GAS
         public string IconGlyph { get; init; } = string.Empty;
         public string AccentColorHex { get; init; } = string.Empty;
         public string HintText { get; init; } = string.Empty;
+
+        /// <summary>
+        /// PresentationText token key for the ability display name. Preferred over <see cref="DisplayName"/>
+        /// for tooltip / WebUI projection. When set, loaders must validate token + locale coverage.
+        /// </summary>
+        public string DisplayNameToken { get; init; } = string.Empty;
+
+        /// <summary>
+        /// PresentationText token key for the ability hint. Preferred over <see cref="HintText"/>.
+        /// </summary>
+        public string HintTextToken { get; init; } = string.Empty;
+
         public Dictionary<string, string> ModeIconGlyphOverrides { get; } = new(System.StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, string> ModeHintOverrides { get; } = new(System.StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Interaction-mode hint token keys (mode name → PresentationText token). Preferred over
+        /// <see cref="ModeHintOverrides"/> final strings for tooltip / WebUI projection.
+        /// </summary>
+        public Dictionary<string, string> ModeHintTokenOverrides { get; } = new(System.StringComparer.OrdinalIgnoreCase);
+
+        public bool HasPresentationTokens =>
+            !string.IsNullOrWhiteSpace(DisplayNameToken) ||
+            !string.IsNullOrWhiteSpace(HintTextToken) ||
+            ModeHintTokenOverrides.Count > 0;
+
         public string ResolveDisplayName(string fallback)
         {
+            // Legacy final-string path. Tooltip / WebUI must use DisplayNameToken via
+            // AbilityPresentationTextValidator instead of this fallback.
             return string.IsNullOrWhiteSpace(DisplayName) ? fallback : DisplayName;
         }
 
@@ -48,6 +73,8 @@ namespace Ludots.Core.Gameplay.GAS
 
         public string ResolveHintText(string? interactionMode, string fallback)
         {
+            // Legacy final-string path. Tooltip / WebUI must use HintTextToken /
+            // ModeHintTokenOverrides via AbilityPresentationTextValidator.
             if (!string.IsNullOrWhiteSpace(interactionMode) &&
                 ModeHintOverrides.TryGetValue(interactionMode, out string? overrideHint) &&
                 !string.IsNullOrWhiteSpace(overrideHint))

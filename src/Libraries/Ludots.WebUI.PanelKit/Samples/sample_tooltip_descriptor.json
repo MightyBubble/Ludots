@@ -1,0 +1,52 @@
+{
+  "descriptorId": "panel-kit.sample.tooltip",
+  "targetKind": "entityInsight",
+  "profileId": "profile.insight.generic",
+  "templateId": "template.tooltip.generic",
+  "localeId": "locale.sample",
+  "anchor": "anchor.cursor",
+  "sections": [
+    {
+      "sectionId": "section.title",
+      "templateId": "template.tooltip.section.title",
+      "blocks": [
+        {
+          "blockId": "block.title",
+          "runs": [
+            {
+              "role": "token",
+              "tokenId": "token.tooltip.title"
+            },
+            {
+              "role": "icon",
+              "iconId": "icon.tooltip.portrait"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sectionId": "section.body",
+      "templateId": "template.tooltip.section.body",
+      "blocks": [
+        {
+          "blockId": "block.body",
+          "runs": [
+            {
+              "role": "token",
+              "tokenId": "token.tooltip.body"
+            },
+            {
+              "role": "value",
+              "valueId": "value.tooltip.primary-stat"
+            },
+            {
+              "role": "state",
+              "stateId": "state.tooltip.ready"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

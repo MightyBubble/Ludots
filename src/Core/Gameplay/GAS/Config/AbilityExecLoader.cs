@@ -645,15 +645,38 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var iconGlyph = presentationObj["iconGlyph"]?.GetValue<string>() ?? string.Empty;
             var accentColorHex = presentationObj["accentColor"]?.GetValue<string>() ?? string.Empty;
             var hintText = presentationObj["hintText"]?.GetValue<string>() ?? string.Empty;
+            var displayNameToken = presentationObj["displayNameToken"]?.GetValue<string>() ?? string.Empty;
+            var hintTextToken = presentationObj["hintTextToken"]?.GetValue<string>() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(displayName) &&
                 string.IsNullOrWhiteSpace(iconGlyph) &&
                 string.IsNullOrWhiteSpace(accentColorHex) &&
                 string.IsNullOrWhiteSpace(hintText) &&
+                string.IsNullOrWhiteSpace(displayNameToken) &&
+                string.IsNullOrWhiteSpace(hintTextToken) &&
                 presentationObj["modeIconGlyphs"] is not JsonObject &&
-                presentationObj["modeHints"] is not JsonObject)
+                presentationObj["modeHints"] is not JsonObject &&
+                presentationObj["modeHintTokens"] is not JsonObject)
             {
                 return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(displayNameToken))
+            {
+                displayNameToken = RequireNonEmptyString(
+                    presentationObj["displayNameToken"],
+                    "presentation.displayNameToken",
+                    id,
+                    path);
+            }
+
+            if (!string.IsNullOrWhiteSpace(hintTextToken))
+            {
+                hintTextToken = RequireNonEmptyString(
+                    presentationObj["hintTextToken"],
+                    "presentation.hintTextToken",
+                    id,
+                    path);
             }
 
             var config = new AbilityPresentationConfig
@@ -661,7 +684,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 DisplayName = displayName,
                 IconGlyph = iconGlyph,
                 AccentColorHex = accentColorHex,
-                HintText = hintText
+                HintText = hintText,
+                DisplayNameToken = displayNameToken,
+                HintTextToken = hintTextToken
             };
 
             if (presentationObj["modeIconGlyphs"] is JsonObject modeIconGlyphs)
@@ -681,6 +706,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHints.{modeKey}", id, path);
                     string hint = RequireNonEmptyString(valueNode, $"presentation.modeHints.{modeKey}", id, path);
                     config.ModeHintOverrides[modeName] = hint;
+                }
+            }
+
+            if (presentationObj["modeHintTokens"] is JsonObject modeHintTokens)
+            {
+                foreach ((string? modeKey, JsonNode? valueNode) in modeHintTokens)
+                {
+                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHintTokens.{modeKey}", id, path);
+                    string token = RequireNonEmptyString(valueNode, $"presentation.modeHintTokens.{modeKey}", id, path);
+                    config.ModeHintTokenOverrides[modeName] = token;
                 }
             }
 
