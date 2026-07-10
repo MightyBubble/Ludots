@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />

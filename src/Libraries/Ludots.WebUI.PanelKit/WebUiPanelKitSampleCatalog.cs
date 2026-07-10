@@ -10,6 +10,11 @@ public static class WebUiPanelKitSampleCatalog
 	public const string CommandTopic = "panel-kit.sample.command";
 	public const string ObjectiveTopic = "panel-kit.sample.objective";
 
+	public const string CommandDeckGlobalProfileId = "profile.command-deck.global";
+	public const string CommandDeckEntityProfileId = "profile.command-deck.entity";
+	public const string CommandDeckAggregateProfileId = "profile.command-deck.aggregate";
+	public const string CommandDeckPinnedProfileId = "profile.command-deck.conditional-pinned";
+
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
 	{
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
@@ -18,7 +23,15 @@ public static class WebUiPanelKitSampleCatalog
 		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center"]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
-		profiles.RegisterAll(["profile.resource.generic", "profile.command.generic", "profile.objective.generic"]);
+		profiles.RegisterAll([
+			"profile.resource.generic",
+			"profile.command.generic",
+			"profile.objective.generic",
+			CommandDeckGlobalProfileId,
+			CommandDeckEntityProfileId,
+			CommandDeckAggregateProfileId,
+			CommandDeckPinnedProfileId
+		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
 		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical"]);
@@ -30,7 +43,7 @@ public static class WebUiPanelKitSampleCatalog
 		inputCapabilities.RegisterAll(["input.none", "input.activate-slot"]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");
-		visibleConditions.Register("condition.always");
+		visibleConditions.RegisterAll(["condition.always", "condition.binding-flag"]);
 
 		return new WebUiPanelKitReferenceCatalog(
 			surfaceRegions,
