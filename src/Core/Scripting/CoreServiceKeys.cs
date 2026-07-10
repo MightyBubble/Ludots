@@ -77,6 +77,7 @@ using Ludots.Core.Systems;
 using Ludots.Core.UI;
 using Ludots.Core.UI.CommandDeck;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.UI.ProductionOverview;
 using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 
@@ -257,6 +258,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.UI.EntityCommandPanels.AbilityAggregationProfileRegistry> AbilityAggregationProfileRegistry = new("AbilityAggregationProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckProfileRegistry> CommandDeckProfileRegistry = new("CommandDeckProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckRouteResolver> CommandDeckRouteResolver = new("CommandDeckRouteResolver");
+        public static readonly ServiceKey<Ludots.Core.UI.ProductionOverview.ProductionOverviewProfileRegistry> ProductionOverviewProfileRegistry = new("ProductionOverviewProfileRegistry");
         public static readonly ServiceKey<ContextBoundCollectionWriter> ContextBoundCollectionWriter = new("ContextBoundCollectionWriter");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");

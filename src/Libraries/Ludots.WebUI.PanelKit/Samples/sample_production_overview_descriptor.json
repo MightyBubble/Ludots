@@ -1,0 +1,33 @@
+{
+  "id": "panel-kit.sample.production-overview",
+  "sourceKind": "entityCollection",
+  "sourceRef": "collection.command.source",
+  "commandPanelSourceId": "gas.ability-slots",
+  "queueSourceKind": "commandPanelSupplemental",
+  "workerCollectionKey": "collection.workers",
+  "topic": "panel-kit.sample.production",
+  "profileId": "profile.production-overview.generic",
+  "layoutId": "layout.overview.split",
+  "workerBuckets": [
+    {
+      "bucketId": "bucket.idle",
+      "displayTokenId": "token.worker.idle",
+      "matchKind": "idle",
+      "sortOrder": 10
+    },
+    {
+      "bucketId": "bucket.gathering",
+      "displayTokenId": "token.worker.gathering",
+      "matchKind": "orderType",
+      "matchRef": "order.sample.gather",
+      "sortOrder": 20
+    },
+    {
+      "bucketId": "bucket.building",
+      "displayTokenId": "token.worker.building",
+      "matchKind": "tag",
+      "matchRef": "tag.sample.building",
+      "sortOrder": 30
+    }
+  ]
+}

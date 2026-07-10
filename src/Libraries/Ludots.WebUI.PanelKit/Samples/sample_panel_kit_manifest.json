@@ -43,6 +43,20 @@
       "layoutId": "layout.list.vertical",
       "densityId": "density.compact",
       "inputCapabilityId": "input.none"
+    },
+    {
+      "panelId": "hud.production-overview",
+      "panelType": "production-overview",
+      "surfaceRegionId": "region.bottom-left",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 18,
+      "anchor": "bottom-left",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.production",
+      "profileId": "profile.production-overview.generic",
+      "layoutId": "layout.overview.split",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.none"
     }
   ]
 }

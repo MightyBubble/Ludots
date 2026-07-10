@@ -63,6 +63,7 @@
   { "Path": "Input/control_schemes.json", "Policy": "DeepObject" },
   { "Path": "UI/ability_aggregation_profiles.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "UI/command_deck_profiles.json", "Policy": "DeepObject" },
+  { "Path": "UI/production_overview_profiles.json", "Policy": "DeepObject" },
 
   { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
 

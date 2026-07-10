@@ -17,5 +17,6 @@
   <ItemGroup>
     <None Include="Samples\sample_panel_kit_manifest.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Samples\sample_resource_attribute_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_production_overview_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
