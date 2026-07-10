@@ -219,8 +219,16 @@ public sealed class WebUiResourceAttributePanelTests
 
 		using var runtime = new WebUiDataPlaneRuntime();
 		runtime.RegisterTopic(resourceProducer);
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		foreach (string topic in WebUiPanelKitSampleCatalog.SampleTopics)
+		{
+			if (topic == WebUiPanelKitSampleCatalog.ResourceTopic)
+			{
+				continue;
+			}
+
+			runtime.RegisterTopic(new StubTopicProducer(topic));
+		}
+
 		runtime.RegisterTopic(new StubTopicProducer("panel-kit.extra.unrelated"));
 
 		WebUiPanelKitReferenceCatalog panelCatalog = WebUiPanelKitSampleCatalog.Create(runtime.IsTopicRegistered);
@@ -232,12 +240,7 @@ public sealed class WebUiResourceAttributePanelTests
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(new[]
-		{
-			WebUiPanelKitSampleCatalog.ResourceTopic,
-			WebUiPanelKitSampleCatalog.CommandTopic,
-			WebUiPanelKitSampleCatalog.ObjectiveTopic
-		}));
+		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(WebUiPanelKitSampleCatalog.SampleTopics));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(manifest.DeclaredTopics, Is.EqualTo(binder.BrowserSubscriptionTopics));
 	}

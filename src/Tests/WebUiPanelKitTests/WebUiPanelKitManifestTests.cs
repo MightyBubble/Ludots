@@ -23,7 +23,7 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(4));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(5));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
@@ -37,7 +37,7 @@ public sealed class WebUiPanelKitManifestTests
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(4));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(5));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
