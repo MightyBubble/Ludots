@@ -15,21 +15,24 @@ namespace EntityCommandPanelMod.Runtime
     /// Collection-selection GAS command panel source (RFC-0065 PNL-4). Grouping is fully delegated
     /// to the <see cref="AbilityAggregationProfileRegistry"/> kernel (DEC-10): every kernel group is
     /// one panel cell, the cell view is composed from the group's member slot views (representative
-    /// icon/label from the first member, state flags OR-ed, cooldown max, badge = member count), and
-    /// activation routes to the group's first member (kernel ordering is deterministic).
-    /// <see cref="SetAggregationProfile"/> switches the active profile at runtime (P3): the next
-    /// build regroups and the revision hash changes, so open panels re-pull without re-selection.
-    /// FormSet switches need no extra code here — the kernel groups over the
+    /// icon/label from the first member, state flags OR-ed, cooldown max, badge = member count).
+    /// <see cref="CopyAggregationMembers"/> exposes the surviving member set for CommandDeck route
+    /// profiles; <see cref="ActivateSlot"/> still activates the group's first surviving member for
+    /// the legacy panel path. <see cref="SetAggregationProfile"/> switches the active profile at
+    /// runtime (P3): the next build regroups and the revision hash changes, so open panels re-pull
+    /// without rebinding. FormSet switches need no extra code here — the kernel groups over the
     /// <c>AbilitySlotResolver</c> effective abilities on every build.
     /// </summary>
     public sealed class CollectionGasEntityCommandPanelSource :
         IEntityCommandPanelContextSource,
-        IEntityCommandPanelContextActionSource
+        IEntityCommandPanelContextActionSource,
+        IEntityCommandPanelAggregationMemberSource
     {
         public const string SourceId = "gas.collection-ability-slots";
 
         private const int MaxOwners = 256;
         private const int MaxAggregatedSlots = 64;
+        private const int MaxMembersPerSlot = MaxOwners;
         private const int OwnerViewStride = AbilityStateBuffer.CAPACITY;
 
         private readonly GameEngine _engine;
@@ -47,6 +50,10 @@ namespace EntityCommandPanelMod.Runtime
         private readonly int[] _ownerCounts = new int[MaxAggregatedSlots];
         private readonly Entity[] _activationOwners = new Entity[MaxAggregatedSlots];
         private readonly int[] _activationSlotIndices = new int[MaxAggregatedSlots];
+        private readonly EntityCommandPanelAggregationMember[] _memberScratch =
+            new EntityCommandPanelAggregationMember[MaxAggregatedSlots * MaxMembersPerSlot];
+        private readonly int[] _memberStarts = new int[MaxAggregatedSlots + 1];
+        private int _memberTotal;
         private readonly string[] _detailCacheBaseLabels = new string[MaxAggregatedSlots];
         private readonly int[] _detailCacheOwnerCounts = new int[MaxAggregatedSlots];
         private readonly string[] _detailCacheLabels = new string[MaxAggregatedSlots];
@@ -173,6 +180,42 @@ namespace EntityCommandPanelMod.Runtime
             return _gasSource.ActivateSlot(_activationOwners[slotIndex], groupIndex, _activationSlotIndices[slotIndex]);
         }
 
+        public int CopyAggregationMembers(
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            int slotIndex,
+            Span<EntityCommandPanelAggregationMember> destination)
+        {
+            if (groupIndex != 0 ||
+                slotIndex < 0 ||
+                destination.IsEmpty ||
+                !TryResolveCollection(context, out EntityCommandPanelCollectionQueryConfig config, out EntityCollectionHandle handle, out _))
+            {
+                return 0;
+            }
+
+            BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
+            if ((uint)slotIndex >= (uint)MaxAggregatedSlots)
+            {
+                return 0;
+            }
+
+            int start = _memberStarts[slotIndex];
+            int count = _ownerCounts[slotIndex];
+            if (count <= 0 || start < 0)
+            {
+                return 0;
+            }
+
+            int written = Math.Min(destination.Length, count);
+            for (int i = 0; i < written; i++)
+            {
+                destination[i] = _memberScratch[start + i];
+            }
+
+            return written;
+        }
+
         public bool TryGetRevision(Entity target, out uint revision)
         {
             revision = 0;
@@ -237,6 +280,8 @@ namespace EntityCommandPanelMod.Runtime
             {
                 Array.Clear(_activationOwners, 0, _activationOwners.Length);
                 Array.Clear(_activationSlotIndices, 0, _activationSlotIndices.Length);
+                _memberTotal = 0;
+                Array.Clear(_memberStarts, 0, _memberStarts.Length);
             }
 
             Array.Clear(_ownerCounts, 0, _ownerCounts.Length);
@@ -267,6 +312,7 @@ namespace EntityCommandPanelMod.Runtime
                 EntityCommandPanelSlotView view = default;
                 Entity activationOwner = Entity.Null;
                 int activationSlotIndex = 0;
+                int memberStart = _memberTotal;
                 for (int memberIndex = 0; memberIndex < members.Length; memberIndex++)
                 {
                     if (!TryGetOwnerView(members[memberIndex], memberSlotIndices[memberIndex], out EntityCommandPanelSlotView memberView) ||
@@ -285,6 +331,13 @@ namespace EntityCommandPanelMod.Runtime
                     else
                     {
                         view = ComposeGroupView(in view, in memberView);
+                    }
+
+                    if (updateActivationMap && _memberTotal < _memberScratch.Length)
+                    {
+                        _memberScratch[_memberTotal++] = new EntityCommandPanelAggregationMember(
+                            members[memberIndex],
+                            memberSlotIndices[memberIndex]);
                     }
 
                     memberCount++;
@@ -308,6 +361,7 @@ namespace EntityCommandPanelMod.Runtime
                 {
                     _activationOwners[aggregateIndex] = activationOwner;
                     _activationSlotIndices[aggregateIndex] = activationSlotIndex;
+                    _memberStarts[aggregateIndex] = memberStart;
                 }
             }
 
@@ -408,6 +462,7 @@ namespace EntityCommandPanelMod.Runtime
                 int ownerCount = _ownerCounts[i];
                 Entity activationOwner = _activationOwners[i];
                 int activationSlot = _activationSlotIndices[i];
+                int memberStart = _memberStarts[i];
                 int j = i - 1;
                 while (j >= 0 && CompareAggregate(_aggregatedSlots[j], _ownerCounts[j], slot, ownerCount, sortKind) > 0)
                 {
@@ -415,6 +470,7 @@ namespace EntityCommandPanelMod.Runtime
                     _ownerCounts[j + 1] = _ownerCounts[j];
                     _activationOwners[j + 1] = _activationOwners[j];
                     _activationSlotIndices[j + 1] = _activationSlotIndices[j];
+                    _memberStarts[j + 1] = _memberStarts[j];
                     j--;
                 }
 
@@ -422,6 +478,7 @@ namespace EntityCommandPanelMod.Runtime
                 _ownerCounts[j + 1] = ownerCount;
                 _activationOwners[j + 1] = activationOwner;
                 _activationSlotIndices[j + 1] = activationSlot;
+                _memberStarts[j + 1] = memberStart;
             }
         }
 
