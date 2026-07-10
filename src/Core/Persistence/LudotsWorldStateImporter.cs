@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
 using Arch.LowLevel.Jagged;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Modding;
 
 namespace Ludots.Core.Persistence
 {
@@ -11,10 +12,18 @@ namespace Ludots.Core.Persistence
     {
         public static void ImportInto(World source, World target)
         {
+            ImportInto(source, target, modLoader: null);
+        }
+
+        public static void ImportInto(World source, World target, ModLoader? modLoader)
+        {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (target == null) throw new ArgumentNullException(nameof(target));
 
-            using World normalizedSource = new LudotsBinaryWorldSerializer().CloneIncludedWorld(source);
+            LudotsBinaryWorldSerializer serializer = modLoader == null
+                ? new LudotsBinaryWorldSerializer()
+                : LudotsPersistenceSerializerFactory.Create(modLoader);
+            using World normalizedSource = serializer.CloneIncludedWorld(source);
             ImportOwnedSnapshotInto(normalizedSource, target);
         }
 

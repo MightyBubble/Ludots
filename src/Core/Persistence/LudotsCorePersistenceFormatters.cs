@@ -26,6 +26,19 @@ namespace Ludots.Core.Persistence
             return s_cache.Value.Formatters.ToArray();
         }
 
+        internal static (IMessagePackFormatter[] Formatters, IReadOnlySet<Type> ComponentTypes) CreateFormatterSet(
+            IEnumerable<Assembly> candidateAssemblies)
+        {
+            if (candidateAssemblies == null) throw new ArgumentNullException(nameof(candidateAssemblies));
+
+            return BuildFormatterSet(NormalizeCandidateAssemblies(candidateAssemblies));
+        }
+
+        internal static Assembly[] CreateCandidateAssemblySnapshot()
+        {
+            return GetCandidateAssemblies().ToArray();
+        }
+
         public static IReadOnlySet<Type> GetFormatterComponentTypes()
         {
             return s_cache.Value.ComponentTypes;
@@ -47,17 +60,25 @@ namespace Ludots.Core.Persistence
         private static FormatterCache BuildCache()
         {
             Interlocked.Increment(ref s_cacheBuildCount);
-            IMessagePackFormatter[] formatters = BuildFormatters();
-            IReadOnlySet<Type> componentTypes = formatters
-                .OfType<ILudotsPersistenceComponentFormatter>()
-                .Select(formatter => formatter.ComponentType)
-                .ToHashSet();
+            (IMessagePackFormatter[] formatters, IReadOnlySet<Type> componentTypes) =
+                BuildFormatterSet(GetCandidateAssemblies());
             return new FormatterCache(
                 formatters,
                 componentTypes);
         }
 
-        private static IMessagePackFormatter[] BuildFormatters()
+        private static (IMessagePackFormatter[] Formatters, IReadOnlySet<Type> ComponentTypes) BuildFormatterSet(
+            IEnumerable<Assembly> candidateAssemblies)
+        {
+            IMessagePackFormatter[] formatters = BuildFormatters(candidateAssemblies);
+            IReadOnlySet<Type> componentTypes = formatters
+                .OfType<ILudotsPersistenceComponentFormatter>()
+                .Select(formatter => formatter.ComponentType)
+                .ToHashSet();
+            return (formatters, componentTypes);
+        }
+
+        private static IMessagePackFormatter[] BuildFormatters(IEnumerable<Assembly> candidateAssemblies)
         {
             var formatters = new Dictionary<Type, IMessagePackFormatter>();
             AddFormatter(formatters, typeof(RelationshipEdge), new RelationshipEdgeFormatter());
@@ -67,7 +88,7 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new RelationshipComponentFormatter<InRelationship>());
             AddComponentFormatter(formatters, new NameFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
-            AddAutoDiscoveredUnmanagedFormatters(formatters);
+            AddAutoDiscoveredUnmanagedFormatters(formatters, candidateAssemblies);
             return formatters.Values.ToArray();
         }
 
@@ -93,9 +114,11 @@ namespace Ludots.Core.Persistence
             formatters[componentFormatter.ComponentType] = formatter;
         }
 
-        private static void AddAutoDiscoveredUnmanagedFormatters(Dictionary<Type, IMessagePackFormatter> formatters)
+        private static void AddAutoDiscoveredUnmanagedFormatters(
+            Dictionary<Type, IMessagePackFormatter> formatters,
+            IEnumerable<Assembly> candidateAssemblies)
         {
-            foreach (Assembly assembly in GetCandidateAssemblies())
+            foreach (Assembly assembly in candidateAssemblies)
             {
                 foreach (Type type in GetLoadableTypes(assembly)
                     .Where(IsCandidateValueType)
@@ -117,9 +140,19 @@ namespace Ludots.Core.Persistence
 
         private static IEnumerable<Assembly> GetCandidateAssemblies()
         {
-            return AppDomain.CurrentDomain.GetAssemblies()
+            return NormalizeCandidateAssemblies(AppDomain.CurrentDomain.GetAssemblies()
                 .Where(IsCandidateAssembly)
-                .OrderBy(assembly => assembly.GetName().Name, StringComparer.Ordinal);
+                .OrderBy(assembly => assembly.GetName().Name, StringComparer.Ordinal));
+        }
+
+        private static Assembly[] NormalizeCandidateAssemblies(IEnumerable<Assembly> assemblies)
+        {
+            return assemblies
+                .Where(assembly => assembly != null && !assembly.IsDynamic)
+                .Distinct()
+                .OrderBy(assembly => assembly.GetName().Name, StringComparer.Ordinal)
+                .ThenBy(assembly => assembly.FullName, StringComparer.Ordinal)
+                .ToArray();
         }
 
         private static bool IsCandidateAssembly(Assembly assembly)

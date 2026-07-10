@@ -7,10 +7,9 @@ namespace Ludots.Core.Persistence
 {
     public sealed class WorldSnapshotService
     {
-        private readonly LudotsBinaryWorldSerializer _worldSerializer;
+        private readonly LudotsBinaryWorldSerializer? _worldSerializer;
 
         public WorldSnapshotService()
-            : this(new LudotsBinaryWorldSerializer())
         {
         }
 
@@ -26,7 +25,9 @@ namespace Ludots.Core.Persistence
             boundary.EnsureClean();
             SaveContextHeader header = SaveContextFactory.Capture(engine);
             JsonObject domains = RequireSaveParticipants(engine).CaptureDomains();
-            byte[] worldBytes = _worldSerializer.Serialize(engine.World);
+            LudotsBinaryWorldSerializer serializer = _worldSerializer
+                ?? LudotsPersistenceSerializerFactory.Create(engine);
+            byte[] worldBytes = serializer.Serialize(engine.World);
 
             return new WorldSaveSnapshot(header, domains, worldBytes);
         }

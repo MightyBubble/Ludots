@@ -29,6 +29,32 @@ namespace Ludots.Core.Modding
 
         public IMapManager MapManager { get; set; }
         public List<string> LoadedModIds { get; private set; } = new List<string>();
+        public IReadOnlyList<Assembly> LoadedAssemblies
+        {
+            get
+            {
+                var assemblies = new List<Assembly>();
+                var seen = new HashSet<Assembly>();
+
+                foreach (Assembly assembly in _sharedAssemblies.Values)
+                {
+                    AddLoadedAssembly(assembly, assemblies, seen);
+                }
+
+                foreach (ModLoadContext context in _loadContexts)
+                {
+                    foreach (Assembly assembly in context.Assemblies)
+                    {
+                        AddLoadedAssembly(assembly, assemblies, seen);
+                    }
+                }
+
+                return assemblies
+                    .OrderBy(assembly => assembly.GetName().Name, StringComparer.Ordinal)
+                    .ThenBy(assembly => assembly.FullName, StringComparer.Ordinal)
+                    .ToArray();
+            }
+        }
 
         public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm,
             SystemFactoryRegistry sfr = null, TriggerDecoratorRegistry tdr = null)
@@ -461,6 +487,19 @@ namespace Ludots.Core.Modding
                 string.Equals(candidate.GetName().Name, assemblySimpleName, StringComparison.Ordinal));
 
             return assembly != null;
+        }
+
+        private static void AddLoadedAssembly(
+            Assembly? assembly,
+            List<Assembly> assemblies,
+            HashSet<Assembly> seen)
+        {
+            if (assembly == null || assembly.IsDynamic || !seen.Add(assembly))
+            {
+                return;
+            }
+
+            assemblies.Add(assembly);
         }
 
         private Assembly ResolveSharedAssembly(AssemblyName assemblyName)

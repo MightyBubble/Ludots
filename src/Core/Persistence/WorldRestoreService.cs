@@ -7,10 +7,9 @@ namespace Ludots.Core.Persistence
 {
     public sealed class WorldRestoreService
     {
-        private readonly LudotsBinaryWorldSerializer _worldSerializer;
+        private readonly LudotsBinaryWorldSerializer? _worldSerializer;
 
         public WorldRestoreService()
-            : this(new LudotsBinaryWorldSerializer())
         {
         }
 
@@ -29,7 +28,9 @@ namespace Ludots.Core.Persistence
             World restoredWorld;
             try
             {
-                restoredWorld = _worldSerializer.Deserialize(snapshot.WorldBytes);
+                LudotsBinaryWorldSerializer serializer = _worldSerializer
+                    ?? LudotsPersistenceSerializerFactory.Create(engine);
+                restoredWorld = serializer.Deserialize(snapshot.WorldBytes);
             }
             catch (Exception ex) when (ex is not SaveContextException)
             {

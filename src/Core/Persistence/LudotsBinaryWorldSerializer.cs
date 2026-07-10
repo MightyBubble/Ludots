@@ -10,6 +10,8 @@ namespace Ludots.Core.Persistence
     public sealed class LudotsBinaryWorldSerializer
     {
         private readonly IMessagePackFormatter[] _additionalFormatters;
+        private readonly IMessagePackFormatter[]? _formatters;
+        private readonly IReadOnlySet<Type>? _componentTypes;
 
         public LudotsBinaryWorldSerializer()
             : this(Array.Empty<IMessagePackFormatter>())
@@ -27,14 +29,30 @@ namespace Ludots.Core.Persistence
             _additionalFormatters = additionalFormatters.ToArray();
         }
 
+        internal LudotsBinaryWorldSerializer(
+            IMessagePackFormatter[] formatters,
+            IReadOnlySet<Type> componentTypes)
+        {
+            if (formatters == null) throw new ArgumentNullException(nameof(formatters));
+            if (componentTypes == null) throw new ArgumentNullException(nameof(componentTypes));
+            if (formatters.Any(formatter => formatter == null))
+            {
+                throw new ArgumentException("Persistence formatters cannot contain null entries.", nameof(formatters));
+            }
+
+            _formatters = formatters.ToArray();
+            _componentTypes = componentTypes;
+            _additionalFormatters = Array.Empty<IMessagePackFormatter>();
+        }
+
         public byte[] Serialize(World world)
         {
             if (world == null) throw new ArgumentNullException(nameof(world));
 
-            EnsureWorldComponentFormatters(world);
+            EnsureSerializableWorldComponents(world);
             ArchBinarySerializer serializer = CreateSerializer();
             using World filteredWorld = CloneIncludedWorld(world);
-            EnsureWorldComponentFormatters(filteredWorld);
+            EnsureSerializableWorldComponents(filteredWorld);
             return serializer.Serialize(filteredWorld);
         }
 
@@ -81,6 +99,11 @@ namespace Ludots.Core.Persistence
 
         private ArchBinarySerializer CreateSerializer()
         {
+            if (_formatters != null)
+            {
+                return new ArchBinarySerializer(_formatters);
+            }
+
             if (_additionalFormatters.Length == 0)
             {
                 return LudotsCorePersistenceFormatters.CreateBinarySerializer();
@@ -92,11 +115,27 @@ namespace Ludots.Core.Persistence
                     .ToArray());
         }
 
+        private void EnsureSerializableWorldComponents(World world)
+        {
+            EnsureWorldComponentFormatters(
+                world,
+                _componentTypes ?? LudotsCorePersistenceFormatters.GetFormatterComponentTypes());
+        }
+
         public static void EnsureWorldComponentFormatters(World world)
         {
-            if (world == null) throw new ArgumentNullException(nameof(world));
+            EnsureWorldComponentFormatters(
+                world,
+                LudotsCorePersistenceFormatters.GetFormatterComponentTypes());
+        }
 
-            IReadOnlySet<Type> formatterTypes = LudotsCorePersistenceFormatters.GetFormatterComponentTypes();
+        private static void EnsureWorldComponentFormatters(
+            World world,
+            IReadOnlySet<Type> formatterTypes)
+        {
+            if (world == null) throw new ArgumentNullException(nameof(world));
+            if (formatterTypes == null) throw new ArgumentNullException(nameof(formatterTypes));
+
             SaveEntityInclusionPolicy policy = SaveEntityInclusionPolicy.Default;
             var missing = new HashSet<Type>();
             var query = QueryDescription.Null;
