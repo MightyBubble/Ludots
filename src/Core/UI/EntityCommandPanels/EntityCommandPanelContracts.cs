@@ -318,6 +318,41 @@ namespace Ludots.Core.UI.EntityCommandPanels
         bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
     }
 
+    /// <summary>
+    /// One surviving member of an aggregated command panel cell (owner + that owner's slot index).
+    /// Used by CommandDeck route resolution so activation is profile-driven over the full member set.
+    /// </summary>
+    public readonly struct EntityCommandPanelAggregationMember
+    {
+        public EntityCommandPanelAggregationMember(Entity owner, int slotIndex)
+        {
+            Owner = owner;
+            SlotIndex = slotIndex;
+        }
+
+        public Entity Owner { get; }
+        public int SlotIndex { get; }
+    }
+
+    /// <summary>
+    /// Optional extension for collection/aggregate panel sources that can enumerate the explicit
+    /// member set behind one displayed aggregate slot. CommandDeck uses this for route profiles;
+    /// sources that do not aggregate need not implement it.
+    /// </summary>
+    public interface IEntityCommandPanelAggregationMemberSource
+    {
+        /// <summary>
+        /// Copy the surviving aggregation members for <paramref name="slotIndex"/> into
+        /// <paramref name="destination"/>. Returns the number written. Call after
+        /// <see cref="IEntityCommandPanelContextSource.CopySlots"/> so the build is current.
+        /// </summary>
+        int CopyAggregationMembers(
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            int slotIndex,
+            Span<EntityCommandPanelAggregationMember> destination);
+    }
+
     public static class EntityCommandPanelSourceDispatch
     {
         public static bool TryGetRevision(
@@ -410,6 +445,24 @@ namespace Ludots.Core.UI.EntityCommandPanels
 
             return source is IEntityCommandPanelActionSource actionSource &&
                    actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
+        }
+
+        public static bool TryCopyAggregationMembers(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            int slotIndex,
+            Span<EntityCommandPanelAggregationMember> destination,
+            out int written)
+        {
+            if (source is IEntityCommandPanelAggregationMemberSource memberSource)
+            {
+                written = memberSource.CopyAggregationMembers(in context, groupIndex, slotIndex, destination);
+                return true;
+            }
+
+            written = 0;
+            return false;
         }
     }
 

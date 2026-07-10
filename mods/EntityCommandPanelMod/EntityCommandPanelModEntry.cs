@@ -60,6 +60,22 @@ namespace EntityCommandPanelMod
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
             });
+            collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
+            {
+                Id = EntityViewKeys.ControlPlaneCommand,
+                CollectionKey = EntityViewKeys.ControlPlaneCommand,
+                Title = "Control Plane Commands",
+                Filter = EntityCommandPanelCollectionFilter.Any,
+                Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
+            });
+            collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
+            {
+                Id = EntityViewKeys.CommandDeckFiltered,
+                CollectionKey = EntityViewKeys.CommandDeckFiltered,
+                Title = "CommandDeck Filtered Commands",
+                Filter = EntityCommandPanelCollectionFilter.Any,
+                Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
+            });
 
             var gasSource = new GasEntityCommandPanelSource(engine);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
