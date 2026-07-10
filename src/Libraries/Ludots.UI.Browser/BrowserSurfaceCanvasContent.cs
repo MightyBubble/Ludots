@@ -16,6 +16,8 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 	private BrowserViewport _pointerMappingViewport;
 	private float _pointerMappingScaleX;
 	private float _pointerMappingScaleY;
+	private bool _hasActivePointerContentRect;
+	private UiRect _activePointerContentRect;
 
 	public BrowserSurfaceCanvasContent(
 		IBrowserSurface surface,
@@ -67,7 +69,12 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		}
 		PointerButton? pointerButton = pointerEvent.Button;
 
-		UiRect contentRect = GetContentRect(node);
+		UiRect currentContentRect = GetContentRect(node);
+		UiRect contentRect = _activePointerButton.HasValue &&
+			pointerEvent.Action != PointerAction.Down &&
+			_hasActivePointerContentRect
+				? _activePointerContentRect
+				: currentContentRect;
 		if (!contentRect.Contains(pointerEvent.X, pointerEvent.Y) &&
 			pointerEvent.Action != PointerAction.Up &&
 			pointerEvent.Action != PointerAction.Cancel &&
@@ -77,11 +84,20 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		}
 
 		BrowserPointerMapping pointerMapping = GetPointerMapping(contentRect);
-		float localX = Math.Clamp((pointerEvent.X - contentRect.X) * pointerMapping.ScaleX, 0f, pointerMapping.Viewport.Width - 1f);
-		float localY = Math.Clamp((pointerEvent.Y - contentRect.Y) * pointerMapping.ScaleY, 0f, pointerMapping.Viewport.Height - 1f);
+		bool preserveCapturedDragDelta = _activePointerButton.HasValue && pointerEvent.Action == PointerAction.Move;
+		float rawLocalX = (pointerEvent.X - contentRect.X) * pointerMapping.ScaleX;
+		float rawLocalY = (pointerEvent.Y - contentRect.Y) * pointerMapping.ScaleY;
+		float localX = preserveCapturedDragDelta
+			? rawLocalX
+			: Math.Clamp(rawLocalX, 0f, pointerMapping.Viewport.Width - 1f);
+		float localY = preserveCapturedDragDelta
+			? rawLocalY
+			: Math.Clamp(rawLocalY, 0f, pointerMapping.Viewport.Height - 1f);
 		if (pointerEvent.Action == PointerAction.Down)
 		{
 			_activePointerButton = pointerButton;
+			_activePointerContentRect = currentContentRect;
+			_hasActivePointerContentRect = true;
 			SetBrowserFocus(true);
 		}
 
@@ -120,6 +136,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		if (pointerEvent.Action is PointerAction.Up or PointerAction.Cancel)
 		{
 			_activePointerButton = null;
+			_hasActivePointerContentRect = false;
 		}
 
 		return true;
@@ -187,7 +204,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		_disposed = true;
 	}
 
-	public UiRect GetContentRect(UiNode node)
+	public virtual UiRect GetContentRect(UiNode node)
 	{
 		return ResolveContentRect(node);
 	}

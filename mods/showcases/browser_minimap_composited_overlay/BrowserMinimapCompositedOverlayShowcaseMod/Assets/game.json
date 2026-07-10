@@ -1,0 +1,16 @@
+{
+  "startupMapId": "performer_blacksmith_minimap_marker_large_world_showcase",
+  "windowTitle": "Ludots Engine - Browser Minimap Composited Overlay",
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "presentation": {
+    "minimap": {
+      "zoomSliderEnabled": false,
+      "modeToggleEnabled": false,
+      "rotateToggleEnabled": false,
+      "debugMarkerSampleCapacity": 0
+    }
+  }
+}

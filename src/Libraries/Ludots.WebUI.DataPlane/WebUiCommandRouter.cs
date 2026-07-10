@@ -64,6 +64,11 @@ public sealed class WebUiCommandRouter : IWebUiCommandDispatcher
 		_handlers[commandName.Trim()] = handler ?? throw new ArgumentNullException(nameof(handler));
 	}
 
+	public bool IsRegistered(string commandName)
+	{
+		return !string.IsNullOrWhiteSpace(commandName) && _handlers.ContainsKey(commandName.Trim());
+	}
+
 	public async ValueTask<WebUiOutboundPacket> HandleAsync(
 		WebUiInboundPacket packet,
 		CancellationToken cancellationToken = default)

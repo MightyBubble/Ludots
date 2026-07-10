@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -25,6 +26,7 @@ namespace Ludots.Core.Presentation.Hud
         public Vector4 Color;
         public Vector4 BackgroundColor;
         public PresentationTextPacket Text;
+        public PresentationClipShape ClipShape;
     }
 
     /// <summary>
@@ -112,6 +114,20 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool AddRect(int x, int y, int width, int height, Vector4 fill, Vector4 border, int stableId, int dirtySerial)
         {
+            return AddRect(x, y, width, height, fill, border, stableId, dirtySerial, PresentationClipShape.None);
+        }
+
+        public bool AddRect(
+            int x,
+            int y,
+            int width,
+            int height,
+            Vector4 fill,
+            Vector4 border,
+            int stableId,
+            int dirtySerial,
+            PresentationClipShape clipShape)
+        {
             if (_count >= MaxItems) return false;
 
             _items[_count++] = new ScreenOverlayItem
@@ -124,7 +140,8 @@ namespace Ludots.Core.Presentation.Hud
                 Width = width,
                 Height = height,
                 BackgroundColor = fill,
-                Color = border
+                Color = border,
+                ClipShape = clipShape
             };
             return true;
         }
@@ -135,6 +152,20 @@ namespace Ludots.Core.Presentation.Hud
         }
 
         public bool AddLine(int x0, int y0, int x1, int y1, int thickness, Vector4 color, int stableId, int dirtySerial)
+        {
+            return AddLine(x0, y0, x1, y1, thickness, color, stableId, dirtySerial, PresentationClipShape.None);
+        }
+
+        public bool AddLine(
+            int x0,
+            int y0,
+            int x1,
+            int y1,
+            int thickness,
+            Vector4 color,
+            int stableId,
+            int dirtySerial,
+            PresentationClipShape clipShape)
         {
             if (_count >= MaxItems) return false;
             if (thickness <= 0 || color.W <= 0f) return true;
@@ -149,7 +180,8 @@ namespace Ludots.Core.Presentation.Hud
                 Width = x1,
                 Height = y1,
                 Thickness = thickness,
-                Color = color
+                Color = color,
+                ClipShape = clipShape
             };
             return true;
         }

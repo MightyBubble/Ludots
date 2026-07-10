@@ -45,6 +45,8 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.UI.CommandDeck;
+using Ludots.Core.UI.ProductionOverview;
 using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
@@ -638,6 +640,8 @@ namespace Ludots.Core.Engine
             registry.Register(EntityCollectionKeys.EntityInfoExplicit);
             registry.Register(EntityCollectionKeys.CommandSource);
             registry.Register(EntityCollectionKeys.UiCastRaw);
+            registry.Register(EntityViewKeys.ControlPlaneCommand);
+            registry.Register(EntityViewKeys.CommandDeckFiltered);
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -1042,6 +1046,18 @@ namespace Ludots.Core.Engine
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
+            if (presentationTextCatalog.DefaultLocaleId > 0)
+            {
+                AbilityPresentationTextValidator.ValidateRegisteredAbilities(
+                    abilityDefinitions,
+                    presentationTextCatalog,
+                    presentationTextCatalog.GetLocaleKey(presentationTextCatalog.DefaultLocaleId),
+                    requireTokensOnAllPresentations: false);
+            }
+            else
+            {
+                AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
+            }
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
@@ -1293,6 +1309,27 @@ namespace Ludots.Core.Engine
             var abilityAggregationProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var abilityAggregationProfileRegistry = new AbilityAggregationProfileRegistry(abilityAggregationProfileIds);
             abilityAggregationProfileRegistry.Install(new AbilityAggregationProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // CommandDeck display/routing profiles (WPK-3): modes + route refs over existing panel/aggregation/dispatch kernels.
+            var commandDeckProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var commandDeckProfileRegistry = new CommandDeckProfileRegistry(
+                commandDeckProfileIds,
+                abilityAggregationProfileRegistry,
+                castDispatchProfileRegistry,
+                filterProfileRegistry);
+            commandDeckProfileRegistry.Install(new CommandDeckProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            var commandDeckRouteResolver = new CommandDeckRouteResolver(castDispatchProfileRegistry);
+
+            // Production / Worker / Queue overview profiles (WPK-4): project command/status/queue + OrderBuffer + collection workers.
+            // Command panel source existence is validated at project time (sources register from mods after Core boot).
+            var productionOverviewProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var productionOverviewProfileRegistry = new ProductionOverviewProfileRegistry(
+                productionOverviewProfileIds,
+                commandPanelSources: null,
+                orderTypes: orderTypeRegistry);
+            productionOverviewProfileRegistry.Install(
+                new ProductionOverviewProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
             int stepRateHz = engineClockConfig.FixedHz / Math.Max(1, gasClockConfig.StepEveryFixedTicks);
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
@@ -1366,6 +1403,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
             SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
+            SetService(CoreServiceKeys.CommandDeckProfileRegistry, commandDeckProfileRegistry);
+            SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
+            SetService(CoreServiceKeys.ProductionOverviewProfileRegistry, productionOverviewProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             RemoveService(CoreServiceKeys.StructureCollisionAsset);

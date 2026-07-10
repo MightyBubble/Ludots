@@ -1,0 +1,20 @@
+{
+  "manifestId": "panel-kit.showcase.techtree.solo",
+  "hostOwnerId": "panel-kit.showcase.techtree",
+  "panels": [
+    {
+      "panelId": "hud.techtree",
+      "panelType": "techtree",
+      "surfaceRegionId": "region.center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.showcase.techtree",
+      "profileId": "profile.techtree.showcase",
+      "layoutId": "layout.tree.generic",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activate-node"
+    }
+  ]
+}

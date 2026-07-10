@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Minimap;
 
 namespace Ludots.Core.Presentation.Hud
@@ -533,7 +534,8 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 fill,
             in Vector4 border,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            PresentationClipShape clipShape = default)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -551,7 +553,8 @@ namespace Ludots.Core.Presentation.Hud
                 Width = width,
                 Height = height,
                 Color0 = fill,
-                Color1 = border
+                Color1 = border,
+                ClipShape = clipShape
             };
             return TryStore(in item);
         }
@@ -612,7 +615,8 @@ namespace Ludots.Core.Presentation.Hud
             float thickness,
             in Vector4 color,
             int stableId = 0,
-            int dirtySerial = 0)
+            int dirtySerial = 0,
+            PresentationClipShape clipShape = default)
         {
             if (thickness <= 0f || color.W <= 0f)
             {
@@ -630,7 +634,8 @@ namespace Ludots.Core.Presentation.Hud
                 Width = x1,
                 Height = y1,
                 Value0 = thickness,
-                Color0 = color
+                Color0 = color,
+                ClipShape = clipShape
             };
             return TryStore(in item);
         }
@@ -1498,7 +1503,8 @@ namespace Ludots.Core.Presentation.Hud
                 left.FontSize != right.FontSize ||
                 left.Value0 != right.Value0 ||
                 left.Value1 != right.Value1 ||
-                left.Value2 != right.Value2)
+                left.Value2 != right.Value2 ||
+                !left.ClipShape.Equals(right.ClipShape))
             {
                 return PresentationOverlayItemCompareResult.Content;
             }

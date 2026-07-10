@@ -1,0 +1,15 @@
+{
+  "profileId": "profile.resource-bar.showcase",
+  "genre": "rts",
+  "coachLine": "Glance at Ore, Power, and Supply before you spend.",
+  "fields": [
+    {"fieldId": "field.primary", "displayTokenId": "token.resource.rts.primary", "value": 420, "capacity": 1000},
+    {"fieldId": "field.secondary", "displayTokenId": "token.resource.rts.secondary", "value": 180, "capacity": 500},
+    {"fieldId": "field.supply", "displayTokenId": "token.resource.rts.supply", "value": 12, "capacity": 20}
+  ],
+  "tokens": {
+    "token.resource.rts.primary": "Ore",
+    "token.resource.rts.secondary": "Power",
+    "token.resource.rts.supply": "Supply"
+  }
+}

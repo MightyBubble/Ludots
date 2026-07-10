@@ -27,6 +27,16 @@
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 - [Browser UI Runtime](browser_ui_runtime.md)
 - [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
+- [WebUI Panel Kit Manifest (WPK-1)](webui_panel_kit_manifest.md)
+- [WebUI Resource Attribute Panel (WPK-2)](webui_resource_attribute_panel.md)
+- [CommandDeck Multi-Display Modes (WPK-3)](command_deck_display_modes.md)
+- [WebUI Production / Worker / Queue Overview (WPK-4)](webui_production_overview_panel.md)
+- [WebUI Tooltip + Rich Text (WPK-5)](webui_tooltip_rich_text.md)
+- [WebUI Quest Objective Panel (WPK-6)](webui_quest_objective_panel.md)
+- [WebUI Notification Panel (WPK-7)](webui_notification_panel.md)
+- [WebUI TechTree / Progression Panel (WPK-9)](webui_techtree_progression_panel.md)
+- [WebUI Panel Kit Showcase Family (WPK-10)](webui_panel_kit_showcase_family.md)
+- [WebUI Panel Kit Showcase Family UAT (WPK-10)](webui_panel_kit_showcase_family_uat.md)
 
 ## Target State And Migration
 

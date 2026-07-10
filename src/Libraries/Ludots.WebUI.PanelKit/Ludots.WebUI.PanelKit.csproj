@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Ludots.WebUI.PanelKit</AssemblyName>
+    <RootNamespace>Ludots.WebUI.PanelKit</RootNamespace>
+    <Description>WebUI Panel Kit assembly contract: panel manifest load, reference validation, and UiSurfaceHost binding. Does not own gameplay truth or a parallel UI host.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Samples\sample_panel_kit_manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_resource_attribute_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_production_overview_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_tooltip_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_techtree_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

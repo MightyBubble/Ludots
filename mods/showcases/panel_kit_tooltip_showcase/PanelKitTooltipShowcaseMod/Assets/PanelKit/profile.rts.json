@@ -1,0 +1,21 @@
+{
+  "profileId": "profile.tooltip.showcase",
+  "genre": "rts",
+  "coachLine": "Hover Train Scout to learn what it does before you spend Ore.",
+  "entries": {
+    "tooltip.rts.scout": {
+      "titleTokenId": "token.tooltip.rts.scout.title",
+      "bodyTokenId": "token.tooltip.rts.scout.body"
+    },
+    "tooltip.rts.depot": {
+      "titleTokenId": "token.tooltip.rts.depot.title",
+      "bodyTokenId": "token.tooltip.rts.depot.body"
+    }
+  },
+  "tokens": {
+    "token.tooltip.rts.scout.title": "Scout",
+    "token.tooltip.rts.scout.body": "Fast recon unit. Completes the starter objective when training finishes.",
+    "token.tooltip.rts.depot.title": "Depot",
+    "token.tooltip.rts.depot.body": "Expands supply and stores gathered ore."
+  }
+}

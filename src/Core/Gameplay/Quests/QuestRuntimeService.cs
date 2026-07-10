@@ -175,7 +175,9 @@ namespace Ludots.Core.Gameplay.Quests
                     stage?.Title ?? string.Empty,
                     stage?.ObjectiveText ?? string.Empty,
                     stage?.ObjectiveHint ?? string.Empty,
-                    entity));
+                    entity,
+                    quest.ScopeHost,
+                    quest.Revision));
             }
 
             views.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.QuestId, b.QuestId));

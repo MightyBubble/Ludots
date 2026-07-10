@@ -44,6 +44,10 @@
 - [Browser Runtime Provider Adapter Guide](browser-runtime-provider-adapter-guide.md)
 - Browser UI Runtime：正式 contract 位于 `docs/architecture/browser_ui_runtime.md`，用于把真实 Web App 作为平台无关 browser surface 嵌入 Ludots UI；它不改变 native Markup 无 JS 的边界
 - WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
+- WebUI Panel Kit Manifest（WPK-1）：面板组合合同位于 `docs/architecture/webui_panel_kit_manifest.md`；复用 `UiSurfaceHost` 与 DataPlane topic，不新建平行 host；加载期校验 topic/profile/layout/surface 引用
+- WebUI Notification Panel（WPK-7）：独立消息 SSOT 位于 `docs/architecture/webui_notification_panel.md`；不依赖 NarrativeFrontend / Quest / showcase toast 私有状态；文案走 WPK-5 token 校验；Web 只渲染 DataPlane snapshot
+- WebUI TechTree / Progression Panel（WPK-9）：Progression 节点面板合同位于 `docs/architecture/webui_techtree_progression_panel.md`；状态来自 Progression runtime/requirement，不新建 TechTreeStore
+- WebUI Panel Kit Showcase Family（WPK-10）：独立面板 showcase 位于 `docs/architecture/webui_panel_kit_showcase_family.md`；一面板类型一 showcase，面向新玩家上手
 
 ## 当前主线重点
 

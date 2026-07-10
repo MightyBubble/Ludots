@@ -1,0 +1,74 @@
+:root {
+  color-scheme: dark;
+  --chrome-inset: 10px;
+  --chrome-fill: rgba(7, 13, 16, 0.42);
+  --chrome-stroke: rgba(227, 242, 232, 0.68);
+  --chrome-shadow: rgba(0, 0, 0, 0.42);
+  --ring: rgba(232, 247, 238, 0.74);
+  --ring-soft: rgba(105, 213, 170, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  pointer-events: none;
+  user-select: none;
+}
+
+.minimap-widget {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid var(--chrome-stroke);
+  background: var(--chrome-fill);
+  box-shadow:
+    0 10px 24px var(--chrome-shadow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.minimap-widget.is-dragging {
+  cursor: grabbing;
+  border-color: rgba(240, 255, 247, 0.88);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.minimap-widget::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(235, 248, 239, 0.64);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.minimap-viewport {
+  position: absolute;
+  inset: var(--chrome-inset);
+  border: 1px solid var(--ring);
+  border-radius: 999px;
+  background: transparent;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px var(--ring-soft);
+  clip-path: circle(50% at 50% 50%);
+  overflow: hidden;
+  pointer-events: none;
+}

@@ -37,6 +37,12 @@ The DataPlane must reuse existing infrastructure before adding new stores:
 
 Missing services or unknown topic/query ids must fail explicitly at the consuming boundary. Silent fallback to selection, current panel state, adapter-local cache, or browser-side state is forbidden.
 Browser adapters must not become selection truth; user-facing selection remains a derived label for explicit `EntityCollectionStore` topics such as `collection.command.source`.
+Panel Kit manifests validate topic existence through `WebUiDataPlaneRuntime.IsTopicRegistered` at load time; unknown topic ids fail with the concrete id in the exception message.
+Resource attribute panels (WPK-2) publish `owner` / `descriptor` / `revision` / `values` snapshots via `WebUiResourceAttributeTopicProducer`; see [WebUI Resource Attribute Panel](webui_resource_attribute_panel.md).
+Production / Worker / Queue overview topics (WPK-4) project existing EntityCommandPanel status/queue, OrderBuffer, and entity-collection worker buckets; see [webui_production_overview_panel.md](webui_production_overview_panel.md).
+Tooltip panels (WPK-5) publish structured rich-text snapshots via `WebUiTooltipTopicProducer`; see [WebUI Tooltip + Rich Text](webui_tooltip_rich_text.md).
+Notification panels (WPK-7) publish ordered message snapshots via `NotificationWebUiTopicProducer` from an independent `NotificationRuntime`; see [WebUI Notification Panel](webui_notification_panel.md).
+TechTree / Progression panels (WPK-9) publish `scopeHost` / `actor` / `descriptor` / `revision` / `nodes` snapshots via `WebUiTechTreeTopicProducer`; see [WebUI TechTree / Progression Panel](webui_techtree_progression_panel.md).
 
 ## 3 Entity Collection Topics
 
@@ -190,6 +196,10 @@ Current evidence is architectural, source-aligned, and executable:
 - Screen marker bucket model: `src/Core/Presentation/Minimap/MinimapScreenMarkerBuffer.cs`
 - WebUI facade: `src/Libraries/Ludots.WebUI/`
 - DataPlane transport contracts: `src/Libraries/Ludots.WebUI.DataPlane/`
+- Panel Kit manifest (WPK-1 composition contract): `src/Libraries/Ludots.WebUI.PanelKit/` and `docs/architecture/webui_panel_kit_manifest.md`
+- Tooltip + rich text (WPK-5): `src/Libraries/Ludots.WebUI.PanelKit/WebUiTooltip*` / `WebUiRichText*` and `docs/architecture/webui_tooltip_rich_text.md`
+- Quest Objective panel projection (WPK-6): `QuestObjectiveWebUiTopicProducer` and `docs/architecture/webui_quest_objective_panel.md`
+- Notification panel (WPK-7): `src/Libraries/Ludots.WebUI.DataPlane/Notification*` and `docs/architecture/webui_notification_panel.md`
 - Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
 - Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
 - Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`

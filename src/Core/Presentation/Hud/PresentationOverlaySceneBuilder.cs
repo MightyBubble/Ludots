@@ -355,7 +355,8 @@ namespace Ludots.Core.Presentation.Hud
                                 item.BackgroundColor,
                                 item.Color,
                                 item.StableId,
-                                item.DirtySerial);
+                                item.DirtySerial,
+                                item.ClipShape);
                             break;
 
                         case ScreenOverlayItemKind.Line:
@@ -368,7 +369,8 @@ namespace Ludots.Core.Presentation.Hud
                                 item.Thickness,
                                 item.Color,
                                 item.StableId,
-                                item.DirtySerial);
+                                item.DirtySerial,
+                                item.ClipShape);
                             break;
                     }
                 }
