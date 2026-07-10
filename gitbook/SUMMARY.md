@@ -14,6 +14,7 @@
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
+  - [实时技能工作台（LSW）架构契约](architecture/live-skill-workbench.md)
   - [Input Order Routing 与 Spawn Target 基建](architecture/input-order-and-spawn-target.md)
   - [Entity Lifecycle 原子 Op](architecture/entity-lifecycle-atomic-ops.md)
   - [时间体系](architecture/time-system.md)

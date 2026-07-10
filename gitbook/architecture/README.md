@@ -8,6 +8,7 @@
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
+- [实时技能工作台（LSW）架构契约](live-skill-workbench.md) — **热调试技能数值 / 属性 / 效果链 / AI 草稿与热应用分级的 SSOT**
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
 - [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**
 - [时间体系](time-system.md)
