@@ -1042,6 +1042,18 @@ namespace Ludots.Core.Engine
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
+            if (presentationTextCatalog.DefaultLocaleId > 0)
+            {
+                AbilityPresentationTextValidator.ValidateRegisteredAbilities(
+                    abilityDefinitions,
+                    presentationTextCatalog,
+                    presentationTextCatalog.GetLocaleKey(presentationTextCatalog.DefaultLocaleId),
+                    requireTokensOnAllPresentations: false);
+            }
+            else
+            {
+                AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
+            }
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
