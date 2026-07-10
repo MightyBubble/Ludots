@@ -19,6 +19,12 @@
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.Browser\Ludots.WebUI.Browser.csproj">
       <Private>true</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.PanelKit\Ludots.WebUI.PanelKit.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>

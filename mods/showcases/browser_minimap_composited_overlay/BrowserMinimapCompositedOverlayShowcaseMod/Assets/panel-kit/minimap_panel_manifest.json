@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.minimap.composited-overlay",
+  "hostOwnerId": "BrowserMinimapCompositedOverlay.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.minimap.web-shell",
+      "panelType": "minimap.web-shell",
+      "surfaceRegionId": "region.minimap.overlay",
+      "surfaceSegment": "Main",
+      "surfacePriority": 12,
+      "anchor": "anchor.top-right",
+      "visibleConditionId": "condition.always",
+      "topic": "wpk.minimap.shell",
+      "profileId": "profile.minimap.composited-overlay",
+      "layoutId": "layout.minimap.floating",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.minimap.focus"
+    }
+  ]
+}
