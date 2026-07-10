@@ -20,6 +20,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 	private readonly CefDataPlaneNativeBridge _dataPlaneNativeBridge;
 	private readonly IBrowserResourceResolver? _resourceResolver;
 	private readonly CefBrowserSurfaceRegistry _registry;
+	private readonly CefV8BufferRegistry _v8BufferRegistry;
 	private readonly TaskCompletionSource _browserInitialized = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	private BrowserViewport _viewport;
@@ -30,14 +31,17 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 	public CefBrowserSurface(
 		BrowserViewport viewport,
 		IBrowserResourceResolver? resourceResolver,
-		CefBrowserSurfaceRegistry registry)
+		CefBrowserSurfaceRegistry registry,
+		CefV8BufferRegistry v8BufferRegistry)
 	{
 		_viewport = viewport;
 		_resourceResolver = resourceResolver;
 		_registry = registry ?? throw new ArgumentNullException(nameof(registry));
+		_v8BufferRegistry = v8BufferRegistry ?? throw new ArgumentNullException(nameof(v8BufferRegistry));
 		_frameBuffer = new BrowserFrameBuffer(viewport, BrowserPixelFormat.Bgra8888Premultiplied);
 		Id = BrowserSurfaceId.New();
 		_dataPlaneNativeBridge = new CefDataPlaneNativeBridge(_sharedBuffers);
+		_sharedBuffers.NativeRegionsChanged += OnNativeRegionsChanged;
 
 		var browserSettings = new BrowserSettings
 		{
@@ -94,6 +98,8 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 		{
 			_browserInitialized.TrySetResult();
 		}
+
+		SyncV8NativeRegions();
 		await _browserInitialized.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
 		string navigationUrl = ResolveNavigationUrl(request.Uri);
 		LoadUrlAsyncResponse response = await _browser.LoadUrlAsync(navigationUrl).ConfigureAwait(false);
@@ -212,6 +218,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 		_browser.BrowserInitialized -= OnBrowserInitialized;
 		_browser.FrameLoadEnd -= OnFrameLoadEnd;
 		_browser.JavascriptObjectRepository.ResolveObject -= OnResolveJavascriptObject;
+		_sharedBuffers.NativeRegionsChanged -= OnNativeRegionsChanged;
 
 		_browser.Dispose();
 		return ValueTask.CompletedTask;
@@ -260,6 +267,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 
 	private ValueTask InjectDataPlaneFacadeAsync(CancellationToken cancellationToken)
 	{
+		SyncV8NativeRegions();
 		return ExecuteScriptAsync(CefDataPlaneFacadeScript.Create(), cancellationToken);
 	}
 
@@ -320,6 +328,16 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 			DataPlaneNativeBridgeObjectName,
 			_dataPlaneNativeBridge,
 			BindingOptions.DefaultBinder);
+	}
+
+	private void SyncV8NativeRegions()
+	{
+		CefV8BufferNativeBridge.SyncNativeRegions(_v8BufferRegistry, _sharedBuffers);
+	}
+
+	private void OnNativeRegionsChanged(object? sender, EventArgs e)
+	{
+		SyncV8NativeRegions();
 	}
 
 	private unsafe void OnPaint(object? sender, OnPaintEventArgs e)

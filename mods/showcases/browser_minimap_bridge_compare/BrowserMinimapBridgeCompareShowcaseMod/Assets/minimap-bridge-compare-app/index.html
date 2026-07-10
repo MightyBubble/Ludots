@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ludots Minimap Bridge Compare</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Minimap Bridge Compare</h1>
+          <p>Small minimap markers, same producer data, current copy path versus true V8 buffer gate.</p>
+        </div>
+        <div class="status-strip" aria-live="polite">
+          <span id="connection-status">connecting</span>
+          <span id="marker-count">0 markers</span>
+          <span id="transport-mode">transport pending</span>
+        </div>
+      </header>
+
+      <section class="compare-grid">
+        <article class="lane lane-compact" data-mode="compact">
+          <div class="lane-head">
+            <div>
+              <h2>Read-Copy Buffer</h2>
+              <p>WDMM marker rows via descriptor, then CefSharp managed read copy.</p>
+            </div>
+            <span class="badge badge-neutral">current baseline</span>
+          </div>
+          <canvas id="compact-canvas" width="420" height="420" aria-label="Compact buffer marker map"></canvas>
+          <dl class="metrics">
+            <div><dt>payload</dt><dd id="compact-bytes">0 B</dd></div>
+            <div><dt>parse</dt><dd id="compact-parse">0.00 ms</dd></div>
+            <div><dt>draw</dt><dd id="compact-draw">0.00 ms</dd></div>
+            <div><dt>frames</dt><dd id="compact-frames">0</dd></div>
+          </dl>
+        </article>
+
+        <article class="lane lane-browser" data-mode="browser-arraybuffer">
+          <div class="lane-head">
+            <div>
+              <h2>Browser ArrayBuffer</h2>
+              <p>Same WDMM rows copied into a browser-owned ArrayBuffer as a lower bound.</p>
+            </div>
+            <span class="badge badge-caution">lower bound</span>
+          </div>
+          <canvas id="browser-canvas" width="420" height="420" aria-label="Browser-owned ArrayBuffer marker map"></canvas>
+          <dl class="metrics">
+            <div><dt>payload</dt><dd id="browser-bytes">0 B</dd></div>
+            <div><dt>parse</dt><dd id="browser-parse">0.00 ms</dd></div>
+            <div><dt>draw</dt><dd id="browser-draw">0.00 ms</dd></div>
+            <div><dt>status</dt><dd id="browser-status">waiting</dd></div>
+          </dl>
+        </article>
+
+        <article class="lane lane-native" data-mode="native">
+          <div class="lane-head">
+            <div>
+              <h2>True V8 Buffer</h2>
+              <p>Native CEF render-process bridge returning a V8 backing-store ArrayBuffer.</p>
+            </div>
+            <span class="badge badge-good" id="v8-badge">required</span>
+          </div>
+          <canvas id="v8-canvas" width="420" height="420" aria-label="True V8 buffer marker map"></canvas>
+          <dl class="metrics">
+            <div><dt>payload</dt><dd id="v8-bytes">0 B</dd></div>
+            <div><dt>parse</dt><dd id="v8-parse">0.00 ms</dd></div>
+            <div><dt>draw</dt><dd id="v8-draw">0.00 ms</dd></div>
+            <div><dt>bridge</dt><dd id="v8-status">probing</dd></div>
+          </dl>
+          <p class="lane-message" id="v8-message"></p>
+        </article>
+      </section>
+
+      <footer class="notes">
+        <span>True V8 lane only accepts ArrayBuffer, not Uint8Array.from(...) snapshots.</span>
+        <span>No heatmap. Marker radius stays below 3px.</span>
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

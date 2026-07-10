@@ -46,13 +46,12 @@ namespace Ludots.Adapter.Raylib
                     _states.Add(id, state);
                 }
 
-                if (content.TryReadLatestFrame(state, static (in BrowserFrameAccess frame, BrowserLayerState layerState) =>
-                    {
-                        layerState.Update(frame);
-                    }))
+                content.TryReadLatestFrame(state, static (in BrowserFrameAccess frame, BrowserLayerState layerState) =>
                 {
-                    state.Draw(rect);
-                }
+                    layerState.Update(frame);
+                });
+
+                state.Draw(rect);
             }
 
             ReleaseStaleStates();

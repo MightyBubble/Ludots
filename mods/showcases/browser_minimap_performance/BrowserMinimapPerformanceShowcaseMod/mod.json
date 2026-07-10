@@ -1,0 +1,12 @@
+{
+  "name": "BrowserMinimapPerformanceShowcaseMod",
+  "version": "1.0.0",
+  "description": "Raw 36B/marker browser minimap baseline that expands Core MinimapMarkerBuffer for performance comparison.",
+  "main": "bin/net8.0/BrowserMinimapPerformanceShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "cef", "minimap", "dataplane", "performance"]
+}

@@ -57,7 +57,9 @@ public sealed class BrowserCefRuntimeModEntry : IMod
 				"Ludots",
 				"BrowserCefRuntime",
 				$"Process-{Process.GetCurrentProcess().Id}");
-			_runtime ??= new CefBrowserRuntime(new CefBrowserRuntimeOptions(runtimeRootPath, cacheRootPath));
+			_runtime ??= new CefBrowserRuntime(new CefBrowserRuntimeOptions(
+				runtimeRootPath,
+				cacheRootPath));
 
 			engine.SetService(_browserRuntimeKey, _runtime);
 			context.Set(_browserRuntimeKey, _runtime);

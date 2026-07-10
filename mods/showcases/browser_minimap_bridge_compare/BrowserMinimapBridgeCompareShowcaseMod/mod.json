@@ -1,0 +1,12 @@
+{
+  "name": "BrowserMinimapBridgeCompareShowcaseMod",
+  "version": "1.0.0",
+  "description": "Compares minimap marker WebUI bridge paths: current read-copy WDMM buffer, browser-owned ArrayBuffer lower bound, and a strict true V8 ArrayBuffer gate.",
+  "main": "bin/net8.0/BrowserMinimapBridgeCompareShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "cef", "minimap", "dataplane"]
+}

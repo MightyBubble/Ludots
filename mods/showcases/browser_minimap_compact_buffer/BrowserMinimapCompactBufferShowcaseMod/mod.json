@@ -1,0 +1,12 @@
+{
+  "name": "BrowserMinimapCompactBufferShowcaseMod",
+  "version": "1.0.0",
+  "description": "Production-style browser minimap showcase that reads the Core MinimapMarkerBuffer as the compact WDMM field packet.",
+  "main": "bin/net8.0/BrowserMinimapCompactBufferShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "cef", "minimap", "dataplane", "performance"]
+}

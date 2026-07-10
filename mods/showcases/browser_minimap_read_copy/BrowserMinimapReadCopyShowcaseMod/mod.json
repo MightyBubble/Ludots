@@ -1,0 +1,12 @@
+{
+  "name": "BrowserMinimapReadCopyShowcaseMod",
+  "version": "1.0.0",
+  "description": "Single-path minimap performance showcase using the current shared-buffer read-copy WebUI path.",
+  "main": "bin/net8.0/BrowserMinimapReadCopyShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "cef", "minimap", "dataplane", "performance"]
+}

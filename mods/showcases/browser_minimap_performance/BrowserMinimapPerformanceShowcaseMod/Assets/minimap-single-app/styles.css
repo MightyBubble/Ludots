@@ -1,0 +1,158 @@
+:root {
+  color-scheme: dark;
+  --bg: #10100c;
+  --panel: rgba(18, 17, 12, 0.50);
+  --line: rgba(197, 176, 112, 0.20);
+  --text: #f8f4e9;
+  --muted: #c5bda4;
+  --accent: #efc25c;
+  --hot: #ff8b66;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.024) 1px, transparent 1px),
+    #10100c;
+  background-size: 32px 32px;
+}
+
+.hud {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: calc(100vw - 32px);
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  backdrop-filter: blur(3px);
+}
+
+.title-row,
+.metric-strip,
+.metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-row {
+  justify-content: flex-start;
+}
+
+h1 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+#path-status,
+.metric-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+#path-status {
+  border-color: rgba(239, 194, 92, 0.54);
+  color: var(--accent);
+}
+
+.metric-strip {
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+
+.metrics {
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+.metrics div {
+  min-width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.metrics div:last-child {
+  min-width: auto;
+}
+
+.metrics,
+#connection-status,
+#payload-bytes,
+#transport-mode {
+  display: none;
+}
+
+dt,
+dd {
+  margin: 0;
+}
+
+dt {
+  display: none;
+}
+
+dd {
+  margin-top: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .hud {
+    left: 10px;
+    top: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .metrics div {
+    min-width: 74px;
+  }
+}

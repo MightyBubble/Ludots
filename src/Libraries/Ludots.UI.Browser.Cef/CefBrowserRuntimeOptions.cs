@@ -5,7 +5,9 @@ namespace Ludots.UI.Browser.Cef;
 
 public sealed class CefBrowserRuntimeOptions
 {
-	public CefBrowserRuntimeOptions(string runtimeRootPath, string? cacheRootPath = null)
+	public CefBrowserRuntimeOptions(
+		string runtimeRootPath,
+		string? cacheRootPath = null)
 	{
 		if (string.IsNullOrWhiteSpace(runtimeRootPath))
 		{

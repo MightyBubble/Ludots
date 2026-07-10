@@ -612,11 +612,6 @@ namespace Ludots.Adapter.Raylib
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
-                        if (drawSkiaUi)
-                        {
-                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
-                        }
-
                         long overlayStart = Stopwatch.GetTimestamp();
                         OverlayCompositeResult overlayResult = overlayCompositor.Render(
                             overlayScene,
@@ -636,6 +631,12 @@ namespace Ludots.Adapter.Raylib
                             overlayResult.FinalDrawMs,
                             overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
                             overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+
+                        if (drawSkiaUi)
+                        {
+                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
+                        }
+
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;

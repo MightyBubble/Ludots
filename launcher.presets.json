@@ -184,6 +184,79 @@
       "buildMode": "auto"
     },
     {
+      "id": "browser_minimap_bridge_compare_cef_raylib",
+      "name": "Browser Minimap Bridge Compare CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_minimap_bridge_compare_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_read_copy_cef_raylib",
+      "name": "Browser Minimap Read-Copy CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_minimap_read_copy_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_browser_arraybuffer_cef_raylib",
+      "name": "Browser Minimap Browser ArrayBuffer CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_minimap_browser_arraybuffer_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_true_v8_cef_raylib",
+      "name": "Browser Minimap True V8 CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_minimap_true_v8_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_compact_buffer_cef_raylib",
+      "name": "Browser Minimap Compact Buffer CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$performer_blacksmith_large_world_nohud",
+        "$browser_minimap_compact_buffer_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_composited_overlay_cef_raylib",
+      "name": "Browser Minimap Composited Overlay CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$performer_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_minimap_performance_cef_raylib",
+      "name": "Browser Minimap Raw Performance CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$performer_blacksmith_large_world_nohud",
+        "$browser_minimap_performance_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

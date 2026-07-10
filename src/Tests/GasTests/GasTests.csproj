@@ -62,6 +62,13 @@
     <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_bridge_compare\BrowserMinimapBridgeCompareShowcaseMod\BrowserMinimapBridgeCompareShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_read_copy\BrowserMinimapReadCopyShowcaseMod\BrowserMinimapReadCopyShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_browser_arraybuffer\BrowserMinimapBrowserArrayBufferShowcaseMod\BrowserMinimapBrowserArrayBufferShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_true_v8\BrowserMinimapTrueV8ShowcaseMod\BrowserMinimapTrueV8ShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_compact_buffer\BrowserMinimapCompactBufferShowcaseMod\BrowserMinimapCompactBufferShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_composited_overlay\BrowserMinimapCompositedOverlayShowcaseMod\BrowserMinimapCompositedOverlayShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_minimap_performance\BrowserMinimapPerformanceShowcaseMod\BrowserMinimapPerformanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\spline_surface_uat\SplineSurfaceUatMod\SplineSurfaceUatMod.csproj" />

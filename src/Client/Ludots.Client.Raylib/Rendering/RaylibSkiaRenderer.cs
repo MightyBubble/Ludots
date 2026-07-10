@@ -99,7 +99,9 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Draw()
         {
+            Raylib_cs.Raylib.BeginBlendMode(BlendMode.BLEND_ALPHA_PREMULTIPLY);
             Raylib_cs.Raylib.DrawTexture(_texture, 0, 0, Raylib_cs.Color.WHITE);
+            Raylib_cs.Raylib.EndBlendMode();
         }
 
         public void RenderToScreen()

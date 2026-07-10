@@ -1,0 +1,12 @@
+{
+  "name": "BrowserMinimapBrowserArrayBufferShowcaseMod",
+  "version": "1.0.0",
+  "description": "Single-path minimap performance showcase using a browser-owned ArrayBuffer copy before WDMM decode.",
+  "main": "bin/net8.0/BrowserMinimapBrowserArrayBufferShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "cef", "minimap", "dataplane", "performance"]
+}

@@ -121,6 +121,59 @@ public sealed class BrowserSharedMemoryDataTransportTests
 	}
 
 	[Test]
+	public async Task NativeRegionsSnapshot_KeepsNonLatestLiveDescriptorUntilOverwritten()
+	{
+		var bridge = new FakeBrowserMessageBridge();
+		var sharedBuffers = new BrowserSharedBufferBridge();
+		await using var store = new BrowserSharedMemoryBufferStore(sharedBuffers);
+		await using var transport = new BrowserSharedMemoryDataTransport(
+			bridge,
+			store,
+			new[]
+			{
+				new BrowserSharedMemoryTopicBuffer(
+					"webui.entityCollection",
+					"test.entity.live-regions",
+					WebUiColumnarPacketSchemaRegistry.EntityCollectionSchemaId,
+					WebUiSharedBufferRing.DefaultHeaderBytes + 24)
+			});
+		var first = new WebUiOutboundPacket(
+			"session-a",
+			"webui.entityCollection",
+			WebUiPacketKind.Snapshot,
+			WebUiDeliverySemantics.LatestWins,
+			new byte[] { 1, 1, 1, 1, 1, 1, 1, 1 },
+			WebUiDataPlaneProtocol.BinaryContentType,
+			ClientSeq: 1);
+		WebUiOutboundPacket second = first with
+		{
+			Payload = new byte[] { 2, 2, 2, 2, 2, 2, 2, 2 },
+			ClientSeq = 2
+		};
+
+		await transport.SendAsync(first, TestContext.CurrentContext.CancellationToken);
+		BrowserScriptMessage firstPost = await bridge.WaitForPostAsync(TestContext.CurrentContext.CancellationToken);
+		using JsonDocument firstDocument = JsonDocument.Parse(firstPost.Payload);
+		JsonElement firstDescriptor = firstDocument.RootElement.GetProperty("payload").GetProperty("sharedBuffer");
+		await transport.SendAsync(second, TestContext.CurrentContext.CancellationToken);
+
+		byte[] firstRead = sharedBuffers.ReadSharedBuffer(
+			firstDescriptor.GetProperty("bufferId").GetString()!,
+			firstDescriptor.GetProperty("byteOffset").GetInt32(),
+			firstDescriptor.GetProperty("byteLength").GetInt32(),
+			firstDescriptor.GetProperty("sequence").GetInt64());
+		BrowserSharedBufferNativeRegion nativeRegion = sharedBuffers.GetNativeRegionsSnapshot().Single(static region =>
+			region.BufferId == "test.entity.live-regions");
+
+		Assert.That(firstRead, Is.EqualTo(first.Payload.ToArray()));
+		Assert.That(nativeRegion.LiveRegions, Has.Length.EqualTo(2));
+		Assert.That(nativeRegion.LiveRegions, Does.Contain(new BrowserSharedBufferLiveRegion(
+			firstDescriptor.GetProperty("byteOffset").GetInt32(),
+			firstDescriptor.GetProperty("byteLength").GetInt32(),
+			firstDescriptor.GetProperty("sequence").GetInt64())));
+	}
+
+	[Test]
 	public async Task ReadSharedBuffer_WhenRingRegionWasPartiallyOverwritten_RejectsStaleDescriptor()
 	{
 		var bridge = new FakeBrowserMessageBridge();

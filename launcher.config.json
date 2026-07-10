@@ -170,6 +170,62 @@
       }
     },
     {
+      "name": "browser_minimap_bridge_compare_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_bridge_compare/BrowserMinimapBridgeCompareShowcaseMod",
+        "projectPath": "BrowserMinimapBridgeCompareShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_read_copy_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_read_copy/BrowserMinimapReadCopyShowcaseMod",
+        "projectPath": "BrowserMinimapReadCopyShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_browser_arraybuffer_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_browser_arraybuffer/BrowserMinimapBrowserArrayBufferShowcaseMod",
+        "projectPath": "BrowserMinimapBrowserArrayBufferShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_true_v8_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_true_v8/BrowserMinimapTrueV8ShowcaseMod",
+        "projectPath": "BrowserMinimapTrueV8ShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_compact_buffer_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_compact_buffer/BrowserMinimapCompactBufferShowcaseMod",
+        "projectPath": "BrowserMinimapCompactBufferShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_composited_overlay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod",
+        "projectPath": "BrowserMinimapCompositedOverlayShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_minimap_performance_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_minimap_performance/BrowserMinimapPerformanceShowcaseMod",
+        "projectPath": "BrowserMinimapPerformanceShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_cef_runtime",
       "target": {
         "type": "path",

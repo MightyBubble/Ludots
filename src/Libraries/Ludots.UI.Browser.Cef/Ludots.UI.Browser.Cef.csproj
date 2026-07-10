@@ -19,5 +19,32 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+    <ProjectReference Include="..\Ludots.UI.Browser.Cef.Subprocess\Ludots.UI.Browser.Cef.Subprocess.csproj" ReferenceOutputAssembly="false" OutputItemType="Content" Private="true" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\Ludots.UI.Browser.Cef.Subprocess\bin\$(Configuration)\net8.0-windows\**\*.*" LinkBase="." CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <Content Include="..\Ludots.UI.Browser.Cef.Native\bin\$(Configuration)\Ludots.UI.Browser.Cef.Native.dll" Link="Ludots.UI.Browser.Cef.Native.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <Content Include="..\Ludots.UI.Browser.Cef.Native\bin\$(Configuration)\Ludots.UI.Browser.Cef.Native.pdb" Link="Ludots.UI.Browser.Cef.Native.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('..\Ludots.UI.Browser.Cef.Native\bin\$(Configuration)\Ludots.UI.Browser.Cef.Native.pdb')" />
+  </ItemGroup>
+
+  <Target Name="BuildLudotsCefNativeBridge" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <LudotsVsMsBuild>$(VSINSTALLDIR)MSBuild\Current\Bin\MSBuild.exe</LudotsVsMsBuild>
+      <LudotsVsMsBuild Condition="!Exists('$(LudotsVsMsBuild)')">$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe</LudotsVsMsBuild>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(LudotsVsMsBuild)')" Text="MSBuild.exe with Visual C++ targets is required to build Ludots.UI.Browser.Cef.Native." />
+    <Exec Command="&quot;$(LudotsVsMsBuild)&quot; &quot;$(MSBuildProjectDirectory)\..\Ludots.UI.Browser.Cef.Native\Ludots.UI.Browser.Cef.Native.vcxproj&quot; /p:Configuration=$(Configuration) /p:Platform=x64 /m /v:minimal" />
+  </Target>
+
+  <Target Name="CopyLudotsCefNativeBridgeArtifacts" AfterTargets="Build">
+    <ItemGroup>
+      <LudotsCefProviderArtifact Include="$(MSBuildProjectDirectory)\..\Ludots.UI.Browser.Cef.Subprocess\bin\$(Configuration)\net8.0-windows\Ludots.UI.Browser.Cef.Subprocess.*" />
+      <LudotsCefProviderArtifact Include="$(MSBuildProjectDirectory)\..\Ludots.UI.Browser.Cef.Subprocess\bin\$(Configuration)\net8.0-windows\CefSharp.BrowserSubprocess*.*" />
+      <LudotsCefProviderArtifact Include="$(MSBuildProjectDirectory)\..\Ludots.UI.Browser.Cef.Native\bin\$(Configuration)\Ludots.UI.Browser.Cef.Native.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LudotsCefProviderArtifact)"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

@@ -26,12 +26,19 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 
 	private readonly List<CefBrowserSurface> _surfaces = new();
 	private readonly object _surfacesSync = new();
+	private readonly CefV8BufferRegistry _v8BufferRegistry;
 
 	private bool _disposed;
 
 	public CefBrowserRuntime(CefBrowserRuntimeOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
+		_v8BufferRegistry = new CefV8BufferRegistry();
+		Environment.SetEnvironmentVariable(
+			CefV8BufferRegistry.RegistryEnvironmentVariableName,
+			_v8BufferRegistry.MemoryMapName,
+			EnvironmentVariableTarget.Process);
+		CefV8BufferNativeBridge.EnsureLoaded(options.RuntimeRootPath);
 		EnsureInitialized(options);
 		Info = new BrowserRuntimeInfo(
 			BrowserEngineKind.Cef,
@@ -55,7 +62,7 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 		cancellationToken.ThrowIfCancellationRequested();
 		ThrowIfDisposed();
 
-		var surface = new CefBrowserSurface(viewport, resourceResolver, SurfaceRegistry);
+		var surface = new CefBrowserSurface(viewport, resourceResolver, SurfaceRegistry, _v8BufferRegistry);
 		lock (_surfacesSync)
 		{
 			_surfaces.Add(surface);
@@ -84,6 +91,7 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 			surface.DisposeAsync().AsTask().GetAwaiter().GetResult();
 		}
 
+		_v8BufferRegistry.Dispose();
 		ReleaseRuntimeOwner();
 		return ValueTask.CompletedTask;
 	}
@@ -195,11 +203,11 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 			throw new DirectoryNotFoundException($"CEF runtime root was not found: {runtimeRoot}");
 		}
 
-		string subprocessPath = Path.Combine(runtimeRoot, "CefSharp.BrowserSubprocess.exe");
+		string subprocessPath = Path.Combine(runtimeRoot, "Ludots.UI.Browser.Cef.Subprocess.exe");
 		string localesPath = Path.Combine(runtimeRoot, "locales");
 		if (!File.Exists(subprocessPath))
 		{
-			throw new FileNotFoundException("CEF browser subprocess executable was not found.", subprocessPath);
+			throw new FileNotFoundException("Ludots CEF browser subprocess executable was not found.", subprocessPath);
 		}
 		if (!Directory.Exists(localesPath))
 		{

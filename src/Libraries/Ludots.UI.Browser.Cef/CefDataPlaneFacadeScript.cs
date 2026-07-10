@@ -11,6 +11,7 @@ internal static class CefDataPlaneFacadeScript
 			  }
 
 			  const nativeBridgeName = 'ludotsDataplaneNative';
+			  const nativeV8BridgeName = '__ludotsCefV8';
 
 			  function bindNativeBridge() {
 			    if (window[nativeBridgeName]) {
@@ -86,6 +87,25 @@ internal static class CefDataPlaneFacadeScript
 			            normalized.sequence);
 			        })
 			        .then(normalizeBytes);
+			    },
+			    acquireV8Buffer(descriptor) {
+			      const normalized = normalizeDescriptor(descriptor);
+			      return Promise.resolve()
+			        .then(function () {
+			          const v8Bridge = window[nativeV8BridgeName];
+			          if (!v8Bridge || typeof v8Bridge.acquireV8Buffer !== 'function') {
+			            throw new Error('Ludots native V8 buffer bridge is missing acquireV8Buffer.');
+			          }
+
+			          return v8Bridge.acquireV8Buffer(normalized);
+			        })
+			        .then(function (value) {
+			          if (!(value instanceof ArrayBuffer)) {
+			            throw new TypeError('Native V8 buffer bridge did not return ArrayBuffer.');
+			          }
+
+			          return value;
+			        });
 			    },
 			    addEventListener(type, listener, options) {
 			      window.addEventListener(type, listener, options);

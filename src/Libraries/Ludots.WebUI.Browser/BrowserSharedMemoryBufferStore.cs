@@ -70,6 +70,12 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 			_buffersById.Add(slot.BufferId, slot);
 			_buffersByTopic.Add(slot.Topic, slot);
 			_sharedBuffers.RegisterReader(slot.BufferId, slot.Read);
+			_sharedBuffers.RegisterNativeRegion(new BrowserSharedBufferNativeRegion(
+				slot.BufferId,
+				slot.MemoryMapName,
+				slot.CapacityBytes,
+				slot.HeaderBytes,
+				Array.Empty<BrowserSharedBufferLiveRegion>()));
 		}
 	}
 
@@ -106,7 +112,15 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 			}
 		}
 
-		return slot.WriteLatestWins(payload, tick);
+		WebUiSharedBufferWriteResult result = slot.WriteLatestWins(payload, tick);
+		if (result.Accepted)
+		{
+			_sharedBuffers.UpdateNativeRegionLiveRegions(
+				slot.BufferId,
+				slot.GetLiveRegionsSnapshot());
+		}
+
+		return result;
 	}
 
 	public BrowserSharedMemoryBufferInfo GetBufferInfo(string bufferId)
@@ -147,6 +161,7 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 		foreach (SharedMemoryBufferSlot slot in slots)
 		{
 			_sharedBuffers.UnregisterReader(slot.BufferId);
+			_sharedBuffers.UnregisterNativeRegion(slot.BufferId);
 			slot.Dispose();
 		}
 	}
@@ -302,6 +317,20 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 					Accepted: true,
 					CreateDescriptor(byteOffset, payload.Length, tick),
 					Error: string.Empty);
+			}
+		}
+
+		public BrowserSharedBufferLiveRegion[] GetLiveRegionsSnapshot()
+		{
+			lock (_sync)
+			{
+				ThrowIfDisposed();
+				return _regionsByOffset
+					.Select(static region => new BrowserSharedBufferLiveRegion(
+						region.Key,
+						region.Value.ByteLength,
+						region.Value.Sequence))
+					.ToArray();
 			}
 		}
 

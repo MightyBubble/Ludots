@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ludots Minimap Bridge Path</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1 id="path-title">Minimap Path</h1>
+          <p id="path-subtitle">30k minimap markers</p>
+        </div>
+        <div class="status-strip" aria-live="polite">
+          <span id="connection-status">connecting</span>
+          <span id="marker-count">0 markers</span>
+          <span id="transport-mode">transport pending</span>
+          <span class="badge" id="path-badge">path</span>
+        </div>
+      </header>
+
+      <section class="stage">
+        <canvas id="minimap-canvas" width="1024" height="1024" aria-label="Minimap marker path"></canvas>
+        <aside class="metrics" aria-label="Runtime metrics">
+          <div><dt>payload</dt><dd id="payload-bytes">0 B</dd></div>
+          <div><dt id="read-label">read</dt><dd id="read-ms">0.00 ms</dd></div>
+          <div><dt>copy</dt><dd id="copy-ms">-</dd></div>
+          <div><dt>parse</dt><dd id="parse-ms">0.00 ms</dd></div>
+          <div><dt>draw</dt><dd id="draw-ms">0.00 ms</dd></div>
+          <div><dt>frames</dt><dd id="frames">0</dd></div>
+          <div><dt>skipped</dt><dd id="skipped">0</dd></div>
+          <div><dt>status</dt><dd id="path-status">waiting</dd></div>
+        </aside>
+      </section>
+
+      <footer class="notes">
+        <span>single path</span>
+        <span>small markers</span>
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -121,6 +121,69 @@ public sealed class BrowserCanvasContentTests
 	}
 
 	[Test]
+	public void HandleInput_ActiveDragUsesPointerDownContentRectWhenCanvasMoves()
+	{
+		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new MovableBrowserSurfaceCanvasContent(surface, new UiRect(0, 0, 200, 100));
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
+
+		bool downHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 30
+		});
+
+		content.ContentRect = new UiRect(40, 30, 200, 100);
+
+		bool moveHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Move,
+			X = 60,
+			Y = 45
+		});
+
+		Assert.That(downHandled, Is.True);
+		Assert.That(moveHandled, Is.True);
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Left, true)));
+		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 60, 45, BrowserPointerButton.Left, true)));
+	}
+
+	[Test]
+	public void HandleInput_ActiveDragMoveOutsidePointerDownRectPreservesBrowserDelta()
+	{
+		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 400, 300);
+
+		bool downHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 30
+		});
+		bool moveHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Move,
+			X = 260,
+			Y = 180
+		});
+
+		Assert.That(downHandled, Is.True);
+		Assert.That(moveHandled, Is.True);
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Left, true)));
+		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 260, 180, BrowserPointerButton.Left, true)));
+	}
+
+	[Test]
 	public void HandleInput_MiddleDownThenMove_SendsMiddleButtonDragToBrowser()
 	{
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
@@ -499,6 +562,22 @@ public sealed class BrowserCanvasContentTests
 				frame.PixelFormat,
 				frame.DirtyRects,
 				frame.Sequence));
+		}
+	}
+
+	private sealed class MovableBrowserSurfaceCanvasContent : BrowserSurfaceCanvasContent
+	{
+		public MovableBrowserSurfaceCanvasContent(IBrowserSurface surface, UiRect contentRect)
+			: base(surface)
+		{
+			ContentRect = contentRect;
+		}
+
+		public UiRect ContentRect { get; set; }
+
+		public override UiRect GetContentRect(UiNode node)
+		{
+			return ContentRect;
 		}
 	}
 

@@ -1,0 +1,8 @@
+{
+  "startupMapId": "performer_blacksmith_minimap_marker_large_world_showcase",
+  "windowTitle": "Ludots Engine - Browser Minimap Compact Buffer",
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60
+}

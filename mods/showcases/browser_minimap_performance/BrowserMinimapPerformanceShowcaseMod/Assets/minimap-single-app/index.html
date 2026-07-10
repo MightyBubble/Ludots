@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ludots Raw Minimap Performance</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <canvas id="minimap-canvas" width="1024" height="1024" aria-label="Raw minimap markers"></canvas>
+      <section class="hud" aria-label="Raw buffer telemetry">
+        <div class="title-row">
+          <h1>Raw Performance</h1>
+          <span id="path-status">waiting</span>
+        </div>
+        <div class="metric-strip" aria-live="polite">
+          <span id="connection-status">connecting</span>
+          <span id="marker-count">0 markers</span>
+          <span id="payload-bytes">0 B</span>
+          <span id="transport-mode">transport pending</span>
+        </div>
+        <dl class="metrics">
+          <div><dt>read</dt><dd id="read-ms">0.00 ms</dd></div>
+          <div><dt>parse</dt><dd id="parse-ms">0.00 ms</dd></div>
+          <div><dt>draw</dt><dd id="draw-ms">0.00 ms</dd></div>
+          <div><dt>frames</dt><dd id="frames">0</dd></div>
+          <div><dt>skipped</dt><dd id="skipped">0</dd></div>
+          <div><dt>dropped</dt><dd id="dropped">0/0</dd></div>
+          <div><dt>bounds</dt><dd id="bounds">-</dd></div>
+        </dl>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

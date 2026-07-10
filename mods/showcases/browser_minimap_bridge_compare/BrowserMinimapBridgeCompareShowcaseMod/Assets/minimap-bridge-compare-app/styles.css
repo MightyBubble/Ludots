@@ -1,0 +1,248 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b1114;
+  --panel: #111b20;
+  --panel-2: #162228;
+  --line: #2d4148;
+  --text: #ecf6f4;
+  --muted: #9cb3b3;
+  --aqua: #62d8d2;
+  --mint: #7ee7a6;
+  --gold: #f2c14e;
+  --rose: #ff7a90;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgb(8, 18, 22), rgb(10, 15, 17)),
+    #0b1114;
+}
+
+.shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  width: 100vw;
+  height: 100vh;
+  padding: 18px;
+}
+
+.topbar,
+.notes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 56px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 760;
+}
+
+h2 {
+  font-size: 18px;
+  line-height: 1.15;
+  font-weight: 720;
+}
+
+p,
+.notes,
+dt {
+  color: var(--muted);
+}
+
+p {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 360px;
+}
+
+.status-strip span,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(22, 34, 40, 0.82);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  min-height: 0;
+}
+
+.lane {
+  display: grid;
+  grid-template-rows: auto minmax(280px, 1fr) auto auto;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 27, 32, 0.88);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.lane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 58px;
+}
+
+.badge-good {
+  border-color: rgba(126, 231, 166, 0.42);
+  color: var(--mint);
+}
+
+.badge-neutral {
+  border-color: rgba(98, 216, 210, 0.42);
+  color: var(--aqua);
+}
+
+.badge-caution {
+  border-color: rgba(242, 193, 78, 0.46);
+  color: var(--gold);
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  border: 1px solid rgba(75, 104, 112, 0.68);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #081114;
+  background-size: 28px 28px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.metrics div {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(45, 65, 72, 0.88);
+  border-radius: 6px;
+  background: rgba(9, 17, 20, 0.74);
+}
+
+dt {
+  font-size: 11px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+dd {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lane-message {
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(45, 65, 72, 0.88);
+  border-radius: 6px;
+  background: rgba(9, 17, 20, 0.74);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
+.lane-message:empty {
+  display: none;
+}
+
+.lane-message[hidden] {
+  display: none !important;
+}
+
+.notes {
+  min-height: 26px;
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .shell {
+    overflow: auto;
+  }
+
+  body {
+    overflow: auto;
+  }
+
+  .topbar,
+  .notes {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-strip {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lane {
+    min-height: 520px;
+  }
+}
