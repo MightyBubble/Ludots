@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -867,6 +868,417 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void BehaviorSystem_OnceSnapToGround_MissingHeightmap_KeepsOriginalYAndBootstrapPending()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            const float originalY = 9f;
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, originalY, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.once.missing.heightmap", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 21,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                heightmap: null);
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(originalY).Within(0.001f));
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+        }
+
+        [Test]
+        public void BehaviorSystem_OnceSnapToGround_FiniteSample_ResolvesHeightAndClearsBootstrap()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 9f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.once.finite", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 22,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                heightmap: new StubHeightmap(heightCm: 250f));
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(3.75f).Within(0.001f));
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.False);
+        }
+
+        [Test]
+        public void BehaviorSystem_OnceSnapToGround_BatchSampleFailure_KeepsOriginalYAndBootstrapPending()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            const float originalY = 9f;
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, originalY, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.once.unsampleable", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 23,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                heightmap: new UnsampleableHeightmap());
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+
+            Assert.That(
+                world.Get<PerformerWorldPosition>(performer).Value.Y,
+                Is.EqualTo(originalY).Within(0.001f),
+                "Failed Once SnapToGround sample must not write offset/0.");
+            Assert.That(
+                world.Has<PerformerBootstrapPending>(performer),
+                Is.True,
+                "Once SnapToGround bootstrap must stay pending until a finite sample resolves.");
+        }
+
+        [Test]
+        public void BehaviorSystem_OnceSnapToGround_NonFiniteSample_KeepsOriginalYAndBootstrapPending()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            const float originalY = 9f;
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, originalY, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.once.nonfinite", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 24,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                heightmap: new NonFiniteHeightmap());
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(originalY).Within(0.001f));
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+        }
+
+        [Test]
+        public void BehaviorSystem_DoesNotSkipOwnerBackedSnapToGround_WhenOwnerSampleStateUnresolved()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 2.5f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new VisualHeightmapSampleState { FrameId = 7, Sampled = 0 });
+
+            int defId = definitions.Register("entity.grounded.owner.unresolved", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 0f,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 25,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            if (world.Has<PerformerBootstrapPending>(performer))
+            {
+                world.Remove<PerformerBootstrapPending>(performer);
+            }
+
+            Assert.That(
+                world.Has<PerfHasGrounding>(performer),
+                Is.True,
+                "Owner VisualHeightmapSampleState with Sampled=0 is not resolved provenance; performer must still ground.");
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                new PresentationOwnerChangeBuffer(8),
+                sounds,
+                new StubHeightmap(heightCm: 400f));
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(4f).Within(0.001f));
+        }
+
+        [Test]
+        public void BehaviorSystem_OnceSnapToGroundUnresolved_StillProcessesNonGroundingFirstFrameBehaviors()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var sounds = new SoundRequestBuffer();
+            const float originalY = 8f;
+
+            int defId = definitions.Register("entity.grounded.once.with.material", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Material,
+                        ActiveByDefault = true,
+                        Material = new MaterialConfig
+                        {
+                            BaseMaterialId = 9001,
+                            MaterialSwapParamKey = 51,
+                            SwapTable =
+                            [
+                                new MaterialSwapEntry { ParamValue = 1f, MaterialId = 9002 },
+                            ],
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            runtime.BindDefinitions(definitions);
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 0,
+                PresentationAnchorKind.WorldPosition,
+                worldPosition: new Vector3(7f, originalY, 9f),
+                stableId: 9302,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            ref var state = ref world.Get<PerformerState>(performer);
+            state.BehaviorActiveMask = 0b11u;
+            runtime.SetParam(performer, 51, ParamLane.Float, 1f, 0, default);
+            if (!world.Has<PerformerBootstrapPending>(performer))
+            {
+                world.Add(performer, new PerformerBootstrapPending());
+            }
+
+            using (var behaviorSystem = new PerformerBehaviorSystem(
+                       world,
+                       runtime,
+                       definitions,
+                       events,
+                       new PresentationOwnerChangeBuffer(8),
+                       sounds,
+                       heightmap: null))
+            {
+                behaviorSystem.Update(0.016f);
+            }
+
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(originalY).Within(0.001f));
+            Assert.That(
+                world.Has<PerformerBootstrapPending>(performer),
+                Is.True,
+                "Unresolved Once SnapToGround must keep bootstrap pending.");
+            Assert.That(
+                runtime.ResolveInt(performer, 51),
+                Is.EqualTo(9002),
+                "Unresolved Once SnapToGround must not block non-grounding first-frame behavior work.");
+        }
+
+        [Test]
         public void TerrainHeightSync_StaticWithoutHeightmap_ProjectsOnceToZeroAndClearsPending()
         {
             using var world = World.Create();
@@ -892,6 +1304,35 @@ namespace Ludots.Tests.Presentation
             world.Get<VisualTransform>(entity).Position.Y = 9f;
             Assert.DoesNotThrow(() => system.Update(0.016f));
             Assert.That(world.Get<VisualTransform>(entity).Position.Y, Is.EqualTo(9f).Within(0.001f));
+        }
+
+        [Test]
+        public void TerrainHeightSync_DynamicNonFiniteSample_DoesNotMarkOwnerSampled()
+        {
+            using var world = World.Create();
+            world.Create(new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f, FrameId = 17 }, new PresentationFrameStateTag());
+            Entity entity = world.Create(
+                WorldPositionCm.FromCmFloat(100f, 200f),
+                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCmFloat(100f, 200f).Value },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 9f, 2f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new VisualHeightmapSampleState { FrameId = 16, Sampled = 1 });
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.VisualHeightmap.Name] = new NonFiniteHeightmap(),
+            };
+
+            using var system = new TerrainHeightSyncSystem(world, globals);
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<VisualTransform>(entity).Position.Y, Is.EqualTo(9f).Within(0.001f));
+            VisualHeightmapSampleState sampleState = world.Get<VisualHeightmapSampleState>(entity);
+            Assert.That(sampleState.FrameId, Is.EqualTo(17));
+            Assert.That(sampleState.Sampled, Is.EqualTo(0), "Non-finite height samples are not valid owner-height provenance.");
         }
 
         [Test]
@@ -994,6 +1435,104 @@ namespace Ludots.Tests.Presentation
                 }
 
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// Bound heightmap service that refuses batch sampling (declared Ready but not sampleable).
+        /// </summary>
+        private sealed class UnsampleableHeightmap : IVisualHeightmap
+        {
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+            {
+                heightCm = float.NaN;
+                return false;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                for (int i = 0; i < outHeightCm.Length; i++)
+                {
+                    outHeightCm[i] = float.NaN;
+                }
+
+                return false;
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+            {
+                hit = default;
+                return false;
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Heightmap that reports success but yields non-finite heights.
+        /// </summary>
+        private sealed class NonFiniteHeightmap : IVisualHeightmap
+        {
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+            {
+                heightCm = float.NaN;
+                return true;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                for (int i = 0; i < outHeightCm.Length; i++)
+                {
+                    outHeightCm[i] = float.PositiveInfinity;
+                }
+
+                return true;
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+            {
+                hit = default;
+                return false;
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                return false;
             }
         }
 

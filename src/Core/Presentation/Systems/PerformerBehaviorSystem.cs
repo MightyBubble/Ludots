@@ -77,6 +77,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly CommandBuffer _commandBuffer = new();
         private readonly List<Entity> _bootstrapClearList = new(256);
         private readonly List<Entity> _materialDirtyClearList = new(256);
+        private readonly HashSet<int> _bootstrapGroundingDeferredEntityIds = new();
+        private bool _bootstrapPassActive;
         private Vector3[] _groundingPositions = Array.Empty<Vector3>();
         private GroundingMode[] _groundingModes = Array.Empty<GroundingMode>();
         private float[] _groundingOffsets = Array.Empty<float>();
@@ -85,6 +87,7 @@ namespace Ludots.Core.Presentation.Systems
         private float[] _groundingWorldXCm = Array.Empty<float>();
         private float[] _groundingWorldZCm = Array.Empty<float>();
         private float[] _groundingHeightsCm = Array.Empty<float>();
+        private bool[] _groundingResolved = Array.Empty<bool>();
         private bool _warnedMissingGroundingHeightmap;
         private bool _warnedGroundingSampleFailure;
         private readonly HashSet<int> _warnedBoneAttachmentProviderMissing = new();
@@ -201,34 +204,52 @@ namespace Ludots.Core.Presentation.Systems
         private void ProcessCreatedPerformers(float tickDt)
         {
             _bootstrapClearList.Clear();
-            foreach (ref var chunk in World.Query(in _bootstrapPendingQuery))
+            _bootstrapGroundingDeferredEntityIds.Clear();
+            _bootstrapPassActive = true;
+            IVisualHeightmap? heightmap = _heightmapProvider();
+            try
             {
-                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
-                bool processedChunk = false;
-                bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
-                if (singleDefinitionChunk &&
-                    _definitions.TryGet(chunkDefId, out PerformerDefinition chunkDefinition))
+                foreach (ref var chunk in World.Query(in _bootstrapPendingQuery))
                 {
-                    processedChunk = TryProcessBootstrapChunkFast(chunk, states, chunkDefinition, tickDt);
-                }
-
-                ref Entity entityFirst = ref chunk.Entity(0);
-                foreach (int index in chunk)
-                {
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    if (!processedChunk)
+                    Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                    bool processedChunk = false;
+                    bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
+                    if (singleDefinitionChunk &&
+                        _definitions.TryGet(chunkDefId, out PerformerDefinition chunkDefinition))
                     {
-                        ProcessPerformer(
-                            entity,
-                            firstFrame: true,
-                            updateAttributeBindings: true,
-                            updateTagBindings: true,
+                        processedChunk = TryProcessBootstrapChunkFast(
+                            chunk,
+                            states,
+                            chunkDefinition,
                             tickDt,
-                            tickDrivenOnly: false);
+                            heightmap);
                     }
 
-                    _bootstrapClearList.Add(entity);
+                    ref Entity entityFirst = ref chunk.Entity(0);
+                    foreach (int index in chunk)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        if (!processedChunk)
+                        {
+                            ProcessPerformer(
+                                entity,
+                                firstFrame: true,
+                                updateAttributeBindings: true,
+                                updateTagBindings: true,
+                                tickDt,
+                                tickDrivenOnly: false);
+                        }
+
+                        if (!_bootstrapGroundingDeferredEntityIds.Contains(entity.Id))
+                        {
+                            _bootstrapClearList.Add(entity);
+                        }
+                    }
                 }
+            }
+            finally
+            {
+                _bootstrapPassActive = false;
             }
         }
 
@@ -248,7 +269,8 @@ namespace Ludots.Core.Presentation.Systems
             Chunk chunk,
             Span<PerformerState> states,
             PerformerDefinition definition,
-            float tickDt)
+            float tickDt,
+            IVisualHeightmap? heightmap)
         {
             if (!CanProcessBootstrapChunkFast(definition))
             {
@@ -293,27 +315,26 @@ namespace Ludots.Core.Presentation.Systems
                     return true;
                 }
 
-                IVisualHeightmap? heightmap = _heightmapProvider();
                 if (heightmap == null)
                 {
                     WarnMissingGroundingHeightmap();
-                    SetBootstrapGroundingMissingHeightmapHeightBatch(
+                    ResolveMissingBootstrapGroundingBatch(
                         positions,
                         states,
                         definition.BootstrapGroundingBehaviorIndices,
                         definition.Behaviors,
                         chunk);
                 }
-                else
-                {
-                    ApplyBootstrapGroundingBatch(
+                else if (!ApplyBootstrapGroundingBatch(
                         positions,
                         rotations,
                         states,
                         definition.BootstrapGroundingBehaviorIndices,
                         definition.Behaviors,
                         heightmap,
-                        chunk);
+                        chunk))
+                {
+                    // Unresolved entities already marked inside ApplyBootstrapGroundingBatch.
                 }
             }
 
@@ -1290,14 +1311,31 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             IVisualHeightmap? heightmap = _heightmapProvider();
+            bool requireResolvedSample = config.UpdatePolicy == GroundingUpdatePolicy.Once;
             if (heightmap == null)
             {
                 WarnMissingGroundingHeightmap();
+                if (requireResolvedSample)
+                {
+                    MarkBootstrapGroundingDeferred(entity);
+                    return;
+                }
+
                 SetGroundingMissingHeightmapHeight(entity, config.Offset);
                 return;
             }
 
             ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(entity);
+            if (config.Mode == GroundingMode.SnapToGround)
+            {
+                if (!TrySnapToGroundSingle(ref position.Value, config.Offset, heightmap, requireResolvedSample))
+                {
+                    MarkBootstrapGroundingDeferred(entity);
+                }
+
+                return;
+            }
+
             Span<Vector3> positions = stackalloc Vector3[1] { position.Value };
             Span<GroundingMode> modes = stackalloc GroundingMode[1] { config.Mode };
             Span<float> offsets = stackalloc float[1] { config.Offset };
@@ -1316,6 +1354,30 @@ namespace Ludots.Core.Presentation.Systems
             position.Value = positions[0];
         }
 
+        private static bool TrySnapToGroundSingle(
+            ref Vector3 position,
+            float offsetMeters,
+            IVisualHeightmap heightmap,
+            bool requireResolvedSample)
+        {
+            const float metersToCm = 100f;
+            const float cmToMeters = 0.01f;
+            if (!heightmap.TrySampleHeightCm(position.X * metersToCm, position.Z * metersToCm, out float heightCm) ||
+                !float.IsFinite(heightCm))
+            {
+                if (requireResolvedSample)
+                {
+                    return false;
+                }
+
+                position.Y = offsetMeters;
+                return true;
+            }
+
+            position.Y = (heightCm * cmToMeters) + offsetMeters;
+            return true;
+        }
+
         private void WarnMissingGroundingHeightmap()
         {
             if (_warnedMissingGroundingHeightmap)
@@ -1323,8 +1385,59 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Performer grounding requested VisualHeightmap, but none is registered; missing-heightmap grounding writes height 0.");
+            Log.Warn(in LogChannels.Presentation, "Performer grounding requested VisualHeightmap, but none is registered; one-shot grounding remains pending and every-frame grounding uses offset height.");
             _warnedMissingGroundingHeightmap = true;
+        }
+
+        private void MarkBootstrapGroundingDeferred(Entity entity)
+        {
+            if (!_bootstrapPassActive)
+            {
+                return;
+            }
+
+            _bootstrapGroundingDeferredEntityIds.Add(entity.Id);
+        }
+
+        private void ResolveMissingBootstrapGroundingBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerState> states,
+            int[] behaviorIndices,
+            BehaviorSlot[] behaviors,
+            Chunk chunk)
+        {
+            if (!_bootstrapPassActive)
+            {
+                return;
+            }
+
+            ref Entity entityFirst = ref chunk.Entity(0);
+            for (int behaviorIndex = 0; behaviorIndex < behaviorIndices.Length; behaviorIndex++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[behaviorIndex]];
+                if (slot.Kind != BehaviorKind.Grounding ||
+                    slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    if (slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.Once)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _bootstrapGroundingDeferredEntityIds.Add(entity.Id);
+                        continue;
+                    }
+
+                    positions[index].Value.Y = slot.Grounding.Offset;
+                }
+            }
         }
 
         private void WarnGroundingSampleFailure()
@@ -1334,7 +1447,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Performer grounding batch could not sample visual heights; grounding writes height 0.");
+            Log.Warn(in LogChannels.Presentation, "Performer grounding batch could not sample visual heights; one-shot grounding remains pending and every-frame grounding uses offset height.");
             _warnedGroundingSampleFailure = true;
         }
 
@@ -1377,35 +1490,7 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void SetBootstrapGroundingMissingHeightmapHeightBatch(
-            Span<PerformerWorldPosition> positions,
-            Span<PerformerState> states,
-            int[] behaviorIndices,
-            BehaviorSlot[] behaviors,
-            Chunk chunk)
-        {
-            for (int i = 0; i < behaviorIndices.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[i]];
-                if (slot.Kind != BehaviorKind.Grounding ||
-                    slot.Grounding.Mode == GroundingMode.None)
-                {
-                    continue;
-                }
-
-                foreach (int index in chunk)
-                {
-                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        continue;
-                    }
-
-                    positions[index].Value.Y = slot.Grounding.Offset;
-                }
-            }
-        }
-
-        private static bool CanSkipOwnerBackedSnapToGround(
+        private bool CanSkipOwnerBackedSnapToGround(
             in PerformerState state,
             in GroundingConfig config,
             TransformSource transformSource)
@@ -1413,7 +1498,8 @@ namespace Ludots.Core.Presentation.Systems
             if (config.Mode != GroundingMode.SnapToGround ||
                 config.Offset != 0f ||
                 state.AnchorKind != PresentationAnchorKind.Entity ||
-                transformSource != TransformSource.EntityTransform)
+                transformSource != TransformSource.EntityTransform ||
+                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -1430,7 +1516,8 @@ namespace Ludots.Core.Presentation.Systems
                 config.Offset != 0f ||
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 !World.Has<PerformerTransformSource>(performer) ||
-                World.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform)
+                World.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform ||
+                !OwnerHasResolvedVisualHeightSample(state.OwnerEntity))
             {
                 return false;
             }
@@ -1472,7 +1559,8 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
-                    if (!CanSkipOwnerBackedSnapToGroundPerformer(in states[index], transformSources[index].Value))
+                    if (!CanSkipOwnerBackedSnapToGroundPerformer(in states[index], transformSources[index].Value) ||
+                        !OwnerHasResolvedVisualHeightSample(states[index].OwnerEntity))
                     {
                         return false;
                     }
@@ -1496,6 +1584,15 @@ namespace Ludots.Core.Presentation.Systems
             return state.AnchorKind == PresentationAnchorKind.Entity &&
                    transformSource == TransformSource.EntityTransform &&
                    state.OwnerEntity != Entity.Null;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool OwnerHasResolvedVisualHeightSample(Entity owner)
+        {
+            return owner != Entity.Null &&
+                   World.IsAlive(owner) &&
+                   World.Has<VisualHeightmapSampleState>(owner) &&
+                   World.Get<VisualHeightmapSampleState>(owner).Sampled != 0;
         }
 
         private void ApplyGroundingBatch(
@@ -1555,7 +1652,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (slot.Grounding.Mode == GroundingMode.SnapToGround)
                 {
-                    ApplySnapToGroundBatch(count, heightmap);
+                    ApplySnapToGroundBatch(count, heightmap, requireResolvedSample: false, out _);
                 }
                 else
                 {
@@ -1576,7 +1673,11 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void ApplyBootstrapGroundingBatch(
+        /// <returns>
+        /// false when any Once SnapToGround sample is unresolved
+        /// (batch sample failed or non-finite); affected performers keep bootstrap pending.
+        /// </returns>
+        private bool ApplyBootstrapGroundingBatch(
             Span<PerformerWorldPosition> positions,
             Span<PerformerWorldRotation> rotations,
             Span<PerformerState> states,
@@ -1585,6 +1686,8 @@ namespace Ludots.Core.Presentation.Systems
             IVisualHeightmap heightmap,
             Chunk chunk)
         {
+            bool resolved = true;
+            ref Entity entityFirst = ref chunk.Entity(0);
             for (int behaviorIndex = 0; behaviorIndex < behaviorIndices.Length; behaviorIndex++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[behaviorIndex]];
@@ -1592,6 +1695,10 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     continue;
                 }
+
+                bool requireResolvedSample =
+                    slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.Once &&
+                    slot.Grounding.Mode == GroundingMode.SnapToGround;
 
                 int count = 0;
                 EnsureGroundingCapacity(chunk.Count);
@@ -1628,7 +1735,28 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (slot.Grounding.Mode == GroundingMode.SnapToGround)
                 {
-                    ApplySnapToGroundBatch(count, heightmap);
+                    if (!ApplySnapToGroundBatch(count, heightmap, requireResolvedSample, out bool anyUnresolved))
+                    {
+                        resolved = false;
+                        if (requireResolvedSample && anyUnresolved)
+                        {
+                            for (int i = 0; i < count; i++)
+                            {
+                                if (_groundingResolved[i])
+                                {
+                                    continue;
+                                }
+
+                                Entity entity = Unsafe.Add(ref entityFirst, _groundingIndices[i]);
+                                MarkBootstrapGroundingDeferred(entity);
+                            }
+                        }
+                    }
+                    else if (requireResolvedSample)
+                    {
+                        // Partial non-finite: ApplySnapToGroundBatch returns false in that case.
+                        // Success path: write resolved heights below.
+                    }
                 }
                 else
                 {
@@ -1647,12 +1775,23 @@ namespace Ludots.Core.Presentation.Systems
                     rotations[index].Value = _groundingRotations[i];
                 }
             }
+
+            return resolved;
         }
 
-        private void ApplySnapToGroundBatch(int count, IVisualHeightmap heightmap)
+        /// <returns>
+        /// false when <paramref name="requireResolvedSample"/> is true and sampling fails
+        /// or yields a non-finite height (positions left unchanged for unresolved entries).
+        /// </returns>
+        private bool ApplySnapToGroundBatch(
+            int count,
+            IVisualHeightmap heightmap,
+            bool requireResolvedSample,
+            out bool anyUnresolved)
         {
             const float metersToCm = 100f;
             const float cmToMeters = 0.01f;
+            anyUnresolved = false;
             Span<float> worldXCm = _groundingWorldXCm.AsSpan(0, count);
             Span<float> worldZCm = _groundingWorldZCm.AsSpan(0, count);
             Span<float> heightsCm = _groundingHeightsCm.AsSpan(0, count);
@@ -1665,26 +1804,49 @@ namespace Ludots.Core.Presentation.Systems
 
             if (!heightmap.SampleHeightsCm(worldXCm, worldZCm, heightsCm))
             {
+                if (requireResolvedSample)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        _groundingResolved[i] = false;
+                    }
+
+                    anyUnresolved = true;
+                    return false;
+                }
+
                 for (int i = 0; i < count; i++)
                 {
                     _groundingPositions[i].Y = _groundingOffsets[i];
                 }
 
                 WarnGroundingSampleFailure();
-                return;
+                return true;
             }
 
+            bool allResolved = true;
             for (int i = 0; i < count; i++)
             {
+                _groundingResolved[i] = false;
                 float heightCm = heightsCm[i];
                 if (!float.IsFinite(heightCm))
                 {
+                    if (requireResolvedSample)
+                    {
+                        allResolved = false;
+                        anyUnresolved = true;
+                        continue;
+                    }
+
                     _groundingPositions[i].Y = _groundingOffsets[i];
                     continue;
                 }
 
                 _groundingPositions[i].Y = (heightCm * cmToMeters) + _groundingOffsets[i];
+                _groundingResolved[i] = true;
             }
+
+            return allResolved;
         }
 
         private void ApplyParentAttachmentBatch(
@@ -2021,6 +2183,7 @@ namespace Ludots.Core.Presentation.Systems
             Array.Resize(ref _groundingWorldXCm, capacity);
             Array.Resize(ref _groundingWorldZCm, capacity);
             Array.Resize(ref _groundingHeightsCm, capacity);
+            Array.Resize(ref _groundingResolved, capacity);
         }
 
         private bool SetTransform(
