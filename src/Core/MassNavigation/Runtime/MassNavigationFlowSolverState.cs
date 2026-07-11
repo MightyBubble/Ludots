@@ -1207,44 +1207,80 @@ public sealed partial class MassNavigationFlowSolverState
         int startIndex = 0;
         long threadedSteeringStart = observeLocalSteering != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         int backgroundWorkerCount = workerCount - 1;
-        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
-        {
-            int length = baseCount + (workerIndex < remainder ? 1 : 0);
-            var job = _stepJobs[workerIndex];
-            job.Owner = this;
-            job.ScratchSlot = workerIndex;
-            job.StartIndex = startIndex;
-            job.EndIndex = startIndex + length;
-            job.Dt = clampedDt;
-            job.NavGroupRuntime = navGroupRuntime;
-            job.SepRadiusSq = sepRadiusSq;
-            job.SepRadiusCm = sepRadiusCm;
-            job.ArrivalRadiusCm = arrivalRadiusCm;
-            job.ArrivalRadiusSq = arrivalRadiusSq;
-            job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
-            job.HashWidthMinusOne = hwm1;
-            job.HashHeightMinusOne = hhm1;
-            job.InvHashCell = invHashCell;
-            job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;
-            job.UseCandidateGating = _useCandidateGating;
-            if (workerIndex < backgroundWorkerCount)
-            {
-                _stepHandles[workerIndex] = scheduler.Schedule(job);
-            }
-            startIndex += length;
-        }
-
-        scheduler.Flush();
+        int scheduledWorkerCount = 0;
+        Exception? primaryException = null;
+        bool flushed = false;
         try
         {
+            for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+            {
+                int length = baseCount + (workerIndex < remainder ? 1 : 0);
+                var job = _stepJobs[workerIndex];
+                job.Owner = this;
+                job.ScratchSlot = workerIndex;
+                job.StartIndex = startIndex;
+                job.EndIndex = startIndex + length;
+                job.Dt = clampedDt;
+                job.NavGroupRuntime = navGroupRuntime;
+                job.SepRadiusSq = sepRadiusSq;
+                job.SepRadiusCm = sepRadiusCm;
+                job.ArrivalRadiusCm = arrivalRadiusCm;
+                job.ArrivalRadiusSq = arrivalRadiusSq;
+                job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
+                job.HashWidthMinusOne = hwm1;
+                job.HashHeightMinusOne = hhm1;
+                job.InvHashCell = invHashCell;
+                job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;
+                job.UseCandidateGating = _useCandidateGating;
+                if (workerIndex < backgroundWorkerCount)
+                {
+                    _stepHandles[workerIndex] = scheduler.Schedule(job);
+                    scheduledWorkerCount++;
+                }
+                startIndex += length;
+            }
+
+            scheduler.Flush();
+            flushed = true;
             _stepJobs[workerCount - 1].Execute();
+        }
+        catch (Exception exception)
+        {
+            primaryException = exception;
         }
         finally
         {
-            for (int workerIndex = 0; workerIndex < backgroundWorkerCount; workerIndex++)
+            if (!flushed && scheduledWorkerCount > 0)
             {
-                _stepHandles[workerIndex].Complete();
+                try
+                {
+                    scheduler.Flush();
+                }
+                catch (Exception flushException)
+                {
+                    primaryException = primaryException == null
+                        ? flushException
+                        : new AggregateException(primaryException, flushException);
+                }
             }
+
+            for (int workerIndex = 0; workerIndex < scheduledWorkerCount; workerIndex++)
+            {
+                try
+                {
+                    _stepHandles[workerIndex].Complete();
+                }
+                catch (Exception completeException)
+                {
+                    primaryException = primaryException == null
+                        ? completeException
+                        : new AggregateException(primaryException, completeException);
+                }
+            }
+        }
+        if (primaryException != null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primaryException).Throw();
         }
         if (observeLocalSteering != null)
         {

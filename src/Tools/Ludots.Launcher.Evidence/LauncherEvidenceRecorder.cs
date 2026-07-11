@@ -3549,7 +3549,12 @@ public static class LauncherEvidenceRecorder
             failures);
         AddAcceptanceCheck(steadyState.MeasuredDurationSeconds >= steadyState.RequestedDurationSeconds, $"MassNavigation steady-state measurement ran {steadyState.MeasuredDurationSeconds:F3}s, below requested {steadyState.RequestedDurationSeconds}s.", failures);
         AddAcceptanceCheck(steadyState.TickCount > 0, "MassNavigation steady-state measurement executed zero ticks.", failures);
-        AddAcceptanceCheck(steadyState.WorkloadOrderCount > 0, "MassNavigation steady-state measurement submitted zero workload orders.", failures);
+        int expectedWorkloadOrderCount = (int)Math.Ceiling(
+            steadyState.RequestedDurationSeconds / (double)MassNavigationSteadyStateOrderIntervalSeconds);
+        AddAcceptanceCheck(
+            steadyState.WorkloadOrderCount == expectedWorkloadOrderCount,
+            $"MassNavigation steady-state measurement submitted {steadyState.WorkloadOrderCount} workload orders; expected exactly {expectedWorkloadOrderCount} for {steadyState.RequestedDurationSeconds}s at {MassNavigationSteadyStateOrderIntervalSeconds}s intervals.",
+            failures);
         AddAcceptanceCheck(steadyState.InitialAgentCount == expectedAgentCount && steadyState.FinalAgentCount == expectedAgentCount, $"MassNavigation steady-state agent count changed: {steadyState.InitialAgentCount} -> {steadyState.FinalAgentCount}; expected {expectedAgentCount}.", failures);
         AddAcceptanceCheck(steadyState.InitialScenarioSpawnCount == steadyState.FinalScenarioSpawnCount, $"MassNavigation steady-state re-ran scenario spawn: {steadyState.InitialScenarioSpawnCount} -> {steadyState.FinalScenarioSpawnCount}.", failures);
         AddAcceptanceCheck(steadyState.InitialSceneResetCount == steadyState.FinalSceneResetCount, $"MassNavigation steady-state reset the scene: {steadyState.InitialSceneResetCount} -> {steadyState.FinalSceneResetCount}.", failures);

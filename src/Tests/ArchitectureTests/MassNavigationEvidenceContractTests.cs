@@ -55,6 +55,8 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("steady_p95_tick_ms"));
             Assert.That(source, Does.Contain("steady_p99_tick_ms"));
             Assert.That(source, Does.Contain("steady_slowest_ticks"));
+            Assert.That(source, Does.Contain("WorkloadOrderCount == expectedWorkloadOrderCount"));
+            Assert.That(source, Does.Contain("expected exactly {expectedWorkloadOrderCount}"));
             Assert.That(source, Does.Contain("simulation.NavGroupRuntime.PeakActiveGroupCount"));
             Assert.That(source, Does.Contain("simulation.PeakOrderIngestionMemberCount"));
             Assert.That(source, Does.Not.Contain("capacity_navigation_group_peak = timeline.Max"));
