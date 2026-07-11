@@ -198,6 +198,118 @@ public sealed class MassNavigationStreamingOwnershipTests
     }
 
     [Test]
+    public void Simulation_StreamingCapacityFailureDoesNotMoveOrPartiallyPublishWindow()
+    {
+        MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+        config.Streaming.RetainSeconds = 10f;
+        using var board = new GridBoard(
+            new BoardId("transactional-window"),
+            "transactional-window",
+            CreateBoardConfig(chunkSizeCells: 4, gridCellSizeCm: 125));
+        var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+        simulation.BindBoardWorld(board.WorldSize, board.LoadedChunksSource);
+
+        var loadedBefore = new HashSet<long>(board.LoadedChunks.ActiveChunkKeys);
+        float solverCenterXBefore = simulation.SolverWindowCenterXCm;
+        float solverCenterYBefore = simulation.SolverWindowCenterYCm;
+        float workAreaCenterXBefore = simulation.FlowWorkAreaCenterXCm;
+        float workAreaCenterYBefore = simulation.FlowWorkAreaCenterYCm;
+        int workAreaRevisionBefore = simulation.FlowWorkAreaRevision;
+        string workAreaReasonBefore = simulation.FlowWorkAreaReason;
+        string solverDriverBefore = simulation.SolverWindowDriver;
+        int peakLoadedChunkCountBefore = simulation.PeakLoadedChunkCount;
+        int solverMovesBefore = simulation.Telemetry.SolverWindowMovesTotal;
+        int streamingUpdatesBefore = simulation.Telemetry.StreamingWindowUpdatesFrame;
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => simulation.FocusSimulationWindow(new Vector2(50_000f, 50_000f)))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(error.Message, Does.Contain("runtime.capacity.loadedChunkCapacity"));
+            Assert.That(simulation.SolverWindowCenterXCm, Is.EqualTo(solverCenterXBefore));
+            Assert.That(simulation.SolverWindowCenterYCm, Is.EqualTo(solverCenterYBefore));
+            Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(workAreaCenterXBefore));
+            Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(workAreaCenterYBefore));
+            Assert.That(simulation.FlowWorkAreaRevision, Is.EqualTo(workAreaRevisionBefore));
+            Assert.That(simulation.FlowWorkAreaReason, Is.EqualTo(workAreaReasonBefore));
+            Assert.That(simulation.SolverWindowDriver, Is.EqualTo(solverDriverBefore));
+            Assert.That(simulation.LoadedChunkCount, Is.EqualTo(loadedBefore.Count));
+            Assert.That(simulation.PeakLoadedChunkCount, Is.EqualTo(peakLoadedChunkCountBefore));
+            Assert.That(simulation.Telemetry.SolverWindowMovesTotal, Is.EqualTo(solverMovesBefore));
+            Assert.That(simulation.Telemetry.StreamingWindowUpdatesFrame, Is.EqualTo(streamingUpdatesBefore));
+            Assert.That(board.LoadedChunks.ActiveChunkKeys, Is.EquivalentTo(loadedBefore));
+        });
+    }
+
+    [Test]
+    public void Simulation_CommandFocusCapacityFailurePreservesExistingHoldAndTelemetry()
+    {
+        MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+        config.Streaming.RetainSeconds = 10f;
+        using var board = new GridBoard(
+            new BoardId("command-focus-transaction"),
+            "command-focus-transaction",
+            CreateBoardConfig(chunkSizeCells: 4, gridCellSizeCm: 125));
+        var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+        simulation.BindBoardWorld(board.WorldSize, board.LoadedChunksSource);
+        simulation.FocusCommandTarget(new Vector2(5_500f, 5_000f), ReadOnlySpan<Arch.Core.Entity>.Empty);
+
+        var loadedBefore = new HashSet<long>(board.LoadedChunks.ActiveChunkKeys);
+        float commandFocusXBefore = simulation.CommandFocusXCm;
+        float commandFocusYBefore = simulation.CommandFocusYCm;
+        int commandFocusTicksBefore = simulation.CommandFocusTicksRemaining;
+        int commandActorCountBefore = simulation.LastCommandActorCount;
+        float solverCenterXBefore = simulation.SolverWindowCenterXCm;
+        float solverCenterYBefore = simulation.SolverWindowCenterYCm;
+        float workAreaCenterXBefore = simulation.FlowWorkAreaCenterXCm;
+        float workAreaCenterYBefore = simulation.FlowWorkAreaCenterYCm;
+        int solverMovesBefore = simulation.Telemetry.SolverWindowMovesTotal;
+        int streamingUpdatesBefore = simulation.Telemetry.StreamingWindowUpdatesFrame;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            simulation.FocusCommandTarget(new Vector2(50_000f, 50_000f), ReadOnlySpan<Arch.Core.Entity>.Empty));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(simulation.CommandFocusXCm, Is.EqualTo(commandFocusXBefore));
+            Assert.That(simulation.CommandFocusYCm, Is.EqualTo(commandFocusYBefore));
+            Assert.That(simulation.CommandFocusTicksRemaining, Is.EqualTo(commandFocusTicksBefore));
+            Assert.That(simulation.LastCommandActorCount, Is.EqualTo(commandActorCountBefore));
+            Assert.That(simulation.SolverWindowCenterXCm, Is.EqualTo(solverCenterXBefore));
+            Assert.That(simulation.SolverWindowCenterYCm, Is.EqualTo(solverCenterYBefore));
+            Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(workAreaCenterXBefore));
+            Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(workAreaCenterYBefore));
+            Assert.That(simulation.Telemetry.SolverWindowMovesTotal, Is.EqualTo(solverMovesBefore));
+            Assert.That(simulation.Telemetry.StreamingWindowUpdatesFrame, Is.EqualTo(streamingUpdatesBefore));
+            Assert.That(board.LoadedChunks.ActiveChunkKeys, Is.EquivalentTo(loadedBefore));
+        });
+    }
+
+    [Test]
+    public void Simulation_ZeroRetentionReplacesExactCapacityWindow()
+    {
+        MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+        config.Streaming.RetainSeconds = 0f;
+        config.Capacity.LoadedChunkCapacity = 25;
+        using var board = new GridBoard(
+            new BoardId("exact-replacement-window"),
+            "exact-replacement-window",
+            CreateBoardConfig(chunkSizeCells: 4, gridCellSizeCm: 125));
+        var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+        simulation.BindBoardWorld(board.WorldSize, board.LoadedChunksSource);
+        var previousWindow = new HashSet<long>(board.LoadedChunks.ActiveChunkKeys);
+
+        simulation.UpdateStreamingWindow(new Vector2(50_000f, 50_000f));
+
+        Assert.That(simulation.LoadedChunkCount, Is.EqualTo(25));
+        foreach (long chunkKey in previousWindow)
+        {
+            Assert.That(board.LoadedChunks.IsLoaded(chunkKey), Is.False);
+        }
+    }
+
+    [Test]
     public void Simulation_RejectsBoardChunkSizeThatDisagreesWithStreamingConfig()
     {
         MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();

@@ -8,6 +8,13 @@ using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
+internal readonly record struct MassNavigationStreamingWindowUpdate(
+    int MinChunkX,
+    int MaxChunkX,
+    int MinChunkY,
+    int MaxChunkY,
+    bool SameWindow);
+
 internal sealed class MassNavigationStreamingWindow
 {
     private readonly string _contributorKey;
@@ -63,6 +70,12 @@ internal sealed class MassNavigationStreamingWindow
 
     public bool Update(Vector2 worldCenterCm)
     {
+        MassNavigationStreamingWindowUpdate update = PrepareUpdate(worldCenterCm);
+        return ApplyUpdate(update);
+    }
+
+    public MassNavigationStreamingWindowUpdate PrepareUpdate(Vector2 worldCenterCm)
+    {
         WorldGridLoadedChunks loadedChunks = RequireLoadedChunks();
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
@@ -71,13 +84,30 @@ internal sealed class MassNavigationStreamingWindow
         int maxChunkX = MathUtil.FloorDiv(centerX + _radiusCm, chunkSize);
         int minChunkY = MathUtil.FloorDiv(centerY - _radiusCm, chunkSize);
         int maxChunkY = MathUtil.FloorDiv(centerY + _radiusCm, chunkSize);
-        if (minChunkX == _minChunkX &&
+        bool sameWindow = minChunkX == _minChunkX &&
             maxChunkX == _maxChunkX &&
             minChunkY == _minChunkY &&
             maxChunkY == _maxChunkY &&
-            _radiusCm == _cachedRadiusCm)
+            _radiusCm == _cachedRadiusCm;
+        var update = new MassNavigationStreamingWindowUpdate(
+            minChunkX,
+            maxChunkX,
+            minChunkY,
+            maxChunkY,
+            sameWindow);
+        if (!sameWindow)
         {
-            TouchWindow(minChunkX, maxChunkX, minChunkY, maxChunkY);
+            EnsureUpdateCapacity(update);
+        }
+
+        return update;
+    }
+
+    public bool ApplyUpdate(in MassNavigationStreamingWindowUpdate update)
+    {
+        if (update.SameWindow)
+        {
+            TouchWindow(update.MinChunkX, update.MaxChunkX, update.MinChunkY, update.MaxChunkY);
             EvictExpiredChunks();
             return false;
         }
@@ -87,13 +117,13 @@ internal sealed class MassNavigationStreamingWindow
             TouchWindow(_minChunkX, _maxChunkX, _minChunkY, _maxChunkY);
         }
 
-        _minChunkX = minChunkX;
-        _maxChunkX = maxChunkX;
-        _minChunkY = minChunkY;
-        _maxChunkY = maxChunkY;
+        _minChunkX = update.MinChunkX;
+        _maxChunkX = update.MaxChunkX;
+        _minChunkY = update.MinChunkY;
+        _maxChunkY = update.MaxChunkY;
         _cachedRadiusCm = _radiusCm;
         EvictExpiredChunks();
-        TouchWindow(minChunkX, maxChunkX, minChunkY, maxChunkY);
+        TouchWindow(update.MinChunkX, update.MaxChunkX, update.MinChunkY, update.MaxChunkY);
         return true;
     }
 
@@ -153,13 +183,64 @@ internal sealed class MassNavigationStreamingWindow
         }
     }
 
+    private void EnsureUpdateCapacity(in MassNavigationStreamingWindowUpdate update)
+    {
+        int requiredCount = 0;
+        bool refreshPreviousWindow = _cachedRadiusCm != int.MinValue && _retainSeconds > 0f;
+        foreach (KeyValuePair<long, float> pair in _lastTouchedSeconds)
+        {
+            bool inNextWindow = IsInWindow(
+                pair.Key,
+                update.MinChunkX,
+                update.MaxChunkX,
+                update.MinChunkY,
+                update.MaxChunkY);
+            bool refreshedByPreviousWindow = refreshPreviousWindow && IsInCurrentWindow(pair.Key);
+            float elapsedSeconds = _clockSeconds - pair.Value;
+            bool expired = !inNextWindow &&
+                !refreshedByPreviousWindow &&
+                ((_retainSeconds == 0f && elapsedSeconds >= 0f) || elapsedSeconds > _retainSeconds);
+            if (!expired)
+            {
+                requiredCount++;
+            }
+        }
+
+        for (int chunkY = update.MinChunkY; chunkY <= update.MaxChunkY; chunkY++)
+        {
+            for (int chunkX = update.MinChunkX; chunkX <= update.MaxChunkX; chunkX++)
+            {
+                if (!_lastTouchedSeconds.ContainsKey(GraphChunkKey.Pack(chunkX, chunkY)))
+                {
+                    requiredCount++;
+                }
+            }
+        }
+
+        if (requiredCount > _chunkCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation streaming update requires {requiredCount} retained chunks, exceeding runtime.capacity.loadedChunkCapacity {_chunkCapacity}.");
+        }
+    }
+
     private bool IsInCurrentWindow(long chunkKey)
     {
+        return IsInWindow(chunkKey, _minChunkX, _maxChunkX, _minChunkY, _maxChunkY);
+    }
+
+    private static bool IsInWindow(
+        long chunkKey,
+        int minChunkX,
+        int maxChunkX,
+        int minChunkY,
+        int maxChunkY)
+    {
         (int chunkX, int chunkY) = GraphChunkKey.Unpack(chunkKey);
-        return chunkX >= _minChunkX &&
-               chunkX <= _maxChunkX &&
-               chunkY >= _minChunkY &&
-               chunkY <= _maxChunkY;
+        return chunkX >= minChunkX &&
+               chunkX <= maxChunkX &&
+               chunkY >= minChunkY &&
+               chunkY <= maxChunkY;
     }
 
     private void TouchChunk(long chunkKey)

@@ -6,6 +6,27 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
+internal struct MassNavigationSolverWindowTransition
+{
+    internal float CenterXCm;
+    internal float CenterYCm;
+    internal int CommandFocusTicksRemaining;
+    internal bool HasCommandFocus;
+    internal float LastCommandFocusXCm;
+    internal float LastCommandFocusYCm;
+    internal int LastCommandActorCount;
+    internal float WorkAreaCenterXCm;
+    internal float WorkAreaCenterYCm;
+    internal float WorkAreaWidthCm;
+    internal float WorkAreaHeightCm;
+    internal int WorkAreaRevision;
+    internal string WorkAreaReason;
+    internal string Driver;
+    internal bool SolverMoved;
+
+    public Vector2 StreamingFocus => new(WorkAreaCenterXCm, WorkAreaCenterYCm);
+}
+
 internal sealed class MassNavigationSolverWindowCoordinator
 {
     private readonly int _commandFocusHoldTicks;
@@ -95,51 +116,124 @@ internal sealed class MassNavigationSolverWindowCoordinator
         _workAreaCenterYCm = _centerYCm;
     }
 
-    public bool AdvanceCommandFocus()
+    public MassNavigationSolverWindowTransition PlanAdvanceCommandFocus(out bool streamingUpdateRequired)
     {
-        if (_commandFocusTicksRemaining <= 0)
+        MassNavigationSolverWindowTransition transition = CaptureTransition();
+        if (transition.CommandFocusTicksRemaining <= 0)
         {
-            _hasCommandFocus = false;
-            return false;
+            transition.HasCommandFocus = false;
+            streamingUpdateRequired = false;
+            return transition;
         }
 
-        _commandFocusTicksRemaining--;
-        if (_commandFocusTicksRemaining > 0)
+        transition.CommandFocusTicksRemaining--;
+        if (transition.CommandFocusTicksRemaining > 0)
         {
-            return false;
+            streamingUpdateRequired = false;
+            return transition;
         }
 
-        _hasCommandFocus = false;
-        return true;
+        transition.HasCommandFocus = false;
+        streamingUpdateRequired = true;
+        return transition;
     }
 
-    public void BeginCommandFocus(Vector2 worldCenterCm, int commandActorCount)
+    public MassNavigationSolverWindowTransition PlanManualFocus(
+        Vector2 worldCenterCm,
+        float focusWidthCm,
+        float focusHeightCm,
+        ReadOnlySpan<Entity> commandActors,
+        MassNavigationAgentState agentState,
+        MassNavigationFlowSolverState flow,
+        string workAreaReason,
+        string solverReason)
     {
-        _hasCommandFocus = true;
-        _lastCommandFocusXCm = worldCenterCm.X;
-        _lastCommandFocusYCm = worldCenterCm.Y;
-        _lastCommandActorCount = commandActorCount;
-        _commandFocusTicksRemaining = _commandFocusHoldTicks;
+        MassNavigationSolverWindowTransition transition = CaptureTransition();
+        PlanWorkArea(
+            ref transition,
+            worldCenterCm,
+            focusWidthCm,
+            focusHeightCm,
+            commandActors,
+            agentState,
+            flow,
+            workAreaReason);
+        PlanMove(ref transition, worldCenterCm, solverReason);
+        return transition;
     }
 
-    public bool Move(Vector2 requestedCenterCm, string reason)
+    public MassNavigationSolverWindowTransition PlanCommandFocus(
+        Vector2 worldCenterCm,
+        int commandActorCount,
+        float focusWidthCm,
+        float focusHeightCm,
+        ReadOnlySpan<Entity> commandActors,
+        MassNavigationAgentState agentState,
+        MassNavigationFlowSolverState flow,
+        string workAreaReason,
+        string solverReason)
     {
-        float nextCenterX = requestedCenterCm.X;
-        float nextCenterY = requestedCenterCm.Y;
-        ClampWindowCenter(ref nextCenterX, ref nextCenterY);
-        if (MathF.Abs(nextCenterX - _centerXCm) < 0.5f &&
-            MathF.Abs(nextCenterY - _centerYCm) < 0.5f)
-        {
-            return false;
-        }
-
-        _centerXCm = nextCenterX;
-        _centerYCm = nextCenterY;
-        _driver = reason;
-        return true;
+        MassNavigationSolverWindowTransition transition = CaptureTransition();
+        transition.HasCommandFocus = true;
+        transition.LastCommandFocusXCm = worldCenterCm.X;
+        transition.LastCommandFocusYCm = worldCenterCm.Y;
+        transition.LastCommandActorCount = commandActorCount;
+        transition.CommandFocusTicksRemaining = _commandFocusHoldTicks;
+        PlanWorkArea(
+            ref transition,
+            worldCenterCm,
+            focusWidthCm,
+            focusHeightCm,
+            commandActors,
+            agentState,
+            flow,
+            workAreaReason);
+        PlanMove(ref transition, worldCenterCm, solverReason);
+        return transition;
     }
 
-    public void ObserveWorkArea(
+    public MassNavigationSolverWindowTransition PlanRuntimeFocus(
+        Vector2 focusCm,
+        float focusWidthCm,
+        float focusHeightCm,
+        ReadOnlySpan<Entity> commandActors,
+        MassNavigationAgentState agentState,
+        MassNavigationFlowSolverState flow,
+        string reason)
+    {
+        MassNavigationSolverWindowTransition transition = CaptureTransition();
+        PlanWorkArea(
+            ref transition,
+            focusCm,
+            focusWidthCm,
+            focusHeightCm,
+            commandActors,
+            agentState,
+            flow,
+            reason);
+        return transition;
+    }
+
+    public void Commit(in MassNavigationSolverWindowTransition transition)
+    {
+        _centerXCm = transition.CenterXCm;
+        _centerYCm = transition.CenterYCm;
+        _commandFocusTicksRemaining = transition.CommandFocusTicksRemaining;
+        _hasCommandFocus = transition.HasCommandFocus;
+        _lastCommandFocusXCm = transition.LastCommandFocusXCm;
+        _lastCommandFocusYCm = transition.LastCommandFocusYCm;
+        _lastCommandActorCount = transition.LastCommandActorCount;
+        _workAreaCenterXCm = transition.WorkAreaCenterXCm;
+        _workAreaCenterYCm = transition.WorkAreaCenterYCm;
+        _workAreaWidthCm = transition.WorkAreaWidthCm;
+        _workAreaHeightCm = transition.WorkAreaHeightCm;
+        _workAreaRevision = transition.WorkAreaRevision;
+        _workAreaReason = transition.WorkAreaReason;
+        _driver = transition.Driver;
+    }
+
+    private void PlanWorkArea(
+        ref MassNavigationSolverWindowTransition transition,
         Vector2 focusCm,
         float focusWidthCm,
         float focusHeightCm,
@@ -155,12 +249,27 @@ internal sealed class MassNavigationSolverWindowCoordinator
         float minY = focusCm.Y - (clampedHeight * 0.5f);
         float maxY = focusCm.Y + (clampedHeight * 0.5f);
 
-        if (HasCommandFocus)
+        if (TransitionHasCommandFocus(in transition))
         {
-            IncludePoint(ref minX, ref maxX, ref minY, ref maxY, _lastCommandFocusXCm, _lastCommandFocusYCm);
+            IncludePoint(
+                ref minX,
+                ref maxX,
+                ref minY,
+                ref maxY,
+                transition.LastCommandFocusXCm,
+                transition.LastCommandFocusYCm);
         }
 
-        IncludeCommandActorBounds(ref minX, ref maxX, ref minY, ref maxY, commandActors, agentState, flow);
+        IncludeCommandActorBounds(
+            ref minX,
+            ref maxX,
+            ref minY,
+            ref maxY,
+            commandActors,
+            agentState,
+            flow,
+            transition.CenterXCm,
+            transition.CenterYCm);
         minX -= _workAreaPaddingCm;
         maxX += _workAreaPaddingCm;
         minY -= _workAreaPaddingCm;
@@ -172,21 +281,67 @@ internal sealed class MassNavigationSolverWindowCoordinator
         float centerX = (minX + maxX) * 0.5f;
         float centerY = (minY + maxY) * 0.5f;
         ClampWorkAreaCenter(ref centerX, ref centerY, width, height);
-        if (MathF.Abs(centerX - _workAreaCenterXCm) < 0.5f &&
-            MathF.Abs(centerY - _workAreaCenterYCm) < 0.5f &&
-            MathF.Abs(width - _workAreaWidthCm) < 0.5f &&
-            MathF.Abs(height - _workAreaHeightCm) < 0.5f &&
-            string.Equals(_workAreaReason, reason, StringComparison.Ordinal))
+        if (MathF.Abs(centerX - transition.WorkAreaCenterXCm) < 0.5f &&
+            MathF.Abs(centerY - transition.WorkAreaCenterYCm) < 0.5f &&
+            MathF.Abs(width - transition.WorkAreaWidthCm) < 0.5f &&
+            MathF.Abs(height - transition.WorkAreaHeightCm) < 0.5f &&
+            string.Equals(transition.WorkAreaReason, reason, StringComparison.Ordinal))
         {
             return;
         }
 
-        _workAreaCenterXCm = centerX;
-        _workAreaCenterYCm = centerY;
-        _workAreaWidthCm = width;
-        _workAreaHeightCm = height;
-        _workAreaReason = reason;
-        _workAreaRevision++;
+        transition.WorkAreaCenterXCm = centerX;
+        transition.WorkAreaCenterYCm = centerY;
+        transition.WorkAreaWidthCm = width;
+        transition.WorkAreaHeightCm = height;
+        transition.WorkAreaReason = reason;
+        transition.WorkAreaRevision++;
+    }
+
+    private MassNavigationSolverWindowTransition CaptureTransition()
+    {
+        return new MassNavigationSolverWindowTransition
+        {
+            CenterXCm = _centerXCm,
+            CenterYCm = _centerYCm,
+            CommandFocusTicksRemaining = _commandFocusTicksRemaining,
+            HasCommandFocus = _hasCommandFocus,
+            LastCommandFocusXCm = _lastCommandFocusXCm,
+            LastCommandFocusYCm = _lastCommandFocusYCm,
+            LastCommandActorCount = _lastCommandActorCount,
+            WorkAreaCenterXCm = _workAreaCenterXCm,
+            WorkAreaCenterYCm = _workAreaCenterYCm,
+            WorkAreaWidthCm = _workAreaWidthCm,
+            WorkAreaHeightCm = _workAreaHeightCm,
+            WorkAreaRevision = _workAreaRevision,
+            WorkAreaReason = _workAreaReason,
+            Driver = _driver,
+        };
+    }
+
+    private void PlanMove(
+        ref MassNavigationSolverWindowTransition transition,
+        Vector2 requestedCenterCm,
+        string reason)
+    {
+        float nextCenterX = requestedCenterCm.X;
+        float nextCenterY = requestedCenterCm.Y;
+        ClampWindowCenter(ref nextCenterX, ref nextCenterY);
+        if (MathF.Abs(nextCenterX - transition.CenterXCm) < 0.5f &&
+            MathF.Abs(nextCenterY - transition.CenterYCm) < 0.5f)
+        {
+            return;
+        }
+
+        transition.CenterXCm = nextCenterX;
+        transition.CenterYCm = nextCenterY;
+        transition.Driver = reason;
+        transition.SolverMoved = true;
+    }
+
+    private static bool TransitionHasCommandFocus(in MassNavigationSolverWindowTransition transition)
+    {
+        return transition.HasCommandFocus && transition.CommandFocusTicksRemaining > 0;
     }
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
@@ -212,8 +367,12 @@ internal sealed class MassNavigationSolverWindowCoordinator
         ref float maxY,
         ReadOnlySpan<Entity> commandActors,
         MassNavigationAgentState agentState,
-        MassNavigationFlowSolverState flow)
+        MassNavigationFlowSolverState flow,
+        float solverCenterXCm,
+        float solverCenterYCm)
     {
+        float solverMinXCm = solverCenterXCm - (_widthCm * 0.5f);
+        float solverMinYCm = solverCenterYCm - (_heightCm * 0.5f);
         for (int i = 0; i < commandActors.Length; i++)
         {
             if (!agentState.TryGetControllableIndex(commandActors[i], out int unitIndex) ||
@@ -227,8 +386,8 @@ internal sealed class MassNavigationSolverWindowCoordinator
                 ref maxX,
                 ref minY,
                 ref maxY,
-                ToWorldXCm(flow.GetPositionX(unitIndex)),
-                ToWorldYCm(flow.GetPositionY(unitIndex)));
+                flow.GetPositionX(unitIndex) + solverMinXCm,
+                flow.GetPositionY(unitIndex) + solverMinYCm);
         }
     }
 

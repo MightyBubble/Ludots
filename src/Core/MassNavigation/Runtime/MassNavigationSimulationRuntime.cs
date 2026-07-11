@@ -341,9 +341,20 @@ public sealed class MassNavigationSimulationRuntime
         _frameIndex++;
         Telemetry.BeginFrame(dt);
         _streamingWindow.AdvanceClock(dt);
-        if (_solverWindow.AdvanceCommandFocus())
+        MassNavigationSolverWindowTransition transition = _solverWindow.PlanAdvanceCommandFocus(
+            out bool streamingUpdateRequired);
+        if (!streamingUpdateRequired)
         {
-            UpdateStreamingWindow(_solverWindow.StreamingFocus);
+            _solverWindow.Commit(transition);
+            return;
+        }
+
+        MassNavigationStreamingWindowUpdate streamingUpdate = _streamingWindow.PrepareUpdate(
+            transition.StreamingFocus);
+        _solverWindow.Commit(transition);
+        if (_streamingWindow.ApplyUpdate(streamingUpdate))
+        {
+            Telemetry.MarkStreamingWindowUpdated();
         }
     }
 
@@ -768,31 +779,36 @@ public sealed class MassNavigationSimulationRuntime
 
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        _solverWindow.ObserveWorkArea(
+        MassNavigationSolverWindowTransition transition = _solverWindow.PlanManualFocus(
             worldCenterCm,
             SolverWindowWidthCm,
             SolverWindowHeightCm,
             ReadOnlySpan<Entity>.Empty,
             AgentState,
             MassNavigationFlow,
-            "manual focus");
-        MoveSolverWindow(worldCenterCm, "manual nav focus");
-        UpdateStreamingWindow(_solverWindow.StreamingFocus);
+            "manual focus",
+            "manual nav focus");
+        MassNavigationStreamingWindowUpdate streamingUpdate = _streamingWindow.PrepareUpdate(
+            transition.StreamingFocus);
+        CommitFocusTransition(transition, streamingUpdate, markFocusBudgetUpdated: false);
     }
 
     public void FocusCommandTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> commandActors)
     {
-        _solverWindow.BeginCommandFocus(worldCenterCm, commandActors.Length);
-        _solverWindow.ObserveWorkArea(
+        string reason = commandActors.Length > 0 ? "actor command" : "team command";
+        MassNavigationSolverWindowTransition transition = _solverWindow.PlanCommandFocus(
             worldCenterCm,
+            commandActors.Length,
             SolverWindowWidthCm,
             SolverWindowHeightCm,
             commandActors,
             AgentState,
             MassNavigationFlow,
-            commandActors.Length > 0 ? "actor command" : "team command");
-        MoveSolverWindow(_solverWindow.SolverFocus, commandActors.Length > 0 ? "actor command" : "team command");
-        UpdateStreamingWindow(_solverWindow.StreamingFocus);
+            reason,
+            reason);
+        MassNavigationStreamingWindowUpdate streamingUpdate = _streamingWindow.PrepareUpdate(
+            transition.StreamingFocus);
+        CommitFocusTransition(transition, streamingUpdate, markFocusBudgetUpdated: false);
     }
 
     public void FocusCommandTargetForEntities(System.Numerics.Vector2 worldCenterCm, Entity[] commandActors)
@@ -802,16 +818,18 @@ public sealed class MassNavigationSimulationRuntime
 
     public void ObserveRuntimeFocus(System.Numerics.Vector2 focusCenterCm, float focusWidthCm, float focusHeightCm)
     {
-        _solverWindow.ObserveWorkArea(
+        string reason = _solverWindow.HasCommandFocus ? "runtime focus + command hold" : "runtime focus";
+        MassNavigationSolverWindowTransition transition = _solverWindow.PlanRuntimeFocus(
             focusCenterCm,
             MathF.Max(1f, focusWidthCm),
             MathF.Max(1f, focusHeightCm),
             ReadOnlySpan<Entity>.Empty,
             AgentState,
             MassNavigationFlow,
-            _solverWindow.HasCommandFocus ? "runtime focus + command hold" : "runtime focus");
-        Telemetry.MarkFocusBudgetUpdated();
-        UpdateStreamingWindow(_solverWindow.StreamingFocus);
+            reason);
+        MassNavigationStreamingWindowUpdate streamingUpdate = _streamingWindow.PrepareUpdate(
+            transition.StreamingFocus);
+        CommitFocusTransition(transition, streamingUpdate, markFocusBudgetUpdated: true);
     }
 
     public System.Numerics.Vector2 ToLocalCm(System.Numerics.Vector2 worldCm)
@@ -1176,21 +1194,36 @@ public sealed class MassNavigationSimulationRuntime
 
     public void UpdateStreamingWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        if (_streamingWindow.Update(worldCenterCm))
+        MassNavigationStreamingWindowUpdate update = _streamingWindow.PrepareUpdate(worldCenterCm);
+        if (_streamingWindow.ApplyUpdate(update))
         {
             Telemetry.MarkStreamingWindowUpdated();
         }
     }
 
-    private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)
+    private void CommitFocusTransition(
+        in MassNavigationSolverWindowTransition transition,
+        in MassNavigationStreamingWindowUpdate streamingUpdate,
+        bool markFocusBudgetUpdated)
     {
-        if (!_solverWindow.Move(requestedCenterCm, reason))
+        _solverWindow.Commit(transition);
+        if (transition.SolverMoved)
         {
-            return;
+            MassNavigationFlow.RebaseWorldOrigin(
+                transition.CenterXCm - (SolverWindowWidthCm * 0.5f),
+                transition.CenterYCm - (SolverWindowHeightCm * 0.5f));
+            Telemetry.MarkSolverWindowMoved();
         }
 
-        MassNavigationFlow.RebaseWorldOrigin(_solverWindow.MinXCm, _solverWindow.MinYCm);
-        Telemetry.MarkSolverWindowMoved();
+        if (_streamingWindow.ApplyUpdate(streamingUpdate))
+        {
+            Telemetry.MarkStreamingWindowUpdated();
+        }
+
+        if (markFocusBudgetUpdated)
+        {
+            Telemetry.MarkFocusBudgetUpdated();
+        }
     }
 
     private static void UpsertComponent<T>(World world, Entity entity, T component)
