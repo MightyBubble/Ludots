@@ -109,10 +109,9 @@ public sealed partial class MassNavigationFlowSolverState
     private float _maxBodyRadiusCm;
     private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
     private bool _maxInteractingBodyRadiiDirty = true;
-    private int _lastFlowStepFrame = int.MinValue;
-    private int _lastCrowdStampFrame = int.MinValue;
-    private int _lastObstacleStampFrame = int.MinValue;
     private int _crowdStampCursor;
+    private int _preparedAgentCapacity = -1;
+    private int _avoidanceNeighborLimit;
     private float _worldOriginXCm;
     private float _worldOriginYCm;
     private float _worldMinXCm = float.NegativeInfinity;
@@ -137,6 +136,8 @@ public sealed partial class MassNavigationFlowSolverState
     public int GridHeight => _gridHeight;
     public int MaxObstacleCount => _maxObstacleCount;
     public int ParallelWorkerCount => _parallelWorkerCount;
+    internal int PreparedAgentCapacity => _preparedAgentCapacity;
+    internal int AgentStorageAllocationCount { get; private set; }
     public int SeparationHashCellSizeCm => _separationHashCellSizeCm;
     public int SeparationHashWidth => _separationHashWidth;
     public int SeparationHashHeight => _separationHashHeight;
@@ -208,7 +209,26 @@ public sealed partial class MassNavigationFlowSolverState
             throw new InvalidOperationException("MassNavigationFlowSolverState agent capacity preallocation requires unitCapacity >= 0.");
         }
 
-        EnsureCapacity(unitCapacity);
+        if (UnitCount != 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigationFlowSolverState agent capacity can only be prepared before agents enter the solver.");
+        }
+
+        if (_preparedAgentCapacity >= 0)
+        {
+            if (_preparedAgentCapacity != unitCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigationFlowSolverState agent capacity is already prepared at {_preparedAgentCapacity}; requested {unitCapacity}.");
+            }
+
+            return;
+        }
+
+        _preparedAgentCapacity = unitCapacity;
+        AllocateAgentStorage(unitCapacity);
+        AllocateAvoidanceScratch();
     }
 
     public Vector2 WorldToLocalCm(Vector2 worldCm)
@@ -321,7 +341,7 @@ public sealed partial class MassNavigationFlowSolverState
     public void Reset(
         ReadOnlySpan<int> teamIds,
         int unitsPerTeam,
-        MassNavigationAgentProfileSetConfig profileSet,
+        MassNavigationAgentProfilePlanSet profileSet,
         MassNavigationAgentLayer layer,
         MassNavigationScenarioSpawnLayoutConfig spawnLayout)
     {
@@ -340,8 +360,9 @@ public sealed partial class MassNavigationFlowSolverState
             throw new InvalidOperationException("MassNavigationFlowSolverState scenario reset requires explicit spawn layout config.");
         }
 
-        UnitCount = checked(unitsPerTeam * teamIds.Length);
-        EnsureCapacity(UnitCount);
+        int unitCount = checked(unitsPerTeam * teamIds.Length);
+        PrepareOrRequireAgentCapacity(unitCount);
+        UnitCount = unitCount;
         InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
         ClearRuntimeObstacles();
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
@@ -354,8 +375,9 @@ public sealed partial class MassNavigationFlowSolverState
 
     public void ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
-        UnitCount = agentSeeds.Length;
-        EnsureCapacity(UnitCount);
+        int unitCount = agentSeeds.Length;
+        PrepareOrRequireAgentCapacity(unitCount);
+        UnitCount = unitCount;
         InitializeTeams(agentSeeds);
         ClearRuntimeObstacles();
         InitializeUnits(agentSeeds);
@@ -375,7 +397,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         int startIndex = UnitCount;
         int newTotal = checked(startIndex + newAgentSeeds.Length);
-        EnsureCapacity(newTotal);
+        RequirePreparedAgentCapacity(newTotal);
         for (int i = 0; i < newAgentSeeds.Length; i++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[i];
@@ -988,7 +1010,7 @@ public sealed partial class MassNavigationFlowSolverState
             return;
         }
 
-        long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        long prepStart = observeStepPrep != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         RefreshTeamRelationshipMatrixIfStale();
 
         float clampedDt = Math.Clamp(dt, 0f, Semantics.Solver.MaxStepDtSeconds);
@@ -1011,7 +1033,10 @@ public sealed partial class MassNavigationFlowSolverState
 
         RecomputeMaxInteractingBodyRadiiCmIfDirty();
         BuildSeparationHash(_readPositionsCm);
-        observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        if (observeStepPrep != null)
+        {
+            observeStepPrep((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        }
 
         int hwm1 = _separationHashWidth - 1;
         int hhm1 = _separationHashHeight - 1;
@@ -1021,17 +1046,23 @@ public sealed partial class MassNavigationFlowSolverState
         int workerCount = Math.Min(_parallelWorkerCount, UnitCount);
         if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
-            long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
-            observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            long steeringStart = observeLocalSteering != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+            StepRange(0, UnitCount, 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
+            if (observeLocalSteering != null)
+            {
+                observeLocalSteering((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            }
             ClampAllPositionsToWorldBounds();
-            long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
+            long resolveStart = observeHardResolve != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
             if (runHardResolve)
             {
                 ResolveHardPenetration();
                 ClampAllPositionsToWorldBounds();
             }
-            observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            if (observeHardResolve != null)
+            {
+                observeHardResolve((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            }
             UpdateSettledUnitCount();
             MarkMovedEntitiesDirty();
             return;
@@ -1042,12 +1073,13 @@ public sealed partial class MassNavigationFlowSolverState
         int baseCount = UnitCount / workerCount;
         int remainder = UnitCount % workerCount;
         int startIndex = 0;
-        long threadedSteeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        long threadedSteeringStart = observeLocalSteering != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
         {
             int length = baseCount + (workerIndex < remainder ? 1 : 0);
             var job = _stepJobs[workerIndex];
             job.Owner = this;
+            job.ScratchSlot = workerIndex;
             job.StartIndex = startIndex;
             job.EndIndex = startIndex + length;
             job.Dt = clampedDt;
@@ -1071,63 +1103,42 @@ public sealed partial class MassNavigationFlowSolverState
         {
             _stepHandles[workerIndex].Complete();
         }
-        observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        if (observeLocalSteering != null)
+        {
+            observeLocalSteering((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        }
 
         ClampAllPositionsToWorldBounds();
-        long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        long hardResolveStart = observeHardResolve != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         if (runHardResolve)
         {
             ResolveHardPenetration();
             ClampAllPositionsToWorldBounds();
         }
-        observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        if (observeHardResolve != null)
+        {
+            observeHardResolve((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        }
         UpdateSettledUnitCount();
         MarkMovedEntitiesDirty();
     }
 
     public bool AdvanceFlowPipeline(
-        MassNavigationFlowTuning tuning,
+        MassNavigationFlowPlan config,
         bool refreshFlow,
         bool refreshCrowd,
         bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
-        return AdvanceFlowPipelineCore(tuning, 0, useConfiguredIntervals: false, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
-    }
-
-    public bool AdvanceFlowPipeline(MassNavigationFlowTuning tuning, int frameIndex, Action<double>? observeFlowFieldRebuild = null)
-    {
-        return AdvanceFlowPipelineCore(
-            tuning,
-            frameIndex,
-            useConfiguredIntervals: true,
-            tuning.ForceRefreshFlow,
-            tuning.ForceRefreshCrowd,
-            tuning.ForceRefreshObstacles,
-            observeFlowFieldRebuild);
-    }
-
-    private bool AdvanceFlowPipelineCore(
-        MassNavigationFlowTuning tuning,
-        int frameIndex,
-        bool useConfiguredIntervals,
-        bool forceRefreshFlow,
-        bool forceRefreshCrowd,
-        bool forceRefreshObstacles,
-        Action<double>? observeFlowFieldRebuild)
-    {
-        bool refreshObstacles = _flowDirty || forceRefreshObstacles || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks));
-        bool refreshCrowd = _flowDirty || forceRefreshCrowd || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks));
-        bool refreshFlow = _flowDirty || forceRefreshFlow || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks));
-        tuning.ForceRefreshFlow = false;
-        tuning.ForceRefreshCrowd = false;
-        tuning.ForceRefreshObstacles = false;
+        refreshObstacles |= _flowDirty;
+        refreshCrowd |= _flowDirty;
+        refreshFlow |= _flowDirty;
         if (!refreshObstacles && !refreshCrowd && !refreshFlow)
         {
             return false;
         }
 
-        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        long start = observeFlowFieldRebuild != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
         if (refreshObstacles)
         {
             RebuildStaticObstacleCost();
@@ -1135,25 +1146,54 @@ public sealed partial class MassNavigationFlowSolverState
 
         if (refreshCrowd || refreshObstacles)
         {
+            RebuildFlowCosts(config.CrowdCostEnabled
+                ? config.CrowdStampBudgetAgentsPerRefresh
+                : 0);
             refreshFlow = true;
         }
 
         if (refreshFlow)
         {
-            ComputeFlowFields(tuning.Enabled ? tuning.IterationsPerStep : 0);
+            SolveFlowFields();
             _flowDirty = false;
         }
 
-        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
-        observeFlowFieldRebuild?.Invoke(LastFlowFieldRebuildMs);
+        if (observeFlowFieldRebuild != null)
+        {
+            LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
+            observeFlowFieldRebuild(LastFlowFieldRebuildMs);
+        }
+
         return true;
     }
 
-    private void EnsureCapacity(int unitCount)
+    private void PrepareOrRequireAgentCapacity(int unitCount)
     {
+        if (_preparedAgentCapacity < 0)
+        {
+            PreallocateAgentCapacity(unitCount);
+            return;
+        }
+
+        RequirePreparedAgentCapacity(unitCount);
+    }
+
+    private void RequirePreparedAgentCapacity(int requiredUnitCount)
+    {
+        if (requiredUnitCount > _preparedAgentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlowSolverState requires {requiredUnitCount} agents, exceeding prepared agent capacity {_preparedAgentCapacity}.");
+        }
+    }
+
+    private void AllocateAgentStorage(int unitCount)
+    {
+        bool storageGrew = false;
         int vectorLength = Math.Max(0, unitCount * 2);
         if (_positionsCm.Length < vectorLength)
         {
+            storageGrew = true;
             Array.Resize(ref _positionsCm, vectorLength);
             Array.Resize(ref _velocitiesCm, vectorLength);
             Array.Resize(ref _readPositionsCm, vectorLength);
@@ -1165,6 +1205,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         if (_teams.Length < unitCount)
         {
+            storageGrew = true;
             Array.Resize(ref _teams, unitCount);
             Array.Resize(ref _teamRuntimeIndices, unitCount);
             Array.Resize(ref _teamLocalIndices, unitCount);
@@ -1194,28 +1235,34 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _arrivalEventAgentIndices, unitCount);
         }
 
-        int avoidanceNeighborCapacity = Math.Max(0, unitCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
-        if (_avoidanceNeighborScratch.Length < avoidanceNeighborCapacity)
+        if (storageGrew)
         {
-            Array.Resize(ref _avoidanceNeighborScratch, avoidanceNeighborCapacity);
+            AgentStorageAllocationCount++;
         }
+    }
 
-        int orcaLineCapacity = Math.Max(0, unitCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
-        if (_orcaLineScratch.Length < orcaLineCapacity)
+    private void AllocateAvoidanceScratch()
+    {
+        int workerSlots = Math.Max(1, _parallelWorkerCount);
+        switch (AvoidanceTuning.ParsedMode)
         {
-            Array.Resize(ref _orcaLineScratch, orcaLineCapacity);
-        }
-
-        int orcaProjectionLineCapacity = Math.Max(0, unitCount * OrcaSolver2D.MaxProjectionLines);
-        if (_orcaProjectionLineScratch.Length < orcaProjectionLineCapacity)
-        {
-            Array.Resize(ref _orcaProjectionLineScratch, orcaProjectionLineCapacity);
-        }
-
-        int sonarIntervalCapacity = Math.Max(0, unitCount * SonarSolver2D.MaxIntervals);
-        if (_sonarIntervalScratch.Length < sonarIntervalCapacity)
-        {
-            Array.Resize(ref _sonarIntervalScratch, sonarIntervalCapacity);
+            case MassNavigationFlowAvoidanceMode.Separation:
+                _avoidanceNeighborLimit = 0;
+                return;
+            case MassNavigationFlowAvoidanceMode.Orca:
+                _avoidanceNeighborLimit = AvoidanceTuning.Orca.MaxNeighbors;
+                _avoidanceNeighborScratch = new int[checked(workerSlots * _avoidanceNeighborLimit)];
+                _orcaLineScratch = new OrcaSolver2D.OrcaLine[checked(workerSlots * _avoidanceNeighborLimit)];
+                _orcaProjectionLineScratch = new OrcaSolver2D.OrcaLine[checked(workerSlots * OrcaSolver2D.MaxProjectionLines)];
+                return;
+            case MassNavigationFlowAvoidanceMode.Sonar:
+                _avoidanceNeighborLimit = AvoidanceTuning.Sonar.MaxNeighbors;
+                _avoidanceNeighborScratch = new int[checked(workerSlots * _avoidanceNeighborLimit)];
+                _sonarIntervalScratch = new SonarSolver2D.Interval[checked(workerSlots * SonarSolver2D.MaxIntervals)];
+                return;
+            default:
+                throw new InvalidOperationException(
+                    $"MassNavigationFlowSolverState cannot prepare unknown avoidance mode {AvoidanceTuning.ParsedMode}.");
         }
     }
 
@@ -1298,7 +1345,7 @@ public sealed partial class MassNavigationFlowSolverState
         _teamRelationshipRevision = int.MinValue;
     }
 
-    private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
+    private void InitializeUnits(MassNavigationAgentProfilePlanSet profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
     {
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
@@ -1340,19 +1387,18 @@ public sealed partial class MassNavigationFlowSolverState
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
-                MassNavigationAgentProfileConfig profile = profileSet.ResolveForLocalIndex(localIndex);
-                var geometry = profileSet.ResolveGeometry(profile.Id);
+                MassNavigationAgentProfilePlan profile = profileSet.ResolveForLocalIndex(localIndex);
                 _teams[unitIndex] = team.TeamId;
                 _teamRuntimeIndices[unitIndex] = teamStateIndex;
                 _teamLocalIndices[unitIndex] = localIndex;
                 _flowRuntimeIndices[unitIndex] = flowStateIndex;
                 _layerCategoryMasks[unitIndex] = layer.CategoryMask;
                 _layerInteractionMasks[unitIndex] = layer.InteractionMask;
-                _navMasses[unitIndex] = geometry.Mass;
+                _navMasses[unitIndex] = profile.Mass;
                 _visualScales[unitIndex] = profile.VisualScale;
-                _bodyRadiiCm[unitIndex] = geometry.RadiusCm;
+                _bodyRadiiCm[unitIndex] = profile.RadiusCm;
                 _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
-                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, geometry.RadiusCm);
+                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, profile.RadiusCm);
                 _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
                 _positionsCm[i2] = ClampXPosition(xCm);
                 _positionsCm[i2 + 1] = ClampYPosition(yCm);
@@ -1406,20 +1452,28 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void ComputeFlowFields(int crowdStampBudgetUnits)
+    private void RebuildFlowCosts(int crowdStampBudgetAgents)
+    {
+        for (int i = 0; i < _flowStates.Count; i++)
+        {
+            FlowRuntimeState flowState = _flowStates[i];
+            RebuildFlowCostForState(flowState, crowdStampBudgetAgents);
+        }
+
+        if (crowdStampBudgetAgents > 0 && UnitCount > 0)
+        {
+            int budget = Math.Min(UnitCount, crowdStampBudgetAgents);
+            _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;
+        }
+    }
+
+    private void SolveFlowFields()
     {
         for (int i = 0; i < _flowStates.Count; i++)
         {
             FlowRuntimeState flowState = _flowStates[i];
             TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
-            RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
             ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
-        }
-
-        if (crowdStampBudgetUnits > 0 && UnitCount > 0)
-        {
-            int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
-            _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;
         }
     }
 
@@ -1427,12 +1481,10 @@ public sealed partial class MassNavigationFlowSolverState
     {
         RebuildStaticObstacleCost();
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
-        ComputeFlowFields(crowdStampBudgetUnits: 0);
+        RebuildFlowCosts(crowdStampBudgetAgents: 0);
+        SolveFlowFields();
         LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
         _flowDirty = false;
-        _lastFlowStepFrame = 0;
-        _lastCrowdStampFrame = 0;
-        _lastObstacleStampFrame = 0;
     }
 
     private void RebuildStaticObstacleCost()
@@ -1591,18 +1643,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private static bool ShouldRun(int frameIndex, ref int lastFrame, int intervalTicks)
-    {
-        int safeInterval = Math.Max(1, intervalTicks);
-        if (lastFrame == int.MinValue || frameIndex - lastFrame >= safeInterval)
-        {
-            lastFrame = frameIndex;
-            return true;
-        }
-
-        return false;
-    }
-
     private void ComputeFlow(float[] flow, float targetX, float targetY)
     {
         for (int y = 0; y < _gridHeight; y++)
@@ -1726,6 +1766,7 @@ public sealed partial class MassNavigationFlowSolverState
     private void StepRange(
         int startIndex,
         int endIndex,
+        int scratchSlot,
         float clampedDt,
         MassNavigationGroupRuntime navGroupRuntime,
         float sepRadiusSq,
@@ -1975,7 +2016,7 @@ public sealed partial class MassNavigationFlowSolverState
 
             float separationX = 0f;
             float separationY = 0f;
-            int neighborScratchBase = i * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors;
+            int neighborScratchBase = scratchSlot * _avoidanceNeighborLimit;
             int avoidanceNeighborCount = 0;
             int avoidanceNeighborLimit = AvoidanceTuning.ParsedMode switch
             {
@@ -2098,6 +2139,7 @@ public sealed partial class MassNavigationFlowSolverState
 
             ApplyConfiguredAvoidanceMode(
                 i,
+                scratchSlot,
                 neighborScratchBase,
                 avoidanceNeighborCount,
                 px,
@@ -2252,6 +2294,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void ApplyConfiguredAvoidanceMode(
         int unitIndex,
+        int scratchSlot,
         int neighborScratchBase,
         int neighborCount,
         float positionXCm,
@@ -2299,8 +2342,8 @@ public sealed partial class MassNavigationFlowSolverState
                 neighborPositions,
                 neighborVelocities,
                 neighborRadii,
-                _orcaLineScratch.AsSpan(unitIndex * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors, MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors),
-                _orcaProjectionLineScratch.AsSpan(unitIndex * OrcaSolver2D.MaxProjectionLines, OrcaSolver2D.MaxProjectionLines)),
+                _orcaLineScratch.AsSpan(scratchSlot * _avoidanceNeighborLimit, _avoidanceNeighborLimit),
+                _orcaProjectionLineScratch.AsSpan(scratchSlot * OrcaSolver2D.MaxProjectionLines, OrcaSolver2D.MaxProjectionLines)),
             MassNavigationFlowAvoidanceMode.Sonar => SonarSolver2D.ComputeDesiredVelocity(
                 position,
                 velocity,
@@ -2313,7 +2356,7 @@ public sealed partial class MassNavigationFlowSolverState
                 neighborVelocities,
                 neighborRadii,
                 CreateSonarSolveConfig(AvoidanceTuning.Sonar),
-                _sonarIntervalScratch.AsSpan(unitIndex * SonarSolver2D.MaxIntervals, SonarSolver2D.MaxIntervals)),
+                _sonarIntervalScratch.AsSpan(scratchSlot * SonarSolver2D.MaxIntervals, SonarSolver2D.MaxIntervals)),
             _ => preferredVelocity
         };
 

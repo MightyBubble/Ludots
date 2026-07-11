@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Text.Json;
 using System.Xml.Linq;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -64,8 +65,8 @@ namespace Ludots.Tests.Presentation
             string modRoot = FormationCapabilityModRoot();
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "FormationCapabilityShowcaseConfig.json"));
             JsonObject massNavConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            JsonObject agentProfiles = massNavConfig["agentProfiles"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig must author agentProfiles.");
+            JsonObject agentProfiles = massNavConfig["runtime"]?["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigation capability profile runtime must author agentProfiles.");
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("FormationCapability config must author formationAgent.");
             AssertAgentAuthoringReferencesProfileOnly(formationAgent, "formationAgent");
@@ -241,20 +242,29 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void FormationCapabilityMassNavigationConfig_IsDeepObjectOverrideAndMergesWithBaseConfig()
+        public void FormationCapabilityMassNavigationConfig_IsMapBoundArrayByIdProfileExtendingBase()
         {
             string modRoot = FormationCapabilityModRoot();
             JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "Configs", "config_catalog.json"));
             JsonObject massNavEntry = FindObjectByPath(catalog, "MassNavigationConfig.json");
             JsonObject formationCapabilityEntry = FindObjectByPath(catalog, "FormationCapabilityShowcaseConfig.json");
-            Assert.That(RequireString(massNavEntry, "Policy"), Is.EqualTo("DeepObject"),
-                "Showcase MassNavigation config must be a focused override merged through ConfigPipeline.");
+            Assert.That(RequireString(massNavEntry, "Policy"), Is.EqualTo("ArrayById"));
+            Assert.That(RequireString(massNavEntry, "IdField"), Is.EqualTo("id"));
             Assert.That(RequireString(formationCapabilityEntry, "Policy"), Is.EqualTo("Replace"),
                 "FormationCapability showcase authoring is a complete scenario SSOT; it must not rely on DeepObject field fill.");
 
-            JsonObject overrideConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            Assert.That(overrideConfig.ContainsKey("cadence"), Is.False,
+            JsonArray profileCatalog = ReadArray(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            JsonObject profileEnvelope = profileCatalog[0]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapability MassNavigation profile is missing.");
+            Assert.That(RequireString(profileEnvelope, "id"), Is.EqualTo("formation_capability_showcase"));
+            Assert.That(RequireString(profileEnvelope, "extends"), Is.EqualTo("mass_navigation"));
+            JsonObject overrideConfig = (JsonObject)profileEnvelope.DeepClone();
+            Assert.That(overrideConfig["runtime"]?.AsObject().ContainsKey("cadence"), Is.False,
                 "Showcase MassNavigationConfig must not duplicate base cadence defaults.");
+            JsonObject mapConfig = ReadObject(Path.Combine(modRoot, "assets", "Maps", "formation_capability_showcase.json"));
+            Assert.That(
+                mapConfig["Metadata"]?[MassNavigationConfigLoader.MapMetadataSection]?[MassNavigationConfigLoader.MapMetadataProfileId]?.GetValue<string>(),
+                Is.EqualTo("formation_capability_showcase"));
             JsonObject config = LoadMergedFormationCapabilityMassNavigationConfigObject();
             JsonObject showcaseConfig = ReadObject(Path.Combine(modRoot, "assets", "FormationCapabilityShowcaseConfig.json"));
             Assert.That(showcaseConfig.ContainsKey("selection"), Is.False,
@@ -263,15 +273,11 @@ namespace Ludots.Tests.Presentation
                 "FormationCapabilityShowcaseConfig must explicitly author initial command actor scratch capacity.");
             string[] required =
             {
-                "mapId",
                 "world",
                 "solver",
-                "presentation",
-                "scenario",
-                "scenarioRuntime",
+                "capacity",
                 "cadence",
                 "agentProfiles",
-                "teamRelationships",
                 "flow",
                 "arrival",
                 "avoidance",
@@ -295,7 +301,6 @@ namespace Ludots.Tests.Presentation
                     $"MassNavigationConfig must stay data-only for MassNavigation and must not own '{property}'.");
             }
 
-            Assert.That(RequireString(config, "mapId"), Is.EqualTo("formation_capability_showcase"));
             JsonObject agentProfiles = config["agentProfiles"]?.AsObject()
                 ?? throw new InvalidOperationException("agentProfiles must be authored.");
             JsonArray profiles = agentProfiles["profiles"]?.AsArray()
@@ -310,41 +315,35 @@ namespace Ludots.Tests.Presentation
             Assert.That(formationGeometry.RadiusCm, Is.EqualTo(720f));
             Assert.That(formationGeometry.Mass, Is.EqualTo(12f));
             Assert.That(formationProfile["speedCmPerSecond"]?.GetValue<float>(), Is.EqualTo(360f));
-            JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("scenarioRuntime must be authored.");
-            Assert.That(scenarioRuntime["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
-            Assert.That(scenarioRuntime["initialCommandActorScratchCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(scenarioRuntime["initialCommandActorSnapshotCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(scenarioRuntime.ContainsKey("panel"), Is.False);
-            Assert.That(scenarioRuntime.ContainsKey("panelControls"), Is.False);
-            JsonObject scenario = config["scenario"]?.AsObject()
-                ?? throw new InvalidOperationException("scenario must be authored.");
-            Assert.That(scenario["agentsPerTeam"]?.GetValue<int>(), Is.EqualTo(0),
-                "FormationCapability runtime owns formation/soldier spawning; the shared MassNavigation config must not auto-author generic scenario agents.");
-            Assert.That(scenario["spawnLayout"], Is.Null,
-                "FormationCapability does not use MassNavigation generic auto-spawn, so the DeepObject override must disable the base spawn layout.");
-            JsonArray scenarioTeams = scenario["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("scenario.teams must be authored.");
-            Assert.That(scenarioTeams.Select(node => node?["id"]?.GetValue<int>()).ToArray(),
-                Is.EquivalentTo(new[] { 1, 2 }));
-            JsonObject presentation = config["presentation"]?.AsObject()
-                ?? throw new InvalidOperationException("presentation must be authored.");
-            JsonArray presentationTeams = presentation["teams"]?.AsArray()
-                ?? throw new InvalidOperationException("presentation.teams must be authored.");
-            Assert.That(presentationTeams.Count, Is.EqualTo(0),
-                "FormationCapability owns formation/soldier spawning through FormationCapabilityShowcaseConfig; MassNavigation generic auto-spawn team mappings must stay empty to avoid a second template SSOT.");
-            Assert.That(presentation["blockerPerformerId"], Is.Null);
-            Assert.That(presentation["hotspotPerformerId"], Is.Null);
-            Assert.That(presentation["blockerTemplateId"]?.GetValue<string>(), Is.EqualTo("mass_navigation_blocker"),
-                "Configured obstacles seed core-owned MassNavigationBlocker entities through the runtime template spawn path even when agents are externally authored.");
-            Assert.That(presentation["hotspotTemplateId"], Is.Null);
-            JsonArray requiredMeshAssetIds = presentation["requiredMeshAssetIds"]?.AsArray()
-                ?? throw new InvalidOperationException("presentation.requiredMeshAssetIds must be authored.");
-            string[] requiredMeshIds = requiredMeshAssetIds.Select(node => node?.GetValue<string>() ?? string.Empty).ToArray();
-            Assert.That(requiredMeshIds, Does.Contain("mass_navigation.agent.soldier"));
-            Assert.That(requiredMeshIds, Does.Contain("mass_navigation.command.marker"));
-            Assert.That(requiredMeshIds, Does.Not.Contain("mass_navigation.blocker.rock"));
-            Assert.That(requiredMeshIds, Does.Not.Contain("mass_navigation.hotspot.obelisk"));
+            JsonObject capacity = config["capacity"]?.AsObject()
+                ?? throw new InvalidOperationException("capacity must be authored.");
+            Assert.That(capacity["initialCommandActorScratchCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(capacity["initialCommandActorSnapshotCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
+            int plannedAgentCount = FormationCapabilityAcceptance.ExpectedTotalAgents;
+            Assert.That(plannedAgentCount, Is.EqualTo(1_286));
+            foreach (string capacityField in new[]
+            {
+                "initialCommandActorScratchCapacity",
+                "initialCommandActorSnapshotCapacity",
+                "groupMembershipAgentCapacity",
+                "commandActorScratchCapacity",
+                "groupMemberCapacity",
+                "orderIngestionMemberCapacity",
+            })
+            {
+                int configuredCapacity = capacity[capacityField]?.GetValue<int>()
+                    ?? throw new InvalidOperationException($"capacity.{capacityField} must be authored.");
+                Assert.That(configuredCapacity, Is.EqualTo(2_048));
+                Assert.That(configuredCapacity, Is.GreaterThanOrEqualTo(plannedAgentCount));
+            }
+            Assert.That(capacity.ContainsKey("panel"), Is.False);
+            Assert.That(capacity.ContainsKey("panelControls"), Is.False);
+
+            MassNavigationSceneAuthoringConfig sceneAuthoring = LoadMergedFormationCapabilityProfile().SceneAuthoring;
+            Assert.That(sceneAuthoring.AutoSpawnConfiguredScenario, Is.False);
+            Assert.That(sceneAuthoring.Scenario, Is.Null);
+            Assert.That(sceneAuthoring.Presentation, Is.Null);
+            Assert.That(sceneAuthoring.TeamRelationships, Is.Null);
 
             JsonObject solver = config["solver"]?.AsObject()
                 ?? throw new InvalidOperationException("solver must be authored.");
@@ -370,8 +369,8 @@ namespace Ludots.Tests.Presentation
 
             JsonObject world = config["world"]?.AsObject()
                 ?? throw new InvalidOperationException("world must be authored.");
-            Assert.That(solver["fieldWidthCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowWidthCm"]!.GetValue<int>()));
-            Assert.That(solver["fieldHeightCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowHeightCm"]!.GetValue<int>()));
+            Assert.That(world.ContainsKey("solverWindowWidthCm"), Is.False);
+            Assert.That(world.ContainsKey("solverWindowHeightCm"), Is.False);
 
             JsonObject streaming = config["streaming"]?.AsObject()
                 ?? throw new InvalidOperationException("streaming must be authored.");
@@ -419,7 +418,7 @@ namespace Ludots.Tests.Presentation
         {
             JsonObject missingSolver = LoadMergedFormationCapabilityMassNavigationConfigObject();
             missingSolver.Remove("solver");
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingSolver))!;
+            JsonException missing = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(missingSolver))!;
             Assert.That(missing.Message, Does.Contain("solver"));
 
             JsonObject invalidSolver = LoadMergedFormationCapabilityMassNavigationConfigObject();
@@ -429,8 +428,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(invalid.Message, Does.Contain("FlowCellSizeCm"));
 
             JsonObject configJson = LoadMergedFormationCapabilityMassNavigationConfigObject();
-            MassNavigationConfig config = MassNavigationConfig.Load(configJson);
-            var simulation = new MassNavigationSimulationRuntime(config);
+            MassNavigationConfig config = LoadMergedFormationCapabilityProfile().Runtime;
+            config.AgentProfiles.BindAgentProfiles(LoadFormationCapabilityAgentProfiles());
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
             MassNavigationSolverRuntimeConfigSnapshot solver = simulation.CaptureSolverRuntimeConfig();
             Assert.That(solver.FieldWidthCm, Is.EqualTo(config.Solver.FieldWidthCm));
             Assert.That(solver.FieldHeightCm, Is.EqualTo(config.Solver.FieldHeightCm));
@@ -451,14 +451,15 @@ namespace Ludots.Tests.Presentation
             FormationCapabilityShowcaseConfig loaded = FormationCapabilityShowcaseConfig.Load(config);
             MassNavigationConfig loadedMassNav = MassNavigationConfig.Load(massNavConfig);
             AgentProfileRegistry geometryProfiles = LoadFormationCapabilityAgentProfiles();
-            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles));
+            loadedMassNav.AgentProfiles.BindAgentProfiles(geometryProfiles);
+            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(MassNavigationRuntimePlan.Compile(loadedMassNav).AgentProfiles));
 
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("FormationCapability config must author formationAgent.");
             formationAgent["profileId"] = "missing_formation_profile";
             loaded = FormationCapabilityShowcaseConfig.Load(config);
             InvalidOperationException missingFormationProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(MassNavigationRuntimePlan.Compile(loadedMassNav).AgentProfiles))!;
             Assert.That(missingFormationProfile.Message, Does.Contain("formationAgent.profileId"));
             Assert.That(missingFormationProfile.Message, Does.Contain("missing_formation_profile"));
 
@@ -472,7 +473,7 @@ namespace Ludots.Tests.Presentation
             soldierAgent["profileId"] = "missing_soldier_profile";
             loaded = FormationCapabilityShowcaseConfig.Load(config);
             InvalidOperationException missingSoldierProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(MassNavigationRuntimePlan.Compile(loadedMassNav).AgentProfiles))!;
             Assert.That(missingSoldierProfile.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(missingSoldierProfile.Message, Does.Contain("missing_soldier_profile"));
 
@@ -505,8 +506,9 @@ namespace Ludots.Tests.Presentation
             profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]?.GetValue<float>()
                 ?? throw new InvalidOperationException("formation profile speed must be numeric.");
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
+            loadedMassNav.AgentProfiles.BindAgentProfiles(geometryProfiles);
             InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(MassNavigationRuntimePlan.Compile(loadedMassNav).AgentProfiles))!;
             Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(equalSpeed.Message, Does.Contain("formationAgent.profileId"));
 
@@ -516,8 +518,9 @@ namespace Ludots.Tests.Presentation
             profile = FindAgentProfileById(profiles, "light");
             profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]!.GetValue<float>() - 1f;
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
+            loadedMassNav.AgentProfiles.BindAgentProfiles(geometryProfiles);
             InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(MassNavigationRuntimePlan.Compile(loadedMassNav).AgentProfiles))!;
             Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.profileId"));
         }
@@ -525,12 +528,19 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void TeamRelationshipConfig_RejectsCaseAliases()
         {
-            JsonObject config = LoadMergedFormationCapabilityMassNavigationConfigObject();
-            JsonObject relationships = config["teamRelationships"]?.AsObject()
+            JsonObject config = ReadObject(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "assets",
+                "MassNavigationConfig.json"));
+            JsonObject relationships = config["sceneAuthoring"]?["teamRelationships"]?.AsObject()
                 ?? throw new InvalidOperationException("teamRelationships must be authored.");
             relationships["defaultRelationship"] = "hostile";
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationCapabilityProfile.Load(config))!;
             Assert.That(ex.Message, Does.Contain("defaultRelationship"));
 
             Assert.That(TeamManager.TryParseRelationship("Hostile", out TeamRelationship parsed), Is.True);
@@ -609,8 +619,13 @@ namespace Ludots.Tests.Presentation
                     },
                     new[] { true, false });
 
-                var followerSystem = new MassNavigationFormationFollowerSystem(engine, simulation);
+                var followerSystem = new MassNavigationFormationFollowerSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
+                int storageAllocationsBeforeFirstTick = followerSystem.GetMemberStorageAllocationCountForTests();
                 UpdateSystem(followerSystem);
+                Assert.That(followerSystem.GetMemberStorageAllocationCountForTests(), Is.EqualTo(storageAllocationsBeforeFirstTick),
+                    "Formation follower member snapshots must be cold-prepared before the first simulation tick.");
                 Assert.That(simulation.GetAgentWorldPositionCm(1).X, Is.EqualTo(1100f).Within(0.001f));
 
                 simulation.ResetRuntimeState(engine.World);
@@ -654,7 +669,9 @@ namespace Ludots.Tests.Presentation
                     },
                     new[] { true, false });
 
-                var followerSystem = new MassNavigationFormationFollowerSystem(engine, simulation);
+                var followerSystem = new MassNavigationFormationFollowerSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
                 UpdateSystem(followerSystem);
 
                 simulation.MassNavigationFlow.SetUnitPositionForTests(
@@ -703,7 +720,9 @@ namespace Ludots.Tests.Presentation
                     },
                     new[] { true, false, true, false });
 
-                var followerSystem = new MassNavigationFormationFollowerSystem(engine, simulation);
+                var followerSystem = new MassNavigationFormationFollowerSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
                 UpdateSystem(followerSystem);
                 Assert.That(followerSystem.GetSyncStateCountForTests(), Is.EqualTo(2));
 
@@ -735,7 +754,9 @@ namespace Ludots.Tests.Presentation
                     offsetYCm: -20,
                     radiusCm: 175);
                 engine.World.Add(blocker, projection);
-                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine, simulation);
+                var environmentSystem = new MassNavigationEnvironmentBindingSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
 
                 UpdateSystem(environmentSystem);
 
@@ -799,7 +820,9 @@ namespace Ludots.Tests.Presentation
                     ?? throw new InvalidOperationException("Physics2D shape storage service must be registered before manifestation obstacle bridge update.");
                 new Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem(engine.World, shapeStorage).Update(0f);
 
-                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine, simulation);
+                var environmentSystem = new MassNavigationEnvironmentBindingSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
                 UpdateSystem(environmentSystem);
 
                 Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(1));
@@ -1044,14 +1067,18 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
             using (engine)
             {
-                simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionTokenCapacity = 1;
-                simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 1;
+                MassNavigationConfig capacityConfig = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+                capacityConfig.Capacity.OrderIngestionTokenCapacity = 1;
+                capacityConfig.Capacity.OrderIngestionMemberCapacity = 1;
+                simulation = new MassNavigationSimulationRuntime(simulation.MapId, capacityConfig);
                 RegisterMoveOrderType(engine);
 
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
 
-                var system = new MassNavigationOrderIngestionSystem(engine, simulation);
+                var system = new MassNavigationOrderIngestionSystem(
+                    engine,
+                    MassNavigationRuntimeBinding.CreateActivated(simulation));
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
                 Assert.That(ex.Message, Does.Contain("orderIngestionTokenCapacity"));
             }
@@ -1065,11 +1092,11 @@ namespace Ludots.Tests.Presentation
             {
                 int initialActiveTeam = simulation.ActiveTeamId;
                 int[] configuredOrder = { 7, initialActiveTeam, 11 };
-                simulation.ConfigureScenarioTeams(configuredOrder);
+                simulation.ConfigureTeams(configuredOrder);
 
                 Assert.That(simulation.TeamIds.ToArray(), Is.EqualTo(configuredOrder));
                 simulation.SetActiveTeam(11);
-                simulation.ConfigureScenarioTeams(configuredOrder);
+                simulation.ConfigureTeams(configuredOrder);
                 Assert.That(simulation.ActiveTeamId, Is.EqualTo(11));
             }
         }
@@ -1095,6 +1122,36 @@ namespace Ludots.Tests.Presentation
                 () => CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Map unload should strip MassNavigation runtime bindings from every tracked formation and soldier agent.");
+        }
+
+        [Test]
+        public void FormationCapabilityMapReload_RebindsInstalledSystemsToNewMassNavigationRuntime()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime first = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, first),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability first load should bind against its first MassNavigation runtime.");
+
+            engine.UnloadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime second = RequireSimulation(engine);
+            Assert.That(second, Is.Not.SameAs(first),
+                "A true unload/reload must create a fresh map-owned MassNavigation runtime.");
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, second),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability systems installed during the first load must resolve and bind the replacement MassNavigation runtime.");
+            Assert.That(first.AgentState.TotalAgents, Is.EqualTo(0),
+                "The unloaded runtime must not receive agents from the reloaded scene.");
         }
 
         [Test]
@@ -1135,6 +1192,69 @@ namespace Ludots.Tests.Presentation
 
             FocusCurrentMapSession(engine, "formation_capability_showcase");
             Assert.That(runtime.IsCurrentShowcaseMap(engine), Is.True);
+        }
+
+        [Test]
+        public void FormationCapabilityInputSystems_DoNotMutateAnotherMassNavigationMap()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime formationSimulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, formationSimulation) &&
+                      CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability scenario should be ready before testing long-lived input isolation.");
+
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            Entity nonLocalFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
+            SelectFormations(engine, new[] { nonLocalFormation });
+            TickUntil(
+                engine,
+                () => CommandSourceCount(engine) == 1,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Test-authored command source should contain the non-local formation before changing map focus.");
+
+            var otherSimulation = new MassNavigationSimulationRuntime(
+                new MapId("other_mass_navigation"),
+                MassNavigationLocalCommandInputSystemTests.CreateConfigForTests());
+            otherSimulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(otherSimulation.StreamingChunkSizeCm));
+            otherSimulation.SetWorldOperationsReady(true);
+            MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new InvalidOperationException("MassNavigationRuntimeBinding is missing.");
+            binding.Activate(otherSimulation);
+            engine.SetService(MassNavigationKeys.SimulationRuntime, otherSimulation);
+            FocusCurrentMapSession(engine, otherSimulation.MapId.Value);
+            var activeFormationAgents = new List<Entity>();
+            QueryDescription activeFormationAgentQuery = new QueryDescription()
+                .WithAll<MassNavigationAgent>()
+                .WithNone<SuspendedTag>();
+            engine.World.Query(in activeFormationAgentQuery, (Entity entity, ref MassNavigationAgent _) =>
+                activeFormationAgents.Add(entity));
+            for (int i = 0; i < activeFormationAgents.Count; i++)
+            {
+                engine.World.Add(activeFormationAgents[i], new SuspendedTag());
+            }
+
+            Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MoveTargetWorldCm);
+            RightClick(engine, GetInputBackend(engine), moveTargetScreen);
+            Assert.That(otherSimulation.CommandRejectsTotal, Is.EqualTo(0),
+                "Formation's long-lived local order source must not reject or submit commands against another MassNavigation map.");
+
+            PlayerInputHandler input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler is missing.");
+            input.InjectButtonPress(FormationCapabilityAcceptance.RotateRightActionId);
+            Tick(engine);
+            input.InjectButtonRelease(FormationCapabilityAcceptance.RotateRightActionId);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForInputRelease);
+
+            Assert.That(otherSimulation.CommandRejectsTotal, Is.EqualTo(0),
+                "Formation's long-lived rotate system must not inspect or reject command actors owned by another MassNavigation map.");
         }
 
         [Test]
@@ -2552,20 +2672,107 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void GameEngine_WhenMassNavigationRuntimeLifecycleChanges_ReflectsRuntimeReadinessThroughServices()
+        public void MassNavigationModLifecycle_ActivatesOnMapFocusAndReleasesOnMapUnload()
         {
-            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
-            using (engine)
-            {
-                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.SameAs(simulation));
-                Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True);
+            _ = typeof(MassNavigationMod.MassNavigationModEntry);
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(MassNavigationDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            engine.MapManager.RegisterMap(new HeadlessMassNavigationLifecycleMapDefinition());
+            engine.Start();
 
-                simulation.SetWorldOperationsReady(false);
-                Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
+            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null,
+                "MassNavigation must remain inactive until its map lifecycle event fires.");
 
-                Assert.That(engine.RemoveService(MassNavigationKeys.SimulationRuntime), Is.True);
-                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
-            }
+            engine.LoadMap("mass_navigation");
+
+            MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+                ?? throw new InvalidOperationException("MassNavigationMod MapLoaded handler did not install the runtime.");
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True);
+
+            List<ISystem<float>> postMovementSystems = GetSystems(engine, SystemGroup.PostMovement);
+            int formationIndex = postMovementSystems.FindIndex(system => system is MassNavigationFormationSystem);
+            int worldToGridIndex = postMovementSystems.FindIndex(system => system is WorldToGridSyncSystem);
+            Assert.That(formationIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(worldToGridIndex, Is.GreaterThan(formationIndex),
+                "MassNavigation must commit WorldPositionCm before WorldToGridSyncSystem publishes grid positions.");
+
+            engine.PushMap("entry");
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False,
+                "MapSuspended must release MassNavigation world operations while another map is focused.");
+
+            engine.PopMap();
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True,
+                "MapResumed must restore MassNavigation world operations when its map regains focus.");
+            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.SameAs(simulation),
+                "MapSuspended/MapResumed must preserve and reactivate the loaded map's MassNavigation runtime instance.");
+
+            engine.UnloadMap("mass_navigation");
+
+            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+            Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding)?.Current, Is.Null);
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
+        }
+
+        [Test]
+        public void MassNavigationModLifecycle_PushAndPop_RestoresOuterRuntimeAndSceneWithoutRespawn()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+            MassNavigationSimulationRuntime outer = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, outer),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Outer MassNavigation scene should spawn before push/pop verification.");
+            Entity[] outerAgents = outer.AgentState.AllAgents.ToArray();
+            int outerAgentCount = outer.AgentState.TotalAgents;
+
+            engine.PushMap("entry");
+            Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding)?.Current, Is.Null,
+                "Suspending a MassNavigation map must unbind Current while preserving its loaded map runtime.");
+            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null,
+                "The legacy current-simulation service must not publish a suspended map runtime.");
+
+            engine.PopMap();
+
+            Assert.That(RequireSimulation(engine), Is.SameAs(outer),
+                "Popping the inner map must reactivate the already-loaded outer runtime instead of constructing a replacement.");
+            Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding)?.Current, Is.SameAs(outer));
+            Assert.That(outer.AgentState.TotalAgents, Is.EqualTo(outerAgentCount),
+                "Resuming the outer map must not respawn its configured MassNavigation scene.");
+            Assert.That(outer.AgentState.AllAgents.ToArray(), Is.EqualTo(outerAgents));
+        }
+
+        [Test]
+        public void MassNavigationRuntime_SwitchesMapBoundProfilesWithoutSystemServiceDivergence()
+        {
+            _ = typeof(MassNavigationMod.MassNavigationModEntry);
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(FormationCapabilityDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            engine.MapManager.RegisterMap(new HeadlessMassNavigationProfileMapDefinition("mass_navigation"));
+            engine.MapManager.RegisterMap(new HeadlessMassNavigationProfileMapDefinition("formation_capability_showcase"));
+            engine.Start();
+
+            engine.LoadMap("mass_navigation");
+            MassNavigationSimulationRuntime first = engine.GetService(MassNavigationKeys.SimulationRuntime)
+                ?? throw new InvalidOperationException("Base MassNavigation profile did not activate.");
+            MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new InvalidOperationException("MassNavigation runtime binding was not installed.");
+            Assert.That(first.MapId.Value, Is.EqualTo("mass_navigation"));
+            Assert.That(binding.Current, Is.SameAs(first));
+
+            engine.UnloadMap("mass_navigation");
+            Assert.That(binding.Current, Is.Null);
+            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+
+            engine.LoadMap("formation_capability_showcase");
+            MassNavigationSimulationRuntime second = engine.GetService(MassNavigationKeys.SimulationRuntime)
+                ?? throw new InvalidOperationException("Formation MassNavigation profile did not activate.");
+            Assert.That(second, Is.Not.SameAs(first));
+            Assert.That(second.MapId.Value, Is.EqualTo("formation_capability_showcase"));
+            Assert.That(binding.Current, Is.SameAs(second));
+            Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding), Is.SameAs(binding));
         }
 
         [Test]
@@ -2586,21 +2793,26 @@ namespace Ludots.Tests.Presentation
                     new DiscreteClock(),
                     orderTypes,
                     new OrderRuleRegistry());
-                engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
+                MassNavigationRuntimeBinding runtimeBinding = MassNavigationRuntimeBinding.CreateActivated(simulation);
+                engine.InsertSystemBeforeRequired<WorldToGridSyncSystem>(
+                    new MassNavigationFormationSystem(engine, runtimeBinding),
+                    SystemGroup.PostMovement);
                 engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-                    new MassNavigationFormationFollowerSystem(engine, simulation),
+                    new MassNavigationFormationFollowerSystem(engine, runtimeBinding),
                     SystemGroup.PostMovement);
                 engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
                     new MassNavigationPreSimulationStepSystem(),
                     SystemGroup.PostMovement);
                 engine.RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
-                engine.RegisterSystem(new MassNavigationOrderIngestionSystem(engine, simulation), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new MassNavigationOrderIngestionSystem(engine, runtimeBinding), SystemGroup.AbilityActivation);
 
                 List<ISystem<float>> postMovementSystems = GetSystems(engine, SystemGroup.PostMovement);
                 int formationIndex = postMovementSystems.FindIndex(system => system is MassNavigationFormationSystem);
+                int worldToGridIndex = postMovementSystems.FindIndex(system => system is WorldToGridSyncSystem);
                 Assert.That(formationIndex, Is.GreaterThanOrEqualTo(0));
                 Assert.That(postMovementSystems.FindIndex(system => system is MassNavigationFormationFollowerSystem), Is.LessThan(formationIndex));
                 Assert.That(postMovementSystems.FindIndex(system => system is MassNavigationPreSimulationStepSystem), Is.LessThan(formationIndex));
+                Assert.That(worldToGridIndex, Is.GreaterThan(formationIndex));
 
                 List<ISystem<float>> abilitySystems = GetSystems(engine, SystemGroup.AbilityActivation);
                 int orderBufferIndex = abilitySystems.FindIndex(system => system is OrderBufferSystem);
@@ -2639,7 +2851,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationModEntry_IsDataOnlyAndDoesNotOwnRuntimeOrPanelLifecycle()
+        public void MassNavigationModEntry_RemainsFocusedRuntimeCapabilityWithoutPresentationDependencies()
         {
             string modRoot = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "MassNavigationMod");
             JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
@@ -2647,7 +2859,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationMod mod.json must author dependencies.");
             string[] projectReferences = ReadProjectReferenceIncludes(Path.Combine(modRoot, "MassNavigationMod.csproj"));
 
-            Assert.That(RequireString(manifest, "description"), Does.Contain("Data-only"));
+            Assert.That(RequireString(manifest, "description"), Does.Not.Contain("Data-only"));
             Assert.That(dependencies.ContainsKey("LudotsCoreMod"), Is.True);
             Assert.That(dependencies.ContainsKey("CameraProfilesMod"), Is.False);
             Assert.That(projectReferences, Has.Exactly(1).Contain("Ludots.Core.csproj"));
@@ -2713,13 +2925,17 @@ namespace Ludots.Tests.Presentation
                 "CapabilityStandardMassNavigationLargeWorld10kMod");
             string entrySource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kModEntry.cs"));
             string mapFocusSource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kMapFocus.cs"));
-            string runtimeSource = entrySource + mapFocusSource;
+            string localOrderSource = File.ReadAllText(Path.Combine(modRoot, "Systems", "MassNavigationLargeWorldLocalOrderSourceSystem.cs"));
+            string runtimeSource = entrySource + mapFocusSource + localOrderSource;
 
             Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldShowcaseAsync);"));
             Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldShowcaseAsync);"));
             Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldShowcaseAsync);"));
             Assert.That(entrySource, Does.Contain("MassNavigationObserverVisibilityBindingSystem"));
             Assert.That(entrySource, Does.Contain("SystemGroup.RuntimeEntityBinding"));
+            Assert.That(localOrderSource, Does.Contain("CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(_engine)"));
+            Assert.That(entrySource, Does.Contain("MassNavigationKeys.RuntimeBinding"));
+            Assert.That(localOrderSource, Does.Contain("MassNavigationRuntimeBinding"));
             Assert.That(runtimeSource, Does.Contain("engine.MergedConfig?.StartupMapId"));
             Assert.That(entrySource, Does.Contain("CoreServiceKeys.MinimapRuntime"));
             Assert.That(entrySource, Does.Contain("runtime.Visible = true;"));
@@ -2735,10 +2951,8 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationAndFormationCapabilitySources_DoNotReintroduceFallbackAliasOrPrototypeNames()
         {
             JsonObject massNavigationConfig = LoadMergedFormationCapabilityMassNavigationConfigObject();
-            JsonObject scenarioRuntime = massNavigationConfig["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("Merged MassNavigationConfig must author scenarioRuntime.");
-            JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
-                ?? throw new InvalidOperationException("Merged MassNavigationConfig must author scenarioRuntime.runtimeCapacity.");
+            JsonObject runtimeCapacity = massNavigationConfig["capacity"]?.AsObject()
+                ?? throw new InvalidOperationException("Merged MassNavigationConfig must author capacity.");
             JsonObject formationConfig = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
 
             Assert.That(runtimeCapacity.ContainsKey("fallback"), Is.False);
@@ -2874,6 +3088,35 @@ namespace Ludots.Tests.Presentation
             };
         }
 
+        private sealed class HeadlessMassNavigationLifecycleMapDefinition : MapDefinition
+        {
+            private static readonly MapTag[] HeadlessTags =
+            {
+                new("camera.skip_default_on_load"),
+            };
+
+            public override MapId Id => new("mass_navigation");
+            public override IReadOnlyList<MapTag> Tags => HeadlessTags;
+        }
+
+        private sealed class HeadlessMassNavigationProfileMapDefinition : MapDefinition
+        {
+            private static readonly MapTag[] HeadlessTags =
+            {
+                new("camera.skip_default_on_load"),
+            };
+
+            private readonly MapId _id;
+
+            public HeadlessMassNavigationProfileMapDefinition(string mapId)
+            {
+                _id = new MapId(mapId);
+            }
+
+            public override MapId Id => _id;
+            public override IReadOnlyList<MapTag> Tags => HeadlessTags;
+        }
+
         private static List<string> FormationCapabilityDependencyPaths()
         {
             List<string> paths = MassNavigationDependencyPaths();
@@ -2994,11 +3237,13 @@ namespace Ludots.Tests.Presentation
                 Path.Combine(FindRepoRoot(), "assets"));
 
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
-            var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World!.StreamingChunkSizeCm));
             simulation.SetWorldOperationsReady(true);
             engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-            FocusCurrentMapSession(engine, config.MapId);
+            FocusCurrentMapSession(engine, simulation.MapId.Value);
             return simulation;
         }
 
@@ -3624,10 +3869,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.AgentState.TryGetAgentEntity(agentIndex, out Entity entity), Is.True);
             Assert.That(engine.World.TryGet(entity, out WorldPositionCm worldPosition), Is.True);
             Vector2 expectedWorld = simulation.GetAgentWorldPositionCm(agentIndex);
-            int expectedWorldX = (int)MathF.Round(expectedWorld.X);
-            int expectedWorldY = (int)MathF.Round(expectedWorld.Y);
-            Assert.That(worldPosition.Value.X.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldX).RawValue));
-            Assert.That(worldPosition.Value.Y.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldY).RawValue));
+            Assert.That(worldPosition.Value.X.RawValue, Is.EqualTo(Fix64.FromFloat(expectedWorld.X).RawValue));
+            Assert.That(worldPosition.Value.Y.RawValue, Is.EqualTo(Fix64.FromFloat(expectedWorld.Y).RawValue));
         }
 
         private static Entity[] CaptureTrackedAgents(MassNavigationSimulationRuntime simulation)
@@ -4216,13 +4459,27 @@ namespace Ludots.Tests.Presentation
         private static JsonObject ReadObject(string path)
         {
             using FileStream stream = File.OpenRead(path);
-            return JsonNode.Parse(stream)?.AsObject()
-                ?? throw new InvalidOperationException($"Expected JSON object at {path}.");
+            JsonNode node = JsonNode.Parse(stream)
+                ?? throw new InvalidOperationException($"Expected JSON at {path}.");
+            if (node is JsonObject obj)
+            {
+                return obj;
+            }
+
+            if (node is JsonArray profiles && profiles.Count == 1 && profiles[0] is JsonObject profile)
+            {
+                JsonObject resolved = (JsonObject)profile.DeepClone();
+                resolved.Remove("id");
+                resolved.Remove("extends");
+                return resolved;
+            }
+
+            throw new InvalidOperationException($"Expected JSON object or one MassNavigation profile at {path}.");
         }
 
         private static MassNavigationConfig LoadBaseMassNavigationConfig()
         {
-            using FileStream stream = File.OpenRead(Path.Combine(
+            JsonArray profiles = ReadArray(Path.Combine(
                 FindRepoRoot(),
                 "mods",
                 "capabilities",
@@ -4230,18 +4487,38 @@ namespace Ludots.Tests.Presentation
                 "MassNavigationMod",
                 "assets",
                 "MassNavigationConfig.json"));
-            return MassNavigationConfig.Load(stream);
+            JsonObject profile = (JsonObject)(profiles[0]?.DeepClone()
+                ?? throw new InvalidOperationException("MassNavigation base profile is missing."));
+            profile.Remove("id");
+            profile.Remove("extends");
+            return MassNavigationCapabilityProfile.Load(profile).Runtime;
         }
 
         private static JsonObject LoadMergedFormationCapabilityMassNavigationConfigObject()
+        {
+            MassNavigationCapabilityProfile profile = LoadMergedFormationCapabilityProfile();
+            return JsonSerializer.SerializeToNode(profile.Runtime, StrictJsonOptions.CreateCamelCase())?.AsObject()
+                ?? throw new InvalidOperationException("Formation MassNavigation profile serialization failed.");
+        }
+
+        private static MassNavigationCapabilityProfile LoadMergedFormationCapabilityProfile()
         {
             ConfigPipeline pipeline = CreateFormationCapabilityConfigPipeline();
             ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
             ConfigCatalogEntry entry = ConfigPipeline.RequireEntry(
                 catalog,
                 "MassNavigationConfig.json",
-                ConfigMergePolicy.DeepObject);
-            return pipeline.MergeDeepObjectFromCatalog(in entry, new ConfigConflictReport());
+                ConfigMergePolicy.ArrayById,
+                "id");
+            var mapConfig = new MapConfig { Id = "formation_capability_showcase" };
+            mapConfig.Metadata[MassNavigationConfigLoader.MapMetadataSection] = new JsonObject
+            {
+                [MassNavigationConfigLoader.MapMetadataProfileId] = "formation_capability_showcase",
+            };
+            return new MassNavigationConfigLoader(pipeline).Load(
+                catalog,
+                new ConfigConflictReport(),
+                mapConfig);
         }
 
         private static ConfigPipeline CreateFormationCapabilityConfigPipeline()
@@ -4317,11 +4594,11 @@ namespace Ludots.Tests.Presentation
                 CreateRuntimeCapacity(agentCapacity, groupMemberCapacity));
         }
 
-        private static MassNavigationRuntimeCapacityConfig CreateRuntimeCapacity(
+        private static MassNavigationCapacityConfig CreateRuntimeCapacity(
             int agentCapacity,
             int groupMemberCapacity)
         {
-            return new MassNavigationRuntimeCapacityConfig
+            return new MassNavigationCapacityConfig
             {
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,

@@ -17,7 +17,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveLifecycleSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly Dictionary<string, object> _globals;
         private readonly OrderTypeRegistry _orderTypeRegistry;
@@ -29,7 +30,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly IMovePlanExecutionSink _executionSink;
         private readonly RoadRouteRefreshService _refresh;
         private readonly RoadRouteProfileCatalog _profiles;
-        private readonly MassNavigationSimulationRuntime _simulation;
+        private readonly MassNavigationRuntimeBinding _binding;
 
         public RoadMoveLifecycleSystem(
             World world,
@@ -38,21 +39,26 @@ namespace RoadNetworkShowcaseMod.Systems
             int roadMoveFollowOrderTypeId,
             MovePlanStore plans,
             MovePlanRuntimeService runtime,
-            MassNavigationSimulationRuntime simulation) : base(world)
+            MassNavigationRuntimeBinding binding) : base(world)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
-            _executionSink = new MassNavigationMovePlanExecutionSink(_simulation);
+            _binding = binding ?? throw new ArgumentNullException(nameof(binding));
+            _executionSink = new MassNavigationMovePlanExecutionSink(_binding);
             _refresh = new RoadRouteRefreshService(world, globals, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             _profiles = new RoadRouteProfileCatalog(world);
         }
 
         public override void Update(in float dt)
         {
+            if (!RoadNetworkShowcaseIds.TryResolveSimulation(_binding, out MassNavigationSimulationRuntime simulation))
+            {
+                return;
+            }
+
             foreach (ref var chunk in World.Query(in Query))
             {
                 Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
@@ -72,7 +78,7 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    if (!_simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
+                    if (!simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
                     {
                         orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
                         orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;

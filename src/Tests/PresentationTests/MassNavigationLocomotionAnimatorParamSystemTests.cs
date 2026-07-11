@@ -14,7 +14,7 @@ namespace Ludots.Tests.Presentation
         {
             using World world = World.Create();
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
-            var simulation = new MassNavigationSimulationRuntime(config);
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
 
             Entity movingAgent = world.Create();
@@ -61,7 +61,7 @@ namespace Ludots.Tests.Presentation
         {
             using World world = World.Create();
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
-            var simulation = new MassNavigationSimulationRuntime(config);
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
 
             Entity movingAgent = world.Create();
@@ -95,6 +95,7 @@ namespace Ludots.Tests.Presentation
                 new[] { true, true });
             simulation.SetAgentNavigationTargetLocalCm(0, simulation.GetAgentLocalPositionCm(0).X + 800f, simulation.GetAgentLocalPositionCm(0).Y);
             simulation.StepNavigationForTests(world, 1f);
+            simulation.SetWorldOperationsReady(true);
 
             Entity movingPerformer = world.Create(
                 new PerformerState { OwnerEntity = movingAgent, Version = 10 },
@@ -109,7 +110,9 @@ namespace Ludots.Tests.Presentation
                 new PerformerFloatParams(),
                 new PerformerCullState { OwnerCullVisible = false });
 
-            var system = new MassNavigationLocomotionAnimatorParamSystem(world, simulation);
+            var system = new MassNavigationLocomotionAnimatorParamSystem(
+                world,
+                MassNavigationRuntimeBinding.CreateActivated(simulation));
             system.Update(0f);
 
             int speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();

@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
+using Ludots.Core.Engine;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -18,24 +19,33 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadNetworkAiAndCaptureSystem : ISystem<float>
     {
         private static readonly QueryDescription FortQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, Team, RoadFortTag, RoadFortControlState>();
+            .WithAll<WorldPositionCm, Team, RoadFortTag, RoadFortControlState>()
+            .WithNone<SuspendedTag>();
 
         private static readonly QueryDescription AiColumnQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, Team, RoadColumnTag, RoadAiControlledTag, OrderBuffer>();
+            .WithAll<WorldPositionCm, Team, RoadColumnTag, RoadAiControlledTag, OrderBuffer>()
+            .WithNone<SuspendedTag>();
 
         private static readonly QueryDescription ColumnQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, Team, RoadColumnTag>();
+            .WithAll<WorldPositionCm, Team, RoadColumnTag>()
+            .WithNone<SuspendedTag>();
 
+        private readonly GameEngine _engine;
+        private readonly RoadNetworkShowcaseRuntime _runtime;
         private readonly World _world;
         private readonly RoadMoveOrderExpander _expander;
         private readonly int _moveToOrderTypeId;
         private float _aiDecisionCooldown;
 
         public RoadNetworkAiAndCaptureSystem(
+            GameEngine engine,
+            RoadNetworkShowcaseRuntime runtime,
             World world,
             Dictionary<string, object> globals,
             OrderQueue incomingOrders)
         {
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _world = world;
             _expander = new RoadMoveOrderExpander(world, globals, incomingOrders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId, statusKey: string.Empty);
             _moveToOrderTypeId = ResolveMoveToOrderTypeId(globals);
@@ -52,6 +62,11 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
+            if (!_runtime.IsCurrentShowcaseMap(_engine))
+            {
+                return;
+            }
+
             UpdateFortCaptures(dt);
             UpdateAiDispatch(dt);
         }

@@ -34,6 +34,31 @@ namespace GasTests
         }
 
         [Test]
+        public void MassNavigationLifecycle_MustBeModOwnedAndCommitBeforeSpatialProjection()
+        {
+            string repoRoot = FindRepoRoot();
+            string gameEngine = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
+            string mapLifecycle = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.MapLoadLifecycle.cs"));
+            string runtime = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "MassNavigation", "Runtime", "MassNavigationRuntime.cs"));
+            string modEntry = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "MassNavigationModEntry.cs"));
+
+            Assert.That(gameEngine, Does.Not.Contain("MassNavigationRuntime"));
+            Assert.That(gameEngine, Does.Not.Contain("_massNavigationRuntime"));
+            Assert.That(mapLifecycle, Does.Not.Contain("_massNavigationRuntime"));
+            Assert.That(modEntry, Does.Contain("context.OnEvent(GameEvents.MapLoaded"));
+            Assert.That(modEntry, Does.Contain("context.OnEvent(GameEvents.MapResumed"));
+            Assert.That(modEntry, Does.Contain("context.OnEvent(GameEvents.MapSuspended"));
+            Assert.That(modEntry, Does.Contain("context.OnEvent(GameEvents.MapUnloaded"));
+            Assert.That(runtime, Does.Contain("InsertSystemBeforeRequired<WorldToGridSyncSystem>"));
+        }
+
+        [Test]
         public void Codebase_MustNotContainCompatibilityOrFallbackMarkers()
         {
             var repoRoot = FindRepoRoot();

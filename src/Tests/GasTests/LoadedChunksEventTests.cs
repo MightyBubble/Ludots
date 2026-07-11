@@ -277,5 +277,124 @@ namespace Ludots.Tests.GAS
             That(store.TryGetChunk(key, out _), Is.False,
                 "New source events should be processed");
         }
+
+        [Test]
+        public void WorldGridLoadedChunks_ContributorsPublishUnionAndReleaseIndependently()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            using WorldGridLoadedChunkContributor camera = loadedChunks.AcquireContributor("camera");
+            using WorldGridLoadedChunkContributor navigation = loadedChunks.AcquireContributor("navigation");
+            long shared = GraphChunkKey.Pack(0, 0);
+            long cameraOnly = GraphChunkKey.Pack(1, 0);
+            long navigationOnly = GraphChunkKey.Pack(2, 0);
+            var unloaded = new List<long>();
+            loadedChunks.ChunkUnloaded += unloaded.Add;
+
+            camera.SetLoaded(shared, loaded: true);
+            camera.SetLoaded(cameraOnly, loaded: true);
+            navigation.SetLoaded(shared, loaded: true);
+            navigation.SetLoaded(navigationOnly, loaded: true);
+
+            That(loadedChunks.ActiveChunkKeys, Is.EquivalentTo(new[] { shared, cameraOnly, navigationOnly }));
+
+            camera.Dispose();
+
+            That(loadedChunks.IsLoaded(shared), Is.True, "A shared chunk must remain active while another contributor still owns it.");
+            That(loadedChunks.IsLoaded(cameraOnly), Is.False);
+            That(loadedChunks.IsLoaded(navigationOnly), Is.True);
+            That(unloaded, Is.EquivalentTo(new[] { cameraOnly }));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_RemoteContributorWindowsRemainActiveTogether()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            using WorldGridLoadedChunkContributor near = loadedChunks.AcquireContributor("near");
+            using WorldGridLoadedChunkContributor remote = loadedChunks.AcquireContributor("remote");
+
+            near.UpdateWindow(centerXcm: 0, centerYcm: 0, radiusCm: 0);
+            remote.UpdateWindow(centerXcm: 100_000, centerYcm: -100_000, radiusCm: 0);
+
+            That(loadedChunks.IsLoaded(GraphChunkKey.Pack(0, 0)), Is.True);
+            That(loadedChunks.IsLoaded(GraphChunkKey.Pack(100, -100)), Is.True);
+            That(loadedChunks.ActiveChunkKeys.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_ReassertingSameWindowKeepsUnionAfterAnotherContributorMoves()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            using WorldGridLoadedChunkContributor fixedWindow = loadedChunks.AcquireContributor("fixed");
+            using WorldGridLoadedChunkContributor movingWindow = loadedChunks.AcquireContributor("moving");
+            long fixedKey = GraphChunkKey.Pack(0, 0);
+            long movedKey = GraphChunkKey.Pack(50, 50);
+
+            fixedWindow.UpdateWindow(centerXcm: 0, centerYcm: 0, radiusCm: 0);
+            movingWindow.UpdateWindow(centerXcm: 10_000, centerYcm: 10_000, radiusCm: 0);
+            movingWindow.UpdateWindow(centerXcm: 50_000, centerYcm: 50_000, radiusCm: 0);
+            fixedWindow.UpdateWindow(centerXcm: 0, centerYcm: 0, radiusCm: 0);
+
+            That(loadedChunks.IsLoaded(fixedKey), Is.True);
+            That(loadedChunks.IsLoaded(movedKey), Is.True);
+            That(loadedChunks.ActiveChunkKeys.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_ResetAndRepeatedDisposeAreIdempotent()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            WorldGridLoadedChunkContributor contributor = loadedChunks.AcquireContributor("reset-owner");
+            long key = GraphChunkKey.Pack(4, 5);
+
+            contributor.SetLoaded(key, loaded: false);
+            contributor.SetLoaded(key, loaded: true);
+            contributor.SetLoaded(key, loaded: false);
+            contributor.SetLoaded(key, loaded: false);
+            contributor.SetLoaded(key, loaded: true);
+            loadedChunks.Reset();
+            loadedChunks.Reset();
+            contributor.Dispose();
+            contributor.Dispose();
+
+            That(loadedChunks.ActiveChunkKeys, Is.Empty);
+            That(loadedChunks.ContributorCount, Is.Zero);
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_DuplicateContributorKeyFailsUntilLeaseIsReleased()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            WorldGridLoadedChunkContributor first = loadedChunks.AcquireContributor("stable-key");
+
+            InvalidOperationException error = Throws<InvalidOperationException>(
+                () => loadedChunks.AcquireContributor("stable-key"))!;
+            That(error.Message, Does.Contain("already acquired"));
+
+            first.Dispose();
+            using WorldGridLoadedChunkContributor reacquired = loadedChunks.AcquireContributor("stable-key");
+            That(loadedChunks.ContributorCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_DirectAndNamedContributionsShareOneUnion()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            using WorldGridLoadedChunkContributor named = loadedChunks.AcquireContributor("named");
+            long shared = GraphChunkKey.Pack(0, 0);
+            long directOnly = GraphChunkKey.Pack(1, 0);
+            long namedOnly = GraphChunkKey.Pack(2, 0);
+
+            loadedChunks.SetLoaded(shared, loaded: true);
+            loadedChunks.SetLoaded(directOnly, loaded: true);
+            named.SetLoaded(shared, loaded: true);
+            named.SetLoaded(namedOnly, loaded: true);
+            loadedChunks.SetLoaded(shared, loaded: false);
+
+            That(loadedChunks.ActiveChunkKeys, Is.EquivalentTo(new[] { shared, directOnly, namedOnly }));
+
+            named.Dispose();
+
+            That(loadedChunks.ActiveChunkKeys, Is.EquivalentTo(new[] { directOnly }));
+        }
     }
 }

@@ -86,7 +86,6 @@ using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
-using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
@@ -244,7 +243,6 @@ namespace Ludots.Core.Engine
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
-        private readonly MassNavigationRuntime _massNavigationRuntime = new();
 
         // Multithreading
         private JobScheduler _jobScheduler;
@@ -2025,7 +2023,6 @@ namespace Ludots.Core.Engine
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
             CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
-            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
@@ -2155,7 +2152,6 @@ namespace Ludots.Core.Engine
             // Fire MapSuspended on outer (scoped)
             if (outerSession != null)
             {
-                _massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);
                 var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
@@ -2195,7 +2191,6 @@ namespace Ludots.Core.Engine
             {
                 CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
 
-                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
@@ -2401,7 +2396,6 @@ namespace Ludots.Core.Engine
             SpatialQueries = sharedSpatialQueries;
             WireUpPositionProvider();
 
-            ILoadedChunks? loadedChunks;
             // Wire up HexMetrics if this is a hex board
             if (board is HexGridBoard hexBoard)
             {
@@ -2410,15 +2404,15 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.HexMetrics, hexBoard.HexMetrics);
                 SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)hexBoard.HexGridAOI);
                 HexGridAOI = hexBoard.HexGridAOI;
-                loadedChunks = hexBoard.HexGridAOI;
             }
             else
             {
                 RemoveService(CoreServiceKeys.HexMetrics);
                 SetService(CoreServiceKeys.LoadedChunks, board.LoadedChunks);
                 HexGridAOI = null;
-                loadedChunks = board.LoadedChunks;
             }
+
+            sharedSpatialQueries.SetLoadedChunks(board.LoadedChunks);
 
             if (board is INodeGraphBoard nodeGraphBoard)
             {

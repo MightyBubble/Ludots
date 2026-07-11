@@ -9,16 +9,16 @@ internal sealed class FormationCapabilityShowcaseFormationRuntimeSystem : ISyste
 {
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
 
     public FormationCapabilityShowcaseFormationRuntimeSystem(
         GameEngine engine,
         FormationCapabilityShowcaseRuntime runtime,
-        MassNavigationSimulationRuntime simulation)
+        MassNavigationRuntimeBinding binding)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _binding = binding ?? throw new ArgumentNullException(nameof(binding));
     }
 
     public void Initialize() { }
@@ -33,6 +33,12 @@ internal sealed class FormationCapabilityShowcaseFormationRuntimeSystem : ISyste
             return;
         }
 
-        _runtime.Tick(_engine, _simulation);
+        MassNavigationSimulationRuntime? simulation = _binding.Current;
+        if (simulation == null || !simulation.IsReadyForWorldOperations)
+        {
+            return;
+        }
+
+        _runtime.Tick(_engine, simulation);
     }
 }

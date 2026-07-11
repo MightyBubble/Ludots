@@ -13,6 +13,10 @@ public struct MassNavigationAgentIndex
     public int Value;
 }
 
+public struct MassNavigationAgentBindingDirty
+{
+}
+
 public struct MassNavigationAgentProfile
 {
     public int ProfileId;

@@ -12,12 +12,13 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationControlSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
 
-    public MassNavigationControlSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationControlSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine;
-        _simulation = simulation;
+        _binding = binding;
     }
 
     public void Initialize() { }
@@ -32,48 +33,29 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             return;
         }
 
-        _simulation.ObserveControlTick();
+        Simulation.ObserveControlTick();
 
         if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
         {
             if (input.PressedThisFrame(MassNavigationInputActions.ResetScene))
             {
-                _simulation.RequestSceneReset();
+                Simulation.RequestSceneReset();
             }
         }
 
-        if (_simulation.ConsumeSceneResetRequest())
+        if (Simulation.ConsumeSceneResetRequest())
         {
-            if (_simulation.Config.ScenarioRuntime.AutoSpawnConfiguredScenario)
-            {
-                ResetConfiguredScenario();
-            }
-            else
-            {
-                ResetRuntimeState();
-                _simulation.MarkSceneResetExecuted();
-                _simulation.MarkStructuralChange();
-            }
+            ResetRuntimeState();
+            _engine.GetService(MassNavigationKeys.SceneController)?.PopulateScene(_engine, Simulation);
+            Simulation.MarkSceneResetExecuted();
+            Simulation.MarkStructuralChange();
         }
-    }
-
-    private void ResetConfiguredScenario()
-    {
-        ResetRuntimeState();
-        MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
-            _engine,
-            _simulation,
-            _engine.GetService(CoreServiceKeys.TeamEntityLookup)
-                ?? throw new InvalidOperationException("MassNavigation runtime requires TeamEntityLookup."));
-
-        _simulation.MarkSceneResetExecuted();
-        _simulation.MarkStructuralChange();
     }
 
     private void ResetRuntimeState()
     {
         RemovePendingScenarioSpawns();
-        _simulation.ResetRuntimeState(_engine.World);
+        Simulation.ResetRuntimeState(_engine.World);
     }
 
     private void RemovePendingScenarioSpawns()

@@ -1,0 +1,5 @@
+{"eventId":"massnav-profile-001","timestamp":0,"phase":"map-load","mapId":"mass_navigation","profileId":"mass_navigation","result":"selected"}
+{"eventId":"massnav-profile-002","timestamp":1,"phase":"runtime-bind","mapId":"mass_navigation","boardOwnsLoadedChunks":true,"bindingMatchesService":true}
+{"eventId":"massnav-profile-003","timestamp":2,"phase":"map-unload","mapId":"mass_navigation","streamingWindowReleased":true,"bindingCleared":true,"serviceRemoved":true}
+{"eventId":"massnav-profile-004","timestamp":3,"phase":"map-load","mapId":"formation_capability_showcase","profileId":"formation_capability_showcase","extends":"mass_navigation","result":"selected"}
+{"eventId":"massnav-profile-005","timestamp":4,"phase":"runtime-bind","mapId":"formation_capability_showcase","newRuntimeInstance":true,"bindingMatchesService":true,"result":"pass"}

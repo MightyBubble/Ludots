@@ -1,0 +1,12 @@
+flowchart TD
+    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]
+    B --> C[Verify performer, minimap, world HUD, and screen HUD coverage]
+    C --> D[Seed collection.command.source]
+    D --> E[Submit massNavigationMove through OrderBuffer]
+    E --> F[Jump core minimap camera to remote 64km coordinate]
+    F --> G[Jump back to original area]
+    G --> H[Disable runtime timing and warm up]
+    H --> I[Run wall-clock steady-state measurement with alternating formal orders]
+    I --> J{Complete HUD, stable agents, and zero storage growth?}
+    J -->|yes| K[Write battle-report + trace + path + PNG timeline]
+    J -->|no| X[Fail MassNavigation UAT]

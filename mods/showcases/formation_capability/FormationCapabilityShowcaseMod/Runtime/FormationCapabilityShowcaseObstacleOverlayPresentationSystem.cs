@@ -21,7 +21,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
 
     private static readonly QueryDescription ObstacleOverlayQuery = new QueryDescription()
         .WithAll<FormationCapabilityShowcaseObstacleOverlay, VisualTransform, PresentationStableId>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;

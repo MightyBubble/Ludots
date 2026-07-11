@@ -1,4 +1,4 @@
 [
-  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
+  { "Path": "MassNavigationConfig.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }
 ]

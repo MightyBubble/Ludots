@@ -16,34 +16,34 @@ internal sealed class MassNavigationAuthoringContract
     private readonly EntityTemplateKeyRegistry _templateKeys;
     private readonly PerformerDefinitionRegistry _performers;
     private readonly MeshAssetRegistry _meshAssets;
-    private readonly MassNavigationConfig _config;
+    private readonly MassNavigationPresentationConfig _presentation;
 
     private MassNavigationAuthoringContract(
         Dictionary<string, EntityTemplate> templates,
         EntityTemplateKeyRegistry templateKeys,
         PerformerDefinitionRegistry performers,
         MeshAssetRegistry meshAssets,
-        MassNavigationConfig config)
+        MassNavigationPresentationConfig presentation)
     {
         _templates = templates;
         _templateKeys = templateKeys;
         _performers = performers;
         _meshAssets = meshAssets;
-        _config = config;
+        _presentation = presentation;
     }
 
     public IReadOnlyDictionary<string, EntityTemplate> Templates => _templates;
 
-    public static MassNavigationAuthoringContract Require(GameEngine engine, MassNavigationConfig config)
+    public static MassNavigationAuthoringContract Require(GameEngine engine, MassNavigationPresentationConfig presentation)
     {
         if (engine == null)
         {
             throw new ArgumentNullException(nameof(engine));
         }
 
-        if (config == null)
+        if (presentation == null)
         {
-            throw new ArgumentNullException(nameof(config));
+            throw new ArgumentNullException(nameof(presentation));
         }
 
         EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
@@ -70,7 +70,7 @@ internal sealed class MassNavigationAuthoringContract
             templates[template.Id] = template;
         }
 
-        var contract = new MassNavigationAuthoringContract(templates, templateKeys, performers, meshAssets, config);
+        var contract = new MassNavigationAuthoringContract(templates, templateKeys, performers, meshAssets, presentation);
         contract.ValidateAll();
         return contract;
     }
@@ -110,19 +110,14 @@ internal sealed class MassNavigationAuthoringContract
     {
         ValidateRequiredMeshAssets();
 
-        if (!_config.ScenarioRuntime.AutoSpawnConfiguredScenario)
-        {
-            return;
-        }
+        ValidatePerformer(_presentation.BlockerPerformerId!);
+        ValidatePerformer(_presentation.HotspotPerformerId!);
+        ValidateTemplate(_presentation.BlockerTemplateId);
+        ValidateTemplate(_presentation.HotspotTemplateId!);
 
-        ValidatePerformer(_config.Presentation.BlockerPerformerId);
-        ValidatePerformer(_config.Presentation.HotspotPerformerId);
-        ValidateTemplate(_config.Presentation.BlockerTemplateId);
-        ValidateTemplate(_config.Presentation.HotspotTemplateId);
-
-        for (int i = 0; i < _config.Presentation.Teams.Length; i++)
+        for (int i = 0; i < _presentation.Teams.Length; i++)
         {
-            MassNavigationTeamPresentationConfig team = _config.Presentation.Teams[i];
+            MassNavigationTeamPresentationConfig team = _presentation.Teams[i];
             ValidateTemplate(team.LightTemplateId);
             ValidateTemplate(team.HeavyTemplateId);
             MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[team.LightTemplateId], team.LightTemplateId);
@@ -148,9 +143,9 @@ internal sealed class MassNavigationAuthoringContract
 
     private void ValidateRequiredMeshAssets()
     {
-        for (int i = 0; i < _config.Presentation.RequiredMeshAssetIds.Length; i++)
+        for (int i = 0; i < _presentation.RequiredMeshAssetIds.Length; i++)
         {
-            string meshAssetId = _config.Presentation.RequiredMeshAssetIds[i];
+            string meshAssetId = _presentation.RequiredMeshAssetIds[i];
             int runtimeId = _meshAssets.GetId(meshAssetId);
             if (runtimeId <= 0 ||
                 !_meshAssets.TryGetDescriptor(runtimeId, out MeshAssetDescriptor descriptor))

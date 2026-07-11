@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -16,40 +17,29 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer>()
+        .WithNone<SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly int _idleScanIntervalFrames;
-    private readonly int _orderTokenCapacity;
-    private readonly int _bucketMemberCapacity;
-    private readonly Dictionary<int, int> _bucketIndexByToken;
-    private readonly List<OrderBucket> _buckets;
-    private readonly HashSet<int> _activeTokens;
-    private readonly List<int> _completedTokens;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
+    private int _idleScanIntervalFrames;
+    private int _orderTokenCapacity;
+    private int _bucketMemberCapacity;
+    private readonly Dictionary<int, int> _bucketIndexByToken = new();
+    private readonly List<OrderBucket> _buckets = new();
+    private readonly HashSet<int> _activeTokens = new();
+    private readonly List<int> _completedTokens = new();
     private MassNavigationRouteExecutionSink? _routeSink;
     private int _usedBucketCount;
     private int _moveOrderTypeId;
     private int _lastIdleScanFrame;
+    private int _observedRuntimeBindingRevision = -1;
 
-    public MassNavigationOrderIngestionSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationOrderIngestionSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine;
-        _simulation = simulation;
-        _idleScanIntervalFrames = simulation.Cadence.OrderIdleScanIntervalFrames;
-        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
-        _orderTokenCapacity = capacity.OrderIngestionTokenCapacity;
-        _bucketMemberCapacity = capacity.OrderIngestionMemberCapacity;
-        _bucketIndexByToken = new Dictionary<int, int>(_orderTokenCapacity);
-        _buckets = new List<OrderBucket>(_orderTokenCapacity);
-        _activeTokens = new HashSet<int>(_orderTokenCapacity);
-        _completedTokens = new List<int>(_orderTokenCapacity);
-        for (int i = 0; i < _orderTokenCapacity; i++)
-        {
-            _buckets.Add(new OrderBucket(_bucketMemberCapacity));
-        }
-
-        _lastIdleScanFrame = -_idleScanIntervalFrames;
+        _binding = binding;
     }
 
     public void Initialize() { }
@@ -64,11 +54,13 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             return;
         }
 
+        RefreshRuntimeConfig();
+
         ResolveMoveOrderType();
 
-        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
-            _simulation.CommandCountFrame <= 0 &&
-            _simulation.FrameIndex - _lastIdleScanFrame < _idleScanIntervalFrames)
+        if (Simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
+            Simulation.CommandCountFrame <= 0 &&
+            Simulation.FrameIndex - _lastIdleScanFrame < _idleScanIntervalFrames)
         {
             return;
         }
@@ -115,7 +107,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 if (bucket.Members.Count >= _bucketMemberCapacity)
                 {
                     throw new InvalidOperationException(
-                        $"MassNavigation order ingestion token {token} required more than configured scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {_bucketMemberCapacity} members.");
+                        $"MassNavigation order ingestion token {token} required more than runtime.capacity.orderIngestionMemberCapacity {_bucketMemberCapacity} members.");
                 }
 
                 bucket.Members.Add(agentIndices[index].Value);
@@ -132,9 +124,9 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 continue;
             }
 
-            _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                _simulation.MassNavigationFlow,
-                _simulation.AgentState,
+            Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                Simulation.MassNavigationFlow,
+                Simulation.AgentState,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
                 bucket.TeamId,
@@ -155,7 +147,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         {
             OrderBucket bucket = _buckets[bucketIndex];
             if (bucket.Members.Count <= 0 ||
-                !_simulation.NavGroupRuntime.TryGetOrderGroup(bucket.Token, out bool arrived) ||
+                !Simulation.NavGroupRuntime.TryGetOrderGroup(bucket.Token, out bool arrived) ||
                 !arrived)
             {
                 continue;
@@ -172,7 +164,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 
         for (int i = 0; i < _completedTokens.Count; i++)
         {
-            _simulation.NavGroupRuntime.CompleteOrderGroup(_simulation.MassNavigationFlow, _completedTokens[i]);
+            Simulation.NavGroupRuntime.CompleteOrderGroup(Simulation.MassNavigationFlow, _completedTokens[i]);
         }
 
         MassNavigationRouteExecutionSink? pruningRouteSink = routeSink ?? ResolveRouteSink();
@@ -185,10 +177,10 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             }
         }
 
-        _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.MassNavigationFlow, _activeTokens);
-        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
+        Simulation.NavGroupRuntime.PruneInactiveOrderGroups(Simulation.MassNavigationFlow, _activeTokens);
+        if (Simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
         {
-            _lastIdleScanFrame = _simulation.FrameIndex;
+            _lastIdleScanFrame = Simulation.FrameIndex;
         }
     }
 
@@ -240,14 +232,14 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         {
             int memberIndex = bucket.Members[i];
             Entity member = ResolveControllableAgent(memberIndex, bucket.Token);
-            if (!_simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(memberIndex, out float destinationX, out float destinationY))
+            if (!Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(memberIndex, out float destinationX, out float destinationY))
             {
                 throw new InvalidOperationException(
                     $"MassNavigation route execution could not resolve the order target for token {bucket.Token}, agent {memberIndex}.");
             }
 
             MassNavigationRouteSinkResult result = routeSink.TrackRouteTarget(
-                _simulation,
+                Simulation,
                 _engine.World,
                 member,
                 memberIndex,
@@ -270,7 +262,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 
     private Entity ResolveControllableAgent(int agentIndex, int orderToken)
     {
-        if (!_simulation.AgentState.TryGetControllableEntity(agentIndex, out Entity entity))
+        if (!Simulation.AgentState.TryGetControllableEntity(agentIndex, out Entity entity))
         {
             throw new InvalidOperationException(
                 $"MassNavigation runtime order {orderToken} references controllable agent index {agentIndex}, but no controllable entity is bound at that MassNavigation agent index.");
@@ -301,7 +293,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         if (_usedBucketCount >= _orderTokenCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation order ingestion required more than configured scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity {_orderTokenCapacity} active order tokens.");
+                $"MassNavigation order ingestion required more than runtime.capacity.orderIngestionTokenCapacity {_orderTokenCapacity} active order tokens.");
         }
 
         index = _usedBucketCount++;
@@ -309,6 +301,37 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         _buckets[index].Reset(token);
 
         return index;
+    }
+
+    private void RefreshRuntimeConfig()
+    {
+        if (_observedRuntimeBindingRevision == _binding.Revision)
+        {
+            return;
+        }
+
+        _observedRuntimeBindingRevision = _binding.Revision;
+        _idleScanIntervalFrames = Simulation.Cadence.OrderIdleScanIntervalFrames;
+        MassNavigationRuntimeCapacityPlan capacity = Simulation.Plan.Capacity;
+        _orderTokenCapacity = capacity.OrderIngestionTokenCapacity;
+        _bucketMemberCapacity = capacity.OrderIngestionMemberCapacity;
+        _bucketIndexByToken.Clear();
+        _bucketIndexByToken.EnsureCapacity(_orderTokenCapacity);
+        _activeTokens.Clear();
+        _activeTokens.EnsureCapacity(_orderTokenCapacity);
+        _completedTokens.Clear();
+        _completedTokens.EnsureCapacity(_orderTokenCapacity);
+        _buckets.Clear();
+        _buckets.EnsureCapacity(_orderTokenCapacity);
+        for (int i = 0; i < _orderTokenCapacity; i++)
+        {
+            _buckets.Add(new OrderBucket(_bucketMemberCapacity));
+        }
+
+        _usedBucketCount = 0;
+        _lastIdleScanFrame = -_idleScanIntervalFrames;
+        _routeSink = null;
+        _engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
     }
 
     private sealed class OrderBucket

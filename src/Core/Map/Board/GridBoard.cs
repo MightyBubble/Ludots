@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
@@ -17,7 +18,8 @@ namespace Ludots.Core.Map.Board
         public ISpatialCoordinateConverter CoordinateConverter { get; }
         public ISpatialPartitionWorld SpatialPartition { get; }
         public ISpatialQueryService QueryService { get; }
-        public ILoadedChunks LoadedChunks => null;
+        public ILoadedChunks LoadedChunks => LoadedChunksSource;
+        public WorldGridLoadedChunks LoadedChunksSource { get; }
         public VertexMap VertexMap { get; set; }
         public LogicTerrainField LogicTerrain { get; set; }
         public NavQueryServiceRegistry NavServices { get; set; }
@@ -43,12 +45,14 @@ namespace Ludots.Core.Map.Board
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
             SpatialPartition = partition;
             QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
+            LoadedChunksSource = new WorldGridLoadedChunks(config.ChunkSizeCells * config.GridCellSizeCm);
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
+            LoadedChunksSource.Reset();
             SpatialPartition?.Clear();
         }
     }

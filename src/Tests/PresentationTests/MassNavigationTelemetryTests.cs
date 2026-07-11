@@ -7,6 +7,21 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationTelemetryTests
     {
         [Test]
+        public void TimingSampling_IsExplicitlyOptIn()
+        {
+            var telemetry = new MassNavigationTelemetry();
+
+            Assert.That(telemetry.TimingEnabled, Is.False);
+            telemetry.ObserveSimStep(2.5d);
+            Assert.That(telemetry.SimStepMs, Is.Zero);
+
+            telemetry.SetTimingEnabled(true);
+            telemetry.ObserveSimStep(2.5d);
+            Assert.That(telemetry.TimingEnabled, Is.True);
+            Assert.That(telemetry.SimStepMs, Is.EqualTo(2.5f).Within(0.001f));
+        }
+
+        [Test]
         public void BeginFrame_ResetsFrameCountersAndKeepsTotals()
         {
             var telemetry = new MassNavigationTelemetry();
@@ -34,6 +49,7 @@ namespace Ludots.Tests.Presentation
         public void ObserveTiming_NegativeSample_ClampsToZero()
         {
             var telemetry = new MassNavigationTelemetry();
+            telemetry.SetTimingEnabled(true);
 
             telemetry.ObserveSimStep(-4d);
 

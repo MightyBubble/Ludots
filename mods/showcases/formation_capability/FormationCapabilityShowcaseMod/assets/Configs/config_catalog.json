@@ -1,5 +1,5 @@
 [
-  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
+  { "Path": "MassNavigationConfig.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "FormationCapabilityShowcaseConfig.json", "Policy": "Replace" },
   { "Path": "Input/command_intent_profiles.json", "Policy": "DeepObject" },
   { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },

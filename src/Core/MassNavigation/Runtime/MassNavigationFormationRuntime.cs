@@ -8,7 +8,9 @@ public sealed class MassNavigationFormationRuntime
 
     public MassNavigationFormationRuntime(MassNavigationGroupSemantics groupSemantics)
     {
-        _groupSemantics = groupSemantics ?? throw new ArgumentNullException(nameof(groupSemantics));
+        ArgumentNullException.ThrowIfNull(groupSemantics);
+        _groupSemantics = new MassNavigationGroupSemantics();
+        _groupSemantics.CopyFrom(groupSemantics);
     }
 
     public float RotationEpsilonRadians => _groupSemantics.FormationRotationEpsilonRadians;

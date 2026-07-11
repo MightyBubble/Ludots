@@ -35,7 +35,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
-            if (!_runtime.IsActive ||
+            if (!_runtime.IsCurrentShowcaseMap(_engine) ||
                 !_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object? inputObj) ||
                 inputObj is not IInputActionReader input ||
                 !input.PressedThisFrame(ResetCameraAction))

@@ -17,22 +17,24 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
 {
     private static readonly QueryDescription BlockersQuery = new QueryDescription()
         .WithAll<MassNavigationFlowObstacleProjection, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription MarkersQuery = new QueryDescription()
         .WithAll<MassNavigationHotspotMarker, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
     private readonly List<MassNavigationObstacleSnapshot> _blockerObstacles = new();
     private readonly CommandBuffer _commandBuffer = new();
     private long _lastSignature;
+    private int _observedRuntimeBindingRevision = -1;
 
-    public MassNavigationEnvironmentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationEnvironmentBindingSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _binding = binding ?? throw new ArgumentNullException(nameof(binding));
     }
 
     public void Initialize() { }
@@ -50,19 +52,25 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
             return;
         }
 
+        if (_observedRuntimeBindingRevision != _binding.Revision)
+        {
+            _observedRuntimeBindingRevision = _binding.Revision;
+            _lastSignature = 0L;
+        }
+
         MassNavigationEnvironmentSignature environment = ComputeSignature();
         if (environment.Hash == _lastSignature &&
-            _simulation.AgentState.BlockerCount == environment.BlockerCount &&
-            _simulation.AgentState.WorldMarkerCount == environment.MarkerCount)
+            Simulation.AgentState.BlockerCount == environment.BlockerCount &&
+            Simulation.AgentState.WorldMarkerCount == environment.MarkerCount)
         {
             return;
         }
 
-        _simulation.AgentState.ClearEnvironmentCounts();
+        Simulation.AgentState.ClearEnvironmentCounts();
         BindBlockers();
         BindMarkers();
         _lastSignature = environment.Hash;
-        _simulation.MarkStructuralChange();
+        Simulation.MarkStructuralChange();
     }
 
     private MassNavigationEnvironmentSignature ComputeSignature()
@@ -162,7 +170,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                     _commandBuffer.Add(entity, profile);
                 }
 
-                _simulation.AgentState.RegisterBlocker(entity);
+                Simulation.AgentState.RegisterBlocker(entity);
             }
         }
 
@@ -171,7 +179,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
             _commandBuffer.Playback(_engine.World);
         }
 
-        _simulation.RebuildRuntimeObstacles(CollectionsMarshal.AsSpan(_blockerObstacles));
+        Simulation.RebuildRuntimeObstacles(CollectionsMarshal.AsSpan(_blockerObstacles));
     }
 
     private void BindMarkers()
@@ -181,7 +189,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
-                _simulation.AgentState.RegisterWorldMarker(Unsafe.Add(ref entityFirst, index));
+                Simulation.AgentState.RegisterWorldMarker(Unsafe.Add(ref entityFirst, index));
             }
         }
     }

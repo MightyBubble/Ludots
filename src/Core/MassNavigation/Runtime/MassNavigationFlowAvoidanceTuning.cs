@@ -24,27 +24,27 @@ public sealed class MassNavigationFlowAvoidanceTuning
 
     private MassNavigationFlowAvoidanceMode _parsedMode;
 
-    public string Mode { get; set; } = string.Empty;
-    public MassNavigationFlowOrcaAvoidanceConfig Orca { get; set; } = new();
-    public MassNavigationFlowSonarAvoidanceConfig Sonar { get; set; } = new();
-    public float DominantMassRatio { get; set; }
-    public float FriendlyResponseScale { get; set; }
-    public float FriendlyResponseMin { get; set; }
-    public float FriendlyResponseMax { get; set; }
-    public float NonFriendlyResponseScale { get; set; }
-    public float NonFriendlyResponseMin { get; set; }
-    public float NonFriendlyResponseMax { get; set; }
-    public float DominantPushResponseScale { get; set; }
-    public float DominantPushResponseMin { get; set; }
-    public float DominantPushResponseMax { get; set; }
-    public float FriendlyCorrectionShareMin { get; set; }
-    public float FriendlyCorrectionShareMax { get; set; }
-    public float DominantCorrectionOtherMassWeight { get; set; }
-    public float DominantCorrectionShareMin { get; set; }
-    public float DominantCorrectionShareMax { get; set; }
-    public float NonFriendlyCorrectionOtherMassWeight { get; set; }
-    public float NonFriendlyCorrectionShareMin { get; set; }
-    public float NonFriendlyCorrectionShareMax { get; set; }
+    [JsonRequired] public string Mode { get; set; } = string.Empty;
+    [JsonRequired] public MassNavigationFlowOrcaAvoidanceConfig Orca { get; set; } = new();
+    [JsonRequired] public MassNavigationFlowSonarAvoidanceConfig Sonar { get; set; } = new();
+    [JsonRequired] public float DominantMassRatio { get; set; }
+    [JsonRequired] public float FriendlyResponseScale { get; set; }
+    [JsonRequired] public float FriendlyResponseMin { get; set; }
+    [JsonRequired] public float FriendlyResponseMax { get; set; }
+    [JsonRequired] public float NonFriendlyResponseScale { get; set; }
+    [JsonRequired] public float NonFriendlyResponseMin { get; set; }
+    [JsonRequired] public float NonFriendlyResponseMax { get; set; }
+    [JsonRequired] public float DominantPushResponseScale { get; set; }
+    [JsonRequired] public float DominantPushResponseMin { get; set; }
+    [JsonRequired] public float DominantPushResponseMax { get; set; }
+    [JsonRequired] public float FriendlyCorrectionShareMin { get; set; }
+    [JsonRequired] public float FriendlyCorrectionShareMax { get; set; }
+    [JsonRequired] public float DominantCorrectionOtherMassWeight { get; set; }
+    [JsonRequired] public float DominantCorrectionShareMin { get; set; }
+    [JsonRequired] public float DominantCorrectionShareMax { get; set; }
+    [JsonRequired] public float NonFriendlyCorrectionOtherMassWeight { get; set; }
+    [JsonRequired] public float NonFriendlyCorrectionShareMin { get; set; }
+    [JsonRequired] public float NonFriendlyCorrectionShareMax { get; set; }
 
     [JsonIgnore]
     public MassNavigationFlowAvoidanceMode ParsedMode => _parsedMode;
@@ -139,8 +139,8 @@ public sealed class MassNavigationFlowAvoidanceTuning
 
 public sealed class MassNavigationFlowOrcaAvoidanceConfig
 {
-    public float TimeHorizonSeconds { get; set; }
-    public int MaxNeighbors { get; set; }
+    [JsonRequired] public float TimeHorizonSeconds { get; set; }
+    [JsonRequired] public int MaxNeighbors { get; set; }
 
     public void CopyFrom(MassNavigationFlowOrcaAvoidanceConfig source)
     {
@@ -175,14 +175,14 @@ public sealed class MassNavigationFlowOrcaAvoidanceConfig
 
 public sealed class MassNavigationFlowSonarAvoidanceConfig
 {
-    public int MaxSteerAngleDeg { get; set; }
-    public int BackwardPenaltyAngleDeg { get; set; }
-    public float PredictionTimeScale { get; set; }
-    public bool IgnoreBehindMovingAgents { get; set; }
-    public bool BlockedStop { get; set; }
-    public bool UsePreferredVelocityWhenBlocked { get; set; }
-    public float TimeHorizonSeconds { get; set; }
-    public int MaxNeighbors { get; set; }
+    [JsonRequired] public int MaxSteerAngleDeg { get; set; }
+    [JsonRequired] public int BackwardPenaltyAngleDeg { get; set; }
+    [JsonRequired] public float PredictionTimeScale { get; set; }
+    [JsonRequired] public bool IgnoreBehindMovingAgents { get; set; }
+    [JsonRequired] public bool BlockedStop { get; set; }
+    [JsonRequired] public bool UsePreferredVelocityWhenBlocked { get; set; }
+    [JsonRequired] public float TimeHorizonSeconds { get; set; }
+    [JsonRequired] public int MaxNeighbors { get; set; }
 
     public void CopyFrom(MassNavigationFlowSonarAvoidanceConfig source)
     {

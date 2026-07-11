@@ -29,10 +29,12 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadNetworkPresentationSystem : ISystem<float>
     {
         private static readonly QueryDescription FortQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, Team, Name, RoadFortTag, RoadFortControlState>();
+            .WithAll<WorldPositionCm, Team, Name, RoadFortTag, RoadFortControlState>()
+            .WithNone<SuspendedTag>();
 
         private static readonly QueryDescription ColumnQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, Team, RoadColumnTag>();
+            .WithAll<WorldPositionCm, Team, RoadColumnTag>()
+            .WithNone<SuspendedTag>();
 
         private static readonly Vector4 ChunkFill = new(0.16f, 0.23f, 0.31f, 0.16f);
         private static readonly Vector4 Blue = new(0.20f, 0.66f, 0.98f, 1f);
@@ -77,7 +79,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
-            if (!_runtime.IsActive || _runtime.ActiveBoard == null || _runtime.Scenario == null)
+            if (!_runtime.IsCurrentShowcaseMap(_engine) || _runtime.ActiveBoard == null || _runtime.Scenario == null)
             {
                 return;
             }

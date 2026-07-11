@@ -14,6 +14,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
@@ -28,33 +29,112 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationConfig_RequiresExplicitParallelWorkerCount()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject solver = config["solver"]?.AsObject()
+            JsonObject runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            JsonObject solver = runtime["solver"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.solver must be authored.");
             solver.Remove("parallelWorkerCount");
 
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            JsonException missing = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(runtime))!;
             Assert.That(missing.Message, Does.Contain("parallelWorkerCount"));
 
             config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            solver = config["solver"]?.AsObject()
+            runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            solver = runtime["solver"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.solver must be authored.");
             solver["parallelWorkerCount"] = 0;
 
-            InvalidOperationException invalid = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            InvalidOperationException invalid = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
             Assert.That(invalid.Message, Does.Contain("ParallelWorkerCount"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_UsesCadenceHzAsTheOnlyFlowSchedule()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            JsonObject flow = runtime["flow"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.flow must be authored.");
+            flow.Remove("stepIntervalTicks");
+            flow.Remove("crowdStampIntervalTicks");
+            flow.Remove("obstacleStampIntervalTicks");
+
+            Assert.That(() => MassNavigationConfig.Load(runtime), Throws.Nothing);
+
+            flow["stepIntervalTicks"] = 1;
+            JsonException legacy = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(legacy.Message, Does.Contain("stepIntervalTicks"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_NamesCrowdCostBudgetByItsActualBehavior()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            JsonObject flow = runtime["flow"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.flow must be authored.");
+            flow.Remove("enabled");
+            flow.Remove("iterationsPerStep");
+            flow.Remove("maxIterationsPerStep");
+            flow["crowdCostEnabled"] = false;
+            flow["crowdStampBudgetAgentsPerRefresh"] = 4_096;
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(runtime);
+
+            Assert.That(loaded.Flow.CrowdCostEnabled, Is.False);
+            Assert.That(loaded.Flow.CrowdStampBudgetAgentsPerRefresh, Is.EqualTo(4_096));
+
+            flow["enabled"] = false;
+            JsonException legacy = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(legacy.Message, Does.Contain("enabled"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_UsesSolverAndStreamingAsSpatialOwners()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            JsonObject world = runtime["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
+            world.Remove("solverWindowWidthCm");
+            world.Remove("solverWindowHeightCm");
+            world.Remove("streamingRadiusCm");
+
+            Assert.That(() => MassNavigationConfig.Load(runtime), Throws.Nothing);
+
+            world["solverWindowWidthCm"] = 10_000;
+            JsonException legacy = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(legacy.Message, Does.Contain("solverWindowWidthCm"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_RejectsCadenceThatSolverWouldSilentlyClamp()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]!.AsObject();
+            runtime["cadence"]!["simulationHz"] = 15;
+            runtime["semantics"]!["solver"]!["maxStepDtSeconds"] = 0.05f;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(ex.Message, Does.Contain("simulationHz"));
+            Assert.That(ex.Message, Does.Contain("maxStepDtSeconds"));
         }
 
         [Test]
         public void AutoSpawnLayout_RequiresExplicitRandomSeed()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject scenario = config["scenario"]?.AsObject()
+            JsonObject scenario = config["sceneAuthoring"]?["scenario"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored.");
             JsonObject spawnLayout = scenario["spawnLayout"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenario.spawnLayout must be authored.");
             spawnLayout.Remove("randomSeed");
 
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            JsonException missing = Assert.Throws<JsonException>(() => MassNavigationCapabilityProfile.Load(config))!;
             Assert.That(missing.Message, Does.Contain("randomSeed"));
         }
 
@@ -63,32 +143,35 @@ namespace Ludots.Tests.Presentation
         {
             JsonObject initialScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
             int authoredAgentCount = ResolveAuthoredAgentCount(initialScratchConfig);
-            JsonObject scenarioRuntime = initialScratchConfig["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored.");
-            scenarioRuntime["initialCommandActorScratchCapacity"] = authoredAgentCount - 1;
+            JsonObject runtimeCapacity = initialScratchConfig["runtime"]?["capacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime.capacity must be authored.");
+            runtimeCapacity["initialCommandActorScratchCapacity"] = authoredAgentCount - 1;
 
-            InvalidOperationException initialScratch = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(initialScratchConfig))!;
-            Assert.That(initialScratch.Message, Does.Contain("scenarioRuntime.initialCommandActorScratchCapacity"));
-            Assert.That(initialScratch.Message, Does.Contain("authored scenario agent count"));
+            InvalidOperationException initialScratch = Assert.Throws<InvalidOperationException>(() => MassNavigationCapabilityProfile.Load(initialScratchConfig))!;
+            Assert.That(initialScratch.Message, Does.Contain("runtime.capacity.initialCommandActorScratchCapacity"));
+            Assert.That(initialScratch.Message, Does.Contain("authored scene agent count"));
 
             JsonObject runtimeScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
             authoredAgentCount = ResolveAuthoredAgentCount(runtimeScratchConfig);
-            MassNavigationConfig runtimeConfig = MassNavigationConfig.Load(runtimeScratchConfig);
-            runtimeConfig.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = authoredAgentCount - 1;
+            MassNavigationCapabilityProfile runtimeProfile = MassNavigationCapabilityProfile.Load(runtimeScratchConfig);
+            runtimeProfile.Runtime.Capacity.CommandActorScratchCapacity = authoredAgentCount - 1;
+            MassNavigationScenarioConfig scenario = runtimeProfile.SceneAuthoring.Scenario!;
 
             InvalidOperationException runtimeScratch = Assert.Throws<InvalidOperationException>(
-                () => runtimeConfig.ScenarioRuntime.RuntimeCapacity.ValidateForScenario(
-                    runtimeConfig.Scenario.Teams.Length,
-                    runtimeConfig.Scenario.AgentsPerTeam))!;
-            Assert.That(runtimeScratch.Message, Does.Contain("scenarioRuntime.runtimeCapacity.commandActorScratchCapacity"));
-            Assert.That(runtimeScratch.Message, Does.Contain("authored scenario agent count"));
+                () => runtimeProfile.Runtime.Capacity.ValidateForScenario(
+                    scenario.Teams.Length,
+                    scenario.AgentsPerTeam))!;
+            Assert.That(runtimeScratch.Message, Does.Contain("runtime.capacity.commandActorScratchCapacity"));
+            Assert.That(runtimeScratch.Message, Does.Contain("authored scene agent count"));
         }
 
         [Test]
         public void MassNavigationConfig_RejectsLegacyWorldObstacles()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject world = config["world"]?.AsObject()
+            JsonObject runtime = config["runtime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.runtime must be authored.");
+            JsonObject world = runtime["world"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
             world["obstacles"] = new JsonArray
             {
@@ -101,7 +184,7 @@ namespace Ludots.Tests.Presentation
                 },
             };
 
-            JsonException ex = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+            JsonException ex = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(runtime))!;
             Assert.That(ex.Message, Does.Contain("obstacles"));
         }
 
@@ -109,19 +192,21 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode()
         {
             JsonObject missingModeConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject missingAvoidance = missingModeConfig["avoidance"]?.AsObject()
+            JsonObject missingRuntime = missingModeConfig["runtime"]!.AsObject();
+            JsonObject missingAvoidance = missingRuntime["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
             missingAvoidance.Remove("mode");
 
-            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingModeConfig))!;
+            JsonException missing = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(missingRuntime))!;
             Assert.That(missing.Message, Does.Contain("mode"));
 
             JsonObject wrongCaseConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            JsonObject wrongCaseAvoidance = wrongCaseConfig["avoidance"]?.AsObject()
+            JsonObject wrongCaseRuntime = wrongCaseConfig["runtime"]!.AsObject();
+            JsonObject wrongCaseAvoidance = wrongCaseRuntime["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
             wrongCaseAvoidance["mode"] = "orca";
 
-            InvalidOperationException wrongCase = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCaseConfig))!;
+            InvalidOperationException wrongCase = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCaseRuntime))!;
             Assert.That(wrongCase.Message, Does.Contain("avoidance.mode"));
             Assert.That(wrongCase.Message, Does.Contain("orca"));
         }
@@ -140,7 +225,7 @@ namespace Ludots.Tests.Presentation
                 flow.Reset(
                     new[] { 1 },
                     unitsPerTeam: 2,
-                    CreateProfileSet(),
+                    CreateProfilePlanSet(),
                     layer,
                     CreateSpawnLayout(randomSeed: 1234));
                 TeamManager.LoadConfig(new TeamConfig
@@ -281,8 +366,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SimulationRuntime_PropagatesFormationGroupSemanticsToMassNavigationFlow()
         {
-            MassNavigationConfig config = MassNavigationConfig.Load(
-                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
             MassNavigationGroupSemantics group = config.Semantics.Group;
             group.FormationLineSpacingCm = 111f;
             group.FormationSquareSpacingCm = 222f;
@@ -290,9 +374,8 @@ namespace Ludots.Tests.Presentation
             group.FormationCircleMinRadiusCm = 444f;
             group.FormationWedgeSpacingCm = 555f;
             group.FormationRotationEpsilonRadians = 0.0123f;
-            group.FormationRotationSpeedRadiansPerSecond = 6.75f;
 
-            var runtime = new MassNavigationSimulationRuntime(config);
+            var runtime = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
             MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
 
             Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
@@ -301,25 +384,47 @@ namespace Ludots.Tests.Presentation
             Assert.That(massFlowGroup.FormationCircleMinRadiusCm, Is.EqualTo(group.FormationCircleMinRadiusCm));
             Assert.That(massFlowGroup.FormationWedgeSpacingCm, Is.EqualTo(group.FormationWedgeSpacingCm));
             Assert.That(massFlowGroup.FormationRotationEpsilonRadians, Is.EqualTo(group.FormationRotationEpsilonRadians));
-            Assert.That(massFlowGroup.FormationRotationSpeedRadiansPerSecond, Is.EqualTo(group.FormationRotationSpeedRadiansPerSecond));
         }
 
         [Test]
         public void SimulationRuntime_PropagatesAllMappedConfigFieldsToMassNavigationFlow()
         {
-            MassNavigationConfig config = MassNavigationConfig.Load(
-                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
             int seed = 1;
             MutateWritableLeaves(config.Arrival, ref seed);
             MutateWritableLeaves(config.Avoidance, ref seed);
             MutateWritableLeaves(config.Semantics, ref seed);
 
-            var runtime = new MassNavigationSimulationRuntime(config);
+            var runtime = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
             MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
 
             AssertWritableLeavesEqual(config.Arrival, flow.ArrivalTuning, "arrival");
             AssertWritableLeavesEqual(config.Avoidance, flow.AvoidanceTuning, "avoidance");
             AssertWritableLeavesEqual(config.Semantics, flow.Semantics, "semantics");
+        }
+
+        [Test]
+        public void SimulationRuntime_CompilesImmutableExecutionPlanFromAuthoringConfig()
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            var runtime = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            int cadenceHz = runtime.Cadence.FlowStepHz;
+            int crowdBudget = runtime.FlowConfig.CrowdStampBudgetAgentsPerRefresh;
+            int streamingRadius = runtime.Streaming.RadiusCm;
+            float formationRotationEpsilon = runtime.FormationRuntime.RotationEpsilonRadians;
+
+            config.Cadence.FlowStepHz = cadenceHz + 1;
+            config.Flow.CrowdStampBudgetAgentsPerRefresh = crowdBudget + 1;
+            config.Streaming.RadiusCm = streamingRadius + config.World!.StreamingChunkSizeCm;
+            config.Semantics.Group.FormationRotationEpsilonRadians = formationRotationEpsilon + 1f;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.Cadence.FlowStepHz, Is.EqualTo(cadenceHz));
+                Assert.That(runtime.FlowConfig.CrowdStampBudgetAgentsPerRefresh, Is.EqualTo(crowdBudget));
+                Assert.That(runtime.Streaming.RadiusCm, Is.EqualTo(streamingRadius));
+                Assert.That(runtime.FormationRuntime.RotationEpsilonRadians, Is.EqualTo(formationRotationEpsilon));
+            });
         }
 
         [Test]
@@ -334,14 +439,16 @@ namespace Ludots.Tests.Presentation
             config.Solver.PlayAreaMinYCm = 50f;
             config.Solver.PlayAreaMaxYCm = 9_950f;
             config.Solver.MaxObstacleCount = 8;
-            config.ScenarioRuntime.InitialCommandActorSnapshotCapacity = 4;
-            config.ScenarioRuntime.InitialCommandActorScratchCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 4;
-            var runtime = new MassNavigationSimulationRuntime(config);
-            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100));
+            config.Capacity.InitialCommandActorSnapshotCapacity = 4;
+            config.Capacity.InitialCommandActorScratchCapacity = 4;
+            config.Capacity.GroupMembershipAgentCapacity = 4;
+            config.Capacity.CommandActorScratchCapacity = 4;
+            config.Capacity.GroupMemberCapacity = 4;
+            config.Capacity.OrderIngestionMemberCapacity = 4;
+            var runtime = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World!.StreamingChunkSizeCm));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity light = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
@@ -394,6 +501,167 @@ namespace Ludots.Tests.Presentation
                 Throws.InvalidOperationException.With.Message.Contains("agent slots"));
         }
 
+        [Test]
+        public void SeparationCapacity_DoesNotAllocateUnusedOrcaOrSonarScratchPerAgent()
+        {
+            const int preparedCapacity = 1_000;
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 4);
+
+            flow.PreallocateAgentCapacity(preparedCapacity);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(GetPrivateArrayLength(flow, "_avoidanceNeighborScratch"), Is.Zero);
+                Assert.That(GetPrivateArrayLength(flow, "_orcaLineScratch"), Is.Zero);
+                Assert.That(GetPrivateArrayLength(flow, "_orcaProjectionLineScratch"), Is.Zero);
+                Assert.That(GetPrivateArrayLength(flow, "_sonarIntervalScratch"), Is.Zero);
+            });
+        }
+
+        [TestCase("Orca")]
+        [TestCase("Sonar")]
+        public void HighQualityAvoidanceCapacity_AllocatesScratchPerWorkerNotPerAgent(string mode)
+        {
+            const int preparedCapacity = 10_000;
+            const int workerCount = 4;
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(workerCount, mode);
+
+            flow.PreallocateAgentCapacity(preparedCapacity);
+
+            int neighborLimit = mode == "Orca"
+                ? flow.AvoidanceTuning.Orca.MaxNeighbors
+                : flow.AvoidanceTuning.Sonar.MaxNeighbors;
+            Assert.Multiple(() =>
+            {
+                Assert.That(GetPrivateArrayLength(flow, "_avoidanceNeighborScratch"), Is.EqualTo(workerCount * neighborLimit));
+                Assert.That(GetPrivateArrayLength(flow, "_orcaLineScratch"), Is.EqualTo(mode == "Orca" ? workerCount * neighborLimit : 0));
+                Assert.That(GetPrivateArrayLength(flow, "_orcaProjectionLineScratch"), Is.EqualTo(mode == "Orca" ? workerCount * OrcaSolver2D.MaxProjectionLines : 0));
+                Assert.That(GetPrivateArrayLength(flow, "_sonarIntervalScratch"), Is.EqualTo(mode == "Sonar" ? workerCount * SonarSolver2D.MaxIntervals : 0));
+            });
+        }
+
+        [TestCase("Orca")]
+        [TestCase("Sonar")]
+        public void ParallelHighQualityAvoidance_MatchesSingleWorkerTrajectory(string mode)
+        {
+            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
+            {
+                ThreadPrefixName = "MassNavAvoidanceTests",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false
+            });
+
+            const int agentCount = 32;
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            for (int i = 0; i < agentCount; i++)
+            {
+                seeds[i] = CreateAvoidanceSeed(
+                    teamId: 1,
+                    localX: 4_800f + ((i % 8) * 55f),
+                    localY: 4_800f + ((i / 8) * 55f),
+                    heavy: false,
+                    layer);
+            }
+
+            MassNavigationFlowSolverState singleWorker = CreateConfiguredFlow(parallelWorkerCount: 1, mode);
+            MassNavigationFlowSolverState parallel = CreateConfiguredFlow(parallelWorkerCount: 4, mode);
+            singleWorker.Semantics.Solver.ParallelStepMinAgents = 2;
+            parallel.Semantics.Solver.ParallelStepMinAgents = 2;
+            singleWorker.ResetAuthoredAgents(seeds);
+            parallel.ResetAuthoredAgents(seeds);
+            for (int i = 0; i < agentCount; i++)
+            {
+                float targetX = 9_000f - seeds[i].LocalPositionXCm;
+                float targetY = 9_000f - seeds[i].LocalPositionYCm;
+                singleWorker.SetUnitTarget(i, targetX, targetY, resetRecovery: true);
+                parallel.SetUnitTarget(i, targetX, targetY, resetRecovery: true);
+            }
+
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            using var singleWorld = World.Create();
+            using var parallelWorld = World.Create();
+            MassNavigationGroupRuntime singleGroups = CreateNavGroupRuntime(agentCount);
+            MassNavigationGroupRuntime parallelGroups = CreateNavGroupRuntime(agentCount);
+
+            for (int step = 0; step < 20; step++)
+            {
+                singleWorker.Step(0.016f, singleWorld, singleGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: agentCount + 1);
+                parallel.Step(0.016f, parallelWorld, parallelGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: agentCount + 1);
+            }
+
+            for (int i = 0; i < agentCount; i++)
+            {
+                Assert.Multiple(() =>
+                {
+                    Assert.That(parallel.GetPositionX(i), Is.EqualTo(singleWorker.GetPositionX(i)).Within(0.0001f), $"agent {i} x");
+                    Assert.That(parallel.GetPositionY(i), Is.EqualTo(singleWorker.GetPositionY(i)).Within(0.0001f), $"agent {i} y");
+                    Assert.That(parallel.GetVelocityCmPerSecond(i).X, Is.EqualTo(singleWorker.GetVelocityCmPerSecond(i).X).Within(0.0001f), $"agent {i} vx");
+                    Assert.That(parallel.GetVelocityCmPerSecond(i).Y, Is.EqualTo(singleWorker.GetVelocityCmPerSecond(i).Y).Within(0.0001f), $"agent {i} vy");
+                });
+            }
+        }
+
+        [Test]
+        public void PreparedAgentCapacity_RejectsAppendInsteadOfResizingDuringRuntime()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            MassNavigationAgentSeed first = CreateAvoidanceSeed(1, 1_000.25f, 1_200.5f, false, layer);
+            MassNavigationAgentSeed second = CreateAvoidanceSeed(1, 1_400f, 1_200f, false, layer);
+            flow.PreallocateAgentCapacity(1);
+            flow.ResetAuthoredAgents(new[] { first });
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => flow.AppendAuthoredAgents(new[] { second }))!;
+
+            Assert.That(ex.Message, Does.Contain("prepared agent capacity 1"));
+            Assert.That(flow.UnitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PreparedAgentCapacity_RecordsOneColdAllocationAndNoRuntimeGrowth()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            MassNavigationAgentSeed first = CreateAvoidanceSeed(1, 1_000f, 1_200f, false, layer);
+            MassNavigationAgentSeed second = CreateAvoidanceSeed(1, 1_400f, 1_200f, false, layer);
+
+            flow.PreallocateAgentCapacity(2);
+            int coldAllocationCount = flow.AgentStorageAllocationCount;
+            flow.ResetAuthoredAgents(new[] { first });
+            flow.AppendAuthoredAgents(new[] { second });
+
+            Assert.That(flow.PreparedAgentCapacity, Is.EqualTo(2));
+            Assert.That(coldAllocationCount, Is.EqualTo(1));
+            Assert.That(flow.AgentStorageAllocationCount, Is.EqualTo(coldAllocationCount));
+        }
+
+        [Test]
+        public void EntitySync_PreservesSubCentimeterWorldPositionPrecision()
+        {
+            using var world = World.Create();
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            MassNavigationAgentSeed seed = CreateAvoidanceSeed(1, 1_000.25f, 1_200.5f, false, layer);
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            flow.PreallocateAgentCapacity(1);
+            flow.ResetAuthoredAgents(new[] { seed });
+            Entity entity = CreateAuthoredAgentEntity(world, 0f, 0f, layer);
+            var agentState = new MassNavigationAgentState();
+            agentState.RegisterAgentAtIndex(entity, agentIndex: 0, controllable: true);
+
+            flow.SyncEntities(world, agentState);
+
+            WorldPositionCm position = world.Get<WorldPositionCm>(entity);
+            Assert.That(position.Value.X.ToFloat(), Is.EqualTo(1_000.25f).Within(0.0001f));
+            Assert.That(position.Value.Y.ToFloat(), Is.EqualTo(1_200.5f).Within(0.0001f));
+        }
+
         private static MassNavigationFlowSolverState CreateSpawnedFlow(int randomSeed)
         {
             var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
@@ -401,15 +669,21 @@ namespace Ludots.Tests.Presentation
             flow.Reset(
                 new[] { 1 },
                 unitsPerTeam: 4,
-                CreateProfileSet(),
+                CreateProfilePlanSet(),
                 layer,
                 CreateSpawnLayout(randomSeed));
             return flow;
         }
 
-        private static MassNavigationFlowSolverState CreateConfiguredFlow(int parallelWorkerCount)
+        private static MassNavigationFlowSolverState CreateConfiguredFlow(int parallelWorkerCount, string? avoidanceMode = null)
         {
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            if (avoidanceMode != null)
+            {
+                config.Avoidance.Mode = avoidanceMode;
+                config.Avoidance.Validate();
+            }
+
             var flow = new MassNavigationFlowSolverState(CreateSolverConfig(parallelWorkerCount));
             flow.ArrivalTuning.CopyFrom(config.Arrival);
             flow.AvoidanceTuning.CopyFrom(config.Avoidance);
@@ -470,8 +744,10 @@ namespace Ludots.Tests.Presentation
 
         private static MassNavigationConfig LoadBaseMassNavigationConfig()
         {
-            return MassNavigationConfig.Load(
-                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
+            MassNavigationConfig config = MassNavigationCapabilityProfile.Load(
+                ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"))).Runtime;
+            config.AgentProfiles.BindAgentProfiles(CreateAgentProfiles());
+            return config;
         }
 
         private static MassNavigationFlowSolverConfig CreateSolverConfig(int parallelWorkerCount)
@@ -494,11 +770,11 @@ namespace Ludots.Tests.Presentation
             };
         }
 
-        private static MassNavigationRuntimeCapacityConfig CreateRuntimeCapacity(
+        private static MassNavigationCapacityConfig CreateRuntimeCapacity(
             int agentCapacity = 16,
             int groupMemberCapacity = 16)
         {
-            return new MassNavigationRuntimeCapacityConfig
+            return new MassNavigationCapacityConfig
             {
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,
@@ -546,10 +822,26 @@ namespace Ludots.Tests.Presentation
             return profileSet;
         }
 
+        private static MassNavigationAgentProfilePlanSet CreateProfilePlanSet()
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.AgentProfiles = CreateProfileSet();
+            return MassNavigationRuntimePlan.Compile(config).AgentProfiles;
+        }
+
         private static AgentProfileRegistry CreateAgentProfiles()
         {
             return new AgentProfileRegistry(new[]
             {
+                new AgentProfileConfig
+                {
+                    Id = "heavy",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 2,
+                    Layer = 0
+                },
                 new AgentProfileConfig
                 {
                     Id = "light",
@@ -602,8 +894,32 @@ namespace Ludots.Tests.Presentation
 
         private static JsonObject ReadObject(string path)
         {
-            return JsonNode.Parse(File.ReadAllText(path))?.AsObject()
-                ?? throw new InvalidOperationException($"Expected JSON object at '{path}'.");
+            JsonNode node = JsonNode.Parse(File.ReadAllText(path))
+                ?? throw new InvalidOperationException($"Expected JSON at '{path}'.");
+            if (node is JsonObject obj)
+            {
+                return obj;
+            }
+
+            if (node is JsonArray profiles && profiles.Count == 1 && profiles[0] is JsonObject profile)
+            {
+                JsonObject resolved = (JsonObject)profile.DeepClone();
+                resolved.Remove("id");
+                resolved.Remove("extends");
+                return resolved;
+            }
+
+            throw new InvalidOperationException($"Expected JSON object or one MassNavigation profile at '{path}'.");
+        }
+
+        private static int GetPrivateArrayLength(MassNavigationFlowSolverState flow, string fieldName)
+        {
+            FieldInfo field = typeof(MassNavigationFlowSolverState).GetField(
+                    fieldName,
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException($"Missing MassNavigationFlowSolverState field '{fieldName}'.");
+            return ((Array?)field.GetValue(flow))?.Length
+                ?? throw new InvalidOperationException($"MassNavigationFlowSolverState field '{fieldName}' is not an array.");
         }
 
         private static void MutateWritableLeaves(object target, ref int seed)
@@ -677,7 +993,7 @@ namespace Ludots.Tests.Presentation
 
         private static int ResolveAuthoredAgentCount(JsonObject config)
         {
-            JsonObject scenario = config["scenario"]?.AsObject()
+            JsonObject scenario = config["sceneAuthoring"]?["scenario"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored.");
             JsonArray teams = scenario["teams"]?.AsArray()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams must be authored.");

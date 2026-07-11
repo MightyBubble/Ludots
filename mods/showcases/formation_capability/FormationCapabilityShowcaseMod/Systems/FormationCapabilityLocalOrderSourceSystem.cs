@@ -3,6 +3,8 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
+using FormationCapabilityShowcaseMod.Runtime;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
@@ -15,25 +17,33 @@ namespace FormationCapabilityShowcaseMod.Systems;
 
 internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
 {
+    private readonly GameEngine _engine;
+    private readonly FormationCapabilityShowcaseRuntime _showcaseRuntime;
     private readonly World _world;
     private readonly Dictionary<string, object> _globals;
     private readonly IModContext _context;
     private readonly LocalOrderSourceHelper _helper;
     private readonly Entity[] _acceptedActors = new Entity[1];
     private InputOrderMappingSystem? _mapping;
-    private MassNavigationSimulationRuntime? _simulation;
+    private readonly MassNavigationRuntimeBinding _runtimeBinding;
     private int _massNavigationMoveOrderTypeId;
     private bool _initialized;
 
     public FormationCapabilityLocalOrderSourceSystem(
+        GameEngine engine,
+        FormationCapabilityShowcaseRuntime showcaseRuntime,
         World world,
         Dictionary<string, object> globals,
         OrderQueue orders,
-        IModContext context)
+        IModContext context,
+        MassNavigationRuntimeBinding runtimeBinding)
     {
+        _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
+        _showcaseRuntime = showcaseRuntime ?? throw new System.ArgumentNullException(nameof(showcaseRuntime));
         _world = world;
         _globals = globals;
         _context = context;
+        _runtimeBinding = runtimeBinding ?? throw new System.ArgumentNullException(nameof(runtimeBinding));
         _helper = new LocalOrderSourceHelper(world, globals, orders);
     }
 
@@ -47,6 +57,11 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
 
     public void Update(in float dt)
     {
+        if (!_showcaseRuntime.IsCurrentShowcaseMap(_engine))
+        {
+            return;
+        }
+
         EnsureInitialized();
         if (_mapping == null)
         {
@@ -157,20 +172,13 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
 
     private bool TryResolveSimulation(out MassNavigationSimulationRuntime simulation)
     {
-        if (_simulation != null)
-        {
-            simulation = _simulation;
-            return true;
-        }
-
-        if (!_globals.TryGetValue(MassNavigationKeys.SimulationRuntime.Name, out object? simulationObj) ||
-            simulationObj is not MassNavigationSimulationRuntime resolved)
+        if (_runtimeBinding.Current is not MassNavigationSimulationRuntime resolved ||
+            !resolved.IsReadyForWorldOperations)
         {
             simulation = null!;
             return false;
         }
 
-        _simulation = resolved;
         simulation = resolved;
         return true;
     }

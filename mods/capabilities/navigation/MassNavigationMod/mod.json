@@ -1,7 +1,7 @@
 {
   "name": "MassNavigationMod",
   "version": "1.0.0",
-  "description": "Data-only MassNavigation sample assets, config, maps, entity templates, GAS orders, and performers.",
+  "description": "MassNavigation runtime capability with sample config, maps, entity templates, GAS orders, and performers.",
   "main": "bin/net8.0/MassNavigationMod.dll",
   "priority": 0,
   "dependencies": {

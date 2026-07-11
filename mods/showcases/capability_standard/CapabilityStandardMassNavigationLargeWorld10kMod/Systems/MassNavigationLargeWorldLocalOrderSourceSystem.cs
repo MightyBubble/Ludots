@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Engine;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.CommandSources;
@@ -16,6 +17,8 @@ namespace CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
 
 internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<float>
 {
+    private readonly GameEngine _engine;
+    private readonly MassNavigationRuntimeBinding _runtimeBinding;
     private readonly World _world;
     private readonly Dictionary<string, object> _globals;
     private readonly IModContext _context;
@@ -29,11 +32,15 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
     private bool _initialized;
 
     public MassNavigationLargeWorldLocalOrderSourceSystem(
+        GameEngine engine,
+        MassNavigationRuntimeBinding runtimeBinding,
         World world,
         Dictionary<string, object> globals,
         OrderQueue orders,
         IModContext context)
     {
+        _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
+        _runtimeBinding = runtimeBinding ?? throw new System.ArgumentNullException(nameof(runtimeBinding));
         _world = world;
         _globals = globals;
         _context = context;
@@ -47,6 +54,11 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
 
     public void Update(in float dt)
     {
+        if (!CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(_engine))
+        {
+            return;
+        }
+
         EnsureInitialized();
         if (_mapping == null)
         {
@@ -149,10 +161,15 @@ internal sealed class MassNavigationLargeWorldLocalOrderSourceSystem : ISystem<f
 
     private bool TryGetSimulation(out MassNavigationSimulationRuntime simulation)
     {
-        simulation = default!;
-        return _globals.TryGetValue(MassNavigationKeys.SimulationRuntime.Name, out object? simulationObj) &&
-               simulationObj is MassNavigationSimulationRuntime runtime &&
-               (simulation = runtime) != null;
+        if (_runtimeBinding.Current is not MassNavigationSimulationRuntime runtime ||
+            !MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        {
+            simulation = null!;
+            return false;
+        }
+
+        simulation = runtime;
+        return true;
     }
 
     private void ClearCommandActorsIfNeeded(MassNavigationSimulationRuntime simulation)

@@ -5,6 +5,10 @@ param(
     [ValidateSet("raylib", "web")]
     [string]$Adapter = "raylib",
     [string]$Build = "",
+    [ValidateRange(0, 36000)]
+    [int]$PerformanceWarmupTicks = 300,
+    [ValidateRange(1, 3600)]
+    [int]$SteadyStateSeconds = 60,
     [switch]$StopOnFailure
 )
 
@@ -17,14 +21,15 @@ if (-not (Test-Path $launcher)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $OutputRoot = Join-Path $repoRoot "artifacts\acceptance\mass-navigation-large-world-soak-$stamp"
+    $OutputRoot = Join-Path $repoRoot "artifacts\acceptance\mass-navigation-issue-642"
 }
 else {
     $OutputRoot = [System.IO.Path]::GetFullPath($OutputRoot)
 }
 
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
+$sessionRoot = Join-Path $OutputRoot (Join-Path "runs" (Get-Date -Format "yyyyMMdd-HHmmss"))
+New-Item -ItemType Directory -Force -Path $sessionRoot | Out-Null
 
 $deadline = $null
 if (-not [string]::IsNullOrWhiteSpace($UntilLocalTime)) {
@@ -55,6 +60,7 @@ if ($Iterations -eq 0 -and $null -eq $deadline) {
 
 $summaryPath = Join-Path $OutputRoot "soak-summary.jsonl"
 $reportPath = Join-Path $OutputRoot "soak-report.md"
+$null | Set-Content -Path $summaryPath -Encoding UTF8 -NoNewline
 $runs = New-Object System.Collections.Generic.List[object]
 
 function ConvertTo-SafeJsonLine {
@@ -77,12 +83,15 @@ function Write-SoakReport {
     $lines.Add("")
     $lines.Add("## Scope")
     $lines.Add("- Target: ``MassNavigationMod``, the high-performance MassNavigation foundation acceptance surface.")
-    $lines.Add("- Launcher path: ``scripts/run-mod-launcher.cmd cli launch mass_navigation --adapter raylib --record ...``.")
+    $lines.Add("- Launcher path: ``scripts/run-mod-launcher.cmd cli launch '`$capability_standard_mass_navigation_large_world_10k' --adapter raylib --record ...``.")
     $lines.Add("- Evidence per run: ``battle-report.md``, ``trace.jsonl``, ``path.mmd``, ``summary.json``, ``visible-checklist.md``, and ``screens/timeline.png``.")
-    $lines.Add("- No fallback contract: out-of-world commands must be rejected and counted; camera/minimap may inspect any in-bounds world coordinate.")
+    $lines.Add("- Canonical latest successful run: ``artifacts/acceptance/mass-navigation-issue-642/{battle-report.md,trace.jsonl,path.mmd,summary.json}``.")
+    $lines.Add("- Performance measurement: timing-disabled, process-wide allocation/GC/working-set evidence plus solver agent-storage allocation-count delta.")
+    $lines.Add("- Measurement scope is the full headless launcher process; allocation and working-set values are not presented as MassNavigation-only attribution.")
     $lines.Add("")
     $lines.Add("## Result")
     $lines.Add("- Output root: ``$Root``")
+    $lines.Add("- Session runs: ``$sessionRoot``")
     $lines.Add("- Deadline: ``$DeadlineValue``")
     $lines.Add("- Runs: ``$($RunRows.Count)``")
     $lines.Add("- Passed: ``$passed``")
@@ -95,32 +104,31 @@ function Write-SoakReport {
     $lines.Add("| Four dynamic teams | Scenario is not a hard-coded two-team demo | ``teams >= 4`` |")
     $lines.Add("| Full minimap | Minimap starts as the whole world | full-world half extent check |")
     $lines.Add("| Camera jumps | Clicking minimap coordinates moves camera exactly there | 12 target tolerances, including all corners and empty space |")
-    $lines.Add("| Formal selection | Box-selected units are represented by Ludots selection runtime | selected count after ``SelectionRuntime`` write |")
-    $lines.Add("| GAS order | Right-click move goes through order buffer | active order/group after ``massNavigationMove`` |")
-    $lines.Add("| Movement | Selected group actually moves | first, second, empty-world, multi-team, and near-edge command advance thresholds |")
-    $lines.Add("| Reset hygiene | Reset clears selection/groups/orders | post-reset selected/groups zero |")
-    $lines.Add("| Multi-team orders | Every dynamic team can own a selected move order | per-team command advance array |")
-    $lines.Add("| Edge in-bounds | World edge is still normal playable RTS space | four corners plus four side midpoints are accepted and move |")
-    $lines.Add("| Boundary errors | Invalid commands are diagnosed, not clamped | eight out-of-world probes, including just-over-edge cases, increment rejects |")
-    $lines.Add("| World bounds | Runtime never leaks positions outside configured board | ``agents_outside_world == 0`` and solver/work area bounds checks |")
-    $lines.Add("| Streaming/working set | Large-world active chunks stay live through soak | loaded chunk count remains positive |")
-    $lines.Add("| Memory stability | Long run does not steadily leak | steady managed/allocated thresholds |")
+    $lines.Add("| 10K binding | Configured crowd binds through production ECS/runtime path | ``agent_count == 10000`` and ECS count matches |")
+    $lines.Add("| Formal command source/order | Selected command-source agents enter OrderBuffer and move even if the short-lived group completes before the snapshot | non-zero submitted orders and moved command actors |")
+    $lines.Add("| Complete health HUD | All 10K bars and 10K texts survive world-to-screen projection | exact bar/text counts and zero screen-HUD drops |")
+    $lines.Add("| Camera/minimap residency | Remote minimap jump does not respawn/reset the scenario | stable agent/spawn/reset counts |")
+    $lines.Add("| Avoidance | Central crowd overlap resolves through the production solver | final overlap/penetration checks |")
+    $lines.Add("| Timing-disabled steady state | Instrumentation does not dominate the measured interval | ``steady_timing_disabled == true`` |")
+    $lines.Add("| Capacity stability | Solver agent storage is prepared before the interval and does not grow | ``steady_capacity_growth_events == 0`` |")
+    $lines.Add("| Memory evidence | Process-wide GC, retained heap and working set are reported without subsystem attribution | exact ``steady_*`` byte/count fields |")
     $lines.Add("")
     $lines.Add("## Runs")
-    $lines.Add("| # | Result | Signature | First cm | Second cm | Empty cm | Multi-team min cm | Edge min cm | Steady managed MB | Steady alloc MB | Timeline |")
-    $lines.Add("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+    $lines.Add("| # | Result | Signature | Duration s | Ticks/orders | Avg tick ms | Alloc MB/s | Retained MB | WS growth MB | Peak WS MB | Capacity growth | Timeline |")
+    $lines.Add("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
     foreach ($run in $RunRows) {
         $result = if ($run.success) { "PASS" } else { "FAIL" }
         $signature = if ($run.normalized_signature) { $run.normalized_signature } else { "n/a" }
         $timeline = if ($run.timeline) { $run.timeline } else { "n/a" }
-        $first = if ($null -ne $run.first_command_advance_cm) { "{0:0}" -f [double]$run.first_command_advance_cm } else { "n/a" }
-        $second = if ($null -ne $run.second_command_advance_cm) { "{0:0}" -f [double]$run.second_command_advance_cm } else { "n/a" }
-        $empty = if ($null -ne $run.empty_world_command_advance_cm) { "{0:0}" -f [double]$run.empty_world_command_advance_cm } else { "n/a" }
-        $multiTeam = if ($null -ne $run.multi_team_min_advance_cm) { "{0:0}" -f [double]$run.multi_team_min_advance_cm } else { "n/a" }
-        $edge = if ($null -ne $run.edge_inside_min_advance_cm) { "{0:0}" -f [double]$run.edge_inside_min_advance_cm } else { "n/a" }
-        $steadyManaged = if ($null -ne $run.steady_managed_growth_bytes) { "{0:0.00}" -f ([double]$run.steady_managed_growth_bytes / 1MB) } else { "n/a" }
-        $steadyAlloc = if ($null -ne $run.steady_allocated_bytes) { "{0:0.00}" -f ([double]$run.steady_allocated_bytes / 1MB) } else { "n/a" }
-        $lines.Add("| $($run.run) | $result | ``$signature`` | $first | $second | $empty | $multiTeam | $edge | $steadyManaged | $steadyAlloc | ``$timeline`` |")
+        $duration = if ($null -ne $run.steady_state_duration_seconds) { "{0:0.000}" -f [double]$run.steady_state_duration_seconds } else { "n/a" }
+        $ticks = if ($null -ne $run.steady_tick_count -and $null -ne $run.steady_workload_order_count) { "$($run.steady_tick_count)/$($run.steady_workload_order_count)" } else { "n/a" }
+        $averageTick = if ($null -ne $run.steady_average_tick_ms) { "{0:0.000}" -f [double]$run.steady_average_tick_ms } else { "n/a" }
+        $allocated = if ($null -ne $run.steady_allocated_bytes_per_second) { "{0:0.00}" -f ([double]$run.steady_allocated_bytes_per_second / 1MB) } else { "n/a" }
+        $retained = if ($null -ne $run.steady_retained_managed_growth_bytes) { "{0:0.00}" -f ([double]$run.steady_retained_managed_growth_bytes / 1MB) } else { "n/a" }
+        $workingSet = if ($null -ne $run.steady_working_set_growth_bytes) { "{0:0.00}" -f ([double]$run.steady_working_set_growth_bytes / 1MB) } else { "n/a" }
+        $peakWorkingSet = if ($null -ne $run.steady_peak_working_set_bytes) { "{0:0.00}" -f ([double]$run.steady_peak_working_set_bytes / 1MB) } else { "n/a" }
+        $capacityGrowth = if ($null -ne $run.steady_capacity_growth_events) { [string]$run.steady_capacity_growth_events } else { "n/a" }
+        $lines.Add("| $($run.run) | $result | ``$signature`` | $duration | $ticks | $averageTick | $allocated | $retained | $workingSet | $peakWorkingSet | $capacityGrowth | ``$timeline`` |")
     }
 
     $lines.Add("")
@@ -142,25 +150,36 @@ while ($true) {
     }
 
     $runIndex++
-    $runDir = Join-Path $OutputRoot ("run-{0:0000}" -f $runIndex)
+    $runDir = Join-Path $sessionRoot ("run-{0:0000}" -f $runIndex)
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
     $logPath = Join-Path $runDir "run.log"
     $startedAt = Get-Date
 
-    $argsList = @("cli", "launch", "mass_navigation", "--adapter", $Adapter)
+    $argsList = @("cli", "launch", '$capability_standard_mass_navigation_large_world_10k', "--adapter", $Adapter)
     if (-not [string]::IsNullOrWhiteSpace($Build)) {
         $argsList += @("--build", $Build)
     }
 
     $argsList += @("--record", $runDir)
 
+    $previousWarmupTicks = $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS
+    $previousSteadyStateSeconds = $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS
+    $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS = [string]$PerformanceWarmupTicks
+    $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS = [string]$SteadyStateSeconds
+    $previousErrorActionPreference = $ErrorActionPreference
     Push-Location $repoRoot
     try {
+        # Windows PowerShell 5 wraps native stderr as ErrorRecord. Capture it in run.log and
+        # decide success from the native exit code plus required evidence instead of terminating here.
+        $ErrorActionPreference = "Continue"
         $output = & $launcher @argsList 2>&1
         $exitCode = $LASTEXITCODE
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
+        $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS = $previousWarmupTicks
+        $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS = $previousSteadyStateSeconds
     }
 
     $endedAt = Get-Date
@@ -202,18 +221,22 @@ while ($true) {
         summary = $summaryFile
         timeline = (Join-Path $runDir "screens\timeline.png")
         normalized_signature = if ($summary) { $summary.normalized_signature } else { $null }
-        first_command_advance_cm = if ($summary) { $summary.first_command_advance_cm } else { $null }
-        second_command_advance_cm = if ($summary) { $summary.second_command_advance_cm } else { $null }
-        empty_world_command_advance_cm = if ($summary) { $summary.empty_world_command_advance_cm } else { $null }
-        edge_inside_command_advance_cm = if ($summary) { $summary.edge_inside_command_advance_cm } else { $null }
-        multi_team_command_advance_cm = if ($summary) { $summary.multi_team_command_advance_cm } else { $null }
-        multi_team_min_advance_cm = if ($summary) { $summary.multi_team_min_advance_cm } else { $null }
-        edge_inside_min_advance_cm = if ($summary) { $summary.edge_inside_min_advance_cm } else { $null }
-        final_loaded_chunks = if ($summary) { $summary.final_loaded_chunks } else { $null }
-        final_rejects = if ($summary) { $summary.final_rejects } else { $null }
-        boundary_rejects_added = if ($summary) { $summary.boundary_rejects_added } else { $null }
-        steady_managed_growth_bytes = if ($summary) { $summary.steady_managed_growth_bytes } else { $null }
-        steady_allocated_bytes = if ($summary) { $summary.steady_allocated_bytes } else { $null }
+        steady_state_duration_seconds = if ($summary) { $summary.steady_state_duration_seconds } else { $null }
+        steady_tick_count = if ($summary) { $summary.steady_tick_count } else { $null }
+        steady_workload_order_count = if ($summary) { $summary.steady_workload_order_count } else { $null }
+        steady_average_tick_ms = if ($summary) { $summary.steady_average_tick_ms } else { $null }
+        steady_max_tick_ms = if ($summary) { $summary.steady_max_tick_ms } else { $null }
+        steady_timing_disabled = if ($summary) { $summary.steady_timing_disabled } else { $null }
+        steady_total_allocated_bytes = if ($summary) { $summary.steady_total_allocated_bytes } else { $null }
+        steady_allocated_bytes_per_second = if ($summary) { $summary.steady_allocated_bytes_per_second } else { $null }
+        steady_allocated_bytes_per_tick = if ($summary) { $summary.steady_allocated_bytes_per_tick } else { $null }
+        steady_retained_managed_growth_bytes = if ($summary) { $summary.steady_retained_managed_growth_bytes } else { $null }
+        steady_gc_gen0_collections = if ($summary) { $summary.steady_gc_gen0_collections } else { $null }
+        steady_gc_gen1_collections = if ($summary) { $summary.steady_gc_gen1_collections } else { $null }
+        steady_gc_gen2_collections = if ($summary) { $summary.steady_gc_gen2_collections } else { $null }
+        steady_working_set_growth_bytes = if ($summary) { $summary.steady_working_set_growth_bytes } else { $null }
+        steady_peak_working_set_bytes = if ($summary) { $summary.steady_peak_working_set_bytes } else { $null }
+        steady_capacity_growth_events = if ($summary) { $summary.steady_capacity_growth_events } else { $null }
         missing_evidence = $missingEvidence
         failed_checks = if ($summary) { @($summary.failed_checks) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) } else { @("missing summary.json or launcher failure") + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) }
         log = $logPath
@@ -221,6 +244,11 @@ while ($true) {
 
     $runs.Add($row)
     Add-Content -Path $summaryPath -Value (ConvertTo-SafeJsonLine $row) -Encoding UTF8
+    if ($success) {
+        foreach ($artifactName in @("battle-report.md", "trace.jsonl", "path.mmd", "summary.json")) {
+            Copy-Item -LiteralPath (Join-Path $runDir $artifactName) -Destination (Join-Path $OutputRoot $artifactName) -Force
+        }
+    }
     Write-SoakReport -RunRows $runs -Path $reportPath -Root $OutputRoot -DeadlineValue $deadline
 
     if (-not $success -and $StopOnFailure) {

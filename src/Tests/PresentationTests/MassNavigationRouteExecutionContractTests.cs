@@ -57,10 +57,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(routedTrack.Tracked, Is.True);
             Assert.That(directTrack.Status, Is.EqualTo(MassNavigationRouteSinkStatus.NoConfiguredAgentType));
             Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+            int storageAllocationsBeforeApply = sink.StorageAllocationCount;
 
             MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
 
             Assert.That(applied.Applied, Is.True);
+            Assert.That(sink.StorageAllocationCount, Is.EqualTo(storageAllocationsBeforeApply),
+                "Applying a tracked route inside the MassNavigation simulation step must not grow route scratch or point storage.");
             Assert.That(applied.ResolvedDomain, Is.EqualTo(PathDomain.NodeGraph));
             Assert.That(pathService.SolveCount, Is.EqualTo(1));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float routedX, out float routedY), Is.True);
@@ -84,6 +87,7 @@ namespace Ludots.Tests.Presentation
             sink.BeginSync();
             sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 88, 128, 8);
             sink.EndSync();
+            int storageAllocationsBeforeApply = sink.StorageAllocationCount;
 
             MassNavigationRouteSinkResult first = sink.TryApplyTrackedRouteTargets(runtime, world);
             runtime.GetFlowSolverForTests().ApplyExternalDisplacement(new[] { 0 }, deltaXCm: 300, deltaYCm: 0);
@@ -92,6 +96,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(first.WaypointWorldCm, Is.EqualTo(new Vector2(5_300, 5_000)));
             Assert.That(second.WaypointWorldCm, Is.EqualTo(new Vector2(5_800, 5_000)));
             Assert.That(pathService.SolveCount, Is.EqualTo(1));
+            Assert.That(sink.StorageAllocationCount, Is.EqualTo(storageAllocationsBeforeApply));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float routedX, out float routedY), Is.True);
             Assert.That(new Vector2(routedX, routedY), Is.EqualTo(new Vector2(5_800, 5_000)));
         }
@@ -129,8 +134,10 @@ namespace Ludots.Tests.Presentation
             direct = world.Create(new MassNavigationAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
-            var runtime = new MassNavigationSimulationRuntime(config);
-            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            var runtime = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World!.StreamingChunkSizeCm));
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             runtime.RebuildFromAuthoredAgents(
                 world,

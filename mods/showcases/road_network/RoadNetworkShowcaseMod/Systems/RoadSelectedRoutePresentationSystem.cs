@@ -3,17 +3,21 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
+using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Systems
 {
     internal sealed class RoadSelectedRoutePresentationSystem : ISystem<float>
     {
+        private readonly GameEngine _engine;
+        private readonly RoadNetworkShowcaseRuntime _runtime;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly RoadRoutePreviewSplineBuilder _builder;
@@ -23,8 +27,15 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly List<RoadRoutePreviewFactScope> _previousScopes = new();
         private readonly HashSet<RoadRoutePreviewFactScope> _currentScopeSet = new();
 
-        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, MovePlanStore plans)
+        public RoadSelectedRoutePresentationSystem(
+            GameEngine engine,
+            RoadNetworkShowcaseRuntime runtime,
+            World world,
+            Dictionary<string, object> globals,
+            MovePlanStore plans)
         {
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _builder = new RoadRoutePreviewSplineBuilder(plans ?? throw new ArgumentNullException(nameof(plans)));
@@ -45,6 +56,12 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
+            if (!_runtime.IsCurrentShowcaseMap(_engine))
+            {
+                EndPreviousScopes();
+                return;
+            }
+
             _currentScopes.Clear();
             _currentScopeSet.Clear();
             Entity[] selected = SnapshotCommandSource();

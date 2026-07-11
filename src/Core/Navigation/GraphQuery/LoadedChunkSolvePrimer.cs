@@ -7,11 +7,11 @@ namespace Ludots.Core.Navigation.GraphQuery
     public static class LoadedChunkSolvePrimer
     {
         public static void PrimeForBounds(
-            WorldGridLoadedChunks loadedChunks,
+            WorldGridLoadedChunkContributor contributor,
             ReadOnlySpan<Vector2> pointsCm,
             int paddingChunks)
         {
-            if (loadedChunks == null) throw new ArgumentNullException(nameof(loadedChunks));
+            if (contributor == null) throw new ArgumentNullException(nameof(contributor));
             if (pointsCm.Length == 0)
             {
                 return;
@@ -32,11 +32,11 @@ namespace Ludots.Core.Navigation.GraphQuery
                 maxYcm = Math.Max(maxYcm, ycm);
             }
 
-            int paddingCm = Math.Max(0, paddingChunks) * loadedChunks.ChunkSizeCm;
+            int paddingCm = Math.Max(0, paddingChunks) * contributor.ChunkSizeCm;
             int centerXcm = (int)(((long)minXcm + maxXcm) / 2L);
             int centerYcm = (int)(((long)minYcm + maxYcm) / 2L);
             int radiusCm = Math.Max(maxXcm - minXcm, maxYcm - minYcm) / 2;
-            loadedChunks.Update(centerXcm, centerYcm, radiusCm + paddingCm);
+            contributor.UpdateWindow(centerXcm, centerYcm, radiusCm + paddingCm);
         }
 
         private static int Round(float value)

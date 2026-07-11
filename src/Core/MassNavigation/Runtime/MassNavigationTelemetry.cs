@@ -14,6 +14,7 @@ public sealed class MassNavigationTelemetry
     private long _performerTick;
     private long _panelTick;
 
+    public bool TimingEnabled { get; private set; }
     public int CommandActorSnapshotCountFrame { get; private set; }
     public int CommandCountFrame { get; private set; }
     public int StructuralChangesFrame { get; private set; }
@@ -67,15 +68,61 @@ public sealed class MassNavigationTelemetry
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
     }
 
-    public void ObserveCommandActorSync(double sampleMs) => CommandActorSyncMs = Smooth(CommandActorSyncMs, (float)sampleMs);
-    public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
-    public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
-    public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
-    public void ObserveLocalSteering(double sampleMs) => LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);
-    public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
-    public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
-    public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
-    public void ObservePerformerCommand(double sampleMs) => PerformerCommandMs = Smooth(PerformerCommandMs, (float)sampleMs);
+    public void SetTimingEnabled(bool enabled)
+    {
+        TimingEnabled = enabled;
+        _commandActorSyncTick = 0;
+        _controlTick = 0;
+        _commandTick = 0;
+        _simTick = 0;
+        _performerTick = 0;
+        _panelTick = 0;
+    }
+
+    public void ObserveCommandActorSync(double sampleMs)
+    {
+        if (TimingEnabled) CommandActorSyncMs = Smooth(CommandActorSyncMs, (float)sampleMs);
+    }
+
+    public void ObserveFormationTargets(double sampleMs)
+    {
+        if (TimingEnabled) FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
+    }
+
+    public void ObserveFlowFieldRebuild(double sampleMs)
+    {
+        if (TimingEnabled) FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
+    }
+
+    public void ObserveStepPrep(double sampleMs)
+    {
+        if (TimingEnabled) StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
+    }
+
+    public void ObserveLocalSteering(double sampleMs)
+    {
+        if (TimingEnabled) LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);
+    }
+
+    public void ObserveSimStep(double sampleMs)
+    {
+        if (TimingEnabled) SimStepMs = Smooth(SimStepMs, (float)sampleMs);
+    }
+
+    public void ObserveHardResolve(double sampleMs)
+    {
+        if (TimingEnabled) HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
+    }
+
+    public void ObserveEntitySync(double sampleMs)
+    {
+        if (TimingEnabled) EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
+    }
+
+    public void ObservePerformerCommand(double sampleMs)
+    {
+        if (TimingEnabled) PerformerCommandMs = Smooth(PerformerCommandMs, (float)sampleMs);
+    }
 
     public void ObservePerformerCoverage(
         int crowdInViewCount,
@@ -89,12 +136,35 @@ public sealed class MassNavigationTelemetry
         PerformerDroppedCount = Math.Max(0, performerDroppedCount);
     }
 
-    public void ObserveCommandActorSyncTick() => CommandActorSyncHzObserved = ObserveHz(ref _commandActorSyncTick, CommandActorSyncHzObserved);
-    public void ObserveControlTick() => ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
-    public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
-    public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
-    public void ObservePerformerTick() => PerformerHzObserved = ObserveHz(ref _performerTick, PerformerHzObserved);
-    public void ObservePanelTick() => PanelHzObserved = ObserveHz(ref _panelTick, PanelHzObserved);
+    public void ObserveCommandActorSyncTick()
+    {
+        if (TimingEnabled) CommandActorSyncHzObserved = ObserveHz(ref _commandActorSyncTick, CommandActorSyncHzObserved);
+    }
+
+    public void ObserveControlTick()
+    {
+        if (TimingEnabled) ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
+    }
+
+    public void ObserveCommandTick()
+    {
+        if (TimingEnabled) CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
+    }
+
+    public void ObserveSimTick()
+    {
+        if (TimingEnabled) SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
+    }
+
+    public void ObservePerformerTick()
+    {
+        if (TimingEnabled) PerformerHzObserved = ObserveHz(ref _performerTick, PerformerHzObserved);
+    }
+
+    public void ObservePanelTick()
+    {
+        if (TimingEnabled) PanelHzObserved = ObserveHz(ref _panelTick, PanelHzObserved);
+    }
 
     public void MarkCommandActorSnapshot() => CommandActorSnapshotCountFrame++;
 

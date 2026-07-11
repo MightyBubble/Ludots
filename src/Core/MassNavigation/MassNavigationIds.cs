@@ -16,7 +16,7 @@ public static class MassNavigationIds
             return false;
         }
 
-        return string.Equals(mapId, simulation.Config.MapId, System.StringComparison.Ordinal);
+        return string.Equals(mapId, simulation.MapId.Value, System.StringComparison.Ordinal);
     }
 
     public static bool IsCurrentNavigationMap(GameEngine engine)

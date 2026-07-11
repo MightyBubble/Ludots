@@ -22,7 +22,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
 
     private static readonly QueryDescription FormationOutlineQuery = new QueryDescription()
         .WithAll<FormationCapabilityShowcaseFormationAgent, FormationCapabilityShowcaseFormationState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;

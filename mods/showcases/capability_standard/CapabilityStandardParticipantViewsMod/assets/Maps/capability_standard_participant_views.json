@@ -15,6 +15,9 @@
     "FovYDeg": 55
   },
   "Metadata": {
+    "massNavigation": {
+      "profileId": "capability_standard_participant_views"
+    },
     "participantViewKnowledge": {
       "Projections": [],
       "Relations": [

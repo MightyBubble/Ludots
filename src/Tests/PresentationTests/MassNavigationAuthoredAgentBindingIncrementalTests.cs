@@ -200,6 +200,67 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AuthoredAgentBindingSystem_SuspendedMapAgentIsIgnoredUntilResumed()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            Entity suspended = CreateAuthoredAgentEntity(
+                harness.Engine.World,
+                localX: 1500f,
+                localY: 1500f,
+                harness.Layer);
+            harness.Engine.World.Add(suspended, new SuspendedTag());
+
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(suspended), Is.False);
+
+            harness.Engine.World.Remove<SuspendedTag>(suspended);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(suspended), Is.True);
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_SteadyStateSkipsFullAgentScan()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int scansAfterInitialBind = harness.BindingSystem.FullAuthoringScanCount;
+
+            for (int i = 0; i < 120; i++)
+            {
+                harness.BindingSystem.Update(0f);
+            }
+
+            Assert.That(scansAfterInitialBind, Is.EqualTo(1));
+            Assert.That(harness.BindingSystem.FullAuthoringScanCount, Is.EqualTo(scansAfterInitialBind));
+
+            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.BindingSystem.FullAuthoringScanCount, Is.EqualTo(scansAfterInitialBind + 1));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_DirtyBoundAgentRebindsWithoutCountChange()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int scansAfterInitialBind = harness.BindingSystem.FullAuthoringScanCount;
+
+            harness.Engine.World.Set(harness.Agent0, new Team { Id = 2 });
+            harness.Engine.World.Remove<OrderBuffer>(harness.Agent0);
+            MassNavigationAgentBinding.MarkDirty(harness.Engine.World, harness.Agent0);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.BindingSystem.FullAuthoringScanCount, Is.EqualTo(scansAfterInitialBind + 1));
+            Assert.That(harness.Simulation.MassNavigationFlow.GetTeam(0), Is.EqualTo(2));
+            Assert.That(harness.Simulation.AgentState.TryGetControllableIndex(harness.Agent0, out _), Is.False);
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentBindingDirty>(harness.Agent0), Is.False);
+        }
+
+        [Test]
         public void AppendAuthoredAgents_ExceedsMembershipCapacity_Throws()
         {
             using var world = World.Create();
@@ -481,29 +542,33 @@ namespace Ludots.Tests.Presentation
             var simulation = CreateConfiguredSimulation(config);
             simulation.SetWorldOperationsReady(true);
             engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-            engine.SetCurrentMapSessionForTests(new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId }));
+            engine.SetCurrentMapSessionForTests(new MapSession(simulation.MapId, new MapConfig { Id = simulation.MapId.Value }));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity agent0 = CreateAuthoredAgentEntity(engine.World, localX: 1000f, localY: 1000f, layer);
             Entity agent1 = CreateAuthoredAgentEntity(engine.World, localX: 1200f, localY: 1000f, layer);
-            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, simulation);
+            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(
+                engine,
+                MassNavigationRuntimeBinding.CreateActivated(simulation));
             return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1);
         }
 
         private static MassNavigationConfig CreateTestConfig(int membershipCapacity)
         {
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
-            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = membershipCapacity;
+            config.Capacity.GroupMembershipAgentCapacity = membershipCapacity;
+            config.Capacity.CommandActorScratchCapacity = membershipCapacity;
+            config.Capacity.GroupMemberCapacity = membershipCapacity;
+            config.Capacity.OrderIngestionMemberCapacity = membershipCapacity;
             return config;
         }
 
         private static MassNavigationSimulationRuntime CreateConfiguredSimulation(MassNavigationConfig config)
         {
-            var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World!.StreamingChunkSizeCm));
             return simulation;
         }
 

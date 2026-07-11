@@ -65,9 +65,9 @@ namespace Ludots.Tests.Architecture
             string repoRoot = FindRepoRoot();
             string modRoot = Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod");
 
-            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
-            JsonObject world = config["world"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.world missing.");
+            JsonObject profile = ReadSingleProfile(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            JsonObject world = profile["runtime"]?["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig profile runtime.world missing.");
             Assert.That(world.ContainsKey("obstacles"), Is.False,
                 "MassNavigationConfig.world.obstacles[] is obsolete and must stay removed.");
 
@@ -123,6 +123,14 @@ namespace Ludots.Tests.Architecture
         {
             return JsonNode.Parse(File.ReadAllText(path))?.AsObject()
                 ?? throw new InvalidOperationException($"Expected JSON object at '{path}'.");
+        }
+
+        private static JsonObject ReadSingleProfile(string path)
+        {
+            JsonArray profiles = ReadArray(path);
+            return profiles.Count == 1 && profiles[0] is JsonObject profile
+                ? profile
+                : throw new InvalidOperationException($"Expected exactly one JSON profile at '{path}'.");
         }
 
         private static bool IsProductionSource(string repoRoot, string file)

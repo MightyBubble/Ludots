@@ -1,0 +1,13 @@
+stateDiagram-v2
+    [*] --> BaseMapLoad
+    BaseMapLoad --> BaseProfile: metadata profileId exists
+    BaseMapLoad --> Rejected: profileId missing or invalid
+    BaseProfile --> BoardStreaming: GridBoard owns WorldGridLoadedChunks
+    BoardStreaming --> BaseActive: binding.Current == SimulationRuntime service
+    BaseActive --> BaseUnload
+    BaseUnload --> Cleared: release policy and clear binding/service
+    Cleared --> FormationMapLoad
+    FormationMapLoad --> FormationProfile: extends mass_navigation
+    FormationProfile --> FormationActive: new runtime and stable binding
+    FormationActive --> [*]
+    Rejected --> [*]

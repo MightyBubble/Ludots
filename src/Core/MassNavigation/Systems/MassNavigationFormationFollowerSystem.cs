@@ -15,27 +15,36 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
 {
     private static readonly QueryDescription AnchorQuery = new QueryDescription()
         .WithAll<MassNavigationFormationAnchor, MassNavigationAgentIndex, FacingDirection>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription FollowerQuery = new QueryDescription()
         .WithAll<MassNavigationFormationFollower, MassNavigationAgentIndex>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
     private readonly Dictionary<int, AnchorSnapshot> _anchorsByFormationId = new();
     private readonly Dictionary<int, FormationSyncState> _syncStateByFormationId = new();
-    private readonly Dictionary<int, List<int>> _memberAgentIndicesByFormationId = new();
+    private Dictionary<int, int> _previousMemberCountByFormationId = new();
+    private Dictionary<int, int> _currentMemberCountByFormationId = new();
     private readonly List<int> _memberAgentIndices = new();
     private readonly List<int> _carriedMemberAgentIndices = new();
     private readonly List<int> _staleFormationIds = new();
+    private int[] _previousFormationIdByAgentIndex = Array.Empty<int>();
+    private int[] _currentFormationIdByAgentIndex = Array.Empty<int>();
+    private int _preparedFormationCapacity;
+    private int _preparedGroupMemberCapacity;
     private int _observedSceneResetCount;
     private int _observedAuthoredRuntimeBindingRevision;
+    private int _observedRuntimeBindingRevision = -1;
+    private int _memberStorageAllocationCount;
 
-    public MassNavigationFormationFollowerSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationFormationFollowerSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _binding = binding ?? throw new ArgumentNullException(nameof(binding));
+        PrepareMemberStorage(_binding.RequireCurrent().Plan.Capacity);
     }
 
     public void Initialize() { }
@@ -44,6 +53,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
     public void Dispose() { }
 
     public int GetSyncStateCountForTests() => _syncStateByFormationId.Count;
+    public int GetMemberStorageAllocationCountForTests() => _memberStorageAllocationCount;
 
     public void Update(in float dt)
     {
@@ -53,10 +63,10 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         }
 
         InvalidateSyncStateForRuntimeLifecycle();
-        if (!_simulation.AgentState.HasBoundAgents(_simulation.MassNavigationFlow.UnitCount))
+        if (!Simulation.AgentState.HasBoundAgents(Simulation.MassNavigationFlow.UnitCount))
         {
             _syncStateByFormationId.Clear();
-            _memberAgentIndicesByFormationId.Clear();
+            ResetMemberSnapshots();
             return;
         }
 
@@ -91,35 +101,46 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
                 {
                     throw new InvalidOperationException($"MassNavigationFormationAnchor '{MassNavigationFormationRegistry.GetName(anchor.FormationId)}' is authored more than once.");
                 }
+
+                if (_anchorsByFormationId.Count > _preparedFormationCapacity)
+                {
+                    throw new InvalidOperationException(
+                        $"MassNavigation formation follower required {_anchorsByFormationId.Count} formations, exceeding runtime.capacity.navigationGroupCapacity {_preparedFormationCapacity}.");
+                }
             }
         }
 
         if (_anchorsByFormationId.Count == 0)
         {
             _syncStateByFormationId.Clear();
-            _memberAgentIndicesByFormationId.Clear();
+            ResetMemberSnapshots();
             return;
         }
 
+        BeginMemberSnapshotFrame();
         PruneSyncStateWithoutAnchor();
         foreach ((int formationId, AnchorSnapshot anchor) in _anchorsByFormationId)
         {
             SyncFormationFollowers(formationId, in anchor);
         }
+        CommitMemberSnapshotFrame();
     }
 
     private void InvalidateSyncStateForRuntimeLifecycle()
     {
-        if (_observedSceneResetCount == _simulation.SceneResetCount &&
-            _observedAuthoredRuntimeBindingRevision == _simulation.AuthoredRuntimeBindingRevision)
+        if (_observedRuntimeBindingRevision == _binding.Revision &&
+            _observedSceneResetCount == Simulation.SceneResetCount &&
+            _observedAuthoredRuntimeBindingRevision == Simulation.AuthoredRuntimeBindingRevision)
         {
             return;
         }
 
-        _observedSceneResetCount = _simulation.SceneResetCount;
-        _observedAuthoredRuntimeBindingRevision = _simulation.AuthoredRuntimeBindingRevision;
+        _observedRuntimeBindingRevision = _binding.Revision;
+        _observedSceneResetCount = Simulation.SceneResetCount;
+        _observedAuthoredRuntimeBindingRevision = Simulation.AuthoredRuntimeBindingRevision;
+        PrepareMemberStorage(Simulation.Plan.Capacity);
         _syncStateByFormationId.Clear();
-        _memberAgentIndicesByFormationId.Clear();
+        ResetMemberSnapshots();
     }
 
     private void PruneSyncStateWithoutAnchor()
@@ -141,7 +162,6 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         for (int i = 0; i < _staleFormationIds.Count; i++)
         {
             _syncStateByFormationId.Remove(_staleFormationIds[i]);
-            _memberAgentIndicesByFormationId.Remove(_staleFormationIds[i]);
         }
     }
 
@@ -163,29 +183,48 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
 
                 if (followerFormationId == formationId)
                 {
-                    _memberAgentIndices.Add(agentIndices[index].Value);
+                    int agentIndex = agentIndices[index].Value;
+                    if ((uint)agentIndex >= (uint)_currentFormationIdByAgentIndex.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"MassNavigation formation follower agent index {agentIndex} exceeds runtime.capacity.groupMembershipAgentCapacity {_currentFormationIdByAgentIndex.Length}.");
+                    }
+
+                    if (_memberAgentIndices.Count >= _preparedGroupMemberCapacity)
+                    {
+                        throw new InvalidOperationException(
+                            $"MassNavigation formation '{MassNavigationFormationRegistry.GetName(formationId)}' exceeds runtime.capacity.groupMemberCapacity {_preparedGroupMemberCapacity}.");
+                    }
+
+                    int existingFormationId = _currentFormationIdByAgentIndex[agentIndex];
+                    if (existingFormationId != 0 && existingFormationId != formationId)
+                    {
+                        throw new InvalidOperationException(
+                            $"MassNavigation follower agent index {agentIndex} is assigned to multiple formations: {existingFormationId} and {formationId}.");
+                    }
+
+                    _memberAgentIndices.Add(agentIndex);
+                    _currentFormationIdByAgentIndex[agentIndex] = formationId;
                 }
             }
         }
 
-        List<int> previousMemberAgentIndices = GetMemberAgentIndicesSnapshot(formationId);
+        _currentMemberCountByFormationId[formationId] = _memberAgentIndices.Count;
         if (_memberAgentIndices.Count == 0)
         {
-            previousMemberAgentIndices.Clear();
             return;
         }
 
         _syncStateByFormationId.TryGetValue(formationId, out FormationSyncState state);
-        bool memberSetChanged = !HaveSameMembers(previousMemberAgentIndices, _memberAgentIndices);
+        bool memberSetChanged = HaveMembersChanged(formationId, _memberAgentIndices);
         _carriedMemberAgentIndices.Clear();
-        AppendRetainedMembers(previousMemberAgentIndices, _memberAgentIndices, _carriedMemberAgentIndices);
-        MassNavigationCarriedRangeSyncResult carrierSync = _simulation.SyncCarriedAgentsToCarrier(
+        AppendRetainedMembers(formationId, _memberAgentIndices, _carriedMemberAgentIndices);
+        MassNavigationCarriedRangeSyncResult carrierSync = Simulation.SyncCarriedAgentsToCarrier(
             anchor.AgentIndex,
             CollectionsMarshal.AsSpan(_carriedMemberAgentIndices),
             state.CarrierSnapshotInitialized,
             state.CarrierWorldXCm,
             state.CarrierWorldYCm);
-        CopyMembers(previousMemberAgentIndices, _memberAgentIndices);
         state.CarrierSnapshotInitialized = true;
         state.CarrierWorldXCm = carrierSync.CarrierWorldXCm;
         state.CarrierWorldYCm = carrierSync.CarrierWorldYCm;
@@ -236,13 +275,13 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
 
                 float slotOffsetX = (lateralX * follower.LocalOffsetXCm) + (forwardX * follower.LocalOffsetYCm);
                 float slotOffsetY = (lateralY * follower.LocalOffsetXCm) + (forwardY * follower.LocalOffsetYCm);
-                MassNavigationCarriedSlotTarget resolvedTarget = _simulation.ResolveCarriedAgentSlotTarget(
+                MassNavigationCarriedSlotTarget resolvedTarget = Simulation.ResolveCarriedAgentSlotTarget(
                     agentIndices[index].Value,
                     carrierSync.CarrierLocalXCm,
                     carrierSync.CarrierLocalYCm,
                     slotOffsetX,
                     slotOffsetY);
-                _simulation.ApplyCarriedAgentSlotTarget(
+                Simulation.ApplyCarriedAgentSlotTarget(
                     agentIndices[index].Value,
                     in resolvedTarget,
                     resetRecovery: true);
@@ -264,53 +303,17 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         _syncStateByFormationId[formationId] = state;
     }
 
-    private List<int> GetMemberAgentIndicesSnapshot(int formationId)
+    private bool HaveMembersChanged(int formationId, List<int> current)
     {
-        if (_memberAgentIndicesByFormationId.TryGetValue(formationId, out List<int> members))
+        if (!_previousMemberCountByFormationId.TryGetValue(formationId, out int previousCount) ||
+            previousCount != current.Count)
         {
-            return members;
+            return true;
         }
 
-        members = new List<int>();
-        _memberAgentIndicesByFormationId.Add(formationId, members);
-        return members;
-    }
-
-    private static bool HaveSameMembers(List<int> previous, List<int> current)
-    {
-        if (previous.Count != current.Count)
+        for (int i = 0; i < current.Count; i++)
         {
-            return false;
-        }
-
-        for (int i = 0; i < previous.Count; i++)
-        {
-            if (!ContainsMember(current, previous[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static void AppendRetainedMembers(List<int> previous, List<int> current, List<int> destination)
-    {
-        for (int i = 0; i < previous.Count; i++)
-        {
-            int memberAgentIndex = previous[i];
-            if (ContainsMember(current, memberAgentIndex))
-            {
-                destination.Add(memberAgentIndex);
-            }
-        }
-    }
-
-    private static bool ContainsMember(List<int> members, int memberAgentIndex)
-    {
-        for (int i = 0; i < members.Count; i++)
-        {
-            if (members[i] == memberAgentIndex)
+            if (_previousFormationIdByAgentIndex[current[i]] != formationId)
             {
                 return true;
             }
@@ -319,13 +322,61 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         return false;
     }
 
-    private static void CopyMembers(List<int> destination, List<int> source)
+    private void AppendRetainedMembers(int formationId, List<int> current, List<int> destination)
     {
-        destination.Clear();
-        for (int i = 0; i < source.Count; i++)
+        for (int i = 0; i < current.Count; i++)
         {
-            destination.Add(source[i]);
+            int memberAgentIndex = current[i];
+            if (_previousFormationIdByAgentIndex[memberAgentIndex] == formationId)
+            {
+                destination.Add(memberAgentIndex);
+            }
         }
+    }
+
+    private void PrepareMemberStorage(MassNavigationRuntimeCapacityPlan capacity)
+    {
+        if (_preparedFormationCapacity == capacity.NavigationGroupCapacity &&
+            _preparedGroupMemberCapacity == capacity.GroupMemberCapacity &&
+            _previousFormationIdByAgentIndex.Length == capacity.GroupMembershipAgentCapacity)
+        {
+            return;
+        }
+
+        _preparedFormationCapacity = capacity.NavigationGroupCapacity;
+        _preparedGroupMemberCapacity = capacity.GroupMemberCapacity;
+        _previousFormationIdByAgentIndex = new int[capacity.GroupMembershipAgentCapacity];
+        _currentFormationIdByAgentIndex = new int[capacity.GroupMembershipAgentCapacity];
+        _anchorsByFormationId.EnsureCapacity(capacity.NavigationGroupCapacity);
+        _syncStateByFormationId.EnsureCapacity(capacity.NavigationGroupCapacity);
+        _previousMemberCountByFormationId.EnsureCapacity(capacity.NavigationGroupCapacity);
+        _currentMemberCountByFormationId.EnsureCapacity(capacity.NavigationGroupCapacity);
+        _memberAgentIndices.EnsureCapacity(capacity.GroupMemberCapacity);
+        _carriedMemberAgentIndices.EnsureCapacity(capacity.GroupMemberCapacity);
+        _staleFormationIds.EnsureCapacity(capacity.NavigationGroupCapacity);
+        _memberStorageAllocationCount++;
+    }
+
+    private void ResetMemberSnapshots()
+    {
+        Array.Clear(_previousFormationIdByAgentIndex);
+        Array.Clear(_currentFormationIdByAgentIndex);
+        _previousMemberCountByFormationId.Clear();
+        _currentMemberCountByFormationId.Clear();
+    }
+
+    private void BeginMemberSnapshotFrame()
+    {
+        Array.Clear(_currentFormationIdByAgentIndex);
+        _currentMemberCountByFormationId.Clear();
+    }
+
+    private void CommitMemberSnapshotFrame()
+    {
+        (_previousFormationIdByAgentIndex, _currentFormationIdByAgentIndex) =
+            (_currentFormationIdByAgentIndex, _previousFormationIdByAgentIndex);
+        (_previousMemberCountByFormationId, _currentMemberCountByFormationId) =
+            (_currentMemberCountByFormationId, _previousMemberCountByFormationId);
     }
 
     private MassNavigationFollowerLocomotion ResolveLocomotion(int formationId, Entity anchor)

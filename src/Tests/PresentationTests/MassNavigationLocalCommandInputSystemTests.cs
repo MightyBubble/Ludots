@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
@@ -184,10 +185,13 @@ namespace Ludots.Tests.Presentation
         {
             MassNavigationConfig config = CreateConfigForTests();
             config.World!.HotZones[0].CenterXCm = 1_000;
-            var simulation = new MassNavigationSimulationRuntime(config);
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World.StreamingChunkSizeCm);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100)))!;
+                () => simulation.BindBoardWorld(
+                    new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                    loadedChunks))!;
 
             Assert.That(ex.Message, Does.Contain("active hot zone"));
             Assert.That(ex.Message, Does.Contain("center x"));
@@ -197,7 +201,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SetFormationMode_RejectsUndefinedEnumValue()
         {
-            var simulation = new MassNavigationSimulationRuntime(CreateConfigForTests());
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), CreateConfigForTests());
 
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
                 () => simulation.SetFormationMode((MassNavigationFormationMode)999))!;
@@ -209,17 +213,17 @@ namespace Ludots.Tests.Presentation
         public void SelectionScratchAndSnapshot_OverflowFailFastWithoutArrayResize()
         {
             MassNavigationConfig config = CreateConfigForTests();
-            config.ScenarioRuntime.InitialCommandActorScratchCapacity = 1;
-            config.ScenarioRuntime.InitialCommandActorSnapshotCapacity = 1;
-            var simulation = new MassNavigationSimulationRuntime(config);
+            config.Capacity.InitialCommandActorScratchCapacity = 1;
+            config.Capacity.InitialCommandActorSnapshotCapacity = 1;
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
 
             InvalidOperationException scratchEx = Assert.Throws<InvalidOperationException>(
                 () => simulation.EnsureCommandActorScratch(2))!;
-            Assert.That(scratchEx.Message, Does.Contain("scenarioRuntime.initialCommandActorScratchCapacity"));
+            Assert.That(scratchEx.Message, Does.Contain("runtime.capacity.initialCommandActorScratchCapacity"));
 
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
                 () => simulation.SetCommandActorSnapshot(new[] { Entity.Null, Entity.Null }, revision: 1))!;
-            Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialCommandActorSnapshotCapacity"));
+            Assert.That(selectedEx.Message, Does.Contain("runtime.capacity.initialCommandActorSnapshotCapacity"));
         }
 
         private static TestContextScope CreateContext(
@@ -248,8 +252,10 @@ namespace Ludots.Tests.Presentation
                 OrderBuffer.CreateEmpty());
 
             var config = CreateConfigForTests();
-            var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
+            var simulation = new MassNavigationSimulationRuntime(new Ludots.Core.Map.MapId("test"), config);
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(config.World!.StreamingChunkSizeCm));
             int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
             var agentLayer = new MassNavigationAgentLayer(1u << layerIndex, 1u << layerIndex);
             simulation.RebuildFromAuthoredAgents(
@@ -364,14 +370,10 @@ namespace Ludots.Tests.Presentation
             MassNavigationFlowSolverConfig solver = CreateTestSolverConfig();
             var config = new MassNavigationConfig
             {
-                MapId = "mass_navigation",
                 Solver = solver,
                 World = new MassNavigationWorldConfig
                 {
-                    SolverWindowWidthCm = solver.FieldWidthCm,
-                    SolverWindowHeightCm = solver.FieldHeightCm,
                     StreamingChunkSizeCm = 500,
-                    StreamingRadiusCm = 1000,
                     CommandFocusHoldTicks = 3,
                     WorkAreaPaddingCm = 100,
                     WorkAreaMaxWidthCm = solver.FieldWidthCm,
@@ -385,8 +387,6 @@ namespace Ludots.Tests.Presentation
                             Label = "Center",
                             CenterXCm = 5000,
                             CenterYCm = 5000,
-                            WidthCm = 1000,
-                            HeightCm = 1000,
                         },
                     },
                 },
@@ -395,37 +395,18 @@ namespace Ludots.Tests.Presentation
                     RetainSeconds = 6f,
                     RadiusCm = 1000,
                 },
-                Scenario = new MassNavigationScenarioConfig
+                Capacity = new MassNavigationCapacityConfig
                 {
-                    AgentsPerTeam = 1,
-                    InitialActiveTeamId = LocalTeamId,
-                    Teams = new[]
-                    {
-                        new MassNavigationScenarioTeamConfig { Id = LocalTeamId, Name = "Team 1" },
-                        new MassNavigationScenarioTeamConfig { Id = EnemyTeamId, Name = "Team 2" },
-                    },
-                    SpawnLayout = new MassNavigationScenarioSpawnLayoutConfig
-                    {
-                        Kind = "OrbitOpposedTargets",
-                        OrbitRadiusCm = 3000f,
-                    },
-                },
-                ScenarioRuntime = new MassNavigationScenarioRuntimeConfig
-                {
-                    AutoSpawnConfiguredScenario = true,
                     InitialCommandActorScratchCapacity = 8,
                     InitialCommandActorSnapshotCapacity = 8,
-                    RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
-                    {
-                        NavigationGroupCapacity = 8,
-                        GroupMembershipAgentCapacity = 16,
-                        CommandActorScratchCapacity = 8,
-                        GroupMemberCapacity = 8,
-                        OrderIngestionTokenCapacity = 8,
-                        OrderIngestionMemberCapacity = 8,
-                        LoadedChunkCapacity = 32,
-                        MetadataTeamCapacity = 2,
-                    },
+                    NavigationGroupCapacity = 8,
+                    GroupMembershipAgentCapacity = 16,
+                    CommandActorScratchCapacity = 8,
+                    GroupMemberCapacity = 8,
+                    OrderIngestionTokenCapacity = 8,
+                    OrderIngestionMemberCapacity = 8,
+                    LoadedChunkCapacity = 32,
+                    MetadataTeamCapacity = 2,
                 },
                 AgentProfiles = new MassNavigationAgentProfileSetConfig
                 {
@@ -444,8 +425,6 @@ namespace Ludots.Tests.Presentation
                     },
                 },
                 Cadence = baseConfig.Cadence,
-                Presentation = baseConfig.Presentation,
-                TeamRelationships = baseConfig.TeamRelationships,
                 Flow = baseConfig.Flow,
                 Arrival = baseConfig.Arrival,
                 Avoidance = baseConfig.Avoidance,
@@ -454,8 +433,7 @@ namespace Ludots.Tests.Presentation
             config.Solver.Validate();
             config.World.Validate(config.Solver);
             config.Streaming.Validate();
-            config.ScenarioRuntime.Validate();
-            config.Scenario.Validate(config.ScenarioRuntime);
+            config.Capacity.Validate();
             config.AgentProfiles.Validate();
             config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
             return config;
@@ -471,8 +449,13 @@ namespace Ludots.Tests.Presentation
                 "MassNavigationMod",
                 "assets",
                 "MassNavigationConfig.json");
-            using FileStream stream = File.OpenRead(path);
-            return MassNavigationConfig.Load(stream);
+            JsonArray profiles = JsonNode.Parse(File.ReadAllText(path))?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.json must contain a profile array.");
+            JsonObject profile = (JsonObject)(profiles[0]?.DeepClone()
+                ?? throw new InvalidOperationException("MassNavigationConfig.json must contain the base profile."));
+            profile.Remove("id");
+            profile.Remove("extends");
+            return MassNavigationCapabilityProfile.Load(profile).Runtime;
         }
 
         private static AgentProfileRegistry CreateAgentProfilesForTests()

@@ -14,7 +14,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
     public TimeFlowScaleRequestConfig[] GasScaleRequests { get; set; } = Array.Empty<TimeFlowScaleRequestConfig>();
     public TimeFlowNavigationProbeConfig NavigationProbe { get; set; } = new();
     public MassNavigationFlowSolverConfig NavigationSolver { get; set; } = new();
-    public MassNavigationRuntimeCapacityConfig NavigationRuntimeCapacity { get; set; } = new();
+    public MassNavigationCapacityConfig NavigationRuntimeCapacity { get; set; } = new();
     public MassNavigationFlowArrivalTuning NavigationArrival { get; set; } = new();
     public MassNavigationFlowAvoidanceTuning NavigationAvoidance { get; set; } = new();
     public TimeFlowNavigationSemanticsConfig NavigationSemantics { get; set; } = new();
@@ -82,7 +82,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
         }
     }
 
-    private static void ValidateRuntimeCapacity(MassNavigationRuntimeCapacityConfig capacity)
+    private static void ValidateRuntimeCapacity(MassNavigationCapacityConfig capacity)
     {
         if (capacity == null)
         {

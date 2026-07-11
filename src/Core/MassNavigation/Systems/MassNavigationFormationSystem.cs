@@ -8,12 +8,13 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationFormationSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
 
-    public MassNavigationFormationSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationFormationSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine;
-        _simulation = simulation;
+        _binding = binding;
     }
 
     public void Initialize() { }
@@ -28,59 +29,70 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             return;
         }
 
-        if (!_simulation.AgentState.HasBoundAgents(_simulation.MassNavigationFlow.UnitCount))
+        MassNavigationSimulationRuntime simulation = Simulation;
+        if (!simulation.AgentState.HasBoundAgents(simulation.MassNavigationFlow.UnitCount))
         {
             return;
         }
 
-        int stepsToRun = _simulation.CadenceScheduler.BeginFixedTick(dt);
+        int stepsToRun = simulation.CadenceScheduler.BeginFixedTick(dt);
+        bool timingEnabled = simulation.Telemetry.TimingEnabled;
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
-            MassNavigationCadenceStep step = _simulation.CadenceScheduler.NextSimulationStep();
-            _simulation.ObserveSimTick();
+            MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
+            simulation.ObserveSimTick();
 
             if (step.UpdateTargets)
             {
-                long targetStart = Stopwatch.GetTimestamp();
-                _simulation.NavGroupRuntime.UpdateTargets(
-                    _simulation.MassNavigationFlow,
-                    _simulation.FrameIndex);
-                ApplyRouteExecutionTargets();
-                _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
+                long targetStart = timingEnabled ? Stopwatch.GetTimestamp() : 0L;
+                simulation.NavGroupRuntime.UpdateTargets(
+                    simulation.MassNavigationFlow,
+                    simulation.FrameIndex);
+                ApplyRouteExecutionTargets(simulation);
+                if (timingEnabled)
+                {
+                    simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
+                }
             }
 
-            if (_simulation.MassNavigationFlow.AdvanceFlowPipeline(
-                    _simulation.FlowTuning,
+            if (simulation.MassNavigationFlow.AdvanceFlowPipeline(
+                    simulation.FlowConfig,
                     step.RefreshFlow,
                     step.RefreshCrowd,
                     step.RefreshObstacles,
-                    _simulation.ObserveFlowFieldRebuild))
+                    timingEnabled ? simulation.ObserveFlowFieldRebuild : null))
             {
-                _simulation.MarkFlowReconcile();
+                simulation.MarkFlowReconcile();
             }
 
-            long start = Stopwatch.GetTimestamp();
-            _simulation.MassNavigationFlow.Step(
+            long start = timingEnabled ? Stopwatch.GetTimestamp() : 0L;
+            simulation.MassNavigationFlow.Step(
                 step.SimulationDt,
                 _engine.World,
-                _simulation.NavGroupRuntime,
+                simulation.NavGroupRuntime,
                 step.RunHardResolve,
-                _simulation.Cadence.HardResolveCandidateThresholdAgents,
-                _simulation.ObserveStepPrep,
-                _simulation.ObserveLocalSteering,
-                _simulation.ObserveHardResolve);
-            _simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                simulation.Cadence.HardResolveCandidateThresholdAgents,
+                timingEnabled ? simulation.ObserveStepPrep : null,
+                timingEnabled ? simulation.ObserveLocalSteering : null,
+                timingEnabled ? simulation.ObserveHardResolve : null);
+            if (timingEnabled)
+            {
+                simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            }
 
             if (step.SyncEntities)
             {
-                start = Stopwatch.GetTimestamp();
-                _simulation.MassNavigationFlow.SyncEntities(_engine.World, _simulation.AgentState);
-                _simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                start = timingEnabled ? Stopwatch.GetTimestamp() : 0L;
+                simulation.MassNavigationFlow.SyncEntities(_engine.World, simulation.AgentState);
+                if (timingEnabled)
+                {
+                    simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                }
             }
         }
     }
 
-    private void ApplyRouteExecutionTargets()
+    private void ApplyRouteExecutionTargets(MassNavigationSimulationRuntime simulation)
     {
         MassNavigationRouteExecutionSink? routeSink = _engine.GetService(MassNavigationKeys.RouteExecutionSink);
         if (routeSink == null || routeSink.ActiveRouteCount <= 0)
@@ -89,7 +101,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
         }
 
         MassNavigationRouteSinkResult result = routeSink.TryApplyTrackedRouteTargets(
-            _simulation,
+            simulation,
             _engine.World);
         if (!result.Applied)
         {

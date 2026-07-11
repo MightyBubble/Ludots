@@ -43,7 +43,7 @@ public sealed partial class MassNavigationFlowSolverState
             float yCm = _positionsCm[i2 + 1];
             float worldXCm = _worldOriginXCm + xCm;
             float worldYCm = _worldOriginYCm + yCm;
-            Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
+            Fix64Vec2 worldValue = Fix64Vec2.FromFloat(worldXCm, worldYCm);
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;
 

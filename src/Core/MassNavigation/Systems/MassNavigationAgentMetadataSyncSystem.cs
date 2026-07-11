@@ -2,46 +2,35 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MassNavigation.Runtime;
-using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
 internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, MassNavigationAgentProfile, EntityLayer>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, MassNavigationAgentProfile, EntityLayer>()
+        .WithNone<SuspendedTag>();
     private static readonly QueryDescription MissingEntityLayerQuery = new QueryDescription()
         .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, MassNavigationAgentProfile>()
-        .WithNone<EntityLayer>();
+        .WithNone<EntityLayer, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly HashSet<int> _teamSet;
-    private readonly int[] _configuredTeamIds;
-    private readonly int _metadataTeamCapacity;
+    private readonly MassNavigationRuntimeBinding _binding;
+    private MassNavigationSimulationRuntime Simulation => _binding.RequireCurrent();
+    private readonly HashSet<int> _teamSet = new();
+    private int[] _observedTeamIds = Array.Empty<int>();
+    private int _metadataTeamCapacity;
+    private int _observedRuntimeBindingRevision = -1;
     private int _lastSyncedStructuralChangeFrame = -1;
 
-    public MassNavigationAgentMetadataSyncSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationAgentMetadataSyncSystem(GameEngine engine, MassNavigationRuntimeBinding binding)
     {
         _engine = engine;
-        _simulation = simulation;
-        _metadataTeamCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.MetadataTeamCapacity;
-        _teamSet = new HashSet<int>(_metadataTeamCapacity);
-        MassNavigationScenarioTeamConfig[] configuredTeams = simulation.Config.Scenario.Teams;
-        if (configuredTeams.Length > _metadataTeamCapacity)
-        {
-            throw new System.InvalidOperationException(
-                $"MassNavigation metadata sync configured scenario team count {configuredTeams.Length} exceeds scenarioRuntime.runtimeCapacity.metadataTeamCapacity {_metadataTeamCapacity}.");
-        }
-
-        _configuredTeamIds = new int[configuredTeams.Length];
-        for (int i = 0; i < configuredTeams.Length; i++)
-        {
-            _configuredTeamIds[i] = configuredTeams[i].Id;
-        }
+        _binding = binding;
     }
 
     public void Initialize() { }
@@ -56,12 +45,14 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             return;
         }
 
-        if (_lastSyncedStructuralChangeFrame == _simulation.StructuralChangeRevision)
+        RefreshRuntimeConfig();
+
+        if (_lastSyncedStructuralChangeFrame == Simulation.StructuralChangeRevision)
         {
             return;
         }
 
-        _lastSyncedStructuralChangeFrame = _simulation.StructuralChangeRevision;
+        _lastSyncedStructuralChangeFrame = Simulation.StructuralChangeRevision;
 
         _teamSet.Clear();
         ThrowIfAgentMissingEntityLayer();
@@ -77,21 +68,21 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                 if (!_teamSet.Contains(teamId) && _teamSet.Count >= _metadataTeamCapacity)
                 {
                     throw new System.InvalidOperationException(
-                        $"MassNavigation metadata sync required more than configured scenarioRuntime.runtimeCapacity.metadataTeamCapacity {_metadataTeamCapacity} teams.");
+                        $"MassNavigation metadata sync required more than runtime.capacity.metadataTeamCapacity {_metadataTeamCapacity} teams.");
                 }
 
                 _teamSet.Add(teamId);
                 MassNavigationAgentProfile profile = profiles[index];
                 EntityLayer layer = layers[index];
                 string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
-                AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
-                _simulation.MassNavigationFlow.SetUnitRuntimeProfile(
+                MassNavigationAgentProfilePlan runtimeProfile = Simulation.Plan.AgentProfiles.Resolve(profileKey);
+                Simulation.MassNavigationFlow.SetUnitRuntimeProfile(
                     agentIndices[index].Value,
                     teamId,
                     profile.Heavy,
-                    geometry.Mass,
+                    runtimeProfile.Mass,
                     profile.VisualScale,
-                    geometry.RadiusCm,
+                    runtimeProfile.RadiusCm,
                     profile.SpeedCmPerSecond,
                     new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
             }
@@ -102,33 +93,33 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             return;
         }
 
+        int write = 0;
         foreach (int teamId in _teamSet)
         {
-            if (!IsConfiguredTeam(teamId))
-            {
-                throw new System.InvalidOperationException(
-                    $"MassNavigation metadata sync observed team {teamId}, but that team is not authored in scenario.teams.");
-            }
+            _observedTeamIds[write++] = teamId;
         }
 
-        if (!HaveSameTeams(_simulation.TeamIds, _configuredTeamIds))
+        Array.Sort(_observedTeamIds, 0, write);
+        ReadOnlySpan<int> observedTeams = _observedTeamIds.AsSpan(0, write);
+        if (!HaveSameTeams(Simulation.TeamIds, observedTeams))
         {
-            _simulation.ConfigureScenarioTeams(_configuredTeamIds);
-            _simulation.RequestSceneReset();
+            Simulation.ConfigureTeams(observedTeams);
         }
     }
 
-    private bool IsConfiguredTeam(int teamId)
+    private void RefreshRuntimeConfig()
     {
-        for (int i = 0; i < _configuredTeamIds.Length; i++)
+        if (_observedRuntimeBindingRevision == _binding.Revision)
         {
-            if (_configuredTeamIds[i] == teamId)
-            {
-                return true;
-            }
+            return;
         }
 
-        return false;
+        _observedRuntimeBindingRevision = _binding.Revision;
+        _metadataTeamCapacity = Simulation.Plan.Capacity.MetadataTeamCapacity;
+        _teamSet.EnsureCapacity(_metadataTeamCapacity);
+        _observedTeamIds = new int[_metadataTeamCapacity];
+
+        _lastSyncedStructuralChangeFrame = -1;
     }
 
     private void ThrowIfAgentMissingEntityLayer()

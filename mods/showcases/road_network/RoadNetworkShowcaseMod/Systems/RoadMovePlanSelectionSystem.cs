@@ -16,23 +16,24 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMovePlanSelectionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly float _defaultSpeedCmPerSec;
         private readonly int _moveSpeedAttributeId;
         private readonly int _roadMoveFollowOrderTypeId;
         private readonly MovePlanStore _plans;
         private readonly MovePlanRuntimeService _runtime;
-        private readonly MassNavigationSimulationRuntime _simulation;
+        private readonly MassNavigationRuntimeBinding _binding;
         private readonly RoadRouteProfileCatalog _profiles;
         private readonly RoadRouteSelectionStrategy _selection = new();
 
-        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation, float defaultSpeedCmPerSec = 600f) : base(world)
+        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationRuntimeBinding binding, float defaultSpeedCmPerSec = 600f) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+            _binding = binding ?? throw new ArgumentNullException(nameof(binding));
             _defaultSpeedCmPerSec = Math.Max(0f, defaultSpeedCmPerSec);
             _moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
             _profiles = new RoadRouteProfileCatalog(world);
@@ -40,6 +41,11 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public override void Update(in float dt)
         {
+            if (!RoadNetworkShowcaseIds.TryResolveSimulation(_binding, out MassNavigationSimulationRuntime simulation))
+            {
+                return;
+            }
+
             foreach (ref var chunk in World.Query(in Query))
             {
                 Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
@@ -73,7 +79,7 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    if (!_simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
+                    if (!simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
                     {
                         orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
                         orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;

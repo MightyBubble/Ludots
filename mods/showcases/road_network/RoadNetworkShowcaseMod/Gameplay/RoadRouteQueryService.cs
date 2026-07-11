@@ -205,8 +205,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
             RoadNetworkScenarioDefinition? scenario,
             in RoadRoutePlannerProfile planner)
         {
-            if (!_globals.TryGetValue(RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey, out object? loadedChunksObj) ||
-                loadedChunksObj is not WorldGridLoadedChunks loadedChunks)
+            if (!_globals.TryGetValue(RoadNetworkShowcaseIds.GraphLoadedChunkSolveContributorServiceKey, out object? contributorObj) ||
+                contributorObj is not WorldGridLoadedChunkContributor contributor)
             {
                 return;
             }
@@ -238,7 +238,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 }
             }
 
-            LoadedChunkSolvePrimer.PrimeForBounds(loadedChunks, points.Slice(0, pointCount), paddingChunks: 2);
+            LoadedChunkSolvePrimer.PrimeForBounds(contributor, points.Slice(0, pointCount), paddingChunks: 2);
         }
 
         private void TryConsiderVariant(

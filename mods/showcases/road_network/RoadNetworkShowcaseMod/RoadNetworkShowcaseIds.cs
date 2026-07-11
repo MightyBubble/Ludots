@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.MassNavigation.Runtime;
 
 namespace RoadNetworkShowcaseMod
 {
@@ -8,7 +9,9 @@ namespace RoadNetworkShowcaseMod
         public const string MapTag = "road_network_showcase";
         public const string InstalledKey = "RoadNetworkShowcaseMod.Installed";
         public const string ScenarioServiceKey = "RoadNetworkShowcaseMod.Scenario";
+        public const string RuntimeServiceKey = "RoadNetworkShowcaseMod.Runtime";
         public const string GraphLoadedChunksServiceKey = "RoadNetworkShowcaseMod.GraphLoadedChunks";
+        public const string GraphLoadedChunkSolveContributorServiceKey = "RoadNetworkShowcaseMod.GraphLoadedChunkSolveContributor";
         public const string PathPlannerAgentTypeId = "RoadColumn";
         public const string RoadMoveFollowOrderTypeKey = "roadMoveFollow";
         public const string RoadSurfacePerformerId = "road_surface_chunk";
@@ -16,6 +19,21 @@ namespace RoadNetworkShowcaseMod
         public static bool IsShowcaseMap(string? mapId)
         {
             return string.Equals(mapId, MapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool TryResolveSimulation(
+            MassNavigationRuntimeBinding binding,
+            out MassNavigationSimulationRuntime simulation)
+        {
+            if (binding?.Current is not MassNavigationSimulationRuntime current ||
+                !IsShowcaseMap(current.MapId.Value))
+            {
+                simulation = null!;
+                return false;
+            }
+
+            simulation = current;
+            return true;
         }
     }
 }

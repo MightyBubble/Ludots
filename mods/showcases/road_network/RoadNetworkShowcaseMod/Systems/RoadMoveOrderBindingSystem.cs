@@ -13,24 +13,28 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveOrderBindingSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>()
+            .WithNone<SuspendedTag>();
 
         private readonly int _roadMoveFollowOrderTypeId;
         private readonly MovePlanStore _plans;
         private readonly MovePlanRuntimeService _runtime;
         private readonly IMovePlanExecutionSink _executionSink;
+        private readonly MassNavigationRuntimeBinding _binding;
 
-        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation) : base(world)
+        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationRuntimeBinding binding) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _executionSink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            _binding = binding ?? throw new ArgumentNullException(nameof(binding));
+            _executionSink = new MassNavigationMovePlanExecutionSink(_binding);
         }
 
         public override void Update(in float dt)
         {
-            if (_roadMoveFollowOrderTypeId <= 0)
+            if (_roadMoveFollowOrderTypeId <= 0 ||
+                !RoadNetworkShowcaseIds.TryResolveSimulation(_binding, out _))
             {
                 return;
             }

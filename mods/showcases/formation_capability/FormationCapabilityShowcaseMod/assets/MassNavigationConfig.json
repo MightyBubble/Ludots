@@ -1,77 +1,58 @@
-{
-  "mapId": "formation_capability_showcase",
-  "presentation": {
-    "requiredMeshAssetIds": [
-      "mass_navigation.agent.soldier",
-      "mass_navigation.command.marker"
-    ],
-    "blockerPerformerId": null,
-    "hotspotPerformerId": null,
-    "hotspotTemplateId": null,
-    "teams": []
-  },
-  "scenario": {
-    "agentsPerTeam": 0,
-    "teams": [
-      {
-        "id": 1,
-        "name": "Azure Vanguard"
+[
+  {
+    "id": "formation_capability_showcase",
+    "extends": "mass_navigation",
+    "runtime": {
+      "capacity": {
+          "initialCommandActorScratchCapacity": 2048,
+          "initialCommandActorSnapshotCapacity": 2048,
+        "navigationGroupCapacity": 512,
+          "groupMembershipAgentCapacity": 2048,
+          "commandActorScratchCapacity": 2048,
+          "groupMemberCapacity": 2048,
+        "orderIngestionTokenCapacity": 512,
+          "orderIngestionMemberCapacity": 2048,
+        "loadedChunkCapacity": 512,
+        "metadataTeamCapacity": 2
       },
-      {
-        "id": 2,
-        "name": "Crimson Column"
+      "agentProfiles": {
+        "profiles": [
+          {
+            "id": "formation",
+            "heavy": true,
+            "visualScale": 1,
+            "speedCmPerSecond": 360,
+            "everyNth": 0,
+            "nthOffset": 0
+          },
+          {
+            "id": "heavy",
+            "heavy": true,
+            "visualScale": 0.34,
+            "speedCmPerSecond": 780,
+            "everyNth": 7,
+            "nthOffset": 0
+          },
+          {
+            "id": "light",
+            "heavy": false,
+            "visualScale": 0.22,
+            "speedCmPerSecond": 920,
+            "everyNth": 0,
+            "nthOffset": 0
+          }
+        ]
+      },
+      "streaming": {
+        "retainSeconds": 12,
+        "radiusCm": 24000
       }
-    ],
-    "spawnLayout": null
-  },
-  "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": false,
-    "initialCommandActorScratchCapacity": 512,
-    "initialCommandActorSnapshotCapacity": 128,
-    "runtimeCapacity": {
-      "navigationGroupCapacity": 512,
-      "groupMembershipAgentCapacity": 80000,
-      "commandActorScratchCapacity": 512,
-      "groupMemberCapacity": 512,
-      "orderIngestionTokenCapacity": 512,
-      "orderIngestionMemberCapacity": 512,
-      "loadedChunkCapacity": 512,
-      "metadataTeamCapacity": 2
+    },
+    "sceneAuthoring": {
+      "presentation": null,
+      "scenario": null,
+      "autoSpawnConfiguredScenario": false,
+      "teamRelationships": null
     }
-  },
-  "agentProfiles": {
-    "profiles": [
-      {
-        "id": "formation",
-        "heavy": true,
-        "visualScale": 1,
-        "speedCmPerSecond": 360,
-        "everyNth": 0,
-        "nthOffset": 0
-      },
-      {
-        "id": "heavy",
-        "heavy": true,
-        "visualScale": 0.34,
-        "speedCmPerSecond": 780,
-        "everyNth": 7,
-        "nthOffset": 0
-      },
-      {
-        "id": "light",
-        "heavy": false,
-        "visualScale": 0.22,
-        "speedCmPerSecond": 920,
-        "everyNth": 0,
-        "nthOffset": 0
-      }
-    ]
-  },
-  "teamRelationships": {
-    "relationships": []
-  },
-  "streaming": {
-    "retainSeconds": 12,
-    "radiusCm": 24000
   }
-}
+]

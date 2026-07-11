@@ -1,6 +1,6 @@
 # MassNavigation Foundation
 
-`MassNavigationMod` is the reusable large-scale navigation foundation asset pack. It is not the Formation Capability scenario itself. The runtime is owned by `src/Core/MassNavigation`; this mod contributes config, templates, performers, and maps that exercise the formal navigation chain.
+`MassNavigationMod` is the reusable large-scale navigation foundation capability. It is not the Formation Capability scenario itself. Runtime implementation lives in `src/Core/MassNavigation`; this mod owns map-event activation and contributes config, templates, performers, and maps that exercise the formal navigation chain.
 
 Start here if you are new:
 
@@ -14,7 +14,7 @@ Start here if you are new:
 | --- | --- |
 | `MassNavigationFlow` | Hot-path SoA solver data, flow/crowd/avoidance calculations, cadence-sensitive simulation. |
 | Core `MassNavigation` runtime | Gameplay-facing navigation integration: agents, profiles, groups, orders, ECS state, authoring contracts, and component-authored runtime binding. |
-| `MassNavigationMod` | Foundation assets and UI for the default large-world navigation map. |
+| `MassNavigationMod` | Activates the Core runtime from map lifecycle events and owns foundation assets/UI for the default large-world navigation map. |
 | Game/showcase mod | Product rules such as formations owning soldiers, army names, formation outlines, obstacle overlay style, initial scenario setup, authored through components and runtime spawn parameters. |
 
 Do not add alternate names for old experiment labels. `MassNavigation*` is the formal runtime surface for this foundation.
@@ -25,7 +25,7 @@ Foundation-owned files stay under `assets/` and are loaded through the normal co
 
 | File | Responsibility |
 | --- | --- |
-| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, and view residency. |
+| `assets/MassNavigationConfig.json` | ArrayById profile catalog. `runtime` owns solver/cadence/crowd/arrival/avoidance/streaming execution data; optional `sceneAuthoring` owns example spawn/presentation/relationship data. Maps bind a profile only through `Metadata.massNavigation.profileId`. |
 | `assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
 | `assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
 | `assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
@@ -63,13 +63,16 @@ Runtime files for MassNavigation live in `src/Core/MassNavigation`. Component au
 - `MassNavigationFlowObstacleProjection` is the bridge output consumed by MassNavigationFlow environment binding.
 - `MassNavigationFormationAnchor`, `MassNavigationFormationFollower`, and optional `MassNavigationFollowerLocomotion` enable formation behavior only for templates that author those components.
 
+Initial spawn and unbound discovery establish the binding automatically. After an agent is bound, any writer that changes its `Team`, `MassNavigationAgent.ProfileId`, `EntityLayer`, or `OrderBuffer` presence must call `MassNavigationAgentBinding.MarkDirty(world, entity)`. This explicit dirty contract keeps steady-state binding O(1) without hiding authoring changes behind periodic 10K-agent scans.
+
 `MassNavigationConfig.world.obstacles[]` is obsolete and must fail strict config loading. Obstacle authoring belongs to map/template ECS components and is documented in `gitbook/reference/obstacle-authoring.md`.
 
 The mod-owned source surface is intentionally small:
 
 | File | Boundary |
 | --- | --- |
-| `MassNavigationModEntry.cs` | Data-only mod entry for MassNavigation foundation assets. |
+| `MassNavigationModEntry.cs` | Registers map loaded/resumed/suspended/unloaded handlers for the Core runtime. |
+| `MassNavigationSceneOwner.cs` | Owns only the optional foundation example scene authoring and reset lifecycle. |
 | `assets/**` | Default MassNavigation config, templates, performers, input, and map data. |
 
 ## Rules For Follow-Up Work
@@ -77,6 +80,6 @@ The mod-owned source surface is intentionally small:
 - No fallback paths for missing services, config, templates, performers, map bounds, or visual heightmap.
 - No parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.
 - No Formation Capability formation ownership inside the MassNavigation foundation.
-- No MassNavigation-owned post-spawn lifecycle or bootstrap path inside this mod; runtime entity discovery is core-owned and component-authored.
+- No game/showcase-specific post-spawn rules inside this mod; generic runtime discovery is Core-owned, while optional foundation example spawning is isolated in `MassNavigationSceneOwner`.
 - No private MassNavigation marker lifecycle system when performer rules can express the lifecycle.
 - Move reusable behavior into `MassNavigationFlow`, `MassNavigation`, Core, or another formal reusable mod when two or more mods need it.

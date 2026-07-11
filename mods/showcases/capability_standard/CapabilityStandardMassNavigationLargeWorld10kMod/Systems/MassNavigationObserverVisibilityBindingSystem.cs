@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Knowledge;
@@ -19,7 +20,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
 
     private static readonly QueryDescription AgentQuery = new QueryDescription()
         .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private Entity _publishedViewer = Entity.Null;
@@ -97,7 +98,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
 
     private static int ResolveExpectedAgentCount(MassNavigationSimulationRuntime simulation)
     {
-        return checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+        return simulation.AgentState.TotalAgents;
     }
 
     private static KnowledgeIdMask256 ResolveHudAttributeMask(
@@ -111,13 +112,30 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
             int teamId = teamIds[i];
             mask = mask.Union(ResolveHudAttributeMask(
                 performers,
-                simulation.Config.Presentation.ResolveAgentPerformerId(teamId, heavy: false)));
+                ResolveAgentPerformerId(teamId, heavy: false)));
             mask = mask.Union(ResolveHudAttributeMask(
                 performers,
-                simulation.Config.Presentation.ResolveAgentPerformerId(teamId, heavy: true)));
+                ResolveAgentPerformerId(teamId, heavy: true)));
         }
 
         return mask;
+    }
+
+    private static string ResolveAgentPerformerId(int teamId, bool heavy)
+    {
+        return (teamId, heavy) switch
+        {
+            (1, false) => "mass_navigation_agent_azure_light",
+            (1, true) => "mass_navigation_agent_azure_heavy",
+            (2, false) => "mass_navigation_agent_crimson_light",
+            (2, true) => "mass_navigation_agent_crimson_heavy",
+            (3, false) => "mass_navigation_agent_amber_light",
+            (3, true) => "mass_navigation_agent_amber_heavy",
+            (4, false) => "mass_navigation_agent_emerald_light",
+            (4, true) => "mass_navigation_agent_emerald_heavy",
+            _ => throw new InvalidOperationException(
+                $"Capability Standard participant views has no performer contract for MassNavigation team {teamId}.")
+        };
     }
 
     private static KnowledgeIdMask256 ResolveHudAttributeMask(

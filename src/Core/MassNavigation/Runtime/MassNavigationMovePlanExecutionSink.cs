@@ -8,12 +8,13 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
 {
-    private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly MassNavigationRuntimeBinding _binding;
     private readonly Dictionary<int, Vector2> _lastTargetsByEntityId = new();
+    private int _observedBindingRevision = -1;
 
-    public MassNavigationMovePlanExecutionSink(MassNavigationSimulationRuntime simulation)
+    public MassNavigationMovePlanExecutionSink(MassNavigationRuntimeBinding binding)
     {
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _binding = binding ?? throw new ArgumentNullException(nameof(binding));
     }
 
     public bool TryApply(World world, Entity entity, in MovePlanExecutionIntent intent)
@@ -21,7 +22,8 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
         ArgumentNullException.ThrowIfNull(world);
         if (intent.HasTarget == 0 ||
             !world.IsAlive(entity) ||
-            !world.Has<MassNavigationAgentIndex>(entity))
+            !world.Has<MassNavigationAgentIndex>(entity) ||
+            !TryResolveSimulation(out MassNavigationSimulationRuntime simulation))
         {
             return false;
         }
@@ -29,7 +31,7 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
         MassNavigationAgentIndex agentIndex = world.Get<MassNavigationAgentIndex>(entity);
         bool resetRecovery = !_lastTargetsByEntityId.TryGetValue(entity.Id, out Vector2 lastTarget) ||
                              lastTarget != intent.TargetWorldCm;
-        bool applied = _simulation.SetAgentNavigationTargetWorldCm(
+        bool applied = simulation.SetAgentNavigationTargetWorldCm(
             agentIndex.Value,
             intent.TargetWorldCm.X,
             intent.TargetWorldCm.Y,
@@ -42,13 +44,32 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
     public void Clear(World world, Entity entity)
     {
         ArgumentNullException.ThrowIfNull(world);
+        _lastTargetsByEntityId.Remove(entity.Id);
         if (!world.IsAlive(entity) ||
-            !world.TryGet(entity, out MassNavigationAgentIndex index))
+            !world.TryGet(entity, out MassNavigationAgentIndex index) ||
+            !TryResolveSimulation(out MassNavigationSimulationRuntime simulation))
         {
             return;
         }
 
-        _lastTargetsByEntityId.Remove(entity.Id);
-        _simulation.ReleaseAgentNavigationTarget(index.Value);
+        simulation.ReleaseAgentNavigationTarget(index.Value);
+    }
+
+    private bool TryResolveSimulation(out MassNavigationSimulationRuntime simulation)
+    {
+        if (_observedBindingRevision != _binding.Revision)
+        {
+            _lastTargetsByEntityId.Clear();
+            _observedBindingRevision = _binding.Revision;
+        }
+
+        if (_binding.Current is not MassNavigationSimulationRuntime current)
+        {
+            simulation = null!;
+            return false;
+        }
+
+        simulation = current;
+        return true;
     }
 }

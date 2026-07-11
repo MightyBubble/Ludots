@@ -1,20 +1,21 @@
 using System;
+using System.Text.Json.Serialization;
 using Ludots.Core.Engine.TimeFlow;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationCadenceConfig
 {
-    public int SimulationHz { get; set; }
-    public int TargetUpdateHz { get; set; }
-    public int FlowStepHz { get; set; }
-    public int FlowCrowdStampHz { get; set; }
-    public int FlowObstacleStampHz { get; set; }
-    public int HardResolveHz { get; set; }
-    public int EntitySyncHz { get; set; }
-    public int MaxStepsPerFixedTick { get; set; }
-    public int HardResolveCandidateThresholdAgents { get; set; }
-    public int OrderIdleScanIntervalFrames { get; set; }
+    [JsonRequired] public int SimulationHz { get; set; }
+    [JsonRequired] public int TargetUpdateHz { get; set; }
+    [JsonRequired] public int FlowStepHz { get; set; }
+    [JsonRequired] public int FlowCrowdStampHz { get; set; }
+    [JsonRequired] public int FlowObstacleStampHz { get; set; }
+    [JsonRequired] public int HardResolveHz { get; set; }
+    [JsonRequired] public int EntitySyncHz { get; set; }
+    [JsonRequired] public int MaxStepsPerFixedTick { get; set; }
+    [JsonRequired] public int HardResolveCandidateThresholdAgents { get; set; }
+    [JsonRequired] public int OrderIdleScanIntervalFrames { get; set; }
 
     public void Validate()
     {
@@ -50,35 +51,6 @@ public sealed class MassNavigationCadenceConfig
         }
     }
 
-    public void AdjustFlowStepHz(int delta)
-    {
-        FlowStepHz = ClampOptionalHz(FlowStepHz + delta);
-    }
-
-    public void AdjustFlowCrowdStampHz(int delta)
-    {
-        FlowCrowdStampHz = ClampOptionalHz(FlowCrowdStampHz + delta);
-    }
-
-    public void AdjustFlowObstacleStampHz(int delta)
-    {
-        FlowObstacleStampHz = ClampOptionalHz(FlowObstacleStampHz + delta);
-    }
-
-    public void AdjustHardResolveHz(int delta)
-    {
-        HardResolveHz = ClampOptionalHz(HardResolveHz + delta);
-    }
-
-    public void AdjustEntitySyncHz(int delta)
-    {
-        EntitySyncHz = ClampOptionalHz(EntitySyncHz + delta);
-    }
-
-    private int ClampOptionalHz(int value)
-    {
-        return Math.Clamp(value, 0, SimulationHz);
-    }
 }
 
 internal readonly record struct MassNavigationCadenceStep(
@@ -92,7 +64,7 @@ internal readonly record struct MassNavigationCadenceStep(
 
 internal sealed class MassNavigationCadenceScheduler
 {
-    private readonly MassNavigationCadenceConfig _config;
+    private readonly MassNavigationCadencePlan _config;
 
     private DiscreteRateTickDistributor? _simulation;
     private DiscreteRateTickDistributor? _targetUpdate;
@@ -112,9 +84,9 @@ internal sealed class MassNavigationCadenceScheduler
     private int _hardResolveHz;
     private int _entitySyncHz;
 
-    public MassNavigationCadenceScheduler(MassNavigationCadenceConfig config)
+    public MassNavigationCadenceScheduler(MassNavigationCadencePlan config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
     }
 
     public int BeginFixedTick(float fixedDt)

@@ -1,0 +1,12 @@
+flowchart TD
+    A["Map load: read metadata.massNavigation.profileId"] --> B["ConfigPipeline: merge ArrayById profile and extends chain"]
+    B --> C{"Strict typed profile valid?"}
+    C -->|"missing or unknown member"| D["Reject profile with JsonException"]
+    C -->|"valid"| E["Compile immutable MassNavigationRuntimePlan"]
+    E --> F["Activate simulation for event MapId"]
+    F --> G{"sceneAuthoring.autoSpawnConfiguredScenario"}
+    G -->|"false"| H["Map or showcase owns authored entities"]
+    G -->|"true"| I["MassNavigationMod scene owner applies relationships and spawns scene"]
+    H --> J["Metadata sync derives teams from bound agents"]
+    I --> J
+    J --> K["Runtime systems consume Plan only"]

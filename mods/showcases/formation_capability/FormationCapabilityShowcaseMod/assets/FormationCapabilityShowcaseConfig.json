@@ -5,6 +5,7 @@
     "profileId": "formation"
   },
   "initialCommandSourceFormationId": "shu_left_vanguard",
+  "defaultTeamRelationship": "Hostile",
   "initialCommandSourceEntityCapacity": 1,
   "obstacleOverlay": {
     "templateId": "formation_capability_showcase_obstacle_overlay",

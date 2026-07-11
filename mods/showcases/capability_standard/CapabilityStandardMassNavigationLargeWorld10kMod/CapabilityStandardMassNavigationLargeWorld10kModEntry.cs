@@ -4,6 +4,8 @@ using CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 
@@ -80,8 +82,10 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 
         OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
             ?? throw new InvalidOperationException("CapabilityStandardMassNavigationLargeWorld10kMod requires OrderQueue.");
+        MassNavigationRuntimeBinding runtimeBinding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+            ?? throw new InvalidOperationException("CapabilityStandardMassNavigationLargeWorld10kMod requires MassNavigationRuntimeBinding.");
         engine.RegisterSystem(
-            new MassNavigationLargeWorldLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context),
+            new MassNavigationLargeWorldLocalOrderSourceSystem(engine, runtimeBinding, engine.World, engine.GlobalContext, orders, context),
             SystemGroup.InputCollection);
         engine.GlobalContext[LocalOrderSourceSystemInstalledKey] = true;
     }

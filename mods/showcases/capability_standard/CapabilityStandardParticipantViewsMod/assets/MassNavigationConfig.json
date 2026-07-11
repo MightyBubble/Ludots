@@ -1,67 +1,54 @@
-{
-  "mapId": "mass_navigation_disabled_for_capability_standard_participant_views",
-  "world": {
-    "hotZones": [
-      {
-        "id": "central",
-        "label": "Central",
-        "centerXCm": 0,
-        "centerYCm": 0,
-        "widthCm": 10000,
-        "heightCm": 10000
+[
+  {
+    "id": "capability_standard_participant_views",
+    "extends": "mass_navigation",
+    "runtime": {
+      "world": {
+        "hotZones": [
+          {
+            "id": "central",
+            "label": "Central",
+            "centerXCm": 0,
+            "centerYCm": 0
+          }
+        ]
+      },
+      "solver": {
+        "maxObstacleCount": 8,
+        "parallelWorkerCount": 1
+      },
+      "capacity": {
+        "initialCommandActorScratchCapacity": 32,
+        "initialCommandActorSnapshotCapacity": 32,
+        "navigationGroupCapacity": 32,
+        "groupMembershipAgentCapacity": 64,
+        "commandActorScratchCapacity": 32,
+        "groupMemberCapacity": 32,
+        "orderIngestionTokenCapacity": 32,
+        "orderIngestionMemberCapacity": 32,
+        "loadedChunkCapacity": 64
+      },
+      "agentProfiles": {
+        "profiles": [
+          {
+            "id": "light",
+            "heavy": false,
+            "visualScale": 0.22,
+            "speedCmPerSecond": 800,
+            "everyNth": 0,
+            "nthOffset": 0
+          }
+        ]
+      },
+      "flow": {
+        "crowdStampBudgetAgentsPerRefresh": 16
       }
-    ]
-  },
-  "solver": {
-    "maxObstacleCount": 8,
-    "parallelWorkerCount": 1
-  },
-  "presentation": {
-    "teams": []
-  },
-  "scenario": {
-    "agentsPerTeam": 1,
-    "teams": [
-      {
-        "id": 1,
-        "name": "Blue"
-      }
-    ],
-    "spawnLayout": {
-      "randomSeed": 1
+    },
+    "sceneAuthoring": {
+      "presentation": null,
+      "scenario": null,
+      "autoSpawnConfiguredScenario": false,
+      "teamRelationships": null
     }
-  },
-  "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": false,
-    "initialCommandActorScratchCapacity": 32,
-    "initialCommandActorSnapshotCapacity": 32,
-    "runtimeCapacity": {
-      "navigationGroupCapacity": 32,
-      "groupMembershipAgentCapacity": 64,
-      "commandActorScratchCapacity": 32,
-      "groupMemberCapacity": 32,
-      "orderIngestionTokenCapacity": 32,
-      "orderIngestionMemberCapacity": 32,
-      "loadedChunkCapacity": 64
-    }
-  },
-  "agentProfiles": {
-    "profiles": [
-      {
-        "id": "light",
-        "heavy": false,
-        "visualScale": 0.22,
-        "speedCmPerSecond": 800,
-        "everyNth": 0,
-        "nthOffset": 0
-      }
-    ]
-  },
-  "teamRelationships": {
-    "relationships": []
-  },
-  "flow": {
-    "iterationsPerStep": 16,
-    "maxIterationsPerStep": 1024
   }
-}
+]

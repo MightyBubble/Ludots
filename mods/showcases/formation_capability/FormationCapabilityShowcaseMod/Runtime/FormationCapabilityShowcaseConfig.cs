@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -16,6 +17,8 @@ internal sealed class FormationCapabilityShowcaseConfig
     public string MapId { get; set; } = string.Empty;
     public FormationCapabilityShowcaseAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialCommandSourceFormationId { get; set; } = string.Empty;
+    public string DefaultTeamRelationship { get; set; } = string.Empty;
+    public TeamRelationship ParsedDefaultTeamRelationship { get; private set; }
     public int InitialCommandSourceEntityCapacity { get; set; }
     public FormationCapabilityShowcaseObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public FormationCapabilityShowcaseFormationConfig[] Formations { get; set; } = Array.Empty<FormationCapabilityShowcaseFormationConfig>();
@@ -57,6 +60,7 @@ internal sealed class FormationCapabilityShowcaseConfig
         RequireProperty(root, "mapId");
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialCommandSourceFormationId");
+        RequireProperty(root, "defaultTeamRelationship");
         RequireProperty(root, "initialCommandSourceEntityCapacity");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
@@ -167,6 +171,13 @@ internal sealed class FormationCapabilityShowcaseConfig
         RequireNonEmpty(MapId, nameof(MapId));
         FormationAgent.Validate(nameof(FormationAgent));
         RequireNonEmpty(InitialCommandSourceFormationId, nameof(InitialCommandSourceFormationId));
+        if (!TeamManager.TryParseRelationship(DefaultTeamRelationship, out TeamRelationship relationship))
+        {
+            throw new InvalidOperationException(
+                $"Formation Capability showcase defaultTeamRelationship is invalid: '{DefaultTeamRelationship}'.");
+        }
+
+        ParsedDefaultTeamRelationship = relationship;
         if (InitialCommandSourceEntityCapacity <= 0)
         {
             throw new InvalidOperationException("Formation Capability showcase config requires initialCommandSourceEntityCapacity > 0.");
@@ -198,15 +209,13 @@ internal sealed class FormationCapabilityShowcaseConfig
         }
     }
 
-    public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet, AgentProfileRegistry geometryProfiles)
+    public void ValidateAgentProfileReferences(MassNavigationAgentProfilePlanSet profileSet)
     {
-        MassNavigationAgentProfileConfig formationProfile = ResolveFormationAgentProfile(profileSet);
-        geometryProfiles.Require(FormationAgent.ProfileId, "formationAgent.profileId");
+        MassNavigationAgentProfilePlan formationProfile = ResolveFormationAgentProfile(profileSet);
         for (int i = 0; i < Formations.Length; i++)
         {
             FormationCapabilityShowcaseFormationConfig formation = Formations[i];
-            MassNavigationAgentProfileConfig soldierProfile = ResolveSoldierAgentProfile(profileSet, i);
-            geometryProfiles.Require(formation.SoldierAgent.ProfileId, $"formations[{i}].soldierAgent.profileId");
+            MassNavigationAgentProfilePlan soldierProfile = ResolveSoldierAgentProfile(profileSet, i);
             if (!(soldierProfile.SpeedCmPerSecond > formationProfile.SpeedCmPerSecond))
             {
                 throw new InvalidOperationException(
@@ -215,12 +224,12 @@ internal sealed class FormationCapabilityShowcaseConfig
         }
     }
 
-    public MassNavigationAgentProfileConfig ResolveFormationAgentProfile(MassNavigationAgentProfileSetConfig profileSet)
+    public MassNavigationAgentProfilePlan ResolveFormationAgentProfile(MassNavigationAgentProfilePlanSet profileSet)
     {
         return ResolveAgentProfile(profileSet, FormationAgent.ProfileId, "formationAgent.profileId");
     }
 
-    public MassNavigationAgentProfileConfig ResolveSoldierAgentProfile(MassNavigationAgentProfileSetConfig profileSet, int formationIndex)
+    public MassNavigationAgentProfilePlan ResolveSoldierAgentProfile(MassNavigationAgentProfilePlanSet profileSet, int formationIndex)
     {
         if ((uint)formationIndex >= (uint)Formations.Length)
         {
@@ -234,8 +243,8 @@ internal sealed class FormationCapabilityShowcaseConfig
             $"formations[{formationIndex}].soldierAgent.profileId");
     }
 
-    private static MassNavigationAgentProfileConfig ResolveAgentProfile(
-        MassNavigationAgentProfileSetConfig profileSet,
+    private static MassNavigationAgentProfilePlan ResolveAgentProfile(
+        MassNavigationAgentProfilePlanSet profileSet,
         string profileId,
         string label)
     {
@@ -245,17 +254,16 @@ internal sealed class FormationCapabilityShowcaseConfig
         }
 
         RequireNonEmpty(profileId, label);
-        for (int i = 0; i < profileSet.Profiles.Length; i++)
+        try
         {
-            MassNavigationAgentProfileConfig profile = profileSet.Profiles[i];
-            if (string.Equals(profile.Id, profileId, StringComparison.Ordinal))
-            {
-                return profile;
-            }
+            return profileSet.Resolve(profileId);
         }
-
-        throw new InvalidOperationException(
-            $"Formation Capability showcase config {label} references MassNavigation agent profile '{profileId}', but that profile is not configured.");
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException(
+                $"Formation Capability showcase config {label} references MassNavigation agent profile '{profileId}', but that profile is not configured.",
+                ex);
+        }
     }
 
     private static void RequireNonEmpty(string value, string fieldName)

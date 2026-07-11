@@ -10,36 +10,46 @@ using Ludots.Core.MassNavigation.Runtime;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
-internal static class MassNavigationScenarioBootstrap
+public static class MassNavigationScenarioBootstrap
 {
-    public static void SpawnConfiguredScenario(GameEngine engine, MassNavigationSimulationRuntime simulation, TeamEntityLookup teamLookup)
+    public static void SpawnConfiguredScenario(
+        GameEngine engine,
+        MassNavigationSimulationRuntime simulation,
+        MassNavigationSceneAuthoringConfig sceneAuthoring,
+        TeamEntityLookup teamLookup)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(simulation);
+        ArgumentNullException.ThrowIfNull(sceneAuthoring);
         ArgumentNullException.ThrowIfNull(teamLookup);
 
-        MassNavigationAuthoringContract authoring = MassNavigationAuthoringContract.Require(engine, simulation.Config);
+        MassNavigationScenarioConfig scenario = sceneAuthoring.Scenario
+            ?? throw new InvalidOperationException("MassNavigation scene owner requires scenario authoring before spawn.");
+        MassNavigationPresentationConfig presentation = sceneAuthoring.Presentation
+            ?? throw new InvalidOperationException("MassNavigation scene owner requires presentation authoring before spawn.");
+        MassNavigationAuthoringContract authoring = MassNavigationAuthoringContract.Require(engine, presentation);
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("MassNavigation runtime requires RuntimeEntitySpawnQueue.");
 
         simulation.AgentState.Reset();
-        ReadOnlySpan<int> teamIds = simulation.TeamIds;
-        MapSession session = RequireCurrentMapSession(engine, simulation.Config.MapId);
+        int[] teamIds = CreateTeamIds(scenario.Teams);
+        simulation.ConfigureTeams(teamIds);
+        simulation.SetAgentsPerTeam(scenario.AgentsPerTeam);
+        simulation.SetActiveTeam(scenario.InitialActiveTeamId);
+        MapSession session = RequireCurrentMapSession(engine, simulation.MapId.Value);
         int[] playerOwnerIdsByScenarioTeam = ResolveScenarioTeamPlayerOwners(session, teamIds);
-        simulation.ConfigureScenarioTeams(teamIds);
-        ConfigureRelationships(simulation.Config);
-        MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, simulation.Config);
+        MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, presentation);
         simulation.MassNavigationFlow.Reset(
             teamIds,
             simulation.AgentsPerTeam,
-            simulation.Config.AgentProfiles,
+            simulation.Plan.AgentProfiles,
             scenarioAgentLayer,
-            simulation.Config.Scenario.SpawnLayout);
+            scenario.SpawnLayout!);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
             int teamId = teamIds[teamIndex];
-            string teamName = simulation.Config.Scenario.Teams[teamIndex].Name;
+            string teamName = scenario.Teams[teamIndex].Name;
             teamLookup.Register(teamId, RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, teamId, teamName));
         }
 
@@ -63,23 +73,23 @@ internal static class MassNavigationScenarioBootstrap
             float bodyRadiusCm = simulation.MassNavigationFlow.GetBodyRadiusCm(i);
             float speedCmPerSecond = simulation.MassNavigationFlow.GetSpeedCmPerSecond(i);
             bool heavy = simulation.MassNavigationFlow.IsHeavyProfile(i);
-            string templateId = simulation.Config.Presentation.ResolveAgentTemplateId(teamId, heavy);
+            string templateId = presentation.ResolveAgentTemplateId(teamId, heavy);
             authoring.ValidateTemplate(templateId);
             EnqueueSpawn(
                 spawnQueue,
                 mapId,
                 templateId,
-                Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
+                Fix64Vec2.FromFloat(worldXCm, worldYCm),
                 teamIdOverride: teamId,
                 playerOwnerIdOverride: ResolvePlayerOwnerId(teamIds, playerOwnerIdsByScenarioTeam, teamId));
         }
 
-        string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
+        string hotspotTemplateId = presentation.HotspotTemplateId!;
         authoring.ValidateTemplate(hotspotTemplateId);
-        ReadOnlySpan<MassNavigationHotZoneConfig> hotZones = simulation.HotZones;
+        ReadOnlySpan<MassNavigationHotZonePlan> hotZones = simulation.HotZones;
         for (int i = 0; i < hotZones.Length; i++)
         {
-            MassNavigationHotZoneConfig zone = hotZones[i];
+            MassNavigationHotZonePlan zone = hotZones[i];
             EnqueueSpawn(
                 spawnQueue,
                 mapId,
@@ -91,19 +101,14 @@ internal static class MassNavigationScenarioBootstrap
         simulation.MarkStructuralChange();
     }
 
-    private static void ConfigureRelationships(MassNavigationConfig config)
-    {
-        TeamManager.LoadConfig(config.TeamRelationships);
-    }
-
     private static MassNavigationAgentLayer ResolveScenarioAgentLayer(
         MassNavigationAuthoringContract authoring,
-        MassNavigationConfig config)
+        MassNavigationPresentationConfig presentation)
     {
         MassNavigationAgentLayer? resolved = null;
-        for (int i = 0; i < config.Presentation.Teams.Length; i++)
+        for (int i = 0; i < presentation.Teams.Length; i++)
         {
-            MassNavigationTeamPresentationConfig team = config.Presentation.Teams[i];
+            MassNavigationTeamPresentationConfig team = presentation.Teams[i];
             MassNavigationAgentLayer lightLayer = authoring.RequireAgentLayer(team.LightTemplateId);
             MassNavigationAgentLayer heavyLayer = authoring.RequireAgentLayer(team.HeavyTemplateId);
             RequireSameLayer(lightLayer, heavyLayer, team.LightTemplateId, team.HeavyTemplateId);
@@ -180,6 +185,17 @@ internal static class MassNavigationScenarioBootstrap
         }
 
         return -1;
+    }
+
+    private static int[] CreateTeamIds(ReadOnlySpan<MassNavigationScenarioTeamConfig> teams)
+    {
+        var ids = new int[teams.Length];
+        for (int i = 0; i < teams.Length; i++)
+        {
+            ids[i] = teams[i].Id;
+        }
+
+        return ids;
     }
 
     private static void EnqueueSpawn(

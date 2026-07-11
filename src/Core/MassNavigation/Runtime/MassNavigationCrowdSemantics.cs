@@ -1,12 +1,14 @@
+using System.Text.Json.Serialization;
+
 namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationCrowdSemantics
 {
-    public MassNavigationObstacleSemantics Obstacle { get; set; } = new();
-    public MassNavigationTargetProjectionSemantics TargetProjection { get; set; } = new();
-    public MassNavigationGroupSemantics Group { get; set; } = new();
-    public MassNavigationSteeringSemantics Steering { get; set; } = new();
-    public MassNavigationSolverSemantics Solver { get; set; } = new();
+    [JsonRequired] public MassNavigationObstacleSemantics Obstacle { get; set; } = new();
+    [JsonRequired] public MassNavigationTargetProjectionSemantics TargetProjection { get; set; } = new();
+    [JsonRequired] public MassNavigationGroupSemantics Group { get; set; } = new();
+    [JsonRequired] public MassNavigationSteeringSemantics Steering { get; set; } = new();
+    [JsonRequired] public MassNavigationSolverSemantics Solver { get; set; } = new();
 
     public void CopyFrom(MassNavigationCrowdSemantics source)
     {
@@ -39,9 +41,9 @@ public sealed class MassNavigationCrowdSemantics
 
 public sealed class MassNavigationObstacleSemantics
 {
-    public float HardResolveCandidateDistanceCm { get; set; }
-    public float SoftPushPaddingCm { get; set; }
-    public float SoftPushForceScale { get; set; }
+    [JsonRequired] public float HardResolveCandidateDistanceCm { get; set; }
+    [JsonRequired] public float SoftPushPaddingCm { get; set; }
+    [JsonRequired] public float SoftPushForceScale { get; set; }
 
     public float ResolveSoftPushRadiusCm(float obstacleRadiusCm) => obstacleRadiusCm + SoftPushPaddingCm;
 
@@ -71,11 +73,11 @@ public sealed class MassNavigationObstacleSemantics
 
 public sealed class MassNavigationTargetProjectionSemantics
 {
-    public float TeamTargetClearanceCm { get; set; }
-    public float GroupCenterClearanceCm { get; set; }
-    public float TeamSlotClearanceCm { get; set; }
-    public float GroupSlotClearanceCm { get; set; }
-    public float LooseTargetClearanceCm { get; set; }
+    [JsonRequired] public float TeamTargetClearanceCm { get; set; }
+    [JsonRequired] public float GroupCenterClearanceCm { get; set; }
+    [JsonRequired] public float TeamSlotClearanceCm { get; set; }
+    [JsonRequired] public float GroupSlotClearanceCm { get; set; }
+    [JsonRequired] public float LooseTargetClearanceCm { get; set; }
 
     public void CopyFrom(MassNavigationTargetProjectionSemantics source)
     {
@@ -107,26 +109,25 @@ public sealed class MassNavigationTargetProjectionSemantics
 
 public sealed class MassNavigationGroupSemantics
 {
-    public float SpawnSpacingCm { get; set; }
-    public float SpawnJitterCm { get; set; }
-    public float TeamSlotSpacingCm { get; set; }
-    public float FormationLineSpacingCm { get; set; }
-    public float FormationSquareSpacingCm { get; set; }
-    public float FormationCircleSpacingCm { get; set; }
-    public float FormationCircleMinRadiusCm { get; set; }
-    public float FormationWedgeSpacingCm { get; set; }
-    public float FormationRotationEpsilonRadians { get; set; }
-    public float FormationRotationSpeedRadiansPerSecond { get; set; }
-    public float PullDeadZoneCm { get; set; }
-    public float PullClampCm { get; set; }
-    public float ArrivedRadiusCm { get; set; }
-    public float FormationArriveThresholdCm { get; set; }
-    public float LooseArriveThresholdCm { get; set; }
-    public float UnitTargetStopThresholdCm { get; set; }
-    public float FormationFlowSlowRadiusCm { get; set; }
-    public float NearSlotBlend { get; set; }
-    public float FarSlotBlend { get; set; }
-    public float NearSlotBlendDistanceSq { get; set; }
+    [JsonRequired] public float SpawnSpacingCm { get; set; }
+    [JsonRequired] public float SpawnJitterCm { get; set; }
+    [JsonRequired] public float TeamSlotSpacingCm { get; set; }
+    [JsonRequired] public float FormationLineSpacingCm { get; set; }
+    [JsonRequired] public float FormationSquareSpacingCm { get; set; }
+    [JsonRequired] public float FormationCircleSpacingCm { get; set; }
+    [JsonRequired] public float FormationCircleMinRadiusCm { get; set; }
+    [JsonRequired] public float FormationWedgeSpacingCm { get; set; }
+    [JsonRequired] public float FormationRotationEpsilonRadians { get; set; }
+    [JsonRequired] public float PullDeadZoneCm { get; set; }
+    [JsonRequired] public float PullClampCm { get; set; }
+    [JsonRequired] public float ArrivedRadiusCm { get; set; }
+    [JsonRequired] public float FormationArriveThresholdCm { get; set; }
+    [JsonRequired] public float LooseArriveThresholdCm { get; set; }
+    [JsonRequired] public float UnitTargetStopThresholdCm { get; set; }
+    [JsonRequired] public float FormationFlowSlowRadiusCm { get; set; }
+    [JsonRequired] public float NearSlotBlend { get; set; }
+    [JsonRequired] public float FarSlotBlend { get; set; }
+    [JsonRequired] public float NearSlotBlendDistanceSq { get; set; }
 
     public void CopyFrom(MassNavigationGroupSemantics source)
     {
@@ -140,7 +141,6 @@ public sealed class MassNavigationGroupSemantics
         FormationCircleMinRadiusCm = source.FormationCircleMinRadiusCm;
         FormationWedgeSpacingCm = source.FormationWedgeSpacingCm;
         FormationRotationEpsilonRadians = source.FormationRotationEpsilonRadians;
-        FormationRotationSpeedRadiansPerSecond = source.FormationRotationSpeedRadiansPerSecond;
         PullDeadZoneCm = source.PullDeadZoneCm;
         PullClampCm = source.PullClampCm;
         ArrivedRadiusCm = source.ArrivedRadiusCm;
@@ -164,7 +164,6 @@ public sealed class MassNavigationGroupSemantics
         RequirePositive(FormationCircleMinRadiusCm, nameof(FormationCircleMinRadiusCm));
         RequirePositive(FormationWedgeSpacingCm, nameof(FormationWedgeSpacingCm));
         RequireNonNegative(FormationRotationEpsilonRadians, nameof(FormationRotationEpsilonRadians));
-        RequirePositive(FormationRotationSpeedRadiansPerSecond, nameof(FormationRotationSpeedRadiansPerSecond));
         RequireNonNegative(PullDeadZoneCm, nameof(PullDeadZoneCm));
         RequirePositive(PullClampCm, nameof(PullClampCm));
         RequirePositive(ArrivedRadiusCm, nameof(ArrivedRadiusCm));
@@ -204,12 +203,12 @@ public sealed class MassNavigationGroupSemantics
 
 public sealed class MassNavigationSteeringSemantics
 {
-    public float SeparationRadiusCm { get; set; }
-    public float GoalArrivalRadiusCm { get; set; }
-    public float FlowObstacleAvoidanceScale { get; set; }
-    public float FormationSeparationScale { get; set; }
-    public float LooseSeparationScale { get; set; }
-    public float VelocityBlendPerSecond { get; set; }
+    [JsonRequired] public float SeparationRadiusCm { get; set; }
+    [JsonRequired] public float GoalArrivalRadiusCm { get; set; }
+    [JsonRequired] public float FlowObstacleAvoidanceScale { get; set; }
+    [JsonRequired] public float FormationSeparationScale { get; set; }
+    [JsonRequired] public float LooseSeparationScale { get; set; }
+    [JsonRequired] public float VelocityBlendPerSecond { get; set; }
 
     public void CopyFrom(MassNavigationSteeringSemantics source)
     {
@@ -251,27 +250,27 @@ public sealed class MassNavigationSteeringSemantics
 
 public sealed class MassNavigationSolverSemantics
 {
-    public float MinNavMass { get; set; }
-    public float MinVisualScale { get; set; }
-    public float MaxStepDtSeconds { get; set; }
-    public int ParallelStepMinAgents { get; set; }
-    public float DirectionEpsilonSq { get; set; }
-    public float NormalizationEpsilonSq { get; set; }
-    public float InverseSqrtMinValue { get; set; }
-    public float EntitySyncPositionEpsilonSq { get; set; }
-    public float EntitySyncVelocityEpsilonSq { get; set; }
-    public float FacingVelocityEpsilonSq { get; set; }
-    public float FlowBlockedCellCost { get; set; }
-    public float FlowBlockedCellThreshold { get; set; }
-    public float FlowTargetStopDistanceSq { get; set; }
-    public int FlowObstacleNeighborRadiusCells { get; set; }
-    public float FlowObstacleNeighborWeight { get; set; }
-    public float FlowObstacleAvoidanceWeight { get; set; }
-    public float CrowdStampCenterCost { get; set; }
-    public float CrowdStampNeighborCost { get; set; }
-    public int CoincidentPairHashBucketCount { get; set; }
-    public int CoincidentPairHashPrimeA { get; set; }
-    public int CoincidentPairHashPrimeB { get; set; }
+    [JsonRequired] public float MinNavMass { get; set; }
+    [JsonRequired] public float MinVisualScale { get; set; }
+    [JsonRequired] public float MaxStepDtSeconds { get; set; }
+    [JsonRequired] public int ParallelStepMinAgents { get; set; }
+    [JsonRequired] public float DirectionEpsilonSq { get; set; }
+    [JsonRequired] public float NormalizationEpsilonSq { get; set; }
+    [JsonRequired] public float InverseSqrtMinValue { get; set; }
+    [JsonRequired] public float EntitySyncPositionEpsilonSq { get; set; }
+    [JsonRequired] public float EntitySyncVelocityEpsilonSq { get; set; }
+    [JsonRequired] public float FacingVelocityEpsilonSq { get; set; }
+    [JsonRequired] public float FlowBlockedCellCost { get; set; }
+    [JsonRequired] public float FlowBlockedCellThreshold { get; set; }
+    [JsonRequired] public float FlowTargetStopDistanceSq { get; set; }
+    [JsonRequired] public int FlowObstacleNeighborRadiusCells { get; set; }
+    [JsonRequired] public float FlowObstacleNeighborWeight { get; set; }
+    [JsonRequired] public float FlowObstacleAvoidanceWeight { get; set; }
+    [JsonRequired] public float CrowdStampCenterCost { get; set; }
+    [JsonRequired] public float CrowdStampNeighborCost { get; set; }
+    [JsonRequired] public int CoincidentPairHashBucketCount { get; set; }
+    [JsonRequired] public int CoincidentPairHashPrimeA { get; set; }
+    [JsonRequired] public int CoincidentPairHashPrimeB { get; set; }
 
     public void CopyFrom(MassNavigationSolverSemantics source)
     {

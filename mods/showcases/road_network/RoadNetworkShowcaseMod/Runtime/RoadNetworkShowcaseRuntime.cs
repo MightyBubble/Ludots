@@ -1,4 +1,5 @@
 using Arch.Core;
+using System;
 using Ludots.Core.Components;
 using System.Threading.Tasks;
 using System.Numerics;
@@ -31,6 +32,8 @@ namespace RoadNetworkShowcaseMod.Runtime
         private string? _activeMapId;
         private readonly RoadNetworkShowcasePanelController _panelController;
         private readonly RoadNetworkShowcaseDebugLogWriter _debugLogWriter;
+        private WorldGridLoadedChunkContributor? _cameraChunkContributor;
+        private WorldGridLoadedChunkContributor? _solveChunkContributor;
 
         public enum ShowcaseCommandPreset : byte
         {
@@ -51,6 +54,14 @@ namespace RoadNetworkShowcaseMod.Runtime
         public bool IsActive => ActiveBoard != null && Scenario != null;
         public string LastSubmitStatus { get; private set; } = "Road command ready. Use the command action near a road or fort.";
         public string? LatestDebugSnapshotPath => _debugLogWriter.SnapshotPath;
+
+        public bool IsCurrentShowcaseMap(GameEngine engine)
+        {
+            return engine != null &&
+                   IsActive &&
+                   string.Equals(engine.CurrentMapSession?.MapId.Value, _activeMapId, StringComparison.OrdinalIgnoreCase) &&
+                   RoadNetworkShowcaseIds.IsShowcaseMap(_activeMapId);
+        }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
         {
@@ -76,8 +87,12 @@ namespace RoadNetworkShowcaseMod.Runtime
             _activeMapId = mapId;
             ActiveBoard = board;
             Scenario = RoadNetworkScenarioDefinition.Create(board.LoadedChunksSource.ChunkSizeCm);
+            _cameraChunkContributor = board.LoadedChunksSource.AcquireContributor("road-network:camera");
+            _solveChunkContributor = board.LoadedChunksSource.AcquireContributor("road-network:route-solve");
             engine.GlobalContext[RoadNetworkShowcaseIds.ScenarioServiceKey] = Scenario;
+            engine.GlobalContext[RoadNetworkShowcaseIds.RuntimeServiceKey] = this;
             engine.GlobalContext[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = board.LoadedChunksSource;
+            engine.GlobalContext[RoadNetworkShowcaseIds.GraphLoadedChunkSolveContributorServiceKey] = _solveChunkContributor;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
             EnsureShowcaseProfiles(engine.World);
@@ -108,7 +123,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         public void UpdateLoadedChunks(GameEngine engine)
         {
-            if (!IsActive || Scenario == null || ActiveBoard == null)
+            if (!IsCurrentShowcaseMap(engine) || Scenario == null || ActiveBoard == null)
             {
                 return;
             }
@@ -124,7 +139,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             var target = engine.GameSession.Camera.State.TargetCm;
-            ActiveBoard.LoadedChunksSource.Update(
+            RequireCameraChunkContributor().UpdateWindow(
                 (int)target.X,
                 (int)target.Y,
                 Scenario.StreamingRadiusCm);
@@ -311,7 +326,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
-            ActiveBoard.LoadedChunksSource.Update(
+            RequireCameraChunkContributor().UpdateWindow(
                 (int)cameraTargetCm.X,
                 (int)cameraTargetCm.Y,
                 Scenario.StreamingRadiusCm);
@@ -494,19 +509,35 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (ActiveBoard != null)
             {
                 ActiveBoard.LoadedChunksSource.ChunkLoaded -= HandleChunkLoaded;
-                ActiveBoard.LoadedChunksSource.Reset();
             }
+
+            _cameraChunkContributor?.Dispose();
+            _cameraChunkContributor = null;
+            _solveChunkContributor?.Dispose();
+            _solveChunkContributor = null;
 
             if (engine != null)
             {
                 engine.GlobalContext.Remove(RoadNetworkShowcaseIds.ScenarioServiceKey);
                 engine.GlobalContext.Remove(RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey);
+                engine.GlobalContext.Remove(RoadNetworkShowcaseIds.GraphLoadedChunkSolveContributorServiceKey);
+                if (engine.GlobalContext.TryGetValue(RoadNetworkShowcaseIds.RuntimeServiceKey, out object? runtimeObj) &&
+                    ReferenceEquals(runtimeObj, this))
+                {
+                    engine.GlobalContext.Remove(RoadNetworkShowcaseIds.RuntimeServiceKey);
+                }
             }
 
             _activeMapId = null;
             ActiveBoard = null;
             Scenario = null;
             LastSubmitStatus = "Road command ready. Use the command action near a road or fort.";
+        }
+
+        private WorldGridLoadedChunkContributor RequireCameraChunkContributor()
+        {
+            return _cameraChunkContributor
+                ?? throw new InvalidOperationException("RoadNetwork showcase requires an active camera loaded-chunk contributor.");
         }
 
         private bool TryResolvePreset(GameEngine engine, ShowcaseCommandPreset preset, out Entity actor, out Vector3 targetWorldCm, out string status)

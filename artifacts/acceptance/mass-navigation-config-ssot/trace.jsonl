@@ -1,0 +1,6 @@
+{"eventId":"config-001","tick":1,"phase":"profile-resolution","action":"resolve map-bound ArrayById profile inheritance","result":"pass","bindingOwner":"MapConfig.Metadata.massNavigation.profileId"}
+{"eventId":"config-002","tick":2,"phase":"strict-deserialization","action":"deserialize runtime and sceneAuthoring contracts","result":"pass","requiredMemberDeclarations":194,"unknownMembers":"disallowed"}
+{"eventId":"config-003","tick":3,"phase":"runtime-compile","action":"compile immutable runtime plan","result":"pass","mutableConfigAlias":false}
+{"eventId":"config-004","tick":4,"phase":"team-binding","action":"derive runtime teams from bound MassNavigation agents","result":"pass","scenarioAllowList":false}
+{"eventId":"config-005","tick":5,"phase":"scene-ownership","action":"apply scenario presentation and team relationships in MassNavigationMod scene owner","result":"pass","coreTeamManagerLoad":false}
+{"eventId":"config-006","tick":6,"phase":"build","action":"build production consumers","result":"pass","errors":0}

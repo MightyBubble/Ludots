@@ -959,7 +959,14 @@
     }
 
     function buildMapSnippet() {
+      const mapId = "replace_with_map_id";
       return JSON.stringify({
+        Id: mapId,
+        Metadata: {
+          massNavigation: {
+            profileId: mapId
+          }
+        },
         Boards: [
           {
             Name: "default",
@@ -976,24 +983,29 @@
 
     function buildMassSnippet() {
       const flow = number("flowWindowCm");
-      return JSON.stringify({
-        world: {
-          solverWindowWidthCm: flow,
-          solverWindowHeightCm: flow,
-          streamingChunkSizeCm: number("partitionChunkCells") * number("cellCm"),
-          streamingRadiusCm: flow * 2,
-          workAreaPaddingCm: Math.round(flow * 0.4),
-          workAreaMaxWidthCm: flow * 4,
-          workAreaMaxHeightCm: flow * 4
-        },
-        solver: {
-          fieldWidthCm: flow,
-          fieldHeightCm: flow,
-          flowCellSizeCm: number("flowCellCm"),
-          separationHashCellSizeCm: number("separationHashCm"),
-          hardResolveHashCellSizeCm: number("hardHashCm")
+      const mapId = "replace_with_map_id";
+      return JSON.stringify([{
+        id: mapId,
+        runtime: {
+          world: {
+            streamingChunkSizeCm: number("partitionChunkCells") * number("cellCm"),
+            workAreaPaddingCm: Math.round(flow * 0.4),
+            workAreaMaxWidthCm: flow * 4,
+            workAreaMaxHeightCm: flow * 4
+          },
+          solver: {
+            fieldWidthCm: flow,
+            fieldHeightCm: flow,
+            flowCellSizeCm: number("flowCellCm"),
+            separationHashCellSizeCm: number("separationHashCm"),
+            hardResolveHashCellSizeCm: number("hardHashCm")
+          },
+          streaming: {
+            retainSeconds: 6,
+            radiusCm: flow * 2
+          }
         }
-      }, null, 2);
+      }], null, 2);
     }
 
     function buildNavSnippet() {

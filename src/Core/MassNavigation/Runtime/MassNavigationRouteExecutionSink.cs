@@ -77,6 +77,7 @@ public sealed class MassNavigationRouteExecutionSink
     }
 
     public int ActiveRouteCount => _routesByKey.Count;
+    public int StorageAllocationCount { get; private set; }
 
     public void BeginSync()
     {
@@ -122,6 +123,8 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: agentIndex);
         }
 
+        int pointCapacity = Math.Max(1, maxPoints);
+        PrepareScratch(pointCapacity);
         long key = PackKey(requestId, agentIndex);
         ref RouteState? state = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(
             _routesByKey,
@@ -129,7 +132,12 @@ public sealed class MassNavigationRouteExecutionSink
             out bool exists);
         if (!exists || state == null)
         {
-            state = new RouteState(key, requestId, agentIndex);
+            state = new RouteState(key, requestId, agentIndex, pointCapacity);
+            StorageAllocationCount++;
+        }
+        else if (state.PreparePointCapacity(pointCapacity))
+        {
+            StorageAllocationCount++;
         }
 
         bool destinationChanged =
@@ -139,13 +147,14 @@ public sealed class MassNavigationRouteExecutionSink
             state.ProfileId != authoredAgent.ProfileId ||
             !string.Equals(state.AgentTypeId, agentType.Id, StringComparison.Ordinal);
         bool entityChanged = state.Agent != agent;
+        bool budgetChanged = state.MaxExpanded != maxExpanded || state.MaxPoints != maxPoints;
         state.Agent = agent;
         state.ProfileId = authoredAgent.ProfileId;
         state.AgentTypeId = agentType.Id;
         state.DestinationWorldCm = destinationWorldCm;
         state.MaxExpanded = maxExpanded;
         state.MaxPoints = maxPoints;
-        if (destinationChanged || profileChanged || entityChanged)
+        if (destinationChanged || profileChanged || entityChanged || budgetChanged)
         {
             state.InvalidateRoute();
         }
@@ -359,7 +368,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: state.AgentIndex);
         }
 
-        EnsureScratch(state.MaxPoints > 0 ? state.MaxPoints : 1);
+        RequireScratch(state.MaxPoints > 0 ? state.MaxPoints : 1);
         bool copied = _pathService.TryCopyPath(in path.Handle, _xScratch, _yScratch, out int count);
         _pathStore.Release(in path.Handle);
         if (!copied)
@@ -388,7 +397,7 @@ public sealed class MassNavigationRouteExecutionSink
                 agentIndex: state.AgentIndex);
         }
 
-        state.EnsurePointCapacity(count);
+        state.RequirePointCapacity(count);
         for (int i = 0; i < count; i++)
         {
             state.PointXCm[i] = _xScratch[i];
@@ -461,15 +470,25 @@ public sealed class MassNavigationRouteExecutionSink
         }
     }
 
-    private void EnsureScratch(int required)
+    private void PrepareScratch(int required)
     {
         if (_xScratch.Length >= required && _yScratch.Length >= required)
         {
             return;
         }
 
-        Array.Resize(ref _xScratch, required);
-        Array.Resize(ref _yScratch, required);
+        _xScratch = new int[required];
+        _yScratch = new int[required];
+        StorageAllocationCount++;
+    }
+
+    private void RequireScratch(int required)
+    {
+        if (_xScratch.Length < required || _yScratch.Length < required)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation route solve required {required} scratch points, exceeding prepared route scratch capacity {Math.Min(_xScratch.Length, _yScratch.Length)}.");
+        }
     }
 
     private static void AdvanceWaypointCursor(
@@ -516,12 +535,14 @@ public sealed class MassNavigationRouteExecutionSink
 
     private sealed class RouteState
     {
-        public RouteState(long key, int orderToken, int agentIndex)
+        public RouteState(long key, int orderToken, int agentIndex, int pointCapacity)
         {
             Key = key;
             OrderToken = orderToken;
             AgentIndex = agentIndex;
             LastAppliedWaypointIndex = -1;
+            PointXCm = new int[pointCapacity];
+            PointYCm = new int[pointCapacity];
         }
 
         public long Key { get; }
@@ -533,8 +554,8 @@ public sealed class MassNavigationRouteExecutionSink
         public Vector2 DestinationWorldCm { get; set; }
         public int MaxExpanded { get; set; }
         public int MaxPoints { get; set; }
-        public int[] PointXCm = Array.Empty<int>();
-        public int[] PointYCm = Array.Empty<int>();
+        public int[] PointXCm;
+        public int[] PointYCm;
         public int PointCount { get; set; }
         public int CurrentWaypointIndex { get; set; }
         public int LastAppliedWaypointIndex { get; set; }
@@ -565,15 +586,25 @@ public sealed class MassNavigationRouteExecutionSink
             ForceResetNextApply = true;
         }
 
-        public void EnsurePointCapacity(int required)
+        public bool PreparePointCapacity(int required)
         {
             if (PointXCm.Length >= required && PointYCm.Length >= required)
             {
-                return;
+                return false;
             }
 
-            Array.Resize(ref PointXCm, required);
-            Array.Resize(ref PointYCm, required);
+            PointXCm = new int[required];
+            PointYCm = new int[required];
+            return true;
+        }
+
+        public void RequirePointCapacity(int required)
+        {
+            if (PointXCm.Length < required || PointYCm.Length < required)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation tracked route required {required} points, exceeding prepared point capacity {Math.Min(PointXCm.Length, PointYCm.Length)}.");
+            }
         }
     }
 }

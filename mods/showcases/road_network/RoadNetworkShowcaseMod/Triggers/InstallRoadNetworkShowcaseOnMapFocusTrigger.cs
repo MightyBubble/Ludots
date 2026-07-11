@@ -50,15 +50,15 @@ namespace RoadNetworkShowcaseMod.Triggers
 
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
-            MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation simulation runtime.");
+            MassNavigationRuntimeBinding runtimeBinding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation runtime binding.");
             var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.RegisterSystem(
-                new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
+                new RoadNetworkLocalOrderSourceSystem(engine, _runtime, engine.World, engine.GlobalContext, orders, _context),
                 SystemGroup.InputCollection);
             engine.RegisterSystem(
-                new RoadNetworkAiAndCaptureSystem(engine.World, engine.GlobalContext, orders),
+                new RoadNetworkAiAndCaptureSystem(engine, _runtime, engine.World, engine.GlobalContext, orders),
                 SystemGroup.InputCollection);
             engine.RegisterSystem(
                 new RoadNetworkChunkStreamingSystem(engine, _runtime),
@@ -70,16 +70,16 @@ namespace RoadNetworkShowcaseMod.Triggers
                 TryResolveRoadMoveFollowOrderTypeId(engine, out int roadMoveFollowOrderTypeId))
             {
                 engine.RegisterSystem(
-                    new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
+                    new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, runtimeBinding),
                     SystemGroup.RuntimeEntityBinding);
                 engine.RegisterSystem(
-                    new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
+                    new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, runtimeBinding),
                     SystemGroup.RuntimeEntityBinding);
                 engine.RegisterSystem(
-                    new RoadMoveExecutionSystem(engine.World, simulation),
+                    new RoadMoveExecutionSystem(engine.World, runtimeBinding),
                     SystemGroup.RuntimeEntityBinding);
                 engine.RegisterSystem(
-                    new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
+                    new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, runtimeBinding),
                     SystemGroup.RuntimeEntityBinding);
                 engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
             }
@@ -88,7 +88,7 @@ namespace RoadNetworkShowcaseMod.Triggers
             MovePlanStore presentationPlans = engine.GlobalContext.TryGetValue(typeof(MovePlanStore).FullName!, out var planObj) && planObj is MovePlanStore resolvedPlans
                 ? resolvedPlans
                 : new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
-            engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, presentationPlans));
+            engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine, _runtime, engine.World, engine.GlobalContext, presentationPlans));
             _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;
         }

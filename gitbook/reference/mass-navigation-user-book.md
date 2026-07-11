@@ -50,11 +50,15 @@ Formation Capability 示例的文件入口：
 | --- | --- |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json` | 配地图 id、visual heightmap、board/world 数据。 |
-| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 配 MassNavigation profile、cadence、flow crowd cost、arrival、avoidance、solver 与 streaming 策略。障碍和相机不归这个文件。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
+
+`MassNavigationConfig.json` 不是进程级单对象，而是 ConfigPipeline `ArrayById` profile catalog。地图只在 `Metadata.massNavigation.profileId` 里显式选择 profile；profile 不重复声明 `mapId`。执行参数归 `runtime`，可选示例生成/表现/关系数据归 `sceneAuthoring`。Formation Capability 示例通过 `id=formation_capability_showcase` 的 profile 覆盖/继承基础 profile，不要在业务 runtime 里缓存“最后加载的配置”。
+
+长期注册的 Core/Mod system 不能缓存首次拿到的 `MassNavigationSimulationRuntime`。它们必须从 `MassNavigationRuntimeBinding` 解析当前焦点地图的 runtime，showcase sidecar 还必须按所属地图门禁，并从 ECS query 排除 `SuspendedTag`；否则 push/pop 或 unload/reload 会把旧地图实体和新 runtime 混在一起。
 
 业务 runtime 入口：
 
@@ -371,12 +375,13 @@ map/template components
 
 ## 相机和裁剪
 
-相机相关配置分两处：
+相机与表现裁剪归共享 presentation/camera 基建：
 
-- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json`：presentation culling distance 和 capacity。
-- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json`：`presentation.cameraCulling`、presentation capacity 和 minimap 策略。
+- `assets/Configs/Camera/virtual_cameras.json`：由 Camera ConfigPipeline 加载的相机 profile；不嵌进 `MassNavigationConfig.json`。
+- performer definitions/rules：表现对象的生命周期与提交策略；不要由 MassNavigation 私有 camera probe 控制。
 
-当前 `viewResidency.mode` 是 `Probe`，并且有 `retainSeconds` 和 `cameraProbes`。这对应产品需求：镜头离开一个地区后，表演单位可以保留一段时间；超过配置时间，再按表现预算处理。
+`cameraProfiles`、`viewResidency` 和 `cameraProbes` 不是当前 `MassNavigationConfig.json` 字段。旧内容出现这些键时应由严格配置加载失败，而不是静默忽略。`MassNavigationConfig.streaming.retainSeconds/radiusCm` 管的是导航 streaming window，不是 performer 的镜头驻留。
 
 逻辑方阵不应该因为镜头离开而消失。表现驻留不是 gameplay 存活。
 
@@ -425,7 +430,7 @@ Formation Capability 地图引用：
 1. 新建你的 entry mod。
 2. 给 Raylib launch graph 加你的 mod。
 3. 配地图和 visual heightmap。
-4. 配 `MassNavigationConfig.json`：profiles、cadence、obstacles、camera probes、view residency。
+4. 配 `MassNavigationConfig.json`：profiles、cadence、flow crowd cost、arrival、avoidance、solver、streaming；障碍写地图/template ECS 组件，相机与裁剪写共享 camera/presentation 配置。
 5. 配你的业务 config：军团、方阵、 squad 或你产品里的控制单位。
 6. 配 selectable control unit 模板。
 7. 配 lower-level agent 模板。

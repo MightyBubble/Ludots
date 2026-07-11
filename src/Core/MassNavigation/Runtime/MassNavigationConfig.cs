@@ -7,25 +7,22 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationConfig
 {
-    public string MapId { get; set; } = string.Empty;
-    public MassNavigationWorldConfig? World { get; set; }
-    public MassNavigationFlowSolverConfig Solver { get; set; } = new();
-    public MassNavigationPresentationConfig Presentation { get; set; } = new();
-    public MassNavigationScenarioConfig Scenario { get; set; } = new();
-    public MassNavigationScenarioRuntimeConfig ScenarioRuntime { get; set; } = new();
-    public MassNavigationCadenceConfig Cadence { get; set; } = new();
-    public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
-    public TeamConfig TeamRelationships { get; set; } = new();
-    public MassNavigationFlowTuning Flow { get; set; } = new();
-    public MassNavigationFlowArrivalTuning Arrival { get; set; } = new();
-    public MassNavigationFlowAvoidanceTuning Avoidance { get; set; } = new();
-    public MassNavigationCrowdSemantics Semantics { get; set; } = new();
-    public MassNavigationStreamingConfig Streaming { get; set; } = new();
+    [JsonRequired] public MassNavigationWorldConfig? World { get; set; }
+    [JsonRequired] public MassNavigationFlowSolverConfig Solver { get; set; } = new();
+    [JsonRequired] public MassNavigationCapacityConfig Capacity { get; set; } = new();
+    [JsonRequired] public MassNavigationCadenceConfig Cadence { get; set; } = new();
+    [JsonRequired] public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
+    [JsonRequired] public MassNavigationFlowConfig Flow { get; set; } = new();
+    [JsonRequired] public MassNavigationFlowArrivalTuning Arrival { get; set; } = new();
+    [JsonRequired] public MassNavigationFlowAvoidanceTuning Avoidance { get; set; } = new();
+    [JsonRequired] public MassNavigationCrowdSemantics Semantics { get; set; } = new();
+    [JsonRequired] public MassNavigationStreamingConfig Streaming { get; set; } = new();
 
     public static MassNavigationConfig Load(JsonObject configObject)
     {
@@ -51,7 +48,6 @@ public sealed class MassNavigationConfig
 
     private static MassNavigationConfig Load(JsonElement root)
     {
-        ValidateRequiredTopLevelProperties(root);
         var options = StrictJsonOptions.CreateCamelCase();
 
         MassNavigationConfig? config = root.Deserialize<MassNavigationConfig>(options);
@@ -64,316 +60,10 @@ public sealed class MassNavigationConfig
         return config;
     }
 
-    private static void ValidateRequiredTopLevelProperties(JsonElement root)
+    internal void Validate()
     {
-        RequireProperty(root, "mapId");
-        RequireProperty(root, "world");
-        RequireProperty(root, "solver");
-        RequireProperty(root, "presentation");
-        RequireProperty(root, "scenario");
-        RequireProperty(root, "scenarioRuntime");
-        RequireProperty(root, "cadence");
-        RequireProperty(root, "agentProfiles");
-        RequireProperty(root, "teamRelationships");
-        RequireProperty(root, "flow");
-        RequireProperty(root, "arrival");
-        RequireProperty(root, "avoidance");
-        RequireProperty(root, "semantics");
-        RequireProperty(root, "streaming");
-        JsonElement scenarioRuntime = RequireProperty(root, "scenarioRuntime");
-        bool autoSpawnConfiguredScenario = RequireBooleanProperty(scenarioRuntime, "autoSpawnConfiguredScenario");
-        RequireProperties(
-            scenarioRuntime,
-            "initialCommandActorScratchCapacity",
-            "initialCommandActorSnapshotCapacity",
-            "runtimeCapacity");
-        RequireProperties(
-            RequireProperty(scenarioRuntime, "runtimeCapacity"),
-            "navigationGroupCapacity",
-            "groupMembershipAgentCapacity",
-            "commandActorScratchCapacity",
-            "groupMemberCapacity",
-            "orderIngestionTokenCapacity",
-            "orderIngestionMemberCapacity",
-            "loadedChunkCapacity",
-            "metadataTeamCapacity");
-
-        JsonElement world = RequireProperty(root, "world");
-        RequireProperties(
-            world,
-            "solverWindowWidthCm",
-            "solverWindowHeightCm",
-            "streamingChunkSizeCm",
-            "streamingRadiusCm",
-            "commandFocusHoldTicks",
-            "workAreaPaddingCm",
-            "workAreaMaxWidthCm",
-            "workAreaMaxHeightCm",
-            "activeHotZoneId",
-            "hotZones");
-        RequireProperties(
-            RequireProperty(root, "solver"),
-            "fieldWidthCm",
-            "fieldHeightCm",
-            "flowCellSizeCm",
-            "maxObstacleCount",
-            "parallelWorkerCount",
-            "separationHashCellSizeCm",
-            "separationHashMinSearchRadiusCells",
-            "hardResolveHashCellSizeCm",
-            "hardResolveHashMinSearchRadiusCells",
-            "playAreaMinXCm",
-            "playAreaMaxXCm",
-            "playAreaMinYCm",
-            "playAreaMaxYCm");
-        JsonElement presentation = RequireProperty(root, "presentation");
-        RequireProperties(
-            presentation,
-            "requiredMeshAssetIds",
-            "blockerTemplateId",
-            "teams");
-        if (autoSpawnConfiguredScenario)
-        {
-            RequireProperties(
-                presentation,
-                "blockerPerformerId",
-                "hotspotPerformerId",
-                "hotspotTemplateId");
-        }
-
-        JsonElement scenario = RequireProperty(root, "scenario");
-        RequireProperties(
-            scenario,
-            "agentsPerTeam",
-            "initialActiveTeamId",
-            "teams");
-        if (autoSpawnConfiguredScenario)
-        {
-            RequireProperties(
-                RequireProperty(scenario, "spawnLayout"),
-                "kind",
-                "orbitRadiusCm",
-                "randomSeed");
-        }
-
-        JsonElement cadence = RequireProperty(root, "cadence");
-        RequireProperties(
-            cadence,
-            "simulationHz",
-            "targetUpdateHz",
-            "flowStepHz",
-            "flowCrowdStampHz",
-            "flowObstacleStampHz",
-            "hardResolveHz",
-            "entitySyncHz",
-            "maxStepsPerFixedTick",
-            "hardResolveCandidateThresholdAgents",
-            "orderIdleScanIntervalFrames");
-        JsonElement agentProfiles = RequireProperty(root, "agentProfiles");
-        RequireProperties(agentProfiles, "defaultProfileId", "profiles");
-        JsonElement profiles = RequireProperty(agentProfiles, "profiles");
-        if (profiles.ValueKind != JsonValueKind.Array)
-        {
-            throw new InvalidOperationException("MassNavigation agentProfiles.profiles must be an explicit array.");
-        }
-
-        int profileIndex = 0;
-        foreach (JsonElement profile in profiles.EnumerateArray())
-        {
-            RequireProperties(
-                profile,
-                "id",
-                "heavy",
-                "visualScale",
-                "speedCmPerSecond",
-                "everyNth",
-                "nthOffset");
-            profileIndex++;
-        }
-
-        if (profileIndex <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation agentProfiles.profiles requires at least one explicit profile.");
-        }
-
-        JsonElement relationships = RequireProperty(root, "teamRelationships");
-        RequireProperty(relationships, "defaultRelationship");
-        RequireProperty(relationships, "relationships");
-        RequireProperties(
-            RequireProperty(root, "streaming"),
-            "retainSeconds",
-            "radiusCm");
-        RequireProperties(
-            RequireProperty(root, "flow"),
-            "enabled",
-            "iterationsPerStep",
-            "maxIterationsPerStep",
-            "stepIntervalTicks",
-            "crowdStampIntervalTicks",
-            "obstacleStampIntervalTicks",
-            "forceRefreshFlow",
-            "forceRefreshCrowd",
-            "forceRefreshObstacles");
-        RequireProperties(
-            RequireProperty(root, "arrival"),
-            "enabled",
-            "timeoutMs",
-            "timeoutMinMs",
-            "timeoutMaxMs",
-            "progressDistanceCm",
-            "progressDistanceMinCm",
-            "progressDistanceMaxCm",
-            "wakePushDistanceCm",
-            "wakePushDistanceMinCm",
-            "wakePushDistanceMaxCm",
-            "maxRetryCountMin",
-            "maxRetryCountMax",
-            "maxRetryCount");
-        RequireProperties(
-            RequireProperty(root, "avoidance"),
-            "mode",
-            "orca",
-            "sonar",
-            "dominantMassRatio",
-            "friendlyResponseScale",
-            "friendlyResponseMin",
-            "friendlyResponseMax",
-            "nonFriendlyResponseScale",
-            "nonFriendlyResponseMin",
-            "nonFriendlyResponseMax",
-            "dominantPushResponseScale",
-            "dominantPushResponseMin",
-            "dominantPushResponseMax",
-            "friendlyCorrectionShareMin",
-            "friendlyCorrectionShareMax",
-            "dominantCorrectionOtherMassWeight",
-            "dominantCorrectionShareMin",
-            "dominantCorrectionShareMax",
-            "nonFriendlyCorrectionOtherMassWeight",
-            "nonFriendlyCorrectionShareMin",
-            "nonFriendlyCorrectionShareMax");
-        RequireProperties(
-            RequireProperty(RequireProperty(root, "avoidance"), "orca"),
-            "timeHorizonSeconds",
-            "maxNeighbors");
-        RequireProperties(
-            RequireProperty(RequireProperty(root, "avoidance"), "sonar"),
-            "maxSteerAngleDeg",
-            "backwardPenaltyAngleDeg",
-            "predictionTimeScale",
-            "ignoreBehindMovingAgents",
-            "blockedStop",
-            "usePreferredVelocityWhenBlocked",
-            "timeHorizonSeconds",
-            "maxNeighbors");
-        JsonElement semantics = RequireProperty(root, "semantics");
-        RequireProperties(
-            RequireProperty(semantics, "obstacle"),
-            "hardResolveCandidateDistanceCm",
-            "softPushPaddingCm",
-            "softPushForceScale");
-        RequireProperties(
-            RequireProperty(semantics, "targetProjection"),
-            "teamTargetClearanceCm",
-            "groupCenterClearanceCm",
-            "teamSlotClearanceCm",
-            "groupSlotClearanceCm",
-            "looseTargetClearanceCm");
-        RequireProperties(
-            RequireProperty(semantics, "group"),
-            "spawnSpacingCm",
-            "spawnJitterCm",
-            "teamSlotSpacingCm",
-            "formationLineSpacingCm",
-            "formationSquareSpacingCm",
-            "formationCircleSpacingCm",
-            "formationCircleMinRadiusCm",
-            "formationWedgeSpacingCm",
-            "formationRotationEpsilonRadians",
-            "formationRotationSpeedRadiansPerSecond",
-            "pullDeadZoneCm",
-            "pullClampCm",
-            "arrivedRadiusCm",
-            "formationArriveThresholdCm",
-            "looseArriveThresholdCm",
-            "unitTargetStopThresholdCm",
-            "formationFlowSlowRadiusCm",
-            "nearSlotBlend",
-            "farSlotBlend",
-            "nearSlotBlendDistanceSq");
-        RequireProperties(
-            RequireProperty(semantics, "steering"),
-            "separationRadiusCm",
-            "goalArrivalRadiusCm",
-            "flowObstacleAvoidanceScale",
-            "formationSeparationScale",
-            "looseSeparationScale",
-            "velocityBlendPerSecond");
-        RequireProperties(
-            RequireProperty(semantics, "solver"),
-            "minNavMass",
-            "minVisualScale",
-            "maxStepDtSeconds",
-            "parallelStepMinAgents",
-            "directionEpsilonSq",
-            "normalizationEpsilonSq",
-            "inverseSqrtMinValue",
-            "entitySyncPositionEpsilonSq",
-            "entitySyncVelocityEpsilonSq",
-            "facingVelocityEpsilonSq",
-            "flowBlockedCellCost",
-            "flowBlockedCellThreshold",
-            "flowTargetStopDistanceSq",
-            "flowObstacleNeighborRadiusCells",
-            "flowObstacleNeighborWeight",
-            "flowObstacleAvoidanceWeight",
-            "crowdStampCenterCost",
-            "crowdStampNeighborCost",
-            "coincidentPairHashBucketCount",
-            "coincidentPairHashPrimeA",
-            "coincidentPairHashPrimeB");
-    }
-
-    private static JsonElement RequireProperty(JsonElement root, string propertyName)
-    {
-        if (!root.TryGetProperty(propertyName, out JsonElement value))
-        {
-            throw new InvalidOperationException($"MassNavigation config requires explicit '{propertyName}' property.");
-        }
-
-        return value;
-    }
-
-    private static bool RequireBooleanProperty(JsonElement root, string propertyName)
-    {
-        JsonElement value = RequireProperty(root, propertyName);
-        return value.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => throw new InvalidOperationException($"MassNavigation config requires explicit boolean '{propertyName}' property.")
-        };
-    }
-
-    private static void RequireProperties(JsonElement root, params string[] propertyNames)
-    {
-        for (int i = 0; i < propertyNames.Length; i++)
-        {
-            RequireProperty(root, propertyNames[i]);
-        }
-    }
-
-    private void Validate()
-    {
-        if (string.IsNullOrWhiteSpace(MapId))
-        {
-            throw new InvalidOperationException("MassNavigation config requires a non-empty map id.");
-        }
-
         Solver.Validate();
-        ScenarioRuntime.Validate();
-        Scenario.Validate(ScenarioRuntime);
-        Presentation.Validate(Scenario, ScenarioRuntime, World);
+        Capacity.Validate();
         Cadence.Validate();
         AgentProfiles.Validate();
         Streaming.Validate();
@@ -381,106 +71,42 @@ public sealed class MassNavigationConfig
         Arrival.Validate();
         Avoidance.Validate();
         Semantics.Validate();
+        float simulationStepSeconds = 1f / Cadence.SimulationHz;
+        if (simulationStepSeconds > Semantics.Solver.MaxStepDtSeconds + 0.000001f)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cadence.simulationHz {Cadence.SimulationHz} produces a {simulationStepSeconds:0.######}s step, " +
+                $"which exceeds semantics.solver.maxStepDtSeconds {Semantics.Solver.MaxStepDtSeconds:0.######} and would silently lose simulation time.");
+        }
+
         if (World == null)
         {
             throw new InvalidOperationException("MassNavigation config requires an explicit world section.");
         }
 
         World.Validate(Solver);
-        ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, Streaming);
+        Capacity.ValidateForStreaming(World, Streaming);
 
-        ValidateRelationships();
-
-        var knownTeams = new HashSet<int>(Scenario.Teams.Length);
-        for (int i = 0; i < Scenario.Teams.Length; i++)
-        {
-            knownTeams.Add(Scenario.Teams[i].Id);
-        }
-
-        for (int i = 0; i < TeamRelationships.Relationships.Count; i++)
-        {
-            RelationshipEntry relation = TeamRelationships.Relationships[i];
-            if (!knownTeams.Contains(relation.TeamA) || !knownTeams.Contains(relation.TeamB))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] references an unknown team.");
-            }
-
-            if (!TeamManager.TryParseRelationship(relation.Attitude, out _))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] has invalid attitude '{relation.Attitude}'.");
-            }
-        }
-    }
-
-    private void ValidateRelationships()
-    {
-        if (TeamRelationships == null)
-        {
-            throw new InvalidOperationException("MassNavigation config requires an explicit teamRelationships section.");
-        }
-
-        if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship) ||
-            !TeamManager.TryParseRelationship(TeamRelationships.DefaultRelationship, out _))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation config teamRelationships.defaultRelationship is invalid: '{TeamRelationships.DefaultRelationship}'.");
-        }
-
-        if (TeamRelationships.Relationships == null)
-        {
-            throw new InvalidOperationException("MassNavigation config requires teamRelationships.relationships as an explicit array.");
-        }
     }
 }
 
-public sealed class MassNavigationScenarioRuntimeConfig
+public sealed class MassNavigationCapacityConfig
 {
-    public bool AutoSpawnConfiguredScenario { get; set; }
-    public int InitialCommandActorScratchCapacity { get; set; }
-    public int InitialCommandActorSnapshotCapacity { get; set; }
-    public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
+    [JsonRequired] public int InitialCommandActorScratchCapacity { get; set; }
+    [JsonRequired] public int InitialCommandActorSnapshotCapacity { get; set; }
+    [JsonRequired] public int NavigationGroupCapacity { get; set; }
+    [JsonRequired] public int GroupMembershipAgentCapacity { get; set; }
+    [JsonRequired] public int CommandActorScratchCapacity { get; set; }
+    [JsonRequired] public int GroupMemberCapacity { get; set; }
+    [JsonRequired] public int OrderIngestionTokenCapacity { get; set; }
+    [JsonRequired] public int OrderIngestionMemberCapacity { get; set; }
+    [JsonRequired] public int LoadedChunkCapacity { get; set; }
+    [JsonRequired] public int MetadataTeamCapacity { get; set; }
 
     public void Validate()
     {
-        if (InitialCommandActorScratchCapacity <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorScratchCapacity must be > 0.");
-        }
-
-        if (InitialCommandActorSnapshotCapacity <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity must be > 0.");
-        }
-
-        if (RuntimeCapacity == null)
-        {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.runtimeCapacity must be explicitly configured.");
-        }
-
-        RuntimeCapacity.Validate(this);
-    }
-}
-
-public sealed class MassNavigationRuntimeCapacityConfig
-{
-    public int NavigationGroupCapacity { get; set; }
-    public int GroupMembershipAgentCapacity { get; set; }
-    public int CommandActorScratchCapacity { get; set; }
-    public int GroupMemberCapacity { get; set; }
-    public int OrderIngestionTokenCapacity { get; set; }
-    public int OrderIngestionMemberCapacity { get; set; }
-    public int LoadedChunkCapacity { get; set; }
-    public int MetadataTeamCapacity { get; set; }
-
-    public void Validate(MassNavigationScenarioRuntimeConfig scenarioRuntime)
-    {
-        if (scenarioRuntime == null)
-        {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity validation requires scenarioRuntime.");
-        }
-
+        RequirePositive(InitialCommandActorScratchCapacity, "initialCommandActorScratchCapacity");
+        RequirePositive(InitialCommandActorSnapshotCapacity, "initialCommandActorSnapshotCapacity");
         RequirePositive(NavigationGroupCapacity, "navigationGroupCapacity");
         RequirePositive(GroupMembershipAgentCapacity, "groupMembershipAgentCapacity");
         RequirePositive(CommandActorScratchCapacity, "commandActorScratchCapacity");
@@ -490,28 +116,28 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
 
-        if (CommandActorScratchCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
+        if (CommandActorScratchCapacity < InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
+                "MassNavigation runtime.capacity.commandActorScratchCapacity must be >= runtime.capacity.initialCommandActorSnapshotCapacity.");
         }
 
-        if (GroupMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
+        if (GroupMemberCapacity < InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
+                "MassNavigation runtime.capacity.groupMemberCapacity must be >= runtime.capacity.initialCommandActorSnapshotCapacity.");
         }
 
         if (OrderIngestionTokenCapacity < NavigationGroupCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
+                "MassNavigation runtime.capacity.orderIngestionTokenCapacity must be >= runtime.capacity.navigationGroupCapacity.");
         }
 
-        if (OrderIngestionMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
+        if (OrderIngestionMemberCapacity < InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
+                "MassNavigation runtime.capacity.orderIngestionMemberCapacity must be >= runtime.capacity.initialCommandActorSnapshotCapacity.");
         }
     }
 
@@ -519,38 +145,38 @@ public sealed class MassNavigationRuntimeCapacityConfig
     {
         if (teamCount <= 0)
         {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity scenario validation requires a positive team count.");
+            throw new InvalidOperationException("MassNavigation runtime.capacity scene validation requires a positive team count.");
         }
 
         long authoredAgentCount = (long)teamCount * agentsPerTeam;
         if (authoredAgentCount > GroupMembershipAgentCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
         if (authoredAgentCount > CommandActorScratchCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {CommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.commandActorScratchCapacity {CommandActorScratchCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
         if (authoredAgentCount > GroupMemberCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity {GroupMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.groupMemberCapacity {GroupMemberCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
         if (authoredAgentCount > OrderIngestionMemberCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
         if (teamCount > MetadataTeamCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.metadataTeamCapacity {MetadataTeamCapacity} is smaller than authored scenario team count {teamCount}.");
+                $"MassNavigation runtime.capacity.metadataTeamCapacity {MetadataTeamCapacity} is smaller than authored scene team count {teamCount}.");
         }
     }
 
@@ -558,12 +184,12 @@ public sealed class MassNavigationRuntimeCapacityConfig
     {
         if (world == null)
         {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity streaming validation requires world config.");
+            throw new InvalidOperationException("MassNavigation runtime.capacity streaming validation requires world config.");
         }
 
         if (streaming == null)
         {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity streaming validation requires streaming config.");
+            throw new InvalidOperationException("MassNavigation runtime.capacity streaming validation requires streaming config.");
         }
 
         int minimumWindowChunkCapacity = CountSquareChunksForRadius(
@@ -572,7 +198,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
         if (LoadedChunkCapacity < minimumWindowChunkCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one streaming window chunk count {minimumWindowChunkCapacity}.");
+                $"MassNavigation runtime.capacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one streaming window chunk count {minimumWindowChunkCapacity}.");
         }
     }
 
@@ -580,7 +206,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
     {
         if (value <= 0)
         {
-            throw new InvalidOperationException($"MassNavigation scenarioRuntime.runtimeCapacity.{fieldName} must be > 0.");
+            throw new InvalidOperationException($"MassNavigation runtime.capacity.{fieldName} must be > 0.");
         }
     }
 
@@ -600,6 +226,10 @@ public sealed class MassNavigationRuntimeCapacityConfig
 public sealed class MassNavigationConfigLoader
 {
     public const string DefaultRelativePath = "MassNavigationConfig.json";
+    public const string MapMetadataSection = "massNavigation";
+    public const string MapMetadataProfileId = "profileId";
+    private const string ProfileIdField = "id";
+    private const string ProfileExtendsField = "extends";
 
     private readonly ConfigPipeline _pipeline;
 
@@ -608,23 +238,26 @@ public sealed class MassNavigationConfigLoader
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
     }
 
-    public MassNavigationConfig Load(
+    public MassNavigationCapabilityProfile Load(
         ConfigCatalog catalog,
         ConfigConflictReport report,
+        MapConfig mapConfig,
         string relativePath = DefaultRelativePath)
     {
-        if (TryLoad(catalog, report, out MassNavigationConfig? config, relativePath))
+        if (TryLoad(catalog, report, mapConfig, out MassNavigationCapabilityProfile? config, relativePath))
         {
             return config;
         }
 
-        throw new InvalidOperationException($"MassNavigation runtime config '{relativePath}' must be registered in config_catalog.json.");
+        throw new InvalidOperationException(
+            $"Map '{mapConfig?.Id}' must declare metadata.{MapMetadataSection}.{MapMetadataProfileId} to activate MassNavigation.");
     }
 
     public bool TryLoad(
         ConfigCatalog catalog,
         ConfigConflictReport report,
-        out MassNavigationConfig? config,
+        MapConfig mapConfig,
+        out MassNavigationCapabilityProfile? config,
         string relativePath = DefaultRelativePath)
     {
         config = null;
@@ -638,31 +271,153 @@ public sealed class MassNavigationConfigLoader
             throw new ArgumentNullException(nameof(report));
         }
 
-        if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
+        if (mapConfig == null)
+        {
+            throw new ArgumentNullException(nameof(mapConfig));
+        }
+
+        if (!TryResolveProfileId(mapConfig, out string profileId))
         {
             return false;
         }
 
-        if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
+        if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            throw new InvalidOperationException($"MassNavigation runtime config '{relativePath}' must use DeepObject merge policy.");
+            throw new InvalidOperationException(
+                $"MassNavigation profile catalog '{relativePath}' must be registered in config_catalog.json.");
         }
 
-        JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-        if (merged == null)
+        if (entry.MergePolicy != ConfigMergePolicy.ArrayById ||
+            !string.Equals(entry.IdField, ProfileIdField, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"MassNavigation runtime requires config '{relativePath}' through ConfigPipeline.");
+            throw new InvalidOperationException(
+                $"MassNavigation profile catalog '{relativePath}' must use ArrayById merge policy with IdField '{ProfileIdField}'.");
         }
 
-        config = MassNavigationConfig.Load(merged);
+        IReadOnlyList<MergedConfigEntry> mergedProfiles = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+        if (mergedProfiles.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation profile catalog '{relativePath}' did not produce any profiles through ConfigPipeline.");
+        }
+
+        JsonObject resolved = ResolveProfile(mergedProfiles, profileId, relativePath);
+        config = MassNavigationCapabilityProfile.Load(resolved);
+        return true;
+    }
+
+    private static bool TryResolveProfileId(MapConfig mapConfig, out string profileId)
+    {
+        profileId = string.Empty;
+        if (!mapConfig.Metadata.TryGetValue(MapMetadataSection, out JsonNode? sectionNode))
+        {
+            return false;
+        }
+
+        if (sectionNode is not JsonObject section)
+        {
+            throw new InvalidOperationException(
+                $"Map '{mapConfig.Id}' metadata.{MapMetadataSection} must be an object.");
+        }
+
+        foreach ((string key, _) in section)
+        {
+            if (!string.Equals(key, MapMetadataProfileId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' metadata.{MapMetadataSection} contains unknown property '{key}'.");
+            }
+        }
+
+        if (!section.TryGetPropertyValue(MapMetadataProfileId, out JsonNode? profileNode) ||
+            profileNode is not JsonValue profileValue ||
+            !profileValue.TryGetValue(out profileId) ||
+            string.IsNullOrWhiteSpace(profileId))
+        {
+            throw new InvalidOperationException(
+                $"Map '{mapConfig.Id}' metadata.{MapMetadataSection}.{MapMetadataProfileId} must be a non-empty string.");
+        }
+
+        return true;
+    }
+
+    private static JsonObject ResolveProfile(
+        IReadOnlyList<MergedConfigEntry> profiles,
+        string profileId,
+        string relativePath)
+    {
+        var profilesById = new Dictionary<string, JsonObject>(profiles.Count, StringComparer.Ordinal);
+        for (int i = 0; i < profiles.Count; i++)
+        {
+            profilesById.Add(profiles[i].Id, profiles[i].Node);
+        }
+
+        if (!profilesById.ContainsKey(profileId))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation profile '{profileId}' bound by the map was not found in '{relativePath}'.");
+        }
+
+        var chain = new List<JsonObject>();
+        var visiting = new HashSet<string>(StringComparer.Ordinal);
+        string currentId = profileId;
+        while (true)
+        {
+            if (!visiting.Add(currentId))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation profile inheritance contains a cycle at '{currentId}' in '{relativePath}'.");
+            }
+
+            JsonObject current = profilesById.TryGetValue(currentId, out JsonObject? found)
+                ? found
+                : throw new InvalidOperationException(
+                    $"MassNavigation profile '{profileId}' extends missing profile '{currentId}' in '{relativePath}'.");
+            chain.Add(current);
+            if (!TryReadExtends(current, out string parentId))
+            {
+                break;
+            }
+
+            currentId = parentId;
+        }
+
+        var resolved = new JsonObject();
+        for (int i = chain.Count - 1; i >= 0; i--)
+        {
+            JsonObject layer = (JsonObject)chain[i].DeepClone();
+            layer.Remove(ProfileIdField);
+            layer.Remove(ProfileExtendsField);
+            ConfigPipeline.DeepMerge(resolved, layer);
+        }
+
+        return resolved;
+    }
+
+    private static bool TryReadExtends(JsonObject profile, out string parentId)
+    {
+        parentId = string.Empty;
+        if (!profile.TryGetPropertyValue(ProfileExtendsField, out JsonNode? node) || node == null)
+        {
+            return false;
+        }
+
+        if (node is not JsonValue value ||
+            !value.TryGetValue(out parentId) ||
+            string.IsNullOrWhiteSpace(parentId))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation profile '{profile[ProfileIdField]}' extends must be a non-empty string.");
+        }
+
         return true;
     }
 }
 
 public sealed class MassNavigationStreamingConfig
 {
-    public float RetainSeconds { get; set; }
-    public int RadiusCm { get; set; }
+    [JsonRequired] public float RetainSeconds { get; set; }
+    [JsonRequired] public int RadiusCm { get; set; }
 
     public void Validate()
     {
@@ -680,23 +435,15 @@ public sealed class MassNavigationStreamingConfig
 
 public sealed class MassNavigationPresentationConfig
 {
-    public string[] RequiredMeshAssetIds { get; set; } = Array.Empty<string>();
-    public string BlockerPerformerId { get; set; } = string.Empty;
-    public string HotspotPerformerId { get; set; } = string.Empty;
-    public string BlockerTemplateId { get; set; } = string.Empty;
-    public string HotspotTemplateId { get; set; } = string.Empty;
-    public MassNavigationTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavigationTeamPresentationConfig>();
+    [JsonRequired] public string[] RequiredMeshAssetIds { get; set; } = Array.Empty<string>();
+    [JsonRequired] public string? BlockerPerformerId { get; set; }
+    [JsonRequired] public string? HotspotPerformerId { get; set; }
+    [JsonRequired] public string BlockerTemplateId { get; set; } = string.Empty;
+    [JsonRequired] public string? HotspotTemplateId { get; set; }
+    [JsonRequired] public MassNavigationTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavigationTeamPresentationConfig>();
 
-    public void Validate(
-        MassNavigationScenarioConfig scenario,
-        MassNavigationScenarioRuntimeConfig scenarioRuntime,
-        MassNavigationWorldConfig? world)
+    public void Validate(MassNavigationScenarioConfig scenario, MassNavigationWorldConfig? world)
     {
-        if (scenarioRuntime == null)
-        {
-            throw new InvalidOperationException("MassNavigation presentation requires an explicit scenarioRuntime section.");
-        }
-
         if (RequiredMeshAssetIds.Length <= 0)
         {
             throw new InvalidOperationException("MassNavigation presentation requires at least one RequiredMeshAssetIds entry.");
@@ -711,17 +458,6 @@ public sealed class MassNavigationPresentationConfig
             {
                 throw new InvalidOperationException($"MassNavigation presentation contains duplicate required mesh asset '{meshAssetId}'.");
             }
-        }
-
-        if (!scenarioRuntime.AutoSpawnConfiguredScenario)
-        {
-            if (Teams.Length != 0)
-            {
-                throw new InvalidOperationException(
-                    "MassNavigation presentation.teams must be empty when scenarioRuntime.autoSpawnConfiguredScenario is false; externally-authored scenarios must author agent templates in their own config.");
-            }
-
-            return;
         }
 
         RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
@@ -781,7 +517,7 @@ public sealed class MassNavigationPresentationConfig
         return heavy ? team.HeavyPerformerId : team.LightPerformerId;
     }
 
-    private static void RequireNonEmpty(string value, string fieldName)
+    private static void RequireNonEmpty(string? value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -792,19 +528,19 @@ public sealed class MassNavigationPresentationConfig
 
 public sealed class MassNavigationFlowSolverConfig
 {
-    public int FieldWidthCm { get; set; }
-    public int FieldHeightCm { get; set; }
-    public int FlowCellSizeCm { get; set; }
-    public int MaxObstacleCount { get; set; }
-    public int ParallelWorkerCount { get; set; }
-    public int SeparationHashCellSizeCm { get; set; }
-    public int SeparationHashMinSearchRadiusCells { get; set; }
-    public int HardResolveHashCellSizeCm { get; set; }
-    public int HardResolveHashMinSearchRadiusCells { get; set; }
-    public float PlayAreaMinXCm { get; set; }
-    public float PlayAreaMaxXCm { get; set; }
-    public float PlayAreaMinYCm { get; set; }
-    public float PlayAreaMaxYCm { get; set; }
+    [JsonRequired] public int FieldWidthCm { get; set; }
+    [JsonRequired] public int FieldHeightCm { get; set; }
+    [JsonRequired] public int FlowCellSizeCm { get; set; }
+    [JsonRequired] public int MaxObstacleCount { get; set; }
+    [JsonRequired] public int ParallelWorkerCount { get; set; }
+    [JsonRequired] public int SeparationHashCellSizeCm { get; set; }
+    [JsonRequired] public int SeparationHashMinSearchRadiusCells { get; set; }
+    [JsonRequired] public int HardResolveHashCellSizeCm { get; set; }
+    [JsonRequired] public int HardResolveHashMinSearchRadiusCells { get; set; }
+    [JsonRequired] public float PlayAreaMinXCm { get; set; }
+    [JsonRequired] public float PlayAreaMaxXCm { get; set; }
+    [JsonRequired] public float PlayAreaMinYCm { get; set; }
+    [JsonRequired] public float PlayAreaMaxYCm { get; set; }
 
     [JsonIgnore]
     public int FlowGridWidth => FieldWidthCm / FlowCellSizeCm;
@@ -892,12 +628,12 @@ public sealed class MassNavigationFlowSolverConfig
 
 public sealed class MassNavigationTeamPresentationConfig
 {
-    public int TeamId { get; set; }
-    public string StyleId { get; set; } = string.Empty;
-    public string LightTemplateId { get; set; } = string.Empty;
-    public string HeavyTemplateId { get; set; } = string.Empty;
-    public string LightPerformerId { get; set; } = string.Empty;
-    public string HeavyPerformerId { get; set; } = string.Empty;
+    [JsonRequired] public int TeamId { get; set; }
+    [JsonRequired] public string StyleId { get; set; } = string.Empty;
+    [JsonRequired] public string LightTemplateId { get; set; } = string.Empty;
+    [JsonRequired] public string HeavyTemplateId { get; set; } = string.Empty;
+    [JsonRequired] public string LightPerformerId { get; set; } = string.Empty;
+    [JsonRequired] public string HeavyPerformerId { get; set; } = string.Empty;
 
     public void Validate()
     {
@@ -937,39 +673,18 @@ public sealed class MassNavigationWorldConfig
 {
     private int _activeHotZoneIndex = -1;
 
-    public int SolverWindowWidthCm { get; set; }
-    public int SolverWindowHeightCm { get; set; }
-    public int StreamingChunkSizeCm { get; set; }
-    public int StreamingRadiusCm { get; set; }
-    public int CommandFocusHoldTicks { get; set; }
-    public int WorkAreaPaddingCm { get; set; }
-    public int WorkAreaMaxWidthCm { get; set; }
-    public int WorkAreaMaxHeightCm { get; set; }
-    public string ActiveHotZoneId { get; set; } = string.Empty;
-    public MassNavigationHotZoneConfig[] HotZones { get; set; } = Array.Empty<MassNavigationHotZoneConfig>();
+    [JsonRequired] public int StreamingChunkSizeCm { get; set; }
+    [JsonRequired] public int CommandFocusHoldTicks { get; set; }
+    [JsonRequired] public int WorkAreaPaddingCm { get; set; }
+    [JsonRequired] public int WorkAreaMaxWidthCm { get; set; }
+    [JsonRequired] public int WorkAreaMaxHeightCm { get; set; }
+    [JsonRequired] public string ActiveHotZoneId { get; set; } = string.Empty;
+    [JsonRequired] public MassNavigationHotZoneConfig[] HotZones { get; set; } = Array.Empty<MassNavigationHotZoneConfig>();
 
     [JsonIgnore]
     public MassNavigationHotZoneConfig ActiveHotZone => _activeHotZoneIndex >= 0 && _activeHotZoneIndex < HotZones.Length
         ? HotZones[_activeHotZoneIndex]
         : throw new InvalidOperationException("MassNavigation world active hot zone was not validated.");
-
-    [JsonIgnore]
-    public float HotZoneMinXCm => ActiveHotZone.CenterXCm - (ActiveHotZone.WidthCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMinYCm => ActiveHotZone.CenterYCm - (ActiveHotZone.HeightCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMaxXCm => ActiveHotZone.CenterXCm + (ActiveHotZone.WidthCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMaxYCm => ActiveHotZone.CenterYCm + (ActiveHotZone.HeightCm * 0.5f);
-
-    [JsonIgnore]
-    public int HotZoneWidthCm => ActiveHotZone.WidthCm;
-
-    [JsonIgnore]
-    public int HotZoneHeightCm => ActiveHotZone.HeightCm;
 
     [JsonIgnore]
     public int HotZoneCenterXCm => ActiveHotZone.CenterXCm;
@@ -1017,13 +732,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires at least one configured hotspot debug landmark.");
         }
 
-        if (SolverWindowWidthCm != solver.FieldWidthCm ||
-            SolverWindowHeightCm != solver.FieldHeightCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation world solver window must match solver field size ({solver.FieldWidthCm}x{solver.FieldHeightCm} cm).");
-        }
-
         var ids = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < HotZones.Length; i++)
         {
@@ -1041,11 +749,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires StreamingChunkSizeCm > 0.");
         }
 
-        if (StreamingRadiusCm < 0)
-        {
-            throw new InvalidOperationException("MassNavigation world requires StreamingRadiusCm >= 0.");
-        }
-
         if (CommandFocusHoldTicks < 0)
         {
             throw new InvalidOperationException("MassNavigation world requires CommandFocusHoldTicks >= 0.");
@@ -1061,7 +764,7 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires positive WorkAreaMaxWidthCm and WorkAreaMaxHeightCm.");
         }
 
-        if (WorkAreaMaxWidthCm < SolverWindowWidthCm || WorkAreaMaxHeightCm < SolverWindowHeightCm)
+        if (WorkAreaMaxWidthCm < solver.FieldWidthCm || WorkAreaMaxHeightCm < solver.FieldHeightCm)
         {
             throw new InvalidOperationException("MassNavigation world work area max must be at least the solver cache size.");
         }
@@ -1090,12 +793,10 @@ public sealed class MassNavigationWorldConfig
 
 public sealed class MassNavigationHotZoneConfig
 {
-    public string Id { get; set; } = string.Empty;
-    public string Label { get; set; } = string.Empty;
-    public int CenterXCm { get; set; }
-    public int CenterYCm { get; set; }
-    public int WidthCm { get; set; }
-    public int HeightCm { get; set; }
+    [JsonRequired] public string Id { get; set; } = string.Empty;
+    [JsonRequired] public string Label { get; set; } = string.Empty;
+    [JsonRequired] public int CenterXCm { get; set; }
+    [JsonRequired] public int CenterYCm { get; set; }
 
     public void Validate()
     {
@@ -1109,25 +810,21 @@ public sealed class MassNavigationHotZoneConfig
             throw new InvalidOperationException($"MassNavigation hot zone '{Id}' requires a non-empty label.");
         }
 
-        if (WidthCm <= 0 || HeightCm <= 0)
-        {
-            throw new InvalidOperationException($"MassNavigation hot zone '{Id}' requires positive width and height.");
-        }
     }
 }
 
 public sealed class MassNavigationScenarioConfig
 {
-    public int AgentsPerTeam { get; set; }
-    public int InitialActiveTeamId { get; set; }
-    public MassNavigationScenarioTeamConfig[] Teams { get; set; } = Array.Empty<MassNavigationScenarioTeamConfig>();
-    public MassNavigationScenarioSpawnLayoutConfig SpawnLayout { get; set; } = new();
+    [JsonRequired] public int AgentsPerTeam { get; set; }
+    [JsonRequired] public int InitialActiveTeamId { get; set; }
+    [JsonRequired] public MassNavigationScenarioTeamConfig[] Teams { get; set; } = Array.Empty<MassNavigationScenarioTeamConfig>();
+    [JsonRequired] public MassNavigationScenarioSpawnLayoutConfig? SpawnLayout { get; set; }
 
-    public void Validate(MassNavigationScenarioRuntimeConfig scenarioRuntime)
+    public void Validate(MassNavigationCapacityConfig capacity)
     {
-        if (scenarioRuntime == null)
+        if (capacity == null)
         {
-            throw new InvalidOperationException("MassNavigation scenario validation requires an explicit scenarioRuntime section.");
+            throw new InvalidOperationException("MassNavigation scene validation requires runtime.capacity.");
         }
 
         if (AgentsPerTeam < 0)
@@ -1167,24 +864,21 @@ public sealed class MassNavigationScenarioConfig
         }
 
         long authoredAgentCount = (long)Teams.Length * AgentsPerTeam;
-        if (authoredAgentCount > scenarioRuntime.InitialCommandActorScratchCapacity)
+        if (authoredAgentCount > capacity.InitialCommandActorScratchCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialCommandActorScratchCapacity {scenarioRuntime.InitialCommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.initialCommandActorScratchCapacity {capacity.InitialCommandActorScratchCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
-        if (authoredAgentCount > scenarioRuntime.InitialCommandActorSnapshotCapacity)
+        if (authoredAgentCount > capacity.InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity {scenarioRuntime.InitialCommandActorSnapshotCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation runtime.capacity.initialCommandActorSnapshotCapacity {capacity.InitialCommandActorSnapshotCapacity} is smaller than authored scene agent count {authoredAgentCount}.");
         }
 
-        scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);
+        capacity.ValidateForScenario(Teams.Length, AgentsPerTeam);
 
-        if (scenarioRuntime.AutoSpawnConfiguredScenario)
-        {
-            SpawnLayout.Validate();
-        }
+        SpawnLayout?.Validate();
     }
 }
 
@@ -1197,9 +891,9 @@ public sealed class MassNavigationScenarioSpawnLayoutConfig
 {
     private MassNavigationScenarioSpawnLayoutKind _parsedKind;
 
-    public string Kind { get; set; } = string.Empty;
-    public float OrbitRadiusCm { get; set; }
-    public int RandomSeed { get; set; }
+    [JsonRequired] public string Kind { get; set; } = string.Empty;
+    [JsonRequired] public float OrbitRadiusCm { get; set; }
+    [JsonRequired] public int RandomSeed { get; set; }
 
     [JsonIgnore]
     public MassNavigationScenarioSpawnLayoutKind ParsedKind => _parsedKind;
@@ -1223,6 +917,6 @@ public sealed class MassNavigationScenarioSpawnLayoutConfig
 
 public sealed class MassNavigationScenarioTeamConfig
 {
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+    [JsonRequired] public int Id { get; set; }
+    [JsonRequired] public string Name { get; set; } = string.Empty;
 }

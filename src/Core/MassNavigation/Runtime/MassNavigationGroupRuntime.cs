@@ -26,14 +26,14 @@ public sealed class MassNavigationGroupRuntime
 
     public MassNavigationGroupRuntime(
         MassNavigationGroupSemantics groupSemantics,
-        MassNavigationRuntimeCapacityConfig capacity)
+        MassNavigationCapacityConfig capacity)
         : this(new MassNavigationFormationRuntime(groupSemantics), capacity)
     {
     }
 
     public MassNavigationGroupRuntime(
         MassNavigationFormationRuntime formationLayout,
-        MassNavigationRuntimeCapacityConfig capacity)
+        MassNavigationCapacityConfig capacity)
     {
         _formationLayout = formationLayout ?? throw new ArgumentNullException(nameof(formationLayout));
         ArgumentNullException.ThrowIfNull(capacity);
@@ -160,7 +160,7 @@ public sealed class MassNavigationGroupRuntime
             if ((uint)captured.GroupId >= (uint)_groups.Count)
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation authored group restore references group id {captured.GroupId}, exceeding configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+                    $"MassNavigation authored group restore references group id {captured.GroupId}, exceeding runtime.capacity.navigationGroupCapacity {_groups.Count}.");
             }
 
             int[] memberIndices = new int[captured.Members.Length];
@@ -869,7 +869,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation group membership required {count} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_groupIdsByAgentIndex.Length}.");
+            $"MassNavigation group membership required {count} agent slots, exceeding runtime.capacity.groupMembershipAgentCapacity {_groupIdsByAgentIndex.Length}.");
     }
 
     private void EnsureMembershipCapacityForMembers(ReadOnlySpan<int> members)
@@ -891,7 +891,7 @@ public sealed class MassNavigationGroupRuntime
         if (_commandActorMemberScratch.Length < count)
         {
             throw new InvalidOperationException(
-                $"MassNavigation command actor scratch required {count} entries, exceeding configured scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {_commandActorMemberScratch.Length}.");
+                $"MassNavigation command actor scratch required {count} entries, exceeding runtime.capacity.commandActorScratchCapacity {_commandActorMemberScratch.Length}.");
         }
 
         return _commandActorMemberScratch.AsSpan(0, count);
@@ -964,7 +964,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+            $"MassNavigation navigation group allocation exceeded runtime.capacity.navigationGroupCapacity {_groups.Count}.");
     }
 
     private void RemoveFromExistingGroup(MassNavigationFlowSolverState simulation, int unitIndex)
@@ -1118,7 +1118,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation loose group layout required {required} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {_looseOffsetX.Length}.");
+            $"MassNavigation loose group layout required {required} members, exceeding runtime.capacity.groupMemberCapacity {_looseOffsetX.Length}.");
     }
 
     private void ScaleLooseLayoutForMemberBodyRadius(
@@ -1168,7 +1168,7 @@ public sealed class MassNavigationGroupRuntime
         if ((uint)groupId >= (uint)_groupPool.Length)
         {
             throw new InvalidOperationException(
-                $"MassNavigation group id {groupId} exceeds configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groupPool.Length}.");
+                $"MassNavigation group id {groupId} exceeds runtime.capacity.navigationGroupCapacity {_groupPool.Length}.");
         }
 
         NavGroupState group = _groupPool[groupId];
@@ -1872,7 +1872,7 @@ public sealed class MassNavigationGroupRuntime
             }
 
             throw new InvalidOperationException(
-                $"MassNavigation group state required {required} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {MemberIndices.Length}.");
+                $"MassNavigation group state required {required} members, exceeding runtime.capacity.groupMemberCapacity {MemberIndices.Length}.");
         }
     }
 }

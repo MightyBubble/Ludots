@@ -15,6 +15,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
@@ -83,9 +84,9 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = checked(simulation.NavigationAgentCount);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
+            Assert.That(simulation.TeamCount, Is.EqualTo(ExpectedTeamCount));
 
             var hudProjection = CreateHudProjection(engine);
             ProjectionSample sample = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -117,13 +118,13 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = checked(simulation.NavigationAgentCount);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorSnapshotCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Plan.Capacity.InitialCommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Plan.Capacity.InitialCommandActorSnapshotCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Plan.Capacity.CommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Plan.Capacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Plan.Capacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -145,7 +146,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = checked(simulation.NavigationAgentCount);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             AssertScenarioAgentTemplatesDoNotDriveHealthPeriodically(engine, simulation);
 
@@ -169,7 +170,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = checked(simulation.NavigationAgentCount);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
             var hudProjection = CreateHudProjection(engine);
@@ -202,7 +203,7 @@ namespace Ludots.Tests.Presentation
             StartStartupMap(engine);
 
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
-            int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
+            int expectedAgents = checked(simulation.NavigationAgentCount);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
             var hudProjection = CreateHudProjection(engine);
@@ -955,12 +956,23 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation)
         {
             var checkedTemplateIds = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < simulation.Config.Presentation.Teams.Length; i++)
+            MassNavigationTeamPresentationConfig[] teams = LoadMassNavigationProfile(engine).SceneAuthoring.Presentation!.Teams;
+            for (int i = 0; i < teams.Length; i++)
             {
-                MassNavigationTeamPresentationConfig team = simulation.Config.Presentation.Teams[i];
+                MassNavigationTeamPresentationConfig team = teams[i];
                 AssertAgentTemplateDoesNotDriveHealthPeriodically(engine, team.LightTemplateId, checkedTemplateIds);
                 AssertAgentTemplateDoesNotDriveHealthPeriodically(engine, team.HeavyTemplateId, checkedTemplateIds);
             }
+        }
+
+        private static MassNavigationCapabilityProfile LoadMassNavigationProfile(GameEngine engine)
+        {
+            MapSession session = engine.CurrentMapSession
+                ?? throw new InvalidOperationException("MassNavigation production path requires an active map session.");
+            return new MassNavigationConfigLoader(engine.ConfigPipeline).Load(
+                engine.ConfigCatalog,
+                engine.ConfigConflictReport,
+                session.MapConfig);
         }
 
         private static void AssertAgentTemplateDoesNotDriveHealthPeriodically(

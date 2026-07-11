@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -12,11 +13,14 @@ using Ludots.Core.Presentation.Primitives;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
+using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Systems
 {
     internal sealed class RoadNetworkLocalOrderSourceSystem : ISystem<float>
     {
+        private readonly GameEngine _engine;
+        private readonly RoadNetworkShowcaseRuntime _runtime;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly LocalOrderSourceHelper _helper;
@@ -28,8 +32,16 @@ namespace RoadNetworkShowcaseMod.Systems
         private int _cueMarkerPrefabId;
         private bool _initialized;
 
-        public RoadNetworkLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext context)
+        public RoadNetworkLocalOrderSourceSystem(
+            GameEngine engine,
+            RoadNetworkShowcaseRuntime runtime,
+            World world,
+            Dictionary<string, object> globals,
+            OrderQueue orders,
+            IModContext context)
         {
+            _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
+            _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
             _world = world;
             _globals = globals;
             _context = context;
@@ -47,6 +59,11 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
+            if (!_runtime.IsCurrentShowcaseMap(_engine))
+            {
+                return;
+            }
+
             EnsureInitialized();
             if (_mapping == null)
             {

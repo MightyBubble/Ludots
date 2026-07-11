@@ -1,12 +1,13 @@
 using System;
+using System.Text.Json.Serialization;
 using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationAgentProfileSetConfig
 {
-    public string DefaultProfileId { get; set; } = string.Empty;
-    public MassNavigationAgentProfileConfig[] Profiles { get; set; } = Array.Empty<MassNavigationAgentProfileConfig>();
+    [JsonRequired] public string DefaultProfileId { get; set; } = string.Empty;
+    [JsonRequired] public MassNavigationAgentProfileConfig[] Profiles { get; set; } = Array.Empty<MassNavigationAgentProfileConfig>();
     private AgentProfileRegistry? _agentProfiles;
 
     public void BindAgentProfiles(AgentProfileRegistry agentProfiles)
@@ -103,12 +104,12 @@ public sealed class MassNavigationAgentProfileSetConfig
 
 public sealed class MassNavigationAgentProfileConfig
 {
-    public string Id { get; set; } = string.Empty;
-    public bool Heavy { get; set; }
-    public float VisualScale { get; set; }
-    public float SpeedCmPerSecond { get; set; }
-    public int EveryNth { get; set; }
-    public int NthOffset { get; set; }
+    [JsonRequired] public string Id { get; set; } = string.Empty;
+    [JsonRequired] public bool Heavy { get; set; }
+    [JsonRequired] public float VisualScale { get; set; }
+    [JsonRequired] public float SpeedCmPerSecond { get; set; }
+    [JsonRequired] public int EveryNth { get; set; }
+    [JsonRequired] public int NthOffset { get; set; }
 
     public void Validate(int index)
     {
