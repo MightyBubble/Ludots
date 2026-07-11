@@ -9,7 +9,7 @@ namespace Ludots.Tests.Architecture;
 public sealed class MassNavigationEvidenceContractTests
 {
     [Test]
-    public void EvidenceRecorder_UsesProcessWideMemoryMetricsAndDisablesTimingForSteadyState()
+    public void EvidenceRecorder_UsesProcessWideMemoryMetricsAndAuditableTimingModes()
     {
         string repoRoot = FindRepoRoot();
         string source = File.ReadAllText(Path.Combine(
@@ -24,7 +24,9 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("GC.GetTotalAllocatedBytes"));
             Assert.That(source, Does.Contain("GC.GetGCMemoryInfo"));
             Assert.That(source, Does.Contain("Process.GetCurrentProcess"));
-            Assert.That(source, Does.Contain("simulation.Telemetry.SetTimingEnabled(false)"));
+            Assert.That(source, Does.Contain("MassNavigationSteadyTimingEnabledEnvironmentVariable"));
+            Assert.That(source, Does.Contain("defaultValue: false"));
+            Assert.That(source, Does.Contain("simulation.Telemetry.SetTimingEnabled(timingEnabled)"));
             Assert.That(source, Does.Contain("timings.SystemBreakdownEnabled = false"));
             Assert.That(source, Does.Contain("simulation.AgentState.TotalAgents"));
             Assert.That(source, Does.Contain("submittedOrderCount > 0"));
@@ -34,9 +36,22 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("afterOrder.ScreenHudTextCount == boot.AgentCount"));
             Assert.That(source, Does.Contain("afterOrder.ScreenHudDroppedTotal == 0"));
             Assert.That(source, Does.Contain("steady_state_duration_seconds"));
+            Assert.That(source, Does.Contain("steady_timing_enabled_requested"));
+            Assert.That(source, Does.Contain("steady_timing_disabled"));
+            Assert.That(source, Does.Contain("steady_presentation_timing_disabled"));
+            Assert.That(source, Does.Contain("git_commit_sha"));
+            Assert.That(source, Does.Contain("runtime_config_sha256"));
+            Assert.That(source, Does.Contain("resolved_capability_profile_sha256"));
+            Assert.That(source, Does.Contain("scenario_random_seed"));
+            Assert.That(source, Does.Contain("steady_flow_cadence_count"));
+            Assert.That(source, Does.Contain("steady_flow_publication_count"));
+            Assert.That(source, Does.Contain("steady_flow_state_growth_events"));
             Assert.That(source, Does.Contain("steady_total_allocated_bytes"));
             Assert.That(source, Does.Contain("steady_working_set_growth_bytes"));
             Assert.That(source, Does.Contain("steady_capacity_growth_events"));
+            Assert.That(source, Does.Contain("simulation.NavGroupRuntime.PeakActiveGroupCount"));
+            Assert.That(source, Does.Contain("simulation.PeakOrderIngestionMemberCount"));
+            Assert.That(source, Does.Not.Contain("capacity_navigation_group_peak = timeline.Max"));
         });
     }
 
@@ -57,6 +72,9 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(script, Does.Contain("steady_total_allocated_bytes"));
             Assert.That(script, Does.Contain("steady_working_set_growth_bytes"));
             Assert.That(script, Does.Contain("steady_capacity_growth_events"));
+            Assert.That(script, Does.Contain("steady_timing_enabled_requested"));
+            Assert.That(script, Does.Contain("LUDOTS_MASS_NAV_STEADY_TIMING_ENABLED"));
+            Assert.That(script, Does.Contain("MassNavigationTimingEnabled"));
             Assert.That(script, Does.Contain("$ErrorActionPreference = \"Continue\""));
             Assert.That(script, Does.Not.Contain("first_command_advance_cm"));
             Assert.That(script, Does.Not.Contain("second_command_advance_cm"));

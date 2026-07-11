@@ -41,6 +41,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | Mod-local assets/MassNavigationConfig.json | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
 | Mod-local assets/MassNavigationConfig.json | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
 | Mod-local assets/MassNavigationConfig.json | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
+| Mod-local assets/MassNavigationConfig.json | `capacity.flowStateCapacity` | `(team, categoryMask, interactionMask)` flow-state 组合的预分配上限；按实际组合数和明确余量 author，超限时 fail-fast |
 | `assets/Configs/Navigation/agent_profiles.json` | `radiusCm` / `heightCm` / `clearanceCm` / `draftCm` / `beamCm` / `mass` / `layer` | agent 几何、避障身份与 NodeGraph 运输容量 SSOT |
 | `assets/Configs/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
 | `assets/Configs/Navigation/pathing.json` | `agentTypes[].profileId` / `selection.mode` | 哪些 profile 走精确 route，哪些继续 MassNavigationFlow |
@@ -126,7 +127,7 @@ MassNavigationFlow 起点：
 ]
 ```
 
-`MassNavigationConfig.json` 使用 ConfigPipeline `ArrayById` profile catalog。地图只通过 `Metadata.massNavigation.profileId` 选择 profile；profile 的执行参数放在 `runtime`，可选场景生成数据放在 `sceneAuthoring`。不要添加重复 `mapId`，也不要依赖全局“最后加载的一个 MassNavigationConfig”。
+`MassNavigationConfig.json` 使用 ConfigPipeline `ArrayById` profile catalog。地图只通过 `Metadata.massNavigation.profileId` 选择 profile；profile 的执行参数放在 `runtime`，场景生成数据放在必填的独立 `sceneAuthoring` domain。不需要自动生成场景时，显式配置 `autoSpawnConfiguredScenario=false` 并将其余 authoring 数据置为 `null`。不要添加重复 `mapId`，也不要依赖全局“最后加载的一个 MassNavigationConfig”。
 
 ## 大战略 / 4X 型
 

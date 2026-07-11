@@ -61,7 +61,8 @@
         "orderIngestionTokenCapacity": 256,
         "orderIngestionMemberCapacity": 10000,
         "loadedChunkCapacity": 256,
-        "metadataTeamCapacity": 4
+        "metadataTeamCapacity": 4,
+        "flowStateCapacity": 16
       },
       "cadence": {
         "simulationHz": 15,
@@ -98,7 +99,8 @@
       },
       "flow": {
         "crowdCostEnabled": false,
-        "crowdStampBudgetAgentsPerRefresh": 4096
+        "crowdStampBudgetAgentsPerRefresh": 4096,
+        "stateSolveBudgetPerSimulationStep": 2
       },
       "arrival": {
         "enabled": true,

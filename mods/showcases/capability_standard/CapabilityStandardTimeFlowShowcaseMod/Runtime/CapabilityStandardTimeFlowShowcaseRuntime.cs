@@ -972,11 +972,13 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             return;
         }
 
-        var flow = new MassNavigationFlowSolverState(config.NavigationSolver);
+        var flow = new MassNavigationFlowSolverState(
+            config.NavigationSolver,
+            config.NavigationRuntimeCapacity.FlowStateCapacity);
         flow.ArrivalTuning.CopyFrom(config.NavigationArrival);
         flow.AvoidanceTuning.CopyFrom(config.NavigationAvoidance);
         config.NavigationSemantics.ApplyTo(flow.Semantics);
-        flow.SetWorldOrigin(0f, 0f);
+        flow.RebaseWorldOrigin(0f, 0f);
         flow.SetWorldBounds(0f, config.NavigationSolver.FieldWidthCm, 0f, config.NavigationSolver.FieldHeightCm);
 
         var seed = new MassNavigationAgentSeed(

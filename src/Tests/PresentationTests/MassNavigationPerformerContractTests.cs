@@ -322,9 +322,9 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.cadence missing.");
             Assert.That(cadence["simulationHz"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(cadence["targetUpdateHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["flowStepHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["flowStepHz"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(cadence["flowCrowdStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
-            Assert.That(cadence["flowObstacleStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["flowObstacleStampHz"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(cadence["hardResolveHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["entitySyncHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["maxStepsPerFixedTick"]?.GetValue<int>(), Is.GreaterThan(0));

@@ -4538,7 +4538,7 @@ namespace Ludots.Tests.Presentation
         private static MassNavigationFlowSolverState CreateTestFlowState()
         {
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
-            var flow = new MassNavigationFlowSolverState(CreateTestSolverConfig());
+            var flow = new MassNavigationFlowSolverState(CreateTestSolverConfig(), flowStateCapacity: 16);
             flow.ArrivalTuning.CopyFrom(config.Arrival);
             flow.AvoidanceTuning.CopyFrom(config.Avoidance);
             flow.Semantics.CopyFrom(config.Semantics);
@@ -4608,6 +4608,7 @@ namespace Ludots.Tests.Presentation
                 OrderIngestionMemberCapacity = groupMemberCapacity,
                 LoadedChunkCapacity = 16,
                 MetadataTeamCapacity = 4,
+                FlowStateCapacity = 16,
             };
         }
 

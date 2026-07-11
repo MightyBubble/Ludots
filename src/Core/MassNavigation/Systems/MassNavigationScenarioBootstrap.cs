@@ -36,6 +36,7 @@ public static class MassNavigationScenarioBootstrap
         simulation.ConfigureTeams(teamIds);
         simulation.SetAgentsPerTeam(scenario.AgentsPerTeam);
         simulation.SetActiveTeam(scenario.InitialActiveTeamId);
+        simulation.SetScenarioRandomSeed(scenario.SpawnLayout!.RandomSeed);
         MapSession session = RequireCurrentMapSession(engine, simulation.MapId.Value);
         int[] playerOwnerIdsByScenarioTeam = ResolveScenarioTeamPlayerOwners(session, teamIds);
         MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, presentation);
@@ -44,7 +45,7 @@ public static class MassNavigationScenarioBootstrap
             simulation.AgentsPerTeam,
             simulation.Plan.AgentProfiles,
             scenarioAgentLayer,
-            scenario.SpawnLayout!);
+            scenario.SpawnLayout);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {

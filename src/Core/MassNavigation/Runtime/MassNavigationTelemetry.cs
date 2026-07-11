@@ -51,6 +51,14 @@ public sealed class MassNavigationTelemetry
     public int ScenarioSpawnCount { get; private set; }
     public int SceneResetCount { get; private set; }
     public int AuthoredRuntimeBindingRevision { get; private set; }
+    public long SimulationStepCountTotal { get; private set; }
+    public long TargetUpdateCountTotal { get; private set; }
+    public long FlowCadenceCountTotal { get; private set; }
+    public long CrowdCadenceCountTotal { get; private set; }
+    public long ObstacleCadenceCountTotal { get; private set; }
+    public long HardResolveCountTotal { get; private set; }
+    public long EntitySyncCountTotal { get; private set; }
+    public long FlowReconcileCountTotal { get; private set; }
     public float LastRejectedCommandXCm { get; private set; }
     public float LastRejectedCommandYCm { get; private set; }
 
@@ -177,7 +185,22 @@ public sealed class MassNavigationTelemetry
     public void MarkCommandApply() => CommandCountFrame++;
     public void MarkScenarioSpawned() => ScenarioSpawnCount++;
     public void MarkSceneResetExecuted() => SceneResetCount++;
-    public void MarkFlowReconcile() => FlowReconcileCountFrame++;
+    public void MarkFlowReconcile()
+    {
+        FlowReconcileCountFrame++;
+        FlowReconcileCountTotal++;
+    }
+
+    internal void MarkCadenceStep(in MassNavigationCadenceStep step)
+    {
+        SimulationStepCountTotal++;
+        if (step.UpdateTargets) TargetUpdateCountTotal++;
+        if (step.RefreshFlow) FlowCadenceCountTotal++;
+        if (step.RefreshCrowd) CrowdCadenceCountTotal++;
+        if (step.RefreshObstacles) ObstacleCadenceCountTotal++;
+        if (step.RunHardResolve) HardResolveCountTotal++;
+        if (step.SyncEntities) EntitySyncCountTotal++;
+    }
     public void MarkStreamingWindowUpdated() => StreamingWindowUpdatesFrame++;
     public void MarkFocusBudgetUpdated()
     {

@@ -74,6 +74,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         _usedBucketCount = 0;
+        int usedMemberCount = 0;
         foreach (ref var chunk in _engine.World.Query(in Query))
         {
             Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
@@ -111,8 +112,11 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 }
 
                 bucket.Members.Add(agentIndices[index].Value);
+                usedMemberCount++;
             }
         }
+
+        Simulation.ObserveOrderIngestionOccupancy(_usedBucketCount, usedMemberCount);
 
         MassNavigationRouteExecutionSink? routeSink = ResolveRouteSink();
         routeSink?.BeginSync();

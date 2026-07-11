@@ -37,9 +37,10 @@ public sealed partial class MassNavigationFlowSolverState
     private readonly float _playAreaMaxYCm;
 
     private readonly int _parallelWorkerCount;
+    private readonly int _flowStateCapacity;
+    private readonly HashSet<int> _membershipChangedTeamIds;
 
     private readonly float[] _staticCost;
-    private readonly float[] _cost;
     private readonly float[] _obsX;
     private readonly float[] _obsY;
     private readonly float[] _obsWorldX;
@@ -105,7 +106,13 @@ public sealed partial class MassNavigationFlowSolverState
     private bool _useCandidateGating;
     private int _entitySyncDirtyCount;
     private int _arrivalEventCount;
-    private bool _flowDirty = true;
+    private bool _staticObstacleCostDirty = true;
+    private bool _flowCostsDirty = true;
+    private bool _flowSolveDirty = true;
+    private bool _flowSolveBatchActive;
+    private int _flowSolveCursor;
+    private int _flowSolveBatchStateCount;
+    private bool _publishedFlowFrameValid;
     private float _maxBodyRadiusCm;
     private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
     private bool _maxInteractingBodyRadiiDirty = true;
@@ -138,6 +145,13 @@ public sealed partial class MassNavigationFlowSolverState
     public int ParallelWorkerCount => _parallelWorkerCount;
     internal int PreparedAgentCapacity => _preparedAgentCapacity;
     internal int AgentStorageAllocationCount { get; private set; }
+    internal bool PublishedFlowFrameValid => _publishedFlowFrameValid;
+    internal int FlowStateCount => _flowStates.Count;
+    internal int FlowStateCapacity => _flowStateCapacity;
+    internal int FlowStateStorageAllocationCount { get; private set; }
+    internal int PeakFlowStateCount { get; private set; }
+    internal int PeakUnitCount { get; private set; }
+    internal int TeamMembershipRebuildCount { get; private set; }
     public int SeparationHashCellSizeCm => _separationHashCellSizeCm;
     public int SeparationHashWidth => _separationHashWidth;
     public int SeparationHashHeight => _separationHashHeight;
@@ -154,10 +168,14 @@ public sealed partial class MassNavigationFlowSolverState
     public float WorldOriginXCm => _worldOriginXCm;
     public float WorldOriginYCm => _worldOriginYCm;
 
-    public MassNavigationFlowSolverState(MassNavigationFlowSolverConfig solver)
+    public MassNavigationFlowSolverState(MassNavigationFlowSolverConfig solver, int flowStateCapacity)
     {
         ArgumentNullException.ThrowIfNull(solver);
         solver.Validate();
+        if (flowStateCapacity <= 0)
+        {
+            throw new InvalidOperationException("MassNavigationFlowSolverState requires flowStateCapacity > 0.");
+        }
 
         _fieldWidthCm = solver.FieldWidthCm;
         _fieldHeightCm = solver.FieldHeightCm;
@@ -167,6 +185,8 @@ public sealed partial class MassNavigationFlowSolverState
         _gridCellCount = _gridWidth * _gridHeight;
         _maxObstacleCount = solver.MaxObstacleCount;
         _parallelWorkerCount = solver.ParallelWorkerCount;
+        _flowStateCapacity = flowStateCapacity;
+        _membershipChangedTeamIds = new HashSet<int>(flowStateCapacity);
         _separationHashCellSizeCm = solver.SeparationHashCellSizeCm;
         _separationHashWidth = solver.SeparationHashWidth;
         _separationHashHeight = solver.SeparationHashHeight;
@@ -181,7 +201,6 @@ public sealed partial class MassNavigationFlowSolverState
         _playAreaMaxYCm = solver.PlayAreaMaxYCm;
 
         _staticCost = new float[_gridCellCount];
-        _cost = new float[_gridCellCount];
         _obsX = new float[_maxObstacleCount];
         _obsY = new float[_maxObstacleCount];
         _obsWorldX = new float[_maxObstacleCount];
@@ -256,6 +275,9 @@ public sealed partial class MassNavigationFlowSolverState
         _positionsCm[offset + 1] = ClampYPosition(localYCm);
     }
     public int GetTeam(int index) => _teams[index];
+    internal int GetTeamLocalIndex(int index) => _teamLocalIndices[index];
+    internal int GetTeamUnitCount(int teamId) => TryGetTeamState(teamId, out TeamRuntimeState team) ? team.UnitCount : 0;
+    internal int GetFlowRuntimeIndex(int index) => _flowRuntimeIndices[index];
     public float GetNavMass(int index) => _navMasses[index];
     public float GetVisualScale(int index) => _visualScales[index];
     public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
@@ -282,28 +304,10 @@ public sealed partial class MassNavigationFlowSolverState
         return new Vector2(_velocitiesCm[offset], _velocitiesCm[offset + 1]);
     }
 
-    public void SetWorldOrigin(float originXCm, float originYCm)
+    public void RebaseWorldOrigin(float originXCm, float originYCm)
     {
-        _worldOriginXCm = originXCm;
-        _worldOriginYCm = originYCm;
-        RefreshObstacleLocalFrame();
-    }
-
-    public void SetWorldBounds(float minXCm, float maxXCm, float minYCm, float maxYCm)
-    {
-        if (minXCm > maxXCm || minYCm > maxYCm)
-        {
-            throw new InvalidOperationException("MassNavigationFlowSolverState requires ordered world bounds.");
-        }
-
-        _worldMinXCm = minXCm;
-        _worldMaxXCm = maxXCm;
-        _worldMinYCm = minYCm;
-        _worldMaxYCm = maxYCm;
-    }
-
-    public void ShiftLocalFrame(float deltaXCm, float deltaYCm)
-    {
+        float deltaXCm = originXCm - _worldOriginXCm;
+        float deltaYCm = originYCm - _worldOriginYCm;
         if (deltaXCm == 0f && deltaYCm == 0f)
         {
             return;
@@ -334,8 +338,24 @@ public sealed partial class MassNavigationFlowSolverState
             team.TargetY -= deltaYCm;
         }
 
-        MarkFlowDirty();
-        MarkAllEntitiesDirty();
+        _worldOriginXCm = originXCm;
+        _worldOriginYCm = originYCm;
+        RefreshObstacleLocalFrame();
+        InvalidatePublishedFlowFrame();
+        MarkStaticObstacleCostDirty();
+    }
+
+    public void SetWorldBounds(float minXCm, float maxXCm, float minYCm, float maxYCm)
+    {
+        if (minXCm > maxXCm || minYCm > maxYCm)
+        {
+            throw new InvalidOperationException("MassNavigationFlowSolverState requires ordered world bounds.");
+        }
+
+        _worldMinXCm = minXCm;
+        _worldMaxXCm = maxXCm;
+        _worldMinYCm = minYCm;
+        _worldMaxYCm = maxYCm;
     }
 
     public void Reset(
@@ -361,6 +381,7 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         int unitCount = checked(unitsPerTeam * teamIds.Length);
+        ValidateScenarioFlowStateCapacity(teamIds, layer);
         PrepareOrRequireAgentCapacity(unitCount);
         UnitCount = unitCount;
         InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
@@ -368,6 +389,7 @@ public sealed partial class MassNavigationFlowSolverState
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
+        PeakUnitCount = Math.Max(PeakUnitCount, UnitCount);
         _frameCount = 0;
         SettledUnitCount = 0;
         _arrivalEventCount = 0;
@@ -376,6 +398,7 @@ public sealed partial class MassNavigationFlowSolverState
     public void ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         int unitCount = agentSeeds.Length;
+        ValidateAuthoredAgentMutation(agentSeeds, startIndex: 0, includeExistingFlowStates: false);
         PrepareOrRequireAgentCapacity(unitCount);
         UnitCount = unitCount;
         InitializeTeams(agentSeeds);
@@ -383,6 +406,7 @@ public sealed partial class MassNavigationFlowSolverState
         InitializeUnits(agentSeeds);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
+        PeakUnitCount = Math.Max(PeakUnitCount, UnitCount);
         _frameCount = 0;
         SettledUnitCount = 0;
         _arrivalEventCount = 0;
@@ -398,6 +422,7 @@ public sealed partial class MassNavigationFlowSolverState
         int startIndex = UnitCount;
         int newTotal = checked(startIndex + newAgentSeeds.Length);
         RequirePreparedAgentCapacity(newTotal);
+        ValidateAuthoredAgentMutation(newAgentSeeds, startIndex, includeExistingFlowStates: true);
         for (int i = 0; i < newAgentSeeds.Length; i++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[i];
@@ -460,13 +485,14 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         UnitCount = newTotal;
+        PeakUnitCount = Math.Max(PeakUnitCount, UnitCount);
         for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
         {
             MarkEntityDirty(unitIndex);
         }
 
         _maxInteractingBodyRadiiDirty = true;
-        MarkFlowDirty();
+        MarkFlowCostsDirty();
     }
 
     public void SetTeamTarget(int teamId, Vector2 targetCm)
@@ -484,10 +510,15 @@ public sealed partial class MassNavigationFlowSolverState
             hintX,
             hintY,
             Semantics.TargetProjection.TeamTargetClearanceCm);
+        if (team.TargetX == resolved.X && team.TargetY == resolved.Y)
+        {
+            return;
+        }
+
         team.TargetX = resolved.X;
         team.TargetY = resolved.Y;
         ResetTeamArrivalState(teamId);
-        MarkFlowDirty();
+        MarkFlowSolveDirty();
     }
 
     public bool SetUnitRuntimeProfile(
@@ -499,13 +530,30 @@ public sealed partial class MassNavigationFlowSolverState
         float speedCmPerSecond,
         MassNavigationAgentLayer layer)
     {
-        if ((uint)index >= (uint)UnitCount)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigationFlow runtime profile agent index {index} exceeds current unit count {UnitCount}.");
-        }
+        return SetUnitRuntimeProfileCore(
+            index,
+            teamId,
+            navMass,
+            visualScale,
+            bodyRadiusCm,
+            speedCmPerSecond,
+            layer,
+            deferTeamMembershipRebuild: false,
+            out _);
+    }
 
-        ValidateRuntimeProfile(index, navMass, visualScale, bodyRadiusCm, speedCmPerSecond);
+    private bool SetUnitRuntimeProfileCore(
+        int index,
+        int teamId,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer,
+        bool deferTeamMembershipRebuild,
+        out bool teamChanged)
+    {
+        ValidateUnitRuntimeProfileChange(index, teamId, navMass, visualScale, bodyRadiusCm, speedCmPerSecond, layer);
         uint categoryMask = layer.CategoryMask;
         uint interactionMask = layer.InteractionMask;
         bool changed =
@@ -518,6 +566,7 @@ public sealed partial class MassNavigationFlowSolverState
             _layerInteractionMasks[index] != interactionMask;
         if (!changed)
         {
+            teamChanged = false;
             return false;
         }
 
@@ -526,10 +575,23 @@ public sealed partial class MassNavigationFlowSolverState
             _teams[index] != teamId ||
             _layerCategoryMasks[index] != categoryMask ||
             _layerInteractionMasks[index] != interactionMask;
-        _teams[index] = teamId;
-        if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+        int teamStateIndex = _teamStateIndexById[teamId];
+        int flowStateIndex = FindFlowStateIndex(teamStateIndex, layer);
+
+        int previousTeamId = _teams[index];
+        teamChanged = previousTeamId != teamId;
+        if (teamChanged)
         {
-            _teamRuntimeIndices[index] = teamStateIndex;
+            _membershipChangedTeamIds.Add(previousTeamId);
+            _membershipChangedTeamIds.Add(teamId);
+        }
+
+        _teams[index] = teamId;
+        _teamRuntimeIndices[index] = teamStateIndex;
+        _flowRuntimeIndices[index] = flowStateIndex;
+        if (teamChanged && !deferTeamMembershipRebuild)
+        {
+            RebuildTeamMembershipIndices();
         }
 
         _navMasses[index] = navMass;
@@ -548,17 +610,83 @@ public sealed partial class MassNavigationFlowSolverState
         _layerCategoryMasks[index] = categoryMask;
         _layerInteractionMasks[index] = interactionMask;
         _maxInteractingBodyRadiiDirty = true;
-        if ((uint)_teamRuntimeIndices[index] < (uint)_teamStates.Count)
+        if (teamOrLayerChanged || MathF.Abs(previousBodyRadiusCm - bodyRadiusCm) > float.Epsilon)
         {
-            _flowRuntimeIndices[index] = ResolveFlowStateIndex(_teamRuntimeIndices[index], layer);
-            if (teamOrLayerChanged || MathF.Abs(previousBodyRadiusCm - bodyRadiusCm) > float.Epsilon)
-            {
-                MarkFlowDirty();
-            }
+            MarkFlowCostsDirty();
         }
 
         MarkEntityDirty(index);
         return true;
+    }
+
+    internal void ValidateUnitRuntimeProfileChange(
+        int index,
+        int teamId,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow runtime profile agent index {index} exceeds current unit count {UnitCount}.");
+        }
+
+        ValidateRuntimeProfile(index, navMass, visualScale, bodyRadiusCm, speedCmPerSecond);
+        ValidateRuntimeLayer(index, layer);
+        if (!_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow runtime profile for agent index {index} references unregistered team {teamId}; rebuild authored bindings before introducing teams.");
+        }
+
+        if (FindFlowStateIndex(teamStateIndex, layer) < 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow runtime profile for agent index {index} requires an unprepared flow state for team {teamId} and layer {layer.CategoryMask}/{layer.InteractionMask}; rebuild authored bindings before introducing team/layer combinations.");
+        }
+    }
+
+    internal bool SetUnitRuntimeProfileDeferred(
+        int index,
+        int teamId,
+        bool heavy,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer,
+        out bool teamChanged)
+    {
+        bool changed = SetUnitRuntimeProfileCore(
+            index,
+            teamId,
+            navMass,
+            visualScale,
+            bodyRadiusCm,
+            speedCmPerSecond,
+            layer,
+            deferTeamMembershipRebuild: true,
+            out teamChanged);
+        byte heavyFlag = heavy ? (byte)1 : (byte)0;
+        if (_heavyProfileFlags[index] != heavyFlag)
+        {
+            _heavyProfileFlags[index] = heavyFlag;
+            MarkEntityDirty(index);
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    internal void CompleteRuntimeProfileBatch(bool teamMembershipChanged)
+    {
+        if (teamMembershipChanged)
+        {
+            RebuildTeamMembershipIndices();
+        }
     }
 
     private void ValidateRuntimeProfile(
@@ -593,6 +721,15 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
+    private static void ValidateRuntimeLayer(int index, MassNavigationAgentLayer layer)
+    {
+        if (layer.CategoryMask == 0u || layer.InteractionMask == 0u)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow runtime profile for agent index {index} requires non-empty category and interaction layer masks.");
+        }
+    }
+
     public bool SetUnitRuntimeProfile(
         int index,
         int teamId,
@@ -618,11 +755,6 @@ public sealed partial class MassNavigationFlowSolverState
         return changed;
     }
 
-    public void RequestFlowRebuild()
-    {
-        MarkFlowDirty();
-    }
-
     public void ResetRuntimeObstaclesFromWorld(ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles)
     {
         if (obstacles.Length > _maxObstacleCount)
@@ -646,7 +778,7 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         ClearStaleObstacles(ObstacleCount, previousCount);
-        ForceFlowRebuild();
+        MarkStaticObstacleCostDirty();
     }
 
     private void ClearRuntimeObstacles()
@@ -1130,41 +1262,76 @@ public sealed partial class MassNavigationFlowSolverState
         bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
-        refreshObstacles |= _flowDirty;
-        refreshCrowd |= _flowDirty;
-        refreshFlow |= _flowDirty;
-        if (!refreshObstacles && !refreshCrowd && !refreshFlow)
-        {
-            return false;
-        }
-
+        ValidateFlowPlan(config);
         long start = observeFlowFieldRebuild != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
-        if (refreshObstacles)
+        bool performedWork = false;
+        if (refreshObstacles && _staticObstacleCostDirty)
         {
             RebuildStaticObstacleCost();
+            _staticObstacleCostDirty = false;
+            _flowCostsDirty = true;
+            MarkFlowSolveDirty();
+            performedWork = true;
         }
 
-        if (refreshCrowd || refreshObstacles)
+        if (config.CrowdCostEnabled)
         {
-            RebuildFlowCosts(config.CrowdCostEnabled
-                ? config.CrowdStampBudgetAgentsPerRefresh
-                : 0);
-            refreshFlow = true;
+            if (refreshCrowd && !_staticObstacleCostDirty)
+            {
+                RebuildFlowCosts(config.CrowdStampBudgetAgentsPerRefresh);
+                _flowCostsDirty = false;
+                MarkFlowSolveDirty();
+                performedWork = true;
+            }
         }
-
-        if (refreshFlow)
+        else if (_flowCostsDirty && !_staticObstacleCostDirty && (refreshObstacles || refreshFlow))
         {
-            SolveFlowFields();
-            _flowDirty = false;
+            RebuildFlowCosts(crowdStampBudgetAgents: 0);
+            _flowCostsDirty = false;
+            MarkFlowSolveDirty();
+            performedWork = true;
         }
 
-        if (observeFlowFieldRebuild != null)
+        if (refreshFlow && _flowSolveDirty && !_flowSolveBatchActive && !_staticObstacleCostDirty && !_flowCostsDirty)
+        {
+            BeginFlowSolveBatch();
+        }
+
+        bool solved = false;
+        if (_flowSolveBatchActive)
+        {
+            solved = AdvanceFlowSolveBatch(config.StateSolveBudgetPerSimulationStep);
+            performedWork = true;
+        }
+
+        if (performedWork && observeFlowFieldRebuild != null)
         {
             LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
             observeFlowFieldRebuild(LastFlowFieldRebuildMs);
         }
 
-        return true;
+        return solved;
+    }
+
+    private static void ValidateFlowPlan(MassNavigationFlowPlan config)
+    {
+        if (config.StateSolveBudgetPerSimulationStep <= 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation flow plan requires StateSolveBudgetPerSimulationStep > 0.");
+        }
+
+        if (config.CrowdStampBudgetAgentsPerRefresh < 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation flow plan requires CrowdStampBudgetAgentsPerRefresh >= 0.");
+        }
+
+        if (config.CrowdCostEnabled && config.CrowdStampBudgetAgentsPerRefresh == 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation flow plan requires CrowdStampBudgetAgentsPerRefresh > 0 when crowd cost is enabled.");
+        }
     }
 
     private void PrepareOrRequireAgentCapacity(int unitCount)
@@ -1473,18 +1640,91 @@ public sealed partial class MassNavigationFlowSolverState
         {
             FlowRuntimeState flowState = _flowStates[i];
             TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
-            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
+            ComputeFlow(flowState.Flow, flowState.Cost, team.TargetX, team.TargetY);
         }
+    }
+
+    private void BeginFlowSolveBatch()
+    {
+        _flowSolveBatchActive = true;
+        _flowSolveCursor = 0;
+        _flowSolveBatchStateCount = _flowStates.Count;
+        _flowSolveDirty = false;
+        for (int i = 0; i < _flowSolveBatchStateCount; i++)
+        {
+            FlowRuntimeState flowState = _flowStates[i];
+            TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+            flowState.BeginSolveSnapshot(team.TargetX, team.TargetY);
+        }
+    }
+
+    private bool AdvanceFlowSolveBatch(int stateBudget)
+    {
+        if (stateBudget <= 0)
+        {
+            throw new InvalidOperationException("MassNavigation flow state solve budget must be positive.");
+        }
+
+        int stateCount = _flowSolveBatchStateCount;
+        int stateCountThisStep = Math.Min(stateCount - _flowSolveCursor, stateBudget);
+        int end = _flowSolveCursor + stateCountThisStep;
+        for (int i = _flowSolveCursor; i < end; i++)
+        {
+            FlowRuntimeState flowState = _flowStates[i];
+            ComputeFlow(
+                flowState.PendingFlow,
+                flowState.SolveCost,
+                flowState.SolveTargetX,
+                flowState.SolveTargetY);
+        }
+
+        _flowSolveCursor = end;
+        if (_flowSolveCursor < stateCount)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < stateCount; i++)
+        {
+            FlowRuntimeState flowState = _flowStates[i];
+            flowState.PublishPendingFlow();
+            flowState.EndSolveSnapshot();
+        }
+
+        _flowSolveCursor = 0;
+        _flowSolveBatchStateCount = 0;
+        _flowSolveBatchActive = false;
+        _publishedFlowFrameValid = true;
+        return true;
     }
 
     private void ForceFlowRebuild()
     {
         RebuildStaticObstacleCost();
-        long start = System.Diagnostics.Stopwatch.GetTimestamp();
         RebuildFlowCosts(crowdStampBudgetAgents: 0);
         SolveFlowFields();
-        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
-        _flowDirty = false;
+        LastFlowFieldRebuildMs = 0f;
+        _staticObstacleCostDirty = false;
+        _flowCostsDirty = false;
+        _flowSolveDirty = false;
+        _flowSolveBatchActive = false;
+        _flowSolveCursor = 0;
+        _flowSolveBatchStateCount = 0;
+        _publishedFlowFrameValid = true;
+    }
+
+    private void InvalidatePublishedFlowFrame()
+    {
+        for (int i = 0; i < _flowSolveBatchStateCount; i++)
+        {
+            _flowStates[i].EndSolveSnapshot();
+        }
+
+        _flowSolveBatchActive = false;
+        _flowSolveCursor = 0;
+        _flowSolveBatchStateCount = 0;
+        _publishedFlowFrameValid = false;
+        _flowSolveDirty = true;
     }
 
     private void RebuildStaticObstacleCost()
@@ -1502,7 +1742,8 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
     {
-        Array.Copy(_staticCost, _cost, _staticCost.Length);
+        float[] cost = flowState.PrepareLatestCostForWrite();
+        Array.Copy(_staticCost, cost, _staticCost.Length);
         if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
         {
             return;
@@ -1518,7 +1759,7 @@ public sealed partial class MassNavigationFlowSolverState
             }
 
             int offset = unitIndex << 1;
-            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+            StampCrowdCost(cost, _positionsCm[offset], _positionsCm[offset + 1]);
         }
     }
 
@@ -1529,7 +1770,7 @@ public sealed partial class MassNavigationFlowSolverState
             (_layerInteractionMasks[agentIndex] & flowState.CategoryMask) != 0u;
     }
 
-    private void StampCrowdCost(float xCm, float yCm)
+    private void StampCrowdCost(float[] cost, float xCm, float yCm)
     {
         int gx = Math.Clamp((int)(xCm / _flowCellSizeCm), 0, _gridWidth - 1);
         int gy = Math.Clamp((int)(yCm / _flowCellSizeCm), 0, _gridHeight - 1);
@@ -1551,7 +1792,7 @@ public sealed partial class MassNavigationFlowSolverState
                 }
 
                 int idx = rowBase + nx;
-                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
+                if (cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
                     continue;
                 }
@@ -1559,14 +1800,26 @@ public sealed partial class MassNavigationFlowSolverState
                 float penalty = (ox == 0 && oy == 0)
                     ? Semantics.Solver.CrowdStampCenterCost
                     : Semantics.Solver.CrowdStampNeighborCost;
-                _cost[idx] += penalty;
+                cost[idx] += penalty;
             }
         }
     }
 
-    private void MarkFlowDirty()
+    private void MarkFlowSolveDirty()
     {
-        _flowDirty = true;
+        _flowSolveDirty = true;
+    }
+
+    private void MarkFlowCostsDirty()
+    {
+        _flowCostsDirty = true;
+        _flowSolveDirty = true;
+    }
+
+    private void MarkStaticObstacleCostDirty()
+    {
+        _staticObstacleCostDirty = true;
+        MarkFlowCostsDirty();
     }
 
     private void InitializeUnits(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -1643,7 +1896,7 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private void ComputeFlow(float[] flow, float targetX, float targetY)
+    private void ComputeFlow(float[] flow, float[] cost, float targetX, float targetY)
     {
         for (int y = 0; y < _gridHeight; y++)
         {
@@ -1651,7 +1904,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 int idx = (y * _gridWidth) + x;
                 int flowIndex = idx << 1;
-                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
+                if (cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
                     flow[flowIndex] = 0f;
                     flow[flowIndex + 1] = 0f;
@@ -1693,7 +1946,7 @@ public sealed partial class MassNavigationFlowSolverState
                             continue;
                         }
 
-                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                        if (cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                         {
                             float ovx = -offsetX;
                             float ovy = -offsetY;
@@ -1861,35 +2114,38 @@ public sealed partial class MassNavigationFlowSolverState
                         int gy = (int)(py / _flowCellSizeCm);
                         float avoidX = 0f;
                         float avoidY = 0f;
-                        for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
+                        if (_publishedFlowFrameValid)
                         {
-                            int ny = gy + oy;
-                            if ((uint)ny >= (uint)_gridHeight)
+                            for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
                             {
-                                continue;
-                            }
-
-                            int rowOffset = ny * _gridWidth;
-                            for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
-                            {
-                                if (ox == 0 && oy == 0)
+                                int ny = gy + oy;
+                                if ((uint)ny >= (uint)_gridHeight)
                                 {
                                     continue;
                                 }
 
-                                int nx = gx + ox;
-                                if ((uint)nx >= (uint)_gridWidth)
+                                int rowOffset = ny * _gridWidth;
+                                for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
                                 {
-                                    continue;
-                                }
+                                    if (ox == 0 && oy == 0)
+                                    {
+                                        continue;
+                                    }
 
-                                if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                                {
-                                    float obstacleDistanceSq = ox * ox + oy * oy;
-                                    float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
-                                    float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
-                                    avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
-                                    avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                    int nx = gx + ox;
+                                    if ((uint)nx >= (uint)_gridWidth)
+                                    {
+                                        continue;
+                                    }
+
+                                    if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                                    {
+                                        float obstacleDistanceSq = ox * ox + oy * oy;
+                                        float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
+                                        float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
+                                        avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                        avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                    }
                                 }
                             }
                         }
@@ -1925,7 +2181,9 @@ public sealed partial class MassNavigationFlowSolverState
                     int gy = (int)(py / _flowCellSizeCm);
                     float flowX = 0f;
                     float flowY = 0f;
-                    if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
+                    if (_publishedFlowFrameValid &&
+                        (uint)gx < (uint)_gridWidth &&
+                        (uint)gy < (uint)_gridHeight)
                     {
                         int flowOffset = ((gy * _gridWidth) + gx) << 1;
                         flowX = flowState.Flow[flowOffset];
@@ -2744,6 +3002,26 @@ public sealed partial class MassNavigationFlowSolverState
 
     private int ResolveFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer)
     {
+        int existingIndex = FindFlowStateIndex(teamStateIndex, layer);
+        if (existingIndex >= 0)
+        {
+            return existingIndex;
+        }
+
+        if (_flowStates.Count >= _flowStateCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlowSolverState required more than runtime.capacity.flowStateCapacity {_flowStateCapacity} flow states.");
+        }
+
+        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));
+        FlowStateStorageAllocationCount++;
+        PeakFlowStateCount = Math.Max(PeakFlowStateCount, _flowStates.Count);
+        return _flowStates.Count - 1;
+    }
+
+    private int FindFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer)
+    {
         for (int i = 0; i < _flowStates.Count; i++)
         {
             FlowRuntimeState existing = _flowStates[i];
@@ -2755,9 +3033,93 @@ public sealed partial class MassNavigationFlowSolverState
             }
         }
 
-        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));
-        return _flowStates.Count - 1;
+        return -1;
     }
+
+    private void RebuildTeamMembershipIndices()
+    {
+        TeamMembershipRebuildCount++;
+        for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
+        {
+            _teamStates[teamStateIndex].UnitCount = 0;
+        }
+
+        for (int unitIndex = 0; unitIndex < UnitCount; unitIndex++)
+        {
+            int teamStateIndex = _teamRuntimeIndices[unitIndex];
+            TeamRuntimeState team = _teamStates[teamStateIndex];
+            _teamLocalIndices[unitIndex] = team.UnitCount++;
+            if (_membershipChangedTeamIds.Contains(_teams[unitIndex]))
+            {
+                ResetUnitArrivalState(unitIndex, clearRetryCount: true);
+            }
+        }
+
+        _membershipChangedTeamIds.Clear();
+        UpdateSettledUnitCount();
+    }
+
+    private void ValidateScenarioFlowStateCapacity(ReadOnlySpan<int> teamIds, MassNavigationAgentLayer layer)
+    {
+        ValidateRuntimeLayer(index: 0, layer);
+        var uniqueTeams = new HashSet<int>();
+        for (int i = 0; i < teamIds.Length; i++)
+        {
+            if (!uniqueTeams.Add(teamIds[i]))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigationFlowSolverState scenario reset contains duplicate team id {teamIds[i]}.");
+            }
+        }
+
+        if (uniqueTeams.Count > _flowStateCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlowSolverState requires {uniqueTeams.Count} flow states, exceeding runtime.capacity.flowStateCapacity {_flowStateCapacity}.");
+        }
+    }
+
+    private void ValidateAuthoredAgentMutation(
+        ReadOnlySpan<MassNavigationAgentSeed> agentSeeds,
+        int startIndex,
+        bool includeExistingFlowStates)
+    {
+        var requiredStates = new HashSet<AuthoredFlowStateKey>();
+        if (includeExistingFlowStates)
+        {
+            for (int i = 0; i < _flowStates.Count; i++)
+            {
+                FlowRuntimeState flowState = _flowStates[i];
+                int teamId = _teamStates[flowState.TeamStateIndex].TeamId;
+                requiredStates.Add(new AuthoredFlowStateKey(
+                    teamId,
+                    flowState.CategoryMask,
+                    flowState.InteractionMask));
+            }
+        }
+
+        for (int i = 0; i < agentSeeds.Length; i++)
+        {
+            MassNavigationAgentSeed seed = agentSeeds[i];
+            int unitIndex = checked(startIndex + i);
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
+            ValidateRuntimeLayer(unitIndex, seed.Layer);
+            requiredStates.Add(new AuthoredFlowStateKey(
+                seed.TeamId,
+                seed.Layer.CategoryMask,
+                seed.Layer.InteractionMask));
+            if (requiredStates.Count > _flowStateCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigationFlowSolverState requires {requiredStates.Count} flow states, exceeding runtime.capacity.flowStateCapacity {_flowStateCapacity}.");
+            }
+        }
+    }
+
+    private readonly record struct AuthoredFlowStateKey(
+        int TeamId,
+        uint CategoryMask,
+        uint InteractionMask);
 
     private static UnitStepJob[] CreateStepJobs(int count)
     {

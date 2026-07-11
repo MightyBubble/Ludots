@@ -762,7 +762,7 @@ namespace Ludots.Tests.GAS
             roadRuntime.UpdateLoadedChunks(engine);
             Assert.That(board.LoadedChunksSource.ActiveChunkKeys.Count, Is.EqualTo(roadOnlyWindowCount));
 
-            massNavigation.BindBoardWorld(board.WorldSize, board.LoadedChunks);
+            massNavigation.BindBoardWorld(board.WorldSize, board.LoadedChunksSource);
 
             Assert.That(board.LoadedChunksSource.ContributorCount, Is.EqualTo(3));
             Assert.That(board.LoadedChunksSource.ActiveChunkKeys.Count, Is.GreaterThanOrEqualTo(roadOnlyWindowCount));

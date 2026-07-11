@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -23,6 +24,7 @@ public sealed class MassNavigationRuntime
         out MassNavigationMapRuntimeState? mapState)
     {
         ArgumentNullException.ThrowIfNull(engine);
+        bool created = false;
         if (!_statesByMap.TryGetValue(mapId, out mapState))
         {
             if (!TryLoadConfigForCurrentMap(engine, mapId, out MassNavigationCapabilityProfile? capabilityProfile))
@@ -30,20 +32,38 @@ public sealed class MassNavigationRuntime
                 return false;
             }
 
+            MassNavigationCapabilityProfile loadedProfile = capabilityProfile
+                ?? throw new InvalidOperationException("MassNavigation config activation reported success without a capability profile.");
+            var newSimulation = new MassNavigationSimulationRuntime(mapId, loadedProfile.Runtime);
+            newSimulation.BindCapabilityProfileProvenance(loadedProfile);
             mapState = new MassNavigationMapRuntimeState(
                 mapId,
-                capabilityProfile,
-                new MassNavigationSimulationRuntime(mapId, capabilityProfile.Runtime));
-            _statesByMap.Add(mapId, mapState);
+                loadedProfile,
+                newSimulation);
+            created = true;
         }
 
         MassNavigationSimulationRuntime simulation = mapState.Simulation;
+        try
+        {
+            BindBoardWorld(engine, simulation);
+        }
+        catch
+        {
+            simulation.ReleaseStreamingWindow();
+            throw;
+        }
+
+        if (created)
+        {
+            _statesByMap.Add(mapId, mapState);
+        }
+
         _binding.Activate(simulation);
 
         engine.SetService(MassNavigationKeys.RuntimeBinding, _binding);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
         EnsureSystemsInstalled(engine);
-        BindBoardWorld(engine, simulation);
         simulation.SetWorldOperationsReady(true);
         return true;
     }
@@ -180,8 +200,10 @@ public sealed class MassNavigationRuntime
 
         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
-        loaded.Runtime.AgentProfiles.BindAgentProfiles(agentProfiles);
-        profile = loaded;
+        MassNavigationCapabilityProfile loadedProfile = loaded
+            ?? throw new InvalidOperationException("MassNavigation config loader reported success without a capability profile.");
+        loadedProfile.Runtime.AgentProfiles.BindAgentProfiles(agentProfiles);
+        profile = loadedProfile;
         return true;
     }
 
@@ -196,7 +218,13 @@ public sealed class MassNavigationRuntime
             throw new InvalidOperationException("MassNavigation requires CoreServiceKeys.LoadedChunks to be owned by the active primary board.");
         }
 
-        simulation.BindBoardWorld(board.WorldSize, board.LoadedChunks);
+        if (board.LoadedChunks is not WorldGridLoadedChunks worldGridLoadedChunks)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation requires the active primary board to expose {nameof(WorldGridLoadedChunks)}, but received '{board.LoadedChunks.GetType().FullName}'.");
+        }
+
+        simulation.BindBoardWorld(board.WorldSize, worldGridLoadedChunks);
     }
 }
 

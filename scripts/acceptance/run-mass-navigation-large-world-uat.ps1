@@ -9,6 +9,7 @@ param(
     [int]$PerformanceWarmupTicks = 300,
     [ValidateRange(1, 3600)]
     [int]$SteadyStateSeconds = 60,
+    [switch]$MassNavigationTimingEnabled,
     [switch]$StopOnFailure
 )
 
@@ -78,6 +79,8 @@ function Write-SoakReport {
 
     $passed = @($RunRows | Where-Object { $_.success -eq $true }).Count
     $failed = @($RunRows | Where-Object { $_.success -ne $true }).Count
+    $timingEnabled = $RunRows.Count -gt 0 -and $RunRows[0].steady_timing_enabled_requested -eq $true
+    $timingMode = if ($timingEnabled) { "timing-enabled" } else { "timing-disabled" }
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add("# MassNavigation Large-World UAT Soak")
     $lines.Add("")
@@ -86,7 +89,7 @@ function Write-SoakReport {
     $lines.Add("- Launcher path: ``scripts/run-mod-launcher.cmd cli launch '`$capability_standard_mass_navigation_large_world_10k' --adapter raylib --record ...``.")
     $lines.Add("- Evidence per run: ``battle-report.md``, ``trace.jsonl``, ``path.mmd``, ``summary.json``, ``visible-checklist.md``, and ``screens/timeline.png``.")
     $lines.Add("- Canonical latest successful run: ``artifacts/acceptance/mass-navigation-issue-642/{battle-report.md,trace.jsonl,path.mmd,summary.json}``.")
-    $lines.Add("- Performance measurement: timing-disabled, process-wide allocation/GC/working-set evidence plus solver agent-storage allocation-count delta.")
+    $lines.Add("- Performance measurement: $timingMode MassNavigation diagnostics, disabled presentation system-breakdown timing, process-wide allocation/GC/working-set evidence, and solver-owned storage deltas.")
     $lines.Add("- Measurement scope is the full headless launcher process; allocation and working-set values are not presented as MassNavigation-only attribution.")
     $lines.Add("")
     $lines.Add("## Result")
@@ -109,7 +112,7 @@ function Write-SoakReport {
     $lines.Add("| Complete health HUD | All 10K bars and 10K texts survive world-to-screen projection | exact bar/text counts and zero screen-HUD drops |")
     $lines.Add("| Camera/minimap residency | Remote minimap jump does not respawn/reset the scenario | stable agent/spawn/reset counts |")
     $lines.Add("| Avoidance | Central crowd overlap resolves through the production solver | final overlap/penetration checks |")
-    $lines.Add("| Timing-disabled steady state | Instrumentation does not dominate the measured interval | ``steady_timing_disabled == true`` |")
+    $lines.Add("| Requested timing mode | The report matches the benchmark mode instead of hard-coding timing-disabled text | ``steady_timing_enabled_requested == $($timingEnabled.ToString().ToLowerInvariant())`` |")
     $lines.Add("| Capacity stability | Solver agent storage is prepared before the interval and does not grow | ``steady_capacity_growth_events == 0`` |")
     $lines.Add("| Memory evidence | Process-wide GC, retained heap and working set are reported without subsystem attribution | exact ``steady_*`` byte/count fields |")
     $lines.Add("")
@@ -164,8 +167,10 @@ while ($true) {
 
     $previousWarmupTicks = $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS
     $previousSteadyStateSeconds = $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS
+    $previousMassNavigationTimingEnabled = $env:LUDOTS_MASS_NAV_STEADY_TIMING_ENABLED
     $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS = [string]$PerformanceWarmupTicks
     $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS = [string]$SteadyStateSeconds
+    $env:LUDOTS_MASS_NAV_STEADY_TIMING_ENABLED = if ($MassNavigationTimingEnabled) { "true" } else { "false" }
     $previousErrorActionPreference = $ErrorActionPreference
     Push-Location $repoRoot
     try {
@@ -180,6 +185,7 @@ while ($true) {
         Pop-Location
         $env:LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS = $previousWarmupTicks
         $env:LUDOTS_MASS_NAV_STEADY_STATE_SECONDS = $previousSteadyStateSeconds
+        $env:LUDOTS_MASS_NAV_STEADY_TIMING_ENABLED = $previousMassNavigationTimingEnabled
     }
 
     $endedAt = Get-Date
@@ -226,6 +232,7 @@ while ($true) {
         steady_workload_order_count = if ($summary) { $summary.steady_workload_order_count } else { $null }
         steady_average_tick_ms = if ($summary) { $summary.steady_average_tick_ms } else { $null }
         steady_max_tick_ms = if ($summary) { $summary.steady_max_tick_ms } else { $null }
+        steady_timing_enabled_requested = if ($summary) { $summary.steady_timing_enabled_requested } else { $null }
         steady_timing_disabled = if ($summary) { $summary.steady_timing_disabled } else { $null }
         steady_total_allocated_bytes = if ($summary) { $summary.steady_total_allocated_bytes } else { $null }
         steady_allocated_bytes_per_second = if ($summary) { $summary.steady_allocated_bytes_per_second } else { $null }

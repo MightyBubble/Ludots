@@ -40,7 +40,8 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
             MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
-            simulation.ObserveSimTick();
+            simulation.Telemetry.MarkCadenceStep(in step);
+            simulation.Telemetry.ObserveSimTick();
 
             if (step.UpdateTargets)
             {
@@ -51,7 +52,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                 ApplyRouteExecutionTargets(simulation);
                 if (timingEnabled)
                 {
-                    simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
+                    simulation.Telemetry.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
                 }
             }
 
@@ -60,7 +61,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                     step.RefreshFlow,
                     step.RefreshCrowd,
                     step.RefreshObstacles,
-                    timingEnabled ? simulation.ObserveFlowFieldRebuild : null))
+                    timingEnabled ? simulation.Telemetry.ObserveFlowFieldRebuild : null))
             {
                 simulation.MarkFlowReconcile();
             }
@@ -72,12 +73,12 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                 simulation.NavGroupRuntime,
                 step.RunHardResolve,
                 simulation.Cadence.HardResolveCandidateThresholdAgents,
-                timingEnabled ? simulation.ObserveStepPrep : null,
-                timingEnabled ? simulation.ObserveLocalSteering : null,
-                timingEnabled ? simulation.ObserveHardResolve : null);
+                timingEnabled ? simulation.Telemetry.ObserveStepPrep : null,
+                timingEnabled ? simulation.Telemetry.ObserveLocalSteering : null,
+                timingEnabled ? simulation.Telemetry.ObserveHardResolve : null);
             if (timingEnabled)
             {
-                simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                simulation.Telemetry.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
             }
 
             if (step.SyncEntities)
@@ -86,7 +87,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                 simulation.MassNavigationFlow.SyncEntities(_engine.World, simulation.AgentState);
                 if (timingEnabled)
                 {
-                    simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                    simulation.Telemetry.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
                 }
             }
         }

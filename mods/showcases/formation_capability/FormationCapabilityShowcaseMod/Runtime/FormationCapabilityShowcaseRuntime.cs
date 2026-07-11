@@ -1091,7 +1091,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         simulation.SetCommandActorSnapshot(commandActors[..written], view.Revision);
-        simulation.ObserveCommandActorSyncTick();
+        simulation.Telemetry.ObserveCommandActorSyncTick();
         _lastCommandSourceOwner = owner;
         _lastCommandSourceRevision = view.Revision;
         _lastStructuralRevision = simulation.StructuralChangeRevision;

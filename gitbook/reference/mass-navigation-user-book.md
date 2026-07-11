@@ -56,7 +56,11 @@ Formation Capability 示例的文件入口：
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
 
-`MassNavigationConfig.json` 不是进程级单对象，而是 ConfigPipeline `ArrayById` profile catalog。地图只在 `Metadata.massNavigation.profileId` 里显式选择 profile；profile 不重复声明 `mapId`。执行参数归 `runtime`，可选示例生成/表现/关系数据归 `sceneAuthoring`。Formation Capability 示例通过 `id=formation_capability_showcase` 的 profile 覆盖/继承基础 profile，不要在业务 runtime 里缓存“最后加载的配置”。
+`MassNavigationConfig.json` 不是进程级单对象，而是 ConfigPipeline `ArrayById` profile catalog。地图只在 `Metadata.massNavigation.profileId` 里显式选择 profile；profile 不重复声明 `mapId`。执行参数归 `runtime`，示例生成/表现/关系数据归必填的独立 `sceneAuthoring` domain；不自动生成场景时必须显式配置 `autoSpawnConfiguredScenario=false`，并将其余 authoring 数据置为 `null`。Formation Capability 示例通过 `id=formation_capability_showcase` 的 profile 覆盖/继承基础 profile，不要在业务 runtime 里缓存“最后加载的配置”。
+
+`runtime.cadence.*Hz` 是各阶段消费 pending work 的唯一频率合同。`flowStepHz` 与 `flowObstacleStampHz` 必须为正；启用 `flow.crowdCostEnabled` 时，`flowCrowdStampHz` 也必须为正。调度脉冲按配置频率产生，但目标、障碍和 crowd 成本都未变化时，flow pipeline 会跳过重复计算，所以实际 reconcile 次数可以低于调度频率；有持续 pending work 时，实际次数必须受对应 Hz 精确约束。一次 flow reconcile 由 cadence 脉冲启动，并按 `flow.stateSolveBudgetPerSimulationStep` 分步写入双缓冲；所有 flow state 完成后才原子发布，避免单 tick 峰值和预算切片暴露混合 generation。
+
+`runtime.capacity.flowStateCapacity` 是 `(team, categoryMask, interactionMask)` flow-state 组合的显式上限，不等同于 team 数。基础 profile 配置 `16`，具体 Mod 必须按其实际 team/layer 组合与余量 author；运行期发现新组合超出容量会在分配前 fail-fast，不能动态扩容或静默复用错误 flow。
 
 长期注册的 Core/Mod system 不能缓存首次拿到的 `MassNavigationSimulationRuntime`。它们必须从 `MassNavigationRuntimeBinding` 解析当前焦点地图的 runtime，showcase sidecar 还必须按所属地图门禁，并从 ECS query 排除 `SuspendedTag`；否则 push/pop 或 unload/reload 会把旧地图实体和新 runtime 混在一起。
 

@@ -65,6 +65,9 @@ public sealed class MassNavigationGroupRuntime
 
     public int ActiveGroupCount { get; private set; }
     public int ActiveOrderGroupCount => _orderTokenToGroupId.Count;
+    public int PeakActiveGroupCount { get; private set; }
+    public int PeakActiveOrderGroupCount { get; private set; }
+    public int PeakGroupMemberCount { get; private set; }
     public float CommandActorRotationRadians { get; private set; }
 
     public void Reset()
@@ -79,6 +82,9 @@ public sealed class MassNavigationGroupRuntime
         _visitedGroupIds.Clear();
         Array.Fill(_groupIdsByAgentIndex, -1);
         ActiveGroupCount = 0;
+        PeakActiveGroupCount = 0;
+        PeakActiveOrderGroupCount = 0;
+        PeakGroupMemberCount = 0;
         CommandActorRotationRadians = 0f;
     }
 
@@ -244,7 +250,7 @@ public sealed class MassNavigationGroupRuntime
                 orderTargetsPreserved;
         }
 
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
     }
 
     public bool HasGroup(int unitIndex)
@@ -459,7 +465,7 @@ public sealed class MassNavigationGroupRuntime
         if (assignedCount == 1)
         {
             AssignLooseTargets(simulation, memberIndices, assignedCount, destinationWorldCm, previousRotation);
-            ActiveGroupCount = CountActiveGroups();
+            RefreshOccupancy();
             RefreshCommandActorRotation(world, agentState, commandActors);
             return assignedCount;
         }
@@ -486,7 +492,7 @@ public sealed class MassNavigationGroupRuntime
         _groups[groupId] = group;
         AssignGroupTargets(simulation, groupId, group, resetRecovery: true);
 
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
         RefreshCommandActorRotation(world, agentState, commandActors);
         return assignedCount;
     }
@@ -534,7 +540,7 @@ public sealed class MassNavigationGroupRuntime
                 AssignGroupTargets(simulation, groupId, created, resetRecovery: true);
             }
 
-            ActiveGroupCount = CountActiveGroups();
+            RefreshOccupancy();
             return memberIndices.Length;
         }
 
@@ -579,7 +585,7 @@ public sealed class MassNavigationGroupRuntime
             AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
         }
 
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
         return group.MemberCount;
     }
 
@@ -613,7 +619,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         DissolveGroup(groupId, group);
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
     }
 
     public void PruneInactiveOrderGroups(MassNavigationFlowSolverState simulation, HashSet<int> activeTokens)
@@ -650,7 +656,7 @@ public sealed class MassNavigationGroupRuntime
             DissolveGroup(groupId, group);
         }
 
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
     }
 
     public void RotateCommandActors(World world, MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors, float deltaRadians)
@@ -842,7 +848,7 @@ public sealed class MassNavigationGroupRuntime
             group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
         }
 
-        ActiveGroupCount = CountActiveGroups();
+        RefreshOccupancy();
         RefreshActiveGroupRotation();
     }
 
@@ -1142,18 +1148,24 @@ public sealed class MassNavigationGroupRuntime
         }
     }
 
-    private int CountActiveGroups()
+    private void RefreshOccupancy()
     {
-        int count = 0;
+        int activeGroupCount = 0;
+        int maxMemberCount = 0;
         for (int i = 0; i < _groups.Count; i++)
         {
-            if (_groups[i] != null)
+            NavGroupState? group = _groups[i];
+            if (group != null)
             {
-                count++;
+                activeGroupCount++;
+                maxMemberCount = Math.Max(maxMemberCount, group.MemberCount);
             }
         }
 
-        return count;
+        ActiveGroupCount = activeGroupCount;
+        PeakActiveGroupCount = Math.Max(PeakActiveGroupCount, activeGroupCount);
+        PeakActiveOrderGroupCount = Math.Max(PeakActiveOrderGroupCount, _orderTokenToGroupId.Count);
+        PeakGroupMemberCount = Math.Max(PeakGroupMemberCount, maxMemberCount);
     }
 
     private NavGroupState CreateGroup(

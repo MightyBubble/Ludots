@@ -407,6 +407,7 @@ namespace Ludots.Tests.Presentation
                     OrderIngestionMemberCapacity = 8,
                     LoadedChunkCapacity = 32,
                     MetadataTeamCapacity = 2,
+                    FlowStateCapacity = 8,
                 },
                 AgentProfiles = new MassNavigationAgentProfileSetConfig
                 {

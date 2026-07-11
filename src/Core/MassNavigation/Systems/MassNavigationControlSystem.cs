@@ -33,7 +33,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             return;
         }
 
-        Simulation.ObserveControlTick();
+        Simulation.Telemetry.ObserveControlTick();
 
         if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
         {

@@ -17,7 +17,8 @@ public readonly record struct MassNavigationCadencePlan(
 
 public readonly record struct MassNavigationFlowPlan(
     bool CrowdCostEnabled,
-    int CrowdStampBudgetAgentsPerRefresh);
+    int CrowdStampBudgetAgentsPerRefresh,
+    int StateSolveBudgetPerSimulationStep);
 
 public readonly record struct MassNavigationStreamingPlan(
     float RetainSeconds,
@@ -33,7 +34,8 @@ public readonly record struct MassNavigationRuntimeCapacityPlan(
     int OrderIngestionTokenCapacity,
     int OrderIngestionMemberCapacity,
     int LoadedChunkCapacity,
-    int MetadataTeamCapacity);
+    int MetadataTeamCapacity,
+    int FlowStateCapacity);
 
 public readonly record struct MassNavigationHotZonePlan(
     string Id,
@@ -203,7 +205,8 @@ public sealed class MassNavigationRuntimePlan
                 config.Cadence.OrderIdleScanIntervalFrames),
             new MassNavigationFlowPlan(
                 config.Flow.CrowdCostEnabled,
-                config.Flow.CrowdStampBudgetAgentsPerRefresh),
+                config.Flow.CrowdStampBudgetAgentsPerRefresh,
+                config.Flow.StateSolveBudgetPerSimulationStep),
             new MassNavigationStreamingPlan(
                 config.Streaming.RetainSeconds,
                 config.Streaming.RadiusCm),
@@ -217,7 +220,8 @@ public sealed class MassNavigationRuntimePlan
                 capacity.OrderIngestionTokenCapacity,
                 capacity.OrderIngestionMemberCapacity,
                 capacity.LoadedChunkCapacity,
-                capacity.MetadataTeamCapacity),
+                capacity.MetadataTeamCapacity,
+                capacity.FlowStateCapacity),
             new MassNavigationWorldPlan(config.World
                 ?? throw new InvalidOperationException("MassNavigation runtime plan requires world config.")),
             new MassNavigationAgentProfilePlanSet(config.AgentProfiles));

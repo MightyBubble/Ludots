@@ -21,11 +21,17 @@ public sealed class MassNavigationCadenceConfig
     {
         ValidateHz(nameof(SimulationHz), SimulationHz, allowZero: false);
         ValidateHz(nameof(TargetUpdateHz), TargetUpdateHz, allowZero: true);
-        ValidateHz(nameof(FlowStepHz), FlowStepHz, allowZero: true);
+        ValidateHz(nameof(FlowStepHz), FlowStepHz, allowZero: false);
         ValidateHz(nameof(FlowCrowdStampHz), FlowCrowdStampHz, allowZero: true);
-        ValidateHz(nameof(FlowObstacleStampHz), FlowObstacleStampHz, allowZero: true);
+        ValidateHz(nameof(FlowObstacleStampHz), FlowObstacleStampHz, allowZero: false);
         ValidateHz(nameof(HardResolveHz), HardResolveHz, allowZero: true);
         ValidateHz(nameof(EntitySyncHz), EntitySyncHz, allowZero: true);
+        ValidateSubrate(nameof(TargetUpdateHz), TargetUpdateHz);
+        ValidateSubrate(nameof(FlowStepHz), FlowStepHz);
+        ValidateSubrate(nameof(FlowCrowdStampHz), FlowCrowdStampHz);
+        ValidateSubrate(nameof(FlowObstacleStampHz), FlowObstacleStampHz);
+        ValidateSubrate(nameof(HardResolveHz), HardResolveHz);
+        ValidateSubrate(nameof(EntitySyncHz), EntitySyncHz);
 
         if (MaxStepsPerFixedTick < 1)
         {
@@ -48,6 +54,15 @@ public sealed class MassNavigationCadenceConfig
         if (value < 0 || (!allowZero && value == 0))
         {
             throw new InvalidOperationException($"MassNavigation cadence {name} is invalid.");
+        }
+    }
+
+    private void ValidateSubrate(string name, int value)
+    {
+        if (value > SimulationHz)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cadence {name} {value} cannot exceed SimulationHz {SimulationHz}.");
         }
     }
 

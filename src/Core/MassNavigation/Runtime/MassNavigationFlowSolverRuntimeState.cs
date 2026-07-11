@@ -90,12 +90,59 @@ public sealed partial class MassNavigationFlowSolverState
             TeamStateIndex = teamStateIndex;
             CategoryMask = categoryMask;
             InteractionMask = interactionMask;
+            _latestCost = new float[gridCellCount];
+            _solveCost = _latestCost;
+            _spareCost = new float[gridCellCount];
             Flow = new float[gridCellCount * 2];
+            PendingFlow = new float[gridCellCount * 2];
         }
+
+        private float[] _latestCost;
+        private float[] _solveCost;
+        private float[] _spareCost;
+        private bool _solveSnapshotActive;
 
         public int TeamStateIndex { get; }
         public uint CategoryMask { get; }
         public uint InteractionMask { get; }
-        public float[] Flow { get; }
+        public float[] Cost => _latestCost;
+        public float[] SolveCost => _solveCost;
+        public float[] Flow { get; private set; }
+        public float[] PendingFlow { get; private set; }
+        public float SolveTargetX { get; private set; }
+        public float SolveTargetY { get; private set; }
+
+        public float[] PrepareLatestCostForWrite()
+        {
+            if (_solveSnapshotActive && ReferenceEquals(_latestCost, _solveCost))
+            {
+                (_latestCost, _spareCost) = (_spareCost, _latestCost);
+            }
+
+            return _latestCost;
+        }
+
+        public void BeginSolveSnapshot(float targetX, float targetY)
+        {
+            _solveCost = _latestCost;
+            SolveTargetX = targetX;
+            SolveTargetY = targetY;
+            _solveSnapshotActive = true;
+        }
+
+        public void EndSolveSnapshot()
+        {
+            if (!ReferenceEquals(_latestCost, _solveCost))
+            {
+                _spareCost = _solveCost;
+            }
+
+            _solveSnapshotActive = false;
+        }
+
+        public void PublishPendingFlow()
+        {
+            (Flow, PendingFlow) = (PendingFlow, Flow);
+        }
     }
 }

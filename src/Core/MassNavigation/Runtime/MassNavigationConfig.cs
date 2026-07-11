@@ -68,6 +68,12 @@ public sealed class MassNavigationConfig
         AgentProfiles.Validate();
         Streaming.Validate();
         Flow.Validate();
+        if (Flow.CrowdCostEnabled && Cadence.FlowCrowdStampHz == 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation cadence.flowCrowdStampHz must be positive when flow.crowdCostEnabled is true.");
+        }
+
         Arrival.Validate();
         Avoidance.Validate();
         Semantics.Validate();
@@ -102,6 +108,7 @@ public sealed class MassNavigationCapacityConfig
     [JsonRequired] public int OrderIngestionMemberCapacity { get; set; }
     [JsonRequired] public int LoadedChunkCapacity { get; set; }
     [JsonRequired] public int MetadataTeamCapacity { get; set; }
+    [JsonRequired] public int FlowStateCapacity { get; set; }
 
     public void Validate()
     {
@@ -115,6 +122,7 @@ public sealed class MassNavigationCapacityConfig
         RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
+        RequirePositive(FlowStateCapacity, "flowStateCapacity");
 
         if (CommandActorScratchCapacity < InitialCommandActorSnapshotCapacity)
         {
@@ -177,6 +185,12 @@ public sealed class MassNavigationCapacityConfig
         {
             throw new InvalidOperationException(
                 $"MassNavigation runtime.capacity.metadataTeamCapacity {MetadataTeamCapacity} is smaller than authored scene team count {teamCount}.");
+        }
+
+        if (teamCount > FlowStateCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation runtime.capacity.flowStateCapacity {FlowStateCapacity} is smaller than authored scene team count {teamCount}.");
         }
     }
 

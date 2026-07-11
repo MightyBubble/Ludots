@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
@@ -128,35 +128,8 @@ public sealed class MassNavigationSimulationRuntime
     private bool _sceneResetRequested;
     private int _frameIndex;
     private int _nextSharedOrderId = 1;
-    private WorldGridLoadedChunks? _loadedChunks;
-    private WorldGridLoadedChunkContributor? _loadedChunkContributor;
-    private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
-    private readonly List<long> _loadedChunksToEvict;
-    private readonly int _loadedChunkCapacity;
-    private float _streamingClockSeconds;
-    private int _streamingMinChunkX = int.MinValue;
-    private int _streamingMaxChunkX = int.MinValue;
-    private int _streamingMinChunkY = int.MinValue;
-    private int _streamingMaxChunkY = int.MinValue;
-    private int _streamingRadiusCm = int.MinValue;
-    private WorldSizeSpec _boardWorldSize;
-    private bool _boardWorldBound;
-    private float _simWindowCenterXCm;
-    private float _simWindowCenterYCm;
-    private float _simWindowWidthCm;
-    private float _simWindowHeightCm;
-    private int _commandFocusTicksRemaining;
-    private bool _hasCommandFocus;
-    private float _lastCommandFocusXCm;
-    private float _lastCommandFocusYCm;
-    private int _lastCommandActorCount;
-    private float _flowWorkAreaCenterXCm;
-    private float _flowWorkAreaCenterYCm;
-    private float _flowWorkAreaWidthCm;
-    private float _flowWorkAreaHeightCm;
-    private int _flowWorkAreaRevision;
-    private string _flowWorkAreaReason = "initial contact";
-    private string _solverWindowDriver = "initial nav area";
+    private readonly MassNavigationStreamingWindow _streamingWindow;
+    private readonly MassNavigationSolverWindowCoordinator _solverWindow;
 
     public MassNavigationTelemetry Telemetry { get; } = new();
     public int CommandActorSnapshotCountFrame => Telemetry.CommandActorSnapshotCountFrame;
@@ -199,6 +172,9 @@ public sealed class MassNavigationSimulationRuntime
     public float LastRejectedCommandYCm => Telemetry.LastRejectedCommandYCm;
     public MapId MapId { get; }
     public MassNavigationRuntimePlan Plan { get; }
+    public string RuntimeConfigSha256 { get; }
+    public string? CapabilityProfileSha256 { get; private set; }
+    public int? ScenarioRandomSeed { get; private set; }
     public MassNavigationAgentState AgentState { get; } = new();
     public MassNavigationFlowPlan FlowConfig { get; }
     public MassNavigationCadencePlan Cadence { get; }
@@ -206,7 +182,7 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationFormationRuntime FormationRuntime { get; }
     public MassNavigationGroupRuntime NavGroupRuntime { get; }
     internal MassNavigationFlowSolverState MassNavigationFlow { get; }
-    public WorldGridLoadedChunks LoadedChunks => RequireLoadedChunks();
+    public WorldGridLoadedChunks LoadedChunks => _streamingWindow.LoadedChunks;
     public MassNavigationStreamingPlan Streaming { get; }
     public bool IsReadyForWorldOperations { get; private set; }
 
@@ -215,6 +191,17 @@ public sealed class MassNavigationSimulationRuntime
     public int NavigationSettledAgentCount => MassNavigationFlow.SettledUnitCount;
     public int PreparedAgentCapacity => MassNavigationFlow.PreparedAgentCapacity;
     public int AgentStorageAllocationCount => MassNavigationFlow.AgentStorageAllocationCount;
+    public int FlowStateCount => MassNavigationFlow.FlowStateCount;
+    public int FlowStateCapacity => MassNavigationFlow.FlowStateCapacity;
+    public int FlowStateStorageAllocationCount => MassNavigationFlow.FlowStateStorageAllocationCount;
+    public int PeakAgentCount => MassNavigationFlow.PeakUnitCount;
+    public int PeakCommandActorScratchCount { get; private set; }
+    public int PeakCommandActorSnapshotCount { get; private set; }
+    public int PeakOrderIngestionTokenCount { get; private set; }
+    public int PeakOrderIngestionMemberCount { get; private set; }
+    public int PeakTeamCount { get; private set; }
+    public int PeakLoadedChunkCount => _streamingWindow.PeakLoadedChunkCount;
+    public int PeakFlowStateCount => MassNavigationFlow.PeakFlowStateCount;
     public int CommandActorCount => _commandActorCount;
     public uint CommandActorSnapshotRevision => _commandActorSnapshotRevision;
     public ReadOnlySpan<Entity> CommandActors => _commandActors.AsSpan(0, _commandActorCount);
@@ -224,35 +211,35 @@ public sealed class MassNavigationSimulationRuntime
     public int AgentsPerTeam { get; private set; }
     public int ActiveTeamId { get; private set; }
     public MassNavigationFormationMode FormationMode { get; private set; } = MassNavigationFormationMode.None;
-    public int LoadedChunkCount => _loadedChunks?.ActiveChunkKeys.Count ?? 0;
-    public int StreamingChunkSizeCm => _loadedChunks?.ChunkSizeCm ?? Plan.World.StreamingChunkSizeCm;
-    public float SolverWindowCenterXCm => _simWindowCenterXCm;
-    public float SolverWindowCenterYCm => _simWindowCenterYCm;
-    public float SolverWindowWidthCm => _simWindowWidthCm;
-    public float SolverWindowHeightCm => _simWindowHeightCm;
-    public float SolverWindowMinXCm => _simWindowCenterXCm - (_simWindowWidthCm * 0.5f);
-    public float SolverWindowMinYCm => _simWindowCenterYCm - (_simWindowHeightCm * 0.5f);
-    public float SolverWindowMaxXCm => _simWindowCenterXCm + (_simWindowWidthCm * 0.5f);
-    public float SolverWindowMaxYCm => _simWindowCenterYCm + (_simWindowHeightCm * 0.5f);
-    public float FlowWorkAreaCenterXCm => _flowWorkAreaCenterXCm;
-    public float FlowWorkAreaCenterYCm => _flowWorkAreaCenterYCm;
-    public float FlowWorkAreaWidthCm => _flowWorkAreaWidthCm;
-    public float FlowWorkAreaHeightCm => _flowWorkAreaHeightCm;
-    public float FlowWorkAreaMinXCm => _flowWorkAreaCenterXCm - (_flowWorkAreaWidthCm * 0.5f);
-    public float FlowWorkAreaMinYCm => _flowWorkAreaCenterYCm - (_flowWorkAreaHeightCm * 0.5f);
-    public float FlowWorkAreaMaxXCm => _flowWorkAreaCenterXCm + (_flowWorkAreaWidthCm * 0.5f);
-    public float FlowWorkAreaMaxYCm => _flowWorkAreaCenterYCm + (_flowWorkAreaHeightCm * 0.5f);
-    public int FlowWorkAreaRevision => _flowWorkAreaRevision;
-    public string FlowWorkAreaReason => _flowWorkAreaReason;
-    public int CommandFocusTicksRemaining => _commandFocusTicksRemaining;
-    public bool HasCommandFocus => _hasCommandFocus && _commandFocusTicksRemaining > 0;
-    public float CommandFocusXCm => _lastCommandFocusXCm;
-    public float CommandFocusYCm => _lastCommandFocusYCm;
-    public int LastCommandActorCount => _lastCommandActorCount;
-    public string SolverWindowDriver => _solverWindowDriver;
-    public int WorldWidthCm => RequireBoardWorldSize().Bounds.Width;
-    public int WorldHeightCm => RequireBoardWorldSize().Bounds.Height;
-    public WorldAabbCm WorldBounds => RequireBoardWorldSize().Bounds;
+    public int LoadedChunkCount => _streamingWindow.LoadedChunkCount;
+    public int StreamingChunkSizeCm => _streamingWindow.ChunkSizeCm ?? Plan.World.StreamingChunkSizeCm;
+    public float SolverWindowCenterXCm => _solverWindow.CenterXCm;
+    public float SolverWindowCenterYCm => _solverWindow.CenterYCm;
+    public float SolverWindowWidthCm => _solverWindow.WidthCm;
+    public float SolverWindowHeightCm => _solverWindow.HeightCm;
+    public float SolverWindowMinXCm => _solverWindow.MinXCm;
+    public float SolverWindowMinYCm => _solverWindow.MinYCm;
+    public float SolverWindowMaxXCm => _solverWindow.MaxXCm;
+    public float SolverWindowMaxYCm => _solverWindow.MaxYCm;
+    public float FlowWorkAreaCenterXCm => _solverWindow.WorkAreaCenterXCm;
+    public float FlowWorkAreaCenterYCm => _solverWindow.WorkAreaCenterYCm;
+    public float FlowWorkAreaWidthCm => _solverWindow.WorkAreaWidthCm;
+    public float FlowWorkAreaHeightCm => _solverWindow.WorkAreaHeightCm;
+    public float FlowWorkAreaMinXCm => _solverWindow.WorkAreaMinXCm;
+    public float FlowWorkAreaMinYCm => _solverWindow.WorkAreaMinYCm;
+    public float FlowWorkAreaMaxXCm => _solverWindow.WorkAreaMaxXCm;
+    public float FlowWorkAreaMaxYCm => _solverWindow.WorkAreaMaxYCm;
+    public int FlowWorkAreaRevision => _solverWindow.WorkAreaRevision;
+    public string FlowWorkAreaReason => _solverWindow.WorkAreaReason;
+    public int CommandFocusTicksRemaining => _solverWindow.CommandFocusTicksRemaining;
+    public bool HasCommandFocus => _solverWindow.HasCommandFocus;
+    public float CommandFocusXCm => _solverWindow.CommandFocusXCm;
+    public float CommandFocusYCm => _solverWindow.CommandFocusYCm;
+    public int LastCommandActorCount => _solverWindow.LastCommandActorCount;
+    public string SolverWindowDriver => _solverWindow.Driver;
+    public int WorldWidthCm => _solverWindow.BoardWorldSize.Bounds.Width;
+    public int WorldHeightCm => _solverWindow.BoardWorldSize.Bounds.Height;
+    public WorldAabbCm WorldBounds => _solverWindow.BoardWorldSize.Bounds;
     public string ActiveHotZoneId => Plan.World.InitialHotZone.Id;
     public string ActiveHotZoneLabel => Plan.World.InitialHotZone.Label;
     public ReadOnlySpan<MassNavigationHotZonePlan> HotZones => Plan.World.HotZones;
@@ -266,25 +253,24 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         MapId = mapId;
+        RuntimeConfigSha256 = ComputeRuntimeConfigSha256(config);
         Plan = MassNavigationRuntimePlan.Compile(config);
-        MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
+        MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver, config.Capacity.FlowStateCapacity);
         Cadence = Plan.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
         _commandActorScratch = new Entity[Plan.Capacity.InitialCommandActorScratchCapacity];
         _commandActors = new Entity[Plan.Capacity.InitialCommandActorSnapshotCapacity];
-        _loadedChunkCapacity = Plan.Capacity.LoadedChunkCapacity;
-        _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
-        _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
-        _simWindowWidthCm = config.Solver.FieldWidthCm;
-        _simWindowHeightCm = config.Solver.FieldHeightCm;
-        _simWindowCenterXCm = Plan.World.InitialHotZone.CenterXCm;
-        _simWindowCenterYCm = Plan.World.InitialHotZone.CenterYCm;
-        _flowWorkAreaCenterXCm = _simWindowCenterXCm;
-        _flowWorkAreaCenterYCm = _simWindowCenterYCm;
-        _flowWorkAreaWidthCm = _simWindowWidthCm;
-        _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowConfig = Plan.Flow;
         Streaming = Plan.Streaming;
+        _streamingWindow = new MassNavigationStreamingWindow(
+            $"mass-navigation:{MapId.Value}",
+            Plan.Capacity.LoadedChunkCapacity,
+            Streaming);
+        _solverWindow = new MassNavigationSolverWindowCoordinator(
+            Plan.World.InitialHotZone,
+            Plan.World,
+            config.Solver.FieldWidthCm,
+            config.Solver.FieldHeightCm);
         FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
         NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime, config.Capacity);
         AgentsPerTeam = 0;
@@ -295,42 +281,46 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.PreallocateAgentCapacity(Plan.Capacity.GroupMembershipAgentCapacity);
     }
 
-    public void BindBoardWorld(WorldSizeSpec boardWorldSize, ILoadedChunks loadedChunks)
+    internal void SetScenarioRandomSeed(int randomSeed)
+    {
+        ScenarioRandomSeed = randomSeed;
+    }
+
+    internal void BindCapabilityProfileProvenance(MassNavigationCapabilityProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        string json = JsonSerializer.Serialize(profile, Ludots.Core.Config.StrictJsonOptions.CreateCamelCase());
+        CapabilityProfileSha256 = ComputeSha256(json);
+    }
+
+    private static string ComputeRuntimeConfigSha256(MassNavigationConfig config)
+    {
+        string json = JsonSerializer.Serialize(config, Ludots.Core.Config.StrictJsonOptions.CreateCamelCase());
+        return ComputeSha256(json);
+    }
+
+    private static string ComputeSha256(string json)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))).ToLowerInvariant();
+    }
+
+    public void BindBoardWorld(WorldSizeSpec boardWorldSize, WorldGridLoadedChunks loadedChunks)
     {
         ArgumentNullException.ThrowIfNull(loadedChunks);
-        if (loadedChunks is not WorldGridLoadedChunks worldGridLoadedChunks)
+        if (loadedChunks.ChunkSizeCm != Plan.World.StreamingChunkSizeCm)
         {
             throw new InvalidOperationException(
-                $"MassNavigation requires its board to expose {nameof(WorldGridLoadedChunks)} for world-centimeter streaming windows, but received '{loadedChunks.GetType().FullName}'.");
+                $"MassNavigation streaming chunk size {Plan.World.StreamingChunkSizeCm} cm must match board loaded-chunk size {loadedChunks.ChunkSizeCm} cm.");
         }
 
-        if (worldGridLoadedChunks.ChunkSizeCm != Plan.World.StreamingChunkSizeCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation streaming chunk size {Plan.World.StreamingChunkSizeCm} cm must match board loaded-chunk size {worldGridLoadedChunks.ChunkSizeCm} cm.");
-        }
-
-        if (_loadedChunks != null && !ReferenceEquals(_loadedChunks, worldGridLoadedChunks))
-        {
-            ReleaseStreamingWindow();
-        }
-
-        _loadedChunks = worldGridLoadedChunks;
-        _loadedChunkContributor ??= worldGridLoadedChunks.AcquireContributor(
-            $"mass-navigation:{MapId.Value}",
-            _loadedChunkCapacity);
-        ValidateInitialSolverWindow(boardWorldSize);
-        _boardWorldSize = boardWorldSize;
-        _boardWorldBound = true;
-        _flowWorkAreaCenterXCm = _simWindowCenterXCm;
-        _flowWorkAreaCenterYCm = _simWindowCenterYCm;
+        _solverWindow.BindBoardWorld(boardWorldSize, Plan.World.InitialHotZone.Id);
+        _streamingWindow.Bind(loadedChunks);
         MassNavigationFlow.SetWorldBounds(
             boardWorldSize.Bounds.Left,
             boardWorldSize.Bounds.Right,
             boardWorldSize.Bounds.Top,
             boardWorldSize.Bounds.Bottom);
-        MassNavigationFlow.SetWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
-        InvalidateStreamingWindowCache();
+        MassNavigationFlow.RebaseWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
         UpdateStreamingWindow(ToWorldCm(new System.Numerics.Vector2(
             MassNavigationFlow.FieldWidthCm * 0.5f,
             MassNavigationFlow.FieldHeightCm * 0.5f)));
@@ -338,16 +328,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public void ReleaseStreamingWindow()
     {
-        if (_loadedChunkContributor == null)
-        {
-            return;
-        }
-
-        _loadedChunkLastTouchedSeconds.Clear();
-        _loadedChunksToEvict.Clear();
-        _loadedChunkContributor.Dispose();
-        _loadedChunkContributor = null;
-        InvalidateStreamingWindowCache();
+        _streamingWindow.Release();
     }
 
     public void SetWorldOperationsReady(bool ready)
@@ -359,35 +340,12 @@ public sealed class MassNavigationSimulationRuntime
     {
         _frameIndex++;
         Telemetry.BeginFrame(dt);
-        _streamingClockSeconds += MathF.Max(0f, dt);
-        AdvanceCommandFocus();
-    }
-
-    private void AdvanceCommandFocus()
-    {
-        if (_commandFocusTicksRemaining <= 0)
+        _streamingWindow.AdvanceClock(dt);
+        if (_solverWindow.AdvanceCommandFocus())
         {
-            _hasCommandFocus = false;
-            return;
-        }
-
-        _commandFocusTicksRemaining--;
-        if (_commandFocusTicksRemaining == 0)
-        {
-            _hasCommandFocus = false;
-            UpdateStreamingWindow(ResolveStreamingFocus());
+            UpdateStreamingWindow(_solverWindow.StreamingFocus);
         }
     }
-
-    public void ObserveCommandActorSync(double sampleMs) => Telemetry.ObserveCommandActorSync(sampleMs);
-    public void ObserveFormationTargets(double sampleMs) => Telemetry.ObserveFormationTargets(sampleMs);
-    public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
-    public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
-    public void ObserveLocalSteering(double sampleMs) => Telemetry.ObserveLocalSteering(sampleMs);
-    public void ObserveSimStep(double sampleMs) => Telemetry.ObserveSimStep(sampleMs);
-    public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
-    public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
-    public void ObservePerformerCommand(double sampleMs) => Telemetry.ObservePerformerCommand(sampleMs);
 
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
     {
@@ -496,13 +454,6 @@ public sealed class MassNavigationSimulationRuntime
             performerDroppedCount);
     }
 
-    public void ObserveCommandActorSyncTick() => Telemetry.ObserveCommandActorSyncTick();
-    public void ObserveControlTick() => Telemetry.ObserveControlTick();
-    public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
-    public void ObserveSimTick() => Telemetry.ObserveSimTick();
-    public void ObservePerformerTick() => Telemetry.ObservePerformerTick();
-    public void ObservePanelTick() => Telemetry.ObservePanelTick();
-
     public Span<Entity> EnsureCommandActorScratch(int required)
     {
         if (required > _commandActorScratch.Length)
@@ -511,6 +462,7 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation command actor scratch required {required} entities, exceeding runtime.capacity.initialCommandActorScratchCapacity {_commandActorScratch.Length}.");
         }
 
+        PeakCommandActorScratchCount = Math.Max(PeakCommandActorScratchCount, required);
         return _commandActorScratch.AsSpan(0, required);
     }
 
@@ -524,6 +476,7 @@ public sealed class MassNavigationSimulationRuntime
 
         entities.CopyTo(_commandActors.AsSpan(0, entities.Length));
         _commandActorCount = entities.Length;
+        PeakCommandActorSnapshotCount = Math.Max(PeakCommandActorSnapshotCount, _commandActorCount);
         _commandActorSnapshotRevision = revision;
         Telemetry.MarkCommandActorSnapshot();
         MassNavigationFlow.SetCommandActorFlags(AgentState, _commandActors.AsSpan(0, _commandActorCount));
@@ -627,6 +580,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         teamIds.CopyTo(_teamIds);
+        PeakTeamCount = Math.Max(PeakTeamCount, _teamIds.Length);
         if (Array.IndexOf(_teamIds, ActiveTeamId) < 0)
         {
             ActiveTeamId = _teamIds[0];
@@ -683,7 +637,7 @@ public sealed class MassNavigationSimulationRuntime
         ClearCommandActorSnapshot();
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
-        MarkAuthoredRuntimeBindingChanged();
+        Telemetry.MarkAuthoredRuntimeBindingChanged();
     }
 
     public void ResetRuntimeState(World world, ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -699,7 +653,7 @@ public sealed class MassNavigationSimulationRuntime
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
-        MarkAuthoredRuntimeBindingChanged();
+        Telemetry.MarkAuthoredRuntimeBindingChanged();
     }
 
     public void RebuildFromAuthoredAgents(
@@ -777,6 +731,12 @@ public sealed class MassNavigationSimulationRuntime
         MarkStructuralChange();
     }
 
+    internal void ObserveOrderIngestionOccupancy(int tokenCount, int memberCount)
+    {
+        PeakOrderIngestionTokenCount = Math.Max(PeakOrderIngestionTokenCount, tokenCount);
+        PeakOrderIngestionMemberCount = Math.Max(PeakOrderIngestionMemberCount, memberCount);
+    }
+
     private void RestoreCommandActorSnapshotAfterAuthoredRebuild(
         World world,
         ReadOnlySpan<Entity> previousCommandActors,
@@ -808,26 +768,31 @@ public sealed class MassNavigationSimulationRuntime
 
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        ObserveFlowWorkArea(worldCenterCm, _simWindowWidthCm, _simWindowHeightCm, ReadOnlySpan<Entity>.Empty, "manual focus");
+        _solverWindow.ObserveWorkArea(
+            worldCenterCm,
+            SolverWindowWidthCm,
+            SolverWindowHeightCm,
+            ReadOnlySpan<Entity>.Empty,
+            AgentState,
+            MassNavigationFlow,
+            "manual focus");
         MoveSolverWindow(worldCenterCm, "manual nav focus");
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        UpdateStreamingWindow(_solverWindow.StreamingFocus);
     }
 
     public void FocusCommandTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> commandActors)
     {
-        _hasCommandFocus = true;
-        _lastCommandFocusXCm = worldCenterCm.X;
-        _lastCommandFocusYCm = worldCenterCm.Y;
-        _lastCommandActorCount = commandActors.Length;
-        _commandFocusTicksRemaining = Plan.World.CommandFocusHoldTicks;
-        ObserveFlowWorkArea(
+        _solverWindow.BeginCommandFocus(worldCenterCm, commandActors.Length);
+        _solverWindow.ObserveWorkArea(
             worldCenterCm,
-            _simWindowWidthCm,
-            _simWindowHeightCm,
+            SolverWindowWidthCm,
+            SolverWindowHeightCm,
             commandActors,
+            AgentState,
+            MassNavigationFlow,
             commandActors.Length > 0 ? "actor command" : "team command");
-        MoveSolverWindow(ResolveSolverFocusForWorkArea(), commandActors.Length > 0 ? "actor command" : "team command");
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        MoveSolverWindow(_solverWindow.SolverFocus, commandActors.Length > 0 ? "actor command" : "team command");
+        UpdateStreamingWindow(_solverWindow.StreamingFocus);
     }
 
     public void FocusCommandTargetForEntities(System.Numerics.Vector2 worldCenterCm, Entity[] commandActors)
@@ -837,30 +802,32 @@ public sealed class MassNavigationSimulationRuntime
 
     public void ObserveRuntimeFocus(System.Numerics.Vector2 focusCenterCm, float focusWidthCm, float focusHeightCm)
     {
-        ObserveFlowWorkArea(
+        _solverWindow.ObserveWorkArea(
             focusCenterCm,
             MathF.Max(1f, focusWidthCm),
             MathF.Max(1f, focusHeightCm),
             ReadOnlySpan<Entity>.Empty,
-            _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "runtime focus + command hold" : "runtime focus");
+            AgentState,
+            MassNavigationFlow,
+            _solverWindow.HasCommandFocus ? "runtime focus + command hold" : "runtime focus");
         Telemetry.MarkFocusBudgetUpdated();
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        UpdateStreamingWindow(_solverWindow.StreamingFocus);
     }
 
     public System.Numerics.Vector2 ToLocalCm(System.Numerics.Vector2 worldCm)
     {
-        return new System.Numerics.Vector2(worldCm.X - SolverWindowMinXCm, worldCm.Y - SolverWindowMinYCm);
+        return _solverWindow.ToLocalCm(worldCm);
     }
 
     public System.Numerics.Vector2 ToWorldCm(System.Numerics.Vector2 localCm)
     {
-        return new System.Numerics.Vector2(localCm.X + SolverWindowMinXCm, localCm.Y + SolverWindowMinYCm);
+        return _solverWindow.ToWorldCm(localCm);
     }
 
-    public float ToWorldXCm(float localXCm) => localXCm + SolverWindowMinXCm;
-    public float ToWorldYCm(float localYCm) => localYCm + SolverWindowMinYCm;
-    public float ToLocalXCm(float worldXCm) => worldXCm - SolverWindowMinXCm;
-    public float ToLocalYCm(float worldYCm) => worldYCm - SolverWindowMinYCm;
+    public float ToWorldXCm(float localXCm) => _solverWindow.ToWorldXCm(localXCm);
+    public float ToWorldYCm(float localYCm) => _solverWindow.ToWorldYCm(localYCm);
+    public float ToLocalXCm(float worldXCm) => _solverWindow.ToLocalXCm(worldXCm);
+    public float ToLocalYCm(float worldYCm) => _solverWindow.ToLocalYCm(worldYCm);
 
     public System.Numerics.Vector2 GetAgentLocalPositionCm(int agentIndex)
     {
@@ -1204,269 +1171,26 @@ public sealed class MassNavigationSimulationRuntime
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
-        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
-        return worldXCm >= bounds.Left &&
-            worldXCm <= bounds.Right &&
-            worldYCm >= bounds.Top &&
-            worldYCm <= bounds.Bottom;
+        return _solverWindow.ContainsWorldPoint(worldXCm, worldYCm);
     }
 
     public void UpdateStreamingWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        WorldGridLoadedChunks loadedChunks = RequireLoadedChunks();
-        int centerX = (int)MathF.Round(worldCenterCm.X);
-        int centerY = (int)MathF.Round(worldCenterCm.Y);
-        int radius = Streaming.RadiusCm;
-        int chunkSize = loadedChunks.ChunkSizeCm;
-        int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
-        int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
-        int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
-        int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);
-        bool changed = minChunkX != _streamingMinChunkX ||
-            maxChunkX != _streamingMaxChunkX ||
-            minChunkY != _streamingMinChunkY ||
-            maxChunkY != _streamingMaxChunkY ||
-            radius != _streamingRadiusCm;
-        if (minChunkX == _streamingMinChunkX &&
-            maxChunkX == _streamingMaxChunkX &&
-            minChunkY == _streamingMinChunkY &&
-            maxChunkY == _streamingMaxChunkY &&
-            radius == _streamingRadiusCm)
-        {
-            EvictExpiredStreamingChunks();
-            return;
-        }
-
-        _streamingMinChunkX = minChunkX;
-        _streamingMaxChunkX = maxChunkX;
-        _streamingMinChunkY = minChunkY;
-        _streamingMaxChunkY = maxChunkY;
-        _streamingRadiusCm = radius;
-        for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
-        {
-            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
-            {
-                long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
-                TouchStreamingChunk(chunkKey);
-            }
-        }
-
-        EvictExpiredStreamingChunks();
-        if (changed)
+        if (_streamingWindow.Update(worldCenterCm))
         {
             Telemetry.MarkStreamingWindowUpdated();
         }
     }
 
-    private void EvictExpiredStreamingChunks()
-    {
-        float retainSeconds = Streaming.RetainSeconds;
-        if (retainSeconds < 0f)
-        {
-            return;
-        }
-
-        _loadedChunksToEvict.Clear();
-        foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
-        {
-            if (_streamingClockSeconds - pair.Value > retainSeconds)
-            {
-                _loadedChunksToEvict.Add(pair.Key);
-            }
-        }
-
-        for (int i = 0; i < _loadedChunksToEvict.Count; i++)
-        {
-            long chunkKey = _loadedChunksToEvict[i];
-            _loadedChunkLastTouchedSeconds.Remove(chunkKey);
-            RequireLoadedChunkContributor().SetLoaded(chunkKey, false);
-        }
-    }
-
-    private void TouchStreamingChunk(long chunkKey)
-    {
-        ref float lastTouchedSeconds = ref CollectionsMarshal.GetValueRefOrNullRef(_loadedChunkLastTouchedSeconds, chunkKey);
-        if (Unsafe.IsNullRef(ref lastTouchedSeconds))
-        {
-            if (_loadedChunkLastTouchedSeconds.Count >= _loadedChunkCapacity)
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation streaming required more than runtime.capacity.loadedChunkCapacity {_loadedChunkCapacity} chunks.");
-            }
-
-            _loadedChunkLastTouchedSeconds.Add(chunkKey, _streamingClockSeconds);
-            RequireLoadedChunkContributor().SetLoaded(chunkKey, true);
-            return;
-        }
-
-        lastTouchedSeconds = _streamingClockSeconds;
-    }
-
     private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)
     {
-        float nextCenterX = requestedCenterCm.X;
-        float nextCenterY = requestedCenterCm.Y;
-        ClampSolverWindowCenter(ref nextCenterX, ref nextCenterY);
-        if (MathF.Abs(nextCenterX - _simWindowCenterXCm) < 0.5f &&
-            MathF.Abs(nextCenterY - _simWindowCenterYCm) < 0.5f)
+        if (!_solverWindow.Move(requestedCenterCm, reason))
         {
             return;
         }
 
-        float previousOriginX = MassNavigationFlow.WorldOriginXCm;
-        float previousOriginY = MassNavigationFlow.WorldOriginYCm;
-        _simWindowCenterXCm = nextCenterX;
-        _simWindowCenterYCm = nextCenterY;
-        float nextOriginX = SolverWindowMinXCm;
-        float nextOriginY = SolverWindowMinYCm;
-        MassNavigationFlow.ShiftLocalFrame(nextOriginX - previousOriginX, nextOriginY - previousOriginY);
-        MassNavigationFlow.SetWorldOrigin(nextOriginX, nextOriginY);
-        MassNavigationFlow.RequestFlowRebuild();
+        MassNavigationFlow.RebaseWorldOrigin(_solverWindow.MinXCm, _solverWindow.MinYCm);
         Telemetry.MarkSolverWindowMoved();
-        _solverWindowDriver = reason;
-    }
-
-    private void ClampSolverWindowCenter(ref float centerX, ref float centerY)
-    {
-        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
-        centerX = ClampWindowCenterToBounds(centerX, bounds.Left, bounds.Right, _simWindowWidthCm);
-        centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, _simWindowHeightCm);
-    }
-
-    private void ValidateInitialSolverWindow(WorldSizeSpec boardWorldSize)
-    {
-        WorldAabbCm bounds = boardWorldSize.Bounds;
-        EnsureWindowFitsBoard(_simWindowWidthCm, bounds.Width, "solver window width");
-        EnsureWindowFitsBoard(_simWindowHeightCm, bounds.Height, "solver window height");
-        EnsurePointInsideWindowCenterBounds(
-            _simWindowCenterXCm,
-            bounds.Left,
-            bounds.Right,
-            _simWindowWidthCm,
-            Plan.World.InitialHotZone.Id,
-            "x");
-        EnsurePointInsideWindowCenterBounds(
-            _simWindowCenterYCm,
-            bounds.Top,
-            bounds.Bottom,
-            _simWindowHeightCm,
-            Plan.World.InitialHotZone.Id,
-            "y");
-    }
-
-    private void ObserveFlowWorkArea(
-        System.Numerics.Vector2 focusCm,
-        float focusWidthCm,
-        float focusHeightCm,
-        ReadOnlySpan<Entity> commandActors,
-        string reason)
-    {
-        float clampedWidth = MathF.Max(1f, focusWidthCm);
-        float clampedHeight = MathF.Max(1f, focusHeightCm);
-        float minX = focusCm.X - (clampedWidth * 0.5f);
-        float maxX = focusCm.X + (clampedWidth * 0.5f);
-        float minY = focusCm.Y - (clampedHeight * 0.5f);
-        float maxY = focusCm.Y + (clampedHeight * 0.5f);
-
-        if (_hasCommandFocus && _commandFocusTicksRemaining > 0)
-        {
-            IncludePoint(ref minX, ref maxX, ref minY, ref maxY, _lastCommandFocusXCm, _lastCommandFocusYCm);
-        }
-
-        if (commandActors.Length > 0)
-        {
-            IncludeCommandActorBounds(ref minX, ref maxX, ref minY, ref maxY, commandActors);
-        }
-
-        float padding = Plan.World.WorkAreaPaddingCm;
-        minX -= padding;
-        maxX += padding;
-        minY -= padding;
-        maxY += padding;
-        ClampWorkArea(ref minX, ref maxX, ref minY, ref maxY);
-
-        float width = MathF.Min(MathF.Max(_simWindowWidthCm, maxX - minX), Plan.World.WorkAreaMaxWidthCm);
-        float height = MathF.Min(MathF.Max(_simWindowHeightCm, maxY - minY), Plan.World.WorkAreaMaxHeightCm);
-        float centerX = (minX + maxX) * 0.5f;
-        float centerY = (minY + maxY) * 0.5f;
-        ClampWorkAreaCenter(ref centerX, ref centerY, width, height);
-
-        if (MathF.Abs(centerX - _flowWorkAreaCenterXCm) < 0.5f &&
-            MathF.Abs(centerY - _flowWorkAreaCenterYCm) < 0.5f &&
-            MathF.Abs(width - _flowWorkAreaWidthCm) < 0.5f &&
-            MathF.Abs(height - _flowWorkAreaHeightCm) < 0.5f &&
-            string.Equals(_flowWorkAreaReason, reason, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _flowWorkAreaCenterXCm = centerX;
-        _flowWorkAreaCenterYCm = centerY;
-        _flowWorkAreaWidthCm = width;
-        _flowWorkAreaHeightCm = height;
-        _flowWorkAreaReason = reason;
-        _flowWorkAreaRevision++;
-    }
-
-    private void IncludeCommandActorBounds(ref float minX, ref float maxX, ref float minY, ref float maxY, ReadOnlySpan<Entity> commandActors)
-    {
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (!AgentState.TryGetControllableIndex(commandActors[i], out int unitIndex) ||
-                (uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
-            {
-                continue;
-            }
-
-            float worldX = ToWorldXCm(MassNavigationFlow.GetPositionX(unitIndex));
-            float worldY = ToWorldYCm(MassNavigationFlow.GetPositionY(unitIndex));
-            IncludePoint(ref minX, ref maxX, ref minY, ref maxY, worldX, worldY);
-        }
-    }
-
-    private void ClampWorkArea(ref float minX, ref float maxX, ref float minY, ref float maxY)
-    {
-        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
-        minX = Math.Clamp(minX, bounds.Left, bounds.Right);
-        maxX = Math.Clamp(maxX, bounds.Left, bounds.Right);
-        minY = Math.Clamp(minY, bounds.Top, bounds.Bottom);
-        maxY = Math.Clamp(maxY, bounds.Top, bounds.Bottom);
-        if (minX > maxX)
-        {
-            (minX, maxX) = (maxX, minX);
-        }
-
-        if (minY > maxY)
-        {
-            (minY, maxY) = (maxY, minY);
-        }
-    }
-
-    private void ClampWorkAreaCenter(ref float centerX, ref float centerY, float width, float height)
-    {
-        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
-        centerX = ClampWindowCenterToBounds(centerX, bounds.Left, bounds.Right, width);
-        centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, height);
-    }
-
-    private System.Numerics.Vector2 ResolveSolverFocusForWorkArea()
-    {
-        return _hasCommandFocus && _commandFocusTicksRemaining > 0
-            ? new System.Numerics.Vector2(_lastCommandFocusXCm, _lastCommandFocusYCm)
-            : new System.Numerics.Vector2(_flowWorkAreaCenterXCm, _flowWorkAreaCenterYCm);
-    }
-
-    private System.Numerics.Vector2 ResolveStreamingFocus()
-    {
-        return new System.Numerics.Vector2(_flowWorkAreaCenterXCm, _flowWorkAreaCenterYCm);
-    }
-
-    private static void IncludePoint(ref float minX, ref float maxX, ref float minY, ref float maxY, float x, float y)
-    {
-        minX = MathF.Min(minX, x);
-        maxX = MathF.Max(maxX, x);
-        minY = MathF.Min(minY, y);
-        maxY = MathF.Max(maxY, y);
     }
 
     private static void UpsertComponent<T>(World world, Entity entity, T component)
@@ -1479,28 +1203,6 @@ public sealed class MassNavigationSimulationRuntime
         {
             world.Add(entity, component);
         }
-    }
-
-    private WorldSizeSpec RequireBoardWorldSize()
-    {
-        if (!_boardWorldBound)
-        {
-            throw new InvalidOperationException("MassNavigationSimulationRuntime requires PrimaryBoard.WorldSize to be bound before world operations.");
-        }
-
-        return _boardWorldSize;
-    }
-
-    private WorldGridLoadedChunks RequireLoadedChunks()
-    {
-        return _loadedChunks
-            ?? throw new InvalidOperationException("MassNavigation requires board-owned loaded chunks before streaming operations.");
-    }
-
-    private WorldGridLoadedChunkContributor RequireLoadedChunkContributor()
-    {
-        return _loadedChunkContributor
-            ?? throw new InvalidOperationException("MassNavigation requires an active board loaded-chunk contribution before streaming operations.");
     }
 
     private void RequireAgentIndex(int agentIndex)
@@ -1534,52 +1236,6 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    private void MarkAuthoredRuntimeBindingChanged()
-    {
-        Telemetry.MarkAuthoredRuntimeBindingChanged();
-    }
-
-    private static float ClampWindowCenterToBounds(float worldCm, int minCm, int maxCm, float windowSizeCm)
-    {
-        float halfSize = windowSizeCm * 0.5f;
-        float min = minCm + halfSize;
-        float max = maxCm - halfSize;
-        if (min > max)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation solver/work area window {windowSizeCm:0.###} cm exceeds board span {maxCm - minCm} cm.");
-        }
-
-        return Math.Clamp(worldCm, min, max);
-    }
-
-    private static void EnsureWindowFitsBoard(float windowSizeCm, int boardSpanCm, string windowName)
-    {
-        if (windowSizeCm > boardSpanCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation initial {windowName} {windowSizeCm:0.###} cm exceeds board span {boardSpanCm} cm.");
-        }
-    }
-
-    private static void EnsurePointInsideWindowCenterBounds(
-        float centerCm,
-        int minCm,
-        int maxCm,
-        float windowSizeCm,
-        string hotZoneId,
-        string axisName)
-    {
-        float halfSize = windowSizeCm * 0.5f;
-        float minCenter = minCm + halfSize;
-        float maxCenter = maxCm - halfSize;
-        if (centerCm < minCenter || centerCm > maxCenter)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation active hot zone '{hotZoneId}' center {axisName}={centerCm:0.###} cannot host solver window {windowSizeCm:0.###} cm inside board center range [{minCenter:0.###}, {maxCenter:0.###}].");
-        }
-    }
-
     public bool ConsumeSceneResetRequest()
     {
         if (!_sceneResetRequested)
@@ -1591,12 +1247,4 @@ public sealed class MassNavigationSimulationRuntime
         return true;
     }
 
-    private void InvalidateStreamingWindowCache()
-    {
-        _streamingMinChunkX = int.MinValue;
-        _streamingMaxChunkX = int.MinValue;
-        _streamingMinChunkY = int.MinValue;
-        _streamingMaxChunkY = int.MinValue;
-        _streamingRadiusCm = int.MinValue;
-    }
 }

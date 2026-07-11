@@ -93,6 +93,645 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void StaticFlowPipeline_SkipsCadenceRefreshUntilStateIsDirty()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 16);
+            int rebuildCount = 0;
+
+            bool cadenceOnly = flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: true,
+                refreshObstacles: true,
+                _ => rebuildCount++);
+
+            Assert.That(cadenceOnly, Is.False,
+                "Static costs and unchanged team targets must not rebuild the same flow fields on every cadence pulse.");
+            Assert.That(rebuildCount, Is.Zero);
+
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(8_000f, 8_000f));
+            bool beforeFlowCadence = flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: false,
+                refreshObstacles: false,
+                _ => rebuildCount++);
+
+            Assert.That(beforeFlowCadence, Is.False,
+                "A dirty target must wait for the configured flow cadence instead of bypassing the scheduler.");
+            Assert.That(rebuildCount, Is.Zero);
+
+            bool dirtyRefresh = flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false,
+                _ => rebuildCount++);
+
+            Assert.That(dirtyRefresh, Is.True);
+            Assert.That(rebuildCount, Is.EqualTo(1));
+
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(8_000f, 8_000f));
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false,
+                _ => rebuildCount++), Is.False,
+                "Submitting the same resolved team target must not manufacture pending flow work.");
+            Assert.That(rebuildCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DynamicCrowdFlowPipeline_PreservesStampedCostsAcrossTargetRefresh()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: true,
+                CrowdStampBudgetAgentsPerRefresh: 4,
+                StateSolveBudgetPerSimulationStep: 16);
+            bool crowdOnly = flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: true,
+                refreshObstacles: false,
+                observeFlowFieldRebuild: null);
+
+            Assert.That(crowdOnly, Is.False,
+                "Crowd stamping and flow solving have independent cadence gates.");
+            float[] stampedCosts = GetFlowCostSnapshot(flow, flowStateIndex: 0);
+            Assert.That(ContainsValueGreaterThan(stampedCosts, 1f), Is.True,
+                "The dynamic crowd cadence must stamp a non-static cost before solving.");
+
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(8_000f, 8_000f));
+            bool refreshed = flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false,
+                observeFlowFieldRebuild: null);
+
+            Assert.That(refreshed, Is.True,
+                "A target change may solve at flow cadence without waiting for another crowd stamp.");
+            Assert.That(GetFlowCostSnapshot(flow, flowStateIndex: 0), Is.EqualTo(stampedCosts),
+                "A target-only refresh must preserve the last cadence-stamped dynamic crowd costs.");
+        }
+
+        [Test]
+        public void DynamicCrowdCosts_AreOwnedPerFlowStateInteractionMask()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var firstLayer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var secondLayer = new MassNavigationAgentLayer(categoryMask: 2u, interactionMask: 2u);
+            flow.PreallocateAgentCapacity(2);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, firstLayer),
+                CreateAvoidanceSeed(1, 8_000f, 8_000f, false, secondLayer),
+            });
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: true,
+                CrowdStampBudgetAgentsPerRefresh: 2,
+                StateSolveBudgetPerSimulationStep: 16);
+
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: true,
+                refreshObstacles: false), Is.False);
+
+            float[] firstCosts = GetFlowCostSnapshot(flow, flowStateIndex: 0);
+            float[] secondCosts = GetFlowCostSnapshot(flow, flowStateIndex: 1);
+            int firstCell = FlowCellIndex(flow, 1_000f, 1_000f);
+            int secondCell = FlowCellIndex(flow, 8_000f, 8_000f);
+            Assert.That(firstCosts[firstCell], Is.GreaterThan(1f));
+            Assert.That(firstCosts[secondCell], Is.EqualTo(1f));
+            Assert.That(secondCosts[firstCell], Is.EqualTo(1f));
+            Assert.That(secondCosts[secondCell], Is.GreaterThan(1f));
+        }
+
+        [Test]
+        public void DynamicCrowdCosts_AppendWaitsForCrowdCadenceBeforeSolvingNewFlowState()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var firstLayer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var secondLayer = new MassNavigationAgentLayer(categoryMask: 2u, interactionMask: 2u);
+            flow.PreallocateAgentCapacity(2);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, firstLayer),
+            });
+            flow.AppendAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 8_000f, 8_000f, false, secondLayer),
+            });
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: true,
+                CrowdStampBudgetAgentsPerRefresh: 2,
+                StateSolveBudgetPerSimulationStep: 16);
+
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.False,
+                "A newly allocated flow state must not solve before its dynamic cost buffer is initialized.");
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: true,
+                refreshObstacles: false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.True);
+
+            float[] firstCosts = GetFlowCostSnapshot(flow, flowStateIndex: 0);
+            float[] secondCosts = GetFlowCostSnapshot(flow, flowStateIndex: 1);
+            int firstCell = FlowCellIndex(flow, 1_000f, 1_000f);
+            int secondCell = FlowCellIndex(flow, 8_000f, 8_000f);
+            Assert.That(firstCosts[firstCell], Is.GreaterThan(1f));
+            Assert.That(firstCosts[secondCell], Is.EqualTo(1f));
+            Assert.That(secondCosts[firstCell], Is.EqualTo(1f));
+            Assert.That(secondCosts[secondCell], Is.GreaterThan(1f));
+        }
+
+        [Test]
+        public void SolverWindowShift_WaitsForObstacleThenFlowCadence()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 16);
+
+            flow.RebaseWorldOrigin(originXCm: 300f, originYCm: 400f);
+            int observedWorkCount = 0;
+
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.False,
+                "A shifted obstacle frame must not solve against stale static costs.");
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: false,
+                refreshObstacles: true,
+                _ => observedWorkCount++), Is.False,
+                "Refreshing static costs must not bypass the independent flow cadence.");
+            Assert.That(observedWorkCount, Is.EqualTo(1),
+                "Cost-only cadence work must remain visible to flow pipeline telemetry.");
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false,
+                _ => observedWorkCount++), Is.True);
+            Assert.That(observedWorkCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SolverWindowShift_DoesNotConsumePublishedFlowFromPreviousFrame()
+        {
+            using var world = World.Create();
+            MassNavigationFlowSolverState flow = CreateUnitTargetFlow(unitCount: 1);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 5_000f));
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 1);
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.True);
+            FillFlowVector(flow, flowStateIndex: 0, x: -1f, y: 0f);
+
+            flow.RebaseWorldOrigin(originXCm: 100f, originYCm: 0f);
+            Assert.That(flow.PublishedFlowFrameValid, Is.False);
+            flow.Step(
+                0.016f,
+                world,
+                CreateNavGroupRuntime(agentCapacity: 1),
+                runHardResolve: false,
+                hardResolveCandidateThresholdAgents: 2);
+
+            Assert.That(flow.GetVelocityCmPerSecond(0).X, Is.GreaterThan(0f),
+                "An invalidated previous-frame flow must not override direct slot steering after rebase.");
+        }
+
+        [TestCase(5, 5)]
+        [TestCase(10, 10)]
+        public void CadenceScheduler_EmitsConfiguredFlowPulsesPerSecond(int flowStepHz, int expectedPulses)
+        {
+            var scheduler = new MassNavigationCadenceScheduler(new MassNavigationCadencePlan(
+                SimulationHz: 20,
+                TargetUpdateHz: 0,
+                FlowStepHz: flowStepHz,
+                FlowCrowdStampHz: 0,
+                FlowObstacleStampHz: 0,
+                HardResolveHz: 0,
+                EntitySyncHz: 0,
+                MaxStepsPerFixedTick: 1,
+                HardResolveCandidateThresholdAgents: 1,
+                OrderIdleScanIntervalFrames: 1));
+            int pulses = 0;
+
+            for (int fixedTick = 0; fixedTick < 20; fixedTick++)
+            {
+                int stepCount = scheduler.BeginFixedTick(1f / 20f);
+                Assert.That(stepCount, Is.EqualTo(1));
+                for (int stepIndex = 0; stepIndex < stepCount; stepIndex++)
+                {
+                    if (scheduler.NextSimulationStep().RefreshFlow)
+                    {
+                        pulses++;
+                    }
+                }
+            }
+
+            Assert.That(pulses, Is.EqualTo(expectedPulses));
+        }
+
+        [TestCase(5, 5)]
+        [TestCase(10, 10)]
+        public void FlowPipeline_ConsumesPendingWorkAtConfiguredRate(int flowStepHz, int expectedReconciles)
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var flowPlan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 16);
+            var scheduler = new MassNavigationCadenceScheduler(new MassNavigationCadencePlan(
+                SimulationHz: 20,
+                TargetUpdateHz: 0,
+                FlowStepHz: flowStepHz,
+                FlowCrowdStampHz: 0,
+                FlowObstacleStampHz: 0,
+                HardResolveHz: 0,
+                EntitySyncHz: 0,
+                MaxStepsPerFixedTick: 1,
+                HardResolveCandidateThresholdAgents: 1,
+                OrderIdleScanIntervalFrames: 1));
+            int reconciles = 0;
+
+            for (int fixedTick = 0; fixedTick < 20; fixedTick++)
+            {
+                int stepCount = scheduler.BeginFixedTick(1f / 20f);
+                Assert.That(stepCount, Is.EqualTo(1));
+                for (int stepIndex = 0; stepIndex < stepCount; stepIndex++)
+                {
+                    flow.SetTeamTarget(
+                        1,
+                        fixedTick % 2 == 0
+                            ? new System.Numerics.Vector2(8_000f, 8_000f)
+                            : new System.Numerics.Vector2(9_000f, 9_000f));
+                    MassNavigationCadenceStep step = scheduler.NextSimulationStep();
+                    if (flow.AdvanceFlowPipeline(
+                        flowPlan,
+                        step.RefreshFlow,
+                        step.RefreshCrowd,
+                        step.RefreshObstacles))
+                    {
+                        reconciles++;
+                    }
+                }
+            }
+
+            Assert.That(reconciles, Is.EqualTo(expectedReconciles));
+        }
+
+        [Test]
+        public void FlowSolveBudget_PublishesFourFlowStatesAtomicallyAcrossTwoSimulationSteps()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(4);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+                CreateAvoidanceSeed(3, 3_000f, 3_000f, false, layer),
+                CreateAvoidanceSeed(4, 4_000f, 4_000f, false, layer),
+            });
+            float[] publishedBefore = GetFlowVectorSnapshot(flow, flowStateIndex: 0);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 2);
+
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: true,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.False,
+                "The first budget slice must not publish a partially rebuilt set of flow states.");
+            Assert.That(GetFlowVectorSnapshot(flow, flowStateIndex: 0), Is.EqualTo(publishedBefore));
+
+            Assert.That(flow.AdvanceFlowPipeline(
+                plan,
+                refreshFlow: false,
+                refreshCrowd: false,
+                refreshObstacles: false), Is.True,
+                "An active flow batch must continue on the next simulation step without another cadence pulse.");
+            Assert.That(ContainsDifference(
+                GetFlowVectorSnapshot(flow, flowStateIndex: 0),
+                publishedBefore), Is.True);
+        }
+
+        [Test]
+        public void FlowSolveBudget_ContinuousCrowdPulsesCannotStarveEightStates()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[8];
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                seeds[i] = CreateAvoidanceSeed(i + 1, 1_000f + (i * 500f), 1_000f + (i * 500f), false, layer);
+            }
+
+            flow.PreallocateAgentCapacity(seeds.Length);
+            flow.ResetAuthoredAgents(seeds);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: true,
+                CrowdStampBudgetAgentsPerRefresh: seeds.Length,
+                StateSolveBudgetPerSimulationStep: 2);
+            int publicationCount = 0;
+
+            for (int step = 0; step < 6; step++)
+            {
+                bool cadencePulse = step % 3 == 0;
+                if (flow.AdvanceFlowPipeline(
+                    plan,
+                    refreshFlow: cadencePulse,
+                    refreshCrowd: cadencePulse,
+                    refreshObstacles: false))
+                {
+                    publicationCount++;
+                }
+            }
+
+            Assert.That(publicationCount, Is.GreaterThanOrEqualTo(1),
+                "A stable solve snapshot must finish even when the next crowd generation arrives mid-batch.");
+        }
+
+        [Test]
+        public void FlowSolveBudget_TargetChangeDuringBatchQueuesNextGeneration()
+        {
+            MassNavigationFlowSolverState flow = CreateFourTeamFlow();
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 1);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(1_000f, 9_000f));
+
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.True);
+            float[] firstGeneration = GetFlowVectorSnapshot(flow, flowStateIndex: 0);
+
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.True);
+            Assert.That(GetFlowVectorSnapshot(flow, flowStateIndex: 0), Is.Not.EqualTo(firstGeneration));
+        }
+
+        [Test]
+        public void RuntimeObstacleUpdate_WaitsForCadenceWithoutCancellingActiveBatch()
+        {
+            MassNavigationFlowSolverState flow = CreateFourTeamFlow();
+            var plan = new MassNavigationFlowPlan(
+                CrowdCostEnabled: false,
+                CrowdStampBudgetAgentsPerRefresh: 4_096,
+                StateSolveBudgetPerSimulationStep: 1);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False);
+
+            flow.ResetRuntimeObstaclesFromWorld(new[]
+            {
+                new MassNavigationObstacleSnapshot(5_000f, 5_000f, 300f),
+            });
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.True,
+                "Runtime obstacle dirtiness must queue the next generation without cancelling the active one.");
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False,
+                "Flow cadence alone must not consume pending static-obstacle work.");
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, true), Is.False,
+                "Obstacle cadence may rebuild costs but must not publish flow immediately.");
+
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.True);
+        }
+
+        [Test]
+        public void FlowSolveBudget_AppendDuringBatchPublishesExistingThenExpandedGeneration()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(5);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+                CreateAvoidanceSeed(3, 3_000f, 3_000f, false, layer),
+                CreateAvoidanceSeed(4, 4_000f, 4_000f, false, layer),
+            });
+            var plan = new MassNavigationFlowPlan(false, 4_096, 1);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            Assert.That(flow.AdvanceFlowPipeline(plan, true, false, false), Is.False);
+            flow.AppendAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(5, 5_000f, 5_000f, false, layer),
+            });
+
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.False);
+            Assert.That(flow.AdvanceFlowPipeline(plan, false, false, false), Is.True);
+            Assert.That(flow.FlowStateCount, Is.EqualTo(5));
+
+            bool expandedPublished = false;
+            for (int step = 0; step < 5; step++)
+            {
+                expandedPublished |= flow.AdvanceFlowPipeline(
+                    plan,
+                    refreshFlow: step == 0,
+                    refreshCrowd: false,
+                    refreshObstacles: false);
+            }
+
+            Assert.That(expandedPublished, Is.True);
+        }
+
+        [Test]
+        public void RuntimeProfileTeamChangeMaintainsPreparedMembershipOrFailsAtomically()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(3);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+                CreateAvoidanceSeed(3, 3_000f, 3_000f, false, layer),
+            });
+            flow.HoldUnitAtCurrentPosition(0);
+            flow.HoldUnitAtCurrentPosition(1);
+            flow.HoldUnitAtCurrentPosition(2);
+            Assert.That(flow.IsUnitSettled(0), Is.True);
+            Assert.That(flow.IsUnitSettled(1), Is.True);
+            Assert.That(flow.IsUnitSettled(2), Is.True);
+
+            int rebuildCount = flow.TeamMembershipRebuildCount;
+            Assert.That(flow.SetUnitRuntimeProfile(0, 2, 1f, 1f, 20f, 800f, layer), Is.True);
+            Assert.That(flow.TeamMembershipRebuildCount, Is.EqualTo(rebuildCount + 1));
+            Assert.That(flow.GetTeam(0), Is.EqualTo(2));
+            Assert.That(flow.GetTeamUnitCount(1), Is.Zero);
+            Assert.That(flow.GetTeamUnitCount(2), Is.EqualTo(2));
+            Assert.That(flow.GetTeamLocalIndex(0), Is.EqualTo(0));
+            Assert.That(flow.GetTeamLocalIndex(1), Is.EqualTo(1));
+            Assert.That(flow.GetFlowRuntimeIndex(0), Is.EqualTo(flow.GetFlowRuntimeIndex(1)));
+            Assert.That(flow.IsUnitSettled(0), Is.False, "Migrated agents must wake for the new team target.");
+            Assert.That(flow.IsUnitSettled(1), Is.False, "Existing new-team agents must wake after slot reindexing.");
+            Assert.That(flow.IsUnitSettled(2), Is.True, "Unrelated teams must preserve settled state.");
+
+            InvalidOperationException unknown = Assert.Throws<InvalidOperationException>(
+                () => flow.SetUnitRuntimeProfile(0, 99, 1f, 1f, 20f, 800f, layer))!;
+            Assert.That(unknown.Message, Does.Contain("unregistered team"));
+            Assert.That(flow.GetTeam(0), Is.EqualTo(2));
+            Assert.That(flow.GetTeamUnitCount(2), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void FlowStateCapacityFailsBeforeRuntimeStorageCanGrowWithoutBound()
+        {
+            var flow = new MassNavigationFlowSolverState(CreateSolverConfig(parallelWorkerCount: 1), flowStateCapacity: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(2);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+            }))!;
+
+            Assert.That(error.Message, Does.Contain("flowStateCapacity"));
+            Assert.That(flow.UnitCount, Is.Zero);
+            Assert.That(flow.FlowStateCount, Is.Zero);
+            Assert.That(flow.FlowStateStorageAllocationCount, Is.Zero);
+        }
+
+        [Test]
+        public void FlowStateCapacityFailureLeavesExistingSolverUnchangedForResetAndAppend()
+        {
+            var flow = new MassNavigationFlowSolverState(CreateSolverConfig(parallelWorkerCount: 1), flowStateCapacity: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(3);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+            });
+            int allocations = flow.FlowStateStorageAllocationCount;
+
+            InvalidOperationException appendError = Assert.Throws<InvalidOperationException>(() => flow.AppendAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+            }))!;
+            Assert.That(appendError.Message, Does.Contain("flowStateCapacity"));
+            Assert.That(flow.UnitCount, Is.EqualTo(1));
+            Assert.That(flow.FlowStateCount, Is.EqualTo(1));
+            Assert.That(flow.FlowStateStorageAllocationCount, Is.EqualTo(allocations));
+            Assert.That(flow.GetTeam(0), Is.EqualTo(1));
+            Assert.That(flow.GetTeamUnitCount(1), Is.EqualTo(1));
+            Assert.That(flow.GetTeamUnitCount(2), Is.Zero);
+
+            InvalidOperationException resetError = Assert.Throws<InvalidOperationException>(() => flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_500f, 1_500f, false, layer),
+                CreateAvoidanceSeed(2, 2_500f, 2_500f, false, layer),
+            }))!;
+            Assert.That(resetError.Message, Does.Contain("flowStateCapacity"));
+            Assert.That(flow.UnitCount, Is.EqualTo(1));
+            Assert.That(flow.FlowStateCount, Is.EqualTo(1));
+            Assert.That(flow.FlowStateStorageAllocationCount, Is.EqualTo(allocations));
+            Assert.That(flow.GetTeam(0), Is.EqualTo(1));
+            Assert.That(flow.GetTeamUnitCount(1), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DeferredRuntimeProfileTeamChangesRebuildMembershipOnce()
+        {
+            MassNavigationFlowSolverState flow = CreateFourTeamFlow();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            int rebuildCount = flow.TeamMembershipRebuildCount;
+            bool membershipChanged = false;
+
+            flow.SetUnitRuntimeProfileDeferred(0, 2, false, 1f, 1f, 20f, 800f, layer, out bool firstChangedTeam);
+            membershipChanged |= firstChangedTeam;
+            flow.SetUnitRuntimeProfileDeferred(2, 4, false, 1f, 1f, 20f, 800f, layer, out bool secondChangedTeam);
+            membershipChanged |= secondChangedTeam;
+            flow.CompleteRuntimeProfileBatch(membershipChanged);
+
+            Assert.That(flow.TeamMembershipRebuildCount, Is.EqualTo(rebuildCount + 1));
+            Assert.That(flow.GetTeamUnitCount(1), Is.Zero);
+            Assert.That(flow.GetTeamUnitCount(2), Is.EqualTo(2));
+            Assert.That(flow.GetTeamUnitCount(3), Is.Zero);
+            Assert.That(flow.GetTeamUnitCount(4), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void FlowPipelineRejectsNonPositiveDirectPlanBudget()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            flow.SetTeamTarget(1, new System.Numerics.Vector2(9_000f, 9_000f));
+            var invalidPlan = new MassNavigationFlowPlan(false, 4_096, 0);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => flow.AdvanceFlowPipeline(invalidPlan, true, false, false))!;
+
+            Assert.That(error.Message, Does.Contain("StateSolveBudgetPerSimulationStep"));
+        }
+
+        [Test]
+        public void FlowPipelineRejectsNegativeDirectCrowdStampBudget()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var invalidPlan = new MassNavigationFlowPlan(false, -1, 1);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => flow.AdvanceFlowPipeline(invalidPlan, false, false, false))!;
+
+            Assert.That(error.Message, Does.Contain("CrowdStampBudgetAgentsPerRefresh"));
+        }
+
+        [Test]
+        public void FlowPipelineRequiresPositiveDirectCrowdStampBudgetWhenCrowdCostIsEnabled()
+        {
+            MassNavigationFlowSolverState flow = CreateSpawnedFlow(randomSeed: 1234);
+            var invalidPlan = new MassNavigationFlowPlan(true, 0, 1);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => flow.AdvanceFlowPipeline(invalidPlan, false, false, false))!;
+
+            Assert.That(error.Message, Does.Contain("CrowdStampBudgetAgentsPerRefresh"));
+            Assert.That(error.Message, Does.Contain("crowd cost"));
+        }
+
+        [Test]
         public void MassNavigationConfig_UsesSolverAndStreamingAsSpatialOwners()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
@@ -122,6 +761,63 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
             Assert.That(ex.Message, Does.Contain("simulationHz"));
             Assert.That(ex.Message, Does.Contain("maxStepDtSeconds"));
+        }
+
+        [TestCase("targetUpdateHz")]
+        [TestCase("flowStepHz")]
+        [TestCase("flowCrowdStampHz")]
+        [TestCase("flowObstacleStampHz")]
+        [TestCase("hardResolveHz")]
+        [TestCase("entitySyncHz")]
+        public void MassNavigationConfig_RejectsStageCadenceAboveSimulationRate(string cadenceProperty)
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]!.AsObject();
+            JsonObject cadence = runtime["cadence"]!.AsObject();
+            int simulationHz = cadence["simulationHz"]!.GetValue<int>();
+            cadence[cadenceProperty] = simulationHz + 1;
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => MassNavigationConfig.Load(runtime))!;
+
+            Assert.That(error.Message, Does.Contain(cadenceProperty).IgnoreCase);
+            Assert.That(error.Message, Does.Contain("SimulationHz"));
+        }
+
+        [TestCase("flowStepHz")]
+        [TestCase("flowObstacleStampHz")]
+        public void MassNavigationConfig_RejectsCadenceThatWouldStarvePendingFlowWork(string cadenceProperty)
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]!.AsObject();
+            runtime["cadence"]![cadenceProperty] = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(ex.Message, Does.Contain(cadenceProperty).IgnoreCase);
+        }
+
+        [Test]
+        public void MassNavigationConfig_RequiresCrowdCadenceWhenDynamicCrowdCostIsEnabled()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]!.AsObject();
+            runtime["flow"]!["crowdCostEnabled"] = true;
+            runtime["cadence"]!["flowCrowdStampHz"] = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(ex.Message, Does.Contain("flowCrowdStampHz"));
+            Assert.That(ex.Message, Does.Contain("crowdCostEnabled"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_RequiresPositiveFlowStateSolveBudget()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject runtime = config["runtime"]!.AsObject();
+            runtime["flow"]!["stateSolveBudgetPerSimulationStep"] = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtime))!;
+            Assert.That(ex.Message, Does.Contain("StateSolveBudgetPerSimulationStep"));
         }
 
         [Test]
@@ -662,6 +1358,52 @@ namespace Ludots.Tests.Presentation
             Assert.That(position.Value.Y.ToFloat(), Is.EqualTo(1_200.5f).Within(0.0001f));
         }
 
+        [Test]
+        public void SolverWorldOriginRebase_PreservesWorldStateWithoutDirtyingAllEntities()
+        {
+            using var world = World.Create();
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            MassNavigationAgentSeed seed = CreateAvoidanceSeed(1, 1_000.25f, 1_200.5f, false, layer);
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            flow.PreallocateAgentCapacity(1);
+            flow.ResetAuthoredAgents(new[] { seed });
+            Entity entity = CreateAuthoredAgentEntity(world, 0f, 0f, layer);
+            var agentState = new MassNavigationAgentState();
+            agentState.RegisterAgentAtIndex(entity, agentIndex: 0, controllable: true);
+            Assert.That(flow.SetUnitTarget(0, 1_600f, 1_700f), Is.True);
+            flow.ResetRuntimeObstaclesFromWorld(new[]
+            {
+                new MassNavigationObstacleSnapshot(2_000f, 2_100f, 50f),
+            });
+            flow.SyncEntities(world, agentState);
+            WorldPositionCm before = world.Get<WorldPositionCm>(entity);
+
+            flow.RebaseWorldOrigin(originXCm: 300f, originYCm: 400f);
+
+            Assert.That(flow.PendingEntitySyncCount, Is.Zero,
+                "Changing the solver's local frame must not publish 10K unchanged world-space positions.");
+            flow.SyncEntities(world, agentState);
+            WorldPositionCm afterShift = world.Get<WorldPositionCm>(entity);
+            Assert.That(afterShift.Value.X.RawValue, Is.EqualTo(before.Value.X.RawValue));
+            Assert.That(afterShift.Value.Y.RawValue, Is.EqualTo(before.Value.Y.RawValue));
+            Assert.That(flow.GetPositionX(0), Is.EqualTo(700.25f).Within(0.0001f));
+            Assert.That(flow.GetPositionY(0), Is.EqualTo(800.5f).Within(0.0001f));
+            Assert.That(flow.TryGetUnitTarget(0, out float targetX, out float targetY), Is.True);
+            Assert.That(flow.WorldOriginXCm + targetX, Is.EqualTo(1_600f).Within(0.0001f));
+            Assert.That(flow.WorldOriginYCm + targetY, Is.EqualTo(1_700f).Within(0.0001f));
+            Assert.That(flow.GetObstacleX(0), Is.EqualTo(1_700f).Within(0.0001f));
+            Assert.That(flow.GetObstacleY(0), Is.EqualTo(1_700f).Within(0.0001f));
+            Assert.That(flow.GetObstacleWorldX(0), Is.EqualTo(2_000f).Within(0.0001f));
+            Assert.That(flow.GetObstacleWorldY(0), Is.EqualTo(2_100f).Within(0.0001f));
+
+            flow.ApplyExternalDisplacementRange(startIndex: 0, count: 1, deltaXCm: 10f, deltaYCm: 0f);
+            Assert.That(flow.PendingEntitySyncCount, Is.EqualTo(1));
+            flow.SyncEntities(world, agentState);
+            WorldPositionCm afterMove = world.Get<WorldPositionCm>(entity);
+            Assert.That(afterMove.Value.X.ToFloat(), Is.EqualTo(before.Value.X.ToFloat() + 10f).Within(0.0001f));
+            Assert.That(afterMove.Value.Y.RawValue, Is.EqualTo(before.Value.Y.RawValue));
+        }
+
         private static MassNavigationFlowSolverState CreateSpawnedFlow(int randomSeed)
         {
             var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
@@ -675,6 +1417,21 @@ namespace Ludots.Tests.Presentation
             return flow;
         }
 
+        private static MassNavigationFlowSolverState CreateFourTeamFlow()
+        {
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.PreallocateAgentCapacity(4);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAvoidanceSeed(1, 1_000f, 1_000f, false, layer),
+                CreateAvoidanceSeed(2, 2_000f, 2_000f, false, layer),
+                CreateAvoidanceSeed(3, 3_000f, 3_000f, false, layer),
+                CreateAvoidanceSeed(4, 4_000f, 4_000f, false, layer),
+            });
+            return flow;
+        }
+
         private static MassNavigationFlowSolverState CreateConfiguredFlow(int parallelWorkerCount, string? avoidanceMode = null)
         {
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
@@ -684,7 +1441,7 @@ namespace Ludots.Tests.Presentation
                 config.Avoidance.Validate();
             }
 
-            var flow = new MassNavigationFlowSolverState(CreateSolverConfig(parallelWorkerCount));
+            var flow = new MassNavigationFlowSolverState(CreateSolverConfig(parallelWorkerCount), flowStateCapacity: 16);
             flow.ArrivalTuning.CopyFrom(config.Arrival);
             flow.AvoidanceTuning.CopyFrom(config.Avoidance);
             flow.Semantics.CopyFrom(config.Semantics);
@@ -784,6 +1541,7 @@ namespace Ludots.Tests.Presentation
                 OrderIngestionMemberCapacity = groupMemberCapacity,
                 LoadedChunkCapacity = 16,
                 MetadataTeamCapacity = 4,
+                FlowStateCapacity = 16,
             };
         }
 
@@ -920,6 +1678,103 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"Missing MassNavigationFlowSolverState field '{fieldName}'.");
             return ((Array?)field.GetValue(flow))?.Length
                 ?? throw new InvalidOperationException($"MassNavigationFlowSolverState field '{fieldName}' is not an array.");
+        }
+
+        private static float[] GetFlowCostSnapshot(MassNavigationFlowSolverState flow, int flowStateIndex)
+        {
+            return GetFlowStateFloatArraySnapshot(flow, flowStateIndex, "Cost");
+        }
+
+        private static float[] GetFlowVectorSnapshot(MassNavigationFlowSolverState flow, int flowStateIndex)
+        {
+            return GetFlowStateFloatArraySnapshot(flow, flowStateIndex, "Flow");
+        }
+
+        private static void FillFlowVector(
+            MassNavigationFlowSolverState flow,
+            int flowStateIndex,
+            float x,
+            float y)
+        {
+            FieldInfo field = typeof(MassNavigationFlowSolverState).GetField(
+                    "_flowStates",
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing MassNavigationFlowSolverState field '_flowStates'.");
+            var states = (System.Collections.IList)(field.GetValue(flow)
+                ?? throw new InvalidOperationException("MassNavigationFlowSolverState field '_flowStates' is null."));
+            object state = states[flowStateIndex]
+                ?? throw new InvalidOperationException($"MassNavigation flow state {flowStateIndex} is null.");
+            PropertyInfo arrayProperty = state.GetType().GetProperty(
+                    "Flow",
+                    BindingFlags.Instance | BindingFlags.Public)
+                ?? throw new InvalidOperationException("MassNavigation flow state is missing Flow.");
+            float[] values = (float[])(arrayProperty.GetValue(state)
+                ?? throw new InvalidOperationException("MassNavigation flow state Flow is null."));
+            for (int i = 0; i < values.Length; i += 2)
+            {
+                values[i] = x;
+                values[i + 1] = y;
+            }
+        }
+
+        private static float[] GetFlowStateFloatArraySnapshot(
+            MassNavigationFlowSolverState flow,
+            int flowStateIndex,
+            string propertyName)
+        {
+            FieldInfo field = typeof(MassNavigationFlowSolverState).GetField(
+                    "_flowStates",
+                    BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Missing MassNavigationFlowSolverState field '_flowStates'.");
+            var states = (System.Collections.IList)(field.GetValue(flow)
+                ?? throw new InvalidOperationException("MassNavigationFlowSolverState field '_flowStates' is null."));
+            object state = states[flowStateIndex]
+                ?? throw new InvalidOperationException($"MassNavigation flow state {flowStateIndex} is null.");
+            PropertyInfo arrayProperty = state.GetType().GetProperty(
+                    propertyName,
+                    BindingFlags.Instance | BindingFlags.Public)
+                ?? throw new InvalidOperationException($"MassNavigation flow state is missing {propertyName}.");
+            float[] values = (float[])(arrayProperty.GetValue(state)
+                ?? throw new InvalidOperationException($"MassNavigation flow state {propertyName} is null."));
+            return (float[])values.Clone();
+        }
+
+        private static bool ContainsDifference(float[] left, float[] right)
+        {
+            if (left.Length != right.Length)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < left.Length; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int FlowCellIndex(MassNavigationFlowSolverState flow, float xCm, float yCm)
+        {
+            int x = Math.Clamp((int)(xCm / flow.FlowCellSizeCm), 0, flow.GridWidth - 1);
+            int y = Math.Clamp((int)(yCm / flow.FlowCellSizeCm), 0, flow.GridHeight - 1);
+            return (y * flow.GridWidth) + x;
+        }
+
+        private static bool ContainsValueGreaterThan(float[] values, float threshold)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] > threshold)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void MutateWritableLeaves(object target, ref int seed)

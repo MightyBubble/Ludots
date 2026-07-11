@@ -6,6 +6,7 @@ public sealed class MassNavigationFlowConfig
 {
     [JsonRequired] public bool CrowdCostEnabled { get; set; }
     [JsonRequired] public int CrowdStampBudgetAgentsPerRefresh { get; set; }
+    [JsonRequired] public int StateSolveBudgetPerSimulationStep { get; set; }
 
     public void Validate()
     {
@@ -19,6 +20,12 @@ public sealed class MassNavigationFlowConfig
         {
             throw new System.InvalidOperationException(
                 "MassNavigation flow requires a positive CrowdStampBudgetAgentsPerRefresh when crowd cost is enabled.");
+        }
+
+        if (StateSolveBudgetPerSimulationStep < 1)
+        {
+            throw new System.InvalidOperationException(
+                "MassNavigation flow requires StateSolveBudgetPerSimulationStep >= 1.");
         }
     }
 }

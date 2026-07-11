@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -108,6 +109,7 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationSteadyStateOrderIntervalSeconds = 5;
     private const string MassNavigationPerformanceWarmupTicksEnvironmentVariable = "LUDOTS_MASS_NAV_PERFORMANCE_WARMUP_TICKS";
     private const string MassNavigationSteadyStateSecondsEnvironmentVariable = "LUDOTS_MASS_NAV_STEADY_STATE_SECONDS";
+    private const string MassNavigationSteadyTimingEnabledEnvironmentVariable = "LUDOTS_MASS_NAV_STEADY_TIMING_ENABLED";
     private const int MassNavigationAvoidanceImageWidth = 1280;
     private const int MassNavigationAvoidanceImageHeight = 720;
     private const float MassNavigationAvoidanceZoomWidthCm = 4000f;
@@ -2407,7 +2409,10 @@ public static class LauncherEvidenceRecorder
                 MassNavigationSteadyStateSecondsEnvironmentVariable,
                 MassNavigationDefaultSteadyStateSeconds,
                 minimum: 1,
-                maximum: 3_600));
+                maximum: 3_600),
+            ResolveStrictEnvironmentBoolean(
+                MassNavigationSteadyTimingEnabledEnvironmentVariable,
+                defaultValue: false));
 
         MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(
             timeline,
@@ -2422,11 +2427,11 @@ public static class LauncherEvidenceRecorder
         string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
         string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
 
-        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, avoidanceMetrics, steadyState, acceptance));
+        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, simulation, timeline, captureFrames, frameTimesMs, avoidanceMetrics, steadyState, acceptance));
         File.WriteAllText(tracePath, BuildMassNavigationTraceJsonl(request.Plan.AdapterId, timeline, steadyState));
-        File.WriteAllText(pathPath, BuildMassNavigationPathMermaid());
+        File.WriteAllText(pathPath, BuildMassNavigationPathMermaid(steadyState.TimingEnabledRequested));
         File.WriteAllText(visibleChecklistPath, BuildMassNavigationVisibleChecklist(captureFrames));
-        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline, avoidanceMetrics, steadyState));
+        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, simulation, acceptance, timeline, avoidanceMetrics, steadyState));
 
         if (!acceptance.Success)
         {
@@ -3078,9 +3083,10 @@ public static class LauncherEvidenceRecorder
         Vector2 firstCommandTargetCm,
         Vector2 secondCommandTargetCm,
         int warmupTicks,
-        int steadyStateSeconds)
+        int steadyStateSeconds,
+        bool timingEnabled)
     {
-        simulation.Telemetry.SetTimingEnabled(false);
+        simulation.Telemetry.SetTimingEnabled(timingEnabled);
         timings.SystemBreakdownEnabled = false;
 
         for (int i = 0; i < warmupTicks; i++)
@@ -3099,6 +3105,16 @@ public static class LauncherEvidenceRecorder
         int initialSettledAgentCount = simulation.NavigationSettledAgentCount;
         int initialPreparedAgentCapacity = simulation.PreparedAgentCapacity;
         int initialAgentStorageAllocationCount = simulation.AgentStorageAllocationCount;
+        int initialFlowStateCount = simulation.FlowStateCount;
+        int initialFlowStateStorageAllocationCount = simulation.FlowStateStorageAllocationCount;
+        long initialSimulationStepCount = simulation.Telemetry.SimulationStepCountTotal;
+        long initialTargetUpdateCount = simulation.Telemetry.TargetUpdateCountTotal;
+        long initialFlowCadenceCount = simulation.Telemetry.FlowCadenceCountTotal;
+        long initialCrowdCadenceCount = simulation.Telemetry.CrowdCadenceCountTotal;
+        long initialObstacleCadenceCount = simulation.Telemetry.ObstacleCadenceCountTotal;
+        long initialHardResolveCount = simulation.Telemetry.HardResolveCountTotal;
+        long initialEntitySyncCount = simulation.Telemetry.EntitySyncCountTotal;
+        long initialFlowReconcileCount = simulation.Telemetry.FlowReconcileCountTotal;
 
         long started = Stopwatch.GetTimestamp();
         long deadline = started + checked((long)steadyStateSeconds * Stopwatch.Frequency);
@@ -3158,7 +3174,9 @@ public static class LauncherEvidenceRecorder
             AverageTickMs: tickCount > 0 ? totalTickMs / tickCount : 0d,
             MaxTickMs: maxTickMs,
             WorkloadOrderCount: workloadOrderCount,
+            TimingEnabledRequested: timingEnabled,
             TimingDisabled: !simulation.Telemetry.TimingEnabled && !timings.SystemBreakdownEnabled,
+            PresentationTimingDisabled: !timings.SystemBreakdownEnabled,
             InitialAgentCount: initialAgentCount,
             FinalAgentCount: simulation.AgentState.TotalAgents,
             InitialScenarioSpawnCount: initialScenarioSpawnCount,
@@ -3175,6 +3193,18 @@ public static class LauncherEvidenceRecorder
             FinalPreparedAgentCapacity: simulation.PreparedAgentCapacity,
             InitialAgentStorageAllocationCount: initialAgentStorageAllocationCount,
             FinalAgentStorageAllocationCount: simulation.AgentStorageAllocationCount,
+            InitialFlowStateCount: initialFlowStateCount,
+            FinalFlowStateCount: simulation.FlowStateCount,
+            InitialFlowStateStorageAllocationCount: initialFlowStateStorageAllocationCount,
+            FinalFlowStateStorageAllocationCount: simulation.FlowStateStorageAllocationCount,
+            SimulationStepCount: simulation.Telemetry.SimulationStepCountTotal - initialSimulationStepCount,
+            TargetUpdateCount: simulation.Telemetry.TargetUpdateCountTotal - initialTargetUpdateCount,
+            FlowCadenceCount: simulation.Telemetry.FlowCadenceCountTotal - initialFlowCadenceCount,
+            CrowdCadenceCount: simulation.Telemetry.CrowdCadenceCountTotal - initialCrowdCadenceCount,
+            ObstacleCadenceCount: simulation.Telemetry.ObstacleCadenceCountTotal - initialObstacleCadenceCount,
+            HardResolveCount: simulation.Telemetry.HardResolveCountTotal - initialHardResolveCount,
+            EntitySyncCount: simulation.Telemetry.EntitySyncCountTotal - initialEntitySyncCount,
+            FlowPublicationCount: simulation.Telemetry.FlowReconcileCountTotal - initialFlowReconcileCount,
             BaselineMemory: baseline,
             EndMemory: end,
             RetainedEndMemory: retainedEnd,
@@ -3233,6 +3263,65 @@ public static class LauncherEvidenceRecorder
         }
 
         return value;
+    }
+
+    private static bool ResolveStrictEnvironmentBoolean(string variableName, bool defaultValue)
+    {
+        string? raw = Environment.GetEnvironmentVariable(variableName);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return defaultValue;
+        }
+
+        if (!bool.TryParse(raw, out bool value))
+        {
+            throw new InvalidOperationException(
+                $"Environment variable {variableName} must be 'true' or 'false', got '{raw}'.");
+        }
+
+        return value;
+    }
+
+    private static string ResolveGitCommitSha()
+    {
+        string? injected = Environment.GetEnvironmentVariable("LUDOTS_GIT_COMMIT_SHA");
+        if (string.IsNullOrWhiteSpace(injected))
+        {
+            injected = Environment.GetEnvironmentVariable("GITHUB_SHA");
+        }
+
+        if (!string.IsNullOrWhiteSpace(injected))
+        {
+            return injected.Trim();
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                WorkingDirectory = Environment.CurrentDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            startInfo.ArgumentList.Add("rev-parse");
+            startInfo.ArgumentList.Add("HEAD");
+            using Process? process = Process.Start(startInfo);
+            if (process == null)
+            {
+                return "unknown";
+            }
+
+            string output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return process.ExitCode == 0 && output.Length > 0 ? output : "unknown";
+        }
+        catch
+        {
+            return "unknown";
+        }
     }
 
     private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(
@@ -3297,7 +3386,10 @@ public static class LauncherEvidenceRecorder
                 failures);
         }
 
-        AddAcceptanceCheck(steadyState.TimingDisabled, "MassNavigation steady-state measurement must disable MassNavigation and presentation system-breakdown timing.", failures);
+        AddAcceptanceCheck(
+            steadyState.TimingEnabledRequested ? !steadyState.TimingDisabled : steadyState.TimingDisabled,
+            $"MassNavigation steady-state timing mode did not match the requested benchmark mode: timingEnabledRequested={steadyState.TimingEnabledRequested}, timingDisabled={steadyState.TimingDisabled}.",
+            failures);
         AddAcceptanceCheck(steadyState.MeasuredDurationSeconds >= steadyState.RequestedDurationSeconds, $"MassNavigation steady-state measurement ran {steadyState.MeasuredDurationSeconds:F3}s, below requested {steadyState.RequestedDurationSeconds}s.", failures);
         AddAcceptanceCheck(steadyState.TickCount > 0, "MassNavigation steady-state measurement executed zero ticks.", failures);
         AddAcceptanceCheck(steadyState.WorkloadOrderCount > 0, "MassNavigation steady-state measurement submitted zero workload orders.", failures);
@@ -3307,6 +3399,8 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(steadyState.InitialPreparedAgentCapacity >= expectedAgentCount, $"MassNavigation prepared agent capacity {steadyState.InitialPreparedAgentCapacity} is below configured agent count {expectedAgentCount}.", failures);
         AddAcceptanceCheck(steadyState.InitialPreparedAgentCapacity == steadyState.FinalPreparedAgentCapacity, $"MassNavigation prepared agent capacity changed during steady state: {steadyState.InitialPreparedAgentCapacity} -> {steadyState.FinalPreparedAgentCapacity}.", failures);
         AddAcceptanceCheck(steadyState.CapacityGrowthEvents == 0, $"MassNavigation agent storage grew {steadyState.CapacityGrowthEvents} time(s) during steady state.", failures);
+        AddAcceptanceCheck(steadyState.FlowStateGrowthEvents == 0, $"MassNavigation flow-state storage grew {steadyState.FlowStateGrowthEvents} time(s) during steady state.", failures);
+        AddAcceptanceCheck(!string.IsNullOrWhiteSpace(simulation.CapabilityProfileSha256), "MassNavigation resolved capability profile SHA-256 was not recorded.", failures);
 
         string normalizedSignature = string.Join("|", new[]
         {
@@ -3323,8 +3417,9 @@ public static class LauncherEvidenceRecorder
             $"steady:{steadyState.RequestedDurationSeconds}s/capacity-growth:{steadyState.CapacityGrowthEvents}"
         });
 
+        string timingMode = steadyState.TimingEnabledRequested ? "timing-enabled" : "timing-disabled";
         string verdict = failures.Count == 0
-            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT and {steadyState.RequestedDurationSeconds}s timing-disabled steady-state evidence with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and zero agent-storage growth."
+            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT and {steadyState.RequestedDurationSeconds}s {timingMode} steady-state evidence with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and zero solver-storage growth."
             : "MassNavigation large-world performer/minimap UAT failed.";
 
         return new MassNavigationAcceptanceResult(
@@ -3339,6 +3434,7 @@ public static class LauncherEvidenceRecorder
 
     private static string BuildMassNavigationBattleReport(
         LauncherRecordingRequest request,
+        MassNavigationSimulationRuntime simulation,
         IReadOnlyList<MassNavigationSnapshot> timeline,
         IReadOnlyList<CaptureFrame> captureFrames,
         IReadOnlyList<double> frameTimesMs,
@@ -3363,6 +3459,11 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine($"- Build: `{typeof(LauncherEvidenceRecorder).Assembly.GetName().Version}`");
+        sb.AppendLine($"- Git commit: `{ResolveGitCommitSha()}`");
+        sb.AppendLine($"- Runtime config SHA-256: `{simulation.RuntimeConfigSha256}`");
+        sb.AppendLine($"- Resolved capability profile SHA-256: `{simulation.CapabilityProfileSha256 ?? "not-bound"}`");
+        sb.AppendLine($"- Scenario random seed: `{simulation.ScenarioRandomSeed?.ToString(CultureInfo.InvariantCulture) ?? "not-authored"}`");
+        sb.AppendLine($"- Platform: `{RuntimeInformation.OSDescription}` / `{RuntimeInformation.FrameworkDescription}` / `{RuntimeInformation.ProcessArchitecture}`");
         sb.AppendLine($"- Execution timestamp UTC: `{DateTimeOffset.UtcNow:O}`");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
@@ -3373,7 +3474,8 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
         sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
-        sb.AppendLine($"4. Disable MassNavigation timing and presentation system-breakdown timing, warm up for {steadyState.WarmupTicks} ticks, then run a {steadyState.RequestedDurationSeconds}s wall-clock steady-state measurement.");
+        string massNavigationTimingAction = steadyState.TimingEnabledRequested ? "Enable" : "Disable";
+        sb.AppendLine($"4. {massNavigationTimingAction} MassNavigation timing, disable presentation system-breakdown timing, warm up for {steadyState.WarmupTicks} ticks, then run a {steadyState.RequestedDurationSeconds}s wall-clock steady-state measurement.");
         sb.AppendLine("5. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, core minimap is not the visible RTS full-map preset, or agent storage grows during steady state.");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
@@ -3409,7 +3511,8 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- avoidance peak/final max penetration ratio: `{avoidance.PeakMaxPenetrationRatio:P2}` / `{avoidance.FinalMaxPenetrationRatio:P2}`");
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
-        sb.AppendLine($"- steady-state timing disabled: `{steadyState.TimingDisabled}`");
+        sb.AppendLine($"- steady-state timing enabled requested / timing disabled actual: `{steadyState.TimingEnabledRequested}` / `{steadyState.TimingDisabled}`");
+        sb.AppendLine($"- presentation system-breakdown timing disabled actual: `{steadyState.PresentationTimingDisabled}`");
         sb.AppendLine($"- steady-state requested/measured duration: `{steadyState.RequestedDurationSeconds}s` / `{steadyState.MeasuredDurationSeconds:F3}s`");
         sb.AppendLine($"- steady-state ticks/orders average/max: `{steadyState.TickCount}` / `{steadyState.WorkloadOrderCount}` / `{steadyState.AverageTickMs:F3}ms` / `{steadyState.MaxTickMs:F3}ms`");
         sb.AppendLine($"- steady-state throughput: `{steadyState.TicksPerSecond:F3}` headless ticks/s");
@@ -3423,6 +3526,9 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- steady active groups/order groups/settled agents start/end: `{steadyState.InitialActiveGroupCount}/{steadyState.FinalActiveGroupCount}` / `{steadyState.InitialActiveOrderGroupCount}/{steadyState.FinalActiveOrderGroupCount}` / `{steadyState.InitialSettledAgentCount}/{steadyState.FinalSettledAgentCount}`");
         sb.AppendLine($"- prepared agent capacity start/end: `{steadyState.InitialPreparedAgentCapacity}` / `{steadyState.FinalPreparedAgentCapacity}`");
         sb.AppendLine($"- agent storage allocation count start/end/growth: `{steadyState.InitialAgentStorageAllocationCount}` / `{steadyState.FinalAgentStorageAllocationCount}` / `{steadyState.CapacityGrowthEvents}`");
+        sb.AppendLine($"- flow states count/capacity/allocation start/end/growth: `{steadyState.InitialFlowStateCount}/{steadyState.FinalFlowStateCount}` / `{simulation.FlowStateCapacity}` / `{steadyState.InitialFlowStateStorageAllocationCount}/{steadyState.FinalFlowStateStorageAllocationCount}/{steadyState.FlowStateGrowthEvents}`");
+        sb.AppendLine($"- capacity high-water agents/command-scratch/command-snapshot/groups/group-members/order-tokens/order-members/chunks/teams/flow-states: `{simulation.PeakAgentCount}` / `{simulation.PeakCommandActorScratchCount}` / `{simulation.PeakCommandActorSnapshotCount}` / `{simulation.NavGroupRuntime.PeakActiveGroupCount}` / `{simulation.NavGroupRuntime.PeakGroupMemberCount}` / `{simulation.PeakOrderIngestionTokenCount}` / `{simulation.PeakOrderIngestionMemberCount}` / `{simulation.PeakLoadedChunkCount}` / `{simulation.PeakTeamCount}` / `{simulation.PeakFlowStateCount}`");
+        sb.AppendLine($"- cadence actual counts simulation/target/flow/crowd/obstacle/hard-resolve/entity-sync/publication: `{steadyState.SimulationStepCount}` / `{steadyState.TargetUpdateCount}` / `{steadyState.FlowCadenceCount}` / `{steadyState.CrowdCadenceCount}` / `{steadyState.ObstacleCadenceCount}` / `{steadyState.HardResolveCount}` / `{steadyState.EntitySyncCount}` / `{steadyState.FlowPublicationCount}`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
         sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `EntityCollectionStore`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
@@ -3486,7 +3592,7 @@ public static class LauncherEvidenceRecorder
         {
             event_id = $"mass_navigation-{adapterId}-{timeline.Count + 1:000}",
             tick = timeline[^1].Tick + steadyState.TickCount,
-            step = "004_timing_disabled_steady_state",
+            step = "004_steady_state",
             warmup_ticks = steadyState.WarmupTicks,
             requested_duration_seconds = steadyState.RequestedDurationSeconds,
             measured_duration_seconds = Math.Round(steadyState.MeasuredDurationSeconds, 4),
@@ -3495,6 +3601,7 @@ public static class LauncherEvidenceRecorder
             ticks_per_second = Math.Round(steadyState.TicksPerSecond, 4),
             average_tick_ms = Math.Round(steadyState.AverageTickMs, 4),
             max_tick_ms = Math.Round(steadyState.MaxTickMs, 4),
+            timing_enabled_requested = steadyState.TimingEnabledRequested,
             timing_disabled = steadyState.TimingDisabled,
             agent_count_start = steadyState.InitialAgentCount,
             agent_count_end = steadyState.FinalAgentCount,
@@ -3521,8 +3628,9 @@ public static class LauncherEvidenceRecorder
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
-    private static string BuildMassNavigationPathMermaid()
+    private static string BuildMassNavigationPathMermaid(bool timingEnabled)
     {
+        string timingAction = timingEnabled ? "Enable MassNavigation timing and warm up" : "Disable MassNavigation timing and warm up";
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
@@ -3532,7 +3640,7 @@ public static class LauncherEvidenceRecorder
             "    D --> E[Submit massNavigationMove through OrderBuffer]",
             "    E --> F[Jump core minimap camera to remote 64km coordinate]",
             "    F --> G[Jump back to original area]",
-            "    G --> H[Disable runtime timing and warm up]",
+            $"    G --> H[{timingAction}]",
             "    H --> I[Run wall-clock steady-state measurement with alternating formal orders]",
             "    I --> J{Complete HUD, stable agents, and zero storage growth?}",
             "    J -->|yes| K[Write battle-report + trace + path + PNG timeline]",
@@ -3561,6 +3669,7 @@ public static class LauncherEvidenceRecorder
 
     private static string BuildMassNavigationSummaryJson(
         LauncherRecordingRequest request,
+        MassNavigationSimulationRuntime simulation,
         MassNavigationAcceptanceResult acceptance,
         IReadOnlyList<MassNavigationSnapshot> timeline,
         IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics,
@@ -3573,6 +3682,14 @@ public static class LauncherEvidenceRecorder
         return JsonSerializer.Serialize(new
         {
             scenario = "mass_navigation_large_world",
+            git_commit_sha = ResolveGitCommitSha(),
+            runtime_config_sha256 = simulation.RuntimeConfigSha256,
+            resolved_capability_profile_sha256 = simulation.CapabilityProfileSha256,
+            scenario_random_seed = simulation.ScenarioRandomSeed,
+            os_description = RuntimeInformation.OSDescription,
+            framework_description = RuntimeInformation.FrameworkDescription,
+            process_architecture = RuntimeInformation.ProcessArchitecture.ToString(),
+            os_architecture = RuntimeInformation.OSArchitecture.ToString(),
             adapter = request.Plan.AdapterId,
             selectors = request.Plan.Selectors,
             root_mods = request.Plan.RootModIds,
@@ -3615,7 +3732,17 @@ public static class LauncherEvidenceRecorder
             steady_ticks_per_second = steadyState.TicksPerSecond,
             steady_average_tick_ms = steadyState.AverageTickMs,
             steady_max_tick_ms = steadyState.MaxTickMs,
+            steady_timing_enabled_requested = steadyState.TimingEnabledRequested,
             steady_timing_disabled = steadyState.TimingDisabled,
+            steady_presentation_timing_disabled = steadyState.PresentationTimingDisabled,
+            steady_simulation_step_count = steadyState.SimulationStepCount,
+            steady_target_update_count = steadyState.TargetUpdateCount,
+            steady_flow_cadence_count = steadyState.FlowCadenceCount,
+            steady_crowd_cadence_count = steadyState.CrowdCadenceCount,
+            steady_obstacle_cadence_count = steadyState.ObstacleCadenceCount,
+            steady_hard_resolve_count = steadyState.HardResolveCount,
+            steady_entity_sync_count = steadyState.EntitySyncCount,
+            steady_flow_publication_count = steadyState.FlowPublicationCount,
             steady_total_allocated_bytes = steadyState.TotalAllocatedBytes,
             steady_allocated_bytes_per_second = steadyState.AllocatedBytesPerSecond,
             steady_allocated_bytes_per_tick = steadyState.AllocatedBytesPerTick,
@@ -3651,6 +3778,35 @@ public static class LauncherEvidenceRecorder
             steady_agent_storage_allocation_count_start = steadyState.InitialAgentStorageAllocationCount,
             steady_agent_storage_allocation_count_end = steadyState.FinalAgentStorageAllocationCount,
             steady_capacity_growth_events = steadyState.CapacityGrowthEvents,
+            steady_flow_state_count_start = steadyState.InitialFlowStateCount,
+            steady_flow_state_count_end = steadyState.FinalFlowStateCount,
+            steady_flow_state_capacity = simulation.FlowStateCapacity,
+            steady_flow_state_storage_allocation_count_start = steadyState.InitialFlowStateStorageAllocationCount,
+            steady_flow_state_storage_allocation_count_end = steadyState.FinalFlowStateStorageAllocationCount,
+            steady_flow_state_growth_events = steadyState.FlowStateGrowthEvents,
+            capacity_initial_command_actor_scratch_limit = simulation.Plan.Capacity.InitialCommandActorScratchCapacity,
+            capacity_initial_command_actor_snapshot_limit = simulation.Plan.Capacity.InitialCommandActorSnapshotCapacity,
+            capacity_navigation_group_limit = simulation.Plan.Capacity.NavigationGroupCapacity,
+            capacity_group_membership_agent_limit = simulation.Plan.Capacity.GroupMembershipAgentCapacity,
+            capacity_command_actor_scratch_limit = simulation.Plan.Capacity.CommandActorScratchCapacity,
+            capacity_group_member_limit = simulation.Plan.Capacity.GroupMemberCapacity,
+            capacity_order_ingestion_token_limit = simulation.Plan.Capacity.OrderIngestionTokenCapacity,
+            capacity_order_ingestion_member_limit = simulation.Plan.Capacity.OrderIngestionMemberCapacity,
+            capacity_loaded_chunk_limit = simulation.Plan.Capacity.LoadedChunkCapacity,
+            capacity_metadata_team_limit = simulation.Plan.Capacity.MetadataTeamCapacity,
+            capacity_flow_state_limit = simulation.Plan.Capacity.FlowStateCapacity,
+            capacity_agent_peak = simulation.PeakAgentCount,
+            capacity_initial_command_actor_scratch_peak = simulation.PeakCommandActorScratchCount,
+            capacity_initial_command_actor_snapshot_peak = simulation.PeakCommandActorSnapshotCount,
+            capacity_navigation_group_peak = simulation.NavGroupRuntime.PeakActiveGroupCount,
+            capacity_active_order_group_peak = simulation.NavGroupRuntime.PeakActiveOrderGroupCount,
+            capacity_group_membership_agent_peak = simulation.PeakAgentCount,
+            capacity_group_member_peak = simulation.NavGroupRuntime.PeakGroupMemberCount,
+            capacity_order_ingestion_token_peak = simulation.PeakOrderIngestionTokenCount,
+            capacity_order_ingestion_member_peak = simulation.PeakOrderIngestionMemberCount,
+            capacity_loaded_chunk_peak = simulation.PeakLoadedChunkCount,
+            capacity_metadata_team_peak = simulation.PeakTeamCount,
+            capacity_flow_state_peak = simulation.PeakFlowStateCount,
             failed_checks = acceptance.FailedChecks
         }, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -4355,7 +4511,9 @@ public static class LauncherEvidenceRecorder
         double AverageTickMs,
         double MaxTickMs,
         int WorkloadOrderCount,
+        bool TimingEnabledRequested,
         bool TimingDisabled,
+        bool PresentationTimingDisabled,
         int InitialAgentCount,
         int FinalAgentCount,
         int InitialScenarioSpawnCount,
@@ -4372,12 +4530,25 @@ public static class LauncherEvidenceRecorder
         int FinalPreparedAgentCapacity,
         int InitialAgentStorageAllocationCount,
         int FinalAgentStorageAllocationCount,
+        int InitialFlowStateCount,
+        int FinalFlowStateCount,
+        int InitialFlowStateStorageAllocationCount,
+        int FinalFlowStateStorageAllocationCount,
+        long SimulationStepCount,
+        long TargetUpdateCount,
+        long FlowCadenceCount,
+        long CrowdCadenceCount,
+        long ObstacleCadenceCount,
+        long HardResolveCount,
+        long EntitySyncCount,
+        long FlowPublicationCount,
         MassNavigationProcessMemorySnapshot BaselineMemory,
         MassNavigationProcessMemorySnapshot EndMemory,
         MassNavigationProcessMemorySnapshot RetainedEndMemory,
         long PeakWorkingSetBytes)
     {
         public int CapacityGrowthEvents => Math.Max(0, FinalAgentStorageAllocationCount - InitialAgentStorageAllocationCount);
+        public int FlowStateGrowthEvents => Math.Max(0, FinalFlowStateStorageAllocationCount - InitialFlowStateStorageAllocationCount);
         public long TotalAllocatedBytes => Math.Max(0L, EndMemory.TotalAllocatedBytes - BaselineMemory.TotalAllocatedBytes);
         public double TicksPerSecond => MeasuredDurationSeconds > 0d ? TickCount / MeasuredDurationSeconds : 0d;
         public double AllocatedBytesPerSecond => MeasuredDurationSeconds > 0d ? TotalAllocatedBytes / MeasuredDurationSeconds : 0d;

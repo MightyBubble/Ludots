@@ -21,16 +21,16 @@ Do not add alternate names for old experiment labels. `MassNavigation*` is the f
 
 ## Foundation Config
 
-Foundation-owned files stay under `assets/` and are loaded through the normal config pipeline.
+Foundation-owned files stay under `mods/capabilities/navigation/MassNavigationMod/assets/` and are loaded through the normal config pipeline.
 
 | File | Responsibility |
 | --- | --- |
-| `assets/MassNavigationConfig.json` | ArrayById profile catalog. `runtime` owns solver/cadence/crowd/arrival/avoidance/streaming execution data; optional `sceneAuthoring` owns example spawn/presentation/relationship data. Maps bind a profile only through `Metadata.massNavigation.profileId`. |
-| `assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
-| `assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
-| `assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
-| `assets/Presentation/performers.json` | Foundation example performer authoring. |
-| `assets/Maps/mass_navigation.json` | Foundation example map, board bounds, and visual terrain binding. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json` | ArrayById profile catalog. `runtime` owns solver/cadence/crowd/arrival/avoidance/streaming execution data and explicit capacities, including bounded `(team, layer)` flow-state storage via `capacity.flowStateCapacity`; required `sceneAuthoring` is explicitly disabled with `autoSpawnConfiguredScenario=false` when no example spawn/presentation/relationship data is needed. Maps bind a profile only through `Metadata.massNavigation.profileId`. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Presentation/performers.json` | Foundation example performer authoring. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json` | Foundation example map, board bounds, and visual terrain binding. |
 
 Game-specific mods can provide their own files with the same kinds of data. They should not create a private loader.
 
@@ -73,7 +73,7 @@ The mod-owned source surface is intentionally small:
 | --- | --- |
 | `MassNavigationModEntry.cs` | Registers map loaded/resumed/suspended/unloaded handlers for the Core runtime. |
 | `MassNavigationSceneOwner.cs` | Owns only the optional foundation example scene authoring and reset lifecycle. |
-| `assets/**` | Default MassNavigation config, templates, performers, input, and map data. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/**` | Default MassNavigation config, templates, performers, input, and map data. |
 
 ## Rules For Follow-Up Work
 

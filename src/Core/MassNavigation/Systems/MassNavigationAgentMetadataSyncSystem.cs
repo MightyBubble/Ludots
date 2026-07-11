@@ -56,6 +56,30 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
 
         _teamSet.Clear();
         ThrowIfAgentMissingEntityLayer();
+        ValidateMetadataChanges();
+        ApplyMetadataChanges();
+
+        if (_teamSet.Count <= 0)
+        {
+            return;
+        }
+
+        int write = 0;
+        foreach (int teamId in _teamSet)
+        {
+            _observedTeamIds[write++] = teamId;
+        }
+
+        Array.Sort(_observedTeamIds, 0, write);
+        ReadOnlySpan<int> observedTeams = _observedTeamIds.AsSpan(0, write);
+        if (!HaveSameTeams(Simulation.TeamIds, observedTeams))
+        {
+            Simulation.ConfigureTeams(observedTeams);
+        }
+    }
+
+    private void ValidateMetadataChanges()
+    {
         foreach (ref var chunk in _engine.World.Query(in Query))
         {
             Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
@@ -76,10 +100,9 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                 EntityLayer layer = layers[index];
                 string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
                 MassNavigationAgentProfilePlan runtimeProfile = Simulation.Plan.AgentProfiles.Resolve(profileKey);
-                Simulation.MassNavigationFlow.SetUnitRuntimeProfile(
+                Simulation.MassNavigationFlow.ValidateUnitRuntimeProfileChange(
                     agentIndices[index].Value,
                     teamId,
-                    profile.Heavy,
                     runtimeProfile.Mass,
                     profile.VisualScale,
                     runtimeProfile.RadiusCm,
@@ -87,23 +110,42 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                     new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
             }
         }
+    }
 
-        if (_teamSet.Count <= 0)
+    private void ApplyMetadataChanges()
+    {
+        bool teamMembershipChanged = false;
+        try
         {
-            return;
+            foreach (ref var chunk in _engine.World.Query(in Query))
+            {
+                Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
+                Span<Team> teams = chunk.GetSpan<Team>();
+                Span<MassNavigationAgentProfile> profiles = chunk.GetSpan<MassNavigationAgentProfile>();
+                Span<EntityLayer> layers = chunk.GetSpan<EntityLayer>();
+                foreach (int index in chunk)
+                {
+                    MassNavigationAgentProfile profile = profiles[index];
+                    EntityLayer layer = layers[index];
+                    string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
+                    MassNavigationAgentProfilePlan runtimeProfile = Simulation.Plan.AgentProfiles.Resolve(profileKey);
+                    Simulation.MassNavigationFlow.SetUnitRuntimeProfileDeferred(
+                        agentIndices[index].Value,
+                        teams[index].Id,
+                        profile.Heavy,
+                        runtimeProfile.Mass,
+                        profile.VisualScale,
+                        runtimeProfile.RadiusCm,
+                        profile.SpeedCmPerSecond,
+                        new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask),
+                        out bool changedTeam);
+                    teamMembershipChanged |= changedTeam;
+                }
+            }
         }
-
-        int write = 0;
-        foreach (int teamId in _teamSet)
+        finally
         {
-            _observedTeamIds[write++] = teamId;
-        }
-
-        Array.Sort(_observedTeamIds, 0, write);
-        ReadOnlySpan<int> observedTeams = _observedTeamIds.AsSpan(0, write);
-        if (!HaveSameTeams(Simulation.TeamIds, observedTeams))
-        {
-            Simulation.ConfigureTeams(observedTeams);
+            Simulation.MassNavigationFlow.CompleteRuntimeProfileBatch(teamMembershipChanged);
         }
     }
 
