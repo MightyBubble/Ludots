@@ -49,9 +49,15 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("steady_flow_cadence_count"));
             Assert.That(source, Does.Contain("steady_flow_publication_count"));
             Assert.That(source, Does.Contain("steady_flow_state_growth_events"));
+            Assert.That(source, Does.Contain("steady_order_ingestion_storage_growth_events"));
+            Assert.That(source, Does.Contain("steady_route_storage_growth_events"));
             Assert.That(source, Does.Contain("steady_total_allocated_bytes"));
             Assert.That(source, Does.Contain("steady_working_set_growth_bytes"));
             Assert.That(source, Does.Contain("steady_capacity_growth_events"));
+            Assert.That(source, Does.Contain("capacity_route_agent_index_limit"));
+            Assert.That(source, Does.Contain("capacity_route_waypoint_per_agent_limit"));
+            Assert.That(source, Does.Contain("capacity_route_total_waypoint_slots"));
+            Assert.That(source, Does.Contain("capacity_route_active_peak"));
             Assert.That(source, Does.Contain("steady_p95_tick_ms"));
             Assert.That(source, Does.Contain("steady_p99_tick_ms"));
             Assert.That(source, Does.Contain("steady_slowest_ticks"));

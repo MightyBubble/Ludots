@@ -33,6 +33,7 @@ public readonly record struct MassNavigationRuntimeCapacityPlan(
     int GroupMemberCapacity,
     int OrderIngestionTokenCapacity,
     int OrderIngestionMemberCapacity,
+    int RouteWaypointCapacityPerAgent,
     int LoadedChunkCapacity,
     int MetadataTeamCapacity,
     int FlowStateCapacity);
@@ -219,6 +220,7 @@ public sealed class MassNavigationRuntimePlan
                 capacity.GroupMemberCapacity,
                 capacity.OrderIngestionTokenCapacity,
                 capacity.OrderIngestionMemberCapacity,
+                capacity.RouteWaypointCapacityPerAgent,
                 capacity.LoadedChunkCapacity,
                 capacity.MetadataTeamCapacity,
                 capacity.FlowStateCapacity),

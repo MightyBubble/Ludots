@@ -908,6 +908,25 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationConfig_RequiresPositiveRouteWaypointCapacity()
+        {
+            JsonObject missingConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject missingRuntime = missingConfig["runtime"]!.AsObject();
+            JsonObject missingCapacity = missingRuntime["capacity"]!.AsObject();
+            missingCapacity.Remove("routeWaypointCapacityPerAgent");
+
+            JsonException missing = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(missingRuntime))!;
+            Assert.That(missing.Message, Does.Contain("routeWaypointCapacityPerAgent"));
+
+            JsonObject invalidConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject invalidRuntime = invalidConfig["runtime"]!.AsObject();
+            invalidRuntime["capacity"]!["routeWaypointCapacityPerAgent"] = 0;
+
+            InvalidOperationException invalid = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(invalidRuntime))!;
+            Assert.That(invalid.Message, Does.Contain("routeWaypointCapacityPerAgent"));
+        }
+
+        [Test]
         public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
         {
             JobScheduler? previousScheduler = World.SharedJobScheduler;
@@ -1581,6 +1600,7 @@ namespace Ludots.Tests.Presentation
                 GroupMemberCapacity = groupMemberCapacity,
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,
+                RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 MetadataTeamCapacity = 4,
                 FlowStateCapacity = 16,

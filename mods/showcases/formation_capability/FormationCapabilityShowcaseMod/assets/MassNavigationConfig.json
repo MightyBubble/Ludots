@@ -12,6 +12,7 @@
           "groupMemberCapacity": 2048,
         "orderIngestionTokenCapacity": 512,
           "orderIngestionMemberCapacity": 2048,
+          "routeWaypointCapacityPerAgent": 64,
         "loadedChunkCapacity": 512,
         "metadataTeamCapacity": 2
       },

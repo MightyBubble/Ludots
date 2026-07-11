@@ -106,6 +106,7 @@ public sealed class MassNavigationCapacityConfig
     [JsonRequired] public int GroupMemberCapacity { get; set; }
     [JsonRequired] public int OrderIngestionTokenCapacity { get; set; }
     [JsonRequired] public int OrderIngestionMemberCapacity { get; set; }
+    [JsonRequired] public int RouteWaypointCapacityPerAgent { get; set; }
     [JsonRequired] public int LoadedChunkCapacity { get; set; }
     [JsonRequired] public int MetadataTeamCapacity { get; set; }
     [JsonRequired] public int FlowStateCapacity { get; set; }
@@ -120,6 +121,7 @@ public sealed class MassNavigationCapacityConfig
         RequirePositive(GroupMemberCapacity, "groupMemberCapacity");
         RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
         RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
+        RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
         RequirePositive(FlowStateCapacity, "flowStateCapacity");
@@ -146,6 +148,17 @@ public sealed class MassNavigationCapacityConfig
         {
             throw new InvalidOperationException(
                 "MassNavigation runtime.capacity.orderIngestionMemberCapacity must be >= runtime.capacity.initialCommandActorSnapshotCapacity.");
+        }
+
+        try
+        {
+            _ = checked(GroupMembershipAgentCapacity * RouteWaypointCapacityPerAgent);
+        }
+        catch (OverflowException exception)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation runtime.capacity route waypoint storage exceeds the supported contiguous array size.",
+                exception);
         }
     }
 

@@ -306,6 +306,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 runtimeCapacity["orderIngestionMemberCapacity"]?.GetValue<int>(),
                 Is.EqualTo(authoredAgentCount));
+            Assert.That(
+                runtimeCapacity["routeWaypointCapacityPerAgent"]?.GetValue<int>(),
+                Is.EqualTo(64));
             Assert.That(authoredAgentCount, Is.EqualTo(10_000));
             Assert.That(
                 runtimeCapacity["groupMembershipAgentCapacity"]?.GetValue<int>(),

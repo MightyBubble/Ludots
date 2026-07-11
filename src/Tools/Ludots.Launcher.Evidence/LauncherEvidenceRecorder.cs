@@ -3110,6 +3110,9 @@ public static class LauncherEvidenceRecorder
         int initialAgentStorageAllocationCount = simulation.AgentStorageAllocationCount;
         int initialFlowStateCount = simulation.FlowStateCount;
         int initialFlowStateStorageAllocationCount = simulation.FlowStateStorageAllocationCount;
+        int initialOrderIngestionStorageAllocationCount = simulation.OrderIngestionStorageAllocationCount;
+        MassNavigationRouteExecutionSink? routeSink = runtime.Engine.GetService(MassNavigationKeys.RouteExecutionSink);
+        int initialRouteStorageAllocationCount = routeSink?.StorageAllocationCount ?? 0;
         long initialSimulationStepCount = simulation.Telemetry.SimulationStepCountTotal;
         long initialTargetUpdateCount = simulation.Telemetry.TargetUpdateCountTotal;
         long initialFlowCadenceCount = simulation.Telemetry.FlowCadenceCountTotal;
@@ -3232,6 +3235,10 @@ public static class LauncherEvidenceRecorder
             FinalFlowStateCount: simulation.FlowStateCount,
             InitialFlowStateStorageAllocationCount: initialFlowStateStorageAllocationCount,
             FinalFlowStateStorageAllocationCount: simulation.FlowStateStorageAllocationCount,
+            InitialOrderIngestionStorageAllocationCount: initialOrderIngestionStorageAllocationCount,
+            FinalOrderIngestionStorageAllocationCount: simulation.OrderIngestionStorageAllocationCount,
+            InitialRouteStorageAllocationCount: initialRouteStorageAllocationCount,
+            FinalRouteStorageAllocationCount: routeSink?.StorageAllocationCount ?? 0,
             SimulationStepCount: simulation.Telemetry.SimulationStepCountTotal - initialSimulationStepCount,
             TargetUpdateCount: simulation.Telemetry.TargetUpdateCountTotal - initialTargetUpdateCount,
             FlowCadenceCount: simulation.Telemetry.FlowCadenceCountTotal - initialFlowCadenceCount,
@@ -3562,6 +3569,8 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(steadyState.InitialPreparedAgentCapacity == steadyState.FinalPreparedAgentCapacity, $"MassNavigation prepared agent capacity changed during steady state: {steadyState.InitialPreparedAgentCapacity} -> {steadyState.FinalPreparedAgentCapacity}.", failures);
         AddAcceptanceCheck(steadyState.CapacityGrowthEvents == 0, $"MassNavigation agent storage grew {steadyState.CapacityGrowthEvents} time(s) during steady state.", failures);
         AddAcceptanceCheck(steadyState.FlowStateGrowthEvents == 0, $"MassNavigation flow-state storage grew {steadyState.FlowStateGrowthEvents} time(s) during steady state.", failures);
+        AddAcceptanceCheck(steadyState.OrderIngestionStorageGrowthEvents == 0, $"MassNavigation order-ingestion storage grew {steadyState.OrderIngestionStorageGrowthEvents} time(s) during steady state.", failures);
+        AddAcceptanceCheck(steadyState.RouteStorageGrowthEvents == 0, $"MassNavigation route storage grew {steadyState.RouteStorageGrowthEvents} time(s) during steady state.", failures);
         AddAcceptanceCheck(!string.IsNullOrWhiteSpace(simulation.CapabilityProfileSha256), "MassNavigation resolved capability profile SHA-256 was not recorded.", failures);
 
         string normalizedSignature = string.Join("|", new[]
@@ -3691,6 +3700,8 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- prepared agent capacity start/end: `{steadyState.InitialPreparedAgentCapacity}` / `{steadyState.FinalPreparedAgentCapacity}`");
         sb.AppendLine($"- agent storage allocation count start/end/growth: `{steadyState.InitialAgentStorageAllocationCount}` / `{steadyState.FinalAgentStorageAllocationCount}` / `{steadyState.CapacityGrowthEvents}`");
         sb.AppendLine($"- flow states count/capacity/allocation start/end/growth: `{steadyState.InitialFlowStateCount}/{steadyState.FinalFlowStateCount}` / `{simulation.FlowStateCapacity}` / `{steadyState.InitialFlowStateStorageAllocationCount}/{steadyState.FinalFlowStateStorageAllocationCount}/{steadyState.FlowStateGrowthEvents}`");
+        sb.AppendLine($"- order-ingestion storage allocation start/end/growth: `{steadyState.InitialOrderIngestionStorageAllocationCount}` / `{steadyState.FinalOrderIngestionStorageAllocationCount}` / `{steadyState.OrderIngestionStorageGrowthEvents}`");
+        sb.AppendLine($"- route storage allocation start/end/growth: `{steadyState.InitialRouteStorageAllocationCount}` / `{steadyState.FinalRouteStorageAllocationCount}` / `{steadyState.RouteStorageGrowthEvents}`");
         sb.AppendLine($"- capacity high-water agents/command-scratch/command-snapshot/groups/group-members/order-tokens/order-members/chunks/teams/flow-states: `{simulation.PeakAgentCount}` / `{simulation.PeakCommandActorScratchCount}` / `{simulation.PeakCommandActorSnapshotCount}` / `{simulation.NavGroupRuntime.PeakActiveGroupCount}` / `{simulation.NavGroupRuntime.PeakGroupMemberCount}` / `{simulation.PeakOrderIngestionTokenCount}` / `{simulation.PeakOrderIngestionMemberCount}` / `{simulation.PeakLoadedChunkCount}` / `{simulation.PeakTeamCount}` / `{simulation.PeakFlowStateCount}`");
         sb.AppendLine($"- cadence actual counts simulation/target/flow/crowd/obstacle/hard-resolve/entity-sync/publication: `{steadyState.SimulationStepCount}` / `{steadyState.TargetUpdateCount}` / `{steadyState.FlowCadenceCount}` / `{steadyState.CrowdCadenceCount}` / `{steadyState.ObstacleCadenceCount}` / `{steadyState.HardResolveCount}` / `{steadyState.EntitySyncCount}` / `{steadyState.FlowPublicationCount}`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
@@ -3789,6 +3800,9 @@ public static class LauncherEvidenceRecorder
             working_set_growth_bytes = steadyState.WorkingSetGrowthBytes,
             peak_working_set_growth_bytes = steadyState.PeakWorkingSetGrowthBytes,
             capacity_growth_events = steadyState.CapacityGrowthEvents,
+            flow_state_growth_events = steadyState.FlowStateGrowthEvents,
+            order_ingestion_storage_growth_events = steadyState.OrderIngestionStorageGrowthEvents,
+            route_storage_growth_events = steadyState.RouteStorageGrowthEvents,
             status = "done"
         }));
 
@@ -3958,6 +3972,12 @@ public static class LauncherEvidenceRecorder
             steady_flow_state_storage_allocation_count_start = steadyState.InitialFlowStateStorageAllocationCount,
             steady_flow_state_storage_allocation_count_end = steadyState.FinalFlowStateStorageAllocationCount,
             steady_flow_state_growth_events = steadyState.FlowStateGrowthEvents,
+            steady_order_ingestion_storage_allocation_count_start = steadyState.InitialOrderIngestionStorageAllocationCount,
+            steady_order_ingestion_storage_allocation_count_end = steadyState.FinalOrderIngestionStorageAllocationCount,
+            steady_order_ingestion_storage_growth_events = steadyState.OrderIngestionStorageGrowthEvents,
+            steady_route_storage_allocation_count_start = steadyState.InitialRouteStorageAllocationCount,
+            steady_route_storage_allocation_count_end = steadyState.FinalRouteStorageAllocationCount,
+            steady_route_storage_growth_events = steadyState.RouteStorageGrowthEvents,
             capacity_initial_command_actor_scratch_limit = simulation.Plan.Capacity.InitialCommandActorScratchCapacity,
             capacity_initial_command_actor_snapshot_limit = simulation.Plan.Capacity.InitialCommandActorSnapshotCapacity,
             capacity_navigation_group_limit = simulation.Plan.Capacity.NavigationGroupCapacity,
@@ -3966,6 +3986,11 @@ public static class LauncherEvidenceRecorder
             capacity_group_member_limit = simulation.Plan.Capacity.GroupMemberCapacity,
             capacity_order_ingestion_token_limit = simulation.Plan.Capacity.OrderIngestionTokenCapacity,
             capacity_order_ingestion_member_limit = simulation.Plan.Capacity.OrderIngestionMemberCapacity,
+            capacity_order_ingestion_prepared_token_capacity = simulation.PreparedOrderIngestionTokenCapacity,
+            capacity_order_ingestion_prepared_member_capacity = simulation.PreparedOrderIngestionMemberCapacity,
+            capacity_route_agent_index_limit = simulation.Plan.Capacity.GroupMembershipAgentCapacity,
+            capacity_route_waypoint_per_agent_limit = simulation.Plan.Capacity.RouteWaypointCapacityPerAgent,
+            capacity_route_total_waypoint_slots = runtime.Engine.GetService(MassNavigationKeys.RouteExecutionSink)?.TotalWaypointSlots ?? 0,
             capacity_loaded_chunk_limit = simulation.Plan.Capacity.LoadedChunkCapacity,
             capacity_metadata_team_limit = simulation.Plan.Capacity.MetadataTeamCapacity,
             capacity_flow_state_limit = simulation.Plan.Capacity.FlowStateCapacity,
@@ -3978,6 +4003,7 @@ public static class LauncherEvidenceRecorder
             capacity_group_member_peak = simulation.NavGroupRuntime.PeakGroupMemberCount,
             capacity_order_ingestion_token_peak = simulation.PeakOrderIngestionTokenCount,
             capacity_order_ingestion_member_peak = simulation.PeakOrderIngestionMemberCount,
+            capacity_route_active_peak = runtime.Engine.GetService(MassNavigationKeys.RouteExecutionSink)?.PeakActiveRouteCount ?? 0,
             capacity_loaded_chunk_peak = simulation.PeakLoadedChunkCount,
             capacity_metadata_team_peak = simulation.PeakTeamCount,
             capacity_flow_state_peak = simulation.PeakFlowStateCount,
@@ -4727,6 +4753,10 @@ public static class LauncherEvidenceRecorder
         int FinalFlowStateCount,
         int InitialFlowStateStorageAllocationCount,
         int FinalFlowStateStorageAllocationCount,
+        int InitialOrderIngestionStorageAllocationCount,
+        int FinalOrderIngestionStorageAllocationCount,
+        int InitialRouteStorageAllocationCount,
+        int FinalRouteStorageAllocationCount,
         long SimulationStepCount,
         long TargetUpdateCount,
         long FlowCadenceCount,
@@ -4742,6 +4772,8 @@ public static class LauncherEvidenceRecorder
     {
         public int CapacityGrowthEvents => Math.Max(0, FinalAgentStorageAllocationCount - InitialAgentStorageAllocationCount);
         public int FlowStateGrowthEvents => Math.Max(0, FinalFlowStateStorageAllocationCount - InitialFlowStateStorageAllocationCount);
+        public int OrderIngestionStorageGrowthEvents => Math.Max(0, FinalOrderIngestionStorageAllocationCount - InitialOrderIngestionStorageAllocationCount);
+        public int RouteStorageGrowthEvents => Math.Max(0, FinalRouteStorageAllocationCount - InitialRouteStorageAllocationCount);
         public long TotalAllocatedBytes => Math.Max(0L, EndMemory.TotalAllocatedBytes - BaselineMemory.TotalAllocatedBytes);
         public double TicksPerSecond => MeasuredDurationSeconds > 0d ? TickCount / MeasuredDurationSeconds : 0d;
         public double AllocatedBytesPerSecond => MeasuredDurationSeconds > 0d ? TotalAllocatedBytes / MeasuredDurationSeconds : 0d;

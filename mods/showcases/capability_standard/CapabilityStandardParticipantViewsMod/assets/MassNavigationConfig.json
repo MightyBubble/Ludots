@@ -26,6 +26,7 @@
         "groupMemberCapacity": 32,
         "orderIngestionTokenCapacity": 32,
         "orderIngestionMemberCapacity": 32,
+        "routeWaypointCapacityPerAgent": 64,
         "loadedChunkCapacity": 64
       },
       "flow": {

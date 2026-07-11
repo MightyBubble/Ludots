@@ -32,6 +32,7 @@
         "groupMemberCapacity": 32,
         "orderIngestionTokenCapacity": 32,
         "orderIngestionMemberCapacity": 32,
+        "routeWaypointCapacityPerAgent": 64,
         "metadataTeamCapacity": 2
       },
       "cadence": {

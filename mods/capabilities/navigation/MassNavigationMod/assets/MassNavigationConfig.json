@@ -60,6 +60,7 @@
         "commandActorScratchCapacity": 10000,
         "orderIngestionTokenCapacity": 256,
         "orderIngestionMemberCapacity": 10000,
+        "routeWaypointCapacityPerAgent": 64,
         "loadedChunkCapacity": 256,
         "metadataTeamCapacity": 4,
         "flowStateCapacity": 16

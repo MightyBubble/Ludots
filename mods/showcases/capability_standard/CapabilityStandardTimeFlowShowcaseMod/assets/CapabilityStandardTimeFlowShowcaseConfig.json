@@ -45,6 +45,7 @@
     "groupMemberCapacity": 4,
     "orderIngestionTokenCapacity": 4,
     "orderIngestionMemberCapacity": 4,
+    "routeWaypointCapacityPerAgent": 64,
     "loadedChunkCapacity": 4,
     "metadataTeamCapacity": 1,
     "flowStateCapacity": 1

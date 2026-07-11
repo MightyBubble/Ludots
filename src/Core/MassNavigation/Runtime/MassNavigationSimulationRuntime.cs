@@ -199,6 +199,9 @@ public sealed class MassNavigationSimulationRuntime
     public int PeakCommandActorSnapshotCount { get; private set; }
     public int PeakOrderIngestionTokenCount { get; private set; }
     public int PeakOrderIngestionMemberCount { get; private set; }
+    public int PreparedOrderIngestionTokenCapacity { get; private set; }
+    public int PreparedOrderIngestionMemberCapacity { get; private set; }
+    public int OrderIngestionStorageAllocationCount { get; private set; }
     public int PeakTeamCount { get; private set; }
     public int PeakLoadedChunkCount => _streamingWindow.PeakLoadedChunkCount;
     public int PeakFlowStateCount => MassNavigationFlow.PeakFlowStateCount;
@@ -746,6 +749,16 @@ public sealed class MassNavigationSimulationRuntime
     {
         PeakOrderIngestionTokenCount = Math.Max(PeakOrderIngestionTokenCount, tokenCount);
         PeakOrderIngestionMemberCount = Math.Max(PeakOrderIngestionMemberCount, memberCount);
+    }
+
+    internal void ObserveOrderIngestionPreparation(
+        int tokenCapacity,
+        int memberCapacity,
+        int storageAllocationCount)
+    {
+        PreparedOrderIngestionTokenCapacity = tokenCapacity;
+        PreparedOrderIngestionMemberCapacity = memberCapacity;
+        OrderIngestionStorageAllocationCount = storageAllocationCount;
     }
 
     private void RestoreCommandActorSnapshotAfterAuthoredRebuild(

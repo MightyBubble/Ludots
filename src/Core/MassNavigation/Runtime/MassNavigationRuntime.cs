@@ -17,6 +17,7 @@ public sealed class MassNavigationRuntime
     private readonly MassNavigationRuntimeBinding _binding = new();
     private readonly Dictionary<MapId, MassNavigationMapRuntimeState> _statesByMap = new();
     private bool _systemsInstalled;
+    private MassNavigationOrderIngestionSystem? _orderIngestionSystem;
 
     public bool HandleMapFocused(
         GameEngine engine,
@@ -64,6 +65,9 @@ public sealed class MassNavigationRuntime
         engine.SetService(MassNavigationKeys.RuntimeBinding, _binding);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
         EnsureSystemsInstalled(engine);
+        (_orderIngestionSystem ?? throw new InvalidOperationException(
+            "MassNavigation order ingestion system was not installed before runtime preparation."))
+            .PrepareForRuntime(simulation);
         simulation.SetWorldOperationsReady(true);
         return true;
     }
@@ -160,9 +164,8 @@ public sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
-        engine.RegisterSystem(
-            new MassNavigationOrderIngestionSystem(engine, _binding),
-            SystemGroup.AbilityActivation);
+        _orderIngestionSystem = new MassNavigationOrderIngestionSystem(engine, _binding);
+        engine.RegisterSystem(_orderIngestionSystem, SystemGroup.AbilityActivation);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine.World, _binding));
         _systemsInstalled = true;

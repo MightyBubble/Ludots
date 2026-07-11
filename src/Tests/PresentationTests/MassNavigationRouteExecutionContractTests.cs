@@ -31,7 +31,7 @@ namespace Ludots.Tests.Presentation
                 new Vector2(5_000, 5_000),
                 new Vector2(5_300, 5_000),
                 new Vector2(5_800, 5_000));
-            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig(), 2, 8);
 
             sink.BeginSync();
             MassNavigationRouteSinkResult routedTrack = sink.TrackRouteTarget(
@@ -82,7 +82,7 @@ namespace Ludots.Tests.Presentation
                 new Vector2(5_000, 5_000),
                 new Vector2(5_300, 5_000),
                 new Vector2(5_800, 5_000));
-            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig(), 2, 8);
 
             sink.BeginSync();
             sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 88, 128, 8);
@@ -110,7 +110,9 @@ namespace Ludots.Tests.Presentation
             var sink = new MassNavigationRouteExecutionSink(
                 new FailingPathService(),
                 store,
-                CreatePathingConfig());
+                CreatePathingConfig(),
+                routeCapacity: 2,
+                pointCapacity: 8);
 
             sink.BeginSync();
             sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 99, 128, 8);
@@ -121,6 +123,76 @@ namespace Ludots.Tests.Presentation
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.PathStatus, Is.EqualTo(PathStatus.NoPath));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False);
+        }
+
+        [Test]
+        public void RouteSink_ReusesPreparedAgentSlotAcrossSustainedOrderTokens()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var pathService = new FakePathService(
+                store,
+                new Vector2(5_000, 5_000),
+                new Vector2(5_800, 5_000));
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig(), 2, 8);
+            int preparedAllocations = sink.StorageAllocationCount;
+
+            for (int token = 1; token <= 1_000; token++)
+            {
+                sink.BeginSync();
+                MassNavigationRouteSinkResult tracked = sink.TrackRouteTarget(
+                    runtime,
+                    world,
+                    routed,
+                    agentIndex: 0,
+                    destinationWorldCm: new Vector2(5_800, 5_000),
+                    requestId: token,
+                    maxExpanded: 128,
+                    maxPoints: 8);
+                sink.EndSync();
+                MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
+
+                Assert.That(tracked.Tracked, Is.True);
+                Assert.That(applied.Applied, Is.True);
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+                Assert.That(sink.PeakActiveRouteCount, Is.EqualTo(1));
+                Assert.That(sink.StorageAllocationCount, Is.EqualTo(preparedAllocations));
+                Assert.That(pathService.SolveCount, Is.EqualTo(1_000));
+            });
+        }
+
+        [Test]
+        public void RouteSink_CapacityFailuresDoNotGrowPreparedStorage()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var sink = new MassNavigationRouteExecutionSink(
+                new FakePathService(store, new Vector2(5_000, 5_000)),
+                store,
+                CreatePathingConfig(),
+                routeCapacity: 1,
+                pointCapacity: 4);
+            int preparedAllocations = sink.StorageAllocationCount;
+
+            sink.BeginSync();
+            InvalidOperationException agentCapacity = Assert.Throws<InvalidOperationException>(() =>
+                sink.TrackRouteTarget(runtime, world, routed, 1, new Vector2(5_800, 5_000), 1, 128, 4))!;
+            InvalidOperationException pointCapacity = Assert.Throws<InvalidOperationException>(() =>
+                sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 1, 128, 5))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(agentCapacity.Message, Does.Contain("groupMembershipAgentCapacity"));
+                Assert.That(pointCapacity.Message, Does.Contain("route point capacity"));
+                Assert.That(sink.ActiveRouteCount, Is.Zero);
+                Assert.That(sink.StorageAllocationCount, Is.EqualTo(preparedAllocations));
+            });
         }
 
         private static MassNavigationSimulationRuntime CreateRuntime(

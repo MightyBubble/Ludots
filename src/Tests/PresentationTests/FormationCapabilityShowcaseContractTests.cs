@@ -336,6 +336,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(configuredCapacity, Is.EqualTo(2_048));
                 Assert.That(configuredCapacity, Is.GreaterThanOrEqualTo(plannedAgentCount));
             }
+            Assert.That(capacity["routeWaypointCapacityPerAgent"]?.GetValue<int>(), Is.EqualTo(64));
             Assert.That(capacity.ContainsKey("panel"), Is.False);
             Assert.That(capacity.ContainsKey("panelControls"), Is.False);
 
@@ -1062,7 +1063,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationOrderIngestion_PreallocatesCommandBucketsFromConfiguredRuntimeCapacity()
+        public void MassNavigationOrderIngestion_EnforcesPreparedAggregateCapacity()
         {
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
             using (engine)
@@ -1076,11 +1077,41 @@ namespace Ludots.Tests.Presentation
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
 
-                var system = new MassNavigationOrderIngestionSystem(
-                    engine,
-                    MassNavigationRuntimeBinding.CreateActivated(simulation));
+                MassNavigationRuntimeBinding binding = MassNavigationRuntimeBinding.CreateActivated(simulation);
+                var system = new MassNavigationOrderIngestionSystem(engine, binding);
+                system.PrepareForRuntime(simulation);
+                int allocationsBeforeUpdate = simulation.OrderIngestionStorageAllocationCount;
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
                 Assert.That(ex.Message, Does.Contain("orderIngestionTokenCapacity"));
+                Assert.That(simulation.OrderIngestionStorageAllocationCount, Is.EqualTo(allocationsBeforeUpdate));
+            }
+        }
+
+        [Test]
+        public void MassNavigationOrderIngestion_MemberCapacityIsAggregateAcrossTokens()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                MassNavigationConfig capacityConfig = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+                capacityConfig.Capacity.OrderIngestionTokenCapacity = 2;
+                capacityConfig.Capacity.OrderIngestionMemberCapacity = 1;
+                simulation = new MassNavigationSimulationRuntime(simulation.MapId, capacityConfig);
+                RegisterMoveOrderType(engine);
+
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
+
+                MassNavigationRuntimeBinding binding = MassNavigationRuntimeBinding.CreateActivated(simulation);
+                var system = new MassNavigationOrderIngestionSystem(engine, binding);
+                system.PrepareForRuntime(simulation);
+                int allocationsBeforeUpdate = simulation.OrderIngestionStorageAllocationCount;
+
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+
+                Assert.That(ex.Message, Does.Contain("orderIngestionMemberCapacity"));
+                Assert.That(ex.Message, Does.Contain("total active members"));
+                Assert.That(simulation.OrderIngestionStorageAllocationCount, Is.EqualTo(allocationsBeforeUpdate));
             }
         }
 
@@ -4606,6 +4637,7 @@ namespace Ludots.Tests.Presentation
                 GroupMemberCapacity = groupMemberCapacity,
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,
+                RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 MetadataTeamCapacity = 4,
                 FlowStateCapacity = 16,

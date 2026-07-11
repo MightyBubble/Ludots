@@ -405,6 +405,7 @@ namespace Ludots.Tests.Presentation
                     GroupMemberCapacity = 8,
                     OrderIngestionTokenCapacity = 8,
                     OrderIngestionMemberCapacity = 8,
+                    RouteWaypointCapacityPerAgent = 64,
                     LoadedChunkCapacity = 32,
                     MetadataTeamCapacity = 2,
                     FlowStateCapacity = 8,
