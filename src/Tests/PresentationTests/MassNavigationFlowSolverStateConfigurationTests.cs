@@ -1006,6 +1006,48 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ParallelStep_RethrowsBackgroundLaneFailureAfterJoiningWorkers()
+        {
+            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
+            {
+                ThreadPrefixName = "MassNavFailureTests",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false
+            });
+
+            const int agentCount = 2;
+            MassNavigationFlowSolverState flow = CreateConfiguredFlow(parallelWorkerCount: 2);
+            flow.Semantics.Solver.ParallelStepMinAgents = agentCount;
+            flow.Reset(
+                new[] { 1 },
+                unitsPerTeam: agentCount,
+                CreateProfilePlanSet(),
+                CreateAgentLayer(),
+                CreateSpawnLayout(randomSeed: 1234));
+            flow.SetUnitPositionForTests(0, 1_000f, 1_000f);
+            flow.SetUnitPositionForTests(1, 9_000f, 9_000f);
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+
+            int[] teamRuntimeIndices = GetPrivateArray<int[]>(flow, "_teamRuntimeIndices");
+            teamRuntimeIndices[0] = int.MaxValue;
+
+            using var world = World.Create();
+            MassNavigationGroupRuntime navGroups = CreateNavGroupRuntime(agentCount);
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                flow.Step(
+                    dt: 0.016f,
+                    world,
+                    navGroups,
+                    runHardResolve: false,
+                    hardResolveCandidateThresholdAgents: 1));
+        }
+
+        [Test]
         public void SpawnJitter_UsesConfiguredSeedDeterministically()
         {
             var first = CreateSpawnedFlow(randomSeed: 1234);
@@ -1672,12 +1714,18 @@ namespace Ludots.Tests.Presentation
 
         private static int GetPrivateArrayLength(MassNavigationFlowSolverState flow, string fieldName)
         {
+            return GetPrivateArray<Array>(flow, fieldName).Length;
+        }
+
+        private static TArray GetPrivateArray<TArray>(MassNavigationFlowSolverState flow, string fieldName)
+            where TArray : class
+        {
             FieldInfo field = typeof(MassNavigationFlowSolverState).GetField(
                     fieldName,
                     BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException($"Missing MassNavigationFlowSolverState field '{fieldName}'.");
-            return ((Array?)field.GetValue(flow))?.Length
-                ?? throw new InvalidOperationException($"MassNavigationFlowSolverState field '{fieldName}' is not an array.");
+            return field.GetValue(flow) as TArray
+                ?? throw new InvalidOperationException($"MassNavigationFlowSolverState field '{fieldName}' is not a {typeof(TArray).Name}.");
         }
 
         private static float[] GetFlowCostSnapshot(MassNavigationFlowSolverState flow, int flowStateIndex)

@@ -25,22 +25,30 @@ public sealed partial class MassNavigationFlowSolverState
 
         public void Execute()
         {
-            Owner!.StepRange(
-                StartIndex,
-                EndIndex,
-                ScratchSlot,
-                Dt,
-                NavGroupRuntime!,
-                SepRadiusSq,
-                SepRadiusCm,
-                ArrivalRadiusCm,
-                ArrivalRadiusSq,
-                UnitTargetStopThresholdSq,
-                HashWidthMinusOne,
-                HashHeightMinusOne,
-                InvHashCell,
-                FlowObstacleNeighborRadiusCells,
-                UseCandidateGating);
+            MassNavigationFlowSolverState owner = Owner!;
+            try
+            {
+                owner.StepRange(
+                    StartIndex,
+                    EndIndex,
+                    ScratchSlot,
+                    Dt,
+                    NavGroupRuntime!,
+                    SepRadiusSq,
+                    SepRadiusCm,
+                    ArrivalRadiusCm,
+                    ArrivalRadiusSq,
+                    UnitTargetStopThresholdSq,
+                    HashWidthMinusOne,
+                    HashHeightMinusOne,
+                    InvHashCell,
+                    FlowObstacleNeighborRadiusCells,
+                    UseCandidateGating);
+            }
+            catch (Exception exception)
+            {
+                owner._stepLaneExceptions[ScratchSlot] = exception;
+            }
         }
     }
 

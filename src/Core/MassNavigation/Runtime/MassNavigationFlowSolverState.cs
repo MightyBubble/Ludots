@@ -95,6 +95,7 @@ public sealed partial class MassNavigationFlowSolverState
     private SonarSolver2D.Interval[] _sonarIntervalScratch = Array.Empty<SonarSolver2D.Interval>();
     private readonly UnitStepJob[] _stepJobs;
     private readonly JobHandle[] _stepHandles;
+    private readonly Exception?[] _stepLaneExceptions;
 
     private readonly List<TeamRuntimeState> _teamStates = new();
     private readonly List<FlowRuntimeState> _flowStates = new();
@@ -219,6 +220,7 @@ public sealed partial class MassNavigationFlowSolverState
         _hardResolveCellCursor = new int[hardResolveHashCellCount];
         _stepJobs = CreateStepJobs(_parallelWorkerCount);
         _stepHandles = new JobHandle[_parallelWorkerCount];
+        _stepLaneExceptions = new Exception?[_parallelWorkerCount];
     }
 
     internal void PreallocateAgentCapacity(int unitCapacity)
@@ -1210,6 +1212,7 @@ public sealed partial class MassNavigationFlowSolverState
         int scheduledWorkerCount = 0;
         Exception? primaryException = null;
         bool flushed = false;
+        Array.Clear(_stepLaneExceptions, 0, workerCount);
         try
         {
             for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
@@ -1258,9 +1261,7 @@ public sealed partial class MassNavigationFlowSolverState
                 }
                 catch (Exception flushException)
                 {
-                    primaryException = primaryException == null
-                        ? flushException
-                        : new AggregateException(primaryException, flushException);
+                    primaryException = CombineStepExceptions(primaryException, flushException);
                 }
             }
 
@@ -1272,12 +1273,19 @@ public sealed partial class MassNavigationFlowSolverState
                 }
                 catch (Exception completeException)
                 {
-                    primaryException = primaryException == null
-                        ? completeException
-                        : new AggregateException(primaryException, completeException);
+                    primaryException = CombineStepExceptions(primaryException, completeException);
                 }
             }
         }
+
+        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+        {
+            if (_stepLaneExceptions[workerIndex] is { } laneException)
+            {
+                primaryException = CombineStepExceptions(primaryException, laneException);
+            }
+        }
+
         if (primaryException != null)
         {
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primaryException).Throw();
@@ -3177,6 +3185,13 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         return jobs;
+    }
+
+    private static Exception CombineStepExceptions(Exception? primaryException, Exception nextException)
+    {
+        return primaryException == null
+            ? nextException
+            : new AggregateException(primaryException, nextException);
     }
 
     private static float DeterministicSpawnJitterCm(int seed, int teamId, int localIndex, uint axis, float jitterCm)
