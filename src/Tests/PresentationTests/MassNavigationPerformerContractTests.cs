@@ -574,6 +574,47 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ParticipantViewsProfile_InheritsAllReferencedAgentProfiles()
+        {
+            string repoRoot = FindRepoRoot();
+            string baseModRoot = MassNavigationModRoot();
+            string participantModRoot = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardParticipantViewsMod");
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("MassNavigationMod", baseModRoot);
+            vfs.Mount("CapabilityStandardParticipantViewsMod", participantModRoot);
+            var modLoader = new Ludots.Core.Modding.ModLoader(
+                vfs,
+                new Ludots.Core.Scripting.FunctionRegistry(),
+                new Ludots.Core.Scripting.TriggerManager());
+            modLoader.LoadedModIds.Add("MassNavigationMod");
+            modLoader.LoadedModIds.Add("CapabilityStandardParticipantViewsMod");
+            var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
+            var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
+            var mapConfig = new MapConfig { Id = "capability_standard_participant_views" };
+            mapConfig.Metadata[MassNavigationConfigLoader.MapMetadataSection] = new JsonObject
+            {
+                [MassNavigationConfigLoader.MapMetadataProfileId] = "capability_standard_participant_views",
+            };
+
+            MassNavigationCapabilityProfile profile = new MassNavigationConfigLoader(pipeline).Load(
+                catalog,
+                new Ludots.Core.Config.ConfigConflictReport(),
+                mapConfig);
+            string[] profileIds = profile.Runtime.AgentProfiles.Profiles
+                .Select(agentProfile => agentProfile.Id)
+                .ToArray();
+
+            Assert.That(profileIds, Does.Contain("light"));
+            Assert.That(profileIds, Does.Contain("heavy"),
+                "Participant Views authors heavy MassNavigation templates and must inherit the base heavy agent profile.");
+        }
+
+        [Test]
         public void LargeWorldMap_UsesVisualHeightmapCameraProfile()
         {
             string modRoot = MassNavigationModRoot();

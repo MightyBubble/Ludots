@@ -28,18 +28,6 @@
         "orderIngestionMemberCapacity": 32,
         "loadedChunkCapacity": 64
       },
-      "agentProfiles": {
-        "profiles": [
-          {
-            "id": "light",
-            "heavy": false,
-            "visualScale": 0.22,
-            "speedCmPerSecond": 800,
-            "everyNth": 0,
-            "nthOffset": 0
-          }
-        ]
-      },
       "flow": {
         "crowdStampBudgetAgentsPerRefresh": 16
       }
