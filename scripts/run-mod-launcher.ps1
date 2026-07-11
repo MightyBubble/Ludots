@@ -52,7 +52,15 @@ if ($ArgsList.Length -gt 0 -and $ArgsList[0] -eq "cli") {
     }
 
     $cliProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"
-    $exitCode = Invoke-DotnetProject -ProjectPath $cliProject -WorkingDirectory $repoRoot -Arguments $cliArgs
+    $noBuild = $false
+    for ($index = 0; $index -lt ($cliArgs.Length - 1); $index++) {
+        if ($cliArgs[$index] -eq "--build" -and $cliArgs[$index + 1] -ieq "never") {
+            $noBuild = $true
+            break
+        }
+    }
+
+    $exitCode = Invoke-DotnetProject -ProjectPath $cliProject -WorkingDirectory $repoRoot -Arguments $cliArgs -NoBuild:$noBuild
     if ($exitCode -ne 0) { exit $exitCode }
     exit 0
 }

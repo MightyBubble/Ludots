@@ -1206,6 +1206,7 @@ public sealed partial class MassNavigationFlowSolverState
         int remainder = UnitCount % workerCount;
         int startIndex = 0;
         long threadedSteeringStart = observeLocalSteering != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+        int backgroundWorkerCount = workerCount - 1;
         for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
         {
             int length = baseCount + (workerIndex < remainder ? 1 : 0);
@@ -1226,14 +1227,24 @@ public sealed partial class MassNavigationFlowSolverState
             job.InvHashCell = invHashCell;
             job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;
             job.UseCandidateGating = _useCandidateGating;
-            _stepHandles[workerIndex] = scheduler.Schedule(job);
+            if (workerIndex < backgroundWorkerCount)
+            {
+                _stepHandles[workerIndex] = scheduler.Schedule(job);
+            }
             startIndex += length;
         }
 
         scheduler.Flush();
-        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+        try
         {
-            _stepHandles[workerIndex].Complete();
+            _stepJobs[workerCount - 1].Execute();
+        }
+        finally
+        {
+            for (int workerIndex = 0; workerIndex < backgroundWorkerCount; workerIndex++)
+            {
+                _stepHandles[workerIndex].Complete();
+            }
         }
         if (observeLocalSteering != null)
         {

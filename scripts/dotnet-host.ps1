@@ -57,10 +57,23 @@ function Invoke-DotnetProject {
         [Parameter(Mandatory = $true)]
         [string]$WorkingDirectory,
         [string[]]$Arguments = @(),
-        [string]$Configuration = 'Release'
+        [string]$Configuration = 'Release',
+        [switch]$NoBuild
     )
 
-    $build = Build-DotnetProject -ProjectPath $ProjectPath -WorkingDirectory $WorkingDirectory -Configuration $Configuration
+    $build = if ($NoBuild) {
+        $dllPath = Get-DotnetProjectDllPath -ProjectPath $ProjectPath -Configuration $Configuration
+        if (-not (Test-Path $dllPath)) {
+            throw "NoBuild requested, but project output dll not found: $dllPath"
+        }
+
+        [pscustomobject]@{
+            Dotnet = Get-DotnetCommand
+            DllPath = $dllPath
+        }
+    } else {
+        Build-DotnetProject -ProjectPath $ProjectPath -WorkingDirectory $WorkingDirectory -Configuration $Configuration
+    }
     & $build.Dotnet exec --roll-forward Major $build.DllPath @Arguments | Out-Host
     return $LASTEXITCODE
 }

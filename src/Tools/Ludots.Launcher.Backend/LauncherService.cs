@@ -402,7 +402,7 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        LauncherBuildResult appBuild = await PrepareAppAsync(resolveResult.Plan);
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
@@ -426,6 +426,26 @@ public sealed class LauncherService
 
         PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
         return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+    }
+
+    public Task<LauncherBuildResult> PrepareAppAsync(LauncherLaunchPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant()
+            ? Task.FromResult(ValidateExistingAppBuild(plan))
+            : BuildAppAsync(plan.AdapterId);
+    }
+
+    private static LauncherBuildResult ValidateExistingAppBuild(LauncherLaunchPlan plan)
+    {
+        bool exists = File.Exists(plan.AppAssemblyPath);
+        return new LauncherBuildResult(
+            plan.AdapterId,
+            exists,
+            exists ? 0 : 1,
+            exists
+                ? $"App build skipped by request: {plan.AppAssemblyPath}"
+                : $"App build mode is never, but the app assembly is missing: {plan.AppAssemblyPath}");
     }
 
     public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
@@ -1526,16 +1546,18 @@ public sealed class LauncherService
         }
 
         ct.ThrowIfCancellationRequested();
-        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            ValidateBrowserRuntimePackage(browserRuntime, out _))
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant())
         {
+            bool exists = ValidateBrowserRuntimePackage(browserRuntime, out string validationMessage);
             return new[]
             {
                 new LauncherBuildResult(
                     resultId,
-                    true,
-                    0,
-                    "Host browser runtime provider build skipped by request.")
+                    exists,
+                    exists ? 0 : 1,
+                    exists
+                        ? "Host browser runtime provider build skipped by request."
+                        : $"Build mode is never, but the host browser runtime provider package is missing or invalid: {validationMessage}")
             };
         }
 
@@ -1628,7 +1650,8 @@ public sealed class LauncherService
             })
             .ToList();
 
-        if (plannedEntries.Any(entry => entry.Info.Kind == LauncherModKind.BuildableSource))
+        bool buildNever = plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant();
+        if (!buildNever && plannedEntries.Any(entry => entry.Info.Kind == LauncherModKind.BuildableSource))
         {
             await ExportSdkAsync(ct);
         }
@@ -1662,10 +1685,16 @@ public sealed class LauncherService
             return new LauncherBuildResult(entry.Info.Id, false, 1, $"Missing main assembly for {entry.Info.Id}: {entry.Info.MainAssemblyPath}");
         }
 
-        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            entry.Info.BuildState == LauncherBuildState.Succeeded)
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant())
         {
-            return new LauncherBuildResult(entry.Info.Id, true, 0, "Build skipped by request.");
+            bool exists = File.Exists(entry.Info.MainAssemblyPath);
+            return new LauncherBuildResult(
+                entry.Info.Id,
+                exists,
+                exists ? 0 : 1,
+                exists
+                    ? $"Build skipped by request: {entry.Info.MainAssemblyPath}"
+                    : $"Build mode is never, but the mod assembly is missing: {entry.Info.MainAssemblyPath}");
         }
 
         var projectPath = EnsureProjectFile(entry, config);

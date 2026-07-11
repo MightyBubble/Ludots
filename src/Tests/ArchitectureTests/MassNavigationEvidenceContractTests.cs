@@ -40,6 +40,9 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("steady_timing_disabled"));
             Assert.That(source, Does.Contain("steady_presentation_timing_disabled"));
             Assert.That(source, Does.Contain("git_commit_sha"));
+            Assert.That(source, Does.Contain("source_worktree_dirty"));
+            Assert.That(source, Does.Contain("source_worktree_sha256"));
+            Assert.That(source, Does.Contain("build_mode"));
             Assert.That(source, Does.Contain("runtime_config_sha256"));
             Assert.That(source, Does.Contain("resolved_capability_profile_sha256"));
             Assert.That(source, Does.Contain("scenario_random_seed"));
@@ -49,9 +52,38 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(source, Does.Contain("steady_total_allocated_bytes"));
             Assert.That(source, Does.Contain("steady_working_set_growth_bytes"));
             Assert.That(source, Does.Contain("steady_capacity_growth_events"));
+            Assert.That(source, Does.Contain("steady_p95_tick_ms"));
+            Assert.That(source, Does.Contain("steady_p99_tick_ms"));
+            Assert.That(source, Does.Contain("steady_slowest_ticks"));
             Assert.That(source, Does.Contain("simulation.NavGroupRuntime.PeakActiveGroupCount"));
             Assert.That(source, Does.Contain("simulation.PeakOrderIngestionMemberCount"));
             Assert.That(source, Does.Not.Contain("capacity_navigation_group_peak = timeline.Max"));
+        });
+    }
+
+    [Test]
+    public void LauncherNeverMode_ValidatesExistingAppInsteadOfBuildingDuringMeasurement()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Tools",
+            "Ludots.Launcher.Backend",
+            "LauncherService.cs"));
+        string wrapper = File.ReadAllText(Path.Combine(repoRoot, "scripts", "run-mod-launcher.ps1"));
+        string host = File.ReadAllText(Path.Combine(repoRoot, "scripts", "dotnet-host.ps1"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(source, Does.Contain("await PrepareAppAsync(resolveResult.Plan)"));
+            Assert.That(source, Does.Contain("App build mode is never, but the app assembly is missing"));
+            Assert.That(source, Does.Contain("!buildNever && plannedEntries.Any"));
+            Assert.That(source, Does.Contain("Build mode is never, but the mod assembly is missing"));
+            Assert.That(source, Does.Contain("Build mode is never, but the host browser runtime provider package is missing or invalid"));
+            Assert.That(wrapper, Does.Contain("-NoBuild:$noBuild"));
+            Assert.That(wrapper, Does.Contain("$cliArgs[$index + 1] -ieq \"never\""));
+            Assert.That(host, Does.Contain("NoBuild requested, but project output dll not found"));
         });
     }
 

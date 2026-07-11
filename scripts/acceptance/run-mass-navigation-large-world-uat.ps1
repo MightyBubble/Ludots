@@ -4,7 +4,8 @@ param(
     [string]$UntilLocalTime = "",
     [ValidateSet("raylib", "web")]
     [string]$Adapter = "raylib",
-    [string]$Build = "",
+    [ValidateSet("auto", "always", "never")]
+    [string]$Build = "auto",
     [ValidateRange(0, 36000)]
     [int]$PerformanceWarmupTicks = 300,
     [ValidateRange(1, 3600)]

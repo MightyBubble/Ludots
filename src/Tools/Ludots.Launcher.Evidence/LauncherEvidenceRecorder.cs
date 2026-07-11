@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -3094,6 +3095,8 @@ public static class LauncherEvidenceRecorder
             TickMassNavigationSteadyState(runtime);
         }
 
+        var tickHistogram = new int[10_001];
+        var slowestTicks = new MassNavigationSlowTick[8];
         ForceFullGarbageCollection();
         using Process process = Process.GetCurrentProcess();
         MassNavigationProcessMemorySnapshot baseline = CaptureProcessMemorySnapshot(process);
@@ -3126,10 +3129,16 @@ public static class LauncherEvidenceRecorder
         int tickCount = 0;
         double totalTickMs = 0d;
         double maxTickMs = 0d;
+        int slowestTickCount = 0;
         long now;
-        do
+        while (true)
         {
             now = Stopwatch.GetTimestamp();
+            if (now >= deadline)
+            {
+                break;
+            }
+
             if (now >= nextWorkloadOrder)
             {
                 _ = SubmitMassNavigationMoveOrder(
@@ -3142,6 +3151,14 @@ public static class LauncherEvidenceRecorder
                 nextWorkloadOrder = now + (MassNavigationSteadyStateOrderIntervalSeconds * Stopwatch.Frequency);
             }
 
+            long simulationStepsBeforeTick = simulation.Telemetry.SimulationStepCountTotal;
+            long targetUpdatesBeforeTick = simulation.Telemetry.TargetUpdateCountTotal;
+            long flowCadencesBeforeTick = simulation.Telemetry.FlowCadenceCountTotal;
+            long crowdCadencesBeforeTick = simulation.Telemetry.CrowdCadenceCountTotal;
+            long obstacleCadencesBeforeTick = simulation.Telemetry.ObstacleCadenceCountTotal;
+            long hardResolvesBeforeTick = simulation.Telemetry.HardResolveCountTotal;
+            long entitySyncsBeforeTick = simulation.Telemetry.EntitySyncCountTotal;
+            long flowPublicationsBeforeTick = simulation.Telemetry.FlowReconcileCountTotal;
             long tickStarted = Stopwatch.GetTimestamp();
             TickMassNavigationSteadyState(runtime);
             now = Stopwatch.GetTimestamp();
@@ -3149,6 +3166,22 @@ public static class LauncherEvidenceRecorder
             tickCount++;
             totalTickMs += tickMs;
             maxTickMs = Math.Max(maxTickMs, tickMs);
+            int histogramBucket = Math.Clamp((int)Math.Ceiling(tickMs * 10d), 0, tickHistogram.Length - 1);
+            tickHistogram[histogramBucket]++;
+            InsertSlowTick(
+                slowestTicks,
+                ref slowestTickCount,
+                new MassNavigationSlowTick(
+                    tickCount,
+                    tickMs,
+                    simulation.Telemetry.SimulationStepCountTotal - simulationStepsBeforeTick,
+                    simulation.Telemetry.TargetUpdateCountTotal - targetUpdatesBeforeTick,
+                    simulation.Telemetry.FlowCadenceCountTotal - flowCadencesBeforeTick,
+                    simulation.Telemetry.CrowdCadenceCountTotal - crowdCadencesBeforeTick,
+                    simulation.Telemetry.ObstacleCadenceCountTotal - obstacleCadencesBeforeTick,
+                    simulation.Telemetry.HardResolveCountTotal - hardResolvesBeforeTick,
+                    simulation.Telemetry.EntitySyncCountTotal - entitySyncsBeforeTick,
+                    simulation.Telemetry.FlowReconcileCountTotal - flowPublicationsBeforeTick));
 
             if (now >= nextWorkingSetSample)
             {
@@ -3157,7 +3190,6 @@ public static class LauncherEvidenceRecorder
                 nextWorkingSetSample = now + (MassNavigationWorkingSetSampleIntervalSeconds * Stopwatch.Frequency);
             }
         }
-        while (now < deadline);
 
         MassNavigationProcessMemorySnapshot end = CaptureProcessMemorySnapshot(process);
         peakWorkingSetBytes = Math.Max(peakWorkingSetBytes, end.WorkingSetBytes);
@@ -3173,6 +3205,9 @@ public static class LauncherEvidenceRecorder
             TickCount: tickCount,
             AverageTickMs: tickCount > 0 ? totalTickMs / tickCount : 0d,
             MaxTickMs: maxTickMs,
+            P95TickMs: ResolveTickPercentile(tickHistogram, tickCount, 0.95d),
+            P99TickMs: ResolveTickPercentile(tickHistogram, tickCount, 0.99d),
+            SlowestTicks: slowestTicks.AsSpan(0, slowestTickCount).ToArray(),
             WorkloadOrderCount: workloadOrderCount,
             TimingEnabledRequested: timingEnabled,
             TimingDisabled: !simulation.Telemetry.TimingEnabled && !timings.SystemBreakdownEnabled,
@@ -3209,6 +3244,54 @@ public static class LauncherEvidenceRecorder
             EndMemory: end,
             RetainedEndMemory: retainedEnd,
             PeakWorkingSetBytes: peakWorkingSetBytes);
+    }
+
+    private static double ResolveTickPercentile(int[] histogram, int sampleCount, double percentile)
+    {
+        if (sampleCount <= 0)
+        {
+            return 0d;
+        }
+
+        int target = Math.Max(1, (int)Math.Ceiling(sampleCount * percentile));
+        int cumulative = 0;
+        for (int bucket = 0; bucket < histogram.Length; bucket++)
+        {
+            cumulative += histogram[bucket];
+            if (cumulative >= target)
+            {
+                return bucket / 10d;
+            }
+        }
+
+        return (histogram.Length - 1) / 10d;
+    }
+
+    private static void InsertSlowTick(
+        MassNavigationSlowTick[] slowestTicks,
+        ref int count,
+        MassNavigationSlowTick candidate)
+    {
+        if (count == slowestTicks.Length && candidate.TickMs <= slowestTicks[^1].TickMs)
+        {
+            return;
+        }
+
+        int insertAt = Math.Min(count, slowestTicks.Length - 1);
+        while (insertAt > 0 && slowestTicks[insertAt - 1].TickMs < candidate.TickMs)
+        {
+            if (insertAt < slowestTicks.Length)
+            {
+                slowestTicks[insertAt] = slowestTicks[insertAt - 1];
+            }
+            insertAt--;
+        }
+
+        if (insertAt < slowestTicks.Length)
+        {
+            slowestTicks[insertAt] = candidate;
+            count = Math.Min(count + 1, slowestTicks.Length);
+        }
     }
 
     private static void TickMassNavigationSteadyState(RecordingRuntime runtime)
@@ -3317,6 +3400,80 @@ public static class LauncherEvidenceRecorder
             string output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
             return process.ExitCode == 0 && output.Length > 0 ? output : "unknown";
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
+
+    private static MassNavigationSourceProvenance ResolveSourceProvenance()
+    {
+        string status = RunGitForOutput(
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            "--",
+            ".",
+            ":(exclude)artifacts/**");
+        string diff = RunGitForOutput(
+            "diff",
+            "--binary",
+            "HEAD",
+            "--",
+            ".",
+            ":(exclude)artifacts/**");
+        string untrackedFiles = RunGitForOutput(
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            ".",
+            ":(exclude)artifacts/**");
+        var fingerprint = new StringBuilder(status.Length + diff.Length + untrackedFiles.Length);
+        fingerprint.Append(status).Append('\n').Append(diff).Append('\n');
+        foreach (string relativePath in untrackedFiles.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string fullPath = Path.GetFullPath(relativePath, Environment.CurrentDirectory);
+            fingerprint.Append(relativePath).Append('\n');
+            if (File.Exists(fullPath))
+            {
+                fingerprint.Append(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(fullPath)))).Append('\n');
+            }
+        }
+
+        return new MassNavigationSourceProvenance(
+            Dirty: !string.IsNullOrWhiteSpace(status),
+            WorktreeSha256: Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fingerprint.ToString()))).ToLowerInvariant());
+    }
+
+    private static string RunGitForOutput(params string[] arguments)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                WorkingDirectory = Environment.CurrentDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            using Process? process = Process.Start(startInfo);
+            if (process == null)
+            {
+                return "unknown";
+            }
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0 ? output : "unknown";
         }
         catch
         {
@@ -3515,6 +3672,8 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- presentation system-breakdown timing disabled actual: `{steadyState.PresentationTimingDisabled}`");
         sb.AppendLine($"- steady-state requested/measured duration: `{steadyState.RequestedDurationSeconds}s` / `{steadyState.MeasuredDurationSeconds:F3}s`");
         sb.AppendLine($"- steady-state ticks/orders average/max: `{steadyState.TickCount}` / `{steadyState.WorkloadOrderCount}` / `{steadyState.AverageTickMs:F3}ms` / `{steadyState.MaxTickMs:F3}ms`");
+        sb.AppendLine($"- steady-state p95/p99 tick: `{steadyState.P95TickMs:F3}ms` / `{steadyState.P99TickMs:F3}ms`");
+        sb.AppendLine($"- steady-state slowest ticks: `{JsonSerializer.Serialize(steadyState.SlowestTicks)}`");
         sb.AppendLine($"- steady-state throughput: `{steadyState.TicksPerSecond:F3}` headless ticks/s");
         sb.AppendLine($"- process-wide total allocated bytes: `{steadyState.TotalAllocatedBytes}`; `{steadyState.AllocatedBytesPerSecond:F3}` bytes/s; `{steadyState.AllocatedBytesPerTick:F3}` bytes/tick (includes the runtime and evidence host; not a MassNavigation-only allocation claim)");
         sb.AppendLine($"- retained managed growth after full GC: `{steadyState.RetainedManagedGrowthBytes}` bytes");
@@ -3601,6 +3760,9 @@ public static class LauncherEvidenceRecorder
             ticks_per_second = Math.Round(steadyState.TicksPerSecond, 4),
             average_tick_ms = Math.Round(steadyState.AverageTickMs, 4),
             max_tick_ms = Math.Round(steadyState.MaxTickMs, 4),
+            p95_tick_ms = Math.Round(steadyState.P95TickMs, 4),
+            p99_tick_ms = Math.Round(steadyState.P99TickMs, 4),
+            slowest_ticks = steadyState.SlowestTicks,
             timing_enabled_requested = steadyState.TimingEnabledRequested,
             timing_disabled = steadyState.TimingDisabled,
             agent_count_start = steadyState.InitialAgentCount,
@@ -3679,10 +3841,13 @@ public static class LauncherEvidenceRecorder
         MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_selection_order");
         MassNavigationSnapshot final = timeline[^1];
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
+        MassNavigationSourceProvenance source = ResolveSourceProvenance();
         return JsonSerializer.Serialize(new
         {
             scenario = "mass_navigation_large_world",
             git_commit_sha = ResolveGitCommitSha(),
+            source_worktree_dirty = source.Dirty,
+            source_worktree_sha256 = source.WorktreeSha256,
             runtime_config_sha256 = simulation.RuntimeConfigSha256,
             resolved_capability_profile_sha256 = simulation.CapabilityProfileSha256,
             scenario_random_seed = simulation.ScenarioRandomSeed,
@@ -3691,6 +3856,7 @@ public static class LauncherEvidenceRecorder
             process_architecture = RuntimeInformation.ProcessArchitecture.ToString(),
             os_architecture = RuntimeInformation.OSArchitecture.ToString(),
             adapter = request.Plan.AdapterId,
+            build_mode = request.Plan.BuildMode,
             selectors = request.Plan.Selectors,
             root_mods = request.Plan.RootModIds,
             success = acceptance.Success,
@@ -3732,6 +3898,9 @@ public static class LauncherEvidenceRecorder
             steady_ticks_per_second = steadyState.TicksPerSecond,
             steady_average_tick_ms = steadyState.AverageTickMs,
             steady_max_tick_ms = steadyState.MaxTickMs,
+            steady_p95_tick_ms = steadyState.P95TickMs,
+            steady_p99_tick_ms = steadyState.P99TickMs,
+            steady_slowest_ticks = steadyState.SlowestTicks,
             steady_timing_enabled_requested = steadyState.TimingEnabledRequested,
             steady_timing_disabled = steadyState.TimingDisabled,
             steady_presentation_timing_disabled = steadyState.PresentationTimingDisabled,
@@ -4503,6 +4672,22 @@ public static class LauncherEvidenceRecorder
         int Gen1Collections,
         int Gen2Collections);
 
+    private readonly record struct MassNavigationSourceProvenance(
+        bool Dirty,
+        string WorktreeSha256);
+
+    private readonly record struct MassNavigationSlowTick(
+        int Tick,
+        double TickMs,
+        long SimulationSteps,
+        long TargetUpdates,
+        long FlowCadences,
+        long CrowdCadences,
+        long ObstacleCadences,
+        long HardResolves,
+        long EntitySyncs,
+        long FlowPublications);
+
     private readonly record struct MassNavigationSteadyStateMetrics(
         int WarmupTicks,
         int RequestedDurationSeconds,
@@ -4510,6 +4695,9 @@ public static class LauncherEvidenceRecorder
         int TickCount,
         double AverageTickMs,
         double MaxTickMs,
+        double P95TickMs,
+        double P99TickMs,
+        IReadOnlyList<MassNavigationSlowTick> SlowestTicks,
         int WorkloadOrderCount,
         bool TimingEnabledRequested,
         bool TimingDisabled,
