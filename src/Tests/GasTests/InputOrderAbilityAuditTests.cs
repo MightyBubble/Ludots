@@ -184,36 +184,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void OrderAdmissionResults_NextStepClearKeepsNewTwoStageOutcomesReadable()
+        public void OrderAdmissionResults_PresentationGlobalAndNextStepEntityRemainReadable()
         {
+            using var world = World.Create();
             var results = new OrderAdmissionResultBuffer(2);
             var terminalResults = new OrderTerminalResultBuffer(2);
             var reset = new GasBudgetResetSystem(new GasBudget(), terminalResults, results);
-            var firstGlobal = new OrderAdmissionOutcome(1, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
-            var firstEntity = new OrderAdmissionOutcome(1, 2, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
-            var overflow = new OrderAdmissionOutcome(2, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedQueueFull);
-
-            That(results.TryWrite(in firstGlobal), Is.True);
-            That(results.TryWrite(in firstEntity), Is.True);
-            That(results.TryWrite(in overflow), Is.False);
-            That(results.Count, Is.EqualTo(2));
-            That(results.OverflowCount, Is.EqualTo(1));
+            var end = new OrderAdmissionGenerationEndSystem(results);
+            var incoming = new OrderQueue(64, results);
+            var clock = new DiscreteClock();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            var intake = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                incoming,
+                admissionResults: results);
 
             float dt = 0f;
             reset.Update(in dt);
-            That(results.Generation, Is.EqualTo(1));
+            end.Update(in dt);
 
-            var nextGlobal = new OrderAdmissionOutcome(3, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
-            var nextEntity = new OrderAdmissionOutcome(3, 2, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
-            That(results.TryWrite(in nextGlobal), Is.True);
-            That(results.TryWrite(in nextEntity), Is.True);
+            var presentationOrder = new Order
+            {
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            That(incoming.TryEnqueueAssigned(ref presentationOrder), Is.True);
+            That(results.Count, Is.EqualTo(1));
+
+            reset.Update(in dt);
+            That(results.Generation, Is.EqualTo(2));
+            intake.Update(in dt);
+
             That(results.Count, Is.EqualTo(2));
-            That(results[0].OrderId, Is.EqualTo(3));
+            That(results[0].OrderId, Is.EqualTo(presentationOrder.OrderId));
             That(results[0].Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
-            That(results[1].OrderId, Is.EqualTo(3));
+            That(results[1].OrderId, Is.EqualTo(presentationOrder.OrderId));
             That(results[1].Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
             That(results.HighWatermark, Is.EqualTo(2));
-            That(results.OverflowCount, Is.EqualTo(1), "Overflow remains cumulative for diagnostics while backlog is step-scoped.");
+            That(results.OverflowCount, Is.Zero);
         }
 
         [Test]

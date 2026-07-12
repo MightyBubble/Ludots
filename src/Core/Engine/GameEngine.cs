@@ -1711,6 +1711,7 @@ namespace Ludots.Core.Engine
             // so the actual clear runs at the tail of the presentation pipeline.
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,

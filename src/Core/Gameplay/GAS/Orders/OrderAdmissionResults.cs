@@ -35,15 +35,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     }
 
     /// <summary>
-    /// Fixed-capacity admission outcome snapshot retained for one logic step.
-    /// Producers append during the step; the SchemaUpdate reset is the sole clear owner.
+    /// Two fixed-capacity generations keep presentation/external intake outcomes until the
+    /// next logic step can append the matching entity-intake outcome.
     /// </summary>
     public sealed class OrderAdmissionResultBuffer
     {
-        private readonly OrderAdmissionOutcome[] _items;
+        private OrderAdmissionOutcome[] _currentItems;
+        private OrderAdmissionOutcome[] _pendingItems;
         private readonly long[] _observedByResult = new long[8];
-        private int _head;
-        private int _count;
+        private int _currentCount;
+        private int _pendingCount;
+        private bool _logicStepActive;
 
         public OrderAdmissionResultBuffer(int capacity = 4096)
         {
@@ -52,11 +54,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new System.ArgumentOutOfRangeException(nameof(capacity), capacity, "capacity must be positive.");
             }
 
-            _items = new OrderAdmissionOutcome[capacity];
+            _currentItems = new OrderAdmissionOutcome[capacity];
+            _pendingItems = new OrderAdmissionOutcome[capacity];
         }
 
-        public int Count => _count;
-        public int Capacity => _items.Length;
+        public int Count => _currentCount + _pendingCount;
+        public int Capacity => _currentItems.Length;
+        public int CurrentGenerationCount => _currentCount;
+        public int PendingGenerationCount => _pendingCount;
+        public bool LogicStepActive => _logicStepActive;
         public int HighWatermark { get; private set; }
         public long OverflowCount { get; private set; }
         public uint Generation { get; private set; }
@@ -65,12 +71,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             get
             {
-                if ((uint)index >= (uint)_count)
+                if ((uint)index >= (uint)Count)
                 {
                     throw new System.ArgumentOutOfRangeException(nameof(index));
                 }
 
-                return ref _items[(_head + index) % _items.Length];
+                if (index < _currentCount)
+                {
+                    return ref _currentItems[index];
+                }
+
+                return ref _pendingItems[index - _currentCount];
             }
         }
 
@@ -84,18 +95,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             _observedByResult[resultIndex]++;
-            if (_count >= _items.Length)
+            bool writePending = outcome.Stage == OrderAdmissionStage.GlobalIntake && !_logicStepActive;
+            ref int count = ref (writePending ? ref _pendingCount : ref _currentCount);
+            OrderAdmissionOutcome[] items = writePending ? _pendingItems : _currentItems;
+            if (count >= items.Length)
             {
                 OverflowCount++;
                 return false;
             }
 
-            int tail = (_head + _count) % _items.Length;
-            _items[tail] = outcome;
-            _count++;
-            if (_count > HighWatermark)
+            items[count++] = outcome;
+            if (Count > HighWatermark)
             {
-                HighWatermark = _count;
+                HighWatermark = Count;
             }
             return true;
         }
@@ -111,11 +123,30 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _observedByResult[index];
         }
 
-        public void Clear()
+        public void BeginLogicStep()
         {
-            _head = 0;
-            _count = 0;
+            if (_logicStepActive)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.LogicStepAlreadyActive");
+            }
+
+            OrderAdmissionOutcome[] retired = _currentItems;
+            _currentItems = _pendingItems;
+            _pendingItems = retired;
+            _currentCount = _pendingCount;
+            _pendingCount = 0;
+            _logicStepActive = true;
             Generation++;
+        }
+
+        public void EndLogicStep()
+        {
+            if (!_logicStepActive)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.LogicStepNotActive");
+            }
+
+            _logicStepActive = false;
         }
     }
 }

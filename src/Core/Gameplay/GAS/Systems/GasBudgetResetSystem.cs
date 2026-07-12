@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _budget?.Reset();
             _orderTerminalResults?.Clear();
-            _orderAdmissionResults?.Clear();
+            _orderAdmissionResults?.BeginLogicStep();
         }
 
         public void AfterUpdate(in float dt) { }
