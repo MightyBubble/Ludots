@@ -201,6 +201,19 @@ public static class LauncherEvidenceRecorder
         var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
+        try
+        {
+            return CreateRaylibRuntimeCore(plan, engine, config);
+        }
+        catch
+        {
+            engine.Dispose();
+            throw;
+        }
+    }
+
+    private static RecordingRuntime CreateRaylibRuntimeCore(LauncherLaunchPlan plan, GameEngine engine, GameConfig config)
+    {
         ApplyRaylibHostAssets(engine);
 
         var skiaRenderer = new SkiaUiRenderer();
@@ -294,7 +307,19 @@ public static class LauncherEvidenceRecorder
         var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
+        try
+        {
+            return CreateWebRuntimeCore(plan, engine, config);
+        }
+        catch
+        {
+            engine.Dispose();
+            throw;
+        }
+    }
 
+    private static RecordingRuntime CreateWebRuntimeCore(LauncherLaunchPlan plan, GameEngine engine, GameConfig config)
+    {
         var skiaRenderer = new SkiaUiRenderer();
         var textMeasurer = new SkiaTextMeasurer();
         var imageSizeProvider = new SkiaImageSizeProvider();

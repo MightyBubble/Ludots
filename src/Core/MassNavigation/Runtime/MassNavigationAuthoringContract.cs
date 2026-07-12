@@ -163,19 +163,6 @@ internal sealed class MassNavigationAuthoringContract
                 throw new InvalidOperationException(
                     $"MassNavigation runtime mesh asset '{meshAssetId}' must be a configured Model or Billboard asset, actual={descriptor.Type}.");
             }
-
-            if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
-            {
-                throw new InvalidOperationException($"MassNavigation runtime mesh asset '{meshAssetId}' must have backend sourceUris from Presentation/host_assets.json.");
-            }
-
-            for (int uriIndex = 0; uriIndex < descriptor.SourceUris.Length; uriIndex++)
-            {
-                if (string.IsNullOrWhiteSpace(descriptor.SourceUris[uriIndex]))
-                {
-                    throw new InvalidOperationException($"MassNavigation runtime mesh asset '{meshAssetId}' has an empty sourceUri at index {uriIndex}.");
-                }
-            }
         }
     }
 }
