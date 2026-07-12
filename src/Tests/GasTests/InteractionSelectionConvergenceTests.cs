@@ -201,15 +201,15 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossExplicitActorCollection()
+        public void InputOrderMapping_PositionMoveCommand_WithGroupTargetLayout_AssignsOffsetTargetsAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.TargetFirst,
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },

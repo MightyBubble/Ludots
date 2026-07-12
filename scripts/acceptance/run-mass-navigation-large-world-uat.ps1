@@ -99,7 +99,7 @@ function Write-SoakReport {
     $lines.Add("| 64km world boot | Designer sees one standard RTS battlefield | ``world_width_cm == 6400000 && world_height_cm == 6400000`` |")
     $lines.Add("| Four dynamic teams | Scenario is not a hard-coded two-team demo | ``teams >= 4`` |")
     $lines.Add("| Formal order chain | The evidence harness fills CommandSource, then one shared move reaches every member through OrderQueue and OrderBuffer | command source and active move-order counts are positive; real box-drag/right-click gestures are covered by the production-path test |")
-    $lines.Add("| Anchor chain | Models and HUD anchors follow the same navigation result | 64 fixed solver/ECS/VisualTransform/performer-root samples stay within tolerance |")
+    $lines.Add("| Position chain | Models and HUD roots follow the same navigation result | 64 fixed solver/ECS/VisualTransform/performer-root samples stay within tolerance |")
     $lines.Add("| World HUD emission | Every authored agent emits a bar and text item | world bar/text counts cover all agents |")
     $lines.Add("| Screen HUD projection | Visible world HUD reaches the host screen buffer | screen bar/text counts are positive and projection failures are zero |")
     $lines.Add("| Capacity | Large crowds do not disappear silently | WorldHud, ScreenHud and minimap drops are all zero |")

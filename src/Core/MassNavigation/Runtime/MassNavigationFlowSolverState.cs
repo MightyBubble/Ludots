@@ -1705,7 +1705,7 @@ public sealed partial class MassNavigationFlowSolverState
             int teamStateIndex = _teamRuntimeIndices[i];
             TeamRuntimeState team = _teamStates[teamStateIndex];
             FlowRuntimeState flowState = _flowStates[_flowRuntimeIndices[i]];
-            bool inFormation = navGroupRuntime.HasGroup(i);
+            bool inOrderGroup = navGroupRuntime.HasGroup(i);
 
             float desiredX = 0f;
             float desiredY = 0f;
@@ -1822,8 +1822,8 @@ public sealed partial class MassNavigationFlowSolverState
                     }
 
                     float targetDistance = MathF.Sqrt(targetDistSq);
-                    float arriveThreshold = inFormation
-                        ? Semantics.Group.FormationArriveThresholdCm
+                    float arriveThreshold = inOrderGroup
+                        ? Semantics.Group.GroupedAgentArriveThresholdCm
                         : Semantics.Group.LooseArriveThresholdCm;
                     if (targetDistance < arriveThreshold)
                     {
@@ -1916,8 +1916,8 @@ public sealed partial class MassNavigationFlowSolverState
             float directTargetY = hasGoalTarget ? targetY - py : 0f;
             float directTargetSq = hasGoalTarget ? directTargetX * directTargetX + directTargetY * directTargetY : 0f;
             float flowScale = suppressTargetMotion ? 0f : 1f;
-            float effectiveArrivalCm = inFormation
-                ? Semantics.Group.FormationFlowSlowRadiusCm
+            float effectiveArrivalCm = inOrderGroup
+                ? Semantics.Group.GroupedAgentFlowSlowRadiusCm
                 : arrivalRadiusCm;
             if (hasUnitNavigationTarget)
             {
@@ -2040,8 +2040,8 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
-            float separationScale = (inFormation
-                ? Semantics.Steering.FormationSeparationScale
+            float separationScale = (inOrderGroup
+                ? Semantics.Steering.GroupedAgentSeparationScale
                 : Semantics.Steering.LooseSeparationScale) * unitArrivalFactor;
             float desiredVelocityX = desiredX * speed * flowScale + separationX * separationScale + obstaclePushX * speed;
             float desiredVelocityY = desiredY * speed * flowScale + separationY * separationScale + obstaclePushY * speed;

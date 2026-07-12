@@ -55,21 +55,6 @@ public readonly record struct MassNavigationArrivalEvent(
     float WorldXCm,
     float WorldYCm);
 
-public readonly record struct MassNavigationCarriedRangeSyncResult(
-    float CarrierLocalXCm,
-    float CarrierLocalYCm,
-    float CarrierWorldXCm,
-    float CarrierWorldYCm,
-    float DisplacementWorldXCm,
-    float DisplacementWorldYCm,
-    bool AppliedDisplacement);
-
-public readonly record struct MassNavigationCarriedSlotTarget(
-    float LocalXCm,
-    float LocalYCm,
-    float WorldXCm,
-    float WorldYCm);
-
 public readonly record struct MassNavigationSolverDiagnostics(
     bool FlowEnabled,
     int FlowIterationsPerStep,
@@ -88,7 +73,7 @@ public readonly record struct MassNavigationSolverDiagnostics(
     float GroupSlotClearanceCm,
     float UnitTargetStopThresholdCm,
     float GoalArrivalRadiusCm,
-    float FormationFlowSlowRadiusCm,
+    float GroupedAgentFlowSlowRadiusCm,
     float DominantMassRatio,
     float FriendlyResponseScale,
     float NonFriendlyResponseScale,
@@ -170,7 +155,7 @@ public sealed class MassNavigationSimulationRuntime
     public int SolverWindowMovesFrame => Telemetry.SolverWindowMovesFrame;
     public float FrameMs => Telemetry.FrameMs;
     public float Fps => Telemetry.Fps;
-    public float FormationTargetMs => Telemetry.FormationTargetMs;
+    public float GroupTargetUpdateMs => Telemetry.GroupTargetUpdateMs;
     public float FlowFieldRebuildMs => Telemetry.FlowFieldRebuildMs;
     public float StepPrepMs => Telemetry.StepPrepMs;
     public float LocalSteeringMs => Telemetry.LocalSteeringMs;
@@ -197,7 +182,6 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
-    public MassNavigationFormationRuntime FormationRuntime { get; }
     internal MassNavigationGroupRuntime NavGroupRuntime { get; }
     internal MassNavigationFlowSolverState MassNavigationFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
@@ -274,8 +258,7 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaWidthCm = _simWindowWidthCm;
         _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowTuning = config.Flow;
-        FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
-        NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime, config.ScenarioRuntime.RuntimeCapacity);
+        NavGroupRuntime = new MassNavigationGroupRuntime(config.Semantics.Group, config.ScenarioRuntime.RuntimeCapacity);
         ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
         MassNavigationFlow.ArrivalTuning.CopyFrom(config.Arrival);
         MassNavigationFlow.AvoidanceTuning.CopyFrom(config.Avoidance);
@@ -375,7 +358,7 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    public void ObserveFormationTargets(double sampleMs) => Telemetry.ObserveFormationTargets(sampleMs);
+    public void ObserveGroupTargetUpdate(double sampleMs) => Telemetry.ObserveGroupTargetUpdate(sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
     public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
     public void ObserveLocalSteering(double sampleMs) => Telemetry.ObserveLocalSteering(sampleMs);
@@ -404,7 +387,7 @@ public sealed class MassNavigationSimulationRuntime
             GroupSlotClearanceCm: MassNavigationFlow.Semantics.TargetProjection.GroupSlotClearanceCm,
             UnitTargetStopThresholdCm: MassNavigationFlow.Semantics.Group.UnitTargetStopThresholdCm,
             GoalArrivalRadiusCm: MassNavigationFlow.Semantics.Steering.GoalArrivalRadiusCm,
-            FormationFlowSlowRadiusCm: MassNavigationFlow.Semantics.Group.FormationFlowSlowRadiusCm,
+            GroupedAgentFlowSlowRadiusCm: MassNavigationFlow.Semantics.Group.GroupedAgentFlowSlowRadiusCm,
             DominantMassRatio: MassNavigationFlow.AvoidanceTuning.DominantMassRatio,
             FriendlyResponseScale: MassNavigationFlow.AvoidanceTuning.FriendlyResponseScale,
             NonFriendlyResponseScale: MassNavigationFlow.AvoidanceTuning.NonFriendlyResponseScale,
@@ -762,98 +745,9 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.ResetRuntimeObstaclesFromWorld(obstacles);
     }
 
-    public MassNavigationCarriedRangeSyncResult SyncCarriedAgentRangeToCarrier(
-        int carrierAgentIndex,
-        int firstMemberAgentIndex,
-        int memberAgentCount,
-        bool previousCarrierSnapshotInitialized,
-        float previousCarrierWorldXCm,
-        float previousCarrierWorldYCm)
-    {
-        RequireAgentIndex(carrierAgentIndex);
-        RequireAgentRange(firstMemberAgentIndex, memberAgentCount, nameof(firstMemberAgentIndex));
-
-        System.Numerics.Vector2 carrierLocal = GetAgentLocalPositionCm(carrierAgentIndex);
-        float carrierWorldX = ToWorldXCm(carrierLocal.X);
-        float carrierWorldY = ToWorldYCm(carrierLocal.Y);
-        float deltaX = previousCarrierSnapshotInitialized ? carrierWorldX - previousCarrierWorldXCm : 0f;
-        float deltaY = previousCarrierSnapshotInitialized ? carrierWorldY - previousCarrierWorldYCm : 0f;
-        bool applied = previousCarrierSnapshotInitialized && (deltaX != 0f || deltaY != 0f);
-        if (applied)
-        {
-            MassNavigationFlow.ApplyExternalDisplacementRange(firstMemberAgentIndex, memberAgentCount, deltaX, deltaY);
-        }
-
-        return new MassNavigationCarriedRangeSyncResult(
-            carrierLocal.X,
-            carrierLocal.Y,
-            carrierWorldX,
-            carrierWorldY,
-            deltaX,
-            deltaY,
-            applied);
-    }
-
-    public MassNavigationCarriedRangeSyncResult SyncCarriedAgentsToCarrier(
-        int carrierAgentIndex,
-        ReadOnlySpan<int> memberAgentIndices,
-        bool previousCarrierSnapshotInitialized,
-        float previousCarrierWorldXCm,
-        float previousCarrierWorldYCm)
-    {
-        RequireAgentIndex(carrierAgentIndex);
-        for (int i = 0; i < memberAgentIndices.Length; i++)
-        {
-            RequireAgentIndex(memberAgentIndices[i]);
-        }
-
-        System.Numerics.Vector2 carrierLocal = GetAgentLocalPositionCm(carrierAgentIndex);
-        float carrierWorldX = ToWorldXCm(carrierLocal.X);
-        float carrierWorldY = ToWorldYCm(carrierLocal.Y);
-        float deltaX = previousCarrierSnapshotInitialized ? carrierWorldX - previousCarrierWorldXCm : 0f;
-        float deltaY = previousCarrierSnapshotInitialized ? carrierWorldY - previousCarrierWorldYCm : 0f;
-        bool applied = previousCarrierSnapshotInitialized && (deltaX != 0f || deltaY != 0f);
-        if (applied)
-        {
-            MassNavigationFlow.ApplyExternalDisplacement(memberAgentIndices, deltaX, deltaY);
-        }
-
-        return new MassNavigationCarriedRangeSyncResult(
-            carrierLocal.X,
-            carrierLocal.Y,
-            carrierWorldX,
-            carrierWorldY,
-            deltaX,
-            deltaY,
-            applied);
-    }
-
     public void SyncAgentEntitiesNow(World world)
     {
         MassNavigationFlow.SyncEntities(world, AgentState);
-    }
-
-    public MassNavigationCarriedSlotTarget ResolveCarriedAgentSlotTarget(
-        int memberAgentIndex,
-        float carrierLocalXCm,
-        float carrierLocalYCm,
-        float slotOffsetLocalXCm,
-        float slotOffsetLocalYCm)
-    {
-        RequireAgentIndex(memberAgentIndex);
-        System.Numerics.Vector2 resolvedLocal = MassNavigationFlow.ResolveUnitNavigableTarget(
-            memberAgentIndex,
-            carrierLocalXCm + slotOffsetLocalXCm,
-            carrierLocalYCm + slotOffsetLocalYCm,
-            slotOffsetLocalXCm,
-            slotOffsetLocalYCm,
-            MassNavigationFlow.Semantics.TargetProjection.GroupSlotClearanceCm);
-        System.Numerics.Vector2 resolvedWorld = ToWorldCm(resolvedLocal);
-        return new MassNavigationCarriedSlotTarget(
-            resolvedLocal.X,
-            resolvedLocal.Y,
-            resolvedWorld.X,
-            resolvedWorld.Y);
     }
 
     public bool TryGetAgentNavigationTargetLocalCm(int agentIndex, out float xCm, out float yCm)
@@ -875,6 +769,42 @@ public sealed class MassNavigationSimulationRuntime
         xCm = ToWorldXCm(localX);
         yCm = ToWorldYCm(localY);
         return true;
+    }
+
+    public Vector2 ResolveAgentNavigableTargetWorldCm(
+        int agentIndex,
+        Vector2 targetWorldCm,
+        Vector2 projectionHintWorldCm,
+        float minimumClearanceCm)
+    {
+        RequireAgentIndex(agentIndex);
+        if (!float.IsFinite(targetWorldCm.X) ||
+            !float.IsFinite(targetWorldCm.Y) ||
+            !float.IsFinite(projectionHintWorldCm.X) ||
+            !float.IsFinite(projectionHintWorldCm.Y))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(targetWorldCm),
+                "MassNavigation navigable-target projection requires finite target and hint coordinates.");
+        }
+
+        if (!float.IsFinite(minimumClearanceCm) || minimumClearanceCm < 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minimumClearanceCm),
+                minimumClearanceCm,
+                "MassNavigation navigable-target projection requires finite minimumClearanceCm >= 0.");
+        }
+
+        Vector2 targetLocalCm = ToLocalCm(targetWorldCm);
+        Vector2 resolvedLocalCm = MassNavigationFlow.ResolveUnitNavigableTarget(
+            agentIndex,
+            targetLocalCm.X,
+            targetLocalCm.Y,
+            projectionHintWorldCm.X,
+            projectionHintWorldCm.Y,
+            minimumClearanceCm);
+        return ToWorldCm(resolvedLocalCm);
     }
 
     public bool SetAgentNavigationTargetLocalCm(int agentIndex, float xCm, float yCm, bool resetRecovery = false)
@@ -986,15 +916,6 @@ public sealed class MassNavigationSimulationRuntime
         float normalized = velocity.Length() / authoredSpeed;
         speed = float.IsFinite(normalized) ? MathF.Max(0f, normalized) : 0f;
         return true;
-    }
-
-    public bool ApplyCarriedAgentSlotTarget(
-        int memberAgentIndex,
-        in MassNavigationCarriedSlotTarget target,
-        bool resetRecovery)
-    {
-        RequireAgentIndex(memberAgentIndex);
-        return MassNavigationFlow.SetUnitTarget(memberAgentIndex, target.LocalXCm, target.LocalYCm, resetRecovery);
     }
 
     public void BindSpawnedAgent(

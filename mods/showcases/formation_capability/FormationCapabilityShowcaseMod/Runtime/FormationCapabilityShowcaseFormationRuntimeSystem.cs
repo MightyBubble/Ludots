@@ -11,6 +11,8 @@ internal sealed class FormationCapabilityShowcaseFormationRuntimeSystem : ISyste
     private readonly FormationCapabilityShowcaseRuntime _runtime;
     private readonly MassNavigationSimulationRuntime _simulation;
 
+    internal FormationCapabilityShowcaseRuntime Runtime => _runtime;
+
     public FormationCapabilityShowcaseFormationRuntimeSystem(
         GameEngine engine,
         FormationCapabilityShowcaseRuntime runtime,

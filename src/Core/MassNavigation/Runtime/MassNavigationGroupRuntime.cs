@@ -2,15 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Components;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
 internal sealed class MassNavigationGroupRuntime
 {
-    internal const float OrderPathRestoreTargetToleranceCm = 0.001f;
+    internal const float OrderTargetRestoreToleranceCm = 0.001f;
 
-    private readonly MassNavigationFormationRuntime _formationLayout;
     private readonly List<NavGroupState?> _groups;
     private readonly Dictionary<int, int> _orderTokenToGroupId;
     private readonly List<int> _orderTokensToRemove;
@@ -21,15 +19,8 @@ internal sealed class MassNavigationGroupRuntime
     public MassNavigationGroupRuntime(
         MassNavigationGroupSemantics groupSemantics,
         MassNavigationRuntimeCapacityConfig capacity)
-        : this(new MassNavigationFormationRuntime(groupSemantics), capacity)
     {
-    }
-
-    public MassNavigationGroupRuntime(
-        MassNavigationFormationRuntime formationLayout,
-        MassNavigationRuntimeCapacityConfig capacity)
-    {
-        _formationLayout = formationLayout ?? throw new ArgumentNullException(nameof(formationLayout));
+        ArgumentNullException.ThrowIfNull(groupSemantics);
         ArgumentNullException.ThrowIfNull(capacity);
 
         _groupMemberCapacity = capacity.GroupMemberCapacity;
@@ -90,26 +81,18 @@ internal sealed class MassNavigationGroupRuntime
                 members[memberIndex] = new AuthoredRebuildMemberSnapshot(
                     group.MemberEntities[memberIndex],
                     group.MemberOrderTargetWorldX[memberIndex],
-                    group.MemberOrderTargetWorldY[memberIndex],
-                    group.MemberOrderPathStartWorldX[memberIndex],
-                    group.MemberOrderPathStartWorldY[memberIndex],
-                    group.MemberOrderPathAnchorWorldX[memberIndex],
-                    group.MemberOrderPathAnchorWorldY[memberIndex],
-                    group.MemberOrderPathAnchorRevision[memberIndex],
-                    group.MemberOrderPathAnchorInitialized[memberIndex]);
+                    group.MemberOrderTargetWorldY[memberIndex]);
             }
 
             groups[capturedCount++] = new AuthoredRebuildGroupSnapshot(
                 groupId,
                 group.CommandToken,
-                group.FormationMode,
                 group.RequestedDestinationWorldX,
                 group.RequestedDestinationWorldY,
                 group.DestinationWorldX,
                 group.DestinationWorldY,
                 group.CenterX,
                 group.CenterY,
-                group.RotationRadians,
                 group.Arrived,
                 members);
         }
@@ -193,13 +176,11 @@ internal sealed class MassNavigationGroupRuntime
             int currentTeamId = simulation.GetTeam(memberIndices[0]);
             NavGroupState group = _groupPool[captured.GroupId];
             group.Reset(currentTeamId);
-            CopyMembersAndRebuildLayout(
+            CopyMembersAndRebuildOffsets(
                 simulation,
                 agentState,
                 group,
-                memberIndices.AsSpan(0, restoredMemberCount),
-                captured.FormationMode,
-                captured.RotationRadians);
+                memberIndices.AsSpan(0, restoredMemberCount));
             group.CommandToken = captured.CommandToken;
             group.RequestedDestinationWorldX = captured.RequestedDestinationWorldX;
             group.RequestedDestinationWorldY = captured.RequestedDestinationWorldY;
@@ -222,7 +203,7 @@ internal sealed class MassNavigationGroupRuntime
                 AssignGroupTargets(simulation, captured.GroupId, group, resetRecovery: true);
             }
 
-            bool orderTargetsPreserved = RestoreCompatibleOrderPathState(group, captured, memberSnapshotIndices, restoredMemberCount);
+            bool orderTargetsPreserved = HaveSameRestoredOrderTargets(group, captured, memberSnapshotIndices, restoredMemberCount);
             group.Arrived = captured.Arrived &&
                 restoredMemberCount == captured.Members.Length &&
                 orderTargetsPreserved;
@@ -262,159 +243,13 @@ internal sealed class MassNavigationGroupRuntime
         return true;
     }
 
-    public bool TryUpdateGroupMemberOrderPathAnchor(
-        MassNavigationFlowSolverState simulation,
-        int unitIndex,
-        float lookaheadCm,
-        float updateEpsilonCm,
-        out float anchorWorldX,
-        out float anchorWorldY,
-        out int anchorRevision)
-    {
-        if (!(lookaheadCm > 0f))
-        {
-            throw new InvalidOperationException("MassNavigation order path anchor requires lookaheadCm > 0.");
-        }
-
-        if (!(updateEpsilonCm > 0f))
-        {
-            throw new InvalidOperationException("MassNavigation order path anchor requires updateEpsilonCm > 0.");
-        }
-
-        return TryUpdateGroupMemberOrderPathAnchorCore(
-            simulation,
-            unitIndex,
-            lookaheadCm,
-            updateEpsilonCm,
-            out anchorWorldX,
-            out anchorWorldY,
-            out anchorRevision,
-            out _,
-            out _);
-    }
-
-    public bool TryUpdateGroupMemberFollowerAnchor(
-        MassNavigationFlowSolverState simulation,
-        int unitIndex,
-        float lookaheadCm,
-        float updateEpsilonCm,
-        out float anchorWorldX,
-        out float anchorWorldY,
-        out int anchorRevision)
-    {
-        if (!(lookaheadCm > 0f))
-        {
-            throw new InvalidOperationException("MassNavigation group member follower anchor requires lookaheadCm > 0.");
-        }
-
-        if (!(updateEpsilonCm > 0f))
-        {
-            throw new InvalidOperationException("MassNavigation group member follower anchor requires updateEpsilonCm > 0.");
-        }
-
-        if (!TryUpdateGroupMemberOrderPathAnchorCore(
-                simulation,
-                unitIndex,
-                lookaheadCm,
-                updateEpsilonCm,
-                out float pathAnchorWorldX,
-                out float pathAnchorWorldY,
-                out anchorRevision,
-                out float passiveOffsetLocalX,
-                out float passiveOffsetLocalY))
-        {
-            anchorWorldX = 0f;
-            anchorWorldY = 0f;
-            return false;
-        }
-
-        Vector2 pathAnchorLocal = simulation.WorldToLocalCm(new Vector2(pathAnchorWorldX, pathAnchorWorldY));
-        Vector2 followerAnchorWorld = simulation.LocalToWorldCm(new Vector2(
-            pathAnchorLocal.X + passiveOffsetLocalX,
-            pathAnchorLocal.Y + passiveOffsetLocalY));
-        anchorWorldX = followerAnchorWorld.X;
-        anchorWorldY = followerAnchorWorld.Y;
-        return true;
-    }
-
-    private bool TryUpdateGroupMemberOrderPathAnchorCore(
-        MassNavigationFlowSolverState simulation,
-        int unitIndex,
-        float lookaheadCm,
-        float updateEpsilonCm,
-        out float anchorWorldX,
-        out float anchorWorldY,
-        out int anchorRevision,
-        out float passiveOffsetLocalX,
-        out float passiveOffsetLocalY)
-    {
-        if (!TryResolveGroupMember(unitIndex, out NavGroupState group, out int memberOffset))
-        {
-            anchorWorldX = 0f;
-            anchorWorldY = 0f;
-            anchorRevision = 0;
-            passiveOffsetLocalX = 0f;
-            passiveOffsetLocalY = 0f;
-            return false;
-        }
-
-        Vector2 finalTargetLocalCm = simulation.WorldToLocalCm(new Vector2(
-            group.MemberOrderTargetWorldX[memberOffset],
-            group.MemberOrderTargetWorldY[memberOffset]));
-        Vector2 orderStartLocalCm = simulation.WorldToLocalCm(new Vector2(
-            group.MemberOrderPathStartWorldX[memberOffset],
-            group.MemberOrderPathStartWorldY[memberOffset]));
-        float currentLocalX = simulation.GetPositionX(unitIndex);
-        float currentLocalY = simulation.GetPositionY(unitIndex);
-        ResolveOrderPathLookaheadAnchor(
-            orderStartLocalCm.X,
-            orderStartLocalCm.Y,
-            currentLocalX,
-            currentLocalY,
-            finalTargetLocalCm.X,
-            finalTargetLocalCm.Y,
-            lookaheadCm,
-            out float anchorLocalX,
-            out float anchorLocalY);
-        ResolveOrderPathPassiveOffset(
-            orderStartLocalCm.X,
-            orderStartLocalCm.Y,
-            currentLocalX,
-            currentLocalY,
-            finalTargetLocalCm.X,
-            finalTargetLocalCm.Y,
-            out passiveOffsetLocalX,
-            out passiveOffsetLocalY);
-        Vector2 nextAnchorWorldCm = simulation.LocalToWorldCm(new Vector2(anchorLocalX, anchorLocalY));
-        float updateEpsilonSq = updateEpsilonCm * updateEpsilonCm;
-        float deltaX = nextAnchorWorldCm.X - group.MemberOrderPathAnchorWorldX[memberOffset];
-        float deltaY = nextAnchorWorldCm.Y - group.MemberOrderPathAnchorWorldY[memberOffset];
-        if (group.MemberOrderPathAnchorInitialized[memberOffset] == 0 ||
-            (deltaX * deltaX) + (deltaY * deltaY) >= updateEpsilonSq)
-        {
-            group.MemberOrderPathAnchorWorldX[memberOffset] = nextAnchorWorldCm.X;
-            group.MemberOrderPathAnchorWorldY[memberOffset] = nextAnchorWorldCm.Y;
-            group.MemberOrderPathAnchorInitialized[memberOffset] = 1;
-            group.MemberOrderPathAnchorRevision[memberOffset]++;
-        }
-
-        anchorWorldX = group.MemberOrderPathAnchorWorldX[memberOffset];
-        anchorWorldY = group.MemberOrderPathAnchorWorldY[memberOffset];
-        anchorRevision = group.MemberOrderPathAnchorRevision[memberOffset];
-        return true;
-    }
-
     public int UpsertOrderMoveCommand(
         MassNavigationFlowSolverState simulation,
-        World world,
         MassNavigationAgentState agentState,
         int orderToken,
         ReadOnlySpan<int> memberIndices,
         int teamId,
-        Vector2 destinationWorldCm,
-        MassNavigationFormationMode formationMode,
-        float rotationRadians,
-        bool hasExplicitRotation)
+        Vector2 destinationWorldCm)
     {
         if (orderToken <= 0 || memberIndices.Length <= 0)
         {
@@ -426,16 +261,13 @@ internal sealed class MassNavigationGroupRuntime
             (uint)groupId >= (uint)_groups.Count ||
             _groups[groupId] == null)
         {
-            float effectiveRotation = hasExplicitRotation
-                ? rotationRadians
-                : ResolveMemberFacing(world, agentState, memberIndices);
             Vector2 resolvedWorldDestination = singleMemberOrder
                 ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
                 : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
             DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
             EnsureMembershipCapacityForMembers(memberIndices);
             groupId = AllocateGroupId();
-            var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId, formationMode, effectiveRotation);
+            var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId);
             created.CommandToken = orderToken;
             created.RequestedDestinationWorldX = destinationWorldCm.X;
             created.RequestedDestinationWorldY = destinationWorldCm.Y;
@@ -452,26 +284,17 @@ internal sealed class MassNavigationGroupRuntime
                 AssignGroupTargets(simulation, groupId, created, resetRecovery: true);
             }
 
-            if (hasExplicitRotation)
-            {
-                WriteMemberFacing(world, created, effectiveRotation);
-            }
-
             ActiveGroupCount = CountActiveGroups();
             return memberIndices.Length;
         }
 
         NavGroupState group = _groups[groupId]!;
-        float effectiveExistingRotation = hasExplicitRotation ? rotationRadians : group.RotationRadians;
-        bool rotationChanged =
-            hasExplicitRotation &&
-            MathF.Abs(NormalizeAngleRadians(group.RotationRadians - effectiveExistingRotation)) >= _formationLayout.RotationEpsilonRadians;
-        bool rebuildLayout = group.FormationMode != formationMode || rotationChanged || !HaveSameMembers(group, memberIndices);
+        bool rebuildOffsets = !HaveSameMembers(group, memberIndices);
         bool retarget =
             group.TeamId != teamId ||
             group.RequestedDestinationWorldX != destinationWorldCm.X ||
             group.RequestedDestinationWorldY != destinationWorldCm.Y ||
-            rebuildLayout;
+            rebuildOffsets;
         if (!retarget)
         {
             return group.MemberCount;
@@ -480,11 +303,11 @@ internal sealed class MassNavigationGroupRuntime
         Vector2 nextResolvedWorldDestination = singleMemberOrder
             ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
             : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
-        if (rebuildLayout)
+        if (rebuildOffsets)
         {
             DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
             EnsureMembershipCapacityForMembers(memberIndices);
-            ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId, formationMode, effectiveExistingRotation);
+            ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId);
         }
 
         group.TeamId = teamId;
@@ -493,48 +316,18 @@ internal sealed class MassNavigationGroupRuntime
         group.RequestedDestinationWorldY = destinationWorldCm.Y;
         group.DestinationWorldX = nextResolvedWorldDestination.X;
         group.DestinationWorldY = nextResolvedWorldDestination.Y;
-        group.RotationRadians = effectiveExistingRotation;
         _groups[groupId] = group;
         if (singleMemberOrder)
         {
-            AssignLooseOrderTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
+            AssignLooseOrderTargets(simulation, groupId, group, resetRecovery: rebuildOffsets);
         }
         else
         {
-            AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
-        }
-
-        if (hasExplicitRotation)
-        {
-            WriteMemberFacing(world, group, effectiveExistingRotation);
+            AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildOffsets);
         }
 
         ActiveGroupCount = CountActiveGroups();
         return group.MemberCount;
-    }
-
-    private static float ResolveMemberFacing(
-        World world,
-        MassNavigationAgentState agentState,
-        ReadOnlySpan<int> memberIndices)
-    {
-        for (int i = 0; i < memberIndices.Length; i++)
-        {
-            if (!agentState.TryGetAgentEntity(memberIndices[i], out Entity entity) || !world.IsAlive(entity))
-            {
-                continue;
-            }
-
-            if (!world.Has<FacingDirection>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation order member {entity.Id} requires {nameof(FacingDirection)}.");
-            }
-
-            return world.Get<FacingDirection>(entity).AngleRad;
-        }
-
-        throw new InvalidOperationException("MassNavigation move order requires at least one live member with FacingDirection.");
     }
 
     public bool TryGetOrderGroup(int orderToken, out bool arrived)
@@ -778,12 +571,6 @@ internal sealed class MassNavigationGroupRuntime
             group.MemberEntities[target] = group.MemberEntities[source];
             group.MemberOrderTargetWorldX[target] = group.MemberOrderTargetWorldX[source];
             group.MemberOrderTargetWorldY[target] = group.MemberOrderTargetWorldY[source];
-            group.MemberOrderPathStartWorldX[target] = group.MemberOrderPathStartWorldX[source];
-            group.MemberOrderPathStartWorldY[target] = group.MemberOrderPathStartWorldY[source];
-            group.MemberOrderPathAnchorWorldX[target] = group.MemberOrderPathAnchorWorldX[source];
-            group.MemberOrderPathAnchorWorldY[target] = group.MemberOrderPathAnchorWorldY[source];
-            group.MemberOrderPathAnchorRevision[target] = group.MemberOrderPathAnchorRevision[source];
-            group.MemberOrderPathAnchorInitialized[target] = group.MemberOrderPathAnchorInitialized[source];
         }
 
         group.MemberCount = nextCount;
@@ -798,7 +585,7 @@ internal sealed class MassNavigationGroupRuntime
             return;
         }
 
-        RebuildGroupLayout(simulation, group);
+        BuildCurrentRelativeOffsets(simulation, group);
         AssignGroupTargets(simulation, groupId, group, resetRecovery: true);
     }
 
@@ -850,9 +637,7 @@ internal sealed class MassNavigationGroupRuntime
         MassNavigationFlowSolverState simulation,
         MassNavigationAgentState agentState,
         ReadOnlySpan<int> members,
-        int teamId,
-        MassNavigationFormationMode formationMode,
-        float rotationRadians)
+        int teamId)
     {
         if ((uint)groupId >= (uint)_groupPool.Length)
         {
@@ -862,7 +647,7 @@ internal sealed class MassNavigationGroupRuntime
 
         NavGroupState group = _groupPool[groupId];
         group.Reset(teamId);
-        CopyMembersAndRebuildLayout(simulation, agentState, group, members, formationMode, rotationRadians);
+        CopyMembersAndRebuildOffsets(simulation, agentState, group, members);
         return group;
     }
 
@@ -909,9 +694,7 @@ internal sealed class MassNavigationGroupRuntime
         int groupId,
         NavGroupState group,
         ReadOnlySpan<int> nextMembers,
-        int teamId,
-        MassNavigationFormationMode formationMode,
-        float rotationRadians)
+        int teamId)
     {
         for (int i = 0; i < group.MemberCount; i++)
         {
@@ -925,7 +708,7 @@ internal sealed class MassNavigationGroupRuntime
         }
 
         group.TeamId = teamId;
-        CopyMembersAndRebuildLayout(simulation, agentState, group, nextMembers, formationMode, rotationRadians);
+        CopyMembersAndRebuildOffsets(simulation, agentState, group, nextMembers);
     }
 
     private void AssignGroupTargets(MassNavigationFlowSolverState simulation, int groupId, NavGroupState group, bool resetRecovery)
@@ -944,14 +727,8 @@ internal sealed class MassNavigationGroupRuntime
                 simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
             simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery);
             Vector2 resolvedTargetWorld = simulation.LocalToWorldCm(resolvedTarget);
-            Vector2 orderStartWorld = simulation.LocalToWorldCm(new Vector2(
-                simulation.GetPositionX(unitIndex),
-                simulation.GetPositionY(unitIndex)));
             group.MemberOrderTargetWorldX[i] = resolvedTargetWorld.X;
             group.MemberOrderTargetWorldY[i] = resolvedTargetWorld.Y;
-            group.MemberOrderPathStartWorldX[i] = orderStartWorld.X;
-            group.MemberOrderPathStartWorldY[i] = orderStartWorld.Y;
-            group.MemberOrderPathAnchorInitialized[i] = 0;
         }
     }
 
@@ -971,14 +748,8 @@ internal sealed class MassNavigationGroupRuntime
                 simulation.Semantics.TargetProjection.LooseTargetClearanceCm);
             simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery);
             Vector2 resolvedTargetWorld = simulation.LocalToWorldCm(resolvedTarget);
-            Vector2 orderStartWorld = simulation.LocalToWorldCm(new Vector2(
-                simulation.GetPositionX(unitIndex),
-                simulation.GetPositionY(unitIndex)));
             group.MemberOrderTargetWorldX[i] = resolvedTargetWorld.X;
             group.MemberOrderTargetWorldY[i] = resolvedTargetWorld.Y;
-            group.MemberOrderPathStartWorldX[i] = orderStartWorld.X;
-            group.MemberOrderPathStartWorldY[i] = orderStartWorld.Y;
-            group.MemberOrderPathAnchorInitialized[i] = 0;
         }
     }
 
@@ -1008,13 +779,11 @@ internal sealed class MassNavigationGroupRuntime
             maxDistanceSq <= simulation.Semantics.Group.LooseArriveThresholdCm * simulation.Semantics.Group.LooseArriveThresholdCm;
     }
 
-    private void CopyMembersAndRebuildLayout(
+    private static void CopyMembersAndRebuildOffsets(
         MassNavigationFlowSolverState simulation,
         MassNavigationAgentState agentState,
         NavGroupState group,
-        ReadOnlySpan<int> members,
-        MassNavigationFormationMode formationMode,
-        float rotationRadians)
+        ReadOnlySpan<int> members)
     {
         group.EnsureCapacity(Math.Max(1, members.Length));
         for (int i = 0; i < members.Length; i++)
@@ -1031,33 +800,7 @@ internal sealed class MassNavigationGroupRuntime
         }
 
         group.MemberCount = members.Length;
-        group.FormationMode = formationMode;
-        group.RotationRadians = rotationRadians;
-        RebuildGroupLayout(simulation, group);
-    }
-
-    private void RebuildGroupLayout(MassNavigationFlowSolverState simulation, NavGroupState group)
-    {
-        if (group.MemberCount <= 0)
-        {
-            return;
-        }
-
-        if (group.FormationMode == MassNavigationFormationMode.None)
-        {
-            BuildCurrentRelativeOffsets(simulation, group);
-            return;
-        }
-
-        _formationLayout.BuildOffsets(
-            group.BaseOffsetX,
-            group.BaseOffsetY,
-            group.OffsetX,
-            group.OffsetY,
-            group.MemberCount,
-            group.FormationMode,
-            group.RotationRadians);
-        ScaleGroupLayoutForMemberBodyRadius(simulation, group);
+        BuildCurrentRelativeOffsets(simulation, group);
     }
 
     private static void BuildCurrentRelativeOffsets(MassNavigationFlowSolverState simulation, NavGroupState group)
@@ -1079,73 +822,9 @@ internal sealed class MassNavigationGroupRuntime
             int unitIndex = group.MemberIndices[i];
             float offsetX = simulation.GetPositionX(unitIndex) - centerX;
             float offsetY = simulation.GetPositionY(unitIndex) - centerY;
-            group.BaseOffsetX[i] = offsetX;
-            group.BaseOffsetY[i] = offsetY;
             group.OffsetX[i] = offsetX;
             group.OffsetY[i] = offsetY;
         }
-    }
-
-    private static void ScaleGroupLayoutForMemberBodyRadius(MassNavigationFlowSolverState simulation, NavGroupState group)
-    {
-        float spacingScale = ResolveBodyRadiusSpacingScale(
-            simulation,
-            group.MemberIndices.AsSpan(0, group.MemberCount),
-            group.MemberCount,
-            group.FormationMode);
-        if (spacingScale == 1f)
-        {
-            return;
-        }
-
-        for (int i = 0; i < group.MemberCount; i++)
-        {
-            group.BaseOffsetX[i] *= spacingScale;
-            group.BaseOffsetY[i] *= spacingScale;
-            group.OffsetX[i] *= spacingScale;
-            group.OffsetY[i] *= spacingScale;
-        }
-    }
-
-    private static float ResolveBodyRadiusSpacingScale(
-        MassNavigationFlowSolverState simulation,
-        ReadOnlySpan<int> memberIndices,
-        int count,
-        MassNavigationFormationMode layoutMode)
-    {
-        if (count <= 0 || layoutMode == MassNavigationFormationMode.None)
-        {
-            return 1f;
-        }
-
-        float maxBodyRadiusCm = 0f;
-        for (int i = 0; i < count; i++)
-        {
-            maxBodyRadiusCm = MathF.Max(maxBodyRadiusCm, simulation.GetBodyRadiusCm(memberIndices[i]));
-        }
-
-        float configuredSpacingCm = ResolveConfiguredFormationSpacing(simulation, layoutMode);
-        if (!(configuredSpacingCm > 0f))
-        {
-            throw new InvalidOperationException($"MassNavigation formation layout {layoutMode} requires a positive configured spacing.");
-        }
-
-        float requiredSpacingCm = maxBodyRadiusCm * 2f;
-        return requiredSpacingCm <= configuredSpacingCm ? 1f : requiredSpacingCm / configuredSpacingCm;
-    }
-
-    private static float ResolveConfiguredFormationSpacing(
-        MassNavigationFlowSolverState simulation,
-        MassNavigationFormationMode layoutMode)
-    {
-        return layoutMode switch
-        {
-            MassNavigationFormationMode.Line => simulation.Semantics.Group.FormationLineSpacingCm,
-            MassNavigationFormationMode.Circle => simulation.Semantics.Group.FormationCircleSpacingCm,
-            MassNavigationFormationMode.Wedge => simulation.Semantics.Group.FormationWedgeSpacingCm,
-            MassNavigationFormationMode.Square => simulation.Semantics.Group.FormationSquareSpacingCm,
-            _ => throw new InvalidOperationException($"MassNavigation formation layout {layoutMode} is not supported for spacing resolution."),
-        };
     }
 
     private static int IndexOfMember(NavGroupState group, int unitIndex)
@@ -1208,7 +887,7 @@ internal sealed class MassNavigationGroupRuntime
         return true;
     }
 
-    private static bool RestoreCompatibleOrderPathState(
+    private static bool HaveSameRestoredOrderTargets(
         NavGroupState group,
         AuthoredRebuildGroupSnapshot captured,
         int[] memberSnapshotIndices,
@@ -1218,19 +897,13 @@ internal sealed class MassNavigationGroupRuntime
         for (int i = 0; i < restoredMemberCount; i++)
         {
             AuthoredRebuildMemberSnapshot member = captured.Members[memberSnapshotIndices[i]];
-            if (MathF.Abs(group.MemberOrderTargetWorldX[i] - member.OrderTargetWorldX) > OrderPathRestoreTargetToleranceCm ||
-                MathF.Abs(group.MemberOrderTargetWorldY[i] - member.OrderTargetWorldY) > OrderPathRestoreTargetToleranceCm)
+            if (MathF.Abs(group.MemberOrderTargetWorldX[i] - member.OrderTargetWorldX) > OrderTargetRestoreToleranceCm ||
+                MathF.Abs(group.MemberOrderTargetWorldY[i] - member.OrderTargetWorldY) > OrderTargetRestoreToleranceCm)
             {
                 allOrderTargetsPreserved = false;
                 continue;
             }
 
-            group.MemberOrderPathStartWorldX[i] = member.OrderPathStartWorldX;
-            group.MemberOrderPathStartWorldY[i] = member.OrderPathStartWorldY;
-            group.MemberOrderPathAnchorWorldX[i] = member.OrderPathAnchorWorldX;
-            group.MemberOrderPathAnchorWorldY[i] = member.OrderPathAnchorWorldY;
-            group.MemberOrderPathAnchorRevision[i] = member.OrderPathAnchorRevision;
-            group.MemberOrderPathAnchorInitialized[i] = member.OrderPathAnchorInitialized;
         }
 
         return allOrderTargetsPreserved;
@@ -1252,88 +925,6 @@ internal sealed class MassNavigationGroupRuntime
         }
 
         return true;
-    }
-
-    private static void ResolveOrderPathLookaheadAnchor(
-        float startLocalXCm,
-        float startLocalYCm,
-        float currentLocalXCm,
-        float currentLocalYCm,
-        float finalTargetLocalXCm,
-        float finalTargetLocalYCm,
-        float lookaheadCm,
-        out float anchorLocalXCm,
-        out float anchorLocalYCm)
-    {
-        float pathX = finalTargetLocalXCm - startLocalXCm;
-        float pathY = finalTargetLocalYCm - startLocalYCm;
-        float pathLengthSq = (pathX * pathX) + (pathY * pathY);
-        if (pathLengthSq <= lookaheadCm * lookaheadCm)
-        {
-            anchorLocalXCm = finalTargetLocalXCm;
-            anchorLocalYCm = finalTargetLocalYCm;
-            return;
-        }
-
-        float currentAlongPath =
-            ((currentLocalXCm - startLocalXCm) * pathX) +
-            ((currentLocalYCm - startLocalYCm) * pathY);
-        float anchorAlongPath = Math.Clamp(currentAlongPath + (lookaheadCm * MathF.Sqrt(pathLengthSq)), 0f, pathLengthSq);
-        float scale = anchorAlongPath / pathLengthSq;
-        anchorLocalXCm = startLocalXCm + (pathX * scale);
-        anchorLocalYCm = startLocalYCm + (pathY * scale);
-    }
-
-    private static void ResolveOrderPathPassiveOffset(
-        float startLocalXCm,
-        float startLocalYCm,
-        float currentLocalXCm,
-        float currentLocalYCm,
-        float finalTargetLocalXCm,
-        float finalTargetLocalYCm,
-        out float passiveOffsetLocalXCm,
-        out float passiveOffsetLocalYCm)
-    {
-        float pathX = finalTargetLocalXCm - startLocalXCm;
-        float pathY = finalTargetLocalYCm - startLocalYCm;
-        float pathLengthSq = (pathX * pathX) + (pathY * pathY);
-        if (pathLengthSq <= float.Epsilon)
-        {
-            passiveOffsetLocalXCm = currentLocalXCm - startLocalXCm;
-            passiveOffsetLocalYCm = currentLocalYCm - startLocalYCm;
-            return;
-        }
-
-        float currentAlongPath =
-            ((currentLocalXCm - startLocalXCm) * pathX) +
-            ((currentLocalYCm - startLocalYCm) * pathY);
-        float projectionScale = Math.Clamp(currentAlongPath / pathLengthSq, 0f, 1f);
-        float projectedLocalX = startLocalXCm + (pathX * projectionScale);
-        float projectedLocalY = startLocalYCm + (pathY * projectionScale);
-        passiveOffsetLocalXCm = currentLocalXCm - projectedLocalX;
-        passiveOffsetLocalYCm = currentLocalYCm - projectedLocalY;
-    }
-
-    private static void WriteMemberFacing(World world, NavGroupState group, float rotationRadians)
-    {
-        for (int i = 0; i < group.MemberCount; i++)
-        {
-            Entity entity = group.MemberEntities[i];
-            if (!world.IsAlive(entity))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation group member entity {entity.Id} is not alive while writing explicit formation facing.");
-            }
-
-            if (!world.Has<FacingDirection>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation group member entity {entity.Id} requires {nameof(FacingDirection)} for explicit formation rotation.");
-            }
-
-            ref FacingDirection facing = ref world.Get<FacingDirection>(entity);
-            facing.AngleRad = rotationRadians;
-        }
     }
 
     private static float ResolveMemberClearanceCm(
@@ -1365,21 +956,6 @@ internal sealed class MassNavigationGroupRuntime
         return clearanceCm;
     }
 
-    private static float NormalizeAngleRadians(float angle)
-    {
-        while (angle > MathF.PI)
-        {
-            angle -= MathF.Tau;
-        }
-
-        while (angle < -MathF.PI)
-        {
-            angle += MathF.Tau;
-        }
-
-        return angle;
-    }
-
     internal sealed class AuthoredRebuildSnapshot
     {
         internal AuthoredRebuildSnapshot(AuthoredRebuildGroupSnapshot[] groups)
@@ -1395,41 +971,35 @@ internal sealed class MassNavigationGroupRuntime
         public AuthoredRebuildGroupSnapshot(
             int groupId,
             int commandToken,
-            MassNavigationFormationMode formationMode,
             float requestedDestinationWorldX,
             float requestedDestinationWorldY,
             float destinationWorldX,
             float destinationWorldY,
             float centerX,
             float centerY,
-            float rotationRadians,
             bool arrived,
             AuthoredRebuildMemberSnapshot[] members)
         {
             GroupId = groupId;
             CommandToken = commandToken;
-            FormationMode = formationMode;
             RequestedDestinationWorldX = requestedDestinationWorldX;
             RequestedDestinationWorldY = requestedDestinationWorldY;
             DestinationWorldX = destinationWorldX;
             DestinationWorldY = destinationWorldY;
             CenterX = centerX;
             CenterY = centerY;
-            RotationRadians = rotationRadians;
             Arrived = arrived;
             Members = members;
         }
 
         public int GroupId { get; }
         public int CommandToken { get; }
-        public MassNavigationFormationMode FormationMode { get; }
         public float RequestedDestinationWorldX { get; }
         public float RequestedDestinationWorldY { get; }
         public float DestinationWorldX { get; }
         public float DestinationWorldY { get; }
         public float CenterX { get; }
         public float CenterY { get; }
-        public float RotationRadians { get; }
         public bool Arrived { get; }
         public AuthoredRebuildMemberSnapshot[] Members { get; }
     }
@@ -1439,34 +1009,16 @@ internal sealed class MassNavigationGroupRuntime
         public AuthoredRebuildMemberSnapshot(
             Entity entity,
             float orderTargetWorldX,
-            float orderTargetWorldY,
-            float orderPathStartWorldX,
-            float orderPathStartWorldY,
-            float orderPathAnchorWorldX,
-            float orderPathAnchorWorldY,
-            int orderPathAnchorRevision,
-            byte orderPathAnchorInitialized)
+            float orderTargetWorldY)
         {
             Entity = entity;
             OrderTargetWorldX = orderTargetWorldX;
             OrderTargetWorldY = orderTargetWorldY;
-            OrderPathStartWorldX = orderPathStartWorldX;
-            OrderPathStartWorldY = orderPathStartWorldY;
-            OrderPathAnchorWorldX = orderPathAnchorWorldX;
-            OrderPathAnchorWorldY = orderPathAnchorWorldY;
-            OrderPathAnchorRevision = orderPathAnchorRevision;
-            OrderPathAnchorInitialized = orderPathAnchorInitialized;
         }
 
         public Entity Entity { get; }
         public float OrderTargetWorldX { get; }
         public float OrderTargetWorldY { get; }
-        public float OrderPathStartWorldX { get; }
-        public float OrderPathStartWorldY { get; }
-        public float OrderPathAnchorWorldX { get; }
-        public float OrderPathAnchorWorldY { get; }
-        public int OrderPathAnchorRevision { get; }
-        public byte OrderPathAnchorInitialized { get; }
     }
 
     private sealed class NavGroupState
@@ -1478,14 +1030,6 @@ internal sealed class MassNavigationGroupRuntime
             MemberEntities = new Entity[capacity];
             MemberOrderTargetWorldX = new float[capacity];
             MemberOrderTargetWorldY = new float[capacity];
-            MemberOrderPathStartWorldX = new float[capacity];
-            MemberOrderPathStartWorldY = new float[capacity];
-            MemberOrderPathAnchorWorldX = new float[capacity];
-            MemberOrderPathAnchorWorldY = new float[capacity];
-            MemberOrderPathAnchorRevision = new int[capacity];
-            MemberOrderPathAnchorInitialized = new byte[capacity];
-            BaseOffsetX = new float[capacity];
-            BaseOffsetY = new float[capacity];
             OffsetX = new float[capacity];
             OffsetY = new float[capacity];
             TeamId = teamId;
@@ -1494,19 +1038,10 @@ internal sealed class MassNavigationGroupRuntime
         public int MemberCount { get; set; }
         public int TeamId { get; set; }
         public int CommandToken { get; set; }
-        public MassNavigationFormationMode FormationMode { get; set; }
         public int[] MemberIndices { get; private set; }
         public Entity[] MemberEntities { get; private set; }
         public float[] MemberOrderTargetWorldX { get; private set; }
         public float[] MemberOrderTargetWorldY { get; private set; }
-        public float[] MemberOrderPathStartWorldX { get; private set; }
-        public float[] MemberOrderPathStartWorldY { get; private set; }
-        public float[] MemberOrderPathAnchorWorldX { get; private set; }
-        public float[] MemberOrderPathAnchorWorldY { get; private set; }
-        public int[] MemberOrderPathAnchorRevision { get; private set; }
-        public byte[] MemberOrderPathAnchorInitialized { get; private set; }
-        public float[] BaseOffsetX { get; private set; }
-        public float[] BaseOffsetY { get; private set; }
         public float[] OffsetX { get; private set; }
         public float[] OffsetY { get; private set; }
         public float RequestedDestinationWorldX { get; set; }
@@ -1515,7 +1050,6 @@ internal sealed class MassNavigationGroupRuntime
         public float DestinationWorldY { get; set; }
         public float CenterX { get; set; }
         public float CenterY { get; set; }
-        public float RotationRadians { get; set; }
         public bool Arrived { get; set; }
 
         public void Reset(int teamId)
@@ -1523,14 +1057,12 @@ internal sealed class MassNavigationGroupRuntime
             MemberCount = 0;
             TeamId = teamId;
             CommandToken = 0;
-            FormationMode = MassNavigationFormationMode.None;
             RequestedDestinationWorldX = 0f;
             RequestedDestinationWorldY = 0f;
             DestinationWorldX = 0f;
             DestinationWorldY = 0f;
             CenterX = 0f;
             CenterY = 0f;
-            RotationRadians = 0f;
             Arrived = false;
         }
 

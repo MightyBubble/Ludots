@@ -20,28 +20,79 @@ public sealed class MassNavigationOrderChainTests
     internal const int EnemyTeamId = 2;
 
     [Test]
-    public void MoveOrderArgs_ExplicitRotationDistinguishesZeroFromUnspecified()
+    public void MoveOrderArgs_EncodeDecodeCarriesOnlySingleWorldTarget()
     {
-        var unspecified = new Order
+        var order = new Order
         {
             OrderId = 1,
-            Args = OrderArgs.CreateSingleWorldCm(new Vector3(100f, 0f, 200f)),
+            Args = MassNavigationMoveOrderArgs.Encode(new Vector2(100f, 200f)),
         };
-        MassNavigationMoveOrderArgs unspecifiedArgs = MassNavigationMoveOrderArgs.Decode(in unspecified);
+        MassNavigationMoveOrderArgs decoded = MassNavigationMoveOrderArgs.Decode(in order);
 
-        var explicitZero = new Order
+        Assert.That(decoded.DestinationCm, Is.EqualTo(new Vector2(100f, 200f)));
+        Assert.That(order.Args.I0, Is.Zero);
+        Assert.That(order.Args.I1, Is.Zero);
+        Assert.That(order.Args.F0, Is.Zero);
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(float.PositiveInfinity)]
+    [TestCase(float.NegativeInfinity)]
+    public void MoveOrderArgs_EncodeRejectsNonFiniteWorldTarget(float invalidCoordinate)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => MassNavigationMoveOrderArgs.Encode(new Vector2(invalidCoordinate, 200f)));
+    }
+
+    [TestCase(float.NaN)]
+    [TestCase(float.PositiveInfinity)]
+    [TestCase(float.NegativeInfinity)]
+    public void MoveOrderArgs_DecodeRejectsNonFiniteWorldTarget(float invalidCoordinate)
+    {
+        OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(invalidCoordinate, 0f, 200f));
+        var order = new Order { OrderId = 3, Args = args };
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => MassNavigationMoveOrderArgs.Decode(in order))!;
+
+        Assert.That(ex.Message, Does.Contain("finite WorldCm"));
+    }
+
+    [Test]
+    public void MoveOrderArgs_DecodeRejectsNonFiniteWorldHeight()
+    {
+        OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(100f, float.NaN, 200f));
+        var order = new Order { OrderId = 4, Args = args };
+
+        Assert.Throws<InvalidOperationException>(() => MassNavigationMoveOrderArgs.Decode(in order));
+    }
+
+    [TestCase("I0")]
+    [TestCase("I1")]
+    [TestCase("F0")]
+    [TestCase("I2")]
+    [TestCase("F1")]
+    public void MoveOrderArgs_DecodeRejectsRetiredNonSpatialPayloadFields(string field)
+    {
+        var order = new Order
         {
             OrderId = 2,
-            Args = MassNavigationMoveOrderArgs.Encode(
-                new Vector2(100f, 200f),
-                MassNavigationFormationMode.None,
-                rotationRadians: 0f),
+            Args = MassNavigationMoveOrderArgs.Encode(new Vector2(100f, 200f)),
         };
-        MassNavigationMoveOrderArgs explicitArgs = MassNavigationMoveOrderArgs.Decode(in explicitZero);
+        switch (field)
+        {
+            case "I0": order.Args.I0 = 1; break;
+            case "I1": order.Args.I1 = 1; break;
+            case "F0": order.Args.F0 = 1f; break;
+            case "I2": order.Args.I2 = 1; break;
+            case "F1": order.Args.F1 = 1f; break;
+            default: throw new ArgumentOutOfRangeException(nameof(field), field, null);
+        }
 
-        Assert.That(unspecifiedArgs.HasExplicitRotation, Is.False);
-        Assert.That(explicitArgs.HasExplicitRotation, Is.True);
-        Assert.That(explicitArgs.RotationRadians, Is.Zero);
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => MassNavigationMoveOrderArgs.Decode(in order))!;
+
+        Assert.That(ex.Message, Does.Contain("retired non-spatial payload"));
     }
 
     [Test]

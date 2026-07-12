@@ -160,27 +160,5 @@ public struct AvoidanceLane
 
 public enum AvoidanceLaneKind : byte
 {
-    FormationPhysics = 1,
-    MassNavigation = 2,
-}
-
-public struct MassNavigationFormationAnchor
-{
-    public int FormationId;
-    public int SlotCount;
-}
-
-public struct MassNavigationFormationFollower
-{
-    public int FormationId;
-    public Entity Anchor;
-    public int SlotIndex;
-    public float LocalOffsetXCm;
-    public float LocalOffsetYCm;
-}
-
-public struct MassNavigationFollowerLocomotion
-{
-    public float TargetChangeEpsilonCm;
-    public float FacingChangeEpsilonRadians;
+    MassNavigation = 1,
 }

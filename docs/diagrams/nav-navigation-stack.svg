@@ -3055,8 +3055,8 @@ z
      <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1355.599731 0)"/>
     </g>
    </g>
-   <g id="text_29">
-    <!-- MassNavigationFormationSystem -->
+   <g id="text_29_retired" style="display: none">
+    <!-- retired simulation-step label -->
     <g style="fill: #2d2a26" transform="translate(588.401375 567.156875) scale(0.08 -0.08)">
      <use xlink:href="#NotoSansSC-Thin-4d"/>
      <use xlink:href="#NotoSansSC-Thin-61" transform="translate(76.999985 0)"/>
@@ -3088,6 +3088,10 @@ z
      <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1336.699722 0)"/>
      <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(1389.399719 0)"/>
     </g>
+   </g>
+   <g id="text_29">
+    <!-- MassNavigationSimulationStepSystem -->
+    <text x="588.401375" y="567.156875" style="fill: #2d2a26; font-family: 'Noto Sans SC', 'Segoe UI', sans-serif; font-size: 8px">MassNavigationSimulationStepSystem</text>
    </g>
    <g id="text_30">
     <!-- MassNavigationOrderIngestionSystem -->

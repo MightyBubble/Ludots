@@ -27,7 +27,7 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationAuthoredAgentBindingIncrementalTests
     {
         private const int TeamId = 1;
-        private const float PositionToleranceCm = MassNavigationGroupRuntime.OrderPathRestoreTargetToleranceCm;
+        private const float PositionToleranceCm = MassNavigationGroupRuntime.OrderTargetRestoreToleranceCm;
 
         [Test]
         public void AppendAuthoredAgents_PreservesActiveMoveGroupState()
@@ -41,15 +41,11 @@ namespace Ludots.Tests.Presentation
             Vector2 moveDestination = new(2000f, 2000f);
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
-                world,
                 simulation.AgentState,
                 orderToken: 1,
                 memberIndices: new[] { 0, 1 },
                 teamId: TeamId,
-                destinationWorldCm: moveDestination,
-                formationMode: MassNavigationFormationMode.Square,
-                rotationRadians: 0f,
-                hasExplicitRotation: false);
+                destinationWorldCm: moveDestination);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
@@ -80,15 +76,11 @@ namespace Ludots.Tests.Presentation
             Vector2 moveDestination = new(2000f, 2000f);
             int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 harness.Simulation.MassNavigationFlow,
-                harness.Engine.World,
                 harness.Simulation.AgentState,
                 orderToken: 1,
                 memberIndices: new[] { 0, 1 },
                 teamId: TeamId,
-                destinationWorldCm: moveDestination,
-                formationMode: MassNavigationFormationMode.Square,
-                rotationRadians: 0f,
-                hasExplicitRotation: false);
+                destinationWorldCm: moveDestination);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
@@ -276,15 +268,11 @@ namespace Ludots.Tests.Presentation
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
-                world,
                 simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2600f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f,
-                hasExplicitRotation: false);
+                new Vector2(2600f, 2200f));
             Assert.That(movedCount, Is.EqualTo(3));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float agent0OrderX, out float agent0OrderY), Is.True);
@@ -330,15 +318,11 @@ namespace Ludots.Tests.Presentation
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
-                world,
                 simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2800f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f,
-                hasExplicitRotation: false);
+                new Vector2(2800f, 2200f));
             Assert.That(movedCount, Is.EqualTo(3));
 
             world.Remove<MassNavigationAgent>(agent1);
@@ -369,15 +353,11 @@ namespace Ludots.Tests.Presentation
             int[] members = { 0, 1 };
             int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 harness.Simulation.MassNavigationFlow,
-                harness.Engine.World,
                 harness.Simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2600f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f,
-                hasExplicitRotation: false);
+                new Vector2(2600f, 2200f));
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
 

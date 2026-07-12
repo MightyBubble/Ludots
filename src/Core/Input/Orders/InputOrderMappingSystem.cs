@@ -1352,28 +1352,28 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            int formationEligibleCount = 0;
+            int layoutEligibleCount = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
-                if (IsGroupMoveFormationOrderType(_routedOrdersScratch[i].OrderTypeKey))
+                if (IsGroupMoveTargetLayoutOrderType(_routedOrdersScratch[i].OrderTypeKey))
                 {
-                    formationEligibleCount++;
+                    layoutEligibleCount++;
                 }
             }
 
-            int formationIndex = 0;
+            int layoutIndex = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
                 Order order = _routedOrdersScratch[i].Order;
                 string orderTypeKey = _routedOrdersScratch[i].OrderTypeKey;
-                if (formationEligibleCount > 1 &&
+                if (layoutEligibleCount > 1 &&
                     !mapping.IsSkillMapping &&
                     mapping.TargetType == OrderTargetType.Position &&
-                    _config.GroupMoveFormation.Mode != GroupMoveFormationMode.None &&
-                    IsGroupMoveFormationOrderType(orderTypeKey))
+                    _config.GroupMoveTargetLayout.Mode != GroupMoveTargetLayoutMode.None &&
+                    IsGroupMoveTargetLayoutOrderType(orderTypeKey))
                 {
-                    ApplyGroupMoveFormation(mapping, orderTypeKey, formationEligibleCount, formationIndex, ref order);
-                    formationIndex++;
+                    ApplyGroupMoveTargetLayout(mapping, orderTypeKey, layoutEligibleCount, layoutIndex, ref order);
+                    layoutIndex++;
                 }
 
                 _orderSubmitHandler!(in order);
@@ -1741,37 +1741,40 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
-                ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
+                ApplyGroupMoveTargetLayout(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
                 _orderSubmitHandler!(in cloned);
             }
         }
 
-        private void ApplyGroupMoveFormation(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
+        private void ApplyGroupMoveTargetLayout(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
         {
             if (totalCount <= 1 ||
                 mapping.IsSkillMapping ||
                 mapping.TargetType != OrderTargetType.Position ||
-                !IsGroupMoveFormationOrderType(orderTypeKey) ||
-                _config.GroupMoveFormation.Mode != GroupMoveFormationMode.Grid ||
+                !IsGroupMoveTargetLayoutOrderType(orderTypeKey) ||
+                _config.GroupMoveTargetLayout.Mode != GroupMoveTargetLayoutMode.Grid ||
                 order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
                 order.Args.Spatial.Mode != OrderCollectionMode.Single)
             {
                 return;
             }
 
-            int spacingCm = Math.Max(1, _config.GroupMoveFormation.SpacingCm);
-            order.Args.Spatial.WorldCm = MoveFormationPlanner.ComputeOffsetTarget(order.Args.Spatial.WorldCm, index, totalCount, spacingCm);
+            order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
+                order.Args.Spatial.WorldCm,
+                index,
+                totalCount,
+                _config.GroupMoveTargetLayout.SpacingCm);
         }
 
-        private bool IsGroupMoveFormationOrderType(string orderTypeKey)
+        private bool IsGroupMoveTargetLayoutOrderType(string orderTypeKey)
         {
-            if (_config.GroupMoveFormation.Mode == GroupMoveFormationMode.None ||
+            if (_config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.None ||
                 string.IsNullOrWhiteSpace(orderTypeKey))
             {
                 return false;
             }
 
-            List<string> keys = _config.GroupMoveFormation.OrderTypeKeys;
+            List<string> keys = _config.GroupMoveTargetLayout.OrderTypeKeys;
             if (keys == null || keys.Count == 0)
             {
                 return false;

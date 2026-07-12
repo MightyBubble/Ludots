@@ -10,7 +10,7 @@
 
 - 玩家：只玩游戏。框选方阵、右键移动、看血条、看 marker、移动相机。
 - Mod 作者：改 JSON 配置和自己的业务 runtime。你配置模板、方阵、士兵、表现、地图、障碍和调参。
-- 引擎开发者：维护 Core、Selection、Order、Performer、MassNavigation 基建。
+- 引擎开发者：维护 Core、EntityCollection、Order、Performer、MovePlanning、MassNavigation 基建。
 
 玩家不需要输入 `collection.command.source`、`EntityCollectionKeys.CommandSource`、template id、performer id 或 order blackboard key。看到文档让玩家输入这些，就是文档写错了。
 
@@ -48,9 +48,9 @@ Formation Capability 示例的文件入口：
 
 | 文件 | 你在这里做什么 |
 | --- | --- |
-| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、command-source 路径预览订单。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json` | 配地图 id、visual heightmap、board/world 数据。 |
-| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、cadence、arrival、avoidance、camera profiles、view residency。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
@@ -63,11 +63,11 @@ Formation Capability 示例的文件入口：
 | `FormationCapabilityShowcaseModEntry.cs` | 注册 showcase runtime 和组件。 |
 | `Runtime/FormationCapabilityShowcaseConfig.cs` | `FormationCapabilityShowcaseConfig.json` 的强类型配置。 |
 | `Runtime/FormationCapabilityShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、向 `RuntimeEntitySpawnQueue` 填参数。 |
-| `Runtime/FormationCapabilityScenarioBindingSystem.cs` | 在 core MassNavigation 绑定完成后，补 showcase sidecar 组件。 |
-| `Runtime/FormationCapabilityFormationRuntimeSystem.cs` | 跑方阵业务状态。 |
-| `Runtime/FormationCapabilityFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
-| `Runtime/FormationCapabilityObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
-| `Runtime/FormationCapabilityFormationComponents.cs` | showcase 专属组件，以及严格大小写的 layout/outline 名称。 |
+| `Runtime/FormationCapabilityShowcaseScenarioBindingSystem.cs` | 在 Core MassNavigation agent 绑定完成后，绑定 showcase 自有方阵与士兵组件。 |
+| `Runtime/FormationCapabilityShowcaseFormationRuntimeSystem.cs` | 消费 showcase 订单，计算方阵与成员目标，并通过 MovePlanning 执行出口交给 MassNavigation。 |
+| `Runtime/FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
+| `Runtime/FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
+| `Runtime/FormationCapabilityShowcaseFormationComponents.cs` | showcase 专属的方阵、成员、命令状态，以及严格大小写的 layout/outline 名称。 |
 
 通用基建入口：
 
@@ -81,10 +81,10 @@ Formation Capability 示例的文件入口：
 
 | 模块 | 你要怎么用 |
 | --- | --- |
-| `LudotsCoreMod` | 提供 entity template、spawn、selection、order、presentation、minimap 等基础链路。先复用，不要复制。 |
+| `LudotsCoreMod` | 提供 entity template、spawn、entity collection、order、presentation、minimap 等基础链路。先复用，不要复制。 |
 | `CoreInputMod` | 提供玩家框选、右键命令等输入入口。你的 Mod 通常只配置可选实体和订单类型。 |
 | `CameraProfilesMod` | 提供相机 profile。你的 Mod 通过配置选择或扩展 profile。 |
-| `src/Core/MassNavigation` | 提供大规模导航 runtime、组件绑定、order ingestion、formation/follower 可选能力。 |
+| `src/Core/MassNavigation` | 提供大规模导航 runtime、agent 绑定、通用移动订单、明确空间目标、避障、到达和 ECS 回写。它不拥有 formation/follower 业务。 |
 | `MassNavigationMod` | 提供大规模导航资产、配置包和可选调参面板。它不拥有 MassNavigation runtime。 |
 | `FormationCapabilityShowcaseMod` | formation capability 业务示例。重点看方阵如何生成士兵、士兵如何跟随方阵、轮廓和障碍如何表现。 |
 
@@ -209,11 +209,9 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `GameplayTagContainer`
 - `TagCountContainer`
 - `MassNavigationAgent`
-- `MassNavigationFormationAnchor`
-- `MassNavigationFollowerLocomotion`
 - `EntityLayer`
 
-这表示方阵能被选中、能接订单、有血量、能进入 core MassNavigation runtime，并且作为可选 formation anchor 工作。
+这表示方阵能被选中、能接业务订单、有血量，并且作为普通 MassNavigation agent 接收明确空间目标。方阵身份、槽位数量、目标朝向和同步阈值由 Showcase 在运行时绑定自己的 `FormationCapabilityShowcaseFormationAgent` 与 `FormationCapabilityShowcaseCommandState`，不写进 Core 模板合同。
 
 士兵模板当前包含：
 
@@ -222,19 +220,17 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `FacingDirection`
 - `EntityLayer`
 - `MassNavigationAgent`
-- `MassNavigationFormationFollower`
 
-这表示士兵也是 core MassNavigation agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `CommandSourceSelectableTag`，所以玩家不能直接选中或下令。
+这表示士兵也是普通 MassNavigation agent；士兵模板不配 `OrderBuffer` 和 `CommandSourceSelectableTag`，所以玩家不能直接选中或下令。所属方阵、槽位和局部偏移来自 Showcase 运行时绑定的 `FormationCapabilityShowcaseFormationSoldier`。
 
 组件语义要按存在与否理解：
 
 - `MassNavigationAgent`：进入 core MassNavigation runtime。
 - `OrderBuffer`：可接玩家或 AI 订单。
 - `CommandSourceSelectableTag`：可进入 `collection.command.source` 的指挥来源集合。
-- `MassNavigationFormationAnchor`：启用 formation anchor 行为。
-- `MassNavigationFormationFollower`：启用 follower 行为。
+- `FormationCapabilityShowcaseFormationAgent` / `FormationCapabilityShowcaseFormationSoldier`：只属于当前 Showcase，由 Showcase 自己注册和绑定；其他 Mod 应使用自己的业务命名。
 
-formation 不是必备 feature。不需要 formation 时，不要配置一个“disabled=false”的占位组件；直接不配置 formation 组件。
+只加载 MassNavigation 时没有 formation 组件、formation 订单或 follower system。Formation 是当前 Showcase 的业务能力，不是一个需要在 Core 中开关的可选模式。
 
 ## Performer 怎么配
 
@@ -293,20 +289,24 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
 
 ## 订单和移动
 
-右键移动链路：
+Formation Capability Showcase 的右键移动链路：
 
 ```text
 Local input
   -> EntityCollectionStore
-  -> OrderBuffer(massNavigationMove)
-  -> MassNavigationOrderIngestionSystem
-  -> MassNavigationGroupRuntime
+  -> OrderBuffer(formationMove)
+  -> FormationCapabilityOrderSystem
+  -> FormationCapabilityShowcaseCommandState
+  -> MovePlanExecutionIntent
+  -> MassNavigationMovePlanExecutionSink
   -> MassNavigationFlowSolverState
   -> WorldPositionCm / FacingDirection
   -> performer transform sync
 ```
 
-订单类型用语义字符串配置，不在 JSON 里写数字 id。
+`formationMove` 只携带一个世界空间目标；`formationRotate` 只携带目标朝向。Q/E 只是 Showcase 的输入映射，它产生 `formationRotate`，不会伪造“移动到当前位置”的 MassNavigation 订单。
+
+通用 `massNavigationMove` 仍由 `MassNavigationOrderIngestionSystem` 消费，但它只接受一个明确空间目标，不接受阵型模式、槽位或旋转字段。订单类型用语义字符串配置，不在 JSON 里写数字 id。
 
 移动和朝向是两件事。方阵移动不应该自动改朝向，除非你显式配置了 auto-facing 策略。玩家要旋转方阵，就提供旋转命令或按钮。
 
@@ -314,12 +314,12 @@ Local input
 
 在这个 showcase 里，业务 runtime 会创建：
 
-- 方阵 core MassNavigation agent。
-- 归属这个方阵的士兵 core MassNavigation agents。
+- 作为控制单位的普通 MassNavigation agent。
+- 归属这个控制单位的普通 MassNavigation soldier agents。
 
-士兵的跟随目标由 core `MassNavigationFormationFollowerSystem` 根据 `MassNavigationFormationAnchor` / `MassNavigationFormationFollower` 组件同步。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵目标。
+Showcase 自己持有方阵身份、成员范围、槽位偏移和目标朝向。每次目标姿态需要更新时，Showcase 计算明确的逐成员世界目标，构造 `MovePlanExecutionIntent`，再通过 `MassNavigationMovePlanExecutionSink` 交给 MassNavigation 执行。它不访问 solver 或 `MassNavigationGroupRuntime` 内部状态，也不会每帧制造 N 条士兵订单。
 
-这个“方阵有哪些士兵、士兵用什么模板和 slot”的规则是业务逻辑，应该放在 `FormationCapabilityShowcaseMod` 或你的游戏 Mod。跟随和 runtime agent 绑定属于 core MassNavigation 能力。
+这个“方阵有哪些士兵、士兵用什么模板和 slot、什么时候转向”的规则全部是业务逻辑，应该放在 `FormationCapabilityShowcaseMod` 或你的游戏 Mod。Core 只负责 MassNavigation agent 绑定和明确目标执行。
 
 ## 障碍物
 
@@ -412,7 +412,7 @@ Formation Capability 地图引用：
 - performer id
 - order key
 - parameter key
-- selection event key
+- command-source collection event key
 - profile id
 - map id
 
@@ -425,13 +425,13 @@ Formation Capability 地图引用：
 1. 新建你的 entry mod。
 2. 给 Raylib launch graph 加你的 mod。
 3. 配地图和 visual heightmap。
-4. 配 `MassNavigationConfig.json`：profiles、cadence、obstacles、camera probes、view residency。
+4. 配 `MassNavigationConfig.json`：profiles、cadence、camera probes、view residency；障碍物写在地图或模板组件中。
 5. 配你的业务 config：军团、方阵、 squad 或你产品里的控制单位。
 6. 配 selectable control unit 模板。
 7. 配 lower-level agent 模板。
 8. 配 performer definitions 和 performer rules。
-9. 只有真正属于你游戏的规则才写业务 runtime，比如“方阵生成哪些士兵、哪些 overlay 和 sidecar 业务组件”。
-10. Selection、Order、Spawn、Performer、Minimap、ConfigPipeline 都复用现有链路。
+9. 在业务 runtime 中拥有 formation 身份、成员、槽位、朝向和业务订单，并把结果转换成明确成员目标。
+10. EntityCollection、Order、Spawn、MovePlanning、MassNavigation、Performer、Minimap、ConfigPipeline 都复用现有链路。
 
 ## 不要做
 
@@ -441,7 +441,7 @@ Formation Capability 地图引用：
 - 如果士兵需要避障和碰撞，不要把士兵做成非 MassNavigation 对象。
 - 不要把 Formation Capability 方阵业务塞进 MassNavigation core。
 - 不要在 Mod 里新增 MassNavigation runtime 或 post-spawn channel binding。
-- 不要配置一个 disabled optional formation 组件；需要才配组件，不需要就不配。
+- 不要向 Core MassNavigation 增加 formation component、registry、follower system、订单字段或兼容解析。
 - 不要在 JSON 里写 order blackboard 数字 id 或 performer param 数字 id。
 - 不要给缺失模板、performer、mesh、material、map、heightmap 加 fallback。
 - 不要做大小写宽容解析。
@@ -458,6 +458,8 @@ Formation Capability 地图引用：
 - 所有 performer id 存在。
 - 方阵可选中、可下令、有血量。
 - 士兵是 MassNavigation agent，但不能直接选中。
+- `formationMove` / `formationRotate` 由 Showcase 自己消费；通用 `massNavigationMove` 没有 formation payload。
+- 士兵目标只通过 MovePlanning execution sink 交给 MassNavigation，Showcase 不直接访问 solver。
 - 士兵 profile 速度大于方阵 profile 速度。
 - command marker 的创建和销毁由 performer rule 驱动。
 - 取消选中或销毁实体后 marker 不残留。

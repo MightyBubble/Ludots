@@ -6,10 +6,9 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.MassNavigation;
-using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using FormationCapabilityShowcaseMod.Runtime;
 
 namespace FormationCapabilityShowcaseMod.Systems;
 
@@ -21,7 +20,7 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
     private readonly LocalOrderSourceHelper _helper;
     private InputOrderMappingSystem? _mapping;
     private ControlDomainQuery? _controlDomains;
-    private int _massNavigationMoveOrderTypeId;
+    private int _formationMoveOrderTypeId;
     private bool _initialized;
 
     public FormationCapabilityLocalOrderSourceSystem(
@@ -79,13 +78,13 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         if (_mapping != null)
         {
             _helper.BeforeOrderSubmit = CanLocalPlayerSubmitOrder;
-            _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
+            _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "E" };
         }
     }
 
     private bool CanLocalPlayerSubmitOrder(in Order order)
     {
-        if (!IsMassNavigationMoveOrder(in order))
+        if (!IsFormationMoveOrder(in order))
         {
             return true;
         }
@@ -109,19 +108,19 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         return true;
     }
 
-    private bool IsMassNavigationMoveOrder(in Order order)
+    private bool IsFormationMoveOrder(in Order order)
     {
-        if (_massNavigationMoveOrderTypeId == 0)
+        if (_formationMoveOrderTypeId == 0)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out object? orderTypesObj) ||
                 orderTypesObj is not OrderTypeRegistry orderTypes ||
-                !orderTypes.TryGetId(MassNavigationOrderKeys.Move, out _massNavigationMoveOrderTypeId))
+                !orderTypes.TryGetId(FormationCapabilityShowcaseOrderKeys.Move, out _formationMoveOrderTypeId))
             {
                 return false;
             }
         }
 
-        return order.OrderTypeId == _massNavigationMoveOrderTypeId;
+        return order.OrderTypeId == _formationMoveOrderTypeId;
     }
 
     private bool TryResolveLocalPlayerEntity(out Entity localPlayer)

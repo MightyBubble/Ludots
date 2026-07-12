@@ -391,13 +391,13 @@ namespace Ludots.Tests.Presentation
             JsonObject orderTypesRoot = ReadObject(Path.Combine(modRoot, "assets", "GAS", "order_types.json"));
             JsonObject orderBlackboardKeys = orderTypesRoot["orderBlackboardKeys"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation orderBlackboardKeys must be authored.");
-            Assert.That(orderBlackboardKeys["MassNavigation.FormationMode"]?.GetValue<bool>(), Is.True);
+            Assert.That(orderBlackboardKeys.Count, Is.Zero);
 
             JsonObject orderTypes = orderTypesRoot["orderTypes"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation orderTypes must be authored.");
             JsonObject moveOrder = orderTypes["massNavigationMove"]?.AsObject()
                 ?? throw new InvalidOperationException("massNavigationMove order type must be authored.");
-            Assert.That(moveOrder["intArg0BlackboardKey"]?.GetValue<string>(), Is.EqualTo("MassNavigation.FormationMode"));
+            Assert.That(moveOrder["intArg0BlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
             Assert.That(moveOrder["spatialBlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
             Assert.That(moveOrder["entityBlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
 
@@ -426,7 +426,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void OrderBlackboardKeys_LoadMassNavigationFormationModeFromConfigOnly()
+        public void OrderBlackboardKeys_MassNavigationMoveDoesNotRegisterFormationPayload()
         {
             string repoRoot = FindRepoRoot();
             string modRoot = MassNavigationModRoot();
@@ -450,12 +450,8 @@ namespace Ludots.Tests.Presentation
 
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
 
-            Assert.That(
-                OrderBlackboardKeyRegistry.TryGetId("MassNavigation.FormationMode", out int keyId),
-                Is.True);
-            Assert.That(keyId, Is.GreaterThan(0));
-            Assert.That(OrderBlackboardKeyRegistry.GetKey(keyId), Is.EqualTo("MassNavigation.FormationMode"));
-            Assert.That(orderTypes.Get(orderTypes.GetId("massNavigationMove")).IntArg0BlackboardKey, Is.EqualTo(keyId));
+            Assert.That(OrderBlackboardKeyRegistry.TryGetId("MassNavigation.FormationMode", out _), Is.False);
+            Assert.That(orderTypes.Get(orderTypes.GetId("massNavigationMove")).IntArg0BlackboardKey, Is.EqualTo(-1));
 
             OrderBlackboardKeyRegistry.ResetToBuiltins();
         }

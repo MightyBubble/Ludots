@@ -125,7 +125,7 @@ namespace Ludots.Tests.Presentation
 
                 using var world = World.Create();
                 var navGroups = new MassNavigationGroupRuntime(
-                    new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                    LoadBaseMassNavigationConfig().Semantics.Group,
                     CreateRuntimeCapacity(agentCapacity: 2, groupMemberCapacity: 2));
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                     flow.Step(
@@ -187,7 +187,7 @@ namespace Ludots.Tests.Presentation
 
             using var world = World.Create();
             var navGroups = new MassNavigationGroupRuntime(
-                new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                LoadBaseMassNavigationConfig().Semantics.Group,
                 CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
 
             flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
@@ -253,29 +253,19 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void SimulationRuntime_PropagatesFormationGroupSemanticsToMassNavigationFlow()
+        public void SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow()
         {
             MassNavigationConfig config = MassNavigationConfig.Load(
                 ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
             MassNavigationGroupSemantics group = config.Semantics.Group;
-            group.FormationLineSpacingCm = 111f;
-            group.FormationSquareSpacingCm = 222f;
-            group.FormationCircleSpacingCm = 333f;
-            group.FormationCircleMinRadiusCm = 444f;
-            group.FormationWedgeSpacingCm = 555f;
-            group.FormationRotationEpsilonRadians = 0.0123f;
-            group.FormationRotationSpeedRadiansPerSecond = 6.75f;
+            group.GroupedAgentArriveThresholdCm = 222f;
+            group.GroupedAgentFlowSlowRadiusCm = 444f;
 
             var runtime = new MassNavigationSimulationRuntime(config);
             MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
 
-            Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
-            Assert.That(massFlowGroup.FormationSquareSpacingCm, Is.EqualTo(group.FormationSquareSpacingCm));
-            Assert.That(massFlowGroup.FormationCircleSpacingCm, Is.EqualTo(group.FormationCircleSpacingCm));
-            Assert.That(massFlowGroup.FormationCircleMinRadiusCm, Is.EqualTo(group.FormationCircleMinRadiusCm));
-            Assert.That(massFlowGroup.FormationWedgeSpacingCm, Is.EqualTo(group.FormationWedgeSpacingCm));
-            Assert.That(massFlowGroup.FormationRotationEpsilonRadians, Is.EqualTo(group.FormationRotationEpsilonRadians));
-            Assert.That(massFlowGroup.FormationRotationSpeedRadiansPerSecond, Is.EqualTo(group.FormationRotationSpeedRadiansPerSecond));
+            Assert.That(massFlowGroup.GroupedAgentArriveThresholdCm, Is.EqualTo(group.GroupedAgentArriveThresholdCm));
+            Assert.That(massFlowGroup.GroupedAgentFlowSlowRadiusCm, Is.EqualTo(group.GroupedAgentFlowSlowRadiusCm));
         }
 
         [Test]
@@ -435,7 +425,7 @@ namespace Ludots.Tests.Presentation
         {
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
             return new MassNavigationGroupRuntime(
-                new MassNavigationFormationRuntime(config.Semantics.Group),
+                config.Semantics.Group,
                 CreateRuntimeCapacity(agentCapacity: agentCapacity, groupMemberCapacity: agentCapacity));
         }
 

@@ -21,7 +21,7 @@ public sealed class MassNavigationTelemetry
     public int SolverWindowMovesFrame { get; private set; }
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
-    public float FormationTargetMs { get; private set; }
+    public float GroupTargetUpdateMs { get; private set; }
     public float FlowFieldRebuildMs { get; private set; }
     public float StepPrepMs { get; private set; }
     public float LocalSteeringMs { get; private set; }
@@ -56,7 +56,7 @@ public sealed class MassNavigationTelemetry
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
     }
 
-    public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
+    public void ObserveGroupTargetUpdate(double sampleMs) => GroupTargetUpdateMs = Smooth(GroupTargetUpdateMs, (float)sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
     public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
     public void ObserveLocalSteering(double sampleMs) => LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);

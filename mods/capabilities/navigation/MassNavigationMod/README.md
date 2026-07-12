@@ -1,21 +1,20 @@
 # MassNavigation Foundation
 
-`MassNavigationMod` is the reusable large-scale navigation foundation asset pack. It is not the Formation Capability scenario itself. The runtime is owned by `src/Core/MassNavigation`; this mod contributes config, templates, performers, and maps that exercise the formal navigation chain.
+`MassNavigationMod` is the reusable large-scale navigation foundation asset pack. The runtime is owned by `src/Core/MassNavigation`; this mod contributes config, templates, performers, and maps that exercise the formal navigation chain.
 
 Start here if you are new:
 
-- Beginner formation capability RTS guide: `gitbook/reference/mass-navigation-user-book.md`
+- Beginner large-scale navigation guide: `gitbook/reference/mass-navigation-user-book.md`
 - Formal chain and boundary audit: `gitbook/reference/mass-navigation-formal-chain.md`
-- Reference game mod: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/`
 
 ## Responsibility Split
 
 | Layer | Responsibility |
 | --- | --- |
 | `MassNavigationFlow` | Hot-path SoA solver data, flow/crowd/avoidance calculations, cadence-sensitive simulation. |
-| Core `MassNavigation` runtime | Gameplay-facing navigation integration: agents, profiles, groups, orders, ECS state, authoring contracts, and component-authored runtime binding. |
+| Core `MassNavigation` runtime | Gameplay-facing navigation integration: agents, profiles, generic order groups, explicit spatial targets, ECS state, authoring contracts, and component-authored runtime binding. |
 | `MassNavigationMod` | Foundation assets and UI for the default large-world navigation map. |
-| Game/showcase mod | Product rules such as formations owning soldiers, army names, formation outlines, obstacle overlay style, initial scenario setup, authored through components and runtime spawn parameters. |
+| Game/showcase mod | Product rules such as member layouts, facing, visual outlines, obstacle overlay style, and initial scenario setup. |
 
 Do not add alternate names for old experiment labels. `MassNavigation*` is the formal runtime surface for this foundation.
 
@@ -40,12 +39,10 @@ Order config is authored with semantic keys:
 
 ```json
 {
-  "orderBlackboardKeys": {
-    "MassNavigation.FormationMode": true
-  },
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "massNavigationMove": {
-      "intArg0BlackboardKey": "MassNavigation.FormationMode"
+      "intArg0BlackboardKey": "none"
     }
   }
 }
@@ -61,7 +58,12 @@ Runtime files for MassNavigation live in `src/Core/MassNavigation`. Component au
 - `OrderBuffer` makes an authored agent controllable/orderable.
 - `ManifestationObstacleIntent2D` / `CompoundObstacle2D` author obstacle geometry.
 - `MassNavigationFlowObstacleProjection` is the bridge output consumed by MassNavigationFlow environment binding.
-- `MassNavigationFormationAnchor`, `MassNavigationFormationFollower`, and optional `MassNavigationFollowerLocomotion` enable formation behavior only for templates that author those components.
+- Shape, facing, anchor/member ownership, and slot generation belong to the consuming Mod. MassNavigation executes explicit movement targets through its Order and MovePlanning seams.
+
+`massNavigationMove` contains one spatial destination only. Formation mode, slot layout, facing and
+rotation are not valid MassNavigation order payloads. A formation-owning Mod submits its own business
+orders, resolves them into explicit member targets, and hands those targets to the existing
+`MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` seam.
 
 `MassNavigationConfig.world.obstacles[]` is obsolete and must fail strict config loading. Obstacle authoring belongs to map/template ECS components and is documented in `gitbook/reference/obstacle-authoring.md`.
 
@@ -76,7 +78,8 @@ The mod-owned source surface is intentionally small:
 
 - No fallback paths for missing services, config, templates, performers, map bounds, or visual heightmap.
 - No parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.
-- No Formation Capability formation ownership inside the MassNavigation foundation.
+- No game-specific group-layout ownership inside the MassNavigation foundation.
+- No formation component, registry, follower system, order payload or rotation shortcut in Core MassNavigation.
 - No MassNavigation-owned post-spawn lifecycle or bootstrap path inside this mod; runtime entity discovery is core-owned and component-authored.
 - No private MassNavigation marker lifecycle system when performer rules can express the lifecycle.
 - Move reusable behavior into `MassNavigationFlow`, `MassNavigation`, Core, or another formal reusable mod when two or more mods need it.

@@ -8,7 +8,7 @@
   "windowResizable": true,
   "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "movePathPreviewOrderTypeKeys": [ "formationMove" ]
   },
   "presentation": {
     "cameraCulling": {

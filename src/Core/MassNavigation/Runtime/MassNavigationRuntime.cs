@@ -104,17 +104,14 @@ public sealed class MassNavigationRuntime
         _simulation = simulation;
         engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-            new MassNavigationFormationFollowerSystem(engine, simulation),
-            SystemGroup.PostMovement);
+        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, simulation),
             SystemGroup.RuntimeEntityBinding);
         engine.RegisterSystem(
             new MassNavigationEnvironmentBindingSystem(engine, simulation),
             SystemGroup.RuntimeEntityBinding);
-        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+        engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(
             new MassNavigationPreSimulationStepSystem(engine, simulation),
             SystemGroup.PostMovement);
         engine.RegisterSystem(

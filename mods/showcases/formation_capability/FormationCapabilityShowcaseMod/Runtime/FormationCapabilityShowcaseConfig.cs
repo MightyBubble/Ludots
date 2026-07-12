@@ -17,7 +17,9 @@ internal sealed class FormationCapabilityShowcaseConfig
     public FormationCapabilityShowcaseAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialCommandSourceFormationId { get; set; } = string.Empty;
     public int InitialCommandSourceEntityCapacity { get; set; }
-    public int RotateOrderBatchCapacity { get; set; }
+    public int OrderBatchCapacity { get; set; }
+    public float TargetChangeEpsilonCm { get; set; }
+    public float FacingChangeEpsilonRadians { get; set; }
     public FormationCapabilityShowcaseObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public FormationCapabilityShowcaseFormationConfig[] Formations { get; set; } = Array.Empty<FormationCapabilityShowcaseFormationConfig>();
     public int FormationOutlineOwnerCapacity => Formations.Length;
@@ -59,7 +61,9 @@ internal sealed class FormationCapabilityShowcaseConfig
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialCommandSourceFormationId");
         RequireProperty(root, "initialCommandSourceEntityCapacity");
-        RequireProperty(root, "rotateOrderBatchCapacity");
+        RequireProperty(root, "orderBatchCapacity");
+        RequireProperty(root, "targetChangeEpsilonCm");
+        RequireProperty(root, "facingChangeEpsilonRadians");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
@@ -174,9 +178,19 @@ internal sealed class FormationCapabilityShowcaseConfig
             throw new InvalidOperationException("Formation Capability showcase config requires initialCommandSourceEntityCapacity > 0.");
         }
 
-        if (RotateOrderBatchCapacity <= 0)
+        if (OrderBatchCapacity <= 0)
         {
-            throw new InvalidOperationException("Formation Capability showcase config requires rotateOrderBatchCapacity > 0.");
+            throw new InvalidOperationException("Formation Capability showcase config requires orderBatchCapacity > 0.");
+        }
+
+        if (!(TargetChangeEpsilonCm > 0f))
+        {
+            throw new InvalidOperationException("Formation Capability showcase config requires targetChangeEpsilonCm > 0.");
+        }
+
+        if (!(FacingChangeEpsilonRadians > 0f))
+        {
+            throw new InvalidOperationException("Formation Capability showcase config requires facingChangeEpsilonRadians > 0.");
         }
 
         ObstacleOverlay.Validate();

@@ -121,10 +121,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 OrderBucket bucket = _buckets[bucketIndex];
                 bucket.AssignOrValidatePayload(
                     _simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value),
-                    moveArgs.DestinationCm,
-                    moveArgs.FormationMode,
-                    moveArgs.RotationRadians,
-                    moveArgs.HasExplicitRotation);
+                    moveArgs.DestinationCm);
                 if (bucket.Members.Count >= _bucketMemberCapacity)
                 {
                     throw new InvalidOperationException(
@@ -152,15 +149,11 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 
             _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 _simulation.MassNavigationFlow,
-                _engine.World,
                 _simulation.AgentState,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
                 bucket.TeamId,
-                bucket.Destination,
-                bucket.FormationMode,
-                bucket.RotationRadians,
-                bucket.HasExplicitRotation);
+                bucket.Destination);
 
             if (commandChanged)
             {
@@ -385,40 +378,28 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         public int Token { get; private set; }
         public int TeamId { get; set; }
         public Vector2 Destination { get; set; }
-        public MassNavigationFormationMode FormationMode { get; set; }
-        public float RotationRadians { get; set; }
-        public bool HasExplicitRotation { get; set; }
         public List<int> Members { get; }
         private bool HasPayload { get; set; }
         private int MemberHash { get; set; }
 
         public void AssignOrValidatePayload(
             int teamId,
-            Vector2 destination,
-            MassNavigationFormationMode formationMode,
-            float rotationRadians,
-            bool hasExplicitRotation)
+            Vector2 destination)
         {
             if (!HasPayload)
             {
                 TeamId = teamId;
                 Destination = destination;
-                FormationMode = formationMode;
-                RotationRadians = rotationRadians;
-                HasExplicitRotation = hasExplicitRotation;
                 HasPayload = true;
                 return;
             }
 
             if (TeamId != teamId ||
                 Destination.X != destination.X ||
-                Destination.Y != destination.Y ||
-                FormationMode != formationMode ||
-                HasExplicitRotation != hasExplicitRotation ||
-                hasExplicitRotation && RotationRadians != rotationRadians)
+                Destination.Y != destination.Y)
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation order ingestion token {Token} has conflicting move-order payloads. Shared order ids must carry one team, destination, formation, and rotation.");
+                    $"MassNavigation order ingestion token {Token} has conflicting move-order payloads. Shared order ids must carry one team and destination.");
             }
         }
 
@@ -433,9 +414,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             return new OrderApplicationSignature(
                 TeamId,
                 Destination,
-                FormationMode,
-                RotationRadians,
-                HasExplicitRotation,
                 Members.Count,
                 MemberHash);
         }
@@ -445,9 +423,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Token = 0;
             TeamId = 0;
             Destination = default;
-            FormationMode = MassNavigationFormationMode.None;
-            RotationRadians = 0f;
-            HasExplicitRotation = false;
             HasPayload = false;
             MemberHash = 0;
             Members.Clear();
@@ -458,9 +433,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Token = token;
             TeamId = 0;
             Destination = default;
-            FormationMode = MassNavigationFormationMode.None;
-            RotationRadians = 0f;
-            HasExplicitRotation = false;
             HasPayload = false;
             MemberHash = 0;
             Members.Clear();
@@ -470,9 +442,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
     private readonly record struct OrderApplicationSignature(
         int TeamId,
         Vector2 Destination,
-        MassNavigationFormationMode FormationMode,
-        float RotationRadians,
-        bool HasExplicitRotation,
         int MemberCount,
         int MemberHash);
 }

@@ -51,9 +51,12 @@ public struct MovePlanRuntime
 public struct MovePlanExecutionIntent
 {
     public Vector2 TargetWorldCm;
+    public Vector2 ProjectionHintWorldCm;
     public float SpeedCmPerSec;
     public float StopRadiusCm;
+    public float MinimumClearanceCm;
     public byte HasTarget;
+    public byte ResolveNavigableTarget;
 }
 
 public readonly ref struct MovePlanView

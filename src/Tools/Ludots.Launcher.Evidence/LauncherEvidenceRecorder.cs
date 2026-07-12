@@ -99,8 +99,8 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationRemoteSettleTicks = 20;
     private const int MassNavigationReturnSettleTicks = 20;
     private const int MassNavigationCommandActorSampleCount = 128;
-    private const int MassNavigationAnchorSampleCount = 64;
-    private const float MassNavigationAnchorToleranceCm = 25f;
+    private const int MassNavigationPositionSampleCount = 64;
+    private const float MassNavigationPositionToleranceCm = 25f;
     private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
     private const int MassNavigationAvoidanceExtraOrderTicks = 210;
     private const int MassNavigationAvoidanceCrossingTicks = 420;
@@ -2592,7 +2592,7 @@ public static class LauncherEvidenceRecorder
                 PlayerId = 1,
                 Actor = entity,
                 SubmitMode = OrderSubmitMode.Immediate,
-                Args = MassNavigationMoveOrderArgs.Encode(targetCm, MassNavigationFormationMode.Square, rotationRadians: 0f)
+                Args = MassNavigationMoveOrderArgs.Encode(targetCm)
             };
         }
 
@@ -3029,8 +3029,8 @@ public static class LauncherEvidenceRecorder
         int transformFailureCount = 0;
         int emissionFailureCount = 0;
         int cullingFailureCount = 0;
-        var samplePositions = new List<MassNavigationAgentSample>(MassNavigationAnchorSampleCount);
-        float anchorToleranceSq = MassNavigationAnchorToleranceCm * MassNavigationAnchorToleranceCm;
+        var samplePositions = new List<MassNavigationAgentSample>(MassNavigationPositionSampleCount);
+        float positionToleranceSq = MassNavigationPositionToleranceCm * MassNavigationPositionToleranceCm;
         engine.World.Query(in OrderableMassNavigationAgentQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref OrderBuffer orders, ref WorldPositionCm position, ref CommandSourceSelectableTag selectable) =>
         {
             ecsAgentCount++;
@@ -3070,11 +3070,11 @@ public static class LauncherEvidenceRecorder
                 emissionFailureCount++;
             }
 
-            if (samplePositions.Count >= MassNavigationAnchorSampleCount || !payloadValid ||
+            if (samplePositions.Count >= MassNavigationPositionSampleCount || !payloadValid ||
                 !engine.World.TryGet(entity, out VisualTransform visual) ||
                 !engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPlanePosition performerPlane))
             {
-                if (samplePositions.Count < MassNavigationAnchorSampleCount && payloadValid)
+                if (samplePositions.Count < MassNavigationPositionSampleCount && payloadValid)
                 {
                     transformFailureCount++;
                 }
@@ -3085,9 +3085,9 @@ public static class LauncherEvidenceRecorder
             Vector2 ecsWorldCm = position.Value.ToVector2();
             Vector2 visualWorldCm = WorldPlane2D.VisualMetersToLogicCm(in visual.Position);
             Vector2 performerWorldCm = performerPlane.ValueCm;
-            if (Vector2.DistanceSquared(solverWorldCm, ecsWorldCm) > anchorToleranceSq ||
-                Vector2.DistanceSquared(ecsWorldCm, visualWorldCm) > anchorToleranceSq ||
-                Vector2.DistanceSquared(visualWorldCm, performerWorldCm) > anchorToleranceSq)
+            if (Vector2.DistanceSquared(solverWorldCm, ecsWorldCm) > positionToleranceSq ||
+                Vector2.DistanceSquared(ecsWorldCm, visualWorldCm) > positionToleranceSq ||
+                Vector2.DistanceSquared(visualWorldCm, performerWorldCm) > positionToleranceSq)
             {
                 transformFailureCount++;
             }
@@ -3205,7 +3205,7 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavigationMs: simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.GroupTargetUpdateMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
@@ -3316,8 +3316,8 @@ public static class LauncherEvidenceRecorder
             $"ScreenHud projection is empty: bars={boot.ScreenHudBarCount}, texts={boot.ScreenHudTextCount}.", failures);
         AddAcceptanceCheck(boot.WorldHudDroppedTotal == 0, $"WorldHud dropped {boot.WorldHudDroppedTotal} items.", failures);
         AddAcceptanceCheck(boot.ScreenHudDroppedTotal == 0, $"ScreenHud dropped {boot.ScreenHudDroppedTotal} items.", failures);
-        AddAcceptanceCheck(boot.SamplePositions.Count == MassNavigationAnchorSampleCount,
-            $"Anchor diagnostics captured {boot.SamplePositions.Count}/{MassNavigationAnchorSampleCount} fixed samples.", failures);
+        AddAcceptanceCheck(boot.SamplePositions.Count == MassNavigationPositionSampleCount,
+            $"Position diagnostics captured {boot.SamplePositions.Count}/{MassNavigationPositionSampleCount} fixed samples.", failures);
         AddAcceptanceCheck(boot.PayloadFailureCount == 0, $"Payload-stage failures: {boot.PayloadFailureCount}.", failures);
         AddAcceptanceCheck(boot.TransformFailureCount == 0, $"Transform-stage failures: {boot.TransformFailureCount}.", failures);
         AddAcceptanceCheck(boot.EmissionFailureCount == 0, $"WorldHud emission-stage failures: {boot.EmissionFailureCount}.", failures);
@@ -3432,7 +3432,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- WorldHud count/capacity/bar/text/drop: `{boot.WorldHudCount}` / `{boot.WorldHudCapacity}` / `{boot.WorldHudBarCount}` / `{boot.WorldHudTextCount}` / `{boot.WorldHudDroppedTotal}`");
         sb.AppendLine($"- ScreenHud count/capacity/bar/text/drop: `{boot.ScreenHudCount}` / `{boot.ScreenHudCapacity}` / `{boot.ScreenHudBarCount}` / `{boot.ScreenHudTextCount}` / `{boot.ScreenHudDroppedTotal}`");
         sb.AppendLine($"- chain failures payload/transform/emission/culling/projection/capacity: `{boot.PayloadFailureCount}` / `{boot.TransformFailureCount}` / `{boot.EmissionFailureCount}` / `{boot.CullingFailureCount}` / `{boot.ProjectionFailureCount}` / `{boot.CapacityFailureCount}`");
-        sb.AppendLine($"- fixed anchor samples: `{boot.SamplePositions.Count}` (tolerance `{MassNavigationAnchorToleranceCm:F0}cm`)");
+        sb.AppendLine($"- fixed position samples: `{boot.SamplePositions.Count}` (tolerance `{MassNavigationPositionToleranceCm:F0}cm`)");
         sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
         sb.AppendLine($"- avoidance frames: `{avoidance.FrameCount}`");
         sb.AppendLine($"- avoidance max visible/play-area/command-actor/heavy-profile agents: `{avoidance.MaxVisibleAgentCount}` / `{avoidance.MaxPlayAreaAgentCount}` / `{avoidance.MaxCommandActorVisibleCount}` / `{avoidance.MaxHeavyAgentCount}`");

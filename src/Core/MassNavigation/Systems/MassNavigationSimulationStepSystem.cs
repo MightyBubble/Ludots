@@ -5,12 +5,12 @@ using Ludots.Core.MassNavigation.Runtime;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
-internal sealed class MassNavigationFormationSystem : ISystem<float>
+internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
 
-    public MassNavigationFormationSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationSimulationStepSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
         _simulation = simulation;
@@ -46,7 +46,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                     _simulation.MassNavigationFlow,
                     _simulation.FrameIndex);
                 ApplyRouteExecutionTargets();
-                _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
+                _simulation.ObserveGroupTargetUpdate((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
             }
 
             if (_simulation.MassNavigationFlow.AdvanceFlowPipeline(

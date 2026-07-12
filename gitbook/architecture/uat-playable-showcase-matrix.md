@@ -16,33 +16,28 @@
 
 | UAT | 主 showcase | 入口 map | 目标 | 复用重点 |
 |------|-------------|----------|------|----------|
-| `UAT-1` | `FormationPhysicsPlaygroundMod` | `formation_physics_playground` | 少量高价值方阵本体、碰撞、推挤、狭窄通过 | 复用 scenario config、panel 与 scenario selection tests |
+| `UAT-1` | 未分配（由 #643 决议） | 无 | 历史精确物理车道的删除或中性化 | 当前没有正式 playable entry，不得虚构 playground |
 | `UAT-2` | `CapabilityStandardMassNavigationLargeWorld10kMod` | `mass_navigation` | 大规模 crowd、MassNavigationFlow 执行、drag-select、move command | 复用 `MassNavigationMod` runtime、panel、contract tests 与 performer tests |
+| `UAT-2` 业务消费者 | `FormationCapabilityShowcaseMod` | `formation_capability_showcase` | Showcase-owned formation move/rotate、明确逐成员目标、障碍后重聚 | 复用 OrderQueue、MovePlanning execution sink 与 MassNavigation agent binding |
 | `UAT-3` | `RelationshipShowcaseMod` | `relationship_showcase` | 预算、状态、前端场景卡、artifact 产出链路 | 复用 production battle-report / trace / path artifact 输出模式 |
 | `UAT-4` | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一入口、控制组、formation 视图、entity info、HUD 面板、跨系统联动 | 复用 hub/stress 双地图、selection dock、entity collection inspector、playable acceptance |
 
-## 3 UAT-1：FormationPhysicsPlaygroundMod
+## 3 UAT-1：#643 决议前不分配入口
 
 ### 3.1 为什么是它
 
-- 它已经是独立 mod，不依赖临时 fixture
-- `<Mod>/assets/game.json` 已提供正式 `startupMapId`
-- scenario config 已覆盖 `PassThrough`、`OrthogonalCross`、`Bottleneck`、`LaneMerge`、`CircleSwap`、`GoalQueue`
-- 已有 scenario selection 和 runtime load tests，说明入口和 scenario catalog 都是正式 contract
+- 仓库当前没有 `FormationPhysicsPlaygroundMod` 或 `formation_physics_playground`。
+- 历史 `FormationPhysics` 枚举与解析入口已经删除；[#643](https://github.com/MightyBubble/Ludots/issues/643) 只继续治理中性精确物理车道。
+- Formation Capability Showcase 使用 MassNavigation 明确成员目标，不是精确 Physics2D lane 的替代证据。
 
-### 3.2 建议操作脚本
+### 3.2 后续操作
 
-1. 进入 `formation_physics_playground`
-2. 从 `PassThrough / Bottleneck / GoalQueue` 三个 scenario 开始
-3. 分别验证 100、300、1000 量级阵列穿越、窄道、排队
-4. 记录碰撞生效、停下与恢复、推挤与回正
+- #643 若决定删除：从矩阵移除 UAT-1。
+- #643 若决定中性化：完成真实实现与正式 launcher 后，再按 Cucumber 玩家场景补入矩阵。
 
 ### 3.3 通过标准
 
-- 方阵本体不穿透
-- 狭窄路径下能形成可感知排队
-- 玩家可以通过 playground 面板切换 scenario，而不是改代码
-- 运行结果可被 scenario selection tests 和 runtime load tests 覆盖
+- 当前通过标准只是：不再宣称不存在的 lane、Mod、地图或测试已经交付。
 
 ## 4 UAT-2：CapabilityStandardMassNavigationLargeWorld10kMod
 
@@ -52,14 +47,21 @@
 - 它通过地图 `mass_navigation` 与 `MassNavigationMod` 使用正式执行引擎
 - 它覆盖 team-slot、direct target、邻居分离、硬解析、performer 展示与配置面板
 - NAV-6 到 NAV-9 的路由、per-agent target、move-plan 与 road 迁移都以 MassNavigationFlow 为执行 sink
+- 它不加载 formation identity、slot layout、facing、rotation 或 follower runtime
 
-### 4.2 建议操作脚本
+### 4.2 玩家验收场景
 
-1. 进入 `mass_navigation`
-2. 拖框选中一片 crowd，右键下达 move goal
-3. 切换执行/避障相关配置 preset
-4. 观察 HUD、单位移动、局部避让、arrival 计数与 performer 展示
-5. 与 `RoadNetworkShowcaseMod` 的 road move-plan UAT 一起跑，确认路由与 MassNavigationFlow sink 共存
+```gherkin
+Feature: 万级大规模导航
+
+  Scenario: 玩家向大规模单位下达移动命令
+    Given 玩家进入 mass_navigation 战场
+    When 玩家拖框选中一批单位并右键点击远处地面
+    Then 被选中的单位向目标区域移动
+    And 单位在密集区域会局部避让
+    And HUD 会持续显示到达数量和运行状态
+    And 大规模单位与 Road Network 的路线移动可以分别通过正式执行链运行
+```
 
 ### 4.3 通过标准
 
@@ -67,6 +69,23 @@
 - MassNavigationFlow panel / runtime 不因规模增加而丢失交互
 - route-to-execution 和 move-plan sink 都使用正式 runtime，不使用脚本桩
 - contract tests 能覆盖配置、执行、arrival、performer 与 road move-plan 回归
+- `massNavigationMove` 只携带一个明确空间目标
+
+### 4.4 Formation Capability 业务消费者
+
+`FormationCapabilityShowcaseMod` 自己拥有 `formationMove`、`formationRotate`、成员关系、槽位和朝向。它把逐成员目标转换为 `MovePlanExecutionIntent`，再通过 `MassNavigationMovePlanExecutionSink` 交给通用导航执行。
+
+```gherkin
+Feature: 方阵业务通过明确成员目标使用大规模导航
+
+  Scenario: 玩家移动并旋转方阵
+    Given 玩家进入 Formation Capability Showcase
+    And 玩家选中了一个方阵
+    When 玩家右键移动并使用旋转操作
+    Then 方阵和士兵向新的目标姿态移动
+    And 士兵绕开障碍后回到各自槽位
+    And 旋转不会提交伪移动订单
+```
 
 ## 5 UAT-3：RelationshipShowcaseMod
 
@@ -76,12 +95,18 @@
 - 非常适合作为“预算 / 语义 / 展示证据”的标准模板
 - 可用于把 AOI / LOD / 预算状态展示为用户可观察的结论，而不是只看控制台
 
-### 5.2 建议操作脚本
+### 5.2 玩家验收场景
 
-1. 进入 `relationship_showcase`
-2. 运行 scripted scenario
-3. 记录 state change、front-end view、battle report、trace、path
-4. 用同一 artifact 模式承载未来的 AOI / LOD / budget 观测结果
+```gherkin
+Feature: 可回放的预算与状态证据
+
+  Scenario: 玩家运行关系场景并查看结果
+    Given 玩家进入 relationship_showcase
+    When 玩家运行一个场景并等待结果生成
+    Then 玩家能看到状态变化和场景卡结果
+    And 系统产出 battle report、trace 与 path 证据
+    And 后续 AOI、LOD 与 budget 结果可以沿用同一证据形式
+```
 
 ### 5.3 通过标准
 
@@ -98,14 +123,25 @@
 - 有 selection dock、control group、formation view、entity collection inspector、ability HUD
 - 是目前最接近“统一 showcase”定义的现货
 
-### 6.2 建议操作脚本
+### 6.2 玩家验收场景
 
-1. 进入 `interaction_showcase_hub`
-2. 多选编队并保存到 control group
-3. 切换 formation view 与 live view
-4. 打开 entity info / collection inspector
-5. 验证语义属性预览、selection virtualization、control group recall、HUD 联动
-6. 再进入 `stress` 路线观察高压输入和技能连段
+```gherkin
+Feature: 统一交互入口
+
+  Scenario: 玩家管理多组单位并查看信息
+    Given 玩家进入 interaction_showcase_hub
+    When 玩家多选单位并保存到 control group
+    And 玩家切换 formation view 与 live view
+    And 玩家打开 entity info 与 collection inspector
+    Then control group 可以召回
+    And HUD 与实体信息保持一致
+    And 切换视图不会产生第二套选择真相
+
+  Scenario: 玩家进入高压交互路线
+    Given 玩家从 hub 进入 stress 路线
+    When 玩家连续执行输入和技能组合
+    Then 输入、技能和 HUD 仍保持一致反馈
+```
 
 ### 6.3 通过标准
 
@@ -116,15 +152,16 @@
 
 ## 7 本轮推荐落地顺序
 
-1. `FormationPhysicsPlaygroundMod`
-2. `CapabilityStandardMassNavigationLargeWorld10kMod`
+1. `CapabilityStandardMassNavigationLargeWorld10kMod`
+2. `FormationCapabilityShowcaseMod`
 3. `RoadNetworkShowcaseMod`
 4. `InteractionShowcaseMod`
 5. `RelationshipShowcaseMod`
 
 这个顺序的目的：
 
-- 先把 `UAT-1` 和 `UAT-2` 的实体仿真主线入口定下来
+- 先跑通 `UAT-2` 的通用 MassNavigation 基线和 Formation 业务消费者
+- `UAT-1` 等待 #643，不用虚构入口填空
 - 再用 road showcase 回归 route / move-plan / MassNavigationFlow sink
 - 再用 `InteractionShowcaseMod` 做 `UAT-4` 统一入口
 - 最后用 `RelationshipShowcaseMod` 补强 artifact-first 的证据产出模板
@@ -138,8 +175,9 @@
 
 ## 9 后续实现建议
 
-- `FormationPhysicsPlaygroundMod` 继续补 UAT-1 操作说明与性能记录模板
+- #643 决定是否删除 UAT-1，或在真正实现中性精确物理车道后另补可玩入口
 - `CapabilityStandardMassNavigationLargeWorld10kMod` 继续补 MassNavigationFlow 档位记录与统一性能字段
+- `FormationCapabilityShowcaseMod` 继续验证 formation 业务只通过 OrderQueue 与 MovePlanning execution sink 接入
 - `RoadNetworkShowcaseMod` 继续承接 route / move-plan / MassNavigationFlow sink UAT
 - `InteractionShowcaseMod` 作为 UAT-4 主入口，继续收敛 selection / entity-info / HUD 的正式 contract
 - `RelationshipShowcaseMod` 作为 artifact-first 模板，承接 AOI / LOD / budget 证据产出

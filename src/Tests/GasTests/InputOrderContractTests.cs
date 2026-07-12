@@ -871,16 +871,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ActorOrderRouting_RoutedMoveTo_AppliesGroupFormationToMoveSubsetOnly()
+        public void ActorOrderRouting_RoutedMoveTo_AppliesGroupTargetLayoutToMoveSubsetOnly()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -982,16 +982,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GroupMoveFormation_OrderTypeKeyMatching_IsCaseSensitive()
+        public void GroupMoveTargetLayout_OrderTypeKeyMatching_IsCaseSensitive()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "MoveTo" },
                 },
@@ -1042,13 +1042,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GroupMoveFormation_GridMode_RequiresOrderTypeKeys()
+        public void GroupMoveTargetLayout_GridMode_RequiresOrderTypeKeys()
         {
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                 },
                 Mappings = new List<InputOrderMapping>
@@ -1067,7 +1067,37 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 InputOrderMappingLoader.Validate(config, "test.json"));
-            Assert.That(ex!.Message, Does.Contain("groupMoveFormation.orderTypeKeys"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.orderTypeKeys"));
+        }
+
+        [Test]
+        public void GroupMoveTargetLayout_GridMode_RejectsNonPositiveSpacing()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 0,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.spacingCm"));
         }
 
         [Test]

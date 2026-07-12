@@ -3,11 +3,26 @@ using System.Numerics;
 
 namespace Ludots.Core.Input.Orders
 {
-    internal static class MoveFormationPlanner
+    internal static class MoveTargetLayoutPlanner
     {
         public static Vector3 ComputeOffsetTarget(Vector3 anchorWorldCm, int index, int totalCount, int spacingCm)
         {
-            if (totalCount <= 1 || spacingCm <= 0)
+            if (totalCount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(totalCount), totalCount, "Target layout requires totalCount > 0.");
+            }
+
+            if ((uint)index >= (uint)totalCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Target layout index must reference an actor in the requested layout.");
+            }
+
+            if (spacingCm <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(spacingCm), spacingCm, "Target layout requires spacingCm > 0.");
+            }
+
+            if (totalCount == 1)
             {
                 return anchorWorldCm;
             }
@@ -22,26 +37,19 @@ namespace Ludots.Core.Input.Orders
 
         private static void GetGridLayout(int count, out int cols, out int rows)
         {
-            if (count <= 0)
-            {
-                cols = 0;
-                rows = 0;
-                return;
-            }
-
             cols = (int)Math.Ceiling(Math.Sqrt(count));
             rows = (int)Math.Ceiling(count / (double)cols);
         }
 
         private static void GetGridCell(int index, int cols, out int row, out int col)
         {
-            row = cols <= 0 ? 0 : index / cols;
-            col = cols <= 0 ? 0 : index % cols;
+            row = index / cols;
+            col = index % cols;
         }
 
         private static int GetCenteredOffset(int index, int count, int spacingCm)
         {
-            return count <= 0 ? 0 : -((count - 1) * spacingCm / 2) + index * spacingCm;
+            return -((count - 1) * spacingCm / 2) + index * spacingCm;
         }
     }
 }

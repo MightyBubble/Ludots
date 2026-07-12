@@ -5,7 +5,7 @@
       "actionId": "Command",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
-      "orderTypeKey": "massNavigationMove",
+      "orderTypeKey": "formationMove",
       "argsTemplate": {},
       "requireTarget": true,
       "targetType": "Position",
