@@ -65,6 +65,7 @@ namespace Ludots.Tests.GAS
 
             var e1 = world.Create();
             world.Add(e1, new Position { GridPos = new IntVector2(2, 0) });
+            world.Add(e1, WorldPositionCm.FromCm(250, 50));
             world.Add(e1, new GameplayTagContainer());
             world.Add(e1, new AttributeBuffer());
             unsafe
@@ -78,6 +79,7 @@ namespace Ludots.Tests.GAS
 
             var e2 = world.Create();
             world.Add(e2, new Position { GridPos = new IntVector2(6, 0) });
+            world.Add(e2, WorldPositionCm.FromCm(650, 50));
             world.Add(e2, new GameplayTagContainer());
             world.Add(e2, new AttributeBuffer());
             unsafe
@@ -112,7 +114,7 @@ namespace Ludots.Tests.GAS
 
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, ImmF = 8.0f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, ImmF = 800.0f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAny, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QuerySortStable },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryLimit, Imm = 1 },

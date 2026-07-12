@@ -618,9 +618,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().TryMinEntityByAttribute(entities, attributeId, out entity, out value);
         }
 
-        public bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        public bool TryMinEntityByWorldDistanceCm(ReadOnlySpan<Entity> entities, WorldCmInt2 centerCm, out Entity entity, out long distanceSquaredCm)
         {
-            return RequireEntityQueries().TryMinEntityByDistance(entities, center, out entity, out distanceSquared);
+            return RequireEntityQueries().TryMinEntityByWorldDistanceCm(entities, centerCm, out entity, out distanceSquaredCm);
         }
 
         public int GetTeamId(Entity entity)

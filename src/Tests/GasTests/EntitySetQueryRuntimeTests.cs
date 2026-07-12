@@ -22,6 +22,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -198,9 +199,9 @@ namespace Ludots.Tests.GAS
             world.Add(far, new EntityLayer(category: 0b0010, mask: uint.MaxValue));
             world.Add(near, new EntityLayer(category: 0b0010, mask: uint.MaxValue));
             world.Add(offLayer, new EntityLayer(category: 0b0100, mask: uint.MaxValue));
-            world.Add(far, new Position { GridPos = new IntVector2(20, 0) });
-            world.Add(near, new Position { GridPos = new IntVector2(2, 0) });
-            world.Add(offLayer, new Position { GridPos = new IntVector2(1, 0) });
+            world.Add(far, WorldPositionCm.FromCm(20, 0));
+            world.Add(near, WorldPositionCm.FromCm(2, 0));
+            world.Add(offLayer, WorldPositionCm.FromCm(1, 0));
 
             Span<Entity> entities = stackalloc Entity[8];
             entities[0] = offLayer;
@@ -215,9 +216,36 @@ namespace Ludots.Tests.GAS
 
             Assert.That(count, Is.EqualTo(1));
             Assert.That(entities[0], Is.EqualTo(near));
-            Assert.That(setup.EntityQueries.TryMinEntityByDistance(entities.Slice(0, count), new IntVector2(0, 0), out Entity closest, out long distanceSquared), Is.True);
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(entities.Slice(0, count), WorldCmInt2.Zero, out Entity closest, out long distanceSquared), Is.True);
             Assert.That(closest, Is.EqualTo(near));
             Assert.That(distanceSquared, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void MinWorldDistance_FarFromOriginWithNonUnitGrid_KeepsWorldCmAndStableTies()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            const int gridCellSizeCm = 250;
+            var coordinates = new SpatialCoordinateConverter(gridCellSizeCm);
+            WorldCmInt2 centerCm = coordinates.GridToWorld(new IntVector2(4000, 0));
+
+            Entity exact = world.Create();
+            Entity tiedFirst = world.Create();
+            Entity tiedSecond = world.Create();
+            world.Add(exact, WorldPositionCm.FromCm(centerCm.X, centerCm.Y));
+            world.Add(tiedFirst, WorldPositionCm.FromCm(centerCm.X - gridCellSizeCm, centerCm.Y));
+            world.Add(tiedSecond, WorldPositionCm.FromCm(centerCm.X + gridCellSizeCm, centerCm.Y));
+
+            Span<Entity> candidates = stackalloc Entity[] { tiedSecond, exact, tiedFirst };
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(candidates, centerCm, out Entity closest, out long distanceSquaredCm), Is.True);
+            Assert.That(closest, Is.EqualTo(exact));
+            Assert.That(distanceSquaredCm, Is.Zero);
+
+            candidates = stackalloc Entity[] { tiedSecond, tiedFirst };
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(candidates, centerCm, out closest, out distanceSquaredCm), Is.True);
+            Assert.That(closest, Is.EqualTo(tiedFirst));
+            Assert.That(distanceSquaredCm, Is.EqualTo((long)gridCellSizeCm * gridCellSizeCm));
         }
 
         [Test]

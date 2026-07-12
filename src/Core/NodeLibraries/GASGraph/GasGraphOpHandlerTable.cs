@@ -391,7 +391,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleAggMinByDistance(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.E[ins.Dst] = s.Api.TryMinEntityByDistance(s.TargetList.Span, s.TargetPosCm, out Entity entity, out _)
+            var centerCm = new WorldCmInt2(s.TargetPosCm.X, s.TargetPosCm.Y);
+            s.E[ins.Dst] = s.Api.TryMinEntityByWorldDistanceCm(s.TargetList.Span, centerCm, out Entity entity, out _)
                 ? entity
                 : Entity.Null;
         }

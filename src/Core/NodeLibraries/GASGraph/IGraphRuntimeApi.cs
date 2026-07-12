@@ -139,7 +139,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        bool TryMinEntityByWorldDistanceCm(ReadOnlySpan<Entity> entities, WorldCmInt2 centerCm, out Entity entity, out long distanceSquaredCm)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
