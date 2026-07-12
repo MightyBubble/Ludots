@@ -236,22 +236,31 @@ public static class LauncherEvidenceRecorder
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
         var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
         var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+        var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         screenProjector.BindPresenter(cameraPresenter);
         screenRayProvider.BindPresenter(cameraPresenter);
+        screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+        screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
 
         engine.SetService(CoreServiceKeys.ViewController, viewController);
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
         engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
-        engine.RegisterPresentationSystem(cullingSystem);
+        var cullingSystem = new CameraCullingSystem(
+            engine.World,
+            engine.GameSession.Camera,
+            engine.SpatialQueries,
+            viewController,
+            performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+            timingDiagnostics: engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+            cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+        engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
         engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
         var renderCameraDebug = new RenderCameraDebugState();
         engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
         engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
 
-        var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         WorldHudToScreenSystem? hudProjection = TryCreateHudProjection(engine, screenProjector, viewController);
 
         engine.Start();
@@ -311,22 +320,31 @@ public static class LauncherEvidenceRecorder
         var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
         var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
+        var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         screenProjector.BindPresenter(cameraPresenter);
         screenRayProvider.BindPresenter(cameraPresenter);
+        screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+        screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
 
         engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
         engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
-        engine.RegisterPresentationSystem(cullingSystem);
+        var cullingSystem = new CameraCullingSystem(
+            engine.World,
+            engine.GameSession.Camera,
+            engine.SpatialQueries,
+            viewController,
+            performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+            timingDiagnostics: engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+            cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+        engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
         engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
         var renderCameraDebug = new RenderCameraDebugState();
         engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
         engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
 
-        var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         WorldHudToScreenSystem? hudProjection = TryCreateHudProjection(engine, screenProjector, viewController);
 
         engine.Start();
