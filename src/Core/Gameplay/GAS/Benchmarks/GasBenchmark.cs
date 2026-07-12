@@ -55,7 +55,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             
             // 3. Create Systems
             var appSystem = new EffectApplicationSystem(world, effectRequests);
-            var durSystem = new EffectLifetimeSystem(world, clock, conditions, effectRequests);
+            var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests);
             var aggSystem = new AttributeAggregatorSystem(world);
 
             var proposalSystem = new EffectProposalProcessingSystem(

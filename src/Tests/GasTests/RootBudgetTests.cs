@@ -172,7 +172,8 @@ namespace Ludots.Tests.GAS
                 world,
                 requests,
                 templates: templates,
-                presentationEvents: presentationEvents);
+                presentationEvents: presentationEvents,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer());
@@ -224,12 +225,14 @@ namespace Ludots.Tests.GAS
                 requests,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
+                lifetimeSnapshotCapacity: 16384,
                 budget: null,
-                templates,
+                templates: templates,
                 inputRequests: null,
                 chainOrders: null,
                 telemetry: new ResponseChainTelemetryBuffer(),
                 orderRequests: new OrderRequestQueue(),
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents);
 
             Entity source = world.Create();
@@ -270,7 +273,7 @@ namespace Ludots.Tests.GAS
                 var clock = new DiscreteClock();
                 var clocks = new GasClocks(clock);
                 var conditions = new GasConditionRegistry();
-                var lifetime = new EffectLifetimeSystem(world, clock, conditions, requests, budget);
+                var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: requests, budget: budget);
 
                 var source = world.Create();
                 var target = world.Create();

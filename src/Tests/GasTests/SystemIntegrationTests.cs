@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             var appSystem = new EffectApplicationSystem(_world, effectRequests);
             var aggSystem = new AttributeAggregatorSystem(_world);
-            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, effectRequests);
+            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests);
             
             // Act: 按Phase顺序执行
             float dt = 0.016f;

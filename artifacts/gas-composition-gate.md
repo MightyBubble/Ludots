@@ -51,3 +51,56 @@ N/A
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: effect 步骤（本任务本身不引入 Mod gameplay 变体）
+
+---
+
+## GAS Composition Gate — #646 Self Review
+
+- **Task / Issue**: #646
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+主要交付物为 A：沿现有 Effect Phase、BuiltinHandler、EffectRequestQueue 与时间切片合同重组执行路径，不新增 profile 字段、preset 枚举、Graph VM 或平行管线。
+
+结论：PASS。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|---|---:|---|
+| 瞬时效果阶段组合 | 2 | 现有 `EffectPhaseExecutor` + effect template phase bindings |
+| 预设主行为 | 0 | 现有 `BuiltinHandlerRegistry` / `BuiltinHandlers` |
+| 生命周期切片 | N/A | 现有 `EffectLifetimeSystem` + `ITimeSlicedSystem` |
+| 后续效果发布 | N/A | 现有 `EffectRequestQueue` |
+
+### 3. Reuse list
+
+- Handlers: `BuiltinHandlerRegistry`, `BuiltinHandlers`, `BuiltinHandlerExecutionContext`
+- Queues / Systems: `EffectRequestQueue`, `EffectProcessingLoopSystem`, `EffectLifetimeSystem`, `AbilityExecSystem`
+- Resolvers / Registries: `EffectPhaseExecutor`, `EffectTemplateRegistry`, existing target resolvers and graph program registry
+- Existing presets / graphs: existing `EffectPresetType` definitions and phase graph bindings; no new variant
+
+### 4. New Layer 0 ops
+
+N/A。
+
+### 5. Transaction boundary
+
+瞬时效果必须在同一次正式阶段执行中完成 OnResolve、OnHit、OnApply，并在结束时清理配置上下文和扇出暂存；需要跨帧监听器所有权的效果不得进入瞬时路径。
+
+### 6. Config SSOT
+
+行为仍由现有 effect template、preset catalog 和 graph 配置表达。新增的仅是 `game.json` 中启动期 GAS 快照容量；没有新增玩法 DSL。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建平行瞬时运行时、Graph VM 或 loader
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 容量不足明确失败，预算不足明确延后，无 fallback/静默截断
+
+### 8. Next variant test
+
+下一个 Mod 变体只调整 graph 连线或 effect 步骤，不修改 Core enum。

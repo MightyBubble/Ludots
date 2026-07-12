@@ -286,6 +286,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 CompilePhaseListeners(cfg.PhaseListeners, ref listenerSetup, cfg.Id, relativePath);
             }
+            if (lifetimeKind == EffectLifetimeKind.Instant && listenerSetup.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: lifetime Instant cannot declare phaseListeners because listener ownership requires cross-frame lifetime.");
+            }
 
             // ── Three-layer target resolution (new schema) ──
             var targetQuery = default(TargetQueryDescriptor);

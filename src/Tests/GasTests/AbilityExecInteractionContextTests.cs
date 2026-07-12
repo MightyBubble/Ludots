@@ -290,6 +290,7 @@ namespace Ludots.Tests.GAS
                     new InputRequestQueue(),
                     new InputResponseBuffer(),
                     new EffectRequestQueue(),
+                    4096,
                     definitions,
                     eventBus,
                     castAbilityOrderTypeId: CastOrderTypeId,

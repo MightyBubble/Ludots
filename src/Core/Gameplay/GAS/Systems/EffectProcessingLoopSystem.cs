@@ -47,9 +47,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectApplicationSystem _application;
         private readonly EffectLifetimeSystem _lifetime;
 
-        private static readonly QueryDescription _pendingQuery = new QueryDescription()
-            .WithAll<GameplayEffect, EffectContext>();
-
         private EffectLoopStage _stage;
         private EffectLoopSubstage _substage;
         private int _pass;
@@ -61,7 +58,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
-        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null)
+        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null)
             : base(world)
         {
             _effectRequests = effectRequests;
@@ -72,9 +69,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var configuredResponseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
                 responseChainOrderTypes,
                 nameof(EffectProcessingLoopSystem));
-            _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
+            _proposal = new EffectProposalProcessingSystem(
+                world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests,
+                configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi, tagOps,
+                spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, exchangeRuntime,
+                progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz,
+                relationshipRuntime, knowledgeAreaRevealRuntime);
             _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime);
-            _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime);
+            _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime);
             _runtimeStateEntity = world.Create(new GasRuntimeState());
         }
 
@@ -91,7 +93,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _stage = EffectLoopStage.ProposalAndApply;
                 _substage = EffectLoopSubstage.Proposal;
                 _pass = 0;
-                _hasPendingEffectsCached = HasPendingEffects();
+                _hasPendingEffectsCached = HasFollowUpEffectRequests();
             }
 
             UpdateRuntimeState();
@@ -102,6 +104,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _proposal.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
             _application.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
+            _lifetime.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
 
             while (true)
             {
@@ -126,7 +129,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!_application.UpdateSlice(dt, remainingMs)) return false;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
-                    _hasPendingEffectsCached = HasPendingEffects();
+                    _hasPendingEffectsCached = HasFollowUpEffectRequests();
                     if (!_hasPendingEffectsCached || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
                     {
                         _stage = EffectLoopStage.Lifetime;
@@ -140,7 +143,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
                     if (elapsed >= budgetTicks) return false;
-                    _lifetime.Update(dt);
+                    if (!_lifetime.UpdateSlice(dt, remainingMs)) return false;
                     _stage = EffectLoopStage.PostLifetimeProposalAndApply;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass = 0;
@@ -159,7 +162,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!_application.UpdateSlice(dt, remainingMs)) return false;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
-                    _hasPendingEffectsCached = HasPendingEffects();
+                    _hasPendingEffectsCached = HasFollowUpEffectRequests();
                     if (!_hasPendingEffectsCached || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
                     {
                         _stage = EffectLoopStage.Done;
@@ -183,14 +186,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _hasPendingEffectsCached = false;
             _proposal.ResetSlice();
             _application.ResetSlice();
+            _lifetime.ResetSlice();
             UpdateRuntimeState();
         }
 
-        private bool HasPendingEffects()
+        private bool HasFollowUpEffectRequests()
         {
-            var job = new AnyPendingEffectJob();
-            World.InlineEntityQuery<AnyPendingEffectJob, GameplayEffect>(in _pendingQuery, ref job);
-            return job.Found;
+            return _effectRequests != null && _effectRequests.Count > 0;
         }
 
         private void UpdateRuntimeState()
@@ -212,21 +214,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 EffectRequestCount = _effectRequests?.Count ?? 0,
                 InputRequestCount = _inputRequests?.Count ?? 0,
                 ChainOrderCount = _chainOrders?.Count ?? 0,
-                OrderRequestCount = _orderRequests?.Count ?? 0
+                OrderRequestCount = _orderRequests?.Count ?? 0,
+
+                EffectLifetimeProcessedLastSlice = _lifetime.LastSliceProcessed,
+                EffectLifetimeDeferredCount = _lifetime.DeferredEntityCount,
+                EffectLifetimeSnapshotCapacity = _lifetime.SnapshotCapacity,
             };
 
             World.Set(_runtimeStateEntity, state);
         }
 
-        private struct AnyPendingEffectJob : IForEachWithEntity<GameplayEffect>
-        {
-            public bool Found;
-
-            public void Update(Entity _, ref GameplayEffect effect)
-            {
-                if (effect.State == EffectState.Pending)
-                    Found = true;
-            }
-        }
     }
 }

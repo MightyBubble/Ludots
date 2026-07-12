@@ -144,7 +144,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var lifetime = new EffectLifetimeSystem(world, clock, new GasConditionRegistry());
+            var lifetime = new EffectLifetimeSystem(world, clock, new GasConditionRegistry(), snapshotCapacity: 4096);
             Entity source = world.Create();
             Entity target = world.Create(new EntityLocalClock(), new ActiveEffectContainer());
             Entity effect = GameplayEffectFactory.CreateEffect(

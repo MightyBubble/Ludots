@@ -255,6 +255,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         float primaryAttributeBefore = hasPrimaryAttributeSnapshot
                             ? World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId)
                             : 0f;
+                        bool phasePublishedAttributeDelta = false;
 
                         // Execute phase handlers through the unified phase executor.
                         if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
@@ -263,6 +264,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 ref readonly var tplData = ref _templates.GetRef(tplIdx);
                                 _builtinRuntime.ResetPerEffect();
+                                _builtinRuntime.SetModifierOverride(in modifiers);
 
                                 ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnResolve, _builtinRuntime);
                                 ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit, _builtinRuntime);
@@ -270,6 +272,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                                 _fanOutDropped += _builtinRuntime.DroppedCount;
                                 PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
+                                phasePublishedAttributeDelta = _builtinRuntime.HasAttributeDelta;
                             }
                         }
 
@@ -280,7 +283,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers);
                             }
 
-                            if (_presentationEvents != null && hasPrimaryAttributeSnapshot && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
+                            if (!phasePublishedAttributeDelta && _presentationEvents != null && hasPrimaryAttributeSnapshot && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
                             {
                                 float primaryAttributeAfter = World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId);
                                 _presentationEvents.Publish(new GasPresentationEvent

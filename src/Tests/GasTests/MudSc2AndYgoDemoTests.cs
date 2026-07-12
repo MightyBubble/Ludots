@@ -133,12 +133,13 @@ namespace Ludots.Tests.GAS
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var timedTags = new TimedTagExpirationSystem(world, clock);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
                     clock,
                     conditions,
+                    16384,
                     budget,
                     templates,
                     inputReq,
@@ -354,6 +355,7 @@ namespace Ludots.Tests.GAS
                     effectRequests,
                     clock,
                     conditions,
+                    16384,
                     budget,
                     templates,
                     inputReq,
@@ -474,12 +476,13 @@ namespace Ludots.Tests.GAS
                 var inputReq = new InputRequestQueue();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, incomingOrders, 30);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
                     clock,
                     conditions,
+                    16384,
                     budget,
                     templates,
                     null,

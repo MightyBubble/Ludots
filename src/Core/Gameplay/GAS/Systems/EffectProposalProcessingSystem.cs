@@ -12,7 +12,14 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -63,6 +70,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
+        private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
+        private readonly RootBudgetTable _instantFanOutBudget = new(16384);
+        private readonly List<FanOutCommand> _instantFanOutCommands = new(256);
+        private readonly Entity[] _instantResolverBuffer = new Entity[256];
+        private readonly OrderTypeRegistry? _builtinOrderTypeRegistry;
+        private readonly OrderRuleRegistry? _builtinOrderRuleRegistry;
+        private readonly Ludots.Core.Engine.IClock? _builtinClock;
+        private readonly int _builtinStepRateHz;
 
         private static readonly QueryDescription _listenersQuery = new QueryDescription().WithAll<ResponseChainListener>();
 
@@ -250,7 +265,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, Ludots.Core.Engine.IClock clock = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null)
             : base(world)
         {
             _queue = queue;
@@ -268,6 +283,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _builtinRuntime.SpatialQueries = spatialQueries;
+            _builtinRuntime.FanOutBudget = _instantFanOutBudget;
+            _builtinRuntime.FanOutCommands = _instantFanOutCommands;
+            _builtinRuntime.ResolverBuffer = _instantResolverBuffer;
+            _builtinRuntime.SpawnRequests = spawnRequests;
+            _builtinRuntime.LifecycleRequests = lifecycleRequests;
+            _builtinRuntime.LifecycleServices = lifecycleServices;
+            _builtinRuntime.Exchange = exchangeRuntime;
+            _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
+            _builtinRuntime.Relationships = relationshipRuntime;
+            _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _builtinOrderTypeRegistry = orderTypeRegistry;
+            _builtinOrderRuleRegistry = orderRuleRegistry;
+            _builtinClock = clock;
+            _builtinStepRateHz = stepRateHz > 0 ? stepRateHz : 30;
         }
 
         public override void Update(in float dt)
@@ -294,6 +324,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!_sliceActive)
             {
                 _sliceActive = true;
+                _instantFanOutBudget.NextFrame();
+                _instantFanOutCommands.Clear();
+                _builtinRuntime.OrderTypeRegistry = _builtinOrderTypeRegistry;
+                _builtinRuntime.OrderRuleRegistry = _builtinOrderRuleRegistry;
+                _builtinRuntime.StepRateHz = _builtinStepRateHz;
+                _builtinRuntime.CurrentStep = _builtinClock?.Now(Ludots.Core.Engine.ClockDomainId.Step) ?? 0;
                 _rootCursor = 0;
                 _rootCountSnapshot = _queue.Count;
                 _phase = WindowPhase.None;
@@ -823,48 +859,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
-                        if (IsPureInstantTemplate(in tpl))
+                        if (CanExecuteInstantInline(in tpl))
                         {
-                            ref var attr = ref World.TryGetRef<AttributeBuffer>(e.Target, out bool hasAttr);
-                            float delta = 0f;
-                            if (hasAttr)
-                            {
-                                // Snapshot primary attribute for delta calculation
-                                int primaryAttrId = e.Modifiers.Count > 0 ? e.Modifiers.Get(0).AttributeId : -1;
-                                float before = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                AttributeMutationOps.ApplyModifiers(World, e.Target, in e.Modifiers);
-                                float after = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                delta = after - before;
-                                if (_presentationEvents != null)
-                                {
-                                    _presentationEvents.Publish(new GasPresentationEvent
-                                    {
-                                        Kind = GasPresentationEventKind.EffectApplied,
-                                        Actor = e.Source,
-                                        Target = e.Target,
-                                        EffectTemplateId = e.TemplateId,
-                                        AttributeId = primaryAttrId,
-                                        Delta = delta
-                                    });
-                                }
-                            }
-
-                            // Dispatch OnApply Phase Listeners even for pure-instant effects.
-                            // Modifiers are applied inline above (equivalent to Main handler),
-                            // but Listeners must still fire for observability, e.g. "whenever
-                            // damage is dealt, draw a card" or "thorns: reflect damage on hit".
-                            if (_phaseExecutor != null && _graphApi != null)
-                            {
-                                SetMergedConfigContext(in tpl, in e);
-                                _phaseExecutor.DispatchPhaseListeners(
-                                    World, _graphApi,
-                                    e.Source, e.Target, e.TargetContext,
-                                    default,
-                                    EffectPhaseId.OnApply,
-                                    tpl.TagId,
-                                    e.TemplateId);
-                                ClearConfigContext();
-                            }
+                            ExecuteInstantInline(in e, in tpl);
 
                             if (_telemetry != null && _emitTelemetry)
                             {
@@ -1040,26 +1037,133 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private static bool IsPureInstantTemplate(in EffectTemplateData tpl)
+        private void ExecuteInstantInline(in EffectProposal proposal, in EffectTemplateData tpl)
+        {
+            bool hasPhaseRuntime = _phaseExecutor != null && _graphApi != null;
+            if (!hasPhaseRuntime)
+            {
+                if (tpl.PhaseGraphBindings.StepCount > 0 || tpl.HasTargetResolver ||
+                    (tpl.PresetType != EffectPresetType.None &&
+                     tpl.PresetType != EffectPresetType.InstantDamage &&
+                     tpl.PresetType != EffectPresetType.Heal &&
+                     tpl.PresetType != EffectPresetType.ApplyForce2D))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+                }
+
+                ApplyInstantModifiersAndPublish(in proposal);
+                return;
+            }
+
+            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+            var context = new EffectContext
+            {
+                RootId = proposal.RootId,
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+            _builtinRuntime.ResetPerEffect();
+            _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
+
+            if (_graphApiHost != null && mergedConfig.Count > 0)
+            {
+                _graphApiHost.SetConfigContext(in mergedConfig);
+            }
+
+            try
+            {
+                _phaseExecutor!.ExecutePhase(
+                    World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve));
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit));
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply));
+
+                if (_builtinRuntime.HasAttributeDelta)
+                {
+                    PublishInstantApplied(
+                        in proposal,
+                        _builtinRuntime.AttributeDeltaId,
+                        _builtinRuntime.AttributeDelta);
+                }
+                else if (tpl.PresetType == EffectPresetType.None ||
+                         tpl.PresetType == EffectPresetType.InstantDamage ||
+                         tpl.PresetType == EffectPresetType.Heal)
+                {
+                    ApplyInstantModifiersAndPublish(in proposal);
+                }
+
+                PublishBuiltinFanOutCommands();
+            }
+            finally
+            {
+                _instantFanOutCommands.Clear();
+                ClearConfigContext();
+            }
+            if (_builtinRuntime.DroppedCount > 0 && _budget != null)
+            {
+                _budget.DurationCallbackCreatesDropped += _builtinRuntime.DroppedCount;
+            }
+        }
+
+        private void ApplyInstantModifiersAndPublish(in EffectProposal proposal)
+        {
+            if (!World.IsAlive(proposal.Target) || !World.Has<AttributeBuffer>(proposal.Target)) return;
+
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(proposal.Target);
+            int primaryAttributeId = proposal.Modifiers.Count > 0
+                ? proposal.Modifiers.Get(0).AttributeId
+                : -1;
+            float before = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
+            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers);
+            float after = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
+            PublishInstantApplied(in proposal, primaryAttributeId, after - before);
+        }
+
+        private void PublishInstantApplied(in EffectProposal proposal, int attributeId, float delta)
+        {
+            if (_presentationEvents == null || attributeId < 0) return;
+            _presentationEvents.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.EffectApplied,
+                Actor = proposal.Source,
+                Target = proposal.Target,
+                EffectTemplateId = proposal.TemplateId,
+                AttributeId = attributeId,
+                Delta = delta,
+            });
+        }
+
+        private static uint BuildInstantExecutionSeed(in EffectProposal proposal, EffectPhaseId phase)
+        {
+            uint hash = 2166136261u;
+            hash = (hash ^ unchecked((uint)proposal.RootId)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.Source.Id)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.Target.Id)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.TemplateId)) * 16777619u;
+            hash = (hash ^ (uint)phase) * 16777619u;
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static bool CanExecuteInstantInline(in EffectTemplateData tpl)
         {
             if (tpl.LifetimeKind != EffectLifetimeKind.Instant) return false;
             if (tpl.PeriodTicks > 0) return false;
-            // Templates with Phase Graph bindings need entity-based processing
-            if (tpl.PhaseGraphBindings.StepCount > 0) return false;
-            // Templates with Phase Listeners need entity-based processing (registration occurs on OnApply)
-            if (tpl.ListenerSetup.Count > 0) return false;
-            // Templates with TargetResolver need entity-based processing for fan-out
-            if (tpl.HasTargetResolver) return false;
-            // Only modifier-driven instant presets can remain on the inline path.
-            // Behavior presets must stay entity-backed so OnApply builtins execute.
-            return tpl.PresetType switch
+            if (tpl.ListenerSetup.Count > 0)
             {
-                EffectPresetType.None => true,
-                EffectPresetType.InstantDamage => true,
-                EffectPresetType.Heal => true,
-                EffectPresetType.ApplyForce2D => true,
-                _ => false,
-            };
+                throw new InvalidOperationException(
+                    "GAS.INSTANT.ERR.PersistentListenerRequiresCrossFrameLifetime");
+            }
+            return true;
         }
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
@@ -1207,18 +1311,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TargetContext = proposal.TargetContext,
             };
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            bool accepted = _phaseExecutor.ExecutePhaseWithValidationResult(
-                World, _graphApi,
-                proposal.Source, proposal.Target, proposal.TargetContext,
-                targetPos,
-                EffectPhaseId.OnPropose,
-                in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                proposal.TagId,
-                proposal.TemplateId,
-                in mergedConfig);
-            ClearConfigContext();
-            return accepted;
+            try
+            {
+                return _phaseExecutor.ExecutePhaseWithValidationResult(
+                    World, _graphApi,
+                    proposal.Source, proposal.Target, proposal.TargetContext,
+                    targetPos,
+                    EffectPhaseId.OnPropose,
+                    in tpl.PhaseGraphBindings,
+                    tpl.PresetType,
+                    proposal.TagId,
+                    proposal.TemplateId,
+                    in mergedConfig);
+            }
+            finally
+            {
+                ClearConfigContext();
+            }
         }
 
         /// <summary>
@@ -1242,17 +1351,39 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TargetContext = proposal.TargetContext,
             };
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            _phaseExecutor.ExecutePhase(
-                World, _graphApi,
-                proposal.Source, proposal.Target, proposal.TargetContext,
-                targetPos,
-                EffectPhaseId.OnCalculate,
-                in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                proposal.TagId,
-                proposal.TemplateId,
-                in mergedConfig);
-            ClearConfigContext();
+            _builtinRuntime.ResetPerEffect();
+            _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
+            try
+            {
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi,
+                    proposal.Source, proposal.Target, proposal.TargetContext,
+                    targetPos,
+                    EffectPhaseId.OnCalculate,
+                    in tpl.PhaseGraphBindings,
+                    tpl.PresetType,
+                    proposal.TagId,
+                    proposal.TemplateId,
+                    in mergedConfig,
+                    _builtinRuntime,
+                    BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate));
+                PublishBuiltinFanOutCommands();
+            }
+            finally
+            {
+                _instantFanOutCommands.Clear();
+                ClearConfigContext();
+            }
+        }
+
+        private void PublishBuiltinFanOutCommands()
+        {
+            for (int i = 0; i < _instantFanOutCommands.Count; i++)
+            {
+                FanOutCommand command = _instantFanOutCommands[i];
+                TargetResolverFanOutHelper.PublishCommand(in command, _queue);
+            }
+            _instantFanOutCommands.Clear();
         }
 
         private void SetConfigContext(in EffectTemplateData tpl)

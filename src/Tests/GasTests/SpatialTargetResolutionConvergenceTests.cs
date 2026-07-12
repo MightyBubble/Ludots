@@ -222,6 +222,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: 100,
                 orderTypeRegistry: new OrderTypeRegistry());

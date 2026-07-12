@@ -1,6 +1,5 @@
 using Arch.Core;
 using Arch.Core.Extensions;
-using Arch.Buffer;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -22,15 +21,10 @@ using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
-    public sealed class EffectLifetimeSystem : BaseSystem<World, float>
+    public sealed class EffectLifetimeSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
         private static readonly QueryDescription _activeEffectsQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
-        private static readonly QueryDescription _periodicEffectsQuery = new QueryDescription()
-            .WithAll<GameplayEffect, EffectContext, EffectPeriodicTick>();
-        private static readonly QueryDescription _expirationEffectsQuery = new QueryDescription()
-            .WithAll<GameplayEffect, EffectContext, EffectExpirationCheck>();
-
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasBudget _budget;
         private readonly Ludots.Core.Engine.IClock _clock;
@@ -48,8 +42,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry? _orderRuleRegistry;
         private readonly int _stepRateHz;
 
-        private readonly CommandBuffer _commandBuffer = new CommandBuffer();
-
         private struct CallbackCommand
         {
             public int RootId;
@@ -60,15 +52,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         // ?? TargetResolver fan-out (period) ??
-        private readonly List<FanOutCommand> _fanOutCommands = new(256);
+        private readonly List<FanOutCommand> _fanOutCommands;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private int _fanOutDropped;
 
 
-        private readonly List<CallbackCommand> _onPeriodCallbacks = new List<CallbackCommand>(64);
-        private readonly List<CallbackCommand> _onExpireCallbacks = new List<CallbackCommand>(64);
-        private readonly List<CallbackCommand> _onRemoveCallbacks = new List<CallbackCommand>(64);
+        private readonly List<CallbackCommand> _onPeriodCallbacks;
+        private readonly List<CallbackCommand> _onExpireCallbacks;
+        private readonly List<CallbackCommand> _onRemoveCallbacks;
         private bool _callbackBudgetFused;
         private readonly RootBudgetTable _callbackCreateBudget = new RootBudgetTable(16384);
         private int _callbackDropped;
@@ -86,12 +78,55 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public Components.EffectContext Context;
         }
 
-        private readonly List<PhaseGraphEntry> _periodPhaseGraphs = new(64);
-        private readonly List<PhaseGraphEntry> _expirePhaseGraphs = new(64);
-        private readonly List<PhaseGraphEntry> _removePhaseGraphs = new(64);
+        private readonly List<PhaseGraphEntry> _periodPhaseGraphs;
+        private readonly List<PhaseGraphEntry> _expirePhaseGraphs;
+        private readonly List<PhaseGraphEntry> _removePhaseGraphs;
+        private readonly List<Entity> _dirtyTargets;
+        private readonly List<Entity> _effectsToDestroy;
+        private readonly Entity[] _effectSnapshot;
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, GasPresentationEventBuffer presentationEvents = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null) : base(world)
+        private enum LifetimeStage : byte
         {
+            Scan = 0,
+            PeriodGraphs = 1,
+            ExpireGraphs = 2,
+            RemoveGraphs = 3,
+            PeriodCallbacks = 4,
+            ExpireCallbacks = 5,
+            RemoveCallbacks = 6,
+            FanOut = 7,
+            DirtyTargets = 8,
+            DestroyEffects = 9,
+            Done = 10,
+        }
+
+        private bool _sliceActive;
+        private LifetimeStage _stage;
+        private int _snapshotCount;
+        private int _cursor;
+
+        public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int SnapshotCapacity => _effectSnapshot.Length;
+        public int LastSliceProcessed { get; private set; }
+        public int DeferredEntityCount => _sliceActive && _stage == LifetimeStage.Scan ? _snapshotCount - _cursor : 0;
+
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, GasPresentationEventBuffer presentationEvents = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null) : base(world)
+        {
+            if (snapshotCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(snapshotCapacity));
+            }
+
+            _effectSnapshot = new Entity[snapshotCapacity];
+            _fanOutCommands = new List<FanOutCommand>(snapshotCapacity);
+            _onPeriodCallbacks = new List<CallbackCommand>(snapshotCapacity);
+            _onExpireCallbacks = new List<CallbackCommand>(snapshotCapacity);
+            _onRemoveCallbacks = new List<CallbackCommand>(snapshotCapacity);
+            _periodPhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
+            _expirePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
+            _removePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
+            _dirtyTargets = new List<Entity>(snapshotCapacity);
+            _effectsToDestroy = new List<Entity>(snapshotCapacity);
             _effectRequests = effectRequests;
             _budget = budget;
             _clock = clock;
@@ -129,11 +164,130 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
+            int previous = MaxWorkUnitsPerSlice;
+            MaxWorkUnitsPerSlice = int.MaxValue;
+            while (!UpdateSlice(dt, int.MaxValue)) { }
+            MaxWorkUnitsPerSlice = previous;
+        }
+
+        public bool UpdateSlice(float dt, int timeBudgetMs)
+        {
+            LastSliceProcessed = 0;
+            if (!_sliceActive)
+            {
+                BeginSlice();
+            }
+
+            int workUnits = 0;
+            while (workUnits < MaxWorkUnitsPerSlice)
+            {
+                if (_stage == LifetimeStage.Scan)
+                {
+                    if (_cursor >= _snapshotCount)
+                    {
+                        _stage = LifetimeStage.PeriodGraphs;
+                        _cursor = 0;
+                        continue;
+                    }
+
+                    Entity entity = _effectSnapshot[_cursor++];
+                    CountWork(ref workUnits);
+                    if (!World.IsAlive(entity) || !World.Has<GameplayEffect>(entity) || !World.Has<EffectContext>(entity))
+                    {
+                        continue;
+                    }
+
+                    ref GameplayEffect effect = ref World.Get<GameplayEffect>(entity);
+                    ref EffectContext context = ref World.Get<EffectContext>(entity);
+                    if (World.Has<EffectPeriodicTick>(entity))
+                    {
+                        ProcessPeriod(entity, ref effect, ref context);
+                    }
+                    if (World.Has<EffectExpirationCheck>(entity))
+                    {
+                        ProcessExpiration(entity, ref effect, ref context);
+                    }
+                    continue;
+                }
+
+                if (ProcessPhaseStage(LifetimeStage.PeriodGraphs, LifetimeStage.ExpireGraphs, _periodPhaseGraphs, EffectPhaseId.OnPeriod, ref workUnits) ||
+                    ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
+                    ProcessPhaseStage(LifetimeStage.RemoveGraphs, LifetimeStage.PeriodCallbacks, _removePhaseGraphs, EffectPhaseId.OnRemove, ref workUnits))
+                {
+                    continue;
+                }
+
+                if (ProcessCallbackStage(LifetimeStage.PeriodCallbacks, LifetimeStage.ExpireCallbacks, _onPeriodCallbacks, ref workUnits) ||
+                    ProcessCallbackStage(LifetimeStage.ExpireCallbacks, LifetimeStage.RemoveCallbacks, _onExpireCallbacks, ref workUnits) ||
+                    ProcessCallbackStage(LifetimeStage.RemoveCallbacks, LifetimeStage.FanOut, _onRemoveCallbacks, ref workUnits))
+                {
+                    continue;
+                }
+
+                if (_stage == LifetimeStage.FanOut)
+                {
+                    if (_cursor < _fanOutCommands.Count)
+                    {
+                        FanOutCommand command = _fanOutCommands[_cursor++];
+                        TargetResolverFanOutHelper.PublishCommand(in command, _effectRequests);
+                        CountWork(ref workUnits);
+                        continue;
+                    }
+                    AdvanceTo(LifetimeStage.DirtyTargets);
+                    continue;
+                }
+
+                if (_stage == LifetimeStage.DirtyTargets)
+                {
+                    if (_cursor < _dirtyTargets.Count)
+                    {
+                        Entity target = _dirtyTargets[_cursor++];
+                        if (World.IsAlive(target) && !World.Has<AttributeAggregateDirty>(target))
+                        {
+                            World.Add(target, new AttributeAggregateDirty());
+                        }
+                        CountWork(ref workUnits);
+                        continue;
+                    }
+                    AdvanceTo(LifetimeStage.DestroyEffects);
+                    continue;
+                }
+
+                if (_stage == LifetimeStage.DestroyEffects)
+                {
+                    if (_cursor < _effectsToDestroy.Count)
+                    {
+                        Entity effect = _effectsToDestroy[_cursor++];
+                        if (World.IsAlive(effect)) World.Destroy(effect);
+                        CountWork(ref workUnits);
+                        continue;
+                    }
+                    _stage = LifetimeStage.Done;
+                    continue;
+                }
+
+                CompleteSlice();
+                return true;
+            }
+
+            return false;
+        }
+
+        public void ResetSlice()
+        {
+            if (!_sliceActive) return;
+            int previous = MaxWorkUnitsPerSlice;
+            MaxWorkUnitsPerSlice = int.MaxValue;
+            while (!UpdateSlice(0f, int.MaxValue)) { }
+            MaxWorkUnitsPerSlice = previous;
+        }
+
+        private void BeginSlice()
+        {
             RefreshBuiltinOrderContext();
             _callbackCreateBudget.NextFrame();
             _callbackDropped = 0;
             _fanOutDropped = 0;
-
             _onPeriodCallbacks.Clear();
             _onExpireCallbacks.Clear();
             _onRemoveCallbacks.Clear();
@@ -141,25 +295,46 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _periodPhaseGraphs.Clear();
             _expirePhaseGraphs.Clear();
             _removePhaseGraphs.Clear();
+            _dirtyTargets.Clear();
+            _effectsToDestroy.Clear();
 
-            var tickJob = new LifetimeTickJob
+            _snapshotCount = World.CountEntities(in _activeEffectsQuery);
+            if (_snapshotCount > _effectSnapshot.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_LIFETIME.ERR.SnapshotCapacityExceeded: required={_snapshotCount}, capacity={_effectSnapshot.Length}.");
+            }
+
+            World.GetEntities(in _activeEffectsQuery, _effectSnapshot);
+            _cursor = 0;
+            _stage = LifetimeStage.Scan;
+            _sliceActive = true;
+        }
+
+        private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        {
+            var job = new LifetimeTickJob
             {
                 World = World,
                 Clock = _clock,
                 Conditions = _conditions,
                 OnPeriodCallbacks = _onPeriodCallbacks,
                 PeriodPhaseGraphs = _periodPhaseGraphs,
-                Budget = _callbackCreateBudget
+                Budget = _callbackCreateBudget,
             };
-            World.InlineEntityQuery<LifetimeTickJob, GameplayEffect, EffectContext>(in _periodicEffectsQuery, ref tickJob);
+            job.Update(entity, ref effect, ref context);
+            _callbackDropped += job.Dropped;
+        }
 
-
-            var cleanupJob = new LifetimeCleanupJob
+        private void ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        {
+            var job = new LifetimeCleanupJob
             {
                 World = World,
                 Clock = _clock,
                 Conditions = _conditions,
-                CommandBuffer = _commandBuffer,
+                DirtyTargets = _dirtyTargets,
+                EffectsToDestroy = _effectsToDestroy,
                 OnExpireCallbacks = _onExpireCallbacks,
                 OnRemoveCallbacks = _onRemoveCallbacks,
                 ExpirePhaseGraphs = _expirePhaseGraphs,
@@ -167,36 +342,89 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PresentationEvents = _presentationEvents,
                 Budget = _callbackCreateBudget,
                 TagOps = _tagOps,
-                GasBudget = _budget
+                GasBudget = _budget,
             };
-            World.InlineEntityQuery<LifetimeCleanupJob, GameplayEffect, EffectContext>(in _expirationEffectsQuery, ref cleanupJob);
+            job.Update(entity, ref effect, ref context);
+            _callbackDropped += job.Dropped;
+        }
 
-            // ── Execute Phase Graphs for period/expire/remove ──
-            ExecutePhaseGraphsForEntries(_periodPhaseGraphs, EffectPhaseId.OnPeriod, _builtinRuntime);
-            ExecutePhaseGraphsForEntries(_expirePhaseGraphs, EffectPhaseId.OnExpire, _builtinRuntime);
-            ExecutePhaseGraphsForEntries(_removePhaseGraphs, EffectPhaseId.OnRemove, _builtinRuntime);
+        private bool ProcessPhaseStage(
+            LifetimeStage current,
+            LifetimeStage next,
+            List<PhaseGraphEntry> entries,
+            EffectPhaseId phase,
+            ref int workUnits)
+        {
+            if (_stage != current) return false;
+            if (_cursor < entries.Count)
+            {
+                PhaseGraphEntry entry = entries[_cursor++];
+                ExecutePhaseGraphEntry(in entry, phase, _builtinRuntime);
+                CountWork(ref workUnits);
+                return true;
+            }
+            AdvanceTo(next);
+            return true;
+        }
 
-            PublishCallbacks(_onPeriodCallbacks);
-            PublishCallbacks(_onExpireCallbacks);
-            PublishCallbacks(_onRemoveCallbacks);
-            TargetResolverFanOutHelper.PublishFanOutCommands(_fanOutCommands, _effectRequests);
+        private bool ProcessCallbackStage(
+            LifetimeStage current,
+            LifetimeStage next,
+            List<CallbackCommand> callbacks,
+            ref int workUnits)
+        {
+            if (_stage != current) return false;
+            if (_cursor < callbacks.Count)
+            {
+                CallbackCommand callback = callbacks[_cursor++];
+                PublishCallback(in callback);
+                CountWork(ref workUnits);
+                return true;
+            }
+            AdvanceTo(next);
+            return true;
+        }
 
-            _callbackDropped = tickJob.Dropped + cleanupJob.Dropped;
+        private void PublishCallback(in CallbackCommand command)
+        {
+            if (_effectRequests == null) return;
+            _effectRequests.Publish(new EffectRequest
+            {
+                RootId = command.RootId,
+                Source = command.Source,
+                Target = command.Target,
+                TargetContext = command.TargetContext,
+                TemplateId = command.EffectTemplateId,
+            });
+        }
+
+        private void CompleteSlice()
+        {
             if (_callbackDropped > 0 && !_callbackBudgetFused)
             {
                 _callbackBudgetFused = true;
-                // Budget fused — telemetry exposed via _callbackBudgetFused + _callbackDropped
             }
             if (_callbackDropped > 0 && _budget != null)
             {
                 _budget.DurationCallbackCreatesDropped += _callbackDropped;
             }
-            if (_fanOutDropped > 0)
-            {
-                // Budget fused — telemetry exposed via _fanOutDropped
-            }
 
-            _commandBuffer.Playback(World, dispose: true);
+            _sliceActive = false;
+            _stage = LifetimeStage.Scan;
+            _snapshotCount = 0;
+            _cursor = 0;
+        }
+
+        private void AdvanceTo(LifetimeStage stage)
+        {
+            _stage = stage;
+            _cursor = 0;
+        }
+
+        private void CountWork(ref int workUnits)
+        {
+            workUnits++;
+            LastSliceProcessed++;
         }
 
         private struct LifetimeTickJob : IForEachWithEntity<GameplayEffect, EffectContext>
@@ -265,7 +493,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public World World;
             public Ludots.Core.Engine.IClock Clock;
             public GasConditionRegistry Conditions;
-            public CommandBuffer CommandBuffer;
+            public List<Entity> DirtyTargets;
+            public List<Entity> EffectsToDestroy;
             public List<CallbackCommand> OnExpireCallbacks;
             public List<CallbackCommand> OnRemoveCallbacks;
             public List<PhaseGraphEntry> ExpirePhaseGraphs;
@@ -354,82 +583,55 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     container.Remove(entity);
                     if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(context.Target))
                     {
-                        CommandBuffer.Add(context.Target, new AttributeAggregateDirty());
+                        DirtyTargets.Add(context.Target);
                     }
                 }
 
-                CommandBuffer.Destroy(entity);
+                EffectsToDestroy.Add(entity);
             }
         }
 
 
-        private void PublishCallbacks(List<CallbackCommand> callbacks)
-        {
-            if (_effectRequests == null || callbacks.Count == 0) return;
-
-            for (int i = 0; i < callbacks.Count; i++)
-            {
-                var cmd = callbacks[i];
-                _effectRequests.Publish(new EffectRequest
-                {
-                    RootId = cmd.RootId,
-                    Source = cmd.Source,
-                    Target = cmd.Target,
-                    TargetContext = cmd.TargetContext,
-                    TemplateId = cmd.EffectTemplateId
-                });
-            }
-        }
-
-        /// <summary>
-        /// Execute phase graphs for all effects that triggered a lifecycle event.
-        /// Uses the effect's own template for behavior/config lookup.
-        /// Also handles listener unregistration on OnExpire/OnRemove.
-        /// </summary>
-        private void ExecutePhaseGraphsForEntries(List<PhaseGraphEntry> entries, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
+        private void ExecutePhaseGraphEntry(
+            in PhaseGraphEntry entry,
+            EffectPhaseId phase,
+            BuiltinHandlerExecutionContext? builtinRuntime)
         {
             if (_phaseExecutor == null || _graphApi == null || _templates == null) return;
 
-            for (int i = 0; i < entries.Count; i++)
+            builtinRuntime?.ResetPerEffect();
+            if (entry.TemplateId <= 0) return;
+            if (!_templates.TryGetRef(entry.TemplateId, out int tplIdx)) return;
+            ref readonly var tpl = ref _templates.GetRef(tplIdx);
+
+            var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, entry.EffectEntity, in tpl.ConfigParams);
+            if (_graphApiHost != null && mergedConfig.Count > 0)
             {
-                builtinRuntime?.ResetPerEffect();
-                var entry = entries[i];
-                if (entry.TemplateId <= 0) continue;
-                if (!_templates.TryGetRef(entry.TemplateId, out int tplIdx)) continue;
-                ref readonly var tpl = ref _templates.GetRef(tplIdx);
+                _graphApiHost.SetConfigContext(in mergedConfig);
+            }
 
-                // Build merged config: template params + caller overrides
-                var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, entry.EffectEntity, in tpl.ConfigParams);
+            _phaseExecutor.ExecutePhase(
+                World, _graphApi,
+                entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
+                default,
+                phase,
+                in tpl.PhaseGraphBindings,
+                tpl.PresetType,
+                tpl.TagId,
+                entry.TemplateId,
+                in mergedConfig,
+                builtinRuntime,
+                BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context));
 
-                if (_graphApiHost != null && mergedConfig.Count > 0)
-                    _graphApiHost.SetConfigContext(in mergedConfig);
+            if (builtinRuntime != null)
+            {
+                _fanOutDropped += builtinRuntime.DroppedCount;
+            }
+            _graphApiHost?.ClearConfigContext();
 
-                _phaseExecutor.ExecutePhase(
-                    World, _graphApi,
-                    entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
-                    default,
-                    phase,
-                    in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
-                    tpl.TagId,
-                    entry.TemplateId,
-                    in mergedConfig,
-                    builtinRuntime,
-                    BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context));
-
-                if (builtinRuntime != null)
-                {
-                    _fanOutDropped += builtinRuntime.DroppedCount;
-                }
-
-
-                _graphApiHost?.ClearConfigContext();
-
-                // Unregister listeners on OnExpire / OnRemove
-                if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
-                {
-                    UnregisterListeners(entry.Context, entry.EffectEntityId);
-                }
+            if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
+            {
+                UnregisterListeners(entry.Context, entry.EffectEntityId);
             }
         }
 

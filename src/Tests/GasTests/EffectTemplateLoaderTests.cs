@@ -559,6 +559,49 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_InstantPhaseListener_RejectsCrossFrameOwnership()
+        {
+            GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.Test.OnHit");
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Invalid.InstantListener",
+                        "tags": ["Event.Invalid"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "phaseListeners": [
+                          {
+                            "phase": "OnHit",
+                            "scope": "Target",
+                            "action": "Graph",
+                            "graphProgram": "Graph.Test.OnHit"
+                          }
+                        ]
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
+
+                That(ex.Message, Does.Contain("lifetime Instant cannot declare phaseListeners"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_ScatterUnitCreationOmittedOffsetRadius_IsAcceptedAsZero()
         {
             string root = CreateTempRoot();

@@ -627,6 +627,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: 100,
                 orderTypeRegistry: new OrderTypeRegistry());
@@ -705,6 +706,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 effectRequests,
+                4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 orderTypeRegistry: orderTypes);
@@ -757,6 +759,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
@@ -839,6 +842,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 tagOps: tagOps);
@@ -921,6 +925,7 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,

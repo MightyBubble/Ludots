@@ -49,12 +49,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             .WithAll<OrderBuffer, BlackboardIntBuffer, AbilityStateBuffer>()
             .WithNone<AbilityExecInstance>();
 
-        private Entity[] _execEntities = new Entity[2048];
+        private readonly Entity[] _execEntities;
         private int _execEntityCount;
         private bool _sliceActive;
         private int _cursor;
+        private readonly Entity _runtimeStateEntity;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int SnapshotCapacity => _execEntities.Length;
+        public int LastSliceProcessed { get; private set; }
+        public int DeferredEntityCount => _sliceActive ? _execEntityCount - _cursor : 0;
 
         public AbilityExecSystem(
             World world,
@@ -62,6 +66,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             InputRequestQueue inputRequests,
             InputResponseBuffer inputResponses,
             EffectRequestQueue effectRequests,
+            int snapshotCapacity,
             AbilityDefinitionRegistry abilityDefinitions = null,
             GameplayEventBus eventBus = null,
             int castAbilityOrderTypeId = 0,
@@ -75,6 +80,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ProgressionRequirementEvaluator progressionRequirements = null)
             : base(world)
         {
+            if (snapshotCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(snapshotCapacity));
+            }
+
+            _execEntities = new Entity[snapshotCapacity];
             _clock = clock;
             _inputRequests = inputRequests;
             _inputResponses = inputResponses;
@@ -90,6 +101,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps ?? new TagOps();
             _orderTypeRegistry = orderTypeRegistry;
             _progressionRequirements = progressionRequirements;
+            _runtimeStateEntity = world.Create(new AbilityExecRuntimeState
+            {
+                SnapshotCapacity = snapshotCapacity,
+            });
         }
 
         /// <summary>
@@ -118,18 +133,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
             int workUnits = 0;
+            LastSliceProcessed = 0;
 
             // Phase 1: Query entities with active CastAbility order + Blackboard (no AbilityExecInstance yet)
             if (HasAbilityActivationOrderType)
             {
                 int newCount = World.CountEntities(in _newOrderQuery);
                 if (newCount > _execEntities.Length)
-                    _execEntities = new Entity[newCount * 2];
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.ABILITY_EXEC.ERR.SnapshotCapacityExceeded: phase=Start, required={newCount}, capacity={_execEntities.Length}.");
+                }
                 World.GetEntities(in _newOrderQuery, _execEntities);
                 for (int i = 0; i < newCount; i++)
                 {
-                    if (workUnits >= MaxWorkUnitsPerSlice) return false;
-                    
+                    if (workUnits >= MaxWorkUnitsPerSlice)
+                    {
+                        PublishRuntimeState();
+                        return false;
+                    }
+
+                    workUnits++;
+                    LastSliceProcessed++;
                     var actor = _execEntities[i];
                     if (!World.IsAlive(actor)) continue;
                     
@@ -399,7 +424,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0;
 
                     PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, slot.AbilityId);
-                    workUnits++;
                 }
             }
 
@@ -408,15 +432,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _sliceActive = true;
                 _cursor = 0;
-                _execEntityCount = 0;
-                var collect = new CollectExecJob { Entities = _execEntities, Count = 0 };
-                World.InlineEntityQuery<CollectExecJob, AbilityExecInstance>(in _execQuery, ref collect);
-                _execEntityCount = collect.Count;
+                _execEntityCount = World.CountEntities(in _execQuery);
+                if (_execEntityCount > _execEntities.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.ABILITY_EXEC.ERR.SnapshotCapacityExceeded: phase=Advance, required={_execEntityCount}, capacity={_execEntities.Length}.");
+                }
+                World.GetEntities(in _execQuery, _execEntities);
             }
 
             while (_cursor < _execEntityCount)
             {
-                if (workUnits >= MaxWorkUnitsPerSlice) return false;
+                if (workUnits >= MaxWorkUnitsPerSlice)
+                {
+                    PublishRuntimeState();
+                    return false;
+                }
 
                 var actor = _execEntities[_cursor++];
                 if (!World.IsAlive(actor) || !World.Has<AbilityExecInstance>(actor) || !World.Has<AbilityStateBuffer>(actor))
@@ -577,9 +608,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 workUnits++;
+                LastSliceProcessed++;
             }
 
             _sliceActive = false;
+            PublishRuntimeState();
             return true;
         }
 
@@ -588,6 +621,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _sliceActive = false;
             _cursor = 0;
             _execEntityCount = 0;
+            PublishRuntimeState();
+        }
+
+        private void PublishRuntimeState()
+        {
+            if (!World.IsAlive(_runtimeStateEntity)) return;
+            World.Set(_runtimeStateEntity, new AbilityExecRuntimeState
+            {
+                ProcessedLastSlice = LastSliceProcessed,
+                DeferredEntityCount = DeferredEntityCount,
+                SnapshotEntityCount = _execEntityCount,
+                SnapshotCapacity = _execEntities.Length,
+            });
         }
 
         private bool HasAbilityActivationOrderType => _castAbilityOrderTypeId > 0 || _castAbilityStartOrderTypeId > 0;
@@ -1336,18 +1382,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
 
-        private struct CollectExecJob : IForEachWithEntity<AbilityExecInstance>
-        {
-            public Entity[] Entities;
-            public int Count;
-
-            public void Update(Entity entity, ref AbilityExecInstance _)
-            {
-                if (Count < Entities.Length)
-                {
-                    Entities[Count++] = entity;
-                }
-            }
-        }
     }
 }

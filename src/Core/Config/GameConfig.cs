@@ -45,6 +45,8 @@ namespace Ludots.Core.Config
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
+        public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
+
         public int GridCellSizeCm { get; set; } = 100;
 
         public int WorldWidthInMacroTiles { get; set; } = 64;
@@ -70,6 +72,27 @@ namespace Ludots.Core.Config
     public sealed class Physics2DConfig
     {
         public bool Enabled { get; set; }
+    }
+
+    public sealed class GasRuntimeCapacityConfig
+    {
+        public int AbilityExecSnapshotCapacity { get; set; }
+        public int EffectLifetimeSnapshotCapacity { get; set; }
+
+        public void Validate()
+        {
+            if (AbilityExecSnapshotCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.abilityExecSnapshotCapacity must be positive.");
+            }
+
+            if (EffectLifetimeSnapshotCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectLifetimeSnapshotCapacity must be positive.");
+            }
+        }
     }
 
     public sealed class BrowserRuntimeConfig

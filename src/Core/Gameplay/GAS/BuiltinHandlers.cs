@@ -55,12 +55,15 @@ namespace Ludots.Core.Gameplay.GAS
             if (!world.IsAlive(context.Target)) return;
             if (!world.Has<AttributeBuffer>(context.Target)) return;
 
-            var modifiers = templateData.Modifiers;
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            var modifiers = runtime?.HasModifierOverride == true
+                ? runtime.ModifierOverride
+                : templateData.Modifiers;
             int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
             float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
             AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers);
             float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
-            BuiltinHandlerRuntimeScope.Current?.RecordAttributeDelta(primaryAttrId, after - before);
+            runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
 
         public static void HandleApplyForce(

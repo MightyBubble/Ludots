@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -43,6 +44,8 @@ namespace Ludots.Core.Gameplay.GAS
         public int AttributeDeltaId { get; private set; } = -1;
         public float AttributeDelta { get; private set; }
         public bool HasAttributeDelta => AttributeDeltaId >= 0 && AttributeDelta != 0f;
+        public bool HasModifierOverride { get; private set; }
+        public EffectModifiers ModifierOverride { get; private set; }
 
         public void ResetPerEffect()
         {
@@ -52,6 +55,14 @@ namespace Ludots.Core.Gameplay.GAS
             LastExchangeResult = default;
             AttributeDeltaId = -1;
             AttributeDelta = 0f;
+            HasModifierOverride = false;
+            ModifierOverride = default;
+        }
+
+        public void SetModifierOverride(in EffectModifiers modifiers)
+        {
+            ModifierOverride = modifiers;
+            HasModifierOverride = true;
         }
 
         public void SetResolvedCandidateCount(int count)

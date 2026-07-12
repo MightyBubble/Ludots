@@ -8,6 +8,10 @@
   "targetFps": 0,
   "simulationBudgetMsPerFrame": 4,
   "simulationMaxSlicesPerLogicFrame": 120,
+  "gasRuntimeCapacity": {
+    "abilityExecSnapshotCapacity": 16384,
+    "effectLifetimeSnapshotCapacity": 16384
+  },
   "gridCellSizeCm": 100,
   "worldWidthInMacroTiles": 64,
   "worldHeightInMacroTiles": 64,
