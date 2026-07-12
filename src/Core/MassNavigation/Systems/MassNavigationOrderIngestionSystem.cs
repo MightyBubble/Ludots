@@ -16,7 +16,7 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, OrderBuffer>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
@@ -27,10 +27,14 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
     private readonly List<OrderBucket> _buckets;
     private readonly HashSet<int> _activeTokens;
     private readonly List<int> _completedTokens;
+    private readonly List<int> _staleSignatureTokens;
+    private readonly Dictionary<int, OrderApplicationSignature> _appliedOrderSignatures;
+    private readonly Entity[] _orderMemberEntities;
     private MassNavigationRouteExecutionSink? _routeSink;
     private int _usedBucketCount;
     private int _moveOrderTypeId;
     private int _lastIdleScanFrame;
+    private uint _lastIncomingRevision;
 
     public MassNavigationOrderIngestionSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
@@ -44,6 +48,9 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         _buckets = new List<OrderBucket>(_orderTokenCapacity);
         _activeTokens = new HashSet<int>(_orderTokenCapacity);
         _completedTokens = new List<int>(_orderTokenCapacity);
+        _staleSignatureTokens = new List<int>(_orderTokenCapacity);
+        _appliedOrderSignatures = new Dictionary<int, OrderApplicationSignature>(_orderTokenCapacity);
+        _orderMemberEntities = new Entity[_bucketMemberCapacity];
         for (int i = 0; i < _orderTokenCapacity; i++)
         {
             _buckets.Add(new OrderBucket(_bucketMemberCapacity));
@@ -66,8 +73,12 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 
         ResolveMoveOrderType();
 
+        OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires OrderBufferSystem to ingest MassNavigation move orders.");
+        uint incomingRevision = orderBufferSystem.IncomingRevision;
+
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
-            _simulation.CommandCountFrame <= 0 &&
+            incomingRevision == _lastIncomingRevision &&
             _simulation.FrameIndex - _lastIdleScanFrame < _idleScanIntervalFrames)
         {
             return;
@@ -85,7 +96,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         foreach (ref var chunk in _engine.World.Query(in Query))
         {
             Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
-            Span<Team> teams = chunk.GetSpan<Team>();
             Span<OrderBuffer> orderBuffers = chunk.GetSpan<OrderBuffer>();
 
             foreach (int index in chunk)
@@ -108,17 +118,18 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 MassNavigationMoveOrderArgs moveArgs = MassNavigationMoveOrderArgs.Decode(in order);
                 OrderBucket bucket = _buckets[bucketIndex];
                 bucket.AssignOrValidatePayload(
-                    teams[index].Id,
+                    _simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value),
                     moveArgs.DestinationCm,
                     moveArgs.FormationMode,
-                    moveArgs.RotationRadians);
+                    moveArgs.RotationRadians,
+                    moveArgs.HasExplicitRotation);
                 if (bucket.Members.Count >= _bucketMemberCapacity)
                 {
                     throw new InvalidOperationException(
                         $"MassNavigation order ingestion token {token} required more than configured scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {_bucketMemberCapacity} members.");
                 }
 
-                bucket.Members.Add(agentIndices[index].Value);
+                bucket.AddMember(agentIndices[index].Value);
             }
         }
 
@@ -132,24 +143,37 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 continue;
             }
 
+            OrderApplicationSignature signature = bucket.CreateSignature();
+            bool commandChanged = !_appliedOrderSignatures.TryGetValue(bucket.Token, out OrderApplicationSignature previous) ||
+                previous != signature;
+            _appliedOrderSignatures[bucket.Token] = signature;
+
             _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 _simulation.MassNavigationFlow,
+                _engine.World,
                 _simulation.AgentState,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
                 bucket.TeamId,
                 bucket.Destination,
                 bucket.FormationMode,
-                bucket.RotationRadians);
+                bucket.RotationRadians,
+                bucket.HasExplicitRotation);
+
+            if (commandChanged)
+            {
+                int orderMemberCount = ResolveOrderMemberEntities(bucket);
+                _simulation.FocusOrderTarget(
+                    bucket.Destination,
+                    _orderMemberEntities.AsSpan(0, orderMemberCount));
+                _simulation.MarkCommandApply();
+            }
 
             if (routeSink != null)
             {
                 ApplyRoutedAgentTargets(routeSink, bucket);
             }
         }
-
-        OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires OrderBufferSystem to complete MassNavigation move orders.");
 
         for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
@@ -186,9 +210,39 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.MassNavigationFlow, _activeTokens);
+        PruneInactiveOrderSignatures();
+        _lastIncomingRevision = incomingRevision;
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
         {
             _lastIdleScanFrame = _simulation.FrameIndex;
+        }
+    }
+
+    private int ResolveOrderMemberEntities(OrderBucket bucket)
+    {
+        int count = bucket.Members.Count;
+        for (int i = 0; i < count; i++)
+        {
+            _orderMemberEntities[i] = ResolveControllableAgent(bucket.Members[i], bucket.Token);
+        }
+
+        return count;
+    }
+
+    private void PruneInactiveOrderSignatures()
+    {
+        _staleSignatureTokens.Clear();
+        foreach (int token in _appliedOrderSignatures.Keys)
+        {
+            if (!_activeTokens.Contains(token))
+            {
+                _staleSignatureTokens.Add(token);
+            }
+        }
+
+        for (int i = 0; i < _staleSignatureTokens.Count; i++)
+        {
+            _appliedOrderSignatures.Remove(_staleSignatureTokens[i]);
         }
     }
 
@@ -229,7 +283,13 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 "MassNavigation route execution requires PathService, PathStore, and PathingConfig to be registered together.");
         }
 
-        _routeSink = new MassNavigationRouteExecutionSink(pathService, pathStore, pathingConfig);
+        MassNavigationRuntimeCapacityConfig capacity = _simulation.Config.ScenarioRuntime.RuntimeCapacity;
+        _routeSink = new MassNavigationRouteExecutionSink(
+            pathService,
+            pathStore,
+            pathingConfig,
+            capacity.RouteStateCapacity,
+            capacity.RouteWaypointCapacityPerAgent);
         _engine.SetService(MassNavigationKeys.RouteExecutionSink, _routeSink);
         return _routeSink;
     }
@@ -323,14 +383,17 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         public Vector2 Destination { get; set; }
         public MassNavigationFormationMode FormationMode { get; set; }
         public float RotationRadians { get; set; }
+        public bool HasExplicitRotation { get; set; }
         public List<int> Members { get; }
         private bool HasPayload { get; set; }
+        private int MemberHash { get; set; }
 
         public void AssignOrValidatePayload(
             int teamId,
             Vector2 destination,
             MassNavigationFormationMode formationMode,
-            float rotationRadians)
+            float rotationRadians,
+            bool hasExplicitRotation)
         {
             if (!HasPayload)
             {
@@ -338,6 +401,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 Destination = destination;
                 FormationMode = formationMode;
                 RotationRadians = rotationRadians;
+                HasExplicitRotation = hasExplicitRotation;
                 HasPayload = true;
                 return;
             }
@@ -346,11 +410,30 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 Destination.X != destination.X ||
                 Destination.Y != destination.Y ||
                 FormationMode != formationMode ||
-                RotationRadians != rotationRadians)
+                HasExplicitRotation != hasExplicitRotation ||
+                hasExplicitRotation && RotationRadians != rotationRadians)
             {
                 throw new InvalidOperationException(
                     $"MassNavigation order ingestion token {Token} has conflicting move-order payloads. Shared order ids must carry one team, destination, formation, and rotation.");
             }
+        }
+
+        public void AddMember(int memberIndex)
+        {
+            Members.Add(memberIndex);
+            MemberHash = unchecked((MemberHash * 397) ^ memberIndex);
+        }
+
+        public OrderApplicationSignature CreateSignature()
+        {
+            return new OrderApplicationSignature(
+                TeamId,
+                Destination,
+                FormationMode,
+                RotationRadians,
+                HasExplicitRotation,
+                Members.Count,
+                MemberHash);
         }
 
         public void Reset()
@@ -360,7 +443,9 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Destination = default;
             FormationMode = MassNavigationFormationMode.None;
             RotationRadians = 0f;
+            HasExplicitRotation = false;
             HasPayload = false;
+            MemberHash = 0;
             Members.Clear();
         }
 
@@ -371,8 +456,19 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Destination = default;
             FormationMode = MassNavigationFormationMode.None;
             RotationRadians = 0f;
+            HasExplicitRotation = false;
             HasPayload = false;
+            MemberHash = 0;
             Members.Clear();
         }
     }
+
+    private readonly record struct OrderApplicationSignature(
+        int TeamId,
+        Vector2 Destination,
+        MassNavigationFormationMode FormationMode,
+        float RotationRadians,
+        bool HasExplicitRotation,
+        int MemberCount,
+        int MemberHash);
 }

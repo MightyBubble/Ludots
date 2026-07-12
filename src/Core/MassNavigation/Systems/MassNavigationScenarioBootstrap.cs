@@ -1,3 +1,4 @@
+using Arch.Core;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
@@ -25,9 +26,9 @@ internal static class MassNavigationScenarioBootstrap
         simulation.AgentState.Reset();
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
         MapSession session = RequireCurrentMapSession(engine, simulation.Config.MapId);
-        int[] playerOwnerIdsByScenarioTeam = ResolveScenarioTeamPlayerOwners(session, teamIds);
+        PlayerEntityLookup playerLookup = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("MassNavigation scenario requires PlayerEntityLookup.");
         simulation.ConfigureScenarioTeams(teamIds);
-        ConfigureRelationships(simulation.Config);
         MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, simulation.Config);
         simulation.MassNavigationFlow.Reset(
             teamIds,
@@ -36,12 +37,17 @@ internal static class MassNavigationScenarioBootstrap
             scenarioAgentLayer,
             simulation.Config.Scenario.SpawnLayout);
 
+        var teamDomains = new Entity[teamIds.Length];
+        var controlOwners = new Entity[teamIds.Length];
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
             int teamId = teamIds[teamIndex];
             string teamName = simulation.Config.Scenario.Teams[teamIndex].Name;
-            teamLookup.Register(teamId, RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, teamId, teamName));
+            teamDomains[teamIndex] = RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, teamId, teamName);
+            controlOwners[teamIndex] = ResolveScenarioTeamControlOwner(session, playerLookup, teamId);
         }
+
+        ConfigureRelationships(engine, simulation.Config, teamIds, teamDomains);
 
         int requested = simulation.MassNavigationFlow.UnitCount + simulation.HotZones.Length;
         if (spawnQueue.FreeCapacity < requested)
@@ -70,8 +76,8 @@ internal static class MassNavigationScenarioBootstrap
                 mapId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
-                teamIdOverride: teamId,
-                playerOwnerIdOverride: ResolvePlayerOwnerId(teamIds, playerOwnerIdsByScenarioTeam, teamId));
+                ownershipSource: controlOwners[IndexOfScenarioTeam(teamIds, teamId)],
+                membershipTarget: teamDomains[IndexOfScenarioTeam(teamIds, teamId)]);
         }
 
         string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
@@ -91,9 +97,29 @@ internal static class MassNavigationScenarioBootstrap
         simulation.MarkStructuralChange();
     }
 
-    private static void ConfigureRelationships(MassNavigationConfig config)
+    private static void ConfigureRelationships(
+        GameEngine engine,
+        MassNavigationConfig config,
+        ReadOnlySpan<int> teamIds,
+        ReadOnlySpan<Entity> teamDomains)
     {
-        TeamManager.LoadConfig(config.TeamRelationships);
+        RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+            ?? throw new InvalidOperationException("MassNavigation scenario requires RelationshipRuntime.");
+        RelationshipTypeRegistry types = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+            ?? throw new InvalidOperationException("MassNavigation scenario requires RelationshipTypeRegistry.");
+        for (int a = 0; a < teamIds.Length; a++)
+        {
+            for (int b = 0; b < teamIds.Length; b++)
+            {
+                if (a == b)
+                {
+                    continue;
+                }
+
+                string stance = ResolveConfiguredStance(config.TeamRelationships, teamIds[a], teamIds[b]);
+                relationships.EnsureLink(teamDomains[a], teamDomains[b], types.GetId(stance));
+            }
+        }
     }
 
     private static MassNavigationAgentLayer ResolveScenarioAgentLayer(
@@ -137,36 +163,51 @@ internal static class MassNavigationScenarioBootstrap
             $"MassNavigation runtime scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
     }
 
-    private static int[] ResolveScenarioTeamPlayerOwners(MapSession session, ReadOnlySpan<int> scenarioTeamIds)
+    private static Entity ResolveScenarioTeamControlOwner(
+        MapSession session,
+        PlayerEntityLookup players,
+        int scenarioTeamId)
     {
         MapConfig mapConfig = session.MapConfig
             ?? throw new InvalidOperationException($"MassNavigation runtime map '{session.MapId.Value}' has no MapConfig.");
-        int[] playerOwnerIdsByScenarioTeam = new int[scenarioTeamIds.Length];
+        Entity resolved = Entity.Null;
         for (int i = 0; i < mapConfig.Players.Count; i++)
         {
             PlayerBindingData binding = mapConfig.Players[i];
-            int teamIndex = IndexOfScenarioTeam(scenarioTeamIds, binding.TeamId);
-            if (teamIndex < 0)
+            if (binding.TeamId != scenarioTeamId)
             {
                 continue;
             }
 
-            if (playerOwnerIdsByScenarioTeam[teamIndex] > 0)
+            if (resolved != Entity.Null)
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation runtime map '{session.MapId.Value}' binds multiple players to scenario team {binding.TeamId}; generated agents require one PlayerOwner per team.");
+                    $"MassNavigation runtime map '{session.MapId.Value}' binds multiple control domains to scenario team {binding.TeamId}; generated agents require one explicit control owner per team.");
             }
 
-            playerOwnerIdsByScenarioTeam[teamIndex] = binding.PlayerId;
+            if (!players.TryGet(binding.PlayerId, out resolved))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation runtime map '{session.MapId.Value}' cannot resolve player representative {binding.PlayerId}.");
+            }
         }
 
-        return playerOwnerIdsByScenarioTeam;
+        return resolved;
     }
 
-    private static int ResolvePlayerOwnerId(ReadOnlySpan<int> scenarioTeamIds, ReadOnlySpan<int> playerOwnerIdsByScenarioTeam, int teamId)
+    private static string ResolveConfiguredStance(TeamConfig config, int sourceTeamId, int targetTeamId)
     {
-        int teamIndex = IndexOfScenarioTeam(scenarioTeamIds, teamId);
-        return teamIndex >= 0 ? playerOwnerIdsByScenarioTeam[teamIndex] : 0;
+        for (int i = 0; i < config.Relationships.Count; i++)
+        {
+            RelationshipEntry relation = config.Relationships[i];
+            if (relation.TeamA == sourceTeamId && relation.TeamB == targetTeamId ||
+                relation.Symmetric && relation.TeamA == targetTeamId && relation.TeamB == sourceTeamId)
+            {
+                return relation.Attitude;
+            }
+        }
+
+        return config.DefaultRelationship;
     }
 
     private static int IndexOfScenarioTeam(ReadOnlySpan<int> scenarioTeamIds, int teamId)
@@ -187,10 +228,12 @@ internal static class MassNavigationScenarioBootstrap
         MapId mapId,
         string templateId,
         Fix64Vec2 worldPosition,
-        int teamIdOverride = 0,
-        int playerOwnerIdOverride = 0,
+        Entity? ownershipSource = null,
+        Entity? membershipTarget = null,
         RuntimeEntitySpawnComponentPatch[]? componentPatches = null)
     {
+        bool hasOwnershipSource = ownershipSource.HasValue && ownershipSource.Value != Entity.Null;
+        bool hasMembershipTarget = membershipTarget.HasValue && membershipTarget.Value != Entity.Null;
         var request = new RuntimeEntitySpawnRequest
         {
             Kind = RuntimeEntitySpawnKind.Template,
@@ -198,8 +241,10 @@ internal static class MassNavigationScenarioBootstrap
             MapId = mapId,
             WorldPositionCm = worldPosition,
             HasWorldPosition = 1,
-            TeamIdOverride = teamIdOverride,
-            PlayerOwnerIdOverride = playerOwnerIdOverride,
+            OwnershipSource = hasOwnershipSource ? ownershipSource!.Value : Entity.Null,
+            HasOwnershipSource = hasOwnershipSource ? (byte)1 : (byte)0,
+            MembershipTarget = hasMembershipTarget ? membershipTarget!.Value : Entity.Null,
+            HasMembershipTarget = hasMembershipTarget ? (byte)1 : (byte)0,
             ComponentPatches = componentPatches ?? Array.Empty<RuntimeEntitySpawnComponentPatch>(),
         };
 

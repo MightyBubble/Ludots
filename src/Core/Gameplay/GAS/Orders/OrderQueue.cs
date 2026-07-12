@@ -38,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public int AvailableCapacity => _items.Length - _count;
 
         public bool TryEnqueue(in Order order)
         {
@@ -54,6 +55,77 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _items[_tail] = order;
             _tail = (_tail + 1) % _items.Length;
             _count++;
+            return true;
+        }
+
+        /// <summary>
+        /// Atomically admits a caller-owned batch into this queue. Capacity and order type ids are
+        /// validated before any queue state or order id is changed, so rejection never leaves a
+        /// partially submitted command group.
+        /// </summary>
+        public bool TryEnqueueBatch(Span<Order> orders)
+        {
+            if (orders.IsEmpty)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                ValidateOrderTypeId(orders[i].OrderTypeId);
+            }
+
+            if (orders.Length > AvailableCapacity)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                EnsureOrderId(ref orders[i]);
+                _items[_tail] = orders[i];
+                _tail = (_tail + 1) % _items.Length;
+            }
+
+            _count += orders.Length;
+            return true;
+        }
+
+        /// <summary>
+        /// Atomically admits a fan-out batch whose rows represent one logical order. The queue owns
+        /// the shared id so producers cannot create ids that collide with other intake paths.
+        /// </summary>
+        public bool TryEnqueueSharedBatch(Span<Order> orders)
+        {
+            if (orders.IsEmpty)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                ValidateOrderTypeId(orders[i].OrderTypeId);
+                if (orders[i].OrderId != 0)
+                {
+                    throw new System.InvalidOperationException(
+                        "OrderQueue shared batch requires caller order ids to be zero.");
+                }
+            }
+
+            if (orders.Length > AvailableCapacity)
+            {
+                return false;
+            }
+
+            int sharedOrderId = _nextOrderId++;
+            for (int i = 0; i < orders.Length; i++)
+            {
+                orders[i].OrderId = sharedOrderId;
+                _items[_tail] = orders[i];
+                _tail = (_tail + 1) % _items.Length;
+            }
+
+            _count += orders.Length;
             return true;
         }
 

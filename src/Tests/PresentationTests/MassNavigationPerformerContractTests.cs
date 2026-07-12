@@ -279,7 +279,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ScenarioRuntimeCapacity_CoversAuthoredScenarioCommandActors()
+        public void ScenarioRuntimeCapacity_CoversAuthoredScenarioOrderMembers()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
             JsonObject scenario = config["scenario"]?.AsObject()
@@ -293,15 +293,6 @@ namespace Ludots.Tests.Presentation
             JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
 
-            Assert.That(
-                scenarioRuntime["initialCommandActorSnapshotCapacity"]?.GetValue<int>(),
-                Is.EqualTo(authoredAgentCount));
-            Assert.That(
-                scenarioRuntime["initialCommandActorScratchCapacity"]?.GetValue<int>(),
-                Is.EqualTo(authoredAgentCount));
-            Assert.That(
-                runtimeCapacity["commandActorScratchCapacity"]?.GetValue<int>(),
-                Is.EqualTo(authoredAgentCount));
             Assert.That(
                 runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
                 Is.EqualTo(authoredAgentCount));

@@ -617,7 +617,7 @@ namespace Ludots.Tests.GAS
             Assert.That(engine.CurrentMapSession!.PrimaryBoard, Is.TypeOf<NodeGraphBoard>());
             Assert.That(engine.GetService(CoreServiceKeys.PathService), Is.TypeOf<AutoPathService>());
             Assert.That(
-                engine.GetService(MassNavigationKeys.SimulationRuntime),
+                engine.GetService(MassNavigationKeys.RuntimeBinding)?.Current,
                 Is.TypeOf<MassNavigationSimulationRuntime>(),
                 "Road-network waypoint following must bootstrap the MassNavigation execution runtime instead of the deleted legacy steering stack.");
 
@@ -1718,7 +1718,9 @@ namespace Ludots.Tests.GAS
         {
             MassNavigationConfig config = CreateRoadMassConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100));
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
+                new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
 
             Vector2 worldPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
@@ -1746,7 +1748,9 @@ namespace Ludots.Tests.GAS
         {
             MassNavigationConfig config = CreateRoadMassConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100));
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
+                new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
             return simulation;
         }
 
@@ -2086,7 +2090,7 @@ namespace Ludots.Tests.GAS
             Entity entity = FindEntityByInstanceId(engine, instanceId);
             if (entity == Entity.Null ||
                 !engine.World.TryGet(entity, out MassNavigationAgentIndex agentIndex) ||
-                engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation)
+                engine.GetService(MassNavigationKeys.RuntimeBinding) is not { IsReady: true, Current: { } simulation })
             {
                 return false;
             }
@@ -2130,7 +2134,7 @@ namespace Ludots.Tests.GAS
                 sb.Append(')');
 
                 if (engine.World.TryGet(entity, out MassNavigationAgentIndex agentIndex) &&
-                    engine.GetService(MassNavigationKeys.SimulationRuntime) is MassNavigationSimulationRuntime simulation &&
+                    engine.GetService(MassNavigationKeys.RuntimeBinding) is { IsReady: true, Current: { } simulation } &&
                     simulation.TryGetAgentNavigationTargetWorldCm(agentIndex.Value, out float targetX, out float targetY))
                 {
                     sb.Append(" massTarget=(");

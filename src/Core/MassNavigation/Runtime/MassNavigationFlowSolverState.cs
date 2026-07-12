@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Presentation.Components;
@@ -76,7 +75,6 @@ public sealed partial class MassNavigationFlowSolverState
     private float[] _unitTargetsCm = Array.Empty<float>();
     private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
-    private byte[] _commandActorFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
@@ -98,8 +96,9 @@ public sealed partial class MassNavigationFlowSolverState
     private readonly List<TeamRuntimeState> _teamStates = new();
     private readonly List<FlowRuntimeState> _flowStates = new();
     private readonly Dictionary<int, int> _teamStateIndexById = new();
-    private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
-    private int _teamRelationshipRevision = int.MinValue;
+    private byte[] _teamRelationshipMatrix = Array.Empty<byte>();
+    private uint _teamRelationshipRevision = uint.MaxValue;
+    private IMassNavigationDomainRelationshipProjection _domainRelationships = MassNavigationIdentityDomainRelationshipProjection.Instance;
     private readonly float[] _maxBodyRadiusByCategoryBit = new float[32];
     private int _frameCount;
     private bool _useCandidateGating;
@@ -109,9 +108,6 @@ public sealed partial class MassNavigationFlowSolverState
     private float _maxBodyRadiusCm;
     private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
     private bool _maxInteractingBodyRadiiDirty = true;
-    private int _lastFlowStepFrame = int.MinValue;
-    private int _lastCrowdStampFrame = int.MinValue;
-    private int _lastObstacleStampFrame = int.MinValue;
     private int _crowdStampCursor;
     private float _worldOriginXCm;
     private float _worldOriginYCm;
@@ -119,6 +115,7 @@ public sealed partial class MassNavigationFlowSolverState
     private float _worldMaxXCm = float.PositiveInfinity;
     private float _worldMinYCm = float.NegativeInfinity;
     private float _worldMaxYCm = float.PositiveInfinity;
+    private int _lockedAgentCapacity;
 
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
@@ -149,7 +146,6 @@ public sealed partial class MassNavigationFlowSolverState
     public float PlayAreaMaxYCm => _playAreaMaxYCm;
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
-    public ReadOnlySpan<byte> CommandActorFlags => _commandActorFlags.AsSpan(0, UnitCount);
     public float WorldOriginXCm => _worldOriginXCm;
     public float WorldOriginYCm => _worldOriginYCm;
 
@@ -209,6 +205,13 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         EnsureCapacity(unitCapacity);
+        _lockedAgentCapacity = unitCapacity;
+    }
+
+    public void SetDomainRelationshipProjection(IMassNavigationDomainRelationshipProjection projection)
+    {
+        _domainRelationships = projection ?? throw new ArgumentNullException(nameof(projection));
+        _teamRelationshipRevision = uint.MaxValue;
     }
 
     public Vector2 WorldToLocalCm(Vector2 worldCm)
@@ -241,7 +244,6 @@ public sealed partial class MassNavigationFlowSolverState
     public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
     public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
-    public bool IsCommandActor(int index) => _commandActorFlags[index] != 0;
     public bool HasUnitTarget(int index) => (uint)index < (uint)UnitCount && _hasUnitTarget[index] != 0;
     public bool IsUnitSettled(int index) => (uint)index < (uint)UnitCount && _unitSettledFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
@@ -390,7 +392,7 @@ public sealed partial class MassNavigationFlowSolverState
                 };
                 _teamStateIndexById[teamId] = _teamStates.Count;
                 _teamStates.Add(state);
-                _teamRelationshipRevision = int.MinValue;
+                _teamRelationshipRevision = uint.MaxValue;
             }
         }
 
@@ -426,7 +428,6 @@ public sealed partial class MassNavigationFlowSolverState
             _unitTargetsCm[i2 + 1] = 0f;
             _unitTargetStopThresholdsCm[unitIndex] = 0f;
             _hasUnitTarget[unitIndex] = 0;
-            _commandActorFlags[unitIndex] = 0;
             _unitProgressAnchorCm[i2] = _positionsCm[i2];
             _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
@@ -704,7 +705,7 @@ public sealed partial class MassNavigationFlowSolverState
         return true;
     }
 
-    public int DrainArrivalEvents(
+    internal int DrainArrivalEvents(
         Span<MassNavigationArrivalEvent> destination,
         MassNavigationAgentState agentState,
         float worldOriginXCm,
@@ -865,24 +866,6 @@ public sealed partial class MassNavigationFlowSolverState
         MarkEntityDirty(index);
     }
 
-    public void SetCommandActorFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors)
-    {
-        if (UnitCount <= 0)
-        {
-            return;
-        }
-
-        Array.Clear(_commandActorFlags, 0, UnitCount);
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (agentState.TryGetControllableIndex(commandActors[i], out int index) &&
-                (uint)index < (uint)UnitCount)
-            {
-                _commandActorFlags[index] = 1;
-            }
-        }
-    }
-
     public Vector2 ResolveUnitNavigableTarget(
         int index,
         float xCm,
@@ -973,7 +956,7 @@ public sealed partial class MassNavigationFlowSolverState
         return new Vector2(resolvedX, resolvedY);
     }
 
-    public void Step(
+    internal void Step(
         float dt,
         World world,
         MassNavigationGroupRuntime navGroupRuntime,
@@ -1092,33 +1075,19 @@ public sealed partial class MassNavigationFlowSolverState
         bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
-        return AdvanceFlowPipelineCore(tuning, 0, useConfiguredIntervals: false, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
-    }
-
-    public bool AdvanceFlowPipeline(MassNavigationFlowTuning tuning, int frameIndex, Action<double>? observeFlowFieldRebuild = null)
-    {
-        return AdvanceFlowPipelineCore(
-            tuning,
-            frameIndex,
-            useConfiguredIntervals: true,
-            tuning.ForceRefreshFlow,
-            tuning.ForceRefreshCrowd,
-            tuning.ForceRefreshObstacles,
-            observeFlowFieldRebuild);
+        return AdvanceFlowPipelineCore(tuning, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
     }
 
     private bool AdvanceFlowPipelineCore(
         MassNavigationFlowTuning tuning,
-        int frameIndex,
-        bool useConfiguredIntervals,
         bool forceRefreshFlow,
         bool forceRefreshCrowd,
         bool forceRefreshObstacles,
         Action<double>? observeFlowFieldRebuild)
     {
-        bool refreshObstacles = _flowDirty || forceRefreshObstacles || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks));
-        bool refreshCrowd = _flowDirty || forceRefreshCrowd || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks));
-        bool refreshFlow = _flowDirty || forceRefreshFlow || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks));
+        bool refreshObstacles = _flowDirty || forceRefreshObstacles;
+        bool refreshCrowd = _flowDirty || forceRefreshCrowd;
+        bool refreshFlow = _flowDirty || forceRefreshFlow;
         tuning.ForceRefreshFlow = false;
         tuning.ForceRefreshCrowd = false;
         tuning.ForceRefreshObstacles = false;
@@ -1151,6 +1120,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void EnsureCapacity(int unitCount)
     {
+        if (_lockedAgentCapacity > 0 && unitCount > _lockedAgentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlowSolverState requires {unitCount} agents, exceeding cold-phase preallocated capacity {_lockedAgentCapacity}.");
+        }
+
         int vectorLength = Math.Max(0, unitCount * 2);
         if (_positionsCm.Length < vectorLength)
         {
@@ -1180,7 +1155,6 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _unitTargetStopThresholdsCm, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
-            Array.Resize(ref _commandActorFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
             Array.Resize(ref _heavyProfileFlags, unitCount);
             Array.Resize(ref _entitySyncDirtyFlags, unitCount);
@@ -1266,8 +1240,8 @@ public sealed partial class MassNavigationFlowSolverState
             _teamStates.Add(state);
         }
 
-        _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
-        _teamRelationshipRevision = int.MinValue;
+        _teamRelationshipMatrix = new byte[_teamStates.Count * _teamStates.Count];
+        _teamRelationshipRevision = uint.MaxValue;
     }
 
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -1294,8 +1268,8 @@ public sealed partial class MassNavigationFlowSolverState
             _teamStates.Add(state);
         }
 
-        _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
-        _teamRelationshipRevision = int.MinValue;
+        _teamRelationshipMatrix = new byte[_teamStates.Count * _teamStates.Count];
+        _teamRelationshipRevision = uint.MaxValue;
     }
 
     private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
@@ -1305,7 +1279,6 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -1430,9 +1403,6 @@ public sealed partial class MassNavigationFlowSolverState
         ComputeFlowFields(crowdStampBudgetUnits: 0);
         LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
         _flowDirty = false;
-        _lastFlowStepFrame = 0;
-        _lastCrowdStampFrame = 0;
-        _lastObstacleStampFrame = 0;
     }
 
     private void RebuildStaticObstacleCost()
@@ -1524,7 +1494,6 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -1589,18 +1558,6 @@ public sealed partial class MassNavigationFlowSolverState
                 MarkEntityDirty(i);
             }
         }
-    }
-
-    private static bool ShouldRun(int frameIndex, ref int lastFrame, int intervalTicks)
-    {
-        int safeInterval = Math.Max(1, intervalTicks);
-        if (lastFrame == int.MinValue || frameIndex - lastFrame >= safeInterval)
-        {
-            lastFrame = frameIndex;
-            return true;
-        }
-
-        return false;
     }
 
     private void ComputeFlow(float[] flow, float targetX, float targetY)
@@ -1690,7 +1647,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void RefreshTeamRelationshipMatrixIfStale()
     {
-        int currentRevision = TeamManager.Revision;
+        uint currentRevision = _domainRelationships.Revision;
         if (_teamRelationshipRevision == currentRevision)
         {
             return;
@@ -1706,7 +1663,7 @@ public sealed partial class MassNavigationFlowSolverState
         int required = teamCount * teamCount;
         if (_teamRelationshipMatrix.Length < required)
         {
-            _teamRelationshipMatrix = new TeamRelationship[required];
+            _teamRelationshipMatrix = new byte[required];
         }
 
         for (int a = 0; a < teamCount; a++)
@@ -1716,7 +1673,7 @@ public sealed partial class MassNavigationFlowSolverState
             for (int b = 0; b < teamCount; b++)
             {
                 int teamB = _teamStates[b].TeamId;
-                _teamRelationshipMatrix[rowOffset + b] = TeamManager.GetRelationship(teamA, teamB);
+                _teamRelationshipMatrix[rowOffset + b] = _domainRelationships.IsCooperative(teamA, teamB) ? (byte)1 : (byte)0;
             }
         }
 
@@ -2191,7 +2148,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private float ComputeSeparationResponse(int selfTeamStateIndex, int otherTeamStateIndex, int selfUnitIndex, int otherUnitIndex)
     {
-        TeamRelationship selfToOther = GetTeamRelationship(selfTeamStateIndex, otherTeamStateIndex);
+        bool selfToOther = IsCooperative(selfTeamStateIndex, otherTeamStateIndex);
         float selfMass = _navMasses[selfUnitIndex];
         float otherMass = _navMasses[otherUnitIndex];
         MassNavigationFlowPairAvoidancePolicy policy = ResolvePolicy(selfToOther, selfMass, otherMass);
@@ -2212,7 +2169,7 @@ public sealed partial class MassNavigationFlowSolverState
         };
     }
 
-    private TeamRelationship GetTeamRelationship(int sourceTeamStateIndex, int targetTeamStateIndex)
+    private bool IsCooperative(int sourceTeamStateIndex, int targetTeamStateIndex)
     {
         int teamCount = _teamStates.Count;
         if ((uint)sourceTeamStateIndex >= (uint)teamCount || (uint)targetTeamStateIndex >= (uint)teamCount)
@@ -2221,14 +2178,14 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow team relationship index out of range: source={sourceTeamStateIndex}, target={targetTeamStateIndex}, teamCount={teamCount}.");
         }
 
-        return _teamRelationshipMatrix[(sourceTeamStateIndex * teamCount) + targetTeamStateIndex];
+        return _teamRelationshipMatrix[(sourceTeamStateIndex * teamCount) + targetTeamStateIndex] != 0;
     }
 
     private MassNavigationFlowPairAvoidancePolicy ResolveBidirectionalPolicy(int selfTeamStateIndex, int otherTeamStateIndex, int selfUnitIndex, int otherUnitIndex)
     {
-        TeamRelationship selfToOther = GetTeamRelationship(selfTeamStateIndex, otherTeamStateIndex);
-        TeamRelationship otherToSelf = GetTeamRelationship(otherTeamStateIndex, selfTeamStateIndex);
-        if (selfToOther == TeamRelationship.Friendly && otherToSelf == TeamRelationship.Friendly)
+        bool selfToOther = IsCooperative(selfTeamStateIndex, otherTeamStateIndex);
+        bool otherToSelf = IsCooperative(otherTeamStateIndex, selfTeamStateIndex);
+        if (selfToOther && otherToSelf)
         {
             return MassNavigationFlowPairAvoidancePolicy.FriendlyCooperativeYield;
         }
@@ -2361,9 +2318,9 @@ public sealed partial class MassNavigationFlowSolverState
         return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / _hardResolveHashCellSizeCm));
     }
 
-    private MassNavigationFlowPairAvoidancePolicy ResolvePolicy(TeamRelationship relationship, float selfMass, float otherMass)
+    private MassNavigationFlowPairAvoidancePolicy ResolvePolicy(bool cooperative, float selfMass, float otherMass)
     {
-        if (relationship == TeamRelationship.Friendly)
+        if (cooperative)
         {
             return MassNavigationFlowPairAvoidancePolicy.FriendlyCooperativeYield;
         }

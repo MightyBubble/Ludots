@@ -260,7 +260,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(showcaseConfig.ContainsKey("selection"), Is.False,
                 "FormationCapabilityShowcaseConfig must not invent a private selection scope block.");
             Assert.That(showcaseConfig["initialCommandSourceEntityCapacity"]?.GetValue<int>(), Is.GreaterThan(0),
-                "FormationCapabilityShowcaseConfig must explicitly author initial command actor scratch capacity.");
+                "FormationCapabilityShowcaseConfig must explicitly author initial command-source capacity.");
+            Assert.That(showcaseConfig["rotateOrderBatchCapacity"]?.GetValue<int>(), Is.GreaterThan(0),
+                "FormationCapabilityShowcaseConfig must own the capacity of its rotate-order producer.");
             string[] required =
             {
                 "mapId",
@@ -313,8 +315,6 @@ namespace Ludots.Tests.Presentation
             JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
                 ?? throw new InvalidOperationException("scenarioRuntime must be authored.");
             Assert.That(scenarioRuntime["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
-            Assert.That(scenarioRuntime["initialCommandActorScratchCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(scenarioRuntime["initialCommandActorSnapshotCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(scenarioRuntime.ContainsKey("panel"), Is.False);
             Assert.That(scenarioRuntime.ContainsKey("panelControls"), Is.False);
             JsonObject scenario = config["scenario"]?.AsObject()
@@ -523,20 +523,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TeamRelationshipConfig_RejectsCaseAliases()
+        public void TeamRelationshipConfig_PreservesDataDrivenStanceKeys()
         {
             JsonObject config = LoadMergedFormationCapabilityMassNavigationConfigObject();
             JsonObject relationships = config["teamRelationships"]?.AsObject()
                 ?? throw new InvalidOperationException("teamRelationships must be authored.");
-            relationships["defaultRelationship"] = "hostile";
+            const string catalogStanceKey = "Custom.Mod.Stance";
+            relationships["defaultRelationship"] = catalogStanceKey;
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
-            Assert.That(ex.Message, Does.Contain("defaultRelationship"));
-
-            Assert.That(TeamManager.TryParseRelationship("Hostile", out TeamRelationship parsed), Is.True);
-            Assert.That(parsed, Is.EqualTo(TeamRelationship.Hostile));
-            Assert.That(TeamManager.TryParseRelationship("hostile", out _), Is.False);
-            Assert.That(TeamManager.TryParseRelationship("HOSTILE", out _), Is.False);
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.TeamRelationships.DefaultRelationship, Is.EqualTo(catalogStanceKey));
         }
 
         [Test]
@@ -1058,19 +1054,99 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationOrderIngestion_IncomingRevisionWakesIdleScanAndSameTokenRotationReapplies()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                var orderTypes = new OrderTypeRegistry();
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    Key = MassNavigationOrderKeys.Move,
+                    OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                    Priority = 100,
+                    CanInterruptSelf = true,
+                });
+                var queue = new OrderQueue(capacity: 64);
+                var orderBufferSystem = new OrderBufferSystem(
+                    engine.World,
+                    new DiscreteClock(),
+                    orderTypes,
+                    new OrderRuleRegistry(),
+                    queue);
+                engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
+                engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
+
+                int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.orderIngestion.revision");
+                Entity first = engine.World.Create(
+                    new MassNavigationAgent { ProfileId = profileId },
+                    new FacingDirection { AngleRad = 0f },
+                    OrderBuffer.CreateEmpty());
+                Entity second = engine.World.Create(
+                    new MassNavigationAgent { ProfileId = profileId },
+                    new FacingDirection { AngleRad = 0f },
+                    OrderBuffer.CreateEmpty());
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { first, second },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 1200f, worldYCm: 1000f),
+                    },
+                    new[] { true, true });
+
+                var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation);
+                UpdateSystem(ingestion);
+                Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.Zero);
+
+                Order[] initial = CreateMoveOrderBatch(first, second, token: 77, rotationRadians: 0f);
+                Assert.That(queue.TryEnqueueBatch(initial), Is.True);
+                orderBufferSystem.Update(0f);
+                Assert.That(orderBufferSystem.IncomingRevision, Is.EqualTo(2u));
+
+                UpdateSystem(ingestion);
+                Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+                Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
+                Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(2));
+                Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float beforeX, out float beforeY), Is.True);
+
+                Order[] rotated = CreateMoveOrderBatch(first, second, token: 77, rotationRadians: MathF.PI * 0.5f);
+                Assert.That(queue.TryEnqueueBatch(rotated), Is.True);
+                orderBufferSystem.Update(0f);
+                UpdateSystem(ingestion);
+
+                Assert.That(simulation.CommandCountFrame, Is.EqualTo(2));
+                Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float afterX, out float afterY), Is.True);
+                Assert.That(((afterX - beforeX) * (afterX - beforeX)) + ((afterY - beforeY) * (afterY - beforeY)),
+                    Is.GreaterThan(1f));
+
+                engine.World.Get<OrderBuffer>(first).ClearActive();
+                engine.World.Get<OrderBuffer>(second).ClearActive();
+                UpdateSystem(ingestion);
+                Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.Zero);
+
+                Order[] reusedToken = CreateMoveOrderBatch(first, second, token: 77, rotationRadians: MathF.PI * 0.5f);
+                Assert.That(queue.TryEnqueueBatch(reusedToken), Is.True);
+                orderBufferSystem.Update(0f);
+                UpdateSystem(ingestion);
+                Assert.That(simulation.CommandCountFrame, Is.EqualTo(3),
+                    "A token reused after becoming inactive must not inherit its pruned application signature.");
+            }
+        }
+
+        [Test]
         public void MassNavigationMetadataSync_UsesScenarioTeamOrderAsSsot()
         {
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
             using (engine)
             {
-                int initialActiveTeam = simulation.ActiveTeamId;
-                int[] configuredOrder = { 7, initialActiveTeam, 11 };
+                int[] configuredOrder = { 7, 3, 11 };
                 simulation.ConfigureScenarioTeams(configuredOrder);
 
                 Assert.That(simulation.TeamIds.ToArray(), Is.EqualTo(configuredOrder));
-                simulation.SetActiveTeam(11);
                 simulation.ConfigureScenarioTeams(configuredOrder);
-                Assert.That(simulation.ActiveTeamId, Is.EqualTo(11));
+                Assert.That(simulation.TeamIds.ToArray(), Is.EqualTo(configuredOrder));
             }
         }
 
@@ -1148,7 +1224,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.DoesNotThrow(() => Tick(engine),
                 "MassNavigation runtime systems must not tick between CurrentMapSession focus and MapLoaded board-world binding.");
-            Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+            Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding), Is.Null);
         }
 
         [Test]
@@ -1360,13 +1436,15 @@ namespace Ludots.Tests.Presentation
 
                 runtime.UpsertOrderMoveCommand(
                     flow,
+                    world,
                     agentState,
                     orderToken: 1,
                     memberIndices: new[] { 0 },
                     teamId: 1,
                     destinationWorldCm: new Vector2(5000f, 1000f),
                     formationMode: MassNavigationFormationMode.None,
-                    rotationRadians: 0f);
+                    rotationRadians: 0f,
+                    hasExplicitRotation: false);
 
                 flow.SetUnitPositionForTests(0, 1000f, 1800f);
 
@@ -1420,13 +1498,15 @@ namespace Ludots.Tests.Presentation
 
                 runtime.UpsertOrderMoveCommand(
                     flow,
+                    world,
                     agentState,
                     orderToken: 1,
                     memberIndices: new[] { 0 },
                     teamId: 1,
                     destinationWorldCm: new Vector2(5000f, 1000f),
                     formationMode: MassNavigationFormationMode.None,
-                    rotationRadians: 0f);
+                    rotationRadians: 0f,
+                    hasExplicitRotation: false);
 
                 flow.SetUnitPositionForTests(0, 1800f, 1220f);
 
@@ -1470,24 +1550,28 @@ namespace Ludots.Tests.Presentation
 
             fixture.Runtime.UpsertOrderMoveCommand(
                 fixture.Flow,
+                fixture.World,
                 fixture.AgentState,
                 orderToken: 11,
                 memberIndices: new[] { 0, 1 },
                 teamId: 1,
                 destinationWorldCm: new Vector2(3000f, 3000f),
                 formationMode: MassNavigationFormationMode.Line,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: true);
             Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float beforeX, out float beforeY), Is.True);
 
             fixture.Runtime.UpsertOrderMoveCommand(
                 fixture.Flow,
+                fixture.World,
                 fixture.AgentState,
                 orderToken: 11,
                 memberIndices: new[] { 0, 1 },
                 teamId: 1,
                 destinationWorldCm: new Vector2(3000f, 3000f),
                 formationMode: MassNavigationFormationMode.Line,
-                rotationRadians: MathF.PI * 0.5f);
+                rotationRadians: MathF.PI * 0.5f,
+                hasExplicitRotation: true);
             Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float afterX, out float afterY), Is.True);
 
             Assert.That((afterX - beforeX) * (afterX - beforeX) + (afterY - beforeY) * (afterY - beforeY),
@@ -1506,13 +1590,15 @@ namespace Ludots.Tests.Presentation
 
             fixture.Runtime.UpsertOrderMoveCommand(
                 fixture.Flow,
+                fixture.World,
                 fixture.AgentState,
                 orderToken: 21,
                 memberIndices: new[] { 0, 1, 2 },
                 teamId: 1,
                 destinationWorldCm: new Vector2(3000f, 3000f),
                 formationMode: MassNavigationFormationMode.Line,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(2, out float beforeX, out float beforeY), Is.True);
             Assert.That(fixture.Runtime.TryUpdateGroupMemberOrderPathAnchor(
                     fixture.Flow,
@@ -1526,13 +1612,15 @@ namespace Ludots.Tests.Presentation
 
             fixture.Runtime.UpsertOrderMoveCommand(
                 fixture.Flow,
+                fixture.World,
                 fixture.AgentState,
                 orderToken: 22,
                 memberIndices: new[] { 1, 3 },
                 teamId: 1,
                 destinationWorldCm: new Vector2(6000f, 3000f),
                 formationMode: MassNavigationFormationMode.Line,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(2, out float afterX, out float afterY), Is.True);
             Assert.That(fixture.Runtime.TryUpdateGroupMemberOrderPathAnchor(
                     fixture.Flow,
@@ -1999,18 +2087,16 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: BuildCommandSourceDiagnostics(engine));
 
-            int rejectsBeforeMove = simulation.CommandRejectsTotal;
             Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MoveTargetWorldCm);
             AssertOutsideMinimapInteractiveRegion(engine, moveTargetScreen);
             WorldCmInt2 expectedMoveTarget = ResolveGroundWorldCm(engine, moveTargetScreen);
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             TickUntil(
                 engine,
-                () => simulation.LastCommandActorCount == FormationCapabilityAcceptance.ExpectedInitialCommandSource &&
-                      simulation.CommandRejectsTotal == rejectsBeforeMove &&
+                () => simulation.LastOrderMemberCount == FormationCapabilityAcceptance.ExpectedInitialCommandSource &&
                       CountActiveMoveOrders(engine, simulation) > 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationLocalCommandInputSystem, and OrderBuffer.");
+                failureMessage: "Right-click command should flow through PlayerInputHandler, OrderBufferSystem, and MassNavigationOrderIngestionSystem.");
 
             Assert.That(simulation.HasCommandFocus, Is.True);
             Assert.That(simulation.CommandFocusXCm, Is.EqualTo(expectedMoveTarget.X).Within(1f));
@@ -2106,7 +2192,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.CommandActorCount == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
+                      CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned and command-source ready before time-control verification.");
 
@@ -2192,14 +2278,9 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Test-authored command source should contain the non-local formation agent.");
 
-            int rejectsBeforeMove = simulation.CommandRejectsTotal;
             Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MoveTargetWorldCm);
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
-            TickUntil(
-                engine,
-                () => simulation.CommandRejectsTotal == rejectsBeforeMove + 1,
-                maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Right-clicking a selected non-local formation must be rejected at the MassNavigation command boundary.");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForInteraction);
 
             Assert.That(CountActiveMoveOrders(engine, simulation), Is.EqualTo(0));
             Assert.That(engine.World.TryGet(enemyFormation, out enemyOwner), Is.True);
@@ -2211,7 +2292,6 @@ namespace Ludots.Tests.Presentation
                 Is.False);
 
             float enemyFacingBeforeRotate = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
-            int rejectsBeforeRotate = simulation.CommandRejectsTotal;
             var input = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler is missing.");
             input.InjectButtonPress(FormationCapabilityAcceptance.RotateRightActionId);
@@ -2223,7 +2303,6 @@ namespace Ludots.Tests.Presentation
                 NormalizeAngleRadians(engine.World.Get<FacingDirection>(enemyFormation).AngleRad - enemyFacingBeforeRotate),
                 Is.EqualTo(0f).Within(0.0001f),
                 "Q/E rotation must use the same local PlayerOwner command boundary as right-click move orders.");
-            Assert.That(simulation.CommandRejectsTotal, Is.GreaterThanOrEqualTo(rejectsBeforeRotate + 1));
         }
 
         [Test]
@@ -2289,7 +2368,6 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Test-authored mixed command source should enter MassNavigation's command snapshot.");
 
-            int rejectsBeforeRotate = simulation.CommandRejectsTotal;
             var input = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler is missing.");
             input.InjectButtonPress(FormationCapabilityAcceptance.RotateRightActionId);
@@ -2305,7 +2383,6 @@ namespace Ludots.Tests.Presentation
                 NormalizeAngleRadians(engine.World.Get<FacingDirection>(enemyFormation).AngleRad - enemyFacingBefore),
                 Is.EqualTo(0f).Within(0.0001f),
                 "Mixed local/non-local selection must not rotate enemy formations.");
-            Assert.That(simulation.CommandRejectsTotal, Is.GreaterThanOrEqualTo(rejectsBeforeRotate + 1));
         }
 
         [Test]
@@ -2379,46 +2456,6 @@ namespace Ludots.Tests.Presentation
                 orderMinDistanceSq,
                 Is.GreaterThanOrEqualTo(initialMinDistanceSq * FormationCapabilityAcceptance.MultiFormationSpacingRetentionRatio),
                 "Multiple formation agents must translate their current relative shape to the move target instead of being repacked into a compact fallback layout.");
-        }
-
-        [Test]
-        public void FormationCapabilityPlayable_ResetClearsSelectedMarkersAndDestroysTrackedAgentsThroughPresentationLifecycle()
-        {
-            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            LoadFormationCapabilityMap(engine);
-            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
-
-            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            TickUntil(
-                engine,
-                () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource &&
-                      CountCommandMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
-                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Formation Capability scenario should be fully spawned and selected before reset.");
-
-            Entity[] previousAgents = CaptureTrackedAgents(simulation);
-            Entity[] previousObstacleOverlays = CaptureObstacleOverlays(engine, simulation.NavigationObstacleCount);
-
-            simulation.RequestSceneReset();
-            TickUntil(
-                engine,
-                () => simulation.SceneResetCount > 0 &&
-                      CommandSourceCount(engine) == 0 &&
-                      Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length == 0 &&
-                      CountCommandMarkerPerformers(engine) == 0 &&
-                      CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
-                maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Scene reset should clear the command source, remove scoped marker performers, and strip runtime tags from agents tracked before reset.");
-
-            TickUntil(
-                engine,
-                () => CountAlive(engine, previousAgents) == 0 &&
-                      CountAlive(engine, previousObstacleOverlays) == 0 &&
-                      CountPresentationDestroyPending(engine) == 0 &&
-                      CountCommandMarkerPerformers(engine) == 0,
-                maxFrames: FormationCapabilityAcceptance.FrameBudgetForPresentationDestroy,
-                failureMessage: "Presentation lifecycle should finalize previously tracked soldiers, obstacle overlays, and scoped markers after reset.");
         }
 
         [Test]
@@ -2557,15 +2594,72 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
             using (engine)
             {
-                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.SameAs(simulation));
+                MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                    ?? throw new InvalidOperationException("MassNavigationRuntimeBinding is missing.");
+                Assert.That(binding.Current, Is.SameAs(simulation));
                 Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True);
 
-                simulation.SetWorldOperationsReady(false);
+                MapId mapId = engine.CurrentMapSession!.MapId;
+                binding.Clear(mapId, simulation);
                 Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
 
-                Assert.That(engine.RemoveService(MassNavigationKeys.SimulationRuntime), Is.True);
-                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+                Assert.That(engine.RemoveService(MassNavigationKeys.RuntimeBinding), Is.True);
+                Assert.That(engine.GetService(MassNavigationKeys.RuntimeBinding), Is.Null);
             }
+        }
+
+        [Test]
+        public void MassNavigationPreSimulationStep_AdvancesFrameAndResetsPerFrameTelemetryThroughProductionGate()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                simulation.MarkCommandApply();
+                Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
+                int frameBefore = simulation.FrameIndex;
+                var system = new MassNavigationPreSimulationStepSystem(engine, simulation);
+
+                system.Update(1f / 60f);
+
+                Assert.That(simulation.FrameIndex, Is.EqualTo(frameBefore + 1));
+                Assert.That(simulation.CommandCountFrame, Is.Zero);
+                Assert.That(simulation.FrameMs, Is.EqualTo(1000f / 60f).Within(0.001f));
+                Assert.That(simulation.Fps, Is.EqualTo(60f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void FormationCapabilityMap_PushAndPop_SuspendsAndResumesTheSameMassNavigationRuntime()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, 2);
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            int frameBeforePush = simulation.FrameIndex;
+
+            engine.PushMap("mass_navigation");
+            Tick(engine, 3);
+
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
+            Assert.That(simulation.FrameIndex, Is.EqualTo(frameBeforePush),
+                "A suspended map must not advance its MassNavigation frame.");
+
+            engine.PopMap();
+            Assert.That(RequireSimulation(engine), Is.SameAs(simulation));
+            Assert.That(simulation.FrameIndex, Is.EqualTo(frameBeforePush),
+                "Restoring map focus must not advance MassNavigation synchronously inside PopMap.");
+            for (int frame = 0; frame < 4 && simulation.FrameIndex == frameBeforePush; frame++)
+            {
+                Tick(engine);
+            }
+
+            MassNavigationRuntimeBinding resumedBinding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new InvalidOperationException("MassNavigationRuntimeBinding is missing after map resume.");
+            Assert.That(
+                MassNavigationIds.IsCurrentNavigationRuntimeReady(engine),
+                Is.True,
+                $"currentMap={engine.CurrentMapSession?.MapId.Value ?? "<none>"}, bindingMap={resumedBinding.CurrentMapId.Value ?? "<none>"}, revision={resumedBinding.Revision}, preparedRevision={resumedBinding.PreparedRevision}, frame={simulation.FrameIndex}");
+            Assert.That(simulation.FrameIndex, Is.EqualTo(frameBeforePush + 1));
         }
 
         [Test]
@@ -2591,7 +2685,7 @@ namespace Ludots.Tests.Presentation
                     new MassNavigationFormationFollowerSystem(engine, simulation),
                     SystemGroup.PostMovement);
                 engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-                    new MassNavigationPreSimulationStepSystem(),
+                    new MassNavigationPreSimulationStepSystem(engine, simulation),
                     SystemGroup.PostMovement);
                 engine.RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
                 engine.RegisterSystem(new MassNavigationOrderIngestionSystem(engine, simulation), SystemGroup.AbilityActivation);
@@ -2611,7 +2705,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationControlSystem_ResetRemovesOwnPendingSpawnRequests()
+        public void GameEngine_MapUnloadRemovesOnlyMatchingPendingMassNavigationSpawnRequests()
         {
             var queue = new RuntimeEntitySpawnQueue();
             var massNavigationMap = new MapId("mass_navigation");
@@ -2826,13 +2920,15 @@ namespace Ludots.Tests.Presentation
 
             int assigned = fixture.Runtime.UpsertOrderMoveCommand(
                 fixture.Flow,
+                fixture.World,
                 fixture.AgentState,
                 orderToken: 501,
                 memberIndices: new[] { 0, 1 },
                 teamId: 1,
                 destinationWorldCm: new Vector2(4000f, 4000f),
                 formationMode: MassNavigationFormationMode.None,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
 
             Assert.That(assigned, Is.EqualTo(2));
             Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float firstX, out float firstY), Is.True);
@@ -2966,8 +3062,8 @@ namespace Ludots.Tests.Presentation
 
         private static MassNavigationSimulationRuntime RequireSimulation(GameEngine engine)
         {
-            return engine.GetService(MassNavigationKeys.SimulationRuntime)
-                ?? throw new InvalidOperationException("MassNavigationSimulationRuntime is missing.");
+            return engine.GetService(MassNavigationKeys.RuntimeBinding)?.RequireCurrent()
+                ?? throw new InvalidOperationException("Prepared MassNavigationRuntimeBinding is missing.");
         }
 
         private static TimeFlowService RequireTimeFlow(GameEngine engine)
@@ -2993,12 +3089,17 @@ namespace Ludots.Tests.Presentation
                 new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
                 Path.Combine(FindRepoRoot(), "assets"));
 
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
-            simulation.SetWorldOperationsReady(true);
-            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
             FocusCurrentMapSession(engine, config.MapId);
+            var binding = new MassNavigationRuntimeBinding();
+            MapId mapId = engine.CurrentMapSession!.MapId;
+            binding.Activate(mapId, simulation);
+            binding.MarkPrepared(mapId, simulation);
+            engine.SetService(MassNavigationKeys.RuntimeBinding, binding);
             return simulation;
         }
 
@@ -3169,8 +3270,28 @@ namespace Ludots.Tests.Presentation
             return engine.World.Create(
                 new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("test.massNavigation.orderIngestion") },
                 new MassNavigationAgentIndex { Value = agentIndex },
-                new Team { Id = 1 },
                 orders);
+        }
+
+        private static Order[] CreateMoveOrderBatch(
+            Entity first,
+            Entity second,
+            int token,
+            float rotationRadians)
+        {
+            Order Create(Entity actor) => new()
+            {
+                OrderId = token,
+                OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = MassNavigationMoveOrderArgs.Encode(
+                    new Vector2(3000f, 3000f),
+                    MassNavigationFormationMode.Line,
+                    rotationRadians),
+            };
+
+            return new[] { Create(first), Create(second) };
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames, string failureMessage)
@@ -4059,7 +4180,7 @@ namespace Ludots.Tests.Presentation
             string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView descriptor)
                 ? $"viewCount={descriptor.Count} viewRev={descriptor.Revision} viewOwner={descriptor.Owner.Id} viewContainer={descriptor.ContextEntity.Id}"
                 : "view=<none>";
-            return $"commandSource={CommandSourceCount(engine)} massNavCommandActors={simulation.CommandActorCount} simRev={simulation.CommandActorSnapshotRevision} {view} markers={CountCommandMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
+            return $"commandSource={CommandSourceCount(engine)} {view} markers={CountCommandMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
         }
 
         private static int CommandSourceCount(GameEngine engine)
@@ -4325,12 +4446,13 @@ namespace Ludots.Tests.Presentation
             {
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,
-                CommandActorScratchCapacity = groupMemberCapacity,
                 GroupMemberCapacity = groupMemberCapacity,
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,
+                RouteStateCapacity = 8,
+                RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
-                MetadataTeamCapacity = 4,
+                RelationshipDomainCapacity = 4,
             };
         }
 
@@ -4429,7 +4551,7 @@ namespace Ludots.Tests.Presentation
             public const string WorldScreenMappingKey = "Tests.FormationCapability.WorldScreenMapping";
             public const string LeftMousePath = "<Mouse>/LeftButton";
             public const string RightMousePath = "<Mouse>/RightButton";
-            public const string RotateRightActionId = "MassNavigation_RotateRight";
+            public const string RotateRightActionId = "FormationCapability_RotateRight";
             public const float FrameSeconds = 1f / 20f;
             public const float PixelsPerCm = 0.08f;
             public const float HeadlessRayOriginHeightM = 2000f;

@@ -151,6 +151,50 @@ namespace Ludots.Tests.GAS
             That(aoi.ActiveChunkKeys.Count, Is.EqualTo(0), "After Reset, no chunks should remain active");
         }
 
+        [Test]
+        public void WorldGridLoadedChunks_ContributorsComposeWithoutOverwritingEachOther()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 8);
+            using WorldGridLoadedChunkContributor navigation = loadedChunks.AcquireContributor("navigation", capacity: 4);
+            using WorldGridLoadedChunkContributor visibility = loadedChunks.AcquireContributor("visibility", capacity: 4);
+            long shared = GraphChunkKey.Pack(1, 1);
+            long navigationOnly = GraphChunkKey.Pack(2, 1);
+            var unloaded = new List<long>();
+            loadedChunks.ChunkUnloaded += unloaded.Add;
+
+            navigation.SetLoaded(shared, true);
+            visibility.SetLoaded(shared, true);
+            navigation.SetLoaded(navigationOnly, true);
+            navigation.SetLoaded(shared, false);
+
+            That(loadedChunks.IsLoaded(shared), Is.True, "The visibility lease must keep the shared chunk loaded.");
+            That(unloaded, Does.Not.Contain(shared));
+
+            visibility.SetLoaded(shared, false);
+
+            That(loadedChunks.IsLoaded(shared), Is.False);
+            That(loadedChunks.IsLoaded(navigationOnly), Is.True);
+            That(unloaded, Does.Contain(shared));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_ResetInvalidatesContributorStateWithoutUnderflow()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 8);
+            WorldGridLoadedChunkContributor contributor = loadedChunks.AcquireContributor("navigation", capacity: 4);
+            long key = GraphChunkKey.Pack(3, 2);
+            contributor.SetLoaded(key, true);
+
+            loadedChunks.Reset();
+
+            That(contributor.ActiveChunkKeys, Is.Empty);
+            That(loadedChunks.IsLoaded(key), Is.False);
+            contributor.SetLoaded(key, true);
+            That(loadedChunks.IsLoaded(key), Is.True);
+            Assert.DoesNotThrow(contributor.Dispose);
+            That(loadedChunks.IsLoaded(key), Is.False);
+        }
+
         // =====================================================================
         // 4. ChunkedNodeGraphStore removes graph data on ChunkUnloaded
         // =====================================================================

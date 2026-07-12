@@ -23,6 +23,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
 
+        public uint IncomingRevision { get; private set; }
+
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
 
@@ -97,6 +99,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             while (_incomingOrders.TryDequeue(out var order))
             {
+                IncomingRevision++;
                 order.SubmitStep = currentStep;
 
                 if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
@@ -216,6 +219,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-
 
 

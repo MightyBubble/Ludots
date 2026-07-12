@@ -29,7 +29,6 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
     private readonly List<int> _memberAgentIndices = new();
     private readonly List<int> _carriedMemberAgentIndices = new();
     private readonly List<int> _staleFormationIds = new();
-    private int _observedSceneResetCount;
     private int _observedAuthoredRuntimeBindingRevision;
 
     public MassNavigationFormationFollowerSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
@@ -110,13 +109,11 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
 
     private void InvalidateSyncStateForRuntimeLifecycle()
     {
-        if (_observedSceneResetCount == _simulation.SceneResetCount &&
-            _observedAuthoredRuntimeBindingRevision == _simulation.AuthoredRuntimeBindingRevision)
+        if (_observedAuthoredRuntimeBindingRevision == _simulation.AuthoredRuntimeBindingRevision)
         {
             return;
         }
 
-        _observedSceneResetCount = _simulation.SceneResetCount;
         _observedAuthoredRuntimeBindingRevision = _simulation.AuthoredRuntimeBindingRevision;
         _syncStateByFormationId.Clear();
         _memberAgentIndicesByFormationId.Clear();

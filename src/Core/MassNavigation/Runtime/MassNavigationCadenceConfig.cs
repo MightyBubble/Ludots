@@ -50,35 +50,6 @@ public sealed class MassNavigationCadenceConfig
         }
     }
 
-    public void AdjustFlowStepHz(int delta)
-    {
-        FlowStepHz = ClampOptionalHz(FlowStepHz + delta);
-    }
-
-    public void AdjustFlowCrowdStampHz(int delta)
-    {
-        FlowCrowdStampHz = ClampOptionalHz(FlowCrowdStampHz + delta);
-    }
-
-    public void AdjustFlowObstacleStampHz(int delta)
-    {
-        FlowObstacleStampHz = ClampOptionalHz(FlowObstacleStampHz + delta);
-    }
-
-    public void AdjustHardResolveHz(int delta)
-    {
-        HardResolveHz = ClampOptionalHz(HardResolveHz + delta);
-    }
-
-    public void AdjustEntitySyncHz(int delta)
-    {
-        EntitySyncHz = ClampOptionalHz(EntitySyncHz + delta);
-    }
-
-    private int ClampOptionalHz(int value)
-    {
-        return Math.Clamp(value, 0, SimulationHz);
-    }
 }
 
 internal readonly record struct MassNavigationCadenceStep(

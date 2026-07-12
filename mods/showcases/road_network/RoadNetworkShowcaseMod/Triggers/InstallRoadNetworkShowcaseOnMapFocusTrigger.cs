@@ -50,8 +50,8 @@ namespace RoadNetworkShowcaseMod.Triggers
 
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
-            MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation simulation runtime.");
+            MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.RuntimeBinding)?.RequireCurrent()
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires a prepared MassNavigation runtime binding.");
             var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.RegisterSystem(

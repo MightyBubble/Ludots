@@ -1648,7 +1648,10 @@ namespace Ludots.Core.Engine
                 presentationTimingDiagnostics,
                 componentAuthoringContext,
                 ownership: ownershipResolver,
-                playerLookup: playerEntityLookup),
+                playerLookup: playerEntityLookup,
+                teamLookup: teamEntityLookup,
+                relationships: relationshipRuntime,
+                memberOfTypeId: memberOfRelationshipTypeId),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(

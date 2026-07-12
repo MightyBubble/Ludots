@@ -41,6 +41,7 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
+        public World World => _world;
 
         /// <summary>Reverse adjacency index backing incoming-edge queries.</summary>
         public RelationshipReverseIndex ReverseIndex => _reverseIndex;

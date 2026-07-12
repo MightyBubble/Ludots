@@ -9,16 +9,19 @@ public readonly struct MassNavigationMoveOrderArgs
     private MassNavigationMoveOrderArgs(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians)
+        float rotationRadians,
+        bool hasExplicitRotation)
     {
         DestinationCm = destinationCm;
         FormationMode = formationMode;
         RotationRadians = rotationRadians;
+        HasExplicitRotation = hasExplicitRotation;
     }
 
     public Vector2 DestinationCm { get; }
     public MassNavigationFormationMode FormationMode { get; }
     public float RotationRadians { get; }
+    public bool HasExplicitRotation { get; }
 
     public static OrderArgs Encode(
         Vector2 destinationCm,
@@ -29,6 +32,7 @@ public readonly struct MassNavigationMoveOrderArgs
 
         OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(destinationCm.X, 0f, destinationCm.Y));
         args.I0 = (int)formationMode;
+        args.I1 = 1;
         args.F0 = rotationRadians;
         return args;
     }
@@ -46,7 +50,8 @@ public readonly struct MassNavigationMoveOrderArgs
         return new MassNavigationMoveOrderArgs(
             new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z),
             formationMode,
-            order.Args.F0);
+            order.Args.F0,
+            hasExplicitRotation: (order.Args.I1 & 1) != 0);
     }
 
     private static MassNavigationFormationMode DecodeFormationMode(int rawValue, int orderToken)

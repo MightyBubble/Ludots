@@ -61,18 +61,42 @@ public sealed class MassNavigationRouteExecutionSink
     private readonly IPathService _pathService;
     private readonly PathStore _pathStore;
     private readonly PathingConfig _pathingConfig;
-    private readonly Dictionary<long, RouteState> _routesByKey = new();
-    private readonly HashSet<long> _activeKeys = new();
-    private readonly List<long> _keysToRemove = new();
+    private readonly Dictionary<long, RouteState> _routesByKey;
+    private readonly HashSet<long> _activeKeys;
+    private readonly List<long> _keysToRemove;
+    private readonly Stack<RouteState> _freeRoutes;
+    private readonly int _waypointCapacityPerAgent;
     private PathingAgentTypeConfig[] _agentTypesByProfileId = Array.Empty<PathingAgentTypeConfig>();
-    private int[] _xScratch = Array.Empty<int>();
-    private int[] _yScratch = Array.Empty<int>();
+    private readonly int[] _xScratch;
+    private readonly int[] _yScratch;
 
-    public MassNavigationRouteExecutionSink(IPathService pathService, PathStore pathStore, PathingConfig pathingConfig)
+    public MassNavigationRouteExecutionSink(
+        IPathService pathService,
+        PathStore pathStore,
+        PathingConfig pathingConfig,
+        int routeStateCapacity = 1024,
+        int waypointCapacityPerAgent = 64)
     {
         _pathService = pathService ?? throw new ArgumentNullException(nameof(pathService));
         _pathStore = pathStore ?? throw new ArgumentNullException(nameof(pathStore));
         _pathingConfig = pathingConfig ?? throw new ArgumentNullException(nameof(pathingConfig));
+        if (routeStateCapacity <= 0 || waypointCapacityPerAgent <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(routeStateCapacity), "Route and waypoint capacities must be positive.");
+        }
+
+        _waypointCapacityPerAgent = waypointCapacityPerAgent;
+        _routesByKey = new Dictionary<long, RouteState>(routeStateCapacity);
+        _activeKeys = new HashSet<long>(routeStateCapacity);
+        _keysToRemove = new List<long>(routeStateCapacity);
+        _freeRoutes = new Stack<RouteState>(routeStateCapacity);
+        for (int i = 0; i < routeStateCapacity; i++)
+        {
+            _freeRoutes.Push(new RouteState(waypointCapacityPerAgent));
+        }
+
+        _xScratch = new int[waypointCapacityPerAgent];
+        _yScratch = new int[waypointCapacityPerAgent];
         RebuildProfileIndex();
     }
 
@@ -123,13 +147,26 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         long key = PackKey(requestId, agentIndex);
+        if (maxPoints <= 0 || maxPoints > _waypointCapacityPerAgent)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation route request maxPoints {maxPoints} exceeds configured routeWaypointCapacityPerAgent {_waypointCapacityPerAgent}.");
+        }
+
         ref RouteState? state = ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrAddDefault(
             _routesByKey,
             key,
             out bool exists);
         if (!exists || state == null)
         {
-            state = new RouteState(key, requestId, agentIndex);
+            if (_freeRoutes.Count <= 0)
+            {
+                _routesByKey.Remove(key);
+                throw new InvalidOperationException("MassNavigation route state capacity exceeded.");
+            }
+
+            state = _freeRoutes.Pop();
+            state.Reset(key, requestId, agentIndex);
         }
 
         bool destinationChanged =
@@ -175,7 +212,7 @@ public sealed class MassNavigationRouteExecutionSink
 
         for (int i = 0; i < _keysToRemove.Count; i++)
         {
-            _routesByKey.Remove(_keysToRemove[i]);
+            ReleaseRoute(_keysToRemove[i]);
         }
     }
 
@@ -192,7 +229,7 @@ public sealed class MassNavigationRouteExecutionSink
 
         for (int i = 0; i < _keysToRemove.Count; i++)
         {
-            _routesByKey.Remove(_keysToRemove[i]);
+            ReleaseRoute(_keysToRemove[i]);
         }
     }
 
@@ -468,8 +505,17 @@ public sealed class MassNavigationRouteExecutionSink
             return;
         }
 
-        Array.Resize(ref _xScratch, required);
-        Array.Resize(ref _yScratch, required);
+        throw new InvalidOperationException(
+            $"MassNavigation route scratch requires {required} points, exceeding configured capacity {_xScratch.Length}.");
+    }
+
+    private void ReleaseRoute(long key)
+    {
+        if (_routesByKey.Remove(key, out RouteState? state) && state != null)
+        {
+            state.InvalidateRoute();
+            _freeRoutes.Push(state);
+        }
     }
 
     private static void AdvanceWaypointCursor(
@@ -516,25 +562,24 @@ public sealed class MassNavigationRouteExecutionSink
 
     private sealed class RouteState
     {
-        public RouteState(long key, int orderToken, int agentIndex)
+        public RouteState(int waypointCapacity)
         {
-            Key = key;
-            OrderToken = orderToken;
-            AgentIndex = agentIndex;
+            PointXCm = new int[waypointCapacity];
+            PointYCm = new int[waypointCapacity];
             LastAppliedWaypointIndex = -1;
         }
 
-        public long Key { get; }
-        public int OrderToken { get; }
-        public int AgentIndex { get; }
+        public long Key { get; private set; }
+        public int OrderToken { get; private set; }
+        public int AgentIndex { get; private set; }
         public Entity Agent { get; set; }
         public int ProfileId { get; set; }
         public string? AgentTypeId { get; set; }
         public Vector2 DestinationWorldCm { get; set; }
         public int MaxExpanded { get; set; }
         public int MaxPoints { get; set; }
-        public int[] PointXCm = Array.Empty<int>();
-        public int[] PointYCm = Array.Empty<int>();
+        public int[] PointXCm;
+        public int[] PointYCm;
         public int PointCount { get; set; }
         public int CurrentWaypointIndex { get; set; }
         public int LastAppliedWaypointIndex { get; set; }
@@ -565,6 +610,20 @@ public sealed class MassNavigationRouteExecutionSink
             ForceResetNextApply = true;
         }
 
+        public void Reset(long key, int orderToken, int agentIndex)
+        {
+            Key = key;
+            OrderToken = orderToken;
+            AgentIndex = agentIndex;
+            Agent = Entity.Null;
+            ProfileId = 0;
+            AgentTypeId = null;
+            DestinationWorldCm = default;
+            MaxExpanded = 0;
+            MaxPoints = 0;
+            InvalidateRoute();
+        }
+
         public void EnsurePointCapacity(int required)
         {
             if (PointXCm.Length >= required && PointYCm.Length >= required)
@@ -572,8 +631,8 @@ public sealed class MassNavigationRouteExecutionSink
                 return;
             }
 
-            Array.Resize(ref PointXCm, required);
-            Array.Resize(ref PointYCm, required);
+            throw new InvalidOperationException(
+                $"MassNavigation route state requires {required} points, exceeding cold-phase capacity {PointXCm.Length}.");
         }
     }
 }

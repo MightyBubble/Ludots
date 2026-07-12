@@ -26,17 +26,14 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
-    "initialCommandActorScratchCapacity": 512,
-    "initialCommandActorSnapshotCapacity": 128,
     "runtimeCapacity": {
       "navigationGroupCapacity": 512,
       "groupMembershipAgentCapacity": 80000,
-      "commandActorScratchCapacity": 512,
       "groupMemberCapacity": 512,
       "orderIngestionTokenCapacity": 512,
       "orderIngestionMemberCapacity": 512,
       "loadedChunkCapacity": 512,
-      "metadataTeamCapacity": 2
+      "relationshipDomainCapacity": 2
     }
   },
   "agentProfiles": {

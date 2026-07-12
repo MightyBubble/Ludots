@@ -6,21 +6,15 @@ using Ludots.Core.Components;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
-public sealed class MassNavigationGroupRuntime
+internal sealed class MassNavigationGroupRuntime
 {
     internal const float OrderPathRestoreTargetToleranceCm = 0.001f;
 
     private readonly MassNavigationFormationRuntime _formationLayout;
     private readonly List<NavGroupState?> _groups;
-    private readonly HashSet<int> _visitedGroupIds;
     private readonly Dictionary<int, int> _orderTokenToGroupId;
     private readonly List<int> _orderTokensToRemove;
     private readonly int[] _groupIdsByAgentIndex;
-    private readonly int[] _commandActorMemberScratch;
-    private readonly float[] _looseBaseOffsetX;
-    private readonly float[] _looseBaseOffsetY;
-    private readonly float[] _looseOffsetX;
-    private readonly float[] _looseOffsetY;
     private readonly NavGroupState[] _groupPool;
     private readonly int _groupMemberCapacity;
 
@@ -51,21 +45,14 @@ public sealed class MassNavigationGroupRuntime
             _groupPool[i] = new NavGroupState(capacity.GroupMemberCapacity, teamId: 0);
         }
 
-        _visitedGroupIds = new HashSet<int>(capacity.NavigationGroupCapacity);
         _orderTokenToGroupId = new Dictionary<int, int>(capacity.NavigationGroupCapacity);
         _orderTokensToRemove = new List<int>(capacity.NavigationGroupCapacity);
         _groupIdsByAgentIndex = new int[capacity.GroupMembershipAgentCapacity];
         Array.Fill(_groupIdsByAgentIndex, -1);
-        _commandActorMemberScratch = new int[capacity.CommandActorScratchCapacity];
-        _looseBaseOffsetX = new float[capacity.GroupMemberCapacity];
-        _looseBaseOffsetY = new float[capacity.GroupMemberCapacity];
-        _looseOffsetX = new float[capacity.GroupMemberCapacity];
-        _looseOffsetY = new float[capacity.GroupMemberCapacity];
     }
 
     public int ActiveGroupCount { get; private set; }
     public int ActiveOrderGroupCount => _orderTokenToGroupId.Count;
-    public float CommandActorRotationRadians { get; private set; }
 
     public void Reset()
     {
@@ -76,17 +63,15 @@ public sealed class MassNavigationGroupRuntime
 
         _orderTokenToGroupId.Clear();
         _orderTokensToRemove.Clear();
-        _visitedGroupIds.Clear();
         Array.Fill(_groupIdsByAgentIndex, -1);
         ActiveGroupCount = 0;
-        CommandActorRotationRadians = 0f;
     }
 
     internal AuthoredRebuildSnapshot CaptureAuthoredRebuildSnapshot()
     {
         if (ActiveGroupCount <= 0)
         {
-            return new AuthoredRebuildSnapshot(Array.Empty<AuthoredRebuildGroupSnapshot>(), CommandActorRotationRadians);
+            return new AuthoredRebuildSnapshot(Array.Empty<AuthoredRebuildGroupSnapshot>());
         }
 
         var groups = new AuthoredRebuildGroupSnapshot[ActiveGroupCount];
@@ -134,7 +119,7 @@ public sealed class MassNavigationGroupRuntime
             Array.Resize(ref groups, capturedCount);
         }
 
-        return new AuthoredRebuildSnapshot(groups, CommandActorRotationRadians);
+        return new AuthoredRebuildSnapshot(groups);
     }
 
     internal void RestoreAuthoredRebuildSnapshot(
@@ -148,7 +133,6 @@ public sealed class MassNavigationGroupRuntime
         ArgumentNullException.ThrowIfNull(agentState);
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        CommandActorRotationRadians = snapshot.CommandActorRotationRadians;
         if (snapshot.Groups.Length <= 0)
         {
             return;
@@ -420,86 +404,17 @@ public sealed class MassNavigationGroupRuntime
         return true;
     }
 
-    public int IssueCommandActorMoveCommand(
-        MassNavigationFlowSolverState simulation,
-        World world,
-        MassNavigationAgentState agentState,
-        ReadOnlySpan<Entity> commandActors,
-        Vector2 destinationWorldCm,
-        MassNavigationFormationMode formationMode)
-    {
-        int count = commandActors.Length;
-        if (count <= 0)
-        {
-            return 0;
-        }
-
-        float previousRotation = ResolvePreviousRotation(world, agentState, commandActors);
-
-        int assignedCount = 0;
-        Span<int> memberIndices = EnsureCommandActorMemberScratch(count);
-        for (int i = 0; i < count; i++)
-        {
-            if (!agentState.TryGetControllableIndex(commandActors[i], out int unitIndex))
-            {
-                continue;
-            }
-
-            RemoveFromExistingGroup(simulation, unitIndex);
-            memberIndices[assignedCount++] = unitIndex;
-            simulation.ReleaseUnitToTeamTarget(unitIndex);
-        }
-
-        if (assignedCount <= 0)
-        {
-            return 0;
-        }
-
-        EnsureMembershipCapacityForMembers(memberIndices[..assignedCount]);
-        if (assignedCount == 1)
-        {
-            AssignLooseTargets(simulation, memberIndices, assignedCount, destinationWorldCm, previousRotation);
-            ActiveGroupCount = CountActiveGroups();
-            RefreshCommandActorRotation(world, agentState, commandActors);
-            return assignedCount;
-        }
-
-        int teamId = simulation.GetTeam(memberIndices[0]);
-        Vector2 destinationLocalCm = simulation.WorldToLocalCm(destinationWorldCm);
-        float centerClearanceCm = ResolveMemberMaxClearanceCm(
-            simulation,
-            memberIndices,
-            assignedCount,
-            simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
-        Vector2 resolvedDestination = simulation.ResolveNavigableTarget(
-            destinationLocalCm.X,
-            destinationLocalCm.Y,
-            0f,
-            0f,
-            centerClearanceCm);
-
-        int groupId = AllocateGroupId();
-        var group = CreateGroup(groupId, simulation, agentState, memberIndices[..assignedCount], teamId, formationMode, previousRotation);
-        Vector2 resolvedWorldDestination = simulation.LocalToWorldCm(resolvedDestination);
-        group.DestinationWorldX = resolvedWorldDestination.X;
-        group.DestinationWorldY = resolvedWorldDestination.Y;
-        _groups[groupId] = group;
-        AssignGroupTargets(simulation, groupId, group, resetRecovery: true);
-
-        ActiveGroupCount = CountActiveGroups();
-        RefreshCommandActorRotation(world, agentState, commandActors);
-        return assignedCount;
-    }
-
     public int UpsertOrderMoveCommand(
         MassNavigationFlowSolverState simulation,
+        World world,
         MassNavigationAgentState agentState,
         int orderToken,
         ReadOnlySpan<int> memberIndices,
         int teamId,
         Vector2 destinationWorldCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians)
+        float rotationRadians,
+        bool hasExplicitRotation)
     {
         if (orderToken <= 0 || memberIndices.Length <= 0)
         {
@@ -511,13 +426,16 @@ public sealed class MassNavigationGroupRuntime
             (uint)groupId >= (uint)_groups.Count ||
             _groups[groupId] == null)
         {
+            float effectiveRotation = hasExplicitRotation
+                ? rotationRadians
+                : ResolveMemberFacing(world, agentState, memberIndices);
             Vector2 resolvedWorldDestination = singleMemberOrder
                 ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
                 : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
             DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
             EnsureMembershipCapacityForMembers(memberIndices);
             groupId = AllocateGroupId();
-            var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId, formationMode, rotationRadians);
+            var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId, formationMode, effectiveRotation);
             created.CommandToken = orderToken;
             created.RequestedDestinationWorldX = destinationWorldCm.X;
             created.RequestedDestinationWorldY = destinationWorldCm.Y;
@@ -534,14 +452,20 @@ public sealed class MassNavigationGroupRuntime
                 AssignGroupTargets(simulation, groupId, created, resetRecovery: true);
             }
 
+            if (hasExplicitRotation)
+            {
+                WriteMemberFacing(world, created, effectiveRotation);
+            }
+
             ActiveGroupCount = CountActiveGroups();
             return memberIndices.Length;
         }
 
         NavGroupState group = _groups[groupId]!;
+        float effectiveExistingRotation = hasExplicitRotation ? rotationRadians : group.RotationRadians;
         bool rotationChanged =
-            formationMode != MassNavigationFormationMode.None &&
-            MathF.Abs(NormalizeAngleRadians(group.RotationRadians - rotationRadians)) >= _formationLayout.RotationEpsilonRadians;
+            hasExplicitRotation &&
+            MathF.Abs(NormalizeAngleRadians(group.RotationRadians - effectiveExistingRotation)) >= _formationLayout.RotationEpsilonRadians;
         bool rebuildLayout = group.FormationMode != formationMode || rotationChanged || !HaveSameMembers(group, memberIndices);
         bool retarget =
             group.TeamId != teamId ||
@@ -560,7 +484,7 @@ public sealed class MassNavigationGroupRuntime
         {
             DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
             EnsureMembershipCapacityForMembers(memberIndices);
-            ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId, formationMode, rotationRadians);
+            ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId, formationMode, effectiveExistingRotation);
         }
 
         group.TeamId = teamId;
@@ -569,6 +493,7 @@ public sealed class MassNavigationGroupRuntime
         group.RequestedDestinationWorldY = destinationWorldCm.Y;
         group.DestinationWorldX = nextResolvedWorldDestination.X;
         group.DestinationWorldY = nextResolvedWorldDestination.Y;
+        group.RotationRadians = effectiveExistingRotation;
         _groups[groupId] = group;
         if (singleMemberOrder)
         {
@@ -579,8 +504,37 @@ public sealed class MassNavigationGroupRuntime
             AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
         }
 
+        if (hasExplicitRotation)
+        {
+            WriteMemberFacing(world, group, effectiveExistingRotation);
+        }
+
         ActiveGroupCount = CountActiveGroups();
         return group.MemberCount;
+    }
+
+    private static float ResolveMemberFacing(
+        World world,
+        MassNavigationAgentState agentState,
+        ReadOnlySpan<int> memberIndices)
+    {
+        for (int i = 0; i < memberIndices.Length; i++)
+        {
+            if (!agentState.TryGetAgentEntity(memberIndices[i], out Entity entity) || !world.IsAlive(entity))
+            {
+                continue;
+            }
+
+            if (!world.Has<FacingDirection>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation order member {entity.Id} requires {nameof(FacingDirection)}.");
+            }
+
+            return world.Get<FacingDirection>(entity).AngleRad;
+        }
+
+        throw new InvalidOperationException("MassNavigation move order requires at least one live member with FacingDirection.");
     }
 
     public bool TryGetOrderGroup(int orderToken, out bool arrived)
@@ -653,119 +607,10 @@ public sealed class MassNavigationGroupRuntime
         ActiveGroupCount = CountActiveGroups();
     }
 
-    public void RotateCommandActors(World world, MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors, float deltaRadians)
-    {
-        if (!(MathF.Abs(deltaRadians) > _formationLayout.RotationEpsilonRadians))
-        {
-            return;
-        }
-
-        Span<int> memberIndices = EnsureCommandActorMemberScratch(commandActors.Length);
-        int memberCount = 0;
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (agentState.TryGetControllableIndex(commandActors[i], out int unitIndex))
-            {
-                memberIndices[memberCount++] = unitIndex;
-            }
-        }
-
-        if (memberCount <= 0)
-        {
-            return;
-        }
-
-        EnsureMembershipCapacityForMembers(memberIndices[..memberCount]);
-        _visitedGroupIds.Clear();
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (!agentState.TryGetControllableIndex(commandActors[i], out int unitIndex))
-            {
-                continue;
-            }
-
-            int groupId = GetGroupId(unitIndex);
-            if (groupId < 0 || !_visitedGroupIds.Add(groupId))
-            {
-                if (groupId < 0)
-                {
-                    RotateUngroupedCommandActor(world, commandActors[i], deltaRadians);
-                }
-
-                continue;
-            }
-
-            NavGroupState? group = _groups[groupId];
-            if (group == null)
-            {
-                continue;
-            }
-
-            group.RotationRadians = NormalizeAngleRadians(group.RotationRadians + deltaRadians);
-            _formationLayout.RecomputeOffsets(
-                group.OffsetX,
-                group.OffsetY,
-                group.BaseOffsetX,
-                group.BaseOffsetY,
-                group.MemberCount,
-                group.RotationRadians);
-            WriteMemberFacing(world, group, group.RotationRadians);
-        }
-
-        RefreshCommandActorRotation(world, agentState, commandActors);
-    }
-
-    public void RefreshCommandActorRotation(World world, MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors)
-    {
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (!agentState.TryGetControllableIndex(commandActors[i], out int unitIndex))
-            {
-                continue;
-            }
-
-            int groupId = GetGroupId(unitIndex);
-            if (groupId < 0)
-            {
-                continue;
-            }
-
-            NavGroupState? group = _groups[groupId];
-            if (group != null)
-            {
-                CommandActorRotationRadians = group.RotationRadians;
-                return;
-            }
-        }
-
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            Entity entity = commandActors[i];
-            if (!world.IsAlive(entity))
-            {
-                continue;
-            }
-
-            if (!world.Has<FacingDirection>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation command actor {entity.Id} requires {nameof(FacingDirection)} for explicit formation rotation.");
-            }
-
-            CommandActorRotationRadians = world.Get<FacingDirection>(entity).AngleRad;
-            return;
-        }
-    }
-
     public void UpdateTargets(
         MassNavigationFlowSolverState simulation,
         int frameIndex)
     {
-        if ((frameIndex & 1) == 0)
-        {
-            RefreshActiveGroupRotation();
-        }
-
         for (int groupId = 0; groupId < _groups.Count; groupId++)
         {
             NavGroupState? group = _groups[groupId];
@@ -843,22 +688,6 @@ public sealed class MassNavigationGroupRuntime
         }
 
         ActiveGroupCount = CountActiveGroups();
-        RefreshActiveGroupRotation();
-    }
-
-    private void RefreshActiveGroupRotation()
-    {
-        for (int groupId = 0; groupId < _groups.Count; groupId++)
-        {
-            NavGroupState? group = _groups[groupId];
-            if (group == null || group.MemberCount <= 0)
-            {
-                continue;
-            }
-
-            CommandActorRotationRadians = group.RotationRadians;
-            return;
-        }
     }
 
     private void EnsureMembershipCapacity(int count)
@@ -886,17 +715,6 @@ public sealed class MassNavigationGroupRuntime
         EnsureMembershipCapacity(maxIndex + 1);
     }
 
-    private Span<int> EnsureCommandActorMemberScratch(int count)
-    {
-        if (_commandActorMemberScratch.Length < count)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation command actor scratch required {count} entries, exceeding configured scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {_commandActorMemberScratch.Length}.");
-        }
-
-        return _commandActorMemberScratch.AsSpan(0, count);
-    }
-
     private void DetachMembersFromOtherGroups(MassNavigationFlowSolverState simulation, ReadOnlySpan<int> members, int keepGroupId)
     {
         for (int i = 0; i < members.Length; i++)
@@ -909,48 +727,6 @@ public sealed class MassNavigationGroupRuntime
 
             RemoveFromExistingGroup(simulation, memberIndex);
         }
-    }
-
-    private float ResolvePreviousRotation(World world, MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors)
-    {
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            if (!agentState.TryGetControllableIndex(commandActors[i], out int unitIndex))
-            {
-                continue;
-            }
-
-            int groupId = GetGroupId(unitIndex);
-            if (groupId < 0)
-            {
-                continue;
-            }
-
-            NavGroupState? group = _groups[groupId];
-            if (group != null)
-            {
-                return group.RotationRadians;
-            }
-        }
-
-        for (int i = 0; i < commandActors.Length; i++)
-        {
-            Entity entity = commandActors[i];
-            if (!world.IsAlive(entity))
-            {
-                continue;
-            }
-
-            if (!world.Has<FacingDirection>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"MassNavigation command actor {entity.Id} requires {nameof(FacingDirection)} for explicit formation rotation.");
-            }
-
-            return world.Get<FacingDirection>(entity).AngleRad;
-        }
-
-        return CommandActorRotationRadians;
     }
 
     private int AllocateGroupId()
@@ -1053,93 +829,6 @@ public sealed class MassNavigationGroupRuntime
         }
 
         return _groupIdsByAgentIndex[unitIndex];
-    }
-
-    private void AssignLooseTargets(
-        MassNavigationFlowSolverState simulation,
-        ReadOnlySpan<int> memberIndices,
-        int count,
-        Vector2 destinationWorldCm,
-        float rotationRadians)
-    {
-        if (count <= 0)
-        {
-            return;
-        }
-
-        if (count == 1)
-        {
-            Vector2 singleLocalTarget = simulation.WorldToLocalCm(destinationWorldCm);
-            Vector2 singleTarget = simulation.ResolveUnitNavigableTarget(
-                memberIndices[0],
-                singleLocalTarget.X,
-                singleLocalTarget.Y,
-                0f,
-                0f,
-                simulation.Semantics.TargetProjection.LooseTargetClearanceCm);
-            simulation.SetUnitTarget(memberIndices[0], singleTarget.X, singleTarget.Y, resetRecovery: true);
-            return;
-        }
-
-        EnsureLooseOffsetCapacity(count);
-        _formationLayout.BuildOffsets(_looseBaseOffsetX, _looseBaseOffsetY, _looseOffsetX, _looseOffsetY, count, MassNavigationFormationMode.Square, rotationRadians);
-        ScaleLooseLayoutForMemberBodyRadius(simulation, memberIndices, count, MassNavigationFormationMode.Square);
-        Vector2 destinationLocalCm = simulation.WorldToLocalCm(destinationWorldCm);
-        float centerClearanceCm = ResolveMemberMaxClearanceCm(
-            simulation,
-            memberIndices,
-            count,
-            simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
-        Vector2 resolvedCenter = simulation.ResolveNavigableTarget(
-            destinationLocalCm.X,
-            destinationLocalCm.Y,
-            0f,
-            0f,
-            centerClearanceCm);
-        for (int i = 0; i < count; i++)
-        {
-            int unitIndex = memberIndices[i];
-            Vector2 resolvedTarget = simulation.ResolveUnitNavigableTarget(
-                unitIndex,
-                resolvedCenter.X + _looseOffsetX[i],
-                resolvedCenter.Y + _looseOffsetY[i],
-                _looseOffsetX[i],
-                _looseOffsetY[i],
-                simulation.Semantics.TargetProjection.LooseTargetClearanceCm);
-            simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
-        }
-    }
-
-    private void EnsureLooseOffsetCapacity(int required)
-    {
-        if (_looseOffsetX.Length >= required)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"MassNavigation loose group layout required {required} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {_looseOffsetX.Length}.");
-    }
-
-    private void ScaleLooseLayoutForMemberBodyRadius(
-        MassNavigationFlowSolverState simulation,
-        ReadOnlySpan<int> memberIndices,
-        int count,
-        MassNavigationFormationMode layoutMode)
-    {
-        float spacingScale = ResolveBodyRadiusSpacingScale(simulation, memberIndices, count, layoutMode);
-        if (spacingScale == 1f)
-        {
-            return;
-        }
-
-        for (int i = 0; i < count; i++)
-        {
-            _looseBaseOffsetX[i] *= spacingScale;
-            _looseBaseOffsetY[i] *= spacingScale;
-            _looseOffsetX[i] *= spacingScale;
-            _looseOffsetY[i] *= spacingScale;
-        }
     }
 
     private int CountActiveGroups()
@@ -1647,23 +1336,6 @@ public sealed class MassNavigationGroupRuntime
         }
     }
 
-    private static void RotateUngroupedCommandActor(World world, Entity entity, float deltaRadians)
-    {
-        if (!world.IsAlive(entity))
-        {
-            return;
-        }
-
-        if (!world.Has<FacingDirection>(entity))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation command actor {entity.Id} requires {nameof(FacingDirection)} for explicit formation rotation.");
-        }
-
-        ref FacingDirection facing = ref world.Get<FacingDirection>(entity);
-        facing.AngleRad = NormalizeAngleRadians(facing.AngleRad + deltaRadians);
-    }
-
     private static float ResolveMemberClearanceCm(
         MassNavigationFlowSolverState simulation,
         int unitIndex,
@@ -1710,14 +1382,12 @@ public sealed class MassNavigationGroupRuntime
 
     internal sealed class AuthoredRebuildSnapshot
     {
-        internal AuthoredRebuildSnapshot(AuthoredRebuildGroupSnapshot[] groups, float commandActorRotationRadians)
+        internal AuthoredRebuildSnapshot(AuthoredRebuildGroupSnapshot[] groups)
         {
             Groups = groups;
-            CommandActorRotationRadians = commandActorRotationRadians;
         }
 
         internal AuthoredRebuildGroupSnapshot[] Groups { get; }
-        internal float CommandActorRotationRadians { get; }
     }
 
     internal sealed class AuthoredRebuildGroupSnapshot

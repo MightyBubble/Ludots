@@ -21,6 +21,7 @@ public sealed class MassNavigationConfig
     public MassNavigationCadenceConfig Cadence { get; set; } = new();
     public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
     public TeamConfig TeamRelationships { get; set; } = new();
+    public MassNavigationRelationshipPolicyConfig RelationshipPolicy { get; set; } = new();
     public MassNavigationFlowTuning Flow { get; set; } = new();
     public MassNavigationFlowArrivalTuning Arrival { get; set; } = new();
     public MassNavigationFlowAvoidanceTuning Avoidance { get; set; } = new();
@@ -75,6 +76,7 @@ public sealed class MassNavigationConfig
         RequireProperty(root, "cadence");
         RequireProperty(root, "agentProfiles");
         RequireProperty(root, "teamRelationships");
+        RequireProperty(root, "relationshipPolicy");
         RequireProperty(root, "flow");
         RequireProperty(root, "arrival");
         RequireProperty(root, "avoidance");
@@ -84,19 +86,18 @@ public sealed class MassNavigationConfig
         bool autoSpawnConfiguredScenario = RequireBooleanProperty(scenarioRuntime, "autoSpawnConfiguredScenario");
         RequireProperties(
             scenarioRuntime,
-            "initialCommandActorScratchCapacity",
-            "initialCommandActorSnapshotCapacity",
             "runtimeCapacity");
         RequireProperties(
             RequireProperty(scenarioRuntime, "runtimeCapacity"),
             "navigationGroupCapacity",
             "groupMembershipAgentCapacity",
-            "commandActorScratchCapacity",
             "groupMemberCapacity",
             "orderIngestionTokenCapacity",
             "orderIngestionMemberCapacity",
+            "routeStateCapacity",
+            "routeWaypointCapacityPerAgent",
             "loadedChunkCapacity",
-            "metadataTeamCapacity");
+            "relationshipDomainCapacity");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
@@ -104,7 +105,6 @@ public sealed class MassNavigationConfig
             "solverWindowWidthCm",
             "solverWindowHeightCm",
             "streamingChunkSizeCm",
-            "streamingRadiusCm",
             "commandFocusHoldTicks",
             "workAreaPaddingCm",
             "workAreaMaxWidthCm",
@@ -145,7 +145,6 @@ public sealed class MassNavigationConfig
         RequireProperties(
             scenario,
             "agentsPerTeam",
-            "initialActiveTeamId",
             "teams");
         if (autoSpawnConfiguredScenario)
         {
@@ -199,6 +198,7 @@ public sealed class MassNavigationConfig
         JsonElement relationships = RequireProperty(root, "teamRelationships");
         RequireProperty(relationships, "defaultRelationship");
         RequireProperty(relationships, "relationships");
+        RequireProperties(RequireProperty(root, "relationshipPolicy"), "cooperativeStance");
         RequireProperties(
             RequireProperty(root, "streaming"),
             "retainSeconds",
@@ -208,9 +208,6 @@ public sealed class MassNavigationConfig
             "enabled",
             "iterationsPerStep",
             "maxIterationsPerStep",
-            "stepIntervalTicks",
-            "crowdStampIntervalTicks",
-            "obstacleStampIntervalTicks",
             "forceRefreshFlow",
             "forceRefreshCrowd",
             "forceRefreshObstacles");
@@ -380,6 +377,7 @@ public sealed class MassNavigationConfig
         Flow.Validate();
         Arrival.Validate();
         Avoidance.Validate();
+        RelationshipPolicy.Validate();
         Semantics.Validate();
         if (World == null)
         {
@@ -406,10 +404,10 @@ public sealed class MassNavigationConfig
                     $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] references an unknown team.");
             }
 
-            if (!TeamManager.TryParseRelationship(relation.Attitude, out _))
+            if (string.IsNullOrWhiteSpace(relation.Attitude))
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] has invalid attitude '{relation.Attitude}'.");
+                    $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] requires a stance key.");
             }
         }
     }
@@ -421,11 +419,10 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("MassNavigation config requires an explicit teamRelationships section.");
         }
 
-        if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship) ||
-            !TeamManager.TryParseRelationship(TeamRelationships.DefaultRelationship, out _))
+        if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship))
         {
             throw new InvalidOperationException(
-                $"MassNavigation config teamRelationships.defaultRelationship is invalid: '{TeamRelationships.DefaultRelationship}'.");
+                "MassNavigation config teamRelationships.defaultRelationship requires a stance key.");
         }
 
         if (TeamRelationships.Relationships == null)
@@ -435,31 +432,32 @@ public sealed class MassNavigationConfig
     }
 }
 
+public sealed class MassNavigationRelationshipPolicyConfig
+{
+    public string CooperativeStance { get; set; } = string.Empty;
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(CooperativeStance))
+        {
+            throw new InvalidOperationException("MassNavigation relationshipPolicy.cooperativeStance must be explicit.");
+        }
+    }
+}
+
 public sealed class MassNavigationScenarioRuntimeConfig
 {
     public bool AutoSpawnConfiguredScenario { get; set; }
-    public int InitialCommandActorScratchCapacity { get; set; }
-    public int InitialCommandActorSnapshotCapacity { get; set; }
     public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
 
     public void Validate()
     {
-        if (InitialCommandActorScratchCapacity <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorScratchCapacity must be > 0.");
-        }
-
-        if (InitialCommandActorSnapshotCapacity <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity must be > 0.");
-        }
-
         if (RuntimeCapacity == null)
         {
             throw new InvalidOperationException("MassNavigation scenarioRuntime.runtimeCapacity must be explicitly configured.");
         }
 
-        RuntimeCapacity.Validate(this);
+        RuntimeCapacity.Validate();
     }
 }
 
@@ -467,40 +465,25 @@ public sealed class MassNavigationRuntimeCapacityConfig
 {
     public int NavigationGroupCapacity { get; set; }
     public int GroupMembershipAgentCapacity { get; set; }
-    public int CommandActorScratchCapacity { get; set; }
     public int GroupMemberCapacity { get; set; }
     public int OrderIngestionTokenCapacity { get; set; }
     public int OrderIngestionMemberCapacity { get; set; }
+    public int RouteStateCapacity { get; set; }
+    public int RouteWaypointCapacityPerAgent { get; set; }
     public int LoadedChunkCapacity { get; set; }
-    public int MetadataTeamCapacity { get; set; }
+    public int RelationshipDomainCapacity { get; set; }
 
-    public void Validate(MassNavigationScenarioRuntimeConfig scenarioRuntime)
+    public void Validate()
     {
-        if (scenarioRuntime == null)
-        {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity validation requires scenarioRuntime.");
-        }
-
         RequirePositive(NavigationGroupCapacity, "navigationGroupCapacity");
         RequirePositive(GroupMembershipAgentCapacity, "groupMembershipAgentCapacity");
-        RequirePositive(CommandActorScratchCapacity, "commandActorScratchCapacity");
         RequirePositive(GroupMemberCapacity, "groupMemberCapacity");
         RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
         RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
+        RequirePositive(RouteStateCapacity, "routeStateCapacity");
+        RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
-        RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
-
-        if (CommandActorScratchCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
-        {
-            throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
-        }
-
-        if (GroupMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
-        {
-            throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
-        }
+        RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");
 
         if (OrderIngestionTokenCapacity < NavigationGroupCapacity)
         {
@@ -508,11 +491,6 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
         }
 
-        if (OrderIngestionMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
-        {
-            throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
-        }
     }
 
     public void ValidateForScenario(int teamCount, int agentsPerTeam)
@@ -529,12 +507,6 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 $"MassNavigation scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
-        if (authoredAgentCount > CommandActorScratchCapacity)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {CommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
-        }
-
         if (authoredAgentCount > GroupMemberCapacity)
         {
             throw new InvalidOperationException(
@@ -547,10 +519,10 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 $"MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
-        if (teamCount > MetadataTeamCapacity)
+        if (teamCount > RelationshipDomainCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.metadataTeamCapacity {MetadataTeamCapacity} is smaller than authored scenario team count {teamCount}.");
+                $"MassNavigation scenarioRuntime.runtimeCapacity.relationshipDomainCapacity {RelationshipDomainCapacity} is smaller than authored scenario team count {teamCount}.");
         }
     }
 
@@ -940,7 +912,6 @@ public sealed class MassNavigationWorldConfig
     public int SolverWindowWidthCm { get; set; }
     public int SolverWindowHeightCm { get; set; }
     public int StreamingChunkSizeCm { get; set; }
-    public int StreamingRadiusCm { get; set; }
     public int CommandFocusHoldTicks { get; set; }
     public int WorkAreaPaddingCm { get; set; }
     public int WorkAreaMaxWidthCm { get; set; }
@@ -1041,11 +1012,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires StreamingChunkSizeCm > 0.");
         }
 
-        if (StreamingRadiusCm < 0)
-        {
-            throw new InvalidOperationException("MassNavigation world requires StreamingRadiusCm >= 0.");
-        }
-
         if (CommandFocusHoldTicks < 0)
         {
             throw new InvalidOperationException("MassNavigation world requires CommandFocusHoldTicks >= 0.");
@@ -1119,7 +1085,6 @@ public sealed class MassNavigationHotZoneConfig
 public sealed class MassNavigationScenarioConfig
 {
     public int AgentsPerTeam { get; set; }
-    public int InitialActiveTeamId { get; set; }
     public MassNavigationScenarioTeamConfig[] Teams { get; set; } = Array.Empty<MassNavigationScenarioTeamConfig>();
     public MassNavigationScenarioSpawnLayoutConfig SpawnLayout { get; set; } = new();
 
@@ -1158,25 +1123,6 @@ public sealed class MassNavigationScenarioConfig
             {
                 throw new InvalidOperationException($"MassNavigation config contains duplicate team id {team.Id}.");
             }
-        }
-
-        if (!seenIds.Contains(InitialActiveTeamId))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation config InitialActiveTeamId {InitialActiveTeamId} is not present in Scenario.Teams.");
-        }
-
-        long authoredAgentCount = (long)Teams.Length * AgentsPerTeam;
-        if (authoredAgentCount > scenarioRuntime.InitialCommandActorScratchCapacity)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialCommandActorScratchCapacity {scenarioRuntime.InitialCommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
-        }
-
-        if (authoredAgentCount > scenarioRuntime.InitialCommandActorSnapshotCapacity)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity {scenarioRuntime.InitialCommandActorSnapshotCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);

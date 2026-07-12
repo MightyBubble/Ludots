@@ -10,6 +10,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -33,8 +34,8 @@ namespace FormationCapabilityShowcaseMod.Runtime;
 
 internal sealed class FormationCapabilityShowcaseRuntime
 {
-    private const string RotateLeftActionId = "MassNavigation_RotateLeft";
-    private const string RotateRightActionId = "MassNavigation_RotateRight";
+    private const string RotateLeftActionId = "FormationCapability_RotateLeft";
+    private const string RotateRightActionId = "FormationCapability_RotateRight";
     private const float RotateStepRadians = MathF.PI / 8f;
 
     private static readonly float DiscSlotGoldenAngleRadians = MathF.PI * (3f - MathF.Sqrt(5f));
@@ -61,11 +62,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private bool _scenarioSpawned;
     private bool _obstacleOverlaySpawnsQueued;
     private bool _initialCommandSourceApplied;
-    private Entity _lastCommandSourceOwner = Entity.Null;
-    private uint _lastCommandSourceRevision;
-    private int _lastStructuralRevision = -1;
-    private bool _lastHadCommandActors;
-    private int _observedSceneResetCount;
+    private int _rotateOrderRejectCount;
+
+    internal int RotateOrderRejectCount => _rotateOrderRejectCount;
 
     public FormationCapabilityShowcaseConfig ActiveConfig => _config
         ?? throw new InvalidOperationException("Formation Capability showcase config has not been loaded.");
@@ -167,10 +166,14 @@ internal sealed class FormationCapabilityShowcaseRuntime
         engine.RegisterSystem(
             new FormationCapabilityLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context),
             SystemGroup.InputCollection);
-        engine.RegisterSystem(
-            new FormationCapabilityCommandSourceRotateSystem(engine, simulation),
-            SystemGroup.InputCollection);
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
+        engine.RegisterSystem(
+            new FormationCapabilityCommandSourceRotateSystem(
+                engine,
+                this,
+                orders,
+                config.RotateOrderBatchCapacity),
+            SystemGroup.InputCollection);
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
@@ -190,17 +193,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
             return;
         }
 
-        if (simulation.SceneResetCount != _observedSceneResetCount)
-        {
-            _observedSceneResetCount = simulation.SceneResetCount;
-            _scenarioSpawned = false;
-            _obstacleOverlaySpawnsQueued = false;
-            _initialCommandSourceApplied = false;
-            RemovePendingScenarioSpawns(engine, config);
-            DestroyShowcaseOwnedEntities(engine);
-            ClearFormationCaches();
-        }
-
         if (!_scenarioSpawned)
         {
             SpawnScenario(engine, config);
@@ -210,7 +202,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         SyncFormationStates(engine, simulation);
         PublishLocalFormationKnowledge(engine);
         TryApplyInitialCommandSource(engine, config);
-        SyncCommandActors(engine, simulation);
     }
 
     private void SpawnScenario(GameEngine engine, FormationCapabilityShowcaseConfig config)
@@ -219,7 +210,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires RuntimeEntitySpawnQueue.");
 
-        ClearCommandActorSnapshot(engine);
+        ClearCommandSource(engine);
         BuildAgentPlans(engine, simulation, config);
         DestroyShowcaseOwnedEntities(engine);
 
@@ -236,6 +227,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         TeamEntityLookup teamLookup = engine.GetService(CoreServiceKeys.TeamEntityLookup)
             ?? throw new InvalidOperationException("Formation Capability showcase requires TeamEntityLookup.");
+        PlayerEntityLookup playerLookup = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires PlayerEntityLookup.");
         var registeredTeamIds = new HashSet<int>(_formationPlans.Length);
         for (int i = 0; i < _formationPlans.Length; i++)
         {
@@ -252,7 +245,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         RemovePendingScenarioSpawns(engine, config);
         MapId mapId = RequireCurrentMapId(engine, config.MapId);
-        EnqueueFormationAgentSpawns(engine, config, spawnQueue, mapId);
+        EnqueueFormationAgentSpawns(engine, config, spawnQueue, mapId, teamLookup, playerLookup);
         EnsureSoldierEntityCache();
         for (int i = 0; i < _soldierAgentPlans.Length; i++)
         {
@@ -267,6 +260,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
                 TeamIdOverride = plan.TeamId,
+                MembershipTarget = RequireLiveTeamDomain(engine, teamLookup, plan.TeamId),
+                HasMembershipTarget = 1,
                 ComponentPatches = CreateFormationFollowerPatch(
                     _formationPlans[plan.FormationIndex].Id,
                     plan.SlotIndex,
@@ -283,7 +278,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         _scenarioSpawned = true;
         _obstacleOverlaySpawnsQueued = false;
         _initialCommandSourceApplied = false;
-        _observedSceneResetCount = simulation.SceneResetCount;
         simulation.MarkScenarioSpawned();
         simulation.MarkStructuralChange();
     }
@@ -776,7 +770,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
         GameEngine engine,
         FormationCapabilityShowcaseConfig config,
         RuntimeEntitySpawnQueue spawnQueue,
-        MapId mapId)
+        MapId mapId,
+        TeamEntityLookup teamLookup,
+        PlayerEntityLookup playerLookup)
     {
         if (_formationEntities.Length != _formationPlans.Length)
         {
@@ -788,6 +784,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
         {
             FormationCapabilityShowcaseFormationPlan plan = _formationPlans[i];
             FormationCapabilityShowcaseFormationConfig formation = config.Formations[plan.FormationIndex];
+            Entity teamDomain = RequireLiveTeamDomain(engine, teamLookup, plan.TeamId);
+            bool hasOwnershipSource = playerLookup.TryGet(formation.OwnerPlayerId, out Entity ownershipSource) &&
+                engine.World.IsAlive(ownershipSource);
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
@@ -799,6 +798,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 HasFacing = 1,
                 TeamIdOverride = plan.TeamId,
                 PlayerOwnerIdOverride = formation.OwnerPlayerId,
+                OwnershipSource = ownershipSource,
+                HasOwnershipSource = hasOwnershipSource ? (byte)1 : (byte)0,
+                MembershipTarget = teamDomain,
+                HasMembershipTarget = 1,
                 ComponentPatches = CreateFormationAnchorPatch(plan.Id, plan.SoldierCount),
             };
 
@@ -807,6 +810,17 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 throw new InvalidOperationException("Formation Capability showcase failed to enqueue formation agent spawn request.");
             }
         }
+    }
+
+    private static Entity RequireLiveTeamDomain(GameEngine engine, TeamEntityLookup teamLookup, int teamId)
+    {
+        if (!teamLookup.TryGet(teamId, out Entity teamDomain) || !engine.World.IsAlive(teamDomain))
+        {
+            throw new InvalidOperationException(
+                $"Formation Capability showcase requires a live relationship representative for team {teamId}.");
+        }
+
+        return teamDomain;
     }
 
     private static RuntimeEntitySpawnComponentPatch[] CreateFormationAnchorPatch(string formationId, int slotCount)
@@ -1043,69 +1057,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         _initialCommandSourceApplied = true;
     }
 
-    private void SyncCommandActors(GameEngine engine, MassNavigationSimulationRuntime simulation)
-    {
-        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
-            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before syncing command actors.");
-        if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
-        {
-            ClearCommandActorsIfNeeded(simulation);
-            return;
-        }
-
-        if (!EntityCollectionContextRuntime.TryDescribeView(
-                collections,
-                owner,
-                EntityCollectionKeys.CommandSource,
-                out EntityCollectionView view))
-        {
-            ClearCommandActorsIfNeeded(simulation);
-            _lastCommandSourceOwner = owner;
-            return;
-        }
-
-        bool structuralChanged = _lastStructuralRevision != simulation.StructuralChangeRevision;
-        if (_lastHadCommandActors &&
-            _lastCommandSourceOwner == owner &&
-            _lastCommandSourceRevision == view.Revision &&
-            !structuralChanged)
-        {
-            return;
-        }
-
-        Span<Entity> commandActors = simulation.EnsureCommandActorScratch(view.Count);
-        int written = EntityCollectionContextRuntime.Copy(
-            collections,
-            owner,
-            EntityCollectionKeys.CommandSource,
-            commandActors);
-        if (written != view.Count)
-        {
-            throw new InvalidOperationException(
-                $"Formation Capability showcase expected {view.Count} command actor row(s), copied {written}.");
-        }
-
-        simulation.SetCommandActorSnapshot(commandActors[..written], view.Revision);
-        simulation.ObserveCommandActorSyncTick();
-        _lastCommandSourceOwner = owner;
-        _lastCommandSourceRevision = view.Revision;
-        _lastStructuralRevision = simulation.StructuralChangeRevision;
-        _lastHadCommandActors = true;
-    }
-
-    private void ClearCommandActorsIfNeeded(MassNavigationSimulationRuntime simulation)
-    {
-        if (_lastHadCommandActors || simulation.CommandActorCount > 0)
-        {
-            simulation.ClearCommandActorSnapshot();
-        }
-
-        _lastCommandSourceOwner = Entity.Null;
-        _lastCommandSourceRevision = 0;
-        _lastStructuralRevision = simulation.StructuralChangeRevision;
-        _lastHadCommandActors = false;
-    }
-
     private void EnsureInitialCommandSourceScratch(FormationCapabilityShowcaseConfig config)
     {
         if (_initialCommandSourceScratch.Length == config.InitialCommandSourceEntityCapacity)
@@ -1194,22 +1145,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         simulation.ConfigureScenarioTeams(teamIds);
-        simulation.SetActiveTeam(ResolveInitialCommandSourceTeamId(config));
-    }
-
-    private static int ResolveInitialCommandSourceTeamId(FormationCapabilityShowcaseConfig config)
-    {
-        for (int i = 0; i < config.Formations.Length; i++)
-        {
-            FormationCapabilityShowcaseFormationConfig formation = config.Formations[i];
-            if (string.Equals(formation.Id, config.InitialCommandSourceFormationId, StringComparison.Ordinal))
-            {
-                return formation.TeamId;
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Formation Capability showcase initial command-source formation '{config.InitialCommandSourceFormationId}' is not configured.");
     }
 
     private static void ConfigureRelationships(MassNavigationConfig config)
@@ -1232,8 +1167,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static MassNavigationSimulationRuntime RequireSimulation(GameEngine engine)
     {
-        return engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new InvalidOperationException("Formation Capability showcase requires MassNavigationSimulationRuntime.");
+        return engine.GetService(MassNavigationKeys.RuntimeBinding)?.RequireCurrent()
+            ?? throw new InvalidOperationException("Formation Capability showcase requires a prepared MassNavigation runtime binding.");
     }
 
     private static MapId RequireCurrentMapId(GameEngine engine, string configuredMapId)
@@ -1295,7 +1230,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
     }
 
-    private static void ClearCommandActorSnapshot(GameEngine engine)
+    private static void ClearCommandSource(GameEngine engine)
     {
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing command source.");
@@ -1369,15 +1304,29 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private sealed class FormationCapabilityCommandSourceRotateSystem : Arch.System.ISystem<float>
     {
         private readonly GameEngine _engine;
-        private readonly MassNavigationSimulationRuntime _simulation;
-        private Entity[] _actorsScratch = Array.Empty<Entity>();
+        private readonly FormationCapabilityShowcaseRuntime _owner;
+        private readonly OrderQueue _orders;
+        private readonly Entity[] _actorsScratch;
+        private readonly Order[] _ordersScratch;
+        private ControlDomainQuery? _controlDomains;
+        private int _moveOrderTypeId;
 
         public FormationCapabilityCommandSourceRotateSystem(
             GameEngine engine,
-            MassNavigationSimulationRuntime simulation)
+            FormationCapabilityShowcaseRuntime owner,
+            OrderQueue orders,
+            int actorCapacity)
         {
-            _engine = engine;
-            _simulation = simulation;
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            _orders = orders ?? throw new ArgumentNullException(nameof(orders));
+            if (actorCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(actorCapacity));
+            }
+
+            _actorsScratch = new Entity[actorCapacity];
+            _ordersScratch = new Order[actorCapacity];
         }
 
         public void Initialize()
@@ -1419,7 +1368,18 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     commandSourceOwner,
                     EntityCollectionKeys.CommandSource)
                 : 0;
-            EnsureActorScratchCapacity(commandActorCount);
+            if (commandActorCount <= 0)
+            {
+                _owner._rotateOrderRejectCount++;
+                return;
+            }
+
+            if (commandActorCount > _actorsScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Formation Capability rotate order requires {commandActorCount} actors, exceeding configured command actor capacity {_actorsScratch.Length}.");
+            }
+
             int actorCount = commandActorCount > 0
                 ? EntityCollectionContextRuntime.Copy(
                     _engine.GlobalContext,
@@ -1427,18 +1387,16 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     EntityCollectionKeys.CommandSource,
                     _actorsScratch)
                 : 0;
-            if (actorCount <= 0 ||
-                !CanLocalPlayerCommand(_engine, _actorsScratch.AsSpan(0, actorCount)))
+            if (actorCount != commandActorCount || !TryBuildOrders(actorCount, deltaRadians))
             {
-                _simulation.RejectCommandUnauthorizedCommandActors(0f, 0f);
+                _owner._rotateOrderRejectCount++;
                 return;
             }
 
-            _simulation.NavGroupRuntime.RotateCommandActors(
-                _engine.World,
-                _simulation.AgentState,
-                _actorsScratch.AsSpan(0, actorCount),
-                deltaRadians);
+            if (!_orders.TryEnqueueBatch(_ordersScratch.AsSpan(0, actorCount)))
+            {
+                _owner._rotateOrderRejectCount++;
+            }
         }
 
         public void AfterUpdate(in float dt)
@@ -1449,51 +1407,94 @@ internal sealed class FormationCapabilityShowcaseRuntime
         {
         }
 
-        private static bool CanLocalPlayerCommand(GameEngine engine, ReadOnlySpan<Entity> actors)
+        private bool TryBuildOrders(int actorCount, float deltaRadians)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
                 localObj is not Entity local ||
-                !engine.World.IsAlive(local) ||
-                !engine.World.TryGet(local, out PlayerOwner localOwner))
+                !_engine.World.IsAlive(local) ||
+                !_engine.World.TryGet(local, out PlayerIdentity localIdentity))
             {
                 return false;
             }
 
-            int liveActors = 0;
-            for (int i = 0; i < actors.Length; i++)
+            _controlDomains ??= _engine.GetService(CoreServiceKeys.ControlDomainQuery)
+                ?? throw new InvalidOperationException("Formation Capability rotate orders require ControlDomainQuery.");
+            if (_moveOrderTypeId == 0)
             {
-                Entity actor = actors[i];
-                if (!engine.World.IsAlive(actor))
+                OrderTypeRegistry orderTypes = _engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                    ?? throw new InvalidOperationException("Formation Capability rotate orders require OrderTypeRegistry.");
+                if (!orderTypes.TryGetId(MassNavigationOrderKeys.Move, out _moveOrderTypeId))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Formation Capability rotate orders require '{MassNavigationOrderKeys.Move}'.");
                 }
+            }
 
-                if (!engine.World.TryGet(actor, out PlayerOwner owner) ||
-                    owner.PlayerId != localOwner.PlayerId)
+            for (int i = 0; i < actorCount; i++)
+            {
+                Entity actor = _actorsScratch[i];
+                if (!_engine.World.IsAlive(actor) ||
+                    !_engine.World.Has<OrderBuffer>(actor) ||
+                    !_engine.World.Has<FacingDirection>(actor) ||
+                    !_controlDomains.TryResolveControlDomain(actor, out Entity domain) ||
+                    domain != local)
                 {
                     return false;
                 }
 
-                liveActors++;
+                ref OrderBuffer buffer = ref _engine.World.Get<OrderBuffer>(actor);
+                int orderId = 0;
+                Vector2 destination;
+                MassNavigationFormationMode formationMode;
+                float baseRotation = _engine.World.Get<FacingDirection>(actor).AngleRad;
+                if (buffer.HasActive)
+                {
+                    ref readonly Order active = ref buffer.ActiveOrder.Order;
+                    if (active.OrderTypeId != _moveOrderTypeId)
+                    {
+                        return false;
+                    }
+
+                    MassNavigationMoveOrderArgs activeMove = MassNavigationMoveOrderArgs.Decode(in active);
+                    orderId = active.OrderId;
+                    destination = activeMove.DestinationCm;
+                    formationMode = activeMove.FormationMode;
+                    if (activeMove.HasExplicitRotation)
+                    {
+                        baseRotation = activeMove.RotationRadians;
+                    }
+                }
+                else
+                {
+                    if (!OrderWorldSpatialResolver.TryGetEntityWorldCm(_engine.World, actor, out Vector3 actorWorldCm))
+                    {
+                        return false;
+                    }
+
+                    destination = new Vector2(actorWorldCm.X, actorWorldCm.Z);
+                    formationMode = MassNavigationFormationMode.None;
+                }
+
+                _ordersScratch[i] = new Order
+                {
+                    OrderId = orderId,
+                    OrderTypeId = _moveOrderTypeId,
+                    PlayerId = localIdentity.PlayerId,
+                    Actor = actor,
+                    SubmitMode = OrderSubmitMode.Immediate,
+                    Args = MassNavigationMoveOrderArgs.Encode(
+                        destination,
+                        formationMode,
+                        NormalizeAngleRadians(baseRotation + deltaRadians)),
+                };
             }
 
-            return liveActors > 0;
+            return true;
         }
 
-        private void EnsureActorScratchCapacity(int required)
+        private static float NormalizeAngleRadians(float angle)
         {
-            if (_actorsScratch.Length >= required)
-            {
-                return;
-            }
-
-            int next = _actorsScratch.Length == 0 ? 4 : _actorsScratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _actorsScratch, next);
+            return MathF.IEEERemainder(angle, MathF.PI * 2f);
         }
     }
 

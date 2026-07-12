@@ -91,7 +91,6 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
 
         RequirePositive(capacity.NavigationGroupCapacity, "navigationRuntimeCapacity.navigationGroupCapacity");
         RequirePositive(capacity.GroupMembershipAgentCapacity, "navigationRuntimeCapacity.groupMembershipAgentCapacity");
-        RequirePositive(capacity.CommandActorScratchCapacity, "navigationRuntimeCapacity.commandActorScratchCapacity");
         RequirePositive(capacity.GroupMemberCapacity, "navigationRuntimeCapacity.groupMemberCapacity");
     }
 

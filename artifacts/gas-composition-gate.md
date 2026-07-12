@@ -1,5 +1,61 @@
 ## GAS Composition Gate - Self Review
 
+- **Task / Issue**: MassNavigation unified responsibility closeout — Epic #642, issues #505/#533/#567/#657, replacement for PR #654.
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本次复用现有 `RuntimeEntitySpawnQueue` 和 relationship ownership/membership resolver，只让场景生成请求显式携带已有关系端点；没有新增 lifecycle profile、preset 开关、Core enum、graph op 或平行物化管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 场景实体生成请求 | Layer 0 existing op | `RuntimeEntitySpawnQueue` / `RuntimeEntitySpawnSystem` |
+| ownership/membership 建边 | Layer 0 existing op | `RuntimeEntitySpawnSystem.TryLinkExplicitRelationships` |
+| MassNavigation 场景编排 | Layer 2 composition | `MassNavigationScenarioBootstrap` |
+
+### 3. Reuse list
+
+- Handlers: N/A，未新增或修改 GAS handler。
+- Queues / Systems: 既有 `RuntimeEntitySpawnQueue`、`RuntimeEntitySpawnSystem`、`OrderQueue`、`OrderBufferSystem`。
+- Resolvers / Registries: 既有 `PlayerEntityLookup`、`TeamEntityLookup`、`RelationshipRuntime`、`RelationshipTypeRegistry`。
+- Existing presets / graphs: N/A，未修改 lifecycle preset 或 graph。
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 没有新增原子 op；只扩展既有 spawn request 的显式关系参数并修正 `Entity.Null` 的未配置语义。
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: 复用 `RuntimeEntitySpawnSystem` 既有的预检与失败清理边界；MassNavigation 不创建新的 lifecycle transaction。
+
+### 6. Config SSOT
+
+行为配置落在: 既有 MassNavigation 场景配置、地图 player/team binding 与 relationship 配置。
+
+是否新增 JSON schema: NO — 删除 MassNavigation 越权输入配置与可变调参字段，没有新增 lifecycle schema。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: 既有场景配置、订单 producer 或 graph/effect 步骤；不修改 Core lifecycle enum。
+
+---
+
+## GAS Composition Gate - Self Review
+
 - **Task / Issue**: PR #581 RFC-0065 A4 axis-move follow-up and SHOW-6 WASD hot-switch evidence.
 - **Date**: 2026-07-07
 - **Agent / Author**: Codex

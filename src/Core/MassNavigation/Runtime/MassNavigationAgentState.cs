@@ -4,7 +4,7 @@ using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
-public sealed class MassNavigationAgentState
+internal sealed class MassNavigationAgentState
 {
     private readonly System.Collections.Generic.List<Entity> _spawnedEntities = new();
     private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds = new();

@@ -56,6 +56,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly ComponentAuthoringContext _authoringContext;
         private readonly OwnershipResolver? _ownership;
         private readonly PlayerEntityLookup? _playerLookup;
+        private readonly TeamEntityLookup? _teamLookup;
+        private readonly RelationshipRuntime? _relationships;
+        private readonly int _memberOfTypeId;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -73,7 +76,10 @@ namespace Ludots.Core.Gameplay.Spawning
             PresentationTimingDiagnostics? timingDiagnostics = null,
             ComponentAuthoringContext? authoringContext = null,
             OwnershipResolver? ownership = null,
-            PlayerEntityLookup? playerLookup = null)
+            PlayerEntityLookup? playerLookup = null,
+            TeamEntityLookup? teamLookup = null,
+            RelationshipRuntime? relationships = null,
+            int memberOfTypeId = -1)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -100,6 +106,9 @@ namespace Ludots.Core.Gameplay.Spawning
             _timingDiagnostics = timingDiagnostics;
             _ownership = ownership;
             _playerLookup = playerLookup;
+            _teamLookup = teamLookup;
+            _relationships = relationships;
+            _memberOfTypeId = memberOfTypeId;
         }
 
         public override void Update(in float dt)
@@ -183,6 +192,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             return entity;
         }
 
@@ -216,6 +226,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             TryBootstrapPerformer(entity, request.TemplateId);
             return entity;
         }
@@ -357,6 +368,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     }
 
                     PublishSpawnReceipt(in request, entity);
+                    TryLinkExplicitRelationships(in request, entity);
 
                     if (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0)
                     {
@@ -464,6 +476,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             return entity;
         }
 
@@ -644,6 +657,47 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
+        }
+
+        private void TryLinkExplicitRelationships(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (request.HasOwnershipSource != 0)
+            {
+                if (_ownership == null || !World.IsAlive(request.OwnershipSource))
+                {
+                    throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
+                }
+
+                _ownership.EnsureOwnership(request.OwnershipSource, entity);
+            }
+
+            if (request.HasMembershipTarget != 0)
+            {
+                if (_relationships == null || _memberOfTypeId < 0 || !World.IsAlive(request.MembershipTarget))
+                {
+                    throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
+                }
+
+                _relationships.EnsureLink(entity, request.MembershipTarget, _memberOfTypeId);
+                return;
+            }
+
+            if (_relationships != null &&
+                _teamLookup != null &&
+                _memberOfTypeId >= 0 &&
+                World.TryGet(entity, out Team team) &&
+                team.Id > 0 &&
+                !World.Has<PlayerIdentity>(entity) &&
+                !World.Has<TeamIdentity>(entity))
+            {
+                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !World.IsAlive(teamRep))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime spawned entity {entity.Id} authors Team {team.Id}, but no live team relationship representative exists.");
+                }
+
+                _relationships.EnsureLink(entity, teamRep, _memberOfTypeId);
+            }
         }
 
         private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)

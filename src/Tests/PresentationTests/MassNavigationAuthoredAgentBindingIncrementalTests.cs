@@ -8,6 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -17,6 +18,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -36,15 +38,18 @@ namespace Ludots.Tests.Presentation
                 out Entity agent0,
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
                 world,
                 simulation.AgentState,
-                simulation.CommandActors,
-                moveDestination,
-                MassNavigationFormationMode.Square);
+                orderToken: 1,
+                memberIndices: new[] { 0, 1 },
+                teamId: TeamId,
+                destinationWorldCm: moveDestination,
+                formationMode: MassNavigationFormationMode.Square,
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
@@ -72,20 +77,23 @@ namespace Ludots.Tests.Presentation
             harness.BindingSystem.Update(0f);
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
 
-            harness.Simulation.SetCommandActorSnapshot(new[] { harness.Agent0, harness.Agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = harness.Simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
+            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 harness.Simulation.MassNavigationFlow,
                 harness.Engine.World,
                 harness.Simulation.AgentState,
-                harness.Simulation.CommandActors,
-                moveDestination,
-                MassNavigationFormationMode.Square);
+                orderToken: 1,
+                memberIndices: new[] { 0, 1 },
+                teamId: TeamId,
+                destinationWorldCm: moveDestination,
+                formationMode: MassNavigationFormationMode.Square,
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
 
-            Entity newAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            Entity newAgent = harness.CreateAuthoredAgent(localX: 1500f, localY: 1500f);
             harness.BindingSystem.Update(0f);
 
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
@@ -192,7 +200,7 @@ namespace Ludots.Tests.Presentation
             harness.BindingSystem.Update(0f);
             int revisionBeforeInsert = harness.Simulation.AuthoredRuntimeBindingRevision;
 
-            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            harness.CreateAuthoredAgent(localX: 1500f, localY: 1500f);
             harness.BindingSystem.Update(0f);
 
             Assert.That(harness.Simulation.AuthoredRuntimeBindingRevision, Is.EqualTo(revisionBeforeInsert));
@@ -247,7 +255,7 @@ namespace Ludots.Tests.Presentation
         {
             using BindingHarness harness = CreateBindingHarness(membershipCapacity: 2);
             harness.BindingSystem.Update(0f);
-            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1400f, localY: 1000f, harness.Layer);
+            harness.CreateAuthoredAgent(localX: 1400f, localY: 1000f);
 
             var ex = Assert.Throws<InvalidOperationException>(() => harness.BindingSystem.Update(0f));
             Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
@@ -268,13 +276,15 @@ namespace Ludots.Tests.Presentation
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
+                world,
                 simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
                 new Vector2(2600f, 2200f),
                 MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(movedCount, Is.EqualTo(3));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float agent0OrderX, out float agent0OrderY), Is.True);
@@ -316,18 +326,19 @@ namespace Ludots.Tests.Presentation
                 out Entity agent2,
                 out _,
                 out MassNavigationAgentSeed[] seeds);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1, agent2 }, revision: 7);
             int orderToken = 84;
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
+                world,
                 simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
                 new Vector2(2800f, 2200f),
                 MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(movedCount, Is.EqualTo(3));
 
             world.Remove<MassNavigationAgent>(agent1);
@@ -340,9 +351,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
             Assert.That(world.TryGet(agent2, out MassNavigationAgentIndex agent2Index), Is.True);
             Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.CommandActors.Length, Is.EqualTo(2));
-            Assert.That(simulation.CommandActors[0], Is.EqualTo(agent0));
-            Assert.That(simulation.CommandActors[1], Is.EqualTo(agent2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
@@ -350,48 +358,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent2Index.Value, out _, out _), Is.True);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out _, out _), Is.True);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent2Index.Value, out _, out _), Is.True);
-        }
-
-        [Test]
-        public void RebuildFromAuthoredAgents_DissolvesSelectionGroupWithOneSurvivor()
-        {
-            using var world = World.Create();
-            MassNavigationSimulationRuntime simulation = CreateSimulation(
-                world,
-                out Entity agent0,
-                out Entity agent1,
-                out MassNavigationAgentLayer layer);
-            MassNavigationAgentSeed survivingSeed = CreateSeed(localX: 1000f, localY: 1000f, layer);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1 }, revision: 9);
-            int movedCount = simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
-                simulation.MassNavigationFlow,
-                world,
-                simulation.AgentState,
-                simulation.CommandActors,
-                new Vector2(2400f, 2200f),
-                MassNavigationFormationMode.Square);
-            Assert.That(movedCount, Is.EqualTo(2));
-            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
-            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-
-            world.Remove<MassNavigationAgent>(agent1);
-            simulation.RebuildFromAuthoredAgents(
-                world,
-                new[] { agent0 },
-                new[] { survivingSeed },
-                new[] { true });
-
-            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
-            Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.CommandActors.Length, Is.EqualTo(1));
-            Assert.That(simulation.CommandActors[0], Is.EqualTo(agent0));
-            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
-            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-            Assert.That(simulation.NavGroupRuntime.HasGroup(agent0Index.Value), Is.False);
-            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.False);
-            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float heldTargetX, out float heldTargetY), Is.True);
-            Assert.That(heldTargetX, Is.EqualTo(1000f).Within(PositionToleranceCm));
-            Assert.That(heldTargetY, Is.EqualTo(1000f).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -403,13 +369,15 @@ namespace Ludots.Tests.Presentation
             int[] members = { 0, 1 };
             int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 harness.Simulation.MassNavigationFlow,
+                harness.Engine.World,
                 harness.Simulation.AgentState,
                 orderToken,
                 members,
                 TeamId,
                 new Vector2(2600f, 2200f),
                 MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                rotationRadians: 0f,
+                hasExplicitRotation: false);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
 
@@ -479,22 +447,32 @@ namespace Ludots.Tests.Presentation
 
             MassNavigationConfig config = CreateTestConfig(membershipCapacity);
             var simulation = CreateConfiguredSimulation(config);
-            simulation.SetWorldOperationsReady(true);
-            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-            engine.SetCurrentMapSessionForTests(new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId }));
+            var mapId = new MapId(config.MapId);
+            var runtimeBinding = new MassNavigationRuntimeBinding();
+            runtimeBinding.Activate(mapId, simulation);
+            runtimeBinding.MarkPrepared(mapId, simulation);
+            engine.SetService(MassNavigationKeys.RuntimeBinding, runtimeBinding);
+            engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity agent0 = CreateAuthoredAgentEntity(engine.World, localX: 1000f, localY: 1000f, layer);
             Entity agent1 = CreateAuthoredAgentEntity(engine.World, localX: 1200f, localY: 1000f, layer);
+            RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                ?? throw new InvalidOperationException("Test requires RelationshipRuntime.");
+            RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("Test requires RelationshipTypeRegistry.");
+            Entity teamRep = engine.World.Create(new TeamIdentity { TeamId = 1 });
+            int memberOfTypeId = relationshipTypes.GetId("MemberOf");
+            relationships.EnsureLink(agent0, teamRep, memberOfTypeId);
+            relationships.EnsureLink(agent1, teamRep, memberOfTypeId);
             var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, simulation);
-            return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1);
+            return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1, teamRep, relationships, memberOfTypeId);
         }
 
         private static MassNavigationConfig CreateTestConfig(int membershipCapacity)
         {
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = membershipCapacity;
             return config;
@@ -503,7 +481,9 @@ namespace Ludots.Tests.Presentation
         private static MassNavigationSimulationRuntime CreateConfiguredSimulation(MassNavigationConfig config)
         {
             var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
             return simulation;
         }
 
@@ -535,7 +515,6 @@ namespace Ludots.Tests.Presentation
             {
                 return world.Create(
                     new MassNavigationAgent { ProfileId = profileId },
-                    new Team { Id = TeamId },
                     WorldPositionCm.FromCmFloat(localX, localY),
                     new EntityLayer(layer.CategoryMask, layer.InteractionMask),
                     new FacingDirection { AngleRad = 0f },
@@ -544,7 +523,6 @@ namespace Ludots.Tests.Presentation
 
             return world.Create(
                 new MassNavigationAgent { ProfileId = profileId },
-                new Team { Id = TeamId },
                 WorldPositionCm.FromCmFloat(localX, localY),
                 new EntityLayer(layer.CategoryMask, layer.InteractionMask),
                 new FacingDirection { AngleRad = 0f });
@@ -575,7 +553,10 @@ namespace Ludots.Tests.Presentation
                 MassNavigationAuthoredAgentBindingSystem bindingSystem,
                 MassNavigationAgentLayer layer,
                 Entity agent0,
-                Entity agent1)
+                Entity agent1,
+                Entity teamRep,
+                RelationshipRuntime relationships,
+                int memberOfTypeId)
             {
                 Engine = engine;
                 Simulation = simulation;
@@ -583,6 +564,9 @@ namespace Ludots.Tests.Presentation
                 Layer = layer;
                 Agent0 = agent0;
                 Agent1 = agent1;
+                TeamRep = teamRep;
+                Relationships = relationships;
+                MemberOfTypeId = memberOfTypeId;
             }
 
             public GameEngine Engine { get; }
@@ -591,6 +575,16 @@ namespace Ludots.Tests.Presentation
             public MassNavigationAgentLayer Layer { get; }
             public Entity Agent0 { get; }
             public Entity Agent1 { get; }
+            private Entity TeamRep { get; }
+            private RelationshipRuntime Relationships { get; }
+            private int MemberOfTypeId { get; }
+
+            public Entity CreateAuthoredAgent(float localX, float localY)
+            {
+                Entity entity = CreateAuthoredAgentEntity(Engine.World, localX, localY, Layer);
+                Relationships.EnsureLink(entity, TeamRep, MemberOfTypeId);
+                return entity;
+            }
 
             public void Dispose()
             {

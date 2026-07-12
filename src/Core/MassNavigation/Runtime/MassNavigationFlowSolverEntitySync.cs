@@ -8,7 +8,7 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed partial class MassNavigationFlowSolverState
 {
-    public void SyncEntities(World world, MassNavigationAgentState agentState)
+    internal void SyncEntities(World world, MassNavigationAgentState agentState)
     {
         if (UnitCount <= 0 || _entitySyncDirtyCount <= 0)
         {
@@ -52,7 +52,7 @@ public sealed partial class MassNavigationFlowSolverState
         _entitySyncDirtyCount = 0;
     }
 
-    public void SyncCullStates(
+    internal void SyncCullStates(
         World world,
         MassNavigationAgentState agentState,
         float localMinXCm,

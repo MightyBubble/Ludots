@@ -11,7 +11,8 @@ public static class MassNavigationIds
             throw new System.ArgumentNullException(nameof(engine));
         }
 
-        if (engine.GetService(MassNavigationKeys.SimulationRuntime) is not Runtime.MassNavigationSimulationRuntime simulation)
+        if (engine.GetService(MassNavigationKeys.RuntimeBinding) is not Runtime.MassNavigationRuntimeBinding binding ||
+            binding.Current is not Runtime.MassNavigationSimulationRuntime simulation)
         {
             return false;
         }
@@ -32,8 +33,9 @@ public static class MassNavigationIds
             return false;
         }
 
-        return engine.GetService(MassNavigationKeys.SimulationRuntime) is Runtime.MassNavigationSimulationRuntime simulation &&
-               simulation.IsReadyForWorldOperations;
+        return engine.GetService(MassNavigationKeys.RuntimeBinding) is Runtime.MassNavigationRuntimeBinding binding &&
+               binding.IsReady &&
+               string.Equals(binding.CurrentMapId.Value, mapId, System.StringComparison.Ordinal);
     }
 
     public static bool IsCurrentNavigationRuntimeReady(GameEngine engine)

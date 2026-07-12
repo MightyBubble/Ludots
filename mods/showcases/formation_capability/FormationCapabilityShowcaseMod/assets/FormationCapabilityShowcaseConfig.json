@@ -6,6 +6,7 @@
   },
   "initialCommandSourceFormationId": "shu_left_vanguard",
   "initialCommandSourceEntityCapacity": 1,
+  "rotateOrderBatchCapacity": 512,
   "obstacleOverlay": {
     "templateId": "formation_capability_showcase_obstacle_overlay",
     "heightOffsetM": 0.28,

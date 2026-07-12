@@ -33,6 +33,10 @@ namespace Ludots.Core.Gameplay.Spawning
         public MapId MapId;
         public int TeamIdOverride;
         public int PlayerOwnerIdOverride;
+        public Entity OwnershipSource;
+        public byte HasOwnershipSource;
+        public Entity MembershipTarget;
+        public byte HasMembershipTarget;
         public RuntimeEntitySpawnComponentPatch[] ComponentPatches;
         public byte CopySourceTeam;
         public byte CopySourcePlayerOwner;

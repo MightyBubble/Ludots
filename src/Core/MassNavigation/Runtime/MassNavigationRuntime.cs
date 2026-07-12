@@ -1,9 +1,11 @@
 using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -16,11 +18,7 @@ public sealed class MassNavigationRuntime
     private bool _configResolved;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
-    private ILoadedChunks? _savedLoadedChunks;
-    private ILoadedChunks? _savedSpatialLoadedChunks;
-    private ILoadedChunks? _activeLoadedChunksOverride;
-    private bool _savedLoadedChunksValid;
-    private bool _loadedChunksOverrideActive;
+    private MassNavigationSimulationRuntime? _simulation;
 
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
@@ -32,13 +30,16 @@ public sealed class MassNavigationRuntime
         }
 
         EnsureSystemsInstalled(engine, config);
+        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("activating map focus");
+        MassNavigationRuntimeBinding binding = RequireRuntimeBinding(engine);
+        binding.Activate(mapId, simulation);
         BindBoardWorld(engine);
-        BindMassNavigationLoadedChunks(engine);
-        RequireSimulationRuntime(engine, "activating map focus").SetWorldOperationsReady(true);
         if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
         {
             EnsureScenario(engine);
         }
+
+        binding.MarkPrepared(mapId, simulation);
 
         return true;
     }
@@ -67,13 +68,13 @@ public sealed class MassNavigationRuntime
             _scenarioSpawned = false;
         }
 
-        if (engine.GetService(MassNavigationKeys.SimulationRuntime) is MassNavigationSimulationRuntime simulation)
+        if (_simulation is MassNavigationSimulationRuntime simulation)
         {
-            simulation.SetWorldOperationsReady(false);
+            RequireRuntimeBinding(engine).Clear(mapId, simulation);
         }
 
         engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
-        ReleaseMassNavigationLoadedChunks(engine);
+        _simulation?.ReleaseLoadedChunkContribution();
         return true;
     }
 
@@ -85,9 +86,15 @@ public sealed class MassNavigationRuntime
         }
 
         var simulation = new MassNavigationSimulationRuntime(config);
-        engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
+        DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires DomainStanceQuery.");
+        simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
+            stances,
+            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+            config.RelationshipPolicy.CooperativeStance));
+        _simulation = simulation;
+        engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationFormationFollowerSystem(engine, simulation),
@@ -99,7 +106,7 @@ public sealed class MassNavigationRuntime
             new MassNavigationEnvironmentBindingSystem(engine, simulation),
             SystemGroup.RuntimeEntityBinding);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-            new MassNavigationPreSimulationStepSystem(),
+            new MassNavigationPreSimulationStepSystem(engine, simulation),
             SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationOrderIngestionSystem(engine, simulation),
@@ -149,14 +156,13 @@ public sealed class MassNavigationRuntime
     private void EnsureScenario(GameEngine engine)
     {
         if (_scenarioSpawned &&
-            engine.GetService(MassNavigationKeys.SimulationRuntime) is { } existing &&
+            _simulation is { } existing &&
             existing.AgentState.TotalAgents > 0)
         {
             return;
         }
 
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires simulation runtime.");
+        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("spawning the configured scenario");
         MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
             engine,
             simulation,
@@ -165,105 +171,58 @@ public sealed class MassNavigationRuntime
         _scenarioSpawned = true;
     }
 
-    private static void BindBoardWorld(GameEngine engine)
+    private void BindBoardWorld(GameEngine engine)
     {
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("MassNavigation runtime requires an active MapSession.");
         var board = session.PrimaryBoard
             ?? throw new InvalidOperationException("MassNavigation runtime requires a primary board.");
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires simulation runtime.");
-        simulation.BindBoardWorld(board.WorldSize);
+        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("binding the board world");
+        if (board.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation requires board-owned {nameof(WorldGridLoadedChunks)}, got {board.LoadedChunks?.GetType().FullName ?? "null"}.");
+        }
+
+        simulation.BindBoardWorld(board.WorldSize, loadedChunks);
     }
 
-    private void BindMassNavigationLoadedChunks(GameEngine engine)
+    private MassNavigationSimulationRuntime RequireSimulationRuntime(string action)
     {
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires simulation runtime.");
-        if (_loadedChunksOverrideActive &&
-            engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks current &&
-            ReferenceEquals(current, simulation.LoadedChunks) &&
-            engine.SpatialQueries is SpatialQueryService activeSpatialQueries &&
-            ReferenceEquals(activeSpatialQueries.LoadedChunks, simulation.LoadedChunks))
-        {
-            return;
-        }
-
-        if (_loadedChunksOverrideActive)
-        {
-            _savedLoadedChunks = null;
-            _savedSpatialLoadedChunks = null;
-            _activeLoadedChunksOverride = null;
-            _savedLoadedChunksValid = false;
-            _loadedChunksOverrideActive = false;
-        }
-
-        _savedLoadedChunksValid = engine.GlobalContext.TryGetValue(CoreServiceKeys.LoadedChunks.Name, out object? savedRaw);
-        if (savedRaw != null && savedRaw is not ILoadedChunks)
-        {
-            throw new InvalidOperationException("MassNavigation runtime loaded chunks override found a non-ILoadedChunks service value.");
-        }
-
-        _savedLoadedChunks = savedRaw as ILoadedChunks;
-        _savedSpatialLoadedChunks = engine.SpatialQueries is SpatialQueryService savedSpatialQueries
-            ? savedSpatialQueries.LoadedChunks
-            : null;
-        _activeLoadedChunksOverride = simulation.LoadedChunks;
-        _loadedChunksOverrideActive = true;
-        engine.SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)simulation.LoadedChunks);
-        if (engine.SpatialQueries is SpatialQueryService spatialQueries)
-        {
-            spatialQueries.SetLoadedChunks(simulation.LoadedChunks);
-        }
-    }
-
-    private void ReleaseMassNavigationLoadedChunks(GameEngine engine)
-    {
-        if (!_loadedChunksOverrideActive)
-        {
-            return;
-        }
-
-        if (_activeLoadedChunksOverride != null &&
-            engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks loadedChunks &&
-            ReferenceEquals(loadedChunks, _activeLoadedChunksOverride))
-        {
-            if (_savedLoadedChunksValid)
-            {
-                engine.SetService(CoreServiceKeys.LoadedChunks, _savedLoadedChunks!);
-            }
-            else
-            {
-                engine.RemoveService(CoreServiceKeys.LoadedChunks);
-            }
-        }
-
-        if (_activeLoadedChunksOverride != null &&
-            engine.SpatialQueries is SpatialQueryService spatialQueries &&
-            ReferenceEquals(spatialQueries.LoadedChunks, _activeLoadedChunksOverride))
-        {
-            spatialQueries.SetLoadedChunks(_savedSpatialLoadedChunks);
-        }
-
-        _savedLoadedChunks = null;
-        _savedSpatialLoadedChunks = null;
-        _activeLoadedChunksOverride = null;
-        _savedLoadedChunksValid = false;
-        _loadedChunksOverrideActive = false;
-    }
-
-    private static MassNavigationSimulationRuntime RequireSimulationRuntime(GameEngine engine, string action)
-    {
-        return engine.GetService(MassNavigationKeys.SimulationRuntime) as MassNavigationSimulationRuntime
+        return _simulation
             ?? throw new InvalidOperationException($"MassNavigation runtime requires simulation runtime before {action}.");
+    }
+
+    private static MassNavigationRuntimeBinding RequireRuntimeBinding(GameEngine engine)
+    {
+        return engine.GetService(MassNavigationKeys.RuntimeBinding)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires RuntimeBinding.");
     }
 }
 
 public sealed class MassNavigationPreSimulationStepSystem : ISystem<float>
 {
+    private readonly GameEngine _engine;
+    private readonly MassNavigationSimulationRuntime _simulation;
+
+    public MassNavigationPreSimulationStepSystem(
+        GameEngine engine,
+        MassNavigationSimulationRuntime simulation)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+    }
+
     public void Initialize() { }
     public void BeforeUpdate(in float dt) { }
-    public void Update(in float dt) { }
+    public void Update(in float dt)
+    {
+        if (MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        {
+            _simulation.BeginFrame(dt);
+            _simulation.ObserveControlTick();
+        }
+    }
     public void AfterUpdate(in float dt) { }
     public void Dispose() { }
 }

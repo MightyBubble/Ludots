@@ -4,7 +4,6 @@
     "solverWindowWidthCm": 10000,
     "solverWindowHeightCm": 10000,
     "streamingChunkSizeCm": 6400,
-    "streamingRadiusCm": 16000,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 48000,
@@ -108,7 +107,6 @@
   },
   "scenario": {
     "agentsPerTeam": 2500,
-    "initialActiveTeamId": 1,
     "teams": [
       {
         "id": 1,
@@ -135,17 +133,16 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialCommandActorScratchCapacity": 10000,
-    "initialCommandActorSnapshotCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
       "groupMemberCapacity": 10000,
-      "commandActorScratchCapacity": 10000,
       "orderIngestionTokenCapacity": 256,
       "orderIngestionMemberCapacity": 10000,
+      "routeStateCapacity": 10000,
+      "routeWaypointCapacityPerAgent": 64,
       "loadedChunkCapacity": 256,
-      "metadataTeamCapacity": 4
+      "relationshipDomainCapacity": 4
     }
   },
   "cadence": {
@@ -192,13 +189,13 @@
       }
     ]
   },
+  "relationshipPolicy": {
+    "cooperativeStance": "Friendly"
+  },
   "flow": {
     "enabled": false,
     "iterationsPerStep": 4096,
     "maxIterationsPerStep": 131072,
-    "stepIntervalTicks": 1,
-    "crowdStampIntervalTicks": 1,
-    "obstacleStampIntervalTicks": 1,
     "forceRefreshFlow": false,
     "forceRefreshCrowd": false,
     "forceRefreshObstacles": false

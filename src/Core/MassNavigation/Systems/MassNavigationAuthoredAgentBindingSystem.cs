@@ -8,9 +8,11 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
@@ -30,6 +32,8 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly List<MassNavigationAgentSeed> _seeds;
     private readonly List<bool> _controllableFlags;
     private readonly int _agentCapacity;
+    private readonly ControlDomainQuery _controlDomains;
+    private readonly DomainStanceQuery _stances;
     private long _lastAuthoringSignature;
 
     public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
@@ -37,6 +41,10 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
         _agentCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        _controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires ControlDomainQuery.");
+        _stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+            ?? throw new InvalidOperationException("MassNavigation authored binding requires DomainStanceQuery.");
         _entities = new List<Entity>(_agentCapacity);
         _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
         _controllableFlags = new List<bool>(_agentCapacity);
@@ -195,7 +203,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         long entityHash = 1469598103934665603L;
         entityHash = Mix(entityHash, entity.Id);
         entityHash = Mix(entityHash, agent.ProfileId);
-        entityHash = Mix(entityHash, _engine.World.TryGet(entity, out Team team) ? team.Id : 0);
+        Entity domainRep = ResolveDomain(entity);
+        entityHash = Mix(entityHash, domainRep.Id);
+        entityHash = Mix(entityHash, domainRep.Version);
         if (_engine.World.TryGet(entity, out EntityLayer layer))
         {
             entityHash = Mix(entityHash, layer.Value.Category);
@@ -290,10 +300,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private MassNavigationAgentSeed CreateSeed(Entity entity, in MassNavigationAgent agent)
     {
         World world = _engine.World;
-        if (!world.TryGet(entity, out Team team))
-        {
-            throw new InvalidOperationException($"MassNavigationAgent entity {entity.Id} requires Team.");
-        }
+        Entity domainRep = ResolveDomain(entity);
 
         if (!world.TryGet(entity, out WorldPositionCm worldPosition))
         {
@@ -316,7 +323,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         float worldXCm = worldPosition.Value.X.ToFloat();
         float worldYCm = worldPosition.Value.Y.ToFloat();
         return new MassNavigationAgentSeed(
-            team.Id,
+            domainRep,
             _simulation.ToLocalXCm(worldXCm),
             _simulation.ToLocalYCm(worldYCm),
             profile.Heavy,
@@ -325,6 +332,22 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             geometry.RadiusCm,
             profile.SpeedCmPerSecond,
             new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
+    }
+
+    private Entity ResolveDomain(Entity entity)
+    {
+        if (_controlDomains.TryResolveControlDomain(entity, out Entity controlDomain))
+        {
+            return controlDomain;
+        }
+
+        if (_stances.TryResolveStanceDomain(entity, out Entity stanceDomain))
+        {
+            return stanceDomain;
+        }
+
+        throw new InvalidOperationException(
+            $"MassNavigationAgent entity {entity.Id} requires an authored control-domain or member-of relationship.");
     }
 
     private readonly struct AuthoredAgentBindingScan

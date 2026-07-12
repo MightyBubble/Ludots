@@ -36,9 +36,6 @@
       "FacingDirection": {
         "AngleRad": 0
       },
-      "Team": {
-        "Id": 1
-      },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
@@ -83,9 +80,6 @@
       "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
-      },
-      "Team": {
-        "Id": 1
       },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
@@ -132,9 +126,6 @@
       "FacingDirection": {
         "AngleRad": 0
       },
-      "Team": {
-        "Id": 2
-      },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
@@ -179,9 +170,6 @@
       "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
-      },
-      "Team": {
-        "Id": 2
       },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
@@ -228,9 +216,6 @@
       "FacingDirection": {
         "AngleRad": 0
       },
-      "Team": {
-        "Id": 3
-      },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
@@ -275,9 +260,6 @@
       "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
-      },
-      "Team": {
-        "Id": 3
       },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
@@ -324,9 +306,6 @@
       "FacingDirection": {
         "AngleRad": 0
       },
-      "Team": {
-        "Id": 4
-      },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
@@ -371,9 +350,6 @@
       "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0
-      },
-      "Team": {
-        "Id": 4
       },
       "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
