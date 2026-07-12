@@ -1450,8 +1450,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
         internal static void PreparePartialOrderTokens(
             OrderQueue orders,
             Span<Order> batch,
-            IReadOnlyDictionary<int, int> selectedTokenCounts,
-            IReadOnlyDictionary<int, int> activeTokenCounts)
+            Dictionary<int, int> selectedTokenCounts,
+            Dictionary<int, int> activeTokenCounts)
         {
             foreach (KeyValuePair<int, int> selected in selectedTokenCounts)
             {
