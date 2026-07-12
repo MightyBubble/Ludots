@@ -365,20 +365,18 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
                 graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
-                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
-                !_globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) ||
-                coordsObj is not Ludots.Core.Spatial.ISpatialCoordinateConverter spatialCoords)
+                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
             {
                 return false;
             }
 
-            var graphApi = GasGraphRuntimeApi.CreateProduction(
-                _world,
-                spatialQueries,
-                spatialCoords,
-                eventBus: null,
-                effectRequests: null,
-                _globals);
+            if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
+                graphApiObj is not GasGraphRuntimeApi graphApi)
+            {
+                throw new InvalidOperationException(
+                    "Context-scored order resolution requires the engine-owned production GasGraphRuntimeApi.");
+            }
+
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
             resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;

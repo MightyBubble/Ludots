@@ -229,7 +229,7 @@ namespace Ludots.Tests.GAS
             int tagId = TagRegistry.Register("Test.HasTagOp");
             _tagOps.AddTag(ref tags, ref counts, tagId);
 
-            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var api = new GasGraphRuntimeApi(world, tagOps: _tagOps);
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);             // E[0] = caster
             program.Add((ushort)GraphNodeOp.HasTag, dst: 0, a: 0, imm: tagId); // B[0] = HasTag(E[0], tagId)

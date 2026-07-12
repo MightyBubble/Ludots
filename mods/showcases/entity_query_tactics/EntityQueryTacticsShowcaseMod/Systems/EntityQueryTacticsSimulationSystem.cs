@@ -936,13 +936,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private IGraphRuntimeApi CreateGraphApi()
         {
-            return GasGraphRuntimeApi.CreateProduction(
-                _world,
-                _engine.SpatialQueries,
-                _engine.SpatialCoords,
-                _engine.EventBus,
-                _engine.GetService(CoreServiceKeys.EffectRequestQueue),
-                _engine.GlobalContext);
+            return _engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+                ?? throw new InvalidOperationException("Engine-owned production GasGraphRuntimeApi is missing.");
         }
 
         private uint NextSeed()

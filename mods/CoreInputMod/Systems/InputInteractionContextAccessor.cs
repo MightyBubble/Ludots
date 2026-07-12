@@ -12,7 +12,6 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
@@ -330,23 +329,16 @@ namespace CoreInputMod.Systems
                 ? resolvedGraphPrograms
                 : null;
             GasGraphRuntimeApi? graphApi = null;
-            if (graphPrograms != null &&
-                _globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) &&
-                coordsObj is ISpatialCoordinateConverter spatialCoords &&
-                HasProductionGraphServices())
+            if (graphPrograms != null)
             {
-                graphApi = GasGraphRuntimeApi.CreateProduction(
-                    _world,
-                    spatialQueries,
-                    spatialCoords,
-                    eventBus: null,
-                    effectRequests: null,
-                    _globals);
-                if (_globals.TryGetValue(CoreServiceKeys.LoadedGraphRuntime.Name, out var graphRuntimeObj) &&
-                    graphRuntimeObj is LoadedGraphRuntime graphRuntime)
+                if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
+                    graphApiObj is not GasGraphRuntimeApi productionGraphApi)
                 {
-                    graphApi.BindLoadedGraphRuntime(graphRuntime);
+                    throw new InvalidOperationException(
+                        "Ability aim presentation requires the engine-owned production GasGraphRuntimeApi when GraphProgramRegistry is present.");
                 }
+
+                graphApi = productionGraphApi;
             }
 
             runtime = new AbilityAimPresentationRuntime(
@@ -360,19 +352,6 @@ namespace CoreInputMod.Systems
                 graphPrograms,
                 graphApi);
             return true;
-        }
-
-        private bool HasProductionGraphServices()
-        {
-            return _globals.ContainsKey(CoreServiceKeys.TagOps.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipRuntime.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipTypeRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipMetricRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipFlagRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipReasonRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.TargetDispatchPresetRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.EntityCollectionStore.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.EntitySetQueryRuntime.Name);
         }
     }
 }
