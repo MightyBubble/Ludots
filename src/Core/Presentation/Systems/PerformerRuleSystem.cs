@@ -368,7 +368,7 @@ namespace Ludots.Core.Presentation.Systems
                     FloatC = evt.FloatC,
                     FloatD = evt.FloatD,
                 },
-                TargetPos = IntVector2.Zero,
+                TargetPosCm = IntVector2.Zero,
                 Api = _graphApi,
                 F = _floatRegs,
                 I = _intRegs,

@@ -131,7 +131,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = Entity.Null,
-                TargetPos = new IntVector2(1000, 0),
+                TargetPosCm = new IntVector2(1000, 0),
                 Api = api,
                 F = f,
                 I = i,
@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-            That(state.TargetPos.X, Is.EqualTo(500));
+            That(state.TargetPosCm.X, Is.EqualTo(500));
             That(state.B[0], Is.EqualTo(0));
         }
 
@@ -281,7 +281,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = Entity.Null,
                 ExplicitTarget = Entity.Null,
-                TargetPos = new IntVector2(50, 25),
+                TargetPosCm = new IntVector2(50, 25),
                 Api = api,
                 F = f,
                 I = i,
@@ -293,7 +293,7 @@ namespace Ludots.Tests.GAS
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             That(state.B[0], Is.EqualTo(1));
-            That(state.TargetPos, Is.EqualTo(new IntVector2(50, 0)));
+            That(state.TargetPosCm, Is.EqualTo(new IntVector2(50, 0)));
         }
     }
 }

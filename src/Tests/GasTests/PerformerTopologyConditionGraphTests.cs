@@ -380,7 +380,7 @@ namespace Ludots.Tests.Presentation
                 Caster = unit,
                 ExplicitTarget = p1Rep,
                 Viewer = p2Rep,
-                TargetPos = IntVector2.Zero,
+                TargetPosCm = IntVector2.Zero,
                 Api = api,
                 F = floats,
                 I = ints,

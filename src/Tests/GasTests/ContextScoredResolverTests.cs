@@ -456,13 +456,13 @@ namespace Ludots.Tests.GAS
                 return false;
             }
 
-            public int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => 0;
-            public int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer) => 0;
-            public int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => 0;
-            public int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => 0;
-            public int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer) => 0;
-            public int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer) => 0;
-            public int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => 0;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => default;
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => 0;
         public int GetRelationship(int teamA, int teamB) => 0;

@@ -303,22 +303,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryRadius(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryRadius(s.TargetPos, ins.ImmF, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRadius(s.TargetPosCm, ins.ImmF, s.Targets));
         }
 
         private static void HandleQueryCone(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryCone(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.ImmF, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryCone(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.ImmF, s.Targets));
         }
 
         private static void HandleQueryRectangle(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryRectangle(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRectangle(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
         }
 
         private static void HandleQueryLine(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryLine(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryLine(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+        }
+
+        private static void ApplySpatialQueryResult(
+            ref GraphExecutionState s,
+            in GraphInstruction ins,
+            Ludots.Core.Spatial.SpatialQueryResult result)
+        {
+            if (ins.Flags > 1)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidSpatialQueryCapacityPolicy: flags={ins.Flags}.");
+            }
+
+            if ((uint)result.Count > (uint)s.Targets.Length || result.Dropped < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidSpatialQueryResult: count={result.Count}, dropped={result.Dropped}, capacity={s.Targets.Length}.");
+            }
+
+            if (result.Dropped > 0 && ins.Flags == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpatialQueryIncomplete: count={result.Count}, dropped={result.Dropped}.");
+            }
+
+            s.TargetList.SetCount(result.Count);
+            if (ins.Flags == 1)
+            {
+                s.I[ins.Dst] = result.Dropped;
+            }
         }
 
         // ── Query Filters ──
@@ -361,7 +391,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleAggMinByDistance(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.E[ins.Dst] = s.Api.TryMinEntityByDistance(s.TargetList.Span, s.TargetPos, out Entity entity, out _)
+            s.E[ins.Dst] = s.Api.TryMinEntityByDistance(s.TargetList.Span, s.TargetPosCm, out Entity entity, out _)
                 ? entity
                 : Entity.Null;
         }
@@ -790,17 +820,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryHexRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexRange(s.TargetPos, ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexRange(s.TargetPosCm, ins.Imm, s.Targets));
         }
 
         private static void HandleQueryHexRing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexRing(s.TargetPos, ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexRing(s.TargetPosCm, ins.Imm, s.Targets));
         }
 
         private static void HandleQueryHexNeighbors(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexNeighbors(s.TargetPos, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexNeighbors(s.TargetPosCm, s.Targets));
         }
 
         // ── Additional Math Ops (22-28) ──
@@ -1027,12 +1057,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadTargetPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.TargetPos.X;
+            s.I[ins.Dst] = s.TargetPosCm.X;
         }
 
         private static void HandleLoadTargetPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.TargetPos.Y;
+            s.I[ins.Dst] = s.TargetPosCm.Y;
         }
 
         private static void HandleClampTargetToRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1043,14 +1073,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            Fix64Vec2 targetCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            Fix64Vec2 targetCm = Fix64Vec2.FromInt(s.TargetPosCm.X, s.TargetPosCm.Y);
             PlacementValidation.ClampToRange(
                 in originCm,
                 ref targetCm,
                 Fix64.FromFloat(s.F[ins.B]),
                 out bool inRange);
             var rounded = targetCm.RoundToInt();
-            s.TargetPos = new IntVector2(rounded.x, rounded.y);
+            s.TargetPosCm = new IntVector2(rounded.x, rounded.y);
             s.B[ins.Dst] = (byte)(inRange ? 1 : 0);
         }
 
@@ -1062,7 +1092,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            Fix64Vec2 pointCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(s.TargetPosCm.X, s.TargetPosCm.Y);
             bool inside = PlacementValidation.IsPointInCircle(
                 in pointCm,
                 in centerCm,
@@ -1075,7 +1105,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool found = s.Api.TrySnapTargetToNearestInCollection(
                 s.E[ins.A],
                 ins.Imm,
-                ref s.TargetPos,
+                ref s.TargetPosCm,
                 s.F[ins.B],
                 out Entity snappedEntity);
             s.E[ins.Dst] = snappedEntity;
@@ -1088,7 +1118,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleSnapToNearestGraphEdge(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             bool found = s.Api.TrySnapTargetToNearestGraphEdge(
-                ref s.TargetPos,
+                ref s.TargetPosCm,
                 s.F[ins.A],
                 out _);
             s.B[ins.Dst] = (byte)(found ? 1 : 0);

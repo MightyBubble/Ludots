@@ -15,7 +15,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World world,
             Entity caster,
             Entity explicitTarget,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
@@ -34,7 +34,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 World = world,
                 Caster = caster,
                 ExplicitTarget = explicitTarget,
-                TargetPos = targetPos,
+                TargetPosCm = targetPosCm,
                 Api = api,
                 F = f,
                 I = i,
@@ -51,7 +51,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World world,
             Entity caster,
             Entity explicitTarget,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             in GraphProgramBuffer program,
             IGraphRuntimeApi api)
         {
@@ -63,7 +63,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 tmp[idx] = program.Get(idx);
             }
 
-            Execute(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api);
+            Execute(world, caster, explicitTarget, targetPosCm, tmp.Slice(0, count), api);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World world,
             Entity caster,
             Entity explicitTarget,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
@@ -98,7 +98,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 World = world,
                 Caster = caster,
                 ExplicitTarget = explicitTarget,
-                TargetPos = targetPos,
+                TargetPosCm = targetPosCm,
                 Api = api,
                 F = f,
                 I = i,
@@ -121,7 +121,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World world,
             Entity caster,
             Entity explicitTarget,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
@@ -140,7 +140,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 World = world,
                 Caster = caster,
                 ExplicitTarget = explicitTarget,
-                TargetPos = targetPos,
+                TargetPosCm = targetPosCm,
                 Api = api,
                 F = f,
                 I = i,
@@ -161,7 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             World world,
             Entity caster,
             Entity explicitTarget,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             in GraphProgramBuffer program,
             IGraphRuntimeApi api)
         {
@@ -173,7 +173,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 tmp[idx] = program.Get(idx);
             }
 
-            return ExecuteValidation(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api);
+            return ExecuteValidation(world, caster, explicitTarget, targetPosCm, tmp.Slice(0, count), api);
         }
     }
 }

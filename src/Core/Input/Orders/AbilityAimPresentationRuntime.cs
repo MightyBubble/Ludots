@@ -393,7 +393,7 @@ namespace Ludots.Core.Input.Orders
                 Caster = actor,
                 ExplicitTarget = previewTarget,
                 TargetContext = previewTarget,
-                TargetPos = ToGraphTargetPos(aimWorldCm),
+                TargetPosCm = ToGraphTargetPos(aimWorldCm),
                 Api = _graphApi,
                 F = floats,
                 I = ints,

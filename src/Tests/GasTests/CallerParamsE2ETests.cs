@@ -184,7 +184,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
             };
 
-            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
             That(requests.Count, Is.EqualTo(1));
             var req = requests[0];
@@ -264,4 +264,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

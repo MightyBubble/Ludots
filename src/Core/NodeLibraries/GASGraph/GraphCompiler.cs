@@ -180,19 +180,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.C = RequireInput(node, 2, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.QueryRadius:
-                        ins.ImmF = node.Radius;
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
+                        ins.ImmF = node.RadiusCm;
                         break;
                     case GraphNodeOp.QueryCone:
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
                         ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.B = RequireInputOrConstInt(node, 1, node.HalfAngleDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.ImmF = node.RangeCm;
                         break;
                     case GraphNodeOp.QueryRectangle:
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
                         ins.A = RequireInputOrConstInt(node, 0, node.HalfWidthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.B = RequireInputOrConstInt(node, 1, node.HalfHeightCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.Imm = node.RotationDeg;
                         break;
                     case GraphNodeOp.QueryLine:
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
                         ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.B = RequireInputOrConstInt(node, 1, node.LengthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
                         ins.Imm = node.HalfWidthCm;
@@ -238,9 +242,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         break;
                     case GraphNodeOp.QueryHexRange:
                     case GraphNodeOp.QueryHexRing:
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
                         ins.Imm = node.HexRadius;
                         break;
                     case GraphNodeOp.QueryHexNeighbors:
+                        ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
                         ins.A = node.Inputs.Count > 0
@@ -499,6 +505,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        ins.Flags = byte.MaxValue;
+                        if (!string.IsNullOrWhiteSpace(node.ValidOutput))
+                        {
+                            // B[0] is the validation result contract. Snap validity must never claim it.
+                            if (boolNext == 0)
+                            {
+                                boolNext = 1;
+                            }
+                            byte snapValidReg = Alloc(ref boolNext, GraphVmLimits.MaxBoolRegisters, cfg.Id, node.Id, diagnostics);
+                            ins.Flags = snapValidReg;
+                            RegisterAuxiliaryOutput(node.ValidOutput, GraphValueType.Bool, snapValidReg, "validOutput", node, valueMap, cfg.Id, diagnostics);
+                        }
                         break;
                     case GraphNodeOp.SnapToNearestGraphEdge:
                         ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
@@ -591,6 +609,81 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SnapToNearestGraphEdge => (GraphValueType.Bool, null),
                 _ => (GraphValueType.Void, null)
             };
+        }
+
+        private static void ConfigureSpatialQueryCapacity(
+            GraphNodeConfig node,
+            ref GraphInstruction ins,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            ref int intNext,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.Equals(node.QueryCapacityPolicy, "RequireComplete", StringComparison.Ordinal))
+            {
+                ins.Flags = 0;
+                if (!string.IsNullOrWhiteSpace(node.DroppedOutput))
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Node '{node.Id}' cannot declare droppedOutput when queryCapacityPolicy is 'RequireComplete'.",
+                        graphId,
+                        node.Id));
+                }
+                return;
+            }
+
+            if (string.Equals(node.QueryCapacityPolicy, "AllowTruncated", StringComparison.Ordinal))
+            {
+                ins.Flags = 1;
+                if (string.IsNullOrWhiteSpace(node.DroppedOutput))
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Node '{node.Id}' must declare droppedOutput when queryCapacityPolicy is 'AllowTruncated'.",
+                        graphId,
+                        node.Id));
+                    return;
+                }
+
+                byte droppedReg = Alloc(ref intNext, GraphVmLimits.MaxIntRegisters, graphId, node.Id, diagnostics);
+                ins.Dst = droppedReg;
+                RegisterAuxiliaryOutput(node.DroppedOutput, GraphValueType.Int, droppedReg, "droppedOutput", node, valueMap, graphId, diagnostics);
+                return;
+            }
+
+            diagnostics.Add(new GraphDiagnostic(
+                GraphDiagnosticSeverity.Error,
+                GraphDiagnosticCodes.TypeMismatch,
+                $"Node '{node.Id}' must declare queryCapacityPolicy as 'RequireComplete' or 'AllowTruncated'.",
+                graphId,
+                node.Id));
+        }
+
+        private static void RegisterAuxiliaryOutput(
+            string outputId,
+            GraphValueType type,
+            byte register,
+            string propertyName,
+            GraphNodeConfig node,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (valueMap.ContainsKey(outputId))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.DuplicateNodeId,
+                    $"Node '{node.Id}' {propertyName} '{outputId}' conflicts with an existing value id.",
+                    graphId,
+                    node.Id));
+                return;
+            }
+
+            valueMap[outputId] = (type, register);
         }
 
         private static GraphOutputSchema CompileOutputSchema(

@@ -466,7 +466,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Caster = caster,
                 ExplicitTarget = target,
                 TargetContext = targetContext,
-                TargetPos = targetPos,
+                TargetPosCm = targetPos,
                 RandomSeed = BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed),
                 Api = api,
                 F = _floatRegs,

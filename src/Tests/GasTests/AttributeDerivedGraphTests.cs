@@ -221,13 +221,13 @@ namespace Ludots.Tests.GAS
             // Stubs for unused methods
             public bool TryGetGridPos(Arch.Core.Entity entity, out Ludots.Core.Mathematics.IntVector2 gridPos) { gridPos = default; return false; }
             public bool HasTag(Arch.Core.Entity entity, int tagId) => false;
-            public int QueryRadius(Ludots.Core.Mathematics.IntVector2 center, float radius, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryCone(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryRectangle(Ludots.Core.Mathematics.IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryLine(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryHexRange(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryHexRing(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => 0;
-            public int QueryHexNeighbors(Ludots.Core.Mathematics.IntVector2 center, System.Span<Arch.Core.Entity> buffer) => 0;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRadius(Ludots.Core.Mathematics.IntVector2 center, float radius, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryCone(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRectangle(Ludots.Core.Mathematics.IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryLine(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRange(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRing(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexNeighbors(Ludots.Core.Mathematics.IntVector2 center, System.Span<Arch.Core.Entity> buffer) => default;
             public int GetTeamId(Arch.Core.Entity entity) => 0;
             public uint GetEntityLayerCategory(Arch.Core.Entity entity) => 0;
         public int GetRelationship(int teamA, int teamB) => 0;

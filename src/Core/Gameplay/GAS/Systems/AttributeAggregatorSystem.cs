@@ -102,7 +102,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     world,
                     caster: entity,        // E[0] = Self
                     explicitTarget: entity, // E[1] = Self (derived graphs operate on self)
-                    targetPos: default,
+                    targetPosCm: default,
                     program,
                     graphApi);
             }

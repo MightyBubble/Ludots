@@ -398,46 +398,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return false;
         }
 
-        public int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer)
+        public SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null)
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             }
-            if (_coords == null)
-            {
-                throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            }
-            WorldCmInt2 worldCenter = _coords.GridToWorld(center);
-            int radiusCm = radius >= 0f
-                ? (int)(radius * _coords!.GridCellSizeCm + 0.5f)
-                : -(int)(-radius * _coords!.GridCellSizeCm + 0.5f);
-            return _spatialQueries.QueryRadius(worldCenter, radiusCm, buffer).Count;
+            var worldCenter = new WorldCmInt2(centerCm.X, centerCm.Y);
+            int roundedRadiusCm = radiusCm >= 0f
+                ? (int)(radiusCm + 0.5f)
+                : -(int)(-radiusCm + 0.5f);
+            return _spatialQueries.QueryRadius(worldCenter, roundedRadiusCm, buffer);
         }
 
-        public int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
+        public SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldOrigin = _coords.GridToWorld(origin);
-            int rCm = (int)(rangeCm * _coords.GridCellSizeCm + 0.5f);
-            return _spatialQueries.QueryCone(worldOrigin, directionDeg, halfAngleDeg, rCm, buffer).Count;
+            var worldOrigin = new WorldCmInt2(originCm.X, originCm.Y);
+            int rCm = (int)(rangeCm + 0.5f);
+            return _spatialQueries.QueryCone(worldOrigin, directionDeg, halfAngleDeg, rCm, buffer);
         }
 
-        public int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
+        public SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldCenter = _coords.GridToWorld(center);
-            return _spatialQueries.QueryRectangle(worldCenter, halfWidthCm, halfHeightCm, rotationDeg, buffer).Count;
+            var worldCenter = new WorldCmInt2(centerCm.X, centerCm.Y);
+            return _spatialQueries.QueryRectangle(worldCenter, halfWidthCm, halfHeightCm, rotationDeg, buffer);
         }
 
-        public int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
+        public SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldOrigin = _coords.GridToWorld(origin);
-            return _spatialQueries.QueryLine(worldOrigin, directionDeg, lengthCm, halfWidthCm, buffer).Count;
+            var worldOrigin = new WorldCmInt2(originCm.X, originCm.Y);
+            return _spatialQueries.QueryLine(worldOrigin, directionDeg, lengthCm, halfWidthCm, buffer);
         }
 
         public int CollectMapEntities(Span<Entity> buffer)
@@ -768,26 +761,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         // ── Hex spatial queries ──
 
-        public int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             if (_coords == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            var hexCenter = _coords.WorldToHex(_coords.GridToWorld(center));
-            return _spatialQueries.QueryHexRange(hexCenter, hexRadius, buffer).Count;
+            var hexCenter = _coords.WorldToHex(new WorldCmInt2(centerCm.X, centerCm.Y));
+            return _spatialQueries.QueryHexRange(hexCenter, hexRadius, buffer);
         }
 
-        public int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             if (_coords == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            var hexCenter = _coords.WorldToHex(_coords.GridToWorld(center));
-            return _spatialQueries.QueryHexRing(hexCenter, hexRadius, buffer).Count;
+            var hexCenter = _coords.WorldToHex(new WorldCmInt2(centerCm.X, centerCm.Y));
+            return _spatialQueries.QueryHexRing(hexCenter, hexRadius, buffer);
         }
 
-        public int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer)
         {
             // Neighbors = Ring(1)
-            return QueryHexRing(center, 1, buffer);
+            return QueryHexRing(centerCm, 1, buffer);
         }
 
         // ── Blackboard immediate read/write ──
