@@ -861,8 +861,90 @@ namespace Ludots.Tests.GAS
             That(world.Get<TagCountContainer>(actor).GetCount(cooldownTagId), Is.EqualTo(1));
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void AbilityExecSystem_ActivationTagsRejectCast_AndFailOrder(bool requiredAllMissing)
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9100;
+            const int activationTagId = 73;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer());
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order
+            {
+                OrderId = requiredAllMissing ? 10 : 11,
+                Actor = actor,
+                OrderTypeId = castAbilityOrderTypeId,
+            };
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
+            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var blockTags = new AbilityActivationBlockTags();
+            if (requiredAllMissing)
+            {
+                blockTags.RequiredAll.AddTag(activationTagId);
+            }
+            else
+            {
+                blockTags.BlockedAny.AddTag(activationTagId);
+                ref var actorTags = ref world.Get<GameplayTagContainer>(actor);
+                actorTags.AddTag(activationTagId);
+            }
+
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition
+            {
+                HasActivationBlockTags = true,
+                ActivationBlockTags = blockTags,
+            });
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                AllowQueuedMode = false,
+                ClearQueueOnActivate = true,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+            });
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                4096,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                tagOps: new TagOps(),
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes);
+
+            That(system.UpdateSlice(0f, int.MaxValue), Is.True);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(presentationEvents.Count, Is.EqualTo(1));
+            That(presentationEvents.Events[0].FailReason, Is.EqualTo(AbilityCastFailReason.BlockedByTag));
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            ref readonly OrderTerminalOutcome terminal = ref orderTypes.TerminalResults[0];
+            That(terminal.OrderId, Is.EqualTo(order.OrderId));
+            That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
+            That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.ActivationBlocked));
+        }
+
         [Test]
-        public void AbilityExecSystem_ActivationPreconditionGraphRejectsCast_AndCancelsOrder()
+        public void AbilityExecSystem_ActivationPreconditionGraphRejectsCast_AndFailsOrder()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -942,10 +1024,15 @@ namespace Ludots.Tests.GAS
 
             That(completed, Is.True);
             That(world.Has<AbilityExecInstance>(actor), Is.False);
-            That(world.Get<OrderBuffer>(actor).HasActive, Is.False, "Rejected casts must cancel the active order so queued orders can promote.");
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False, "Rejected casts must fail the active order so queued orders can promote.");
             That(presentationEvents.Count, Is.EqualTo(1));
             That(presentationEvents.Events[0].Kind, Is.EqualTo(GasPresentationEventKind.CastFailed));
             That(presentationEvents.Events[0].FailReason, Is.EqualTo(AbilityCastFailReason.PreconditionFailed));
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            ref readonly OrderTerminalOutcome terminal = ref orderTypes.TerminalResults[0];
+            That(terminal.OrderId, Is.EqualTo(order.OrderId));
+            That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
+            That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
         }
 
         [Test]

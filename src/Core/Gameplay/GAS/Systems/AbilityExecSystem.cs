@@ -248,35 +248,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (!blockTags.RequiredAll.IsEmpty && (!hasActorTags || !actorTags.ContainsAll(in blockTags.RequiredAll)))
                         {
-                            // Cancel the order via OrderSubmitter so next order can promote
-                            if (_orderTypeRegistry != null)
-                            {
-                                OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
-                            }
-                            _presentationEvents?.Publish(new GasPresentationEvent
-                            {
-                                Kind = GasPresentationEventKind.CastFailed,
-                                Actor = actor,
-                                AbilitySlot = slotIndex,
-                                AbilityId = slot.AbilityId,
-                                FailReason = AbilityCastFailReason.BlockedByTag
-                            });
+                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.BlockedByTag);
                             continue;
                         }
                         if (hasActorTags && !blockTags.BlockedAny.IsEmpty && actorTags.Intersects(in blockTags.BlockedAny))
                         {
-                            if (_orderTypeRegistry != null)
-                            {
-                                OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
-                            }
-                            _presentationEvents?.Publish(new GasPresentationEvent
-                            {
-                                Kind = GasPresentationEventKind.CastFailed,
-                                Actor = actor,
-                                AbilitySlot = slotIndex,
-                                AbilityId = slot.AbilityId,
-                                FailReason = AbilityCastFailReason.BlockedByTag
-                            });
+                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.BlockedByTag);
                             continue;
                         }
                     }
@@ -365,19 +342,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 _graphPrograms,
                                 _graphApi))
                         {
-                            if (_orderTypeRegistry != null)
-                            {
-                                OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
-                            }
-                            _presentationEvents?.Publish(new GasPresentationEvent
-                            {
-                                Kind = GasPresentationEventKind.CastFailed,
-                                Actor = actor,
-                                Target = targetEntity,
-                                AbilitySlot = slotIndex,
-                                AbilityId = slot.AbilityId,
-                                FailReason = AbilityCastFailReason.PreconditionFailed
-                            });
+                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
                             continue;
                         }
                     }
