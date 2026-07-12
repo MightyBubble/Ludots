@@ -126,7 +126,7 @@ namespace Ludots.Tests.GAS
                     onActivate.Add(tplHeal);
                 }
 
-                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer());
+                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer(), new DirtyFlags());
                 ref var playerAbilities = ref world.Get<AbilityStateBuffer>(player);
                 var abilityDefs = new AbilityDefinitionRegistry();
                 abilityDefs.RegisterFromEntity(world, abilityFirebolt, 6001);
@@ -135,8 +135,8 @@ namespace Ludots.Tests.GAS
                 playerAbilities.AddAbility(6002);
                 world.Get<AttributeBuffer>(player).SetCurrent(attrHealth, 100f);
 
-                var goblinA = world.Create(new AttributeBuffer());
-                var goblinB = world.Create(new AttributeBuffer());
+                var goblinA = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var goblinB = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(goblinA).SetCurrent(attrHealth, 100f);
                 world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
 
@@ -153,7 +153,8 @@ namespace Ludots.Tests.GAS
                     null,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = 2048
                 };
@@ -302,7 +303,7 @@ namespace Ludots.Tests.GAS
                 var targets = new Entity[targetsCount];
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    targets[i] = world.Create(new AttributeBuffer());
+                    targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
                     attr.SetCurrent(attrHealth, 1000f);
                 }
@@ -326,7 +327,8 @@ namespace Ludots.Tests.GAS
                     null,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

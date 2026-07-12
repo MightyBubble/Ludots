@@ -440,8 +440,11 @@ namespace Ludots.Tests.GAS
         public void BuiltinHandlers_ApplyModifiers_AppliesModifiersToTarget()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             var effect = world.Create();
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var runtime = new BuiltinHandlerExecutionContext { TagOps = new TagOps() };
 
             var ctx = new EffectContext { Source = effect, Target = target };
             var tpl = new EffectTemplateData();
@@ -450,7 +453,7 @@ namespace Ludots.Tests.GAS
             tpl.Modifiers.Add(attributeId, ModifierOp.Add, 42f);
 
             var mergedParams = new EffectConfigParams();
-            BuiltinHandlers.HandleApplyModifiers(world, effect, ref ctx, in mergedParams, in tpl);
+            registry.Invoke(BuiltinHandlerId.ApplyModifiers, world, effect, ref ctx, in mergedParams, in tpl, runtime);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
             That(attrBuf.GetCurrent(attributeId), Is.EqualTo(42f));
@@ -465,8 +468,11 @@ namespace Ludots.Tests.GAS
             That(fxKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
             That(fyKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
 
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             var effect = world.Create();
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var runtime = new BuiltinHandlerExecutionContext { TagOps = new TagOps() };
             const int forceXAttrId = AttributeBuffer.MAX_ATTRS - 2;
             const int forceYAttrId = AttributeBuffer.MAX_ATTRS - 1;
 
@@ -477,7 +483,7 @@ namespace Ludots.Tests.GAS
             mergedParams.TryAddFloat(fxKey, 10f);
             mergedParams.TryAddFloat(fyKey, -3f);
 
-            BuiltinHandlers.HandleApplyForce(world, effect, ref ctx, in mergedParams, in tpl);
+            registry.Invoke(BuiltinHandlerId.ApplyForce, world, effect, ref ctx, in mergedParams, in tpl, runtime);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
             That(attrBuf.GetCurrent(forceXAttrId), Is.EqualTo(10f));
@@ -849,6 +855,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<Team>(spawned).Id, Is.EqualTo(7));
             That(world.Has<MapEntity>(spawned), Is.True);
             That(world.Get<MapEntity>(spawned).MapId.Value, Is.EqualTo("runtime_spawn_test"));
+            That(world.Has<DirtyFlags>(spawned), Is.True);
             That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(spawned), Is.True);
             That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(spawned).Value, Is.GreaterThan(0));
 
@@ -1178,8 +1185,9 @@ namespace Ludots.Tests.GAS
             That(receipts.Count, Is.EqualTo(0));
 
             var queue = new DeferredTriggerQueue();
-            using var deferred = new DeferredTriggerCollectionSystem(world, queue);
-            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f);
+            var tagOps = new TagOps();
+            using var deferred = new DeferredTriggerCollectionSystem(world, queue, tagOps);
+            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f, tagOps);
             deferred.Update(0.016f);
 
             That(queue.AttributeTriggerCount, Is.EqualTo(1));

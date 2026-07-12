@@ -8,6 +8,7 @@ using GenreInfoShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation;
@@ -289,6 +290,11 @@ namespace GenreInfoShowcaseMod.Runtime
             {
                 world.Add(entity, attributes);
             }
+
+            if (!world.Has<DirtyFlags>(entity))
+            {
+                world.Add(entity, new DirtyFlags());
+            }
         }
 
         private static void SetEntityTags(World world, string entityName, params string[] tagNames)
@@ -299,11 +305,17 @@ namespace GenreInfoShowcaseMod.Runtime
                 return;
             }
 
-            GameplayTagContainer tags = world.TryGet(entity, out GameplayTagContainer existing) ? existing : new GameplayTagContainer();
-            tags.Clear();
+            GameplayTagContainer tags = default;
+            TagCountContainer counts = default;
             for (int i = 0; i < tagNames.Length; i++)
             {
-                tags.AddTag(TagRegistry.Register(tagNames[i]));
+                int tagId = TagRegistry.Register(tagNames[i]);
+                tags.AddTag(tagId);
+                if (!counts.AddCount(tagId))
+                {
+                    throw new InvalidOperationException(
+                        $"{TagOps.TagCountOverflowError}: entity={entity.Id}, source=GenreInfoShowcase.");
+                }
             }
 
             if (world.Has<GameplayTagContainer>(entity))
@@ -314,6 +326,17 @@ namespace GenreInfoShowcaseMod.Runtime
             {
                 world.Add(entity, tags);
             }
+
+            if (world.Has<TagCountContainer>(entity))
+            {
+                world.Set(entity, counts);
+            }
+            else
+            {
+                world.Add(entity, counts);
+            }
+
+            TagStateInstaller.EnsureInstalled(world, entity);
         }
 
         private static void EnsurePresentationStableIds(GameEngine engine)

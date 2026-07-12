@@ -68,14 +68,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps() });
 
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
             That(hp, Is.EqualTo(75f), "ApplyModifiers via Builtin handler path should reduce HP by 25");
@@ -109,7 +110,7 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
@@ -149,7 +150,7 @@ namespace Ludots.Tests.GAS
 
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
                 queue.Publish(new EffectRequest
                 {
@@ -366,13 +367,14 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps() });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);
             That(buf.GetCurrent(forceXAttrId), Is.EqualTo(100f), "ForceX should be applied");

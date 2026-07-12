@@ -471,6 +471,7 @@ namespace Ludots.Tests.GAS
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
         public void RemoveEffectTemplate(Entity target, int templateId) { }
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
+        public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value) { }
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value) { value = 0f; return false; }
             public bool TryReadBlackboardInt(Entity entity, int keyId, out int value) { value = 0; return false; }

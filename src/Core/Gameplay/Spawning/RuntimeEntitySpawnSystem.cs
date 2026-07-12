@@ -166,7 +166,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
                 new CullState { IsVisible = false, LOD = LODLevel.Low },
-                new AttributeBuffer());
+                new AttributeBuffer(),
+                new DirtyFlags());
             EnsurePresentationStableId(entity);
 
             string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
@@ -180,6 +181,10 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
+            if (World.Has<GameplayTagContainer>(entity))
+            {
+                TagStateInstaller.EnsureInstalled(World, entity);
+            }
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);

@@ -821,7 +821,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
         {
-            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta);
+            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta, RequireTagOps());
+        }
+
+        public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
+        {
+            AttributeMutationOps.SetCurrent(_world, target, attributeId, value, RequireTagOps());
         }
 
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)

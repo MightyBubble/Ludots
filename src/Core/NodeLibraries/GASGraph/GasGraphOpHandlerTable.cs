@@ -1052,7 +1052,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var self = s.Caster;
             if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
             {
-                AttributeMutationOps.SetCurrent(s.World, self, ins.Imm, s.F[ins.A]);
+                s.Api.ModifyAttributeSet(s.Caster, self, ins.Imm, s.F[ins.A]);
             }
         }
 

@@ -149,6 +149,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.Relationships = relationshipRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _builtinRuntime.TagOps = _tagOps;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;

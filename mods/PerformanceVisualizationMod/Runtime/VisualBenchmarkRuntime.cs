@@ -436,6 +436,7 @@ namespace PerformanceVisualizationMod.Runtime
                 if (scenario.AttachHealthAttributes)
                 {
                     world.Add(entity, new AttributeBuffer());
+                    world.Add(entity, new DirtyFlags());
                     ref var attributes = ref world.Get<AttributeBuffer>(entity);
                     attributes.SetBase(_healthAttributeId, 100f);
                     attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));

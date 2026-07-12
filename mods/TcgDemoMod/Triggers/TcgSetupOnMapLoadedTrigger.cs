@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
@@ -89,8 +90,7 @@ namespace TcgDemoMod.Triggers
                     return;
                 }
 
-                if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
-                if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
+                TagStateInstaller.EnsureInstalled(world, e);
                 if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
             });
         }

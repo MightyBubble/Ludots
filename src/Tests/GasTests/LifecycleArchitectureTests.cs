@@ -85,7 +85,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps());
 
             var state = new LifecycleTransactionState
             {
@@ -177,7 +178,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 templateKeys,
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps());
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
 
             executor.ExecutePhase(
@@ -279,7 +281,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 templateKeys,
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps());
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
 
             executor.ExecutePhase(
@@ -582,7 +585,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps());
             var state = new LifecycleTransactionState
             {
                 Source = source,

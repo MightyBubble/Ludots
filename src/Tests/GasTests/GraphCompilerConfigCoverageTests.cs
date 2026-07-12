@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
         public void GraphsJson_CompilesAndExecutesIntBlackboardConfigAndSelfAttributeOps()
         {
             using var world = World.Create();
-            var caster = world.Create(new AttributeBuffer());
+            var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
             var target = world.Create();
             int copiedAttr = AttributeRegistry.Register("tests.attr.copiedFloat");
             var api = new RecordingGraphApi(world);
@@ -144,7 +144,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty());
+                new AttributeAggregateDirty(),
+                new DirtyFlags());
             ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(entity);
             buffer.SetBase(sourceAttr, 10f);
             buffer.SetCurrent(sourceAttr, 10f);
@@ -155,7 +156,7 @@ namespace Ludots.Tests.GAS
                 "AttributeDerivedGraphBinding",
                 JsonNode.Parse("""{ "graphs": [ "tests.graph.derived-attribute" ] }""")!);
 
-            var system = new AttributeAggregatorSystem(world, programs, new RecordingGraphApi(world));
+            var system = new AttributeAggregatorSystem(world, programs, new RecordingGraphApi(world), new TagOps());
             system.Update(0f);
 
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(derivedAttr), Is.EqualTo(12.5f));
@@ -639,6 +640,10 @@ namespace Ludots.Tests.GAS
             public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
             public void RemoveEffectTemplate(Entity target, int templateId) { }
             public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
+            public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
+            {
+                _world.Get<AttributeBuffer>(target).SetCurrent(attributeId, value);
+            }
             public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value) => FloatBlackboard.TryGetValue((entity, keyId), out value);
             public bool TryReadBlackboardInt(Entity entity, int keyId, out int value) => IntBlackboard.TryGetValue((entity, keyId), out value);

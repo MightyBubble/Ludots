@@ -61,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS
                 : templateData.Modifiers;
             int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
             float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
-            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers);
+            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
             float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
             runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
@@ -80,9 +80,9 @@ namespace Ludots.Core.Gameplay.GAS
             mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
 
             if (templateData.PresetAttribute0 > 0)
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
             if (templateData.PresetAttribute1 > 0)
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
         public static void HandleSpatialQuery(

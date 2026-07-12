@@ -64,10 +64,11 @@ namespace Ludots.Tests.GAS
                 effectRequests,
                 null,
                 effectTemplates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-            var appSystem = new EffectApplicationSystem(_world, effectRequests);
-            var aggSystem = new AttributeAggregatorSystem(_world);
-            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: _tagOps);
+            var appSystem = new EffectApplicationSystem(_world, effectRequests, tagOps: _tagOps);
+            var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
+            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests, tagOps: _tagOps);
             
             // Act: 按Phase顺序执行
             float dt = 0.016f;
@@ -193,7 +194,7 @@ namespace Ludots.Tests.GAS
             _world.Add(entity, new DirtyFlags());
             
             var triggerQueue = new DeferredTriggerQueue();
-            var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue);
+            var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps);
             var processSystem = new DeferredTriggerProcessSystem(_world, triggerQueue, new GameplayEventBus());
             
             // 修改属性值（触发脏标记）

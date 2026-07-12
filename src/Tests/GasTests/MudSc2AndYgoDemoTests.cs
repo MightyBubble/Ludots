@@ -132,8 +132,9 @@ namespace Ludots.Tests.GAS
                 var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, orderRuleRegistry, incomingOrders, 30);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
-                var timedTags = new TimedTagExpirationSystem(world, clock);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
+                var tagOps = new TagOps();
+                var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -146,13 +147,14 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
-                var agg = new AttributeAggregatorSystem(world);
+                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
-                var player = world.Create(new AttributeBuffer(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var playerAttr = ref world.Get<AttributeBuffer>(player);
                 playerAttr.SetBase(attrHealth, 100f);
                 playerAttr.SetBase(attrEnergy, 75f);
@@ -160,7 +162,7 @@ namespace Ludots.Tests.GAS
                 playerAttr.SetBase(attrMoveSpeed, 1f);
                 playerAttr.SetBase(attrShield, 0f);
 
-                var enemy = world.Create(new AttributeBuffer(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var enemy = world.Create(new AttributeBuffer(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var enemyAttr = ref world.Get<AttributeBuffer>(enemy);
                 enemyAttr.SetBase(attrHealth, 60f);
                 enemyAttr.SetBase(attrEnergy, 50f);
@@ -168,7 +170,7 @@ namespace Ludots.Tests.GAS
                 enemyAttr.SetBase(attrMoveSpeed, 1f);
                 enemyAttr.SetBase(attrShield, 40f);
 
-                var enemy2 = world.Create(new AttributeBuffer(), new GameplayTagContainer(), new TagCountContainer());
+                var enemy2 = world.Create(new AttributeBuffer(), new DirtyFlags(), new GameplayTagContainer(), new TagCountContainer());
                 ref var enemy2Attr = ref world.Get<AttributeBuffer>(enemy2);
                 enemy2Attr.SetBase(attrHealth, 60f);
                 enemy2Attr.SetBase(attrEnergy, 50f);
@@ -350,6 +352,7 @@ namespace Ludots.Tests.GAS
 
                 var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, incomingOrders, 30);
+                var tagOps2 = new TagOps();
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -362,8 +365,9 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-                var agg = new AttributeAggregatorSystem(world);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps2);
+                var agg = new AttributeAggregatorSystem(world, tagOps: tagOps2);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
 
@@ -375,9 +379,9 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var player = world.Create(new AttributeBuffer());
+                var player = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 50f);
-                var opponent = world.Create(new AttributeBuffer());
+                var opponent = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(opponent).SetBase(attrHealth, 50f);
 
                 string logPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "mud_ygo_chain_demo.log");
@@ -476,7 +480,8 @@ namespace Ludots.Tests.GAS
                 var inputReq = new InputRequestQueue();
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, incomingOrders, 30);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
+                var tagOps3 = new TagOps();
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -489,7 +494,8 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps3)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -510,7 +516,7 @@ namespace Ludots.Tests.GAS
                 var targets = new Entity[targetsCount];
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    targets[i] = world.Create(new AttributeBuffer());
+                    targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
                     attr.SetBase(attrEnergy, 50f);
                     attr.SetBase(attrShield, 40f);

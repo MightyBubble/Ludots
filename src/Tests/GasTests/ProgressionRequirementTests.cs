@@ -657,7 +657,8 @@ namespace Ludots.Tests.GAS
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps());
 
             system.Update(0f);
 
@@ -746,7 +747,8 @@ namespace Ludots.Tests.GAS
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps());
 
             system.Update(0f);
 
@@ -820,7 +822,8 @@ namespace Ludots.Tests.GAS
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps());
 
             system.Update(0f);
 
@@ -879,7 +882,8 @@ namespace Ludots.Tests.GAS
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps());
 
             system.Update(0f);
 

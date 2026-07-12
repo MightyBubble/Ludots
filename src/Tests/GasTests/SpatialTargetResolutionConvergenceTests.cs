@@ -225,7 +225,8 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry());
+                orderTypeRegistry: new OrderTypeRegistry(),
+                tagOps: new TagOps());
 
             system.Update(0f);
 

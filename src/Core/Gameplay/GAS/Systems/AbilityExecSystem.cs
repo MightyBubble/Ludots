@@ -99,7 +99,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             _orderTypeRegistry = orderTypeRegistry;
             _progressionRequirements = progressionRequirements;
             MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
@@ -986,11 +986,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if ((byte)clockId == 0) clockId = inst.ActiveClockId;
 
             EnsureTagComponents(actor);
-            if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
-            ref var tags = ref World.Get<GameplayTagContainer>(actor);
-            ref var counts = ref World.Get<TagCountContainer>(actor);
-            ref var dirty = ref World.Get<DirtyFlags>(actor);
-            _tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            _tagOps.AddTag(World, actor, tagId);
 
             if (durationTicks > 0)
             {
@@ -1013,21 +1009,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 if (World.Has<GameplayTagContainer>(actor) && World.Has<TagCountContainer>(actor))
                 {
-                    if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
-                    ref var tags = ref World.Get<GameplayTagContainer>(actor);
-                    ref var counts = ref World.Get<TagCountContainer>(actor);
-                    ref var dirty = ref World.Get<DirtyFlags>(actor);
-                    _tagOps.RemoveTag(ref tags, ref counts, tagId, ref dirty);
+                    _tagOps.RemoveTag(World, actor, tagId);
                 }
             }
             else
             {
                 EnsureTagComponents(actor);
-                if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
-                ref var tags = ref World.Get<GameplayTagContainer>(actor);
-                ref var counts = ref World.Get<TagCountContainer>(actor);
-                ref var dirty = ref World.Get<DirtyFlags>(actor);
-                _tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+                _tagOps.AddTag(World, actor, tagId);
             }
         }
 
@@ -1222,14 +1210,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.IsAlive(actor)) return;
             EnsureTagComponents(actor);
-            if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
 
             ref var tags = ref World.Get<GameplayTagContainer>(actor);
             if (tags.HasTag(toggleSpec.ToggleTagId)) return;
 
-            ref var counts = ref World.Get<TagCountContainer>(actor);
-            ref var dirty = ref World.Get<DirtyFlags>(actor);
-            _tagOps.AddTag(ref tags, ref counts, toggleSpec.ToggleTagId, ref dirty);
+            _tagOps.AddTag(World, actor, toggleSpec.ToggleTagId);
             
             // Apply active effects as infinite-duration effects
             unsafe
@@ -1259,12 +1244,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             in AbilityToggleSpec toggleSpec, int slotIndex, int abilityId, Entity targetEntity)
         {
             EnsureTagComponents(actor);
-            if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
-
-            ref var tags = ref World.Get<GameplayTagContainer>(actor);
-            ref var counts = ref World.Get<TagCountContainer>(actor);
-            ref var dirty = ref World.Get<DirtyFlags>(actor);
-            _tagOps.RemoveTag(ref tags, ref counts, toggleSpec.ToggleTagId, ref dirty);
+            _tagOps.RemoveTag(World, actor, toggleSpec.ToggleTagId);
             
             // Remove active effects by tag (the effects are tagged with the toggle tag,
             // so removing the tag will cause EffectLifetimeSystem to clean them up via ExpireCondition)

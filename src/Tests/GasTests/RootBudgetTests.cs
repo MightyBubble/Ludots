@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS
                 graphApi: graphApi);
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer());
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
             Entity effect = GameplayEffectFactory.CreateEffect(
                 world,
@@ -176,7 +176,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer());
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             requests.Publish(new EffectRequest
@@ -236,7 +236,7 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents);
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer());
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             requests.Publish(new EffectRequest

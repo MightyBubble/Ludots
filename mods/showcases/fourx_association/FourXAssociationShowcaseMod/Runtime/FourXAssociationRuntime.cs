@@ -352,7 +352,7 @@ public sealed class FourXAssociationRuntime
         FourXAssociationConfig config = _config!;
         World world = engine.World;
         var mapId = new MapId(FourXAssociationIds.MapId);
-        _playerA = world.Create(new Name { Value = config.PlayerAName }, new MapEntity { MapId = mapId }, new AttributeBuffer());
+        _playerA = world.Create(new Name { Value = config.PlayerAName }, new MapEntity { MapId = mapId }, new AttributeBuffer(), new DirtyFlags());
         _playerB = world.Create(new Name { Value = config.PlayerBName }, new MapEntity { MapId = mapId });
         _cityA = world.Create(new Name { Value = config.CityAName }, new MapEntity { MapId = mapId });
         _cityB = world.Create(new Name { Value = config.CityBName }, new MapEntity { MapId = mapId });

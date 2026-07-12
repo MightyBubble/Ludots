@@ -79,15 +79,14 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
             }
 
             ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(P2Rep);
-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(P2Rep);
             bool activate = !tags.HasTag(OfflineTagId);
             if (activate)
             {
-                _tagOps.AddTag(ref tags, ref counts, OfflineTagId);
+                _tagOps.AddTag(_world, P2Rep, OfflineTagId);
             }
             else
             {
-                _tagOps.RemoveTag(ref tags, ref counts, OfflineTagId);
+                _tagOps.RemoveTag(_world, P2Rep, OfflineTagId);
             }
 
             return activate;

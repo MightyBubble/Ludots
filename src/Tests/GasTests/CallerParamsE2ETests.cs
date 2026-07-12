@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
                 That(fxAttrId, Is.GreaterThanOrEqualTo(0));
                 That(fyAttrId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 // Publish request with CallerParams overriding default force
@@ -90,7 +90,8 @@ namespace Ludots.Tests.GAS
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps());
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -129,7 +130,7 @@ namespace Ludots.Tests.GAS
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
                 int fyAttrId = AttributeRegistry.GetId("Physics.ForceRequestY");
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 int tplId = EffectTemplateIdRegistry.GetId("Effect.Preset.ApplyForce2D");
@@ -149,7 +150,8 @@ namespace Ludots.Tests.GAS
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps());
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)

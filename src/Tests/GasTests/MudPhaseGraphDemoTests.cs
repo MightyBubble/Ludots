@@ -134,12 +134,12 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f); // actual = 20 * 1.5 = 30
 
                 // ── Create entities ──
-                var caster = world.Create(new AttributeBuffer());
-                var target = world.Create(new AttributeBuffer(), new BlackboardFloatBuffer(), new BlackboardIntBuffer());
+                var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer(), new BlackboardIntBuffer());
                 world.Get<AttributeBuffer>(caster).SetCurrent(AttrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps());
 
                 // ═══════ Phase 1: OnPropose ═══════
                 sb.AppendLine("[MUD][PHASE] ① OnPropose: 法师提案【冲击】效果。");
@@ -269,10 +269,10 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyBaseDamage, 25f); // damage = 25 * 2 = 50
 
                 var caster = world.Create();
-                var target = world.Create(new AttributeBuffer(), new BlackboardFloatBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps());
 
                 api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
@@ -349,12 +349,12 @@ namespace Ludots.Tests.GAS
                 iceConfig.TryAddFloat(ConfigKeyDmgMultiplier, 1.0f);
 
                 var caster = world.Create();
-                var targetA = world.Create(new AttributeBuffer());
-                var targetB = world.Create(new AttributeBuffer());
+                var targetA = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var targetB = world.Create(new AttributeBuffer(), new DirtyFlags());
                 world.Get<AttributeBuffer>(targetA).SetCurrent(AttrHealth, 100f);
                 world.Get<AttributeBuffer>(targetB).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps());
 
                 // Fire → targetA
                 api.SetConfigContext(in fireConfig);

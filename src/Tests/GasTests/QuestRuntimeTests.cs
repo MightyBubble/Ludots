@@ -93,13 +93,15 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
+            var tagOps = new TagOps();
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
                 templates: templates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-            var application = new EffectApplicationSystem(world, requests, templates: templates);
-            var aggregator = new AttributeAggregatorSystem(world);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, requests, templates: templates, tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             requests.Publish(new EffectRequest
             {

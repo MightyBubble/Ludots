@@ -67,7 +67,9 @@ namespace MobaDemoMod.Triggers
                 registryObj is OrderTypeRegistry orderTypeRegistry)
             {
                 int navMoveAbilityTagId = TagRegistry.Register(MobaDemoAbilityDefinitions.Move);
-                engine.RegisterSystem(new StopOrderNavMoveCleanupSystem(engine.World, config.Constants.OrderTypeIds["stop"], navMoveAbilityTagId), SystemGroup.AbilityActivation);
+                TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                    ?? throw new InvalidOperationException("MobaDemoMod requires engine TagOps.");
+                engine.RegisterSystem(new StopOrderNavMoveCleanupSystem(engine.World, config.Constants.OrderTypeIds["stop"], navMoveAbilityTagId, tagOps), SystemGroup.AbilityActivation);
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry, config.Constants.OrderTypeIds["stop"]), SystemGroup.AbilityActivation);
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
             }

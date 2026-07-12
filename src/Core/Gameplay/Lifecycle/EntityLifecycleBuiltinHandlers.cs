@@ -53,7 +53,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
         {
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.CopyAttributeSlice(
-                world,
+                RequireServices(),
                 state.Target,
                 in state.Snapshot,
                 state);

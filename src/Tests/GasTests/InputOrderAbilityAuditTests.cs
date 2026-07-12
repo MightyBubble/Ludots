@@ -683,7 +683,8 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry());
+                orderTypeRegistry: new OrderTypeRegistry(),
+                tagOps: new TagOps());
             system.MaxWorkUnitsPerSlice = 1;
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
@@ -762,7 +763,8 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
-                orderTypeRegistry: orderTypes);
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps());
 
             system.Update(0f);
 
@@ -816,7 +818,8 @@ namespace Ludots.Tests.GAS
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
-                orderTypeRegistry: new OrderTypeRegistry());
+                orderTypeRegistry: new OrderTypeRegistry(),
+                tagOps: new TagOps());
             system.MaxWorkUnitsPerSlice = 1;
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
@@ -1066,7 +1069,8 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 graphPrograms: graphPrograms,
                 graphApi: graphApi,
-                orderTypeRegistry: orderTypes);
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps());
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
 
@@ -1312,16 +1316,18 @@ namespace Ludots.Tests.GAS
             var actor = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new AbilityExecInstance(),
-                new GameplayTagContainer());
-
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+            var tagOps = new TagOps();
+            tagOps.AddTag(world, actor, navMoveTagId);
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
-            tags.AddTag(navMoveTagId);
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
             buffer.SetActiveDirect(in stopOrder, priority: 200);
 
-            var system = new StopOrderNavMoveCleanupSystem(world, 103, navMoveTagId);
+            var system = new StopOrderNavMoveCleanupSystem(world, 103, navMoveTagId, tagOps);
             system.Update(0f);
 
             That(tags.HasTag(navMoveTagId), Is.False);

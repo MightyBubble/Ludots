@@ -289,6 +289,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
         void RemoveEffectTemplate(Entity target, int templateId);
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
+        void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
         // ── Entity lifecycle graph composition ──

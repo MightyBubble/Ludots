@@ -36,6 +36,7 @@ namespace Ludots.Core.Gameplay.GAS
                             throw new System.InvalidOperationException(TagOps.RuleRejectedError);
                     }
                 }
+                if (dirtyFlags.IsAnyTagDirty()) tagOps.MarkDirtyEntity(world, target);
             }
             catch
             {
@@ -69,6 +70,7 @@ namespace Ludots.Core.Gameplay.GAS
                     for (int repeat = 0; repeat < amount; repeat++)
                         tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
                 }
+                if (dirtyFlags.IsAnyTagDirty()) tagOps.MarkDirtyEntity(world, target);
             }
             catch
             {
@@ -111,6 +113,7 @@ namespace Ludots.Core.Gameplay.GAS
                             tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
                     }
                 }
+                if (dirtyFlags.IsAnyTagDirty()) tagOps.MarkDirtyEntity(world, target);
             }
             catch
             {

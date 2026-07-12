@@ -79,6 +79,7 @@ namespace Ludots.Core.Config
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
+        public int DeferredTriggerActiveEntityCapacity { get; set; }
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
 
@@ -100,6 +101,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.orderTerminalResultCapacity must be positive.");
+            }
+
+            if (DeferredTriggerActiveEntityCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
             }
 
             ValidateFiniteWorkBudget(

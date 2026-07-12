@@ -99,15 +99,13 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
                 Entity entity = chunk.Entity(i);
                 string name = names[i].Value ?? string.Empty;
                 EnsureTagComponents(engine.World, entity);
-                ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
-                ref var counts = ref engine.World.Get<TagCountContainer>(entity);
 
-                if (IsCapital(name)) tagOps.AddTag(ref tags, ref counts, _capitalTagId);
-                if (string.Equals(name, "Ancient Gate", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _objectiveTagId);
-                if (string.Equals(name, "Crystal Relay", StringComparison.Ordinal) || string.Equals(name, "Helium Well", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _resourceTagId);
-                if (string.Equals(name, "Void Rift", StringComparison.Ordinal) || string.Equals(name, "Ember Storm", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _hazardTagId);
-                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Carrier", StringComparison.OrdinalIgnoreCase) || name.Contains("Warpack", StringComparison.OrdinalIgnoreCase) || name.Contains("Wing", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(ref tags, ref counts, _alertTagId);
-                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Border", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(ref tags, ref counts, _frontierTagId);
+                if (IsCapital(name)) tagOps.AddTag(engine.World, entity, _capitalTagId);
+                if (string.Equals(name, "Ancient Gate", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _objectiveTagId);
+                if (string.Equals(name, "Crystal Relay", StringComparison.Ordinal) || string.Equals(name, "Helium Well", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _resourceTagId);
+                if (string.Equals(name, "Void Rift", StringComparison.Ordinal) || string.Equals(name, "Ember Storm", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _hazardTagId);
+                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Carrier", StringComparison.OrdinalIgnoreCase) || name.Contains("Warpack", StringComparison.OrdinalIgnoreCase) || name.Contains("Wing", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _alertTagId);
+                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Border", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _frontierTagId);
 
                 if (playerCapital == Entity.Null && string.Equals(name, "Imperial Capital", StringComparison.Ordinal))
                 {
@@ -140,8 +138,7 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
 
     private static void EnsureTagComponents(World world, Entity entity)
     {
-        if (!world.Has<GameplayTagContainer>(entity)) world.Add(entity, new GameplayTagContainer());
-        if (!world.Has<TagCountContainer>(entity)) world.Add(entity, new TagCountContainer());
+        TagStateInstaller.EnsureInstalled(world, entity);
         if (!world.Has<TimedTagBuffer>(entity)) world.Add(entity, new TimedTagBuffer());
     }
 

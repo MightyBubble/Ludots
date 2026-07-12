@@ -82,13 +82,14 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
 
                 var source = world.Create();
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(attrHealth, 1000f);
 

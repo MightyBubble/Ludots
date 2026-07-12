@@ -294,7 +294,8 @@ namespace Ludots.Tests.GAS
                     definitions,
                     eventBus,
                     castAbilityOrderTypeId: CastOrderTypeId,
-                    orderTypeRegistry: orderTypes);
+                    orderTypeRegistry: orderTypes,
+                    tagOps: new TagOps());
 
                 return new Harness
                 {

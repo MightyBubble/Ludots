@@ -68,7 +68,10 @@ namespace Ludots.Tests.GAS
                 dirty.MarkTagDirty(tag);
 
                 var queue = new DeferredTriggerQueue();
-                var sys = new DeferredTriggerCollectionSystem(world, queue);
+                var active = new DirtyEntityQueue(4);
+                var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+                active.Track(world, entity);
+                var sys = new DeferredTriggerCollectionSystem(world, queue, tagOps, active);
                 sys.Update(dt: 0f);
 
                 That(queue.TagCountTriggerCount, Is.EqualTo(1));
@@ -79,6 +82,7 @@ namespace Ludots.Tests.GAS
                 ref var dirty2 = ref world.Get<DirtyFlags>(entity);
                 counts2.AddCount(tag, 1);
                 dirty2.MarkTagDirty(tag);
+                active.Track(world, entity);
                 sys.Update(dt: 0f);
 
                 That(queue.TagCountTriggerCount, Is.EqualTo(2));
@@ -164,7 +168,9 @@ namespace Ludots.Tests.GAS
                 dirty.MarkTagDirty(tagA);
 
                 var queue = new DeferredTriggerQueue();
-                var collect = new DeferredTriggerCollectionSystem(world, queue, _tagOps);
+                var active = _tagOps.DirtyEntities;
+                active.Track(world, entity);
+                var collect = new DeferredTriggerCollectionSystem(world, queue, _tagOps, active);
                 collect.Update(0f);
 
                 That(world.Has<GameplayTagEffectiveChangedBits>(entity), Is.True);
@@ -175,6 +181,7 @@ namespace Ludots.Tests.GAS
                 ref var dirty2 = ref world.Get<DirtyFlags>(entity);
                 tags2.AddTag(tagBlock);
                 dirty2.MarkTagDirty(tagBlock);
+                active.Track(world, entity);
                 collect.Update(0f);
 
                 ref var changed2 = ref world.Get<GameplayTagEffectiveChangedBits>(entity);

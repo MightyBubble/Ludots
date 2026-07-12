@@ -107,6 +107,10 @@ namespace Ludots.Core.Config
             {
                 TagStateInstaller.EnsureInstalled(_world, entity);
             }
+            else if (_world.Has<AttributeBuffer>(entity) && !_world.Has<DirtyFlags>(entity))
+            {
+                _world.Add(entity, new DirtyFlags());
+            }
 
             // Reset for next use
             _activeTemplate = null;

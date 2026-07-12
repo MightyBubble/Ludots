@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
                 var clocks = new GasClocks(clock);
                 var conditions = new GasConditionRegistry();
                 var requests = new EffectRequestQueue();
-                var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: requests);
+                var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: requests, tagOps: _tagOps);
 
                 int keepAliveTag = 3;
                 var keepAlive = conditions.Register(new GasCondition(GasConditionKind.TagPresent, keepAliveTag, TagSense.Present));
@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
 
             int durabilityId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("Durability");
 
-            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new ActiveEffectContainer());
             ref var targetAttributes = ref world.Get<AttributeBuffer>(target);
             targetAttributes.SetBase(durabilityId, 100f);
             targetAttributes.SetCurrent(durabilityId, 100f);
@@ -152,7 +152,8 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
-            var graphApi = new GasGraphRuntimeApi(world);
+            var tagOps = new TagOps();
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var executor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
@@ -166,8 +167,9 @@ namespace Ludots.Tests.GAS
                 snapshotCapacity: 4096,
                 templates: templates,
                 phaseExecutor: executor,
-                graphApi: graphApi);
-            var aggregator = new AttributeAggregatorSystem(world);
+                graphApi: graphApi,
+                tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             const int graphId = 9001;
             const int templateId = 701;

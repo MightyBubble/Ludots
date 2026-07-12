@@ -212,6 +212,7 @@ namespace Physics2DPlaygroundMod.Systems
             _chainDemoEntity = _world.Create(
                 new VisualTransform { Position = Vector3.Zero, Rotation = Quaternion.Identity, Scale = Vector3.One },
                 default(AttributeBuffer),
+                default(DirtyFlags),
                 default(ActiveEffectContainer),
                 listener);
             _chainDemoInited = true;

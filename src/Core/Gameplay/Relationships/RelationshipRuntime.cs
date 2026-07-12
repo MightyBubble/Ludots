@@ -128,6 +128,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 default(AttributeBuffer),
                 new GameplayTagContainer(),
                 new TagCountContainer(),
+                new DirtyFlags(),
                 new ActiveEffectContainer());
             _entityIndex[key] = relationshipEntity;
             return relationshipEntity;

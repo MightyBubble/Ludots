@@ -652,7 +652,7 @@ namespace Ludots.Core.Config
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
                 bool hasTagCountContainer = hasGameplayTagContainer || template.Components.ContainsKey("TagCountContainer");
-                bool hasDirtyFlags = hasGameplayTagContainer || template.Components.ContainsKey("DirtyFlags");
+                bool hasDirtyFlags = hasAttributeBuffer || hasGameplayTagContainer || template.Components.ContainsKey("DirtyFlags");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
                 bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");

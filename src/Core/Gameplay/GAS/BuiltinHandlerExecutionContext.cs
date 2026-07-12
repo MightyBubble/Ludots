@@ -32,6 +32,7 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipRuntime? Relationships { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
         public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
+        public TagOps? TagOps { get; set; }
         public OrderTypeRegistry? OrderTypeRegistry { get; set; }
         public OrderRuleRegistry? OrderRuleRegistry { get; set; }
         public int CurrentStep { get; set; }

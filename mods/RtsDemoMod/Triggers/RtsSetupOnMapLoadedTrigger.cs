@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
@@ -43,8 +44,7 @@ namespace RtsDemoMod.Triggers
             world.Query(in q, (Entity e, ref Name name) =>
             {
                 // Ensure all named entities have tag components for GAS interaction
-                if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
-                if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
+                TagStateInstaller.EnsureInstalled(world, e);
                 if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
                 if (world.Has<CommandSourceSelectableTag>(e) && !world.Has<CommandSourceSelectableState>(e))
                 {

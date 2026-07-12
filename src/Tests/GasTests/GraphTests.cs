@@ -68,6 +68,7 @@ namespace Ludots.Tests.GAS
             world.Add(e1, WorldPositionCm.FromCm(250, 50));
             world.Add(e1, new GameplayTagContainer());
             world.Add(e1, new AttributeBuffer());
+            world.Add(e1, new DirtyFlags());
             unsafe
             {
                 ref var tags = ref world.Get<GameplayTagContainer>(e1);
@@ -82,6 +83,7 @@ namespace Ludots.Tests.GAS
             world.Add(e2, WorldPositionCm.FromCm(650, 50));
             world.Add(e2, new GameplayTagContainer());
             world.Add(e2, new AttributeBuffer());
+            world.Add(e2, new DirtyFlags());
             unsafe
             {
                 ref var tags = ref world.Get<GameplayTagContainer>(e2);

@@ -138,7 +138,7 @@ namespace Ludots.Tests.GAS
                 That(fxId, Is.GreaterThanOrEqualTo(0));
                 That(fyId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer(), new ForceInput2D());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new ForceInput2D());
 
                 GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
@@ -153,7 +153,8 @@ namespace Ludots.Tests.GAS
                     templates: templates,
                     inputRequests: null,
                     chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps());
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);

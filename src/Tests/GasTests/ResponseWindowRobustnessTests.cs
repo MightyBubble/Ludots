@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attributes = ref world.Get<AttributeBuffer>(target);
                 attributes.SetBase(attrHealth, 100f);
                 attributes.SetCurrent(attrHealth, 100f);
@@ -59,7 +59,8 @@ namespace Ludots.Tests.GAS
                     templates,
                     inputRequests: null,
                     chainOrders: null,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = 2
                 };
@@ -155,7 +156,8 @@ namespace Ludots.Tests.GAS
                     templates,
                     inputRequests: null,
                     chainOrders: null,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

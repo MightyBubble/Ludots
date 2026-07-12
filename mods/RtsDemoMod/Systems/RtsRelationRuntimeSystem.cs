@@ -37,7 +37,8 @@ namespace RtsDemoMod.Systems
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
-            _tagOps = engine.GetService(CoreServiceKeys.TagOps) ?? new TagOps();
+            _tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("RtsRelationRuntimeSystem requires engine TagOps.");
         }
 
         public void Initialize()
@@ -355,15 +356,7 @@ namespace RtsDemoMod.Systems
                 return;
             }
 
-            if (!_world.Has<DirtyFlags>(entity))
-            {
-                _world.Add(entity, new DirtyFlags());
-            }
-
-            ref var tags = ref _world.Get<GameplayTagContainer>(entity);
-            ref var counts = ref _world.Get<TagCountContainer>(entity);
-            ref var dirty = ref _world.Get<DirtyFlags>(entity);
-            _tagOps.RemoveTag(ref tags, ref counts, tagId, ref dirty);
+            _tagOps.RemoveTag(_world, entity, tagId);
         }
 
         private bool IsRtsMapActive()

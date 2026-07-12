@@ -70,7 +70,8 @@ namespace Ludots.Tests.GAS
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 3_000,
-                abilityDefinitions: definitions)
+                abilityDefinitions: definitions,
+                tagOps: new TagOps())
             {
                 MaxWorkUnitsPerSlice = 127,
             };
@@ -106,7 +107,8 @@ namespace Ludots.Tests.GAS
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
                 snapshotCapacity: 5,
-                abilityDefinitions: definitions);
+                abilityDefinitions: definitions,
+                tagOps: new TagOps());
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -209,7 +211,7 @@ namespace Ludots.Tests.GAS
             });
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             requests.Publish(new EffectRequest
             {
                 RootId = 1,
@@ -281,6 +283,7 @@ namespace Ludots.Tests.GAS
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
                 OrderTerminalResultCapacity = 64,
+                DeferredTriggerActiveEntityCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
             };

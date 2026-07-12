@@ -147,6 +147,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.Relationships = relationshipRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _builtinRuntime.TagOps = _tagOps;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _orderClock = orderClock;
@@ -282,7 +283,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             if ((_phaseExecutor == null || _graphApi == null) && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
                             {
-                                AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers);
+                                AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers, _tagOps);
                             }
 
                             if (!phasePublishedAttributeDelta && _presentationEvents != null && hasPrimaryAttributeSnapshot && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))

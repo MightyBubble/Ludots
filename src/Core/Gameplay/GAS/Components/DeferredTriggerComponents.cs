@@ -44,6 +44,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
         
         public ulong AttributeDirtyMask;
+        public byte DeferredTriggerQueued;
         public fixed byte AttributeDirty[MAX_ATTRS];
         public fixed byte TagDirty[TAG_DIRTY_BYTES];
         

@@ -17,7 +17,7 @@ namespace Ludots.Tests.GAS
         public void ExecuteGraph_ResetsReferencedScratchRegistersBeforeReuse()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             const int attributeId = 7;
             var programs = new GraphProgramRegistry();
@@ -47,7 +47,13 @@ namespace Ludots.Tests.GAS
                 new BuiltinHandlerRegistry(),
                 GasGraphOpHandlerTable.Instance,
                 new EffectTemplateRegistry());
-            var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: null);
+            var api = new GasGraphRuntimeApi(
+                world,
+                spatialQueries: null,
+                coords: null,
+                eventBus: null,
+                effectRequests: null,
+                tagOps: new TagOps());
 
             executor.ExecuteGraph(world, api, target, target, default, default, 1);
             executor.ExecuteGraph(world, api, target, target, default, default, 2);

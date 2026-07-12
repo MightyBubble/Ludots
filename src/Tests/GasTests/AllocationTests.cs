@@ -52,7 +52,7 @@ namespace Ludots.Tests.GAS
                 ref var abilityState = ref world.Get<AbilityStateBuffer>(caster);
                 abilityState.AddAbility(5001);
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
@@ -62,7 +62,8 @@ namespace Ludots.Tests.GAS
                     requests,
                     budget: null,
                     templates: templates,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps());
 
                 var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
 
@@ -109,7 +110,7 @@ namespace Ludots.Tests.GAS
             int fxId = AttributeRegistry.Register("Physics.ForceRequestX");
             int fyId = AttributeRegistry.Register("Physics.ForceRequestY");
 
-            var target = world.Create(new AttributeBuffer(), new Ludots.Core.Physics.ForceInput2D());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Physics.ForceInput2D());
             ref var attr = ref world.Get<AttributeBuffer>(target);
             attr.SetCurrent(fxId, 0f);
             attr.SetCurrent(fyId, 0f);
@@ -139,7 +140,8 @@ namespace Ludots.Tests.GAS
                 templates: templates,
                 inputRequests: null,
                 chainOrders: chainOrders,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps());
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);

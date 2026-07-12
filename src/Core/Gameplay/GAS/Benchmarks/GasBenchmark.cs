@@ -38,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
+            var tagOps = new TagOps();
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -54,17 +55,18 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             });
             
             // 3. Create Systems
-            var appSystem = new EffectApplicationSystem(world, effectRequests);
-            var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests);
-            var aggSystem = new AttributeAggregatorSystem(world);
+            var appSystem = new EffectApplicationSystem(world, effectRequests, tagOps: tagOps);
+            var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests, tagOps: tagOps);
+            var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             var proposalSystem = new EffectProposalProcessingSystem(
                 world,
                 effectRequests,
                 null,
                 effectTemplates,
-                responseChainOrderTypes: BenchmarkResponseChainOrderTypes);
-            var abilitySystem = new AbilitySystem(world, effectRequests);
+                responseChainOrderTypes: BenchmarkResponseChainOrderTypes,
+                tagOps: tagOps);
+            var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
             
             // 4. Create Global Ability Template (Flyweight)
@@ -87,6 +89,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 typeof(ActiveEffectContainer),
                 typeof(GameplayTagContainer),
                 typeof(TagCountContainer),
+                typeof(DirtyFlags),
                 typeof(AbilityStateBuffer),
                 typeof(ReactionBuffer)
             };

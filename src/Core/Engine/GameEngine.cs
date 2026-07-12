@@ -669,7 +669,11 @@ namespace Ludots.Core.Engine
             var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
             var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer, new RelationshipReverseIndex(World));
-            var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
+            var gasRuntimeCapacity = config.GasRuntimeCapacity
+                ?? throw new InvalidOperationException("GameConfig.gasRuntimeCapacity is required.");
+            gasRuntimeCapacity.Validate();
+            var dirtyEntities = new DirtyEntityQueue(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
+            var tagOps = new TagOps(new TagRuleRegistry(), gasBudget, dirtyEntities);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
@@ -934,14 +938,11 @@ namespace Ludots.Core.Engine
 
             var orderTypeIds = config.Constants.OrderTypeIds;
             var responseChainOrderTypeIds = config.Constants.ResponseChainOrderTypeIds;
-            var gasRuntimeCapacity = config.GasRuntimeCapacity
-                ?? throw new InvalidOperationException("GameConfig.gasRuntimeCapacity is required.");
-            gasRuntimeCapacity.Validate();
             var orderTerminalResults = new OrderTerminalResultBuffer(
                 gasRuntimeCapacity.OrderTerminalResultCapacity);
 
             var deferredTriggerQueue = new DeferredTriggerQueue();
-            var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps);
+            var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps, dirtyEntities);
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
             var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);
             var gasPresentationEvents = new GasPresentationEventBuffer(presentationConfig.GasPresentationEventCapacity);
@@ -1186,14 +1187,14 @@ namespace Ludots.Core.Engine
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
-            World.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            World.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks, cameraBehaviorInput);
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi);
+            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi, tagOps);
             var sessionSystem = new GameSessionSystem(GameSession);
             var authoritativeInput = new FrozenInputActionReader();
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
@@ -1368,6 +1369,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasController, _gasController);
             SetService(CoreServiceKeys.GasConditionRegistry, gasConditions);
             SetService(CoreServiceKeys.TagOps, tagOps);
+            SetService(CoreServiceKeys.DirtyEntityQueue, dirtyEntities);
             SetService(CoreServiceKeys.AbilityDefinitionRegistry, abilityDefinitions);
             SetService(CoreServiceKeys.AbilityFormSetRegistry, abilityFormSets);
             SetService(CoreServiceKeys.ProgressionDefinitionRegistry, progressionDefinitions);
@@ -1626,6 +1628,7 @@ namespace Ludots.Core.Engine
                 MapLoader.TemplateRegistry,
                 MapLoader.EntityTemplateKeys,
                 presentationStableIds,
+                tagOps,
                 performerRuntime,
                 performerDefinitions,
                 componentAuthoringContext);

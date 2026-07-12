@@ -550,25 +550,14 @@ namespace RelationshipShowcaseMod.Systems
                 return;
             }
 
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                entity.Add(new GameplayTagContainer());
-            }
-
-            if (!_world.Has<TagCountContainer>(entity))
-            {
-                entity.Add(new TagCountContainer());
-            }
-
-            ref GameplayTagContainer tagContainer = ref _world.Get<GameplayTagContainer>(entity);
-            ref TagCountContainer tagCounts = ref _world.Get<TagCountContainer>(entity);
+            TagStateInstaller.EnsureInstalled(_world, entity);
             TagOps tagOps = _engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("TagOps is missing.");
 
             foreach (string tag in tags)
             {
                 int tagId = TagRegistry.Register(tag);
-                tagOps.AddTag(ref tagContainer, ref tagCounts, tagId);
+                tagOps.AddTag(_world, entity, tagId);
             }
         }
 

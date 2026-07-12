@@ -21,20 +21,84 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly TagRuleRegistry _rules;
         private readonly TagRuleTransaction _transaction;
         private readonly GasBudget _budget;
+        private readonly DirtyEntityQueue _dirtyEntities;
 
-        public TagOps() : this(new TagRuleRegistry(), budget: null) { }
+        public TagOps() : this(new TagRuleRegistry(), budget: null, dirtyEntities: null) { }
 
-        public TagOps(TagRuleRegistry rules, GasBudget budget = null)
+        public TagOps(TagRuleRegistry rules, GasBudget budget = null, DirtyEntityQueue dirtyEntities = null)
         {
             _rules = rules;
             _transaction = new TagRuleTransaction();
             _budget = budget;
+            _dirtyEntities = dirtyEntities ?? new DirtyEntityQueue(4096);
         }
 
         /// <summary>
         /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
         /// </summary>
         public TagRuleRegistry Rules => _rules;
+        public DirtyEntityQueue DirtyEntities => _dirtyEntities;
+
+        public void MarkDirtyEntity(World world, Entity entity)
+        {
+            _dirtyEntities.Track(world, entity);
+        }
+
+        public bool AddTag(World world, Entity entity, int tagId)
+        {
+            RequireTagState(world, entity);
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirty;
+            try
+            {
+                bool changed = AddTag(ref tags, ref counts, tagId, ref dirty);
+                if (changed) _dirtyEntities.Track(world, entity);
+                return changed;
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        public bool RemoveTag(World world, Entity entity, int tagId)
+        {
+            RequireTagState(world, entity);
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirty;
+            try
+            {
+                bool changed = RemoveTag(ref tags, ref counts, tagId, ref dirty);
+                if (changed) _dirtyEntities.Track(world, entity);
+                return changed;
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        private static void RequireTagState(World world, Entity entity)
+        {
+            if (!world.IsAlive(entity)) throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
+            if (!world.Has<GameplayTagContainer>(entity)) throw new InvalidOperationException(MissingGameplayTagContainerError);
+            if (!world.Has<TagCountContainer>(entity)) throw new InvalidOperationException(MissingTagCountContainerError);
+            if (!world.Has<DirtyFlags>(entity)) throw new InvalidOperationException(MissingDirtyFlagsError);
+        }
 
         public void ClearRuleRegistry()
         {

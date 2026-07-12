@@ -364,3 +364,61 @@ One effect grant, revoke, or stack update snapshots all three fixed-size compone
 - [x] No effect hot-path component add/remove remains in the contribution helper
 - [x] No empty `TagOps` fallback remains in the three effect systems
 - [x] Capacity failure is explicit and counted once per failed transaction
+
+---
+
+## GAS Composition Gate - #669 Audit Closeout
+
+- **Task / Issue**: #669
+- **Date**: 2026-07-13
+- **Result**: PASS
+
+### 1. Core judgment
+
+The change closes six production-contract gaps inside the existing GAS, Order, template spawning, graph-output lifecycle, and Arch World destruction paths. It adds no gameplay DSL, effect preset, graph operation, loader, or parallel runtime pipeline.
+
+### 2. Layer assignment
+
+| Capability | Layer | Existing carrier |
+|---|---:|---|
+| Complete tag state before gameplay | N/A | `TagStateInstaller`, `EntityBuilder`, batch/runtime spawning |
+| Sparse deferred-trigger collection | N/A | `DirtyFlags`, `TagOps`, `DeferredTriggerCollectionSystem` |
+| Shared effect work budget | N/A | `EffectProcessingLoopSystem` and existing stage cursors |
+| Cross-presentation admission generation | N/A | `OrderAdmissionResultBuffer` and SchemaUpdate owner |
+| Owner-scoped graph output cleanup | N/A | Existing owner retirement notifications and output store |
+| Unobserved destruction fast path | N/A | Existing Arch World entity-destroyed notification |
+
+### 3. Reuse list
+
+- Handlers: existing builtin effect handlers and lifecycle atomic handlers
+- Queues / systems: existing effect proposal/application/lifetime loop, order intake, deferred triggers, entity spawning, and World destruction
+- Resolvers / registries: existing `TagOps`, `TagRuleRegistry`, `EntityBuilder`, graph runtime API, and order registries
+- Existing presets / graphs: unchanged; `WriteSelfAttribute` uses the existing graph instruction through the production graph API
+
+### 4. New Layer 0 ops
+
+N/A. No graph op, preset enum, gameplay profile, or configuration DSL was added.
+
+### 5. Transaction boundary
+
+Tag and attribute writes validate complete state before mutation. The fixed-capacity dirty-entity queue accepts each entity once per logic step. Capacity failure is explicit and restores tag, count, attribute, dirty, and presentation-visible state before returning control. Effect stages debit one shared remaining-work counter and retain their existing stage/pass cursors when exhausted. Admission generations have one SchemaUpdate owner.
+
+### 6. Config SSOT
+
+`game.json -> gasRuntimeCapacity.deferredTriggerActiveEntityCapacity` is the single production capacity source and is validated as positive during engine composition. This is a runtime budget, not gameplay behavior. The queue is registered once as `CoreServiceKeys.DirtyEntityQueue` and shared by the production `TagOps` and deferred-trigger collector.
+
+### 7. Red flag scan
+
+- [x] No gameplay DSL, preset, graph op, or parallel GAS/Order pipeline added
+- [x] No effect hot-path component Add/Remove fallback remains
+- [x] No permanent `DirtyFlags` full-world scan remains after one-time migration bootstrap
+- [x] No validated batch component is silently omitted
+- [x] No stage can independently consume the full outer effect budget
+- [x] No admission producer or consumer owns an independent Clear boundary
+- [x] No unobserved World destruction enters the subscriber lock
+- [x] Fixed-capacity overflow is explicit and mutation paths roll back
+- [x] Sparse dirty processing is zero-allocation after the complete active-path warmup
+
+### 8. Next variant test
+
+A new Mod or gameplay variant must install tag state through `TagStateInstaller`, mutate attributes through the shared production `TagOps` path, and rely on the same effect budget and order admission generation. It must not add a Mod-local dirty queue, fallback `TagOps`, alternate effect loop, or consumer-owned admission lifetime.

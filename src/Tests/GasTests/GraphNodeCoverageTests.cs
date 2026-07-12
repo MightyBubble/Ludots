@@ -22,15 +22,15 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var caster = world.Create(new AttributeBuffer(), new Position { GridPos = new IntVector2(0, 0) });
+                var caster = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
                 world.Get<AttributeBuffer>(caster).SetCurrent(0, 0f);
 
-                var target = world.Create(new AttributeBuffer(), new Position { GridPos = new IntVector2(1, 0) });
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
                 world.Get<AttributeBuffer>(target).SetCurrent(0, 7f);
 
                 var effectRequests = new EffectRequestQueue();
                 var eventBus = new GameplayEventBus();
-                var api = new GasGraphRuntimeApi(world, spatialQueries: null, eventBus: eventBus, effectRequests: effectRequests);
+                var api = new GasGraphRuntimeApi(world, spatialQueries: null, eventBus: eventBus, effectRequests: effectRequests, tagOps: new TagOps());
 
                 const int evtId = 123;
                 const int tplId = 42;
@@ -86,8 +86,8 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var caster = world.Create(new AttributeBuffer(), new Position { GridPos = new IntVector2(0, 0) });
-                var target = world.Create(new AttributeBuffer(), new Position { GridPos = new IntVector2(1, 0) });
+                var caster = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
 
                 var effectRequests = new EffectRequestQueue();
                 var eventBus = new GameplayEventBus();
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS
             {
                 var physics = new PhysicsWorld();
                 var caster = world.Create(new Position { GridPos = new IntVector2(0, 0) });
-                var target = world.Create(new AttributeBuffer(), new Position { GridPos = new IntVector2(1, 0) });
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
                 world.Get<AttributeBuffer>(target).SetCurrent(0, 0f);
 
                 var e1 = world.Create(new Position { GridPos = new IntVector2(2, 0) });
@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
 
                 var coords = new SpatialCoordinateConverter();
                 var spatial = new SpatialQueryService(new PhysicsWorldSpatialBackend(physics, coords));
-                var api = new GasGraphRuntimeApi(world, spatial, coords, eventBus: null, effectRequests: null);
+                var api = new GasGraphRuntimeApi(world, spatial, coords, eventBus: null, effectRequests: null, tagOps: new TagOps());
 
                 var program = new[]
                 {

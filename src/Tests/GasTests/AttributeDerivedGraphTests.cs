@@ -24,7 +24,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty()
+                new AttributeAggregateDirty(),
+                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(abilityHasteAttrId, 50f);
@@ -58,7 +59,7 @@ namespace Ludots.Tests.GAS
 
             // Act: run aggregator
             var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi);
+            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
             system.Update(0f);
 
             // Assert
@@ -81,7 +82,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty()
+                new AttributeAggregateDirty(),
+                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(hpAttrId, 1000f);
@@ -118,7 +120,7 @@ namespace Ludots.Tests.GAS
             world.Add(entity, binding);
 
             var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi);
+            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -135,14 +137,15 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty()
+                new AttributeAggregateDirty(),
+                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(1, 42f);
 
             var registry = new GraphProgramRegistry();
             var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi);
+            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -162,7 +165,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty()
+                new AttributeAggregateDirty(),
+                new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(sourceAttr, 10f);
@@ -186,10 +190,10 @@ namespace Ludots.Tests.GAS
             world.Add(entity, binding);
 
             var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi);
+            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
             system.Update(0f);
 
-            // Entity should have DirtyFlags added (from WithoutDirtyJob path)
+            // Entity keeps its preinstalled DirtyFlags and records the derived change.
             That(world.Has<DirtyFlags>(entity), Is.True,
                 "DirtyFlags should be added when derived attributes change");
 
@@ -235,6 +239,10 @@ namespace Ludots.Tests.GAS
         public void ApplyEffectTemplate(Arch.Core.Entity caster, Arch.Core.Entity target, int templateId, in EffectArgs args) { }
         public void RemoveEffectTemplate(Arch.Core.Entity target, int templateId) { }
         public void ModifyAttributeAdd(Arch.Core.Entity caster, Arch.Core.Entity target, int attributeId, float delta) { }
+        public void ModifyAttributeSet(Arch.Core.Entity caster, Arch.Core.Entity target, int attributeId, float value)
+        {
+            _world.Get<AttributeBuffer>(target).SetCurrent(attributeId, value);
+        }
         public void SendEvent(Arch.Core.Entity caster, Arch.Core.Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Arch.Core.Entity entity, int keyId, out float value) { value = 0f; return false; }
             public bool TryReadBlackboardInt(Arch.Core.Entity entity, int keyId, out int value) { value = 0; return false; }

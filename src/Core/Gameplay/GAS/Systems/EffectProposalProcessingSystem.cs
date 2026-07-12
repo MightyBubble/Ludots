@@ -295,6 +295,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
             _builtinRuntime.Relationships = relationshipRuntime;
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _builtinRuntime.TagOps = _tagOps;
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
             _builtinClock = clock;
@@ -1132,7 +1133,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ? proposal.Modifiers.Get(0).AttributeId
                 : -1;
             float before = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
-            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers);
+            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, _tagOps);
             float after = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
         }

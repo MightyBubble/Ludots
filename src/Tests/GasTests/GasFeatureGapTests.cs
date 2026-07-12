@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue);
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps());
 
             var e = world.Create();
             var attrs = new AttributeBuffer();

@@ -26,7 +26,17 @@ public static class TagStateInstaller
 
         if (!world.Has<TagCountContainer>(entity))
         {
-            world.Add(entity, new TagCountContainer());
+            var counts = new TagCountContainer();
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
+            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            {
+                if (tags.HasTag(tagId) && !counts.AddCount(tagId))
+                {
+                    throw new InvalidOperationException(
+                        $"{TagOps.TagCountOverflowError}: entity={entity.Id}, source=TagStateInstaller.");
+                }
+            }
+            world.Add(entity, counts);
         }
 
         if (!world.Has<DirtyFlags>(entity))

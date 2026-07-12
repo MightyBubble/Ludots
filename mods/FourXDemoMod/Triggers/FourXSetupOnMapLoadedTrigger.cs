@@ -43,9 +43,7 @@ namespace FourXDemoMod.Triggers
             EnsureTagComponents(world, entities.Governor);
 
             int canColonize = TagRegistry.Register("Status.CanColonize");
-            ref var tags = ref world.Get<GameplayTagContainer>(entities.Governor);
-            ref var counts = ref world.Get<TagCountContainer>(entities.Governor);
-            tagOps.AddTag(ref tags, ref counts, canColonize);
+            tagOps.AddTag(world, entities.Governor, canColonize);
             SeedRelationshipEdges(engine, world, entities);
 
             return Task.CompletedTask;
@@ -62,8 +60,7 @@ namespace FourXDemoMod.Triggers
 
         private static void EnsureTagComponents(World world, Entity e)
         {
-            if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
-            if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
+            TagStateInstaller.EnsureInstalled(world, e);
             if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
         }
 
