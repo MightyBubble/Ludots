@@ -2203,18 +2203,35 @@ public sealed class LauncherService
         }
         catch (OperationCanceledException)
         {
+            string timeoutOutput = string.Empty;
             try
             {
                 if (!process.HasExited)
                 {
                     process.Kill(entireProcessTree: true);
                 }
+
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
             }
             catch
             {
             }
 
-            return (-1, $"Process timed out after {timeoutMs} ms.");
+            try
+            {
+                await Task.WhenAll(stdoutTask, stderrTask).WaitAsync(TimeSpan.FromSeconds(5));
+                timeoutOutput = string.Join(
+                    Environment.NewLine,
+                    new[] { stdoutTask.Result, stderrTask.Result }.Where(text => !string.IsNullOrWhiteSpace(text)));
+            }
+            catch
+            {
+            }
+
+            string timeoutMessage = $"Process timed out after {timeoutMs} ms.";
+            return (-1, string.IsNullOrWhiteSpace(timeoutOutput)
+                ? timeoutMessage
+                : timeoutMessage + Environment.NewLine + timeoutOutput);
         }
 
         var stdout = await stdoutTask;
