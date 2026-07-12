@@ -144,7 +144,7 @@ while ($true) {
     $logPath = Join-Path $runDir "run.log"
     $startedAt = Get-Date
 
-    $argsList = @("cli", "launch", "mass_navigation", "--adapter", $Adapter)
+    $argsList = @("cli", "launch", "capability_standard_mass_navigation_large_world_10k", "--adapter", $Adapter)
     if (-not [string]::IsNullOrWhiteSpace($Build)) {
         $argsList += @("--build", $Build)
     }
@@ -152,11 +152,14 @@ while ($true) {
     $argsList += @("--record", $runDir)
 
     Push-Location $repoRoot
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
+        $ErrorActionPreference = "Continue"
         $output = & $launcher @argsList 2>&1
         $exitCode = $LASTEXITCODE
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
     }
 
