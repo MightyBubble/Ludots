@@ -282,6 +282,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
+            bool hasExplicitRelationshipWork = false;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
@@ -290,6 +291,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
+                hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
             }
 
             TemplateBatchSpawnFeatures features =
@@ -330,6 +332,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasTeamWork ||
                 hasPlayerOwnerWork ||
                 hasParentWork ||
+                hasExplicitRelationshipWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||

@@ -259,7 +259,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 HasWorldPosition = 1,
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
-                TeamIdOverride = plan.TeamId,
                 MembershipTarget = RequireLiveTeamDomain(engine, teamLookup, plan.TeamId),
                 HasMembershipTarget = 1,
                 ComponentPatches = CreateFormationFollowerPatch(
@@ -356,8 +355,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialFootprint(plan.Id));
         UpsertComponent(engine.World, entity, default(CommandSourceSelectableTag));
         UpsertComponent(engine.World, entity, CommandSourceSelectableState.EnabledByDefault);
-        UpsertComponent(engine.World, entity, new Team { Id = formation.TeamId });
-        UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = formation.OwnerPlayerId });
     }
 
     private void RegisterSpawnedObstacleOverlay(GameEngine engine, Entity entity, int overlayIndex)
@@ -461,10 +458,16 @@ internal sealed class FormationCapabilityShowcaseRuntime
     {
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
             viewerObj is not Entity viewer ||
-            !engine.World.IsAlive(viewer) ||
-            !engine.World.TryGet(viewer, out Team viewerTeam))
+            !engine.World.IsAlive(viewer))
         {
             return;
+        }
+
+        ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires ControlDomainQuery before publishing local formation knowledge.");
+        if (!controlDomains.TryResolveControlDomain(viewer, out Entity viewerDomain))
+        {
+            throw new InvalidOperationException("Formation Capability showcase local player has no relationship control domain.");
         }
 
         KnowledgeProjectionStore store = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
@@ -478,8 +481,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             if (!engine.World.IsAlive(formation) ||
                 engine.World.Has<PresentationDestroyPending>(formation) ||
                 !CommandSourceEligibility.IsSelectableNow(engine.World, formation) ||
-                !engine.World.TryGet(formation, out Team formationTeam) ||
-                formationTeam.Id != viewerTeam.Id)
+                !controlDomains.TryResolveControlDomain(formation, out Entity formationDomain) ||
+                formationDomain != viewerDomain)
             {
                 continue;
             }
@@ -796,8 +799,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 HasWorldPosition = 1,
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
-                TeamIdOverride = plan.TeamId,
-                PlayerOwnerIdOverride = formation.OwnerPlayerId,
                 OwnershipSource = ownershipSource,
                 HasOwnershipSource = hasOwnershipSource ? (byte)1 : (byte)0,
                 MembershipTarget = teamDomain,
@@ -1284,30 +1285,19 @@ internal sealed class FormationCapabilityShowcaseRuntime
         return engine.MergedConfig?.StartupLocalPlayerId ?? 0;
     }
 
-    private static int ResolveLocalPlayerOwnerId(GameEngine engine)
+    internal sealed class FormationCapabilityCommandSourceRotateSystem : Arch.System.ISystem<float>
     {
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity local ||
-            !engine.World.IsAlive(local))
-        {
-            throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before binding local formation ownership.");
-        }
+        private static readonly QueryDescription ActiveOrderQuery = new QueryDescription()
+            .WithAll<OrderBuffer>()
+            .WithNone<SuspendedTag>();
 
-        if (!engine.World.TryGet(local, out PlayerOwner owner))
-        {
-            throw new InvalidOperationException("Formation Capability showcase LocalPlayerEntity must author PlayerOwner before binding local formation ownership.");
-        }
-
-        return owner.PlayerId;
-    }
-
-    private sealed class FormationCapabilityCommandSourceRotateSystem : Arch.System.ISystem<float>
-    {
         private readonly GameEngine _engine;
         private readonly FormationCapabilityShowcaseRuntime _owner;
         private readonly OrderQueue _orders;
         private readonly Entity[] _actorsScratch;
         private readonly Order[] _ordersScratch;
+        private readonly Dictionary<int, int> _selectedTokenCounts;
+        private readonly Dictionary<int, int> _activeTokenCounts;
         private ControlDomainQuery? _controlDomains;
         private int _moveOrderTypeId;
 
@@ -1327,6 +1317,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
             _actorsScratch = new Entity[actorCapacity];
             _ordersScratch = new Order[actorCapacity];
+            _selectedTokenCounts = new Dictionary<int, int>(actorCapacity);
+            _activeTokenCounts = new Dictionary<int, int>(actorCapacity);
         }
 
         public void Initialize()
@@ -1387,7 +1379,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     EntityCollectionKeys.CommandSource,
                     _actorsScratch)
                 : 0;
-            if (actorCount != commandActorCount || !TryBuildOrders(actorCount, deltaRadians))
+            if (actorCount != commandActorCount ||
+                !TryBuildOrders(actorCount, deltaRadians) ||
+                !TryPrepareOrderTokens(actorCount))
             {
                 _owner._rotateOrderRejectCount++;
                 return;
@@ -1396,6 +1390,107 @@ internal sealed class FormationCapabilityShowcaseRuntime
             if (!_orders.TryEnqueueBatch(_ordersScratch.AsSpan(0, actorCount)))
             {
                 _owner._rotateOrderRejectCount++;
+            }
+        }
+
+        private bool TryPrepareOrderTokens(int actorCount)
+        {
+            if (actorCount > _orders.AvailableCapacity)
+            {
+                return false;
+            }
+
+            _selectedTokenCounts.Clear();
+            _activeTokenCounts.Clear();
+            for (int i = 0; i < actorCount; i++)
+            {
+                int token = _ordersScratch[i].OrderId;
+                if (token <= 0)
+                {
+                    continue;
+                }
+
+                _selectedTokenCounts.TryGetValue(token, out int selectedCount);
+                _selectedTokenCounts[token] = selectedCount + 1;
+                _activeTokenCounts.TryAdd(token, 0);
+            }
+
+            if (_selectedTokenCounts.Count == 0)
+            {
+                return true;
+            }
+
+            foreach (ref var chunk in _engine.World.Query(in ActiveOrderQuery))
+            {
+                Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
+                foreach (int index in chunk)
+                {
+                    ref OrderBuffer buffer = ref buffers[index];
+                    if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+                    {
+                        continue;
+                    }
+
+                    int token = buffer.ActiveOrder.Order.OrderId;
+                    if (_activeTokenCounts.TryGetValue(token, out int activeCount))
+                    {
+                        _activeTokenCounts[token] = activeCount + 1;
+                    }
+                }
+            }
+
+            PreparePartialOrderTokens(
+                _orders,
+                _ordersScratch.AsSpan(0, actorCount),
+                _selectedTokenCounts,
+                _activeTokenCounts);
+            return true;
+        }
+
+        internal static void PreparePartialOrderTokens(
+            OrderQueue orders,
+            Span<Order> batch,
+            IReadOnlyDictionary<int, int> selectedTokenCounts,
+            IReadOnlyDictionary<int, int> activeTokenCounts)
+        {
+            foreach (KeyValuePair<int, int> selected in selectedTokenCounts)
+            {
+                if (!activeTokenCounts.TryGetValue(selected.Key, out int activeCount))
+                {
+                    throw new InvalidOperationException(
+                        $"Formation Capability rotate order token {selected.Key} has no active-member count.");
+                }
+
+                if (activeCount < selected.Value)
+                {
+                    throw new InvalidOperationException(
+                        $"Formation Capability rotate order token {selected.Key} selected {selected.Value} actors but only {activeCount} active members exist.");
+                }
+
+                if (activeCount == selected.Value)
+                {
+                    continue;
+                }
+
+                int replacementToken = 0;
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    if (batch[i].OrderId != selected.Key)
+                    {
+                        continue;
+                    }
+
+                    if (replacementToken == 0)
+                    {
+                        batch[i].OrderId = 0;
+                        orders.EnsureOrderId(ref batch[i]);
+                        replacementToken = batch[i].OrderId;
+                    }
+                    else
+                    {
+                        batch[i].OrderId = replacementToken;
+                    }
+                }
             }
         }
 

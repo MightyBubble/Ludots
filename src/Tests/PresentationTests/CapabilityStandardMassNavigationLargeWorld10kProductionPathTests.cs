@@ -87,6 +87,12 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
+            var spatialQueries = engine.SpatialQueries as SpatialQueryService
+                ?? throw new InvalidOperationException("Production engine must keep a stable SpatialQueryService instance.");
+            ILoadedChunks loadedChunks = RequireService(engine, CoreServiceKeys.LoadedChunks);
+            Assert.That(spatialQueries.LoadedChunks, Is.SameAs(loadedChunks),
+                "GridBoard focus must publish one loaded-chunk SSOT to both Core services and spatial queries.");
+
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));

@@ -29,8 +29,8 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastProjectionRevision = -1;
         private int _lastCullVisibilityRevision = -1;
 
-        private const int Margin = 200;
-        private const float WorldHudCoarseMarginCm = 600f;
+        public const int ProjectionMarginPixels = 200;
+        public const float ProjectionCoarseMarginCm = 600f;
         private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
         private int _frameCacheStamp;
@@ -111,10 +111,10 @@ namespace Ludots.Core.Presentation.Systems
             float projectionHeight = hasProjectionSnapshot ? projectionSnapshot.Resolution.Y : 0f;
 
             bool useCoarseCull = _cullingDebug != null && _cullingDebug.MaxX > _cullingDebug.MinX && _cullingDebug.MaxY > _cullingDebug.MinY;
-            float minX = useCoarseCull ? _cullingDebug!.MinX - WorldHudCoarseMarginCm : 0f;
-            float maxX = useCoarseCull ? _cullingDebug!.MaxX + WorldHudCoarseMarginCm : 0f;
-            float minZ = useCoarseCull ? _cullingDebug!.MinY - WorldHudCoarseMarginCm : 0f;
-            float maxZ = useCoarseCull ? _cullingDebug!.MaxY + WorldHudCoarseMarginCm : 0f;
+            float minX = useCoarseCull ? _cullingDebug!.MinX - ProjectionCoarseMarginCm : 0f;
+            float maxX = useCoarseCull ? _cullingDebug!.MaxX + ProjectionCoarseMarginCm : 0f;
+            float minZ = useCoarseCull ? _cullingDebug!.MinY - ProjectionCoarseMarginCm : 0f;
+            float maxZ = useCoarseCull ? _cullingDebug!.MaxY + ProjectionCoarseMarginCm : 0f;
             int projectedItems = 0;
             int densitySkippedItems = 0;
             int projectedBarIndex = 0;
@@ -242,10 +242,10 @@ namespace Ludots.Core.Presentation.Systems
             {
                 if (iw <= 0 ||
                     ih <= 0 ||
-                    ix + iw < -Margin ||
-                    iy + ih < -Margin ||
-                    ix > screenWidth + Margin ||
-                    iy > screenHeight + Margin)
+                    ix + iw < -ProjectionMarginPixels ||
+                    iy + ih < -ProjectionMarginPixels ||
+                    ix > screenWidth + ProjectionMarginPixels ||
+                    iy > screenHeight + ProjectionMarginPixels)
                 {
                     return;
                 }
@@ -293,10 +293,10 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
-            if (ix + fontSize < -Margin ||
-                iy + fontSize < -Margin ||
-                ix > screenWidth + Margin ||
-                iy > screenHeight + Margin)
+            if (ix + fontSize < -ProjectionMarginPixels ||
+                iy + fontSize < -ProjectionMarginPixels ||
+                ix > screenWidth + ProjectionMarginPixels ||
+                iy > screenHeight + ProjectionMarginPixels)
             {
                 return;
             }

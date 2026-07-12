@@ -17,11 +17,11 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
 {
     private static readonly QueryDescription BlockersQuery = new QueryDescription()
         .WithAll<MassNavigationFlowObstacleProjection, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription MarkersQuery = new QueryDescription()
         .WithAll<MassNavigationHotspotMarker, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;

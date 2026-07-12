@@ -89,6 +89,26 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(loadedBefore));
     }
 
+    [Test]
+    public void StationaryStreamingWindow_RemainsLoadedBeyondRetentionPeriod()
+    {
+        MassNavigationConfig config = CreateConfigForTests();
+        var simulation = new MassNavigationSimulationRuntime(config);
+        var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
+            config.World!.StreamingChunkSizeCm);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            loadedChunks);
+
+        long[] expected = loadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray();
+        Assert.That(expected, Is.Not.Empty);
+
+        simulation.BeginFrame(config.Streaming.RetainSeconds + 1f);
+        simulation.UpdateStreamingWindow(new Vector2(5_000f, 5_000f));
+
+        Assert.That(loadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(expected));
+    }
+
     internal static MassNavigationConfig CreateConfigForTests()
     {
         MassNavigationConfig baseConfig = LoadBaseMassNavigationConfig();

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -16,7 +17,8 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, OrderBuffer>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, OrderBuffer>()
+        .WithNone<SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
@@ -264,16 +266,13 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 
     private MassNavigationRouteExecutionSink? ResolveRouteSink()
     {
-        if (_routeSink != null)
-        {
-            return _routeSink;
-        }
-
         IPathService? pathService = _engine.GetService(CoreServiceKeys.PathService);
         PathStore? pathStore = _engine.GetService(CoreServiceKeys.PathStore);
         PathingConfig? pathingConfig = _engine.GetService(CoreServiceKeys.PathingConfig);
         if (pathService == null && pathStore == null && pathingConfig == null)
         {
+            _routeSink = null;
+            _engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
             return null;
         }
 
@@ -281,6 +280,11 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         {
             throw new InvalidOperationException(
                 "MassNavigation route execution requires PathService, PathStore, and PathingConfig to be registered together.");
+        }
+
+        if (_routeSink != null && _routeSink.IsBoundTo(pathService, pathStore, pathingConfig))
+        {
+            return _routeSink;
         }
 
         MassNavigationRuntimeCapacityConfig capacity = _simulation.Config.ScenarioRuntime.RuntimeCapacity;

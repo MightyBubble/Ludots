@@ -118,6 +118,23 @@ namespace Ludots.Tests.Presentation
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False);
         }
 
+        [Test]
+        public void RouteSink_BindingIdentityChangesWhenMapPathingServicesAreRebuilt()
+        {
+            var firstStore = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var firstService = new FakePathService(firstStore, new Vector2(1, 1));
+            PathingConfig firstConfig = CreatePathingConfig();
+            var sink = new MassNavigationRouteExecutionSink(firstService, firstStore, firstConfig);
+
+            Assert.That(sink.IsBoundTo(firstService, firstStore, firstConfig), Is.True);
+
+            var resumedStore = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var resumedService = new FakePathService(resumedStore, new Vector2(2, 2));
+            PathingConfig resumedConfig = CreatePathingConfig();
+            Assert.That(sink.IsBoundTo(resumedService, resumedStore, resumedConfig), Is.False,
+                "A push/pop map restore rebuilds pathing services, so ingestion must replace its cached route sink.");
+        }
+
         private static MassNavigationSimulationRuntime CreateRuntime(
             World world,
             out Entity routed,

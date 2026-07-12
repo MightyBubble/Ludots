@@ -2423,6 +2423,8 @@ namespace Ludots.Core.Engine
                 loadedChunks = board.LoadedChunks;
             }
 
+            sharedSpatialQueries.SetLoadedChunks(loadedChunks);
+
             if (board is INodeGraphBoard nodeGraphBoard)
             {
                 SetService(CoreServiceKeys.LoadedGraphRuntime, nodeGraphBoard.GraphRuntime);

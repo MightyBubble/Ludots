@@ -2894,7 +2894,7 @@ public static class LauncherEvidenceRecorder
         string step,
         bool captureImage)
     {
-        MassNavigationSnapshot snapshot = SampleMassNavigationSnapshot(runtime.Engine, simulation, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        MassNavigationSnapshot snapshot = SampleMassNavigationSnapshot(runtime, simulation, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
         timeline.Add(snapshot);
         if (!captureImage)
         {
@@ -2906,8 +2906,9 @@ public static class LauncherEvidenceRecorder
         captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.AgentCount, snapshot.ActiveMoveOrderCount, snapshot.MinimapVisibleMarkerCount, snapshot.FrameMs));
     }
 
-    private static MassNavigationSnapshot SampleMassNavigationSnapshot(GameEngine engine, MassNavigationSimulationRuntime simulation, int tick, string step, double tickMs)
+    private static MassNavigationSnapshot SampleMassNavigationSnapshot(RecordingRuntime runtime, MassNavigationSimulationRuntime simulation, int tick, string step, double tickMs)
     {
+        GameEngine engine = runtime.Engine;
         int[] configuredTeamIds = simulation.TeamIds.ToArray();
         var teamCounts = new Dictionary<int, int>(configuredTeamIds.Length);
         for (int i = 0; i < configuredTeamIds.Length; i++)
@@ -2942,6 +2943,7 @@ public static class LauncherEvidenceRecorder
         int worldHudBarCount = 0;
         int worldHudTextCount = 0;
         int projectionFailureCount = 0;
+        CameraCullingDebugState? cullingDebug = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
         foreach (WorldHudItem item in worldHudItems)
         {
             if (item.Kind == WorldHudItemKind.Bar)
@@ -2960,7 +2962,8 @@ public static class LauncherEvidenceRecorder
             }
 
             if (item.Owner == Entity.Null || !engine.World.IsAlive(item.Owner) ||
-                !engine.World.TryGet(item.Owner, out CullState ownerCull) || !ownerCull.IsVisible)
+                !engine.World.TryGet(item.Owner, out CullState ownerCull) || !ownerCull.IsVisible ||
+                !ShouldRequireScreenHudProjection(runtime, in item, cullingDebug))
             {
                 continue;
             }
@@ -3161,6 +3164,44 @@ public static class LauncherEvidenceRecorder
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
             MassNavigationMs: simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
+    }
+
+    private static bool ShouldRequireScreenHudProjection(
+        RecordingRuntime runtime,
+        in WorldHudItem item,
+        CameraCullingDebugState? cullingDebug)
+    {
+        float worldXCm = item.WorldPosition.X * 100f;
+        float worldZCm = item.WorldPosition.Z * 100f;
+        bool useCoarseCull = cullingDebug != null &&
+            cullingDebug.MaxX > cullingDebug.MinX &&
+            cullingDebug.MaxY > cullingDebug.MinY;
+        if (useCoarseCull &&
+            (worldXCm < cullingDebug!.MinX - WorldHudToScreenSystem.ProjectionCoarseMarginCm ||
+             worldXCm > cullingDebug.MaxX + WorldHudToScreenSystem.ProjectionCoarseMarginCm ||
+             worldZCm < cullingDebug.MinY - WorldHudToScreenSystem.ProjectionCoarseMarginCm ||
+             worldZCm > cullingDebug.MaxY + WorldHudToScreenSystem.ProjectionCoarseMarginCm))
+        {
+            return false;
+        }
+
+        Vector2 screen = runtime.ScreenProjector.WorldToScreen(item.WorldPosition);
+        if (!float.IsFinite(screen.X) || !float.IsFinite(screen.Y))
+        {
+            return false;
+        }
+
+        int x = (int)MathF.Round(screen.X - item.Width * 0.5f);
+        int y = (int)MathF.Round(screen.Y);
+        int margin = WorldHudToScreenSystem.ProjectionMarginPixels;
+        int extentX = item.Kind == WorldHudItemKind.Bar ? (int)item.Width : Math.Max(1, item.FontSize);
+        int extentY = item.Kind == WorldHudItemKind.Bar ? (int)item.Height : Math.Max(1, item.FontSize);
+        return extentX > 0 &&
+            extentY > 0 &&
+            x + extentX >= -margin &&
+            y + extentY >= -margin &&
+            x <= DefaultWidth + margin &&
+            y <= DefaultHeight + margin;
     }
 
     private static int GetMassNavigationCommandSourceCount(GameEngine engine)

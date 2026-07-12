@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MassNavigation.Runtime;
@@ -12,14 +13,15 @@ namespace Ludots.Core.MassNavigation.Systems;
 internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, MassNavigationAgentProfile, EntityLayer>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, MassNavigationAgentProfile, EntityLayer>()
+        .WithNone<SuspendedTag>();
     private static readonly QueryDescription MissingEntityLayerQuery = new QueryDescription()
         .WithAll<MassNavigationAgent, MassNavigationAgentIndex, MassNavigationAgentProfile>()
-        .WithNone<EntityLayer>();
+        .WithNone<EntityLayer, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly HashSet<int> _teamSet;
+    private readonly HashSet<int> _domainIdSet;
     private readonly int _relationshipDomainCapacity;
     private int _lastSyncedStructuralChangeFrame = -1;
 
@@ -28,7 +30,7 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
         _engine = engine;
         _simulation = simulation;
         _relationshipDomainCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity;
-        _teamSet = new HashSet<int>(_relationshipDomainCapacity);
+        _domainIdSet = new HashSet<int>(_relationshipDomainCapacity);
     }
 
     public void Initialize() { }
@@ -50,7 +52,7 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
 
         _lastSyncedStructuralChangeFrame = _simulation.StructuralChangeRevision;
 
-        _teamSet.Clear();
+        _domainIdSet.Clear();
         ThrowIfAgentMissingEntityLayer();
         foreach (ref var chunk in _engine.World.Query(in Query))
         {
@@ -59,21 +61,21 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             Span<EntityLayer> layers = chunk.GetSpan<EntityLayer>();
             foreach (int index in chunk)
             {
-                int teamId = _simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value);
-                if (!_teamSet.Contains(teamId) && _teamSet.Count >= _relationshipDomainCapacity)
+                int domainId = _simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value);
+                if (!_domainIdSet.Contains(domainId) && _domainIdSet.Count >= _relationshipDomainCapacity)
                 {
                     throw new System.InvalidOperationException(
-                        $"MassNavigation metadata sync required more than configured scenarioRuntime.runtimeCapacity.relationshipDomainCapacity {_relationshipDomainCapacity} teams.");
+                        $"MassNavigation metadata sync required more than configured scenarioRuntime.runtimeCapacity.relationshipDomainCapacity {_relationshipDomainCapacity} domains.");
                 }
 
-                _teamSet.Add(teamId);
+                _domainIdSet.Add(domainId);
                 MassNavigationAgentProfile profile = profiles[index];
                 EntityLayer layer = layers[index];
                 string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
                 AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
                 _simulation.MassNavigationFlow.SetUnitRuntimeProfile(
                     agentIndices[index].Value,
-                    teamId,
+                    domainId,
                     profile.Heavy,
                     geometry.Mass,
                     profile.VisualScale,
@@ -83,7 +85,7 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             }
         }
 
-        if (_teamSet.Count <= 0)
+        if (_domainIdSet.Count <= 0)
         {
             return;
         }

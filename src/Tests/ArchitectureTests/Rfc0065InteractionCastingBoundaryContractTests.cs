@@ -515,6 +515,23 @@ namespace Ludots.Tests.Architecture
                 Is.Empty,
                 "MassNavigation agent templates must receive ownership and membership through relationship edges, not PlayerOwner/Team mirrors: " +
                 string.Join(", ", violations));
+
+            string formationRuntimePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "formation_capability",
+                "FormationCapabilityShowcaseMod",
+                "Runtime",
+                "FormationCapabilityShowcaseRuntime.cs");
+            string formationRuntime = File.ReadAllText(formationRuntimePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(formationRuntime, Does.Not.Contain("TeamIdOverride = plan.TeamId"));
+                Assert.That(formationRuntime, Does.Not.Contain("PlayerOwnerIdOverride = formation.OwnerPlayerId"));
+                Assert.That(formationRuntime, Does.Not.Contain("new Team { Id = formation.TeamId }"));
+                Assert.That(formationRuntime, Does.Not.Contain("new PlayerOwner { PlayerId = formation.OwnerPlayerId }"));
+            });
         }
 
         [Test]

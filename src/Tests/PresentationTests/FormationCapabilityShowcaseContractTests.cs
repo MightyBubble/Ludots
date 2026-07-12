@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -18,6 +19,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
@@ -825,12 +827,13 @@ namespace Ludots.Tests.Presentation
                 FormationCapabilityShowcaseFormationSoldier,
                 MassNavigationFormationFollower,
                 MassNavigationAgentIndex,
-                MassNavigationAgent,
-                Team>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier soldier, ref MassNavigationFormationFollower follower) =>
+                MassNavigationAgent>();
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier, ref MassNavigationFormationFollower follower) =>
             {
                 Assert.That(soldier.SlotIndex, Is.EqualTo(follower.SlotIndex));
                 Assert.That(MassNavigationFormationRegistry.GetName(follower.FormationId), Is.Not.Empty);
+                Assert.That(engine.World.Has<Team>(entity), Is.False);
+                Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False);
                 soldierCount++;
             });
 
@@ -1050,6 +1053,22 @@ namespace Ludots.Tests.Presentation
                 var system = new MassNavigationOrderIngestionSystem(engine, simulation);
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
                 Assert.That(ex.Message, Does.Contain("orderIngestionTokenCapacity"));
+            }
+        }
+
+        [Test]
+        public void MassNavigationOrderIngestion_IgnoresSuspendedMapAgents()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                RegisterMoveOrderType(engine);
+                Entity suspended = CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 999);
+                engine.World.Add(suspended, new SuspendedTag());
+
+                var system = new MassNavigationOrderIngestionSystem(engine, simulation);
+                Assert.DoesNotThrow(() => UpdateSystem(system));
+                Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.Zero);
             }
         }
 
@@ -1979,6 +1998,76 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void RuntimeTemplateBatchSpawn_AppliesExplicitMembershipRelationshipsForEveryEntity()
+        {
+            string templateJson = """
+[
+  {
+    "id": "relationship_batch_agent",
+    "components": {
+      "Name": { "Value": "Relationship Batch Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            var relationshipTypes = new RelationshipTypeRegistry();
+            int memberOfTypeId = relationshipTypes.Register("MemberOf");
+            var relationships = new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
+            Entity membershipTarget = world.Create(new TeamIdentity { TeamId = 7 });
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "relationship_batch_agent",
+                    MapId = new MapId("relationship_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = membershipTarget,
+                    HasMembershipTarget = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (Entity entity, ref EntityTemplateKeyRef _) =>
+            {
+                Assert.That(relationships.HasLink(entity, membershipTarget, memberOfTypeId), Is.True);
+                spawned++;
+            });
+            Assert.That(spawned, Is.EqualTo(2));
+        }
+
+        [Test]
         public void CoreComponentRegistry_RegistersMassNavigationAgentLayer()
         {
             Assert.That(Ludots.Core.Config.ComponentRegistry.TryGetComponentType("MassNavigationAgent", out _), Is.True);
@@ -2181,6 +2270,32 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityRotateOrderBatch_RotatingSharedMoveSubsetAssignsFreshSharedToken()
+        {
+            var queue = new OrderQueue(capacity: 64);
+            Order[] batch =
+            {
+                new() { OrderId = 77, OrderTypeId = TestMassNavigationMoveOrderTypeId },
+                new() { OrderId = 77, OrderTypeId = TestMassNavigationMoveOrderTypeId },
+                new() { OrderId = 88, OrderTypeId = TestMassNavigationMoveOrderTypeId },
+                new() { OrderId = 0, OrderTypeId = TestMassNavigationMoveOrderTypeId },
+            };
+            var selectedCounts = new Dictionary<int, int> { [77] = 2, [88] = 1 };
+            var activeCounts = new Dictionary<int, int> { [77] = 4, [88] = 1 };
+
+            FormationCapabilityShowcaseRuntime.FormationCapabilityCommandSourceRotateSystem.PreparePartialOrderTokens(
+                queue,
+                batch,
+                selectedCounts,
+                activeCounts);
+
+            Assert.That(batch[0].OrderId, Is.GreaterThan(0).And.Not.EqualTo(77));
+            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(batch[2].OrderId, Is.EqualTo(88));
+            Assert.That(batch[3].OrderId, Is.Zero);
+        }
+
+        [Test]
         public void FormationCapabilityPlayable_TimeFlowTokenRequestsDriveSimulationTimeFlow()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
@@ -2245,7 +2360,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void FormationCapabilityPlayable_NonLocalPlayerOwnerFormationSelectionRejectsRightClickMoveOrder()
+        public void FormationCapabilityPlayable_NonLocalControlDomainFormationSelectionRejectsRightClickMoveOrder()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
             LoadFormationCapabilityMap(engine);
@@ -2259,12 +2374,12 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before non-local formation command verification.");
 
-            AssertLocalPlayerOwnerFormations(engine);
-            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
-            Entity enemyFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
+            Entity localDomain = ResolveLocalPlayerEntity(engine);
+            AssertLocalControlDomainFormations(engine, localDomain);
+            Entity enemyFormation = FindNonLocalControlDomainFormation(engine, localDomain);
             Assert.That(engine.World.TryGet(enemyFormation, out MassNavigationAgentIndex enemyAgentIndex), Is.True);
-            Assert.That(engine.World.TryGet(enemyFormation, out PlayerOwner enemyOwner), Is.True);
-            Assert.That(enemyOwner.PlayerId, Is.Not.EqualTo(localPlayerId));
+            Assert.That(ResolveControlDomain(engine, enemyFormation), Is.Not.EqualTo(localDomain));
+            Assert.That(engine.World.Has<PlayerOwner>(enemyFormation), Is.False);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
                     enemyAgentIndex.Value,
                     out float _,
@@ -2283,8 +2398,7 @@ namespace Ludots.Tests.Presentation
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForInteraction);
 
             Assert.That(CountActiveMoveOrders(engine, simulation), Is.EqualTo(0));
-            Assert.That(engine.World.TryGet(enemyFormation, out enemyOwner), Is.True);
-            Assert.That(enemyOwner.PlayerId, Is.Not.EqualTo(localPlayerId));
+            Assert.That(ResolveControlDomain(engine, enemyFormation), Is.Not.EqualTo(localDomain));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
                     enemyAgentIndex.Value,
                     out float _,
@@ -2302,7 +2416,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 NormalizeAngleRadians(engine.World.Get<FacingDirection>(enemyFormation).AngleRad - enemyFacingBeforeRotate),
                 Is.EqualTo(0f).Within(0.0001f),
-                "Q/E rotation must use the same local PlayerOwner command boundary as right-click move orders.");
+                "Q/E rotation must use the same relationship control-domain boundary as right-click move orders.");
         }
 
         [Test]
@@ -2323,21 +2437,21 @@ namespace Ludots.Tests.Presentation
             AssertFormationCommandSourceCandidateFacts(engine);
             Entity[] formations = CaptureFormationAgents(engine, FormationCapabilityAcceptance.ExpectedTotalFormations);
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, formations));
-            int selectorTeamId = ResolveSelectionOwnerTeamId(engine);
             TickUntil(
                 engine,
-                () => CommandSourceCount(engine) == CountFriendlyTeamFormations(engine, selectorTeamId),
+                () => CommandSourceCount(engine) == CountFriendlyDomainFormations(engine),
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Player box acquisition should include only formations accepted by the configured Friendly relationship filter.");
 
             Entity[] selected = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
-            Assert.That(selected.Length, Is.EqualTo(CountFriendlyTeamFormations(engine, selectorTeamId)));
+            Assert.That(selected.Length, Is.EqualTo(CountFriendlyDomainFormations(engine)));
             for (int i = 0; i < selected.Length; i++)
             {
                 Entity entity = selected[i];
                 Assert.That(engine.World.Has<FormationCapabilityShowcaseFormationAgent>(entity), Is.True);
-                Assert.That(engine.World.TryGet(entity, out Team team), Is.True);
-                Assert.That(RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id), Is.True);
+                Assert.That(IsFriendlyToLocalDomain(engine, entity), Is.True);
+                Assert.That(engine.World.Has<Team>(entity), Is.False);
+                Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False);
             }
         }
 
@@ -2356,9 +2470,9 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before mixed command-source rotate verification.");
 
-            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
-            Entity localFormation = FindLocalPlayerOwnerFormation(engine, localPlayerId);
-            Entity enemyFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
+            Entity localDomain = ResolveLocalPlayerEntity(engine);
+            Entity localFormation = FindLocalControlDomainFormation(engine, localDomain);
+            Entity enemyFormation = FindNonLocalControlDomainFormation(engine, localDomain);
             float localFacingBefore = engine.World.Get<FacingDirection>(localFormation).AngleRad;
             float enemyFacingBefore = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
             SelectFormations(engine, new[] { localFormation, enemyFormation });
@@ -3506,21 +3620,21 @@ namespace Ludots.Tests.Presentation
             return result;
         }
 
-        private static Entity FindNonLocalPlayerOwnerFormation(GameEngine engine, int localPlayerId)
+        private static Entity FindNonLocalControlDomainFormation(GameEngine engine, Entity localDomain)
         {
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
-            int formationsWithoutOwner = 0;
+            int formationsWithoutDomain = 0;
             var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
             engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
             {
-                if (!engine.World.TryGet(entity, out PlayerOwner owner))
+                if (!TryResolveControlDomain(engine, entity, out Entity domain))
                 {
-                    formationsWithoutOwner++;
+                    formationsWithoutDomain++;
                     return;
                 }
 
-                if (owner.PlayerId == localPlayerId || formation.FormationIndex >= formationIndex)
+                if (domain == localDomain || formation.FormationIndex >= formationIndex)
                 {
                     return;
                 }
@@ -3530,25 +3644,25 @@ namespace Ludots.Tests.Presentation
             });
 
             Assert.That(result, Is.Not.EqualTo(Entity.Null),
-                $"Formation Capability command authorization test requires at least one non-local owner formation; formations without PlayerOwner={formationsWithoutOwner}.");
+                $"Formation Capability command authorization test requires at least one non-local relationship domain; formations without domain={formationsWithoutDomain}.");
             return result;
         }
 
-        private static Entity FindLocalPlayerOwnerFormation(GameEngine engine, int localPlayerId)
+        private static Entity FindLocalControlDomainFormation(GameEngine engine, Entity localDomain)
         {
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
-            int formationsWithoutOwner = 0;
+            int formationsWithoutDomain = 0;
             var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
             engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
             {
-                if (!engine.World.TryGet(entity, out PlayerOwner owner))
+                if (!TryResolveControlDomain(engine, entity, out Entity domain))
                 {
-                    formationsWithoutOwner++;
+                    formationsWithoutDomain++;
                     return;
                 }
 
-                if (owner.PlayerId != localPlayerId || formation.FormationIndex >= formationIndex)
+                if (domain != localDomain || formation.FormationIndex >= formationIndex)
                 {
                     return;
                 }
@@ -3558,17 +3672,17 @@ namespace Ludots.Tests.Presentation
             });
 
             Assert.That(result, Is.Not.EqualTo(Entity.Null),
-                $"Formation Capability command authorization test requires at least one local owner formation; formations without PlayerOwner={formationsWithoutOwner}.");
+                $"Formation Capability command authorization test requires at least one local relationship domain; formations without domain={formationsWithoutDomain}.");
             return result;
         }
 
-        private static int CountFriendlyTeamFormations(GameEngine engine, int selectorTeamId)
+        private static int CountFriendlyDomainFormations(GameEngine engine)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, Team>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationAgent _, ref Team team) =>
+            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent _) =>
             {
-                if (RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id))
+                if (IsFriendlyToLocalDomain(engine, entity))
                 {
                     count++;
                 }
@@ -3579,25 +3693,24 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertFormationCommandSourceCandidateFacts(GameEngine engine)
         {
-            int selectorTeamId = ResolveSelectionOwnerTeamId(engine);
             int friendlyFormationCount = 0;
             int rejectedFormationCount = 0;
-            int formationsWithoutTeam = 0;
+            int formationsWithoutDomain = 0;
             var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, CommandSourceSelectableState>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent _, ref CommandSourceSelectableState selectable) =>
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation, ref CommandSourceSelectableState selectable) =>
             {
                 Assert.That(engine.World.Has<CommandSourceSelectableTag>(entity), Is.True,
                     "Runtime-spawned Formation Capability formation anchors must satisfy Core command-source candidate tagging.");
                 Assert.That(selectable.Enabled, Is.True,
                     "Formation Capability formation candidates stay generally selectable; Core relationship filtering gates player acquisition.");
 
-                if (!engine.World.TryGet(entity, out Team team))
+                if (!TryResolveControlDomain(engine, entity, out _))
                 {
-                    formationsWithoutTeam++;
+                    formationsWithoutDomain++;
                     return;
                 }
 
-                if (RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id))
+                if (IsFriendlyToLocalDomain(engine, entity))
                 {
                     friendlyFormationCount++;
                 }
@@ -3607,19 +3720,18 @@ namespace Ludots.Tests.Presentation
                 }
             });
 
-            Assert.That(formationsWithoutTeam, Is.EqualTo(0));
+            Assert.That(formationsWithoutDomain, Is.EqualTo(0));
             Assert.That(friendlyFormationCount, Is.GreaterThan(0));
             Assert.That(rejectedFormationCount, Is.GreaterThan(0));
         }
 
-        private static void AssertLocalPlayerOwnerFormations(GameEngine engine)
+        private static void AssertLocalControlDomainFormations(GameEngine engine, Entity localDomain)
         {
-            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
             int localFormationCount = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, PlayerOwner>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationAgent _, ref PlayerOwner owner) =>
+            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent _) =>
             {
-                if (owner.PlayerId != localPlayerId)
+                if (!TryResolveControlDomain(engine, entity, out Entity domain) || domain != localDomain)
                 {
                     return;
                 }
@@ -3628,7 +3740,38 @@ namespace Ludots.Tests.Presentation
             });
 
             Assert.That(localFormationCount, Is.GreaterThan(0),
-                "Formation Capability command authorization test requires at least one local owner formation.");
+                "Formation Capability command authorization test requires at least one local relationship-domain formation.");
+        }
+
+        private static Entity ResolveControlDomain(GameEngine engine, Entity entity)
+        {
+            Assert.That(TryResolveControlDomain(engine, entity, out Entity domain), Is.True);
+            return domain;
+        }
+
+        private static bool TryResolveControlDomain(GameEngine engine, Entity entity, out Entity domain)
+        {
+            ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
+                ?? throw new InvalidOperationException("ControlDomainQuery is missing.");
+            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+                ?? throw new InvalidOperationException("DomainStanceQuery is missing.");
+            return controlDomains.TryResolveControlDomain(entity, out domain) ||
+                stances.TryResolveStanceDomain(entity, out domain);
+        }
+
+        private static bool IsFriendlyToLocalDomain(GameEngine engine, Entity entity)
+        {
+            Entity local = ResolveLocalPlayerEntity(engine);
+            if (!TryResolveControlDomain(engine, local, out Entity localDomain) ||
+                !TryResolveControlDomain(engine, entity, out Entity candidateDomain))
+            {
+                return false;
+            }
+
+            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+                ?? throw new InvalidOperationException("DomainStanceQuery is missing.");
+            Assert.That(stances.TryResolveStanceId(nameof(RelationshipFilter.Friendly), out int friendlyStanceId), Is.True);
+            return stances.GetStance(localDomain, candidateDomain) == friendlyStanceId;
         }
 
         private static void SelectFormations(GameEngine engine, ReadOnlySpan<Entity> formations)
@@ -3664,20 +3807,6 @@ namespace Ludots.Tests.Presentation
             }
 
             return local;
-        }
-
-        private static int ResolveLocalPlayerOwnerId(GameEngine engine)
-        {
-            Entity local = ResolveLocalPlayerEntity(engine);
-            Assert.That(engine.World.TryGet(local, out PlayerOwner owner), Is.True);
-            return owner.PlayerId;
-        }
-
-        private static int ResolveSelectionOwnerTeamId(GameEngine engine)
-        {
-            Entity local = ResolveLocalPlayerEntity(engine);
-            Assert.That(engine.World.TryGet(local, out Team team), Is.True);
-            return team.Id;
         }
 
         private static float MinPairDistanceSq(

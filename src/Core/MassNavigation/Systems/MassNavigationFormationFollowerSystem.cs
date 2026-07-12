@@ -15,11 +15,11 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
 {
     private static readonly QueryDescription AnchorQuery = new QueryDescription()
         .WithAll<MassNavigationFormationAnchor, MassNavigationAgentIndex, FacingDirection>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription FollowerQuery = new QueryDescription()
         .WithAll<MassNavigationFormationFollower, MassNavigationAgentIndex>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;

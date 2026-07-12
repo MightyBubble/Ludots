@@ -102,6 +102,13 @@ public sealed class MassNavigationRouteExecutionSink
 
     public int ActiveRouteCount => _routesByKey.Count;
 
+    internal bool IsBoundTo(IPathService pathService, PathStore pathStore, PathingConfig pathingConfig)
+    {
+        return ReferenceEquals(_pathService, pathService) &&
+            ReferenceEquals(_pathStore, pathStore) &&
+            ReferenceEquals(_pathingConfig, pathingConfig);
+    }
+
     public void BeginSync()
     {
         _activeKeys.Clear();

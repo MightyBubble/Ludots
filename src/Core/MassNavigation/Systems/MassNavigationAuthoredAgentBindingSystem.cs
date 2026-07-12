@@ -20,11 +20,11 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 {
     private static readonly QueryDescription AuthoredAgentsQuery = new QueryDescription()
         .WithAll<MassNavigationAgent>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription UnboundAgentsQuery = new QueryDescription()
         .WithAll<MassNavigationAgent>()
-        .WithNone<MassNavigationAgentIndex, PresentationDestroyPending>();
+        .WithNone<MassNavigationAgentIndex, PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;

@@ -33,13 +33,22 @@ public sealed class MassNavigationRuntime
         MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("activating map focus");
         MassNavigationRuntimeBinding binding = RequireRuntimeBinding(engine);
         binding.Activate(mapId, simulation);
-        BindBoardWorld(engine);
-        if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        try
         {
-            EnsureScenario(engine);
-        }
+            BindBoardWorld(engine);
+            if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+            {
+                EnsureScenario(engine);
+            }
 
-        binding.MarkPrepared(mapId, simulation);
+            binding.MarkPrepared(mapId, simulation);
+        }
+        catch
+        {
+            binding.Clear(mapId, simulation);
+            simulation.ReleaseLoadedChunkContribution();
+            throw;
+        }
 
         return true;
     }
