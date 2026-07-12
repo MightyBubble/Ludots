@@ -104,3 +104,56 @@ N/A。
 ### 8. Next variant test
 
 下一个 Mod 变体只调整 graph 连线或 effect 步骤，不修改 Core enum。
+
+---
+
+## GAS Composition Gate — #647 Self Review
+
+- **Task / Issue**: #647
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+主要交付物为 A：统一现有生产 Graph API 的服务装配和生命周期/诊断接线；没有新增 graph op、preset 字段、玩法枚举或平行运行时。
+
+结论：PASS。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|---|---:|---|
+| 生产图服务装配 | N/A | `GasGraphRuntimeApi.CreateProduction` + `GasGraphRuntimeProductionServices` |
+| 派生属性图执行 | 2 | 现有 `GraphProgramRegistry` + `AttributeAggregatorSystem` |
+| 输出生命周期 | N/A | 现有 `GraphOutputValueStore` + Cleanup system |
+| GAS 告警出口 | N/A | 现有 `GasBudget` / `OrderAdmissionResultBuffer` + 固定容量结构化事件缓冲 |
+
+### 3. Reuse list
+
+- Handlers: existing `GasGraphOpHandlerTable`
+- Queues / Systems: `AttributeAggregatorSystem`, `GasBudgetReportSystem`, `OrderAdmissionResultBuffer`
+- Resolvers / Registries: `GraphProgramRegistry`, topology services, `GraphOutputValueStore`
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A。
+
+### 5. Transaction boundary
+
+生产 Graph API 构造要求完整服务集合，缺失任一正式依赖立即失败；owner 版本退役时，输出槽位、哈希索引和旧句柄在同一 Cleanup 更新中一起失效。
+
+### 6. Config SSOT
+
+没有新增玩法配置 schema。生产服务来自引擎唯一强类型服务集合；诊断指标来自 `GasBudget` 与订单接入结果。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile enum 或 graph op
+- [x] 未建立第二套 Graph API 运行时
+- [x] 未用全 ECS 表扫描或定期全清实现输出回收
+- [x] 缺服务、诊断缓冲溢出和计数器回退均 hard-stop
+
+### 8. Next variant test
+
+下一个 Mod 变体继续通过现有 graph 连线和服务集合接入，不修改 Core enum。

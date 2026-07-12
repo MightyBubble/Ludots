@@ -25,6 +25,65 @@ using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
+    public sealed class GasGraphRuntimeProductionServices
+    {
+        public GasGraphRuntimeProductionServices(
+            World world,
+            ISpatialQueryService spatialQueries,
+            ISpatialCoordinateConverter coords,
+            GameplayEventBus eventBus,
+            EffectRequestQueue effectRequests,
+            TagOps tagOps,
+            RelationshipRuntime relationshipRuntime,
+            RelationshipTypeRegistry typeRegistry,
+            RelationshipMetricRegistry metricRegistry,
+            RelationshipFlagRegistry flagRegistry,
+            RelationshipReasonRegistry reasonRegistry,
+            TargetDispatchPresetRegistry targetDispatchPresets,
+            EntityCollectionStore entityCollections,
+            EntitySetQueryRuntime entityQueries,
+            ControlDomainQuery controlDomains,
+            KnowledgeProjectionResolver knowledgeProjections,
+            IClock clock)
+        {
+            World = world ?? throw new ArgumentNullException(nameof(world));
+            SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
+            Coords = coords ?? throw new ArgumentNullException(nameof(coords));
+            EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+            EffectRequests = effectRequests ?? throw new ArgumentNullException(nameof(effectRequests));
+            TagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
+            RelationshipRuntime = relationshipRuntime ?? throw new ArgumentNullException(nameof(relationshipRuntime));
+            TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
+            MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
+            FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
+            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
+            TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
+            EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
+            ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+            KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
+            Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        }
+
+        public World World { get; }
+        public ISpatialQueryService SpatialQueries { get; }
+        public ISpatialCoordinateConverter Coords { get; }
+        public GameplayEventBus EventBus { get; }
+        public EffectRequestQueue EffectRequests { get; }
+        public TagOps TagOps { get; }
+        public RelationshipRuntime RelationshipRuntime { get; }
+        public RelationshipTypeRegistry TypeRegistry { get; }
+        public RelationshipMetricRegistry MetricRegistry { get; }
+        public RelationshipFlagRegistry FlagRegistry { get; }
+        public RelationshipReasonRegistry ReasonRegistry { get; }
+        public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
+        public EntityCollectionStore EntityCollections { get; }
+        public EntitySetQueryRuntime EntityQueries { get; }
+        public ControlDomainQuery ControlDomains { get; }
+        public KnowledgeProjectionResolver KnowledgeProjections { get; }
+        public IClock Clock { get; }
+    }
+
     public sealed class GasGraphRuntimeApi : IGraphRuntimeApi
     {
         private readonly World _world;
@@ -70,12 +129,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new ArgumentNullException(nameof(services));
             }
 
-            var api = new GasGraphRuntimeApi(
+            return CreateProduction(new GasGraphRuntimeProductionServices(
                 world,
-                spatialQueries,
-                coords,
-                eventBus,
-                effectRequests,
+                spatialQueries ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires SpatialQueryService."),
+                coords ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires SpatialCoordinateConverter."),
+                eventBus ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires GameplayEventBus."),
+                effectRequests ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires EffectRequestQueue."),
                 RequireService(services, CoreServiceKeys.TagOps),
                 RequireService(services, CoreServiceKeys.RelationshipRuntime),
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
@@ -84,18 +143,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
-                RequireService(services, CoreServiceKeys.EntitySetQueryRuntime));
-            api.BindTopologyServices(
-                OptionalService(services, CoreServiceKeys.ControlDomainQuery),
-                OptionalService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                OptionalService(services, CoreServiceKeys.Clock));
-            return api;
+                RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
+                RequireService(services, CoreServiceKeys.ControlDomainQuery),
+                RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
+                RequireService(services, CoreServiceKeys.Clock)));
         }
 
-        private static T? OptionalService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
-            where T : class
+        public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
         {
-            return services.TryGetValue(key.Name, out object? value) && value is T typed ? typed : null;
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            var api = new GasGraphRuntimeApi(
+                services.World,
+                services.SpatialQueries,
+                services.Coords,
+                services.EventBus,
+                services.EffectRequests,
+                services.TagOps,
+                services.RelationshipRuntime,
+                services.TypeRegistry,
+                services.MetricRegistry,
+                services.FlagRegistry,
+                services.ReasonRegistry,
+                services.TargetDispatchPresets,
+                services.EntityCollections,
+                services.EntityQueries);
+            api.BindTopologyServices(
+                services.ControlDomains,
+                services.KnowledgeProjections,
+                services.Clock);
+            return api;
         }
 
         private static T RequireService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)

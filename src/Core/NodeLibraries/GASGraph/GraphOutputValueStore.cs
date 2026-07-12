@@ -4,9 +4,9 @@ using Ludots.Core.Registry;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
-    public readonly record struct GraphOutputValueHandle(int Slot, uint Revision)
+    public readonly record struct GraphOutputValueHandle(int Slot, uint Generation)
     {
-        public bool IsValid => Slot >= 0 && Revision != 0;
+        public bool IsValid => Slot >= 0 && Generation != 0;
         public static GraphOutputValueHandle Invalid { get; } = new(-1, 0);
     }
 
@@ -34,11 +34,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private int[] _ownerVersions;
         private int[] _keyIds;
         private GraphOutputValueKind[] _kinds;
+        private uint[] _handleGenerations;
         private uint[] _revisions;
         private byte[] _boolValues;
         private int[] _intValues;
         private float[] _floatValues;
         private Entity[] _entityValues;
+        private int[] _freeSlots;
+        private int _freeSlotCount;
 
         private int[] _bucketHeads;
         private int[] _entryNext;
@@ -66,11 +69,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _ownerVersions = new int[initialCapacity];
             _keyIds = new int[initialCapacity];
             _kinds = new GraphOutputValueKind[initialCapacity];
+            _handleGenerations = new uint[initialCapacity];
             _revisions = new uint[initialCapacity];
             _boolValues = new byte[initialCapacity];
             _intValues = new int[initialCapacity];
             _floatValues = new float[initialCapacity];
             _entityValues = new Entity[initialCapacity];
+            _freeSlots = new int[initialCapacity];
 
             int bucketCount = NextPowerOfTwo(Math.Max(16, initialCapacity * 2));
             _bucketHeads = new int[bucketCount];
@@ -84,6 +89,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public StringIntRegistry KeyRegistry => _keyRegistry;
+        public int ActiveCount { get; private set; }
 
         public GraphOutputValueHandle SetBool(Entity owner, string key, bool value)
         {
@@ -97,7 +103,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool changed = kindChanged || _boolValues[slot] != (value ? (byte)1 : (byte)0);
             _boolValues[slot] = value ? (byte)1 : (byte)0;
             Commit(slot, changed);
-            return new GraphOutputValueHandle(slot, _revisions[slot]);
+            return new GraphOutputValueHandle(slot, _handleGenerations[slot]);
         }
 
         public GraphOutputValueHandle SetInt(Entity owner, string key, int value)
@@ -112,7 +118,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool changed = kindChanged || _intValues[slot] != value;
             _intValues[slot] = value;
             Commit(slot, changed);
-            return new GraphOutputValueHandle(slot, _revisions[slot]);
+            return new GraphOutputValueHandle(slot, _handleGenerations[slot]);
         }
 
         public GraphOutputValueHandle SetFloat(Entity owner, string key, float value)
@@ -127,7 +133,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool changed = kindChanged || _floatValues[slot] != value;
             _floatValues[slot] = value;
             Commit(slot, changed);
-            return new GraphOutputValueHandle(slot, _revisions[slot]);
+            return new GraphOutputValueHandle(slot, _handleGenerations[slot]);
         }
 
         public GraphOutputValueHandle SetEntity(Entity owner, string key, Entity value)
@@ -142,7 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool changed = kindChanged || _entityValues[slot] != value;
             _entityValues[slot] = value;
             Commit(slot, changed);
-            return new GraphOutputValueHandle(slot, _revisions[slot]);
+            return new GraphOutputValueHandle(slot, _handleGenerations[slot]);
         }
 
         public bool TryGet(Entity owner, string key, out GraphOutputValueHandle handle)
@@ -158,14 +164,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return false;
             }
 
-            handle = new GraphOutputValueHandle(slot, _revisions[slot]);
+            handle = new GraphOutputValueHandle(slot, _handleGenerations[slot]);
             return true;
         }
 
         public bool TryGetView(GraphOutputValueHandle handle, out GraphOutputValueView view)
         {
             view = default;
-            if (!TryValidateSlot(handle.Slot))
+            if (!TryValidateSlot(handle.Slot) || _handleGenerations[handle.Slot] != handle.Generation)
             {
                 return false;
             }
@@ -183,6 +189,56 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 _floatValues[slot],
                 _entityValues[slot]);
             return true;
+        }
+
+        public int RemoveOwner(Entity owner)
+        {
+            if (owner == Entity.Null)
+            {
+                return 0;
+            }
+
+            int removed = 0;
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                if (_active[slot] && _owners[slot] == owner)
+                {
+                    ReleaseSlot(slot);
+                    removed++;
+                }
+            }
+
+            if (removed > 0)
+            {
+                RebuildEntries();
+            }
+
+            return removed;
+        }
+
+        public int ReleaseDeadOwners(World world)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            int removed = 0;
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                if (_active[slot] && !world.IsAlive(_owners[slot]))
+                {
+                    ReleaseSlot(slot);
+                    removed++;
+                }
+            }
+
+            if (removed > 0)
+            {
+                RebuildEntries();
+            }
+
+            return removed;
         }
 
         private int PrepareSlot(Entity owner, int keyId, GraphOutputValueKind kind, out bool kindChanged)
@@ -206,6 +262,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _ownerVersions[slot] = owner.Version;
             _keyIds[slot] = keyId;
             _kinds[slot] = kind;
+            if (_handleGenerations[slot] == 0)
+            {
+                _handleGenerations[slot] = 1;
+            }
             if (kindChanged)
             {
                 _boolValues[slot] = 0;
@@ -253,7 +313,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Rehash(_bucketHeads.Length * 2);
             }
 
-            int slot = _slotCount++;
+            int slot;
+            if (_freeSlotCount > 0)
+            {
+                slot = _freeSlots[--_freeSlotCount];
+            }
+            else
+            {
+                slot = _slotCount++;
+            }
             int entry = _entryCount++;
             _entryOwnerIds[entry] = owner.Id;
             _entryOwnerWorldIds[entry] = owner.WorldId;
@@ -263,7 +331,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int bucket = BucketIndex(owner.Id, owner.WorldId, owner.Version, keyId, _bucketHeads.Length);
             _entryNext[entry] = _bucketHeads[bucket];
             _bucketHeads[bucket] = entry;
+            ActiveCount++;
             return slot;
+        }
+
+        private void ReleaseSlot(int slot)
+        {
+            _active[slot] = false;
+            _owners[slot] = Entity.Null;
+            _ownerIds[slot] = 0;
+            _ownerWorldIds[slot] = 0;
+            _ownerVersions[slot] = 0;
+            _keyIds[slot] = 0;
+            _kinds[slot] = default;
+            _boolValues[slot] = 0;
+            _intValues[slot] = 0;
+            _floatValues[slot] = 0f;
+            _entityValues[slot] = Entity.Null;
+            _handleGenerations[slot]++;
+            if (_handleGenerations[slot] == 0)
+            {
+                _handleGenerations[slot] = 1;
+            }
+
+            _freeSlots[_freeSlotCount++] = slot;
+            ActiveCount--;
+        }
+
+        private void RebuildEntries()
+        {
+            Array.Fill(_bucketHeads, -1);
+            _entryCount = 0;
+            EnsureEntryCapacity(ActiveCount);
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                int entry = _entryCount++;
+                _entryOwnerIds[entry] = _ownerIds[slot];
+                _entryOwnerWorldIds[entry] = _ownerWorldIds[slot];
+                _entryOwnerVersions[entry] = _ownerVersions[slot];
+                _entryKeyIds[entry] = _keyIds[slot];
+                _entrySlots[entry] = slot;
+                int bucket = BucketIndex(
+                    _ownerIds[slot],
+                    _ownerWorldIds[slot],
+                    _ownerVersions[slot],
+                    _keyIds[slot],
+                    _bucketHeads.Length);
+                _entryNext[entry] = _bucketHeads[bucket];
+                _bucketHeads[bucket] = entry;
+            }
         }
 
         private bool TryFindSlot(Entity owner, int keyId, out int slot)
@@ -310,11 +431,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Array.Resize(ref _ownerVersions, next);
             Array.Resize(ref _keyIds, next);
             Array.Resize(ref _kinds, next);
+            Array.Resize(ref _handleGenerations, next);
             Array.Resize(ref _revisions, next);
             Array.Resize(ref _boolValues, next);
             Array.Resize(ref _intValues, next);
             Array.Resize(ref _floatValues, next);
             Array.Resize(ref _entityValues, next);
+            Array.Resize(ref _freeSlots, next);
         }
 
         private void EnsureEntryCapacity(int required)

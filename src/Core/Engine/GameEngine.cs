@@ -658,6 +658,7 @@ namespace Ludots.Core.Engine
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
             var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);
             var gasBudget = new GasBudget();
+            var gasDiagnostics = new GasDiagnosticEventBuffer();
             TeamManager.DefaultRelationship = TeamRelationship.Hostile;
             var teamEntityLookup = new TeamEntityLookup();
             var playerEntityLookup = new PlayerEntityLookup();
@@ -855,7 +856,7 @@ namespace Ludots.Core.Engine
                 effectRequestQueue,
                 relationshipRuntime);
             var graphOutputValueStore = new GraphOutputValueStore(graphOutputValueKeyRegistry, initialCapacity: 128);
-            var gasGraphApi = new GasGraphRuntimeApi(
+            var gasGraphProductionServices = new GasGraphRuntimeProductionServices(
                 World,
                 SpatialQueries,
                 SpatialCoords,
@@ -869,7 +870,11 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 entityCollectionStore,
-                entitySetQueryRuntime);
+                entitySetQueryRuntime,
+                controlDomainQuery,
+                knowledgeProjectionResolver,
+                clock);
+            var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
                 World,
@@ -921,8 +926,9 @@ namespace Ludots.Core.Engine
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
-            var orderQueue = new OrderQueue();
-            var chainOrderQueue = new OrderQueue();
+            var orderAdmissionResults = new OrderAdmissionResultBuffer();
+            var orderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
+            var chainOrderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
             var orderRequestQueue = new OrderRequestQueue();
             var responseChainTelemetry = new ResponseChainTelemetryBuffer();
 
@@ -987,23 +993,7 @@ namespace Ludots.Core.Engine
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
-            var performerGraphApi = new GasGraphRuntimeApi(
-                World,
-                spatialQueries: null,
-                coords: null,
-                eventBus: null,
-                effectRequests: effectRequestQueue,
-                tagOps: tagOps,
-                relationshipRuntime: relationshipRuntime,
-                typeRegistry: relationshipTypeRegistry,
-                metricRegistry: relationshipMetricRegistry,
-                flagRegistry: relationshipFlagRegistry,
-                reasonRegistry: relationshipReasonRegistry,
-                targetDispatchPresets: targetDispatchPresetRegistry,
-                entityCollections: entityCollectionStore,
-                entityQueries: entitySetQueryRuntime);
-            // RFC-0065 PROV-4b: topology predicate ops for performer graph conditions.
-            performerGraphApi.BindTopologyServices(controlDomainQuery, knowledgeProjectionResolver, clock);
+            var performerGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
             {
                 return eventKind == PresentationEventKind.EffectApplied
@@ -1201,7 +1191,7 @@ namespace Ludots.Core.Engine
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World);
+            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi);
             var sessionSystem = new GameSessionSystem(GameSession);
             var authoritativeInput = new FrozenInputActionReader();
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
@@ -1337,7 +1327,8 @@ namespace Ludots.Core.Engine
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
                 orderQueue, stepRateHz,
-                graphProgramRegistry, gasGraphApi);
+                graphProgramRegistry, gasGraphApi,
+                orderAdmissionResults);
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
@@ -1350,14 +1341,18 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ExtensionAttributeRegistry, extensionAttributeRegistry);
             SetService(CoreServiceKeys.AttributeSchemaUpdateQueue, attributeSchemaUpdateQueue);
             SetService(CoreServiceKeys.GasBudget, gasBudget);
+            SetService(CoreServiceKeys.GasDiagnosticEventBuffer, gasDiagnostics);
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
+            SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
             SetService(CoreServiceKeys.GraphReturnWriter, graphReturnWriter);
             SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
+            SetService(CoreServiceKeys.OrderAdmissionResultBuffer, orderAdmissionResults);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
@@ -1702,9 +1697,10 @@ namespace Ludots.Core.Engine
 
             // Phase 6: Cleanup
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
+            RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
-            RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
+            RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
             // and owner-change index consumed by performer owner bindings.

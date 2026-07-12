@@ -37,6 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public sealed class OrderAdmissionResultBuffer
     {
         private readonly OrderAdmissionOutcome[] _items;
+        private readonly long[] _observedByResult = new long[8];
         private int _head;
         private int _count;
 
@@ -56,6 +57,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryWrite(in OrderAdmissionOutcome outcome)
         {
+            int resultIndex = (int)outcome.Result;
+            if ((uint)resultIndex >= (uint)_observedByResult.Length)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.ADMISSION.ERR.UnknownSubmitResult: value={resultIndex}.");
+            }
+
+            _observedByResult[resultIndex]++;
             if (_count >= _items.Length)
             {
                 OverflowCount++;
@@ -66,6 +75,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _items[tail] = outcome;
             _count++;
             return true;
+        }
+
+        public long GetObservedCount(OrderSubmitResult result)
+        {
+            int index = (int)result;
+            if ((uint)index >= (uint)_observedByResult.Length)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(result));
+            }
+
+            return _observedByResult[index];
         }
 
         public bool TryRead(out OrderAdmissionOutcome outcome)
