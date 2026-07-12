@@ -6,16 +6,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
-    public enum OrderSubmitResult
-    {
-        Activated = 0,
-        Queued = 1,
-        Blocked = 2,
-        QueueFull = 3,
-        Ignored = 4,
-        InvalidEntity = 5
-    }
-
     public static class OrderSubmitter
     {
         public static OrderSubmitResult Submit(
@@ -34,7 +24,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
-                return OrderSubmitResult.InvalidEntity;
+                return OrderSubmitResult.RejectedInvalidActor;
             }
 
             var config = registry.Get(order.OrderTypeId);
@@ -54,18 +44,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             if (!config.AllowQueuedMode)
             {
-                return OrderSubmitResult.Ignored;
+                return OrderSubmitResult.RejectedByRule;
             }
 
             if (buffer.QueuedCount >= config.QueuedModeMaxSize)
             {
-                return OrderSubmitResult.QueueFull;
+                return OrderSubmitResult.RejectedQueueFull;
             }
 
             int expireStep = CalculateExpireStep(config, currentStep, stepRateHz);
             return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                 ? OrderSubmitResult.Queued
-                : OrderSubmitResult.QueueFull;
+                : OrderSubmitResult.RejectedQueueFull;
         }
 
         private static OrderSubmitResult HandleImmediateMode(
@@ -85,7 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ref readonly var rules = ref orderRuleRegistry.Get(order.OrderTypeId);
                 if (rules.Blocks(activeOrderTypeId))
                 {
-                    return OrderSubmitResult.Blocked;
+                    return OrderSubmitResult.RejectedByRule;
                 }
             }
 
@@ -131,22 +121,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                         }
                         else
                         {
-                            return OrderSubmitResult.QueueFull;
+                            return OrderSubmitResult.RejectedQueueFull;
                         }
                     }
 
                     return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                         ? OrderSubmitResult.Queued
-                        : OrderSubmitResult.QueueFull;
+                        : OrderSubmitResult.RejectedQueueFull;
                 }
                 case SameTypePolicy.Replace:
                     buffer.RemoveAllOfType(order.OrderTypeId);
                     return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                         ? OrderSubmitResult.Queued
-                        : OrderSubmitResult.QueueFull;
+                        : OrderSubmitResult.RejectedQueueFull;
                 case SameTypePolicy.Ignore:
                 default:
-                    return OrderSubmitResult.Ignored;
+                    return OrderSubmitResult.RejectedByRule;
             }
         }
 

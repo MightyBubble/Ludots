@@ -81,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             currentStep,
                             _stepRateHz);
 
-                        if (result != OrderSubmitResult.Blocked)
+                        if (result != OrderSubmitResult.RejectedByRule)
                         {
                             continue;
                         }

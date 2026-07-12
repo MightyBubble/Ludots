@@ -2520,7 +2520,7 @@ public static class LauncherEvidenceRecorder
                 Args = MassNavigationMoveOrderArgs.Encode(targetCm, MassNavigationFormationMode.Square, rotationRadians: 0f)
             };
 
-            if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.InvalidEntity)
+            if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.RejectedInvalidActor)
             {
                 submitted++;
             }

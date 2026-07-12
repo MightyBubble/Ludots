@@ -29,11 +29,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _tail;
         private int _count;
         private int _nextOrderId = 1;
+        private readonly OrderAdmissionResultBuffer? _admissionResults;
 
-        public OrderQueue(int capacity = 4096)
+        public OrderQueue(int capacity = 4096, OrderAdmissionResultBuffer? admissionResults = null)
         {
             if (capacity < 64) capacity = 64;
             _items = new Order[capacity];
+            _admissionResults = admissionResults;
         }
 
         public int Count => _count;
@@ -47,13 +49,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryEnqueueAssigned(ref Order order)
         {
-            ValidateOrderTypeId(order.OrderTypeId);
-            if (_count >= _items.Length) return false;
             EnsureOrderId(ref order);
+            if (!IsValidOrderTypeId(order.OrderTypeId))
+            {
+                WriteAdmission(in order, OrderSubmitResult.RejectedInvalidOrderType);
+                return false;
+            }
+
+            if (_count >= _items.Length)
+            {
+                WriteAdmission(in order, OrderSubmitResult.RejectedQueueFull);
+                return false;
+            }
 
             _items[_tail] = order;
             _tail = (_tail + 1) % _items.Length;
             _count++;
+            WriteAdmission(in order, OrderSubmitResult.Queued);
             return true;
         }
 
@@ -65,13 +77,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private static void ValidateOrderTypeId(int orderTypeId)
+        private static bool IsValidOrderTypeId(int orderTypeId)
         {
-            if (orderTypeId <= 0 || orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
-            {
-                throw new System.InvalidOperationException(
-                    $"OrderQueue requires a positive order type id below {OrderTypeRegistry.MaxOrderTypes}; got {orderTypeId}.");
-            }
+            return orderTypeId > 0 && orderTypeId < OrderTypeRegistry.MaxOrderTypes;
+        }
+
+        private void WriteAdmission(in Order order, OrderSubmitResult result)
+        {
+            if (_admissionResults == null) return;
+            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.GlobalIntake, result);
+            _admissionResults.TryWrite(in outcome);
         }
 
         public bool TryDequeue(out Order order)

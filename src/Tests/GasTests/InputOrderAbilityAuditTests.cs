@@ -151,15 +151,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void OrderQueue_InvalidOrderTypeId_Throws()
+        public void OrderQueue_InvalidOrderTypeId_PublishesTypedRejection()
         {
-            var queue = new OrderQueue();
+            var results = new OrderAdmissionResultBuffer(4);
+            var queue = new OrderQueue(64, results);
             var order = new Order { OrderTypeId = 0 };
 
-            var ex = Throws<InvalidOperationException>(() => queue.TryEnqueue(in order));
+            bool accepted = queue.TryEnqueue(in order);
 
-            That(ex!.Message, Does.Contain("OrderQueue"));
-            That(ex.Message, Does.Contain("0"));
+            That(accepted, Is.False);
+            That(results.TryRead(out var outcome), Is.True);
+            That(outcome.OrderId, Is.GreaterThan(0));
+            That(outcome.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
+            That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidOrderType));
+        }
+
+        [Test]
+        public void OrderAdmissionResultBuffer_WhenFull_CountsOverflowWithoutAllocatingOrGrowing()
+        {
+            var results = new OrderAdmissionResultBuffer(1);
+            var first = new OrderAdmissionOutcome(1, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+            var second = new OrderAdmissionOutcome(2, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedQueueFull);
+
+            That(results.TryWrite(in first), Is.True);
+            That(results.TryWrite(in second), Is.False);
+
+            That(results.Capacity, Is.EqualTo(1));
+            That(results.Count, Is.EqualTo(1));
+            That(results.OverflowCount, Is.EqualTo(1));
         }
 
         [Test]

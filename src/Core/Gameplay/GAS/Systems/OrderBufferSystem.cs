@@ -19,6 +19,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry _orderRuleRegistry;
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
+        private readonly OrderAdmissionResultBuffer? _admissionResults;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -34,7 +35,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            OrderAdmissionResultBuffer? admissionResults = null)
             : base(world)
         {
             _clock = clock;
@@ -50,6 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _graphProgramRegistry = graphProgramRegistry;
             _graphApi = graphApi;
+            _admissionResults = admissionResults;
         }
 
         public override void Update(in float dt)
@@ -101,10 +104,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
                 {
+                    WriteAdmission(in order, OrderSubmitResult.RejectedInvalidActor);
                     continue;
                 }
 
-                var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out var config))
+                {
+                    WriteAdmission(in order, OrderSubmitResult.RejectedInvalidOrderType);
+                    continue;
+                }
+
                 if (config.ValidationGraphId > 0)
                 {
                     if (_graphProgramRegistry == null || _graphApi == null)
@@ -127,7 +136,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         targetPos,
                         validationProgram,
                         _graphApi);
-                    if (!passed) continue;
+                    if (!passed)
+                    {
+                        WriteAdmission(in order, OrderSubmitResult.RejectedValidation);
+                        continue;
+                    }
                 }
 
                 var result = OrderSubmitter.Submit(
@@ -139,13 +152,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     currentStep,
                     _stepRateHz);
 
-                if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
+                if (result == OrderSubmitResult.RejectedByRule && config.PendingBufferWindowMs > 0)
                 {
                     int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
                     ref var buffer = ref World.Get<OrderBuffer>(order.Actor);
                     buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+                    result = OrderSubmitResult.Pending;
                 }
+
+
+                WriteAdmission(in order, result);
             }
+        }
+
+        private void WriteAdmission(in Order order, OrderSubmitResult result)
+        {
+            if (_admissionResults == null) return;
+            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
+            _admissionResults.TryWrite(in outcome);
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
@@ -216,6 +240,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-
 
 
