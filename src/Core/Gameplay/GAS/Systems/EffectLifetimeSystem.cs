@@ -621,7 +621,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 entry.TemplateId,
                 in mergedConfig,
                 builtinRuntime,
-                BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context));
+                BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
+                entry.Context.RootId);
 
             if (builtinRuntime != null)
             {

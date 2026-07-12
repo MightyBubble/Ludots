@@ -668,7 +668,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 templateId,
                 in mergedConfig,
                 builtinRuntime,
-                BuildExecutionSeed(effectEntity, phase, templateId, context));
+                BuildExecutionSeed(effectEntity, phase, templateId, context),
+                context.RootId);
 
             _graphApiHost?.ClearConfigContext();
 

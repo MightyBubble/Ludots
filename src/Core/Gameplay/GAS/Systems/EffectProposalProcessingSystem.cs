@@ -1078,15 +1078,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _phaseExecutor!.ExecutePhase(
                     World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve));
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
                 _phaseExecutor.ExecutePhase(
                     World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit));
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
                 _phaseExecutor.ExecutePhase(
                     World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply));
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
 
                 if (_builtinRuntime.HasAttributeDelta)
                 {
@@ -1306,6 +1306,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
@@ -1322,7 +1323,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     tpl.PresetType,
                     proposal.TagId,
                     proposal.TemplateId,
-                    in mergedConfig);
+                    in mergedConfig,
+                    rootId: proposal.RootId);
             }
             finally
             {
@@ -1346,6 +1348,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
@@ -1366,7 +1369,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     proposal.TemplateId,
                     in mergedConfig,
                     _builtinRuntime,
-                    BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate));
+                    BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate),
+                    proposal.RootId);
                 PublishBuiltinFanOutCommands();
             }
             finally
