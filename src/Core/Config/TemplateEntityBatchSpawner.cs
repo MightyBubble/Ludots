@@ -240,7 +240,7 @@ namespace Ludots.Core.Config
                 Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
                 Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
-                Span<DirtyFlags> dirtyFlags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<DirtyFlags>() : default;
+                Span<DirtyFlags> dirtyFlags = descriptor.HasDirtyFlags ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
@@ -296,7 +296,7 @@ namespace Ludots.Core.Config
                     {
                         tagCounts[componentIndex] = descriptor.TagCounts;
                     }
-                    if (descriptor.HasGameplayTagContainer)
+                    if (descriptor.HasDirtyFlags)
                     {
                         dirtyFlags[componentIndex] = default;
                     }
@@ -482,6 +482,7 @@ namespace Ludots.Core.Config
             public readonly bool HasAttributeBuffer;
             public readonly bool HasGameplayTagContainer;
             public readonly bool HasTagCountContainer;
+            public readonly bool HasDirtyFlags;
             public readonly GameplayTagContainer GameplayTags;
             public readonly TagCountContainer TagCounts;
             public readonly EntityTemplateKeyRef TemplateKey;
@@ -510,6 +511,7 @@ namespace Ludots.Core.Config
                 bool hasAttributeBuffer,
                 bool hasGameplayTagContainer,
                 bool hasTagCountContainer,
+                bool hasDirtyFlags,
                 GameplayTagContainer gameplayTags,
                 TagCountContainer tagCounts,
                 EntityTemplateKeyRef templateKey,
@@ -537,6 +539,7 @@ namespace Ludots.Core.Config
                 HasAttributeBuffer = hasAttributeBuffer;
                 HasGameplayTagContainer = hasGameplayTagContainer;
                 HasTagCountContainer = hasTagCountContainer;
+                HasDirtyFlags = hasDirtyFlags;
                 GameplayTags = gameplayTags;
                 TagCounts = tagCounts;
                 TemplateKey = templateKey;
@@ -649,6 +652,7 @@ namespace Ludots.Core.Config
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
                 bool hasTagCountContainer = hasGameplayTagContainer || template.Components.ContainsKey("TagCountContainer");
+                bool hasDirtyFlags = hasGameplayTagContainer || template.Components.ContainsKey("DirtyFlags");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
                 bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
@@ -720,10 +724,14 @@ namespace Ludots.Core.Config
                     signature += Component<AttributeLastSnapshot>.Signature;
                 }
 
+                if (hasDirtyFlags)
+                {
+                    signature += Component<DirtyFlags>.Signature;
+                }
+
                 if (hasGameplayTagContainer)
                 {
                     signature += Component<GameplayTagContainer>.Signature;
-                    signature += Component<DirtyFlags>.Signature;
                 }
 
                 if (hasTagCountContainer)
@@ -795,6 +803,7 @@ namespace Ludots.Core.Config
                     hasAttributeBuffer,
                     hasGameplayTagContainer,
                     hasTagCountContainer,
+                    hasDirtyFlags,
                     default,
                     default,
                     new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
@@ -807,7 +816,7 @@ namespace Ludots.Core.Config
                     hasTeam,
                     playerOwner,
                     hasPlayerOwner,
-                    onSpawnEffectTemplateId,
+                    onSpawnEffectTemplateId: onSpawnEffectTemplateId,
                     tagComponentTypes,
                     attributeSeeds);
             }
@@ -816,31 +825,32 @@ namespace Ludots.Core.Config
             {
                 return new TemplateSpawnDescriptor(
                     isCompatible: false,
-                    default,
-                    false,
-                    false,
-                    default,
-                    default,
-                    default,
-                    default,
-                    false,
-                    false,
-                    false,
-                    default,
-                    default,
-                    default,
-                    false,
-                    default,
-                    false,
-                    default,
-                    false,
-                    default,
-                    false,
-                    default,
-                    false,
+                    baseSignature: default,
+                    hasStaticTransform: false,
+                    hasDynamicHeightSampling: false,
+                    name: default,
+                    defaultWorldPosition: default,
+                    facing: default,
+                    cullState: default,
+                    hasAttributeBuffer: false,
+                    hasGameplayTagContainer: false,
+                    hasTagCountContainer: false,
+                    hasDirtyFlags: false,
+                    gameplayTags: default,
+                    tagCounts: default,
+                    templateKey: default,
+                    hasOrderBuffer: false,
+                    commandSourceSelectableState: default,
+                    hasCommandSourceSelectableState: false,
+                    entityLayer: default,
+                    hasEntityLayer: false,
+                    team: default,
+                    hasTeam: false,
+                    playerOwner: default,
+                    hasPlayerOwner: false,
                     onSpawnEffectTemplateId,
-                    Array.Empty<ComponentType>(),
-                    Array.Empty<AttributeSeed>());
+                    tagComponentTypes: Array.Empty<ComponentType>(),
+                    attributeSeeds: Array.Empty<AttributeSeed>());
             }
 
             private static bool IsBatchCandidate(IReadOnlyDictionary<string, JsonNode> components)

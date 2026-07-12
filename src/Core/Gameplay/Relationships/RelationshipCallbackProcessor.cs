@@ -141,20 +141,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private void EnsureTagState(Entity entity)
         {
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                entity.Add(new GameplayTagContainer());
-            }
-
-            if (!_world.Has<TagCountContainer>(entity))
-            {
-                entity.Add(new TagCountContainer());
-            }
-
-            if (!_world.Has<DirtyFlags>(entity))
-            {
-                entity.Add(new DirtyFlags());
-            }
+            TagStateInstaller.EnsureInstalled(_world, entity);
         }
 
         private static ScriptContext CreateContext(GameEngine engine)

@@ -1321,9 +1321,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void EnsureTagComponents(Entity actor)
         {
-            if (!World.Has<GameplayTagContainer>(actor)) World.Add(actor, new GameplayTagContainer());
-            if (!World.Has<TagCountContainer>(actor)) World.Add(actor, new TagCountContainer());
-            if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
+            TagStateInstaller.EnsureInstalled(World, actor);
             if (!World.Has<TimedTagBuffer>(actor)) World.Add(actor, new TimedTagBuffer());
         }
 

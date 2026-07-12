@@ -646,6 +646,29 @@ namespace Ludots.Tests.GAS.Production
             WriteLog("rts_demo.log", sb);
         }
 
+        [Test]
+        public void Arpg_FirstAbilityBleed_InstallsStatusAndExpiresWithoutPriorDamage()
+        {
+            RunWithEngine(new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", engine =>
+            {
+                World world = engine.World;
+                var (hero, enemy) = FindEntities2(world, "ArpgHero", "ArpgEnemy");
+                int bleedingTagId = TagRegistry.Register("Status.Bleeding");
+
+                Assert.That(world.Has<DirtyFlags>(enemy), Is.True,
+                    "An entity must enter gameplay with complete tag state before the first effect runs.");
+
+                CastAbility(engine, hero, enemy, slot: 4);
+                Tick(engine, 5);
+
+                Assert.That(HasEffectiveTag(world, engine, enemy, bleedingTagId), Is.True);
+
+                Tick(engine, 360);
+
+                Assert.That(HasEffectiveTag(world, engine, enemy, bleedingTagId), Is.False);
+            });
+        }
+
         // ═════════════════════════════════════════════════
         //  Helpers
         // ═════════════════════════════════════════════════

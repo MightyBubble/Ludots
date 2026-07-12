@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Config
@@ -104,8 +105,7 @@ namespace Ludots.Core.Config
 
             if (_world.Has<GameplayTagContainer>(entity))
             {
-                if (!_world.Has<TagCountContainer>(entity)) _world.Add(entity, new TagCountContainer());
-                if (!_world.Has<DirtyFlags>(entity)) _world.Add(entity, new DirtyFlags());
+                TagStateInstaller.EnsureInstalled(_world, entity);
             }
 
             // Reset for next use
