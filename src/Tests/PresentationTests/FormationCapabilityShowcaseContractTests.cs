@@ -87,6 +87,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(RequireString(targetFilter, "relationFilter"), Is.EqualTo("Friendly"),
                 "FormationCapability player acquisition must use Core RelationshipFilter authoring, not a showcase-local selection policy.");
             JsonObject mapConfig = ReadObject(Path.Combine(modRoot, "assets", "Maps", "formation_capability_showcase.json"));
+            JsonObject defaultCamera = mapConfig["DefaultCamera"]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapability map must author a visual-height-aware default camera.");
+            Assert.That(RequireString(defaultCamera, "VirtualCameraId"), Is.EqualTo("MassNavigation.Camera.LargeWorldHeightmap"),
+                "Formation Capability terrain is elevated, so the camera target height must come from the same visual-heightmap SSOT.");
             JsonObject localPlayerEntity = mapConfig["Entities"]?.AsArray()
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(node => string.Equals(node?["InstanceId"]?.GetValue<string>(), "formation.local_player", StringComparison.Ordinal))
@@ -1070,6 +1074,8 @@ namespace Ludots.Tests.Presentation
 
             Entity[] previousAgents = CaptureTrackedAgents(simulation);
             engine.UnloadMap("formation_capability_showcase");
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.HasActiveCamera, Is.False,
+                "Unloading the focused map must release its heightmap-dependent camera before the next tick.");
             TickUntil(
                 engine,
                 () => CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,

@@ -2028,9 +2028,9 @@ namespace Ludots.Core.Engine
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
             CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
-            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
+            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
 
@@ -2198,9 +2198,9 @@ namespace Ludots.Core.Engine
             {
                 CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
 
-                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
+                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
             }

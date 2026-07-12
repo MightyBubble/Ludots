@@ -5,8 +5,10 @@ using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Adapter.Web.Streaming;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Registry;
 using NUnit.Framework;
 
@@ -15,6 +17,123 @@ namespace Ludots.Tests.ThreeC
     [TestFixture]
     public sealed class WebTextProtocolTests
     {
+        [Test]
+        public void BinaryFrameEncoder_SkinnedVisualsShareTheWebPrimitiveTransformLane()
+        {
+            var primitives = new PrimitiveDrawBuffer(capacity: 2);
+            Assert.That(primitives.TryAdd(new PrimitiveDrawItem
+            {
+                MeshAssetId = 11,
+                Position = Vector3.Zero,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.StaticMesh,
+            }), Is.True);
+            Assert.That(primitives.TryAdd(new PrimitiveDrawItem
+            {
+                MeshAssetId = 77,
+                Position = new Vector3(1f, 2f, 3f),
+                Scale = new Vector3(4f, 5f, 6f),
+                Color = new Vector4(0.1f, 0.2f, 0.3f, 1f),
+                RenderPath = VisualRenderPath.SkinnedMesh,
+            }), Is.True);
+
+            var skinned = new SkinnedVisualBatchBuffer(capacity: 1);
+            Assert.That(skinned.TryAdd(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = 77,
+                Position = new Vector3(1f, 2f, 3f),
+                Scale = new Vector3(4f, 5f, 6f),
+                Color = new Vector4(0.1f, 0.2f, 0.3f, 1f),
+                Visibility = VisualVisibility.Visible,
+            }), Is.True);
+
+            var encoder = new BinaryFrameEncoder();
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+            encoder.Encode(1, 2, 3, in camera, primitives, null, null, null, null, null, null, null, skinned);
+
+            ReadOnlySpan<byte> buffer = encoder.GetResult();
+            var (payloadOffset, itemCount, byteLength) = FindSection(buffer, FrameProtocol.SectionPrimitives);
+            Assert.That(itemCount, Is.EqualTo(2), "The skinned projection must replace, not duplicate, its legacy primitive-lane entry.");
+            Assert.That(byteLength, Is.EqualTo(2 * WirePrimitiveDrawItem.SizeInBytes));
+            Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(payloadOffset, 4)), Is.EqualTo(11));
+            int skinnedOffset = payloadOffset + WirePrimitiveDrawItem.SizeInBytes;
+            Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(skinnedOffset, 4)), Is.EqualTo(77));
+            Assert.That(BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(skinnedOffset + 4, 4))), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void BinaryFrameEncoder_FastPathSkinnedVisuals_ExcludeHiddenAndCulledSnapshots()
+        {
+            var skinned = new SkinnedVisualBatchBuffer(capacity: 3);
+            Assert.That(skinned.TryAdd(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = 77,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                Visibility = VisualVisibility.Visible,
+            }), Is.True);
+            Assert.That(skinned.TryAdd(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = 78,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                Visibility = VisualVisibility.Hidden,
+            }), Is.True);
+            Assert.That(skinned.TryAdd(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = 79,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                Visibility = VisualVisibility.Culled,
+            }), Is.True);
+
+            var encoder = new BinaryFrameEncoder();
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+            encoder.Encode(1, 2, 3, in camera, null, null, null, null, null, null, null, null, skinned);
+
+            ReadOnlySpan<byte> buffer = encoder.GetResult();
+            var (payloadOffset, itemCount, byteLength) = FindSection(buffer, FrameProtocol.SectionPrimitives);
+            Assert.That(itemCount, Is.EqualTo(1));
+            Assert.That(byteLength, Is.EqualTo(WirePrimitiveDrawItem.SizeInBytes));
+            Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(payloadOffset, 4)), Is.EqualTo(77));
+        }
+
+        [Test]
+        public void BinaryFrameEncoder_StaticAndSkinnedVisualCountBeyondWireCapacity_ThrowsExplicitly()
+        {
+            var primitives = new PrimitiveDrawBuffer(capacity: ushort.MaxValue);
+            var primitive = new PrimitiveDrawItem
+            {
+                MeshAssetId = 11,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.StaticMesh,
+            };
+            for (int i = 0; i < ushort.MaxValue; i++)
+            {
+                if (!primitives.TryAdd(primitive))
+                {
+                    throw new InvalidOperationException($"Primitive test fixture overflowed at {i}.");
+                }
+            }
+
+            var skinned = new SkinnedVisualBatchBuffer(capacity: 1);
+            Assert.That(skinned.TryAdd(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = 77,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                Visibility = VisualVisibility.Visible,
+            }), Is.True);
+
+            var encoder = new BinaryFrameEncoder();
+            var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                encoder.Encode(1, 2, 3, in camera, primitives, null, null, null, null, null, null, null, skinned))!;
+            Assert.That(error.Message, Does.Contain(ushort.MaxValue.ToString()));
+        }
+
         [Test]
         public void BinaryFrameEncoder_ScreenHud_EncodesPresentationTextPacketAndTemplateTable()
         {
