@@ -225,6 +225,129 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GrantToEntity_WhenSecondNewTagOverflows_RollsBackWholeBatchOnce()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new TagRuleRegistry(), budget);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 17, Formula = TagContributionFormula.Fixed, Amount = 1 });
+
+            var ex = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps, budget));
+
+            That(ex.Message, Is.EqualTo(TagOps.TagCountOverflowError));
+            That(counts.Count, Is.EqualTo(15));
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(dirty.IsTagDirty(16), Is.False);
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UpdateOnEntity_WhenLaterContributionOverflows_RestoresEarlierCount()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new TagRuleRegistry(), budget);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 14, Formula = TagContributionFormula.Linear, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Linear, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 17, Formula = TagContributionFormula.Linear, Amount = 1 });
+
+            Throws<InvalidOperationException>(() => EffectTagContributionHelper.UpdateOnEntity(world, target, in grants, 1, 2, tagOps, budget));
+
+            That(counts.GetCount(14), Is.EqualTo(1));
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(dirty.IsTagDirty(14), Is.False);
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GrantToEntity_WhenAttachedRuleOverflows_RollsBackRuleCascade()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new TagRuleRegistry(), budget);
+            var rule = new TagRuleSet();
+            unsafe { rule.AttachedTags[0] = 17; rule.AttachedCount = 1; }
+            tagOps.RegisterTagRuleSet(16, rule);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Fixed, Amount = 1 });
+
+            Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps, budget));
+
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(counts.Count, Is.EqualTo(15));
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GrantToEntity_WhenServiceOrComponentsMissing_FailsBeforeMutation()
+        {
+            using var world = World.Create();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            Entity complete = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            var missingService = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, complete, in grants, 1, null));
+            That(missingService.Message, Is.EqualTo(TagOps.MissingTagOpsError));
+            That(world.Get<TagCountContainer>(complete).Count, Is.Zero);
+
+            Entity incomplete = world.Create(new TagCountContainer(), new DirtyFlags());
+            var missingComponent = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, incomplete, in grants, 1, new TagOps()));
+            That(missingComponent.Message, Is.EqualTo(TagOps.MissingGameplayTagContainerError));
+            That(world.Has<GameplayTagContainer>(incomplete), Is.False);
+            That(world.Get<TagCountContainer>(incomplete).Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectTagContributionTransaction_AfterWarmup_AllocatesZero()
+        {
+            using var world = World.Create();
+            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            for (int i = 0; i < 32; i++)
+            {
+                EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps);
+                EffectTagContributionHelper.RevokeFromEntity(world, target, in grants, 1, tagOps);
+            }
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000; i++)
+            {
+                EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps);
+                EffectTagContributionHelper.RevokeFromEntity(world, target, in grants, 1, tagOps);
+            }
+            long after = GC.GetAllocatedBytesForCurrentThread();
+            That(after - before, Is.LessThanOrEqualTo(64));
+        }
+
+        [Test]
         public void Helper_MultiTag_StackScenario()
         {
             // Scenario from plan: effectA Linear(6), effectB Linear(7)

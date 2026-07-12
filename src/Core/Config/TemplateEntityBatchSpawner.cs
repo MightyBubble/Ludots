@@ -240,6 +240,7 @@ namespace Ludots.Core.Config
                 Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
                 Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
+                Span<DirtyFlags> dirtyFlags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
@@ -294,6 +295,10 @@ namespace Ludots.Core.Config
                     if (descriptor.HasTagCountContainer)
                     {
                         tagCounts[componentIndex] = descriptor.TagCounts;
+                    }
+                    if (descriptor.HasGameplayTagContainer)
+                    {
+                        dirtyFlags[componentIndex] = default;
                     }
                     templateKeys[componentIndex] = descriptor.TemplateKey;
                     if (descriptor.HasOrderBuffer)
@@ -643,7 +648,7 @@ namespace Ludots.Core.Config
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
-                bool hasTagCountContainer = template.Components.ContainsKey("TagCountContainer");
+                bool hasTagCountContainer = hasGameplayTagContainer || template.Components.ContainsKey("TagCountContainer");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
                 bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
@@ -669,6 +674,10 @@ namespace Ludots.Core.Config
                 if (hasTagCountContainer)
                 {
                     RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                }
+                if (template.Components.ContainsKey("DirtyFlags"))
+                {
+                    RequireEmptyObject(templateId, template.Components, "DirtyFlags");
                 }
 
                 if (hasOrderBuffer)
@@ -714,6 +723,7 @@ namespace Ludots.Core.Config
                 if (hasGameplayTagContainer)
                 {
                     signature += Component<GameplayTagContainer>.Signature;
+                    signature += Component<DirtyFlags>.Signature;
                 }
 
                 if (hasTagCountContainer)
@@ -851,6 +861,7 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "DirtyFlags", StringComparison.Ordinal) ||
                         string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "CommandSourceSelectableState", StringComparison.Ordinal) ||
                         string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
@@ -913,6 +924,7 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "DirtyFlags", StringComparison.Ordinal) ||
                        string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "CommandSourceSelectableState", StringComparison.Ordinal) ||
                        string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||

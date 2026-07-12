@@ -334,3 +334,33 @@ N/A。
 ### 8. Next variant test
 
 新入口必须返回共享接单结果，不得恢复 bool/void 或临时替换 actor provider。
+
+---
+
+## GAS Composition Gate - #667 Tag Transaction Closeout
+
+- **Task / Issue**: #667
+- **Date**: 2026-07-12
+- **Result**: PASS
+
+### 1. Core judgment
+
+The change extends the existing `TagOps`, `GameplayTagContainer`, `TagCountContainer`, and `DirtyFlags` contract with fixed-size value snapshots. It adds no tag DSL, effect preset, graph op, loader, or parallel tag runtime.
+
+### 2. Reuse list
+
+- Existing rule executor: `TagOps` and `TagRuleTransaction`
+- Existing effect path: `EffectTagContributionHelper`
+- Existing state: `GameplayTagContainer`, `TagCountContainer`, and `DirtyFlags`
+- Existing diagnostics: `GasBudget.TagCountOverflowDropped`
+
+### 3. Transaction boundary
+
+One effect grant, revoke, or stack update snapshots all three fixed-size components before the first write. Any capacity or rule failure restores all snapshots and publishes one stable error. Rule-driven attach/remove work runs inside the same boundary.
+
+### 4. Red flag scan
+
+- [x] No dynamic collection or per-operation allocation added
+- [x] No effect hot-path component add/remove remains in the contribution helper
+- [x] No empty `TagOps` fallback remains in the three effect systems
+- [x] Capacity failure is explicit and counted once per failed transaction

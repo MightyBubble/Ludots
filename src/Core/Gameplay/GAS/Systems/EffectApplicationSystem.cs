@@ -131,7 +131,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _presentationEvents = presentationEvents;
             _templates = templates;
             _spatialQueries = spatialQueries;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps;
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;

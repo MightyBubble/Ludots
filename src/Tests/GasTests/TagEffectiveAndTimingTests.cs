@@ -72,9 +72,9 @@ namespace Ludots.Tests.GAS
                 sys.Update(dt: 0f);
 
                 That(queue.TagCountTriggerCount, Is.EqualTo(1));
-                That(world.Has<DirtyFlags>(entity), Is.False);
+                That(world.Has<DirtyFlags>(entity), Is.True);
+                That(world.Get<DirtyFlags>(entity).IsAnyTagDirty(), Is.False);
 
-                world.Add(entity, default(DirtyFlags));
                 ref var counts2 = ref world.Get<TagCountContainer>(entity);
                 ref var dirty2 = ref world.Get<DirtyFlags>(entity);
                 counts2.AddCount(tag, 1);
@@ -82,7 +82,8 @@ namespace Ludots.Tests.GAS
                 sys.Update(dt: 0f);
 
                 That(queue.TagCountTriggerCount, Is.EqualTo(2));
-                That(world.Has<DirtyFlags>(entity), Is.False);
+                That(world.Has<DirtyFlags>(entity), Is.True);
+                That(world.Get<DirtyFlags>(entity).IsAnyTagDirty(), Is.False);
             }
             finally
             {
@@ -170,7 +171,6 @@ namespace Ludots.Tests.GAS
                 ref var changed = ref world.Get<GameplayTagEffectiveChangedBits>(entity);
                 changed.Clear();
 
-                world.Add(entity, default(DirtyFlags));
                 ref var tags2 = ref world.Get<GameplayTagContainer>(entity);
                 ref var dirty2 = ref world.Get<DirtyFlags>(entity);
                 tags2.AddTag(tagBlock);

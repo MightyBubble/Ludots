@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Config
 {
@@ -99,6 +100,12 @@ namespace Ludots.Core.Config
             foreach (var kvp in _overrides)
             {
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
+            }
+
+            if (_world.Has<GameplayTagContainer>(entity))
+            {
+                if (!_world.Has<TagCountContainer>(entity)) _world.Add(entity, new TagCountContainer());
+                if (!_world.Has<DirtyFlags>(entity)) _world.Add(entity, new DirtyFlags());
             }
 
             // Reset for next use

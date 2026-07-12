@@ -137,7 +137,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _callbackCreateBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;

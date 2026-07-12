@@ -17,53 +17,65 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            EnsureTagState(world, target);
+            RequireTagState(world, target, tagOps);
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            tagOps ??= new TagOps();
-
-            for (int i = 0; i < grantedTags.Count; i++)
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirtyFlags;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int amount = contribution.Compute(stackCount);
-                for (int repeat = 0; repeat < amount; repeat++)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    tagOps.AddTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
+                    var contribution = grantedTags.Get(i);
+                    int amount = contribution.Compute(stackCount);
+                    for (int repeat = 0; repeat < amount; repeat++)
+                    {
+                        if (!tagOps.AddTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags))
+                            throw new System.InvalidOperationException(TagOps.RuleRejectedError);
+                    }
                 }
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirtyFlags = dirtyBefore;
+                throw;
             }
         }
 
         public static void RevokeFromEntity(World world, Entity target, in EffectGrantedTags grantedTags, int stackCount, TagOps tagOps, GasBudget budget = null)
         {
-            if (!world.IsAlive(target) || grantedTags.Count <= 0 || !world.Has<TagCountContainer>(target))
+            if (!world.IsAlive(target) || grantedTags.Count <= 0)
             {
                 return;
             }
 
-            if (!world.Has<GameplayTagContainer>(target))
-            {
-                world.Add(target, new GameplayTagContainer());
-            }
-
-            if (!world.Has<DirtyFlags>(target))
-            {
-                world.Add(target, new DirtyFlags());
-            }
-
+            RequireTagState(world, target, tagOps);
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            tagOps ??= new TagOps();
-
-            for (int i = 0; i < grantedTags.Count; i++)
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirtyFlags;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int amount = contribution.Compute(stackCount);
-                for (int repeat = 0; repeat < amount; repeat++)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
+                    var contribution = grantedTags.Get(i);
+                    int amount = contribution.Compute(stackCount);
+                    for (int repeat = 0; repeat < amount; repeat++)
+                        tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
                 }
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirtyFlags = dirtyBefore;
+                throw;
             }
         }
 
@@ -74,30 +86,38 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            EnsureTagState(world, target);
+            RequireTagState(world, target, tagOps);
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            tagOps ??= new TagOps();
-
-            for (int i = 0; i < grantedTags.Count; i++)
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirtyFlags;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int delta = contribution.Compute(newStackCount) - contribution.Compute(oldStackCount);
-                if (delta > 0)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    for (int repeat = 0; repeat < delta; repeat++)
+                    var contribution = grantedTags.Get(i);
+                    int delta = contribution.Compute(newStackCount) - contribution.Compute(oldStackCount);
+                    if (delta > 0)
                     {
-                        tagOps.AddTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
+                        for (int repeat = 0; repeat < delta; repeat++)
+                            if (!tagOps.AddTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags))
+                                throw new System.InvalidOperationException(TagOps.RuleRejectedError);
+                    }
+                    else if (delta < 0)
+                    {
+                        for (int repeat = 0; repeat < -delta; repeat++)
+                            tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
                     }
                 }
-                else if (delta < 0)
-                {
-                    for (int repeat = 0; repeat < -delta; repeat++)
-                    {
-                        tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
-                    }
-                }
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirtyFlags = dirtyBefore;
+                throw;
             }
         }
 
@@ -110,19 +130,21 @@ namespace Ludots.Core.Gameplay.GAS
         /// <param name="stackCount">Current stack count of the effect (usually 1 on first apply).</param>
         public static void Grant(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int stackCount, GasBudget budget = null)
         {
-            for (int i = 0; i < grantedTags.Count; i++)
+            TagCountContainer before = tagCounts;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int amount = contribution.Compute(stackCount);
-                if (amount > 0)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    if (!tagCounts.AddCount(contribution.TagId, (ushort)System.Math.Min(amount, ushort.MaxValue)))
+                    var contribution = grantedTags.Get(i);
+                    int amount = contribution.Compute(stackCount);
+                    if (amount > 0 && !tagCounts.AddCount(contribution.TagId, (ushort)System.Math.Min(amount, ushort.MaxValue)))
                     {
                         if (budget != null) budget.TagCountOverflowDropped++;
-                        throw new System.InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                        throw new System.InvalidOperationException(TagOps.TagCountOverflowError);
                     }
                 }
             }
+            catch { tagCounts = before; throw; }
         }
 
         /// <summary>
@@ -133,15 +155,17 @@ namespace Ludots.Core.Gameplay.GAS
         /// <param name="stackCount">Stack count at the time of removal.</param>
         public static void Revoke(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int stackCount, GasBudget budget = null)
         {
-            for (int i = 0; i < grantedTags.Count; i++)
+            TagCountContainer before = tagCounts;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int amount = contribution.Compute(stackCount);
-                if (amount > 0)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    tagCounts.RemoveCount(contribution.TagId, (ushort)System.Math.Min(amount, ushort.MaxValue));
+                    var contribution = grantedTags.Get(i);
+                    int amount = contribution.Compute(stackCount);
+                    if (amount > 0) tagCounts.RemoveCount(contribution.TagId, (ushort)System.Math.Min(amount, ushort.MaxValue));
                 }
             }
+            catch { tagCounts = before; throw; }
         }
 
         /// <summary>
@@ -154,44 +178,30 @@ namespace Ludots.Core.Gameplay.GAS
         /// <param name="newStackCount">New stack count.</param>
         public static void Update(in EffectGrantedTags grantedTags, ref TagCountContainer tagCounts, int oldStackCount, int newStackCount, GasBudget budget = null)
         {
-            for (int i = 0; i < grantedTags.Count; i++)
+            TagCountContainer before = tagCounts;
+            try
             {
-                var contribution = grantedTags.Get(i);
-                int oldAmount = contribution.Compute(oldStackCount);
-                int newAmount = contribution.Compute(newStackCount);
-                int delta = newAmount - oldAmount;
-
-                if (delta > 0)
+                for (int i = 0; i < grantedTags.Count; i++)
                 {
-                    if (!tagCounts.AddCount(contribution.TagId, (ushort)System.Math.Min(delta, ushort.MaxValue)))
+                    var contribution = grantedTags.Get(i);
+                    int delta = contribution.Compute(newStackCount) - contribution.Compute(oldStackCount);
+                    if (delta > 0 && !tagCounts.AddCount(contribution.TagId, (ushort)System.Math.Min(delta, ushort.MaxValue)))
                     {
                         if (budget != null) budget.TagCountOverflowDropped++;
-                        throw new System.InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                        throw new System.InvalidOperationException(TagOps.TagCountOverflowError);
                     }
-                }
-                else if (delta < 0)
-                {
-                    tagCounts.RemoveCount(contribution.TagId, (ushort)System.Math.Min(-delta, ushort.MaxValue));
+                    else if (delta < 0) tagCounts.RemoveCount(contribution.TagId, (ushort)System.Math.Min(-delta, ushort.MaxValue));
                 }
             }
+            catch { tagCounts = before; throw; }
         }
 
-        private static void EnsureTagState(World world, Entity target)
+        private static void RequireTagState(World world, Entity target, TagOps tagOps)
         {
-            if (!world.Has<GameplayTagContainer>(target))
-            {
-                world.Add(target, new GameplayTagContainer());
-            }
-
-            if (!world.Has<TagCountContainer>(target))
-            {
-                world.Add(target, new TagCountContainer());
-            }
-
-            if (!world.Has<DirtyFlags>(target))
-            {
-                world.Add(target, new DirtyFlags());
-            }
+            if (tagOps == null) throw new System.InvalidOperationException(TagOps.MissingTagOpsError);
+            if (!world.Has<GameplayTagContainer>(target)) throw new System.InvalidOperationException(TagOps.MissingGameplayTagContainerError);
+            if (!world.Has<TagCountContainer>(target)) throw new System.InvalidOperationException(TagOps.MissingTagCountContainerError);
+            if (!world.Has<DirtyFlags>(target)) throw new System.InvalidOperationException(TagOps.MissingDirtyFlagsError);
         }
     }
 }

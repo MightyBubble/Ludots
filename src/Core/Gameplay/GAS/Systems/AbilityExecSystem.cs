@@ -1323,6 +1323,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.Has<GameplayTagContainer>(actor)) World.Add(actor, new GameplayTagContainer());
             if (!World.Has<TagCountContainer>(actor)) World.Add(actor, new TagCountContainer());
+            if (!World.Has<DirtyFlags>(actor)) World.Add(actor, new DirtyFlags());
             if (!World.Has<TimedTagBuffer>(actor)) World.Add(actor, new TimedTagBuffer());
         }
 

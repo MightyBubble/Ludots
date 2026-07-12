@@ -73,6 +73,7 @@ namespace Ludots.Core.Config
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register<TagCountContainer>("TagCountContainer");
+            Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");

@@ -11,6 +11,12 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public class TagOps
     {
+        public const string TagCountOverflowError = "GAS.TAG.ERR.TagCountOverflow";
+        public const string RuleRejectedError = "GAS.TAG.ERR.RuleRejected";
+        public const string MissingTagOpsError = "GAS.TAG.ERR.MissingTagOps";
+        public const string MissingGameplayTagContainerError = "GAS.TAG.ERR.MissingGameplayTagContainer";
+        public const string MissingTagCountContainerError = "GAS.TAG.ERR.MissingTagCountContainer";
+        public const string MissingDirtyFlagsError = "GAS.TAG.ERR.MissingDirtyFlags";
 
         private readonly TagRuleRegistry _rules;
         private readonly TagRuleTransaction _transaction;
@@ -127,6 +133,24 @@ namespace Ludots.Core.Gameplay.GAS
 
         private unsafe bool AddTagCore(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
+            GameplayTagContainer tagsBefore = tagContainer;
+            TagCountContainer countsBefore = countContainer;
+            DirtyFlags dirtyBefore = dirty == null ? default : *dirty;
+            try
+            {
+                return AddTagCoreTransactional(ref tagContainer, ref countContainer, tagId, dirty);
+            }
+            catch
+            {
+                tagContainer = tagsBefore;
+                countContainer = countsBefore;
+                if (dirty != null) *dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        private unsafe bool AddTagCoreTransactional(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
+        {
             if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
                 throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {TagRuleRegistry.MaxCoreTags - 1}].");
 
@@ -135,7 +159,7 @@ namespace Ludots.Core.Gameplay.GAS
                 if (!countContainer.AddCount(tagId, 1))
                 {
                     if (_budget != null) _budget.TagCountOverflowDropped++;
-                    throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                    throw new InvalidOperationException(TagCountOverflowError);
                 }
                 MarkDirty(dirty, tagId);
                 return true;
@@ -146,7 +170,7 @@ namespace Ludots.Core.Gameplay.GAS
                 if (!countContainer.AddCount(tagId, 1))
                 {
                     if (_budget != null) _budget.TagCountOverflowDropped++;
-                    throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                    throw new InvalidOperationException(TagCountOverflowError);
                 }
                 tagContainer.AddTag(tagId);
                 MarkDirty(dirty, tagId);
@@ -198,7 +222,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (!countContainer.AddCount(tagId, 1))
             {
                 if (_budget != null) _budget.TagCountOverflowDropped++;
-                throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                throw new InvalidOperationException(TagCountOverflowError);
             }
             tagContainer.AddTag(tagId);
             MarkDirty(dirty, tagId);

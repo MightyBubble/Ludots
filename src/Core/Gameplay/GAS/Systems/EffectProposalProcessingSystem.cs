@@ -279,7 +279,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 responseChainOrderTypes,
                 nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps;
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;

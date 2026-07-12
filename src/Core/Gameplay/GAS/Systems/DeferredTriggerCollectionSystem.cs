@@ -113,7 +113,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 bool hasCounts = World.Has<TagCountContainer>(entity);
                 if (!hasTags && !hasCounts)
                 {
-                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
                     return;
                 }
 
@@ -143,7 +143,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 if (!anyDirty)
                 {
-                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
                     return;
                 }
 
@@ -307,15 +307,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     CommandBuffer.Add(entity, effChangedLocal);
                 }
 
-                RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private void RemoveDirtyFlagsIfClean(Entity entity, ref DirtyFlags dirtyFlags)
+            private void ClearDirtyFlagsIfClean(Entity entity, ref DirtyFlags dirtyFlags)
             {
                 if (!dirtyFlags.IsAnyAttributeDirty() && !dirtyFlags.IsAnyTagDirty())
                 {
-                    CommandBuffer.Remove<DirtyFlags>(entity);
+                    dirtyFlags.Clear();
                 }
             }
 
