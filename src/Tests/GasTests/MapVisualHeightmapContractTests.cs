@@ -34,7 +34,12 @@ namespace Ludots.Tests.Gas
               "startupMapId": "outer_map",
               "worldWidthInMacroTiles": 16,
               "worldHeightInMacroTiles": 16,
-              "gridCellSizeCm": 100
+              "gridCellSizeCm": 100,
+              "gasRuntimeCapacity": {
+                "abilityExecSnapshotCapacity": 64,
+                "effectLifetimeSnapshotCapacity": 64,
+                "orderTerminalResultCapacity": 64
+              }
             }
             """);
 

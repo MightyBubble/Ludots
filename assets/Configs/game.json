@@ -10,7 +10,8 @@
   "simulationMaxSlicesPerLogicFrame": 120,
   "gasRuntimeCapacity": {
     "abilityExecSnapshotCapacity": 16384,
-    "effectLifetimeSnapshotCapacity": 16384
+    "effectLifetimeSnapshotCapacity": 16384,
+    "orderTerminalResultCapacity": 4096
   },
   "gridCellSizeCm": 100,
   "worldWidthInMacroTiles": 64,

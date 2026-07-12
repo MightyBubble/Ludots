@@ -73,6 +73,7 @@ namespace Ludots.Tests.GAS
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
             {
+                OrderId = 1,
                 OrderTypeId = setSpawnTargetOrderTypeId,
                 Target = Entity.Null,
                 Args = new OrderArgs
@@ -174,6 +175,7 @@ namespace Ludots.Tests.GAS
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
             {
+                OrderId = 1,
                 OrderTypeId = setSpawnTargetOrderTypeId,
                 Actor = host,
                 Target = garrisonTarget,

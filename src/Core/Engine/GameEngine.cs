@@ -937,6 +937,8 @@ namespace Ludots.Core.Engine
             var gasRuntimeCapacity = config.GasRuntimeCapacity
                 ?? throw new InvalidOperationException("GameConfig.gasRuntimeCapacity is required.");
             gasRuntimeCapacity.Validate();
+            var orderTerminalResults = new OrderTerminalResultBuffer(
+                gasRuntimeCapacity.OrderTerminalResultCapacity);
 
             var deferredTriggerQueue = new DeferredTriggerQueue();
             var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps);
@@ -1229,7 +1231,7 @@ namespace Ludots.Core.Engine
             var orderRuleRegistry = new OrderRuleRegistry();
 
             // ── OrderBuffer pipeline ──
-            var orderTypeRegistry = new OrderTypeRegistry();
+            var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);
             new OrderTypeConfigLoader(ConfigPipeline).Load(orderTypeRegistry, orderRuleRegistry, ConfigCatalog, ConfigConflictReport);
 
             int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
@@ -1353,6 +1355,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GraphReturnWriter, graphReturnWriter);
             SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
             SetService(CoreServiceKeys.OrderAdmissionResultBuffer, orderAdmissionResults);
+            SetService(CoreServiceKeys.OrderTerminalResultBuffer, orderTerminalResults);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
@@ -1537,7 +1540,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
-            RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
+            RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
@@ -1607,7 +1610,6 @@ namespace Ludots.Core.Engine
             // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
-            RegisterSystem(orderContinuationSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
 
             // Phase 3: EffectProcessing (含响应链)
@@ -1696,6 +1698,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
+            RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
             RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
 

@@ -93,6 +93,7 @@ namespace Ludots.Tests.GasTests
             Assert.That(engine.GetService(CoreServiceKeys.GraphOutputValueStore), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GasDiagnosticEventBuffer), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer), Is.Not.Null);
+            Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
         }
 
         private static bool Find(

@@ -23,14 +23,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         Interrupted = 8
     }
 
-    public struct OrderTerminalSignal
-    {
-        public int OrderId;
-        public int OrderTypeId;
-        public OrderTerminalState State;
-        public OrderFailureReason FailureReason;
-    }
-
     public struct OrderContinuationEntry
     {
         public int TriggerOrderId;

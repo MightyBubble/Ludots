@@ -84,7 +84,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 if (buffer.HasActive)
                 {
-                    DeactivateCurrentOrder(world, entity, ref buffer, registry);
+                    FinalizeActive(
+                        world,
+                        entity,
+                        ref buffer,
+                        registry,
+                        OrderTerminalState.Cancelled,
+                        OrderFailureReason.Interrupted,
+                        promoteNext: false);
                 }
 
                 if (config.ClearQueueOnActivate)
@@ -282,24 +289,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
-            if (!buffer.HasActive)
-            {
-                return false;
-            }
-
-            int completedOrderId = buffer.ActiveOrder.Order.OrderId;
-            int completedOrderTypeId = buffer.ActiveOrder.Order.OrderTypeId;
-            DeactivateCurrentOrder(world, entity, ref buffer, registry);
-            WriteTerminalSignal(world, entity, completedOrderId, completedOrderTypeId, state, failureReason);
-
-            if (buffer.PromoteNext())
-            {
-                var nextOrder = buffer.ActiveOrder.Order;
-                var nextConfig = registry.Get(nextOrder.OrderTypeId);
-                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
-            }
-
-            return true;
+            return FinalizeActive(
+                world,
+                entity,
+                ref buffer,
+                registry,
+                state,
+                failureReason,
+                promoteNext: true);
         }
 
         public static bool NotifyOrderComplete(World world, Entity entity, OrderTypeRegistry registry)
@@ -351,40 +348,97 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
-            DeactivateCurrentOrder(world, entity, ref buffer, registry);
+            FinalizeActive(
+                world,
+                entity,
+                ref buffer,
+                registry,
+                OrderTerminalState.Cancelled,
+                OrderFailureReason.None,
+                promoteNext: false);
             buffer.Clear();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteTerminalSignal(
+        private static bool FinalizeActive(
             World world,
             Entity entity,
-            int orderId,
-            int orderTypeId,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
             OrderTerminalState state,
-            OrderFailureReason failureReason)
+            OrderFailureReason failureReason,
+            bool promoteNext)
         {
-            if (orderId <= 0)
+            if (!buffer.HasActive)
             {
-                return;
+                return false;
             }
+
+            Order terminalOrder = buffer.ActiveOrder.Order;
+            ValidateTerminalOutcome(in terminalOrder, state, failureReason);
+            registry.EnsureTerminalResultCapacity();
+
+            DeactivateCurrentOrder(world, entity, ref buffer, registry);
 
             if (world.Has<OrderContinuationBuffer>(entity) && state != OrderTerminalState.Completed)
             {
                 ref var continuation = ref world.Get<OrderContinuationBuffer>(entity);
-                continuation.RemoveByTrigger(orderId);
+                continuation.RemoveByTrigger(terminalOrder.OrderId);
             }
 
-            if (!world.Has<OrderTerminalSignal>(entity))
+            var outcome = new OrderTerminalOutcome(
+                terminalOrder.OrderId,
+                terminalOrder.OrderTypeId,
+                state,
+                failureReason,
+                entity);
+            registry.PublishTerminalResult(in outcome);
+
+            if (promoteNext && buffer.PromoteNext())
             {
-                return;
+                var nextOrder = buffer.ActiveOrder.Order;
+                var nextConfig = registry.Get(nextOrder.OrderTypeId);
+                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
             }
 
-            ref var signal = ref world.Get<OrderTerminalSignal>(entity);
-            signal.OrderId = orderId;
-            signal.OrderTypeId = orderTypeId;
-            signal.State = state;
-            signal.FailureReason = failureReason;
+            return true;
+        }
+
+        private static void ValidateTerminalOutcome(
+            in Order order,
+            OrderTerminalState state,
+            OrderFailureReason failureReason)
+        {
+            if (order.OrderId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.InvalidOrderId: orderTypeId={order.OrderTypeId}, orderId={order.OrderId}.");
+            }
+
+            if (order.OrderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.InvalidOrderTypeId: orderId={order.OrderId}, orderTypeId={order.OrderTypeId}.");
+            }
+
+            if (state == OrderTerminalState.Completed && failureReason != OrderFailureReason.None)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.CompletedWithFailure: orderId={order.OrderId}, failureReason={failureReason}.");
+            }
+
+            if (state == OrderTerminalState.Failed && failureReason == OrderFailureReason.None)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.FailedWithoutReason: orderId={order.OrderId}.");
+            }
+
+            if (state == OrderTerminalState.Cancelled &&
+                failureReason != OrderFailureReason.None &&
+                failureReason != OrderFailureReason.Interrupted)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.InvalidCancellationReason: orderId={order.OrderId}, failureReason={failureReason}.");
+            }
         }
     }
 }

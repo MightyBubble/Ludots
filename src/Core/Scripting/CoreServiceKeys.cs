@@ -174,6 +174,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TargetDispatchPresetRegistry> TargetDispatchPresetRegistry = new("TargetDispatchPresetRegistry");
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<OrderAdmissionResultBuffer> OrderAdmissionResultBuffer = new("OrderAdmissionResultBuffer");
+        public static readonly ServiceKey<OrderTerminalResultBuffer> OrderTerminalResultBuffer = new("OrderTerminalResultBuffer");
         public static readonly ServiceKey<AbilityDefinitionRegistry> AbilityDefinitionRegistry = new("AbilityDefinitionRegistry");
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
         public static readonly ServiceKey<ProgressionDefinitionRegistry> ProgressionDefinitionRegistry = new("ProgressionDefinitionRegistry");

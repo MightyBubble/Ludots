@@ -1,5 +1,78 @@
 ## GAS Composition Gate — Self Review
 
+Current closeouts and prior issue reviews follow.
+
+## GAS Composition Gate - #649 Production Closeout
+
+- **Task / Issue**: #649
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Extend the existing Order pipeline with one typed, bounded terminal-result contract.
+
+Result: PASS
+
+Reason: The change reuses OrderSubmitter, OrderTypeRegistry, OrderContinuationBuffer and the SchemaUpdate frame boundary. It adds no gameplay profile, preset, graph op, loader or parallel order runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Unique order finalization | N/A | `OrderSubmitter.FinalizeActive` |
+| Current-frame terminal snapshot | N/A | `OrderTerminalResultBuffer` owned by `OrderTypeRegistry` |
+| Continuation dispatch | N/A | `OrderContinuationSystem` consumes every typed outcome once |
+| Frame reset | N/A | Existing `GasBudgetResetSystem` in SchemaUpdate |
+
+### 3. Reuse list
+
+- Handlers: existing OrderSubmitter activation and blackboard cleanup helpers
+- Queues / Systems: OrderBuffer, OrderContinuationBuffer, OrderContinuationSystem, GasBudgetResetSystem
+- Resolvers / Registries: OrderTypeRegistry
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Terminal-result capacity and outcome validity are checked before the active order is mutated. The single internal finalizer then clears blackboard and active state, removes non-completed continuations, publishes exactly one typed outcome, and optionally promotes the next queued order.
+
+### 6. Config SSOT
+
+Production capacity is explicitly configured at `game.json -> gasRuntimeCapacity.orderTerminalResultCapacity` and validated as positive during engine composition.
+
+New JSON schema: YES. This is a runtime capacity budget, not gameplay behavior and cannot be represented by effect/graph composition.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn, order or terminal runtime added
+- [x] No placement validation moved into lifecycle operations
+- [x] No default gameplay fallback or silent capacity drop added
+- [x] No per-finalization ECS component add/remove; continuation consumes the bounded result snapshot directly
+
+### 8. Next variant test
+
+Future order variants publish through the same finalizer and terminal-result buffer. They do not add Core enums, consumer-specific signals or alternate completion paths.
+
+---
+
+## GAS Composition Gate - #647 Consumer Closeout
+
+- **Task / Issue**: #647
+- **Date**: 2026-07-12
+- **Result**: PASS
+- CoreInput aiming, context-scored order routing, and the entity-query showcase now consume the engine-owned `GasGraphRuntimeApi` service.
+- Consumer-side `CreateProduction` calls were removed; missing composition-root service is an explicit hard failure.
+- No graph op, profile schema, preset enum, loader, or parallel runtime was added.
+
+---
+
+## GAS Composition Gate - Combined Order/Input Review
+
 - **Task / Issue**: #650, #649, #651
 - **Date**: 2026-07-12
 - **Agent / Author**: Codex

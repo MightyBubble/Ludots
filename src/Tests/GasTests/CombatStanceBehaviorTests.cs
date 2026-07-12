@@ -212,6 +212,8 @@ public sealed class CombatStanceBehaviorTests
 
     private sealed class StanceFixture : IDisposable
     {
+        private int _nextOrderId = 1;
+
         private StanceFixture(
             World world,
             DiscreteClock clock,
@@ -366,6 +368,7 @@ public sealed class CombatStanceBehaviorTests
         {
             var order = new Order
             {
+                OrderId = _nextOrderId++,
                 Actor = actor,
                 OrderTypeId = orderTypeId,
                 SubmitMode = OrderSubmitMode.Immediate,

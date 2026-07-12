@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -14,13 +13,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class OrderContinuationSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<OrderBuffer, OrderContinuationBuffer, OrderTerminalSignal>();
-
         private readonly IClock _clock;
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly OrderRuleRegistry _orderRuleRegistry;
+        private readonly OrderTerminalResultBuffer _terminalResults;
         private readonly int _stepRateHz;
+        private uint _processedGeneration;
+        private int _processedCount;
 
         public OrderContinuationSystem(
             World world,
@@ -33,6 +32,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _orderRuleRegistry = orderRuleRegistry ?? throw new ArgumentNullException(nameof(orderRuleRegistry));
+            _terminalResults = orderTypeRegistry.TerminalResults;
+            _processedGeneration = _terminalResults.Generation;
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
@@ -46,64 +47,71 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int currentStep = _clock.Now(ClockDomainId.Step);
             Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
 
-            foreach (ref var chunk in World.Query(in Query))
+            if (_processedGeneration != _terminalResults.Generation)
             {
-                ref Entity entityFirst = ref chunk.Entity(0);
-                var buffers = chunk.GetSpan<OrderBuffer>();
-                var continuations = chunk.GetSpan<OrderContinuationBuffer>();
-                var signals = chunk.GetSpan<OrderTerminalSignal>();
-                foreach (var index in chunk)
+                _processedGeneration = _terminalResults.Generation;
+                _processedCount = 0;
+            }
+
+            while (_processedCount < _terminalResults.Count)
+            {
+                ref readonly OrderTerminalOutcome outcome = ref _terminalResults[_processedCount];
+                _processedCount++;
+
+                Entity entity = outcome.Actor;
+                if (!World.IsAlive(entity) ||
+                    !World.Has<OrderBuffer>(entity) ||
+                    !World.Has<OrderContinuationBuffer>(entity))
                 {
-                    ref OrderTerminalSignal signal = ref signals[index];
-                    ref OrderContinuationBuffer continuation = ref continuations[index];
-                    if (signal.OrderId <= 0 || !continuation.HasEntries)
+                    continue;
+                }
+
+                ref OrderContinuationBuffer continuation = ref World.Get<OrderContinuationBuffer>(entity);
+                if (!continuation.HasEntries)
+                {
+                    continue;
+                }
+
+                int count;
+                if (outcome.State == OrderTerminalState.Completed)
+                {
+                    count = continuation.Extract(outcome.OrderId, extracted);
+                }
+                else
+                {
+                    continuation.RemoveByTrigger(outcome.OrderId);
+                    count = 0;
+                }
+
+                ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var order = extracted[i];
+                    order.Actor = entity;
+
+                    var result = OrderSubmitter.Submit(
+                        World,
+                        entity,
+                        in order,
+                        _orderTypeRegistry,
+                        _orderRuleRegistry,
+                        currentStep,
+                        _stepRateHz);
+
+                    if (result != OrderSubmitResult.RejectedByRule)
                     {
-                        signal = default;
                         continue;
                     }
 
-                    int count;
-                    if (signal.State == OrderTerminalState.Completed)
+                    var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                    if (config.PendingBufferWindowMs <= 0)
                     {
-                        count = continuation.Extract(signal.OrderId, extracted);
+                        continue;
                     }
-                    else
-                    {
-                        continuation.RemoveByTrigger(signal.OrderId);
-                        count = 0;
-                    }
-                    signal = default;
-                    Entity entity = Unsafe.Add(ref entityFirst, index);
-                    ref OrderBuffer buffer = ref buffers[index];
 
-                    for (int i = 0; i < count; i++)
-                    {
-                        var order = extracted[i];
-                        order.Actor = entity;
-
-                        var result = OrderSubmitter.Submit(
-                            World,
-                            entity,
-                            in order,
-                            _orderTypeRegistry,
-                            _orderRuleRegistry,
-                            currentStep,
-                            _stepRateHz);
-
-                        if (result != OrderSubmitResult.RejectedByRule)
-                        {
-                            continue;
-                        }
-
-                        var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                        if (config.PendingBufferWindowMs <= 0)
-                        {
-                            continue;
-                        }
-
-                        int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                        buffer.SetPending(in order, config.Priority, expireStep, currentStep);
-                    }
+                    int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                    buffer.SetPending(in order, config.Priority, expireStep, currentStep);
                 }
             }
         }

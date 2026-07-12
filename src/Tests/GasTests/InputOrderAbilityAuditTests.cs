@@ -1154,7 +1154,7 @@ namespace Ludots.Tests.GAS
                 new AbilityExecInstance());
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
-            var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
+            var stopOrder = new Order { OrderId = 1, Actor = actor, OrderTypeId = 103 };
             buffer.SetActiveDirect(in stopOrder, priority: 200);
 
             var orderTypes = new OrderTypeRegistry();
@@ -1222,7 +1222,7 @@ namespace Ludots.Tests.GAS
             args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
-            var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
+            var order = new Order { OrderId = 1, Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
             var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
@@ -1404,8 +1404,8 @@ namespace Ludots.Tests.GAS
             secondArgs.Spatial.WorldCm = new Vector3(60f, 0f, 0f);
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
-            var firstOrder = new Order { Actor = actor, OrderTypeId = 101, Args = firstArgs };
-            var secondOrder = new Order { Actor = actor, OrderTypeId = 101, Args = secondArgs, SubmitMode = OrderSubmitMode.Queued };
+            var firstOrder = new Order { OrderId = 1, Actor = actor, OrderTypeId = 101, Args = firstArgs };
+            var secondOrder = new Order { OrderId = 2, Actor = actor, OrderTypeId = 101, Args = secondArgs, SubmitMode = OrderSubmitMode.Queued };
             buffer.SetActiveDirect(in firstOrder, priority: 60);
             buffer.Enqueue(in secondOrder, priority: 60, expireStep: -1, insertStep: 1);
 

@@ -1242,6 +1242,7 @@ namespace Ludots.Tests.GAS
             var compute = new RoadRouteComputeService(roadMoveFollowOrderTypeId);
             Order sourceOrder = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 600, ycm: 0, submitMode: OrderSubmitMode.Immediate);
             Order followOrder = compute.CreateFollowOrder(in sourceOrder, pathXcm, pathYcm, pathXcm.Length, new Vector3(600f, 0f, 0f));
+            followOrder.OrderId = 7001;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in followOrder, priority: 100);
 

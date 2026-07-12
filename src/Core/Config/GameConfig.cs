@@ -78,6 +78,7 @@ namespace Ludots.Core.Config
     {
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
+        public int OrderTerminalResultCapacity { get; set; }
 
         public void Validate()
         {
@@ -91,6 +92,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.effectLifetimeSnapshotCapacity must be positive.");
+            }
+
+            if (OrderTerminalResultCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderTerminalResultCapacity must be positive.");
             }
         }
     }
