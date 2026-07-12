@@ -2179,8 +2179,18 @@ public sealed class LauncherService
         return latest;
     }
 
-    private static async Task<(int ExitCode, string Output)> RunProcessAsync(string fileName, string arguments, string workingDirectory, int timeoutMs)
+    internal static async Task<(int ExitCode, string Output)> RunProcessAsync(
+        string fileName,
+        string arguments,
+        string workingDirectory,
+        int timeoutMs,
+        int outputDrainTimeoutMs = 5_000)
     {
+        if (outputDrainTimeoutMs <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(outputDrainTimeoutMs), outputDrainTimeoutMs, "Output drain timeout must be positive.");
+        }
+
         var startInfo = new ProcessStartInfo(fileName, arguments)
         {
             WorkingDirectory = workingDirectory,
@@ -2193,17 +2203,57 @@ public sealed class LauncherService
         };
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Failed to start process '{fileName}'.");
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        var processExited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        process.Exited += (_, _) => processExited.TrySetResult(true);
+        process.EnableRaisingEvents = true;
+        if (process.HasExited)
+        {
+            processExited.TrySetResult(true);
+        }
+
+        var outputGate = new object();
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        var stdoutClosed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stderrClosed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        process.OutputDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is null)
+            {
+                stdoutClosed.TrySetResult(true);
+                return;
+            }
+
+            lock (outputGate)
+            {
+                stdout.AppendLine(eventArgs.Data);
+            }
+        };
+        process.ErrorDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is null)
+            {
+                stderrClosed.TrySetResult(true);
+                return;
+            }
+
+            lock (outputGate)
+            {
+                stderr.AppendLine(eventArgs.Data);
+            }
+        };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         using var timeoutSource = new CancellationTokenSource(timeoutMs);
+        bool timedOut = false;
         try
         {
-            await process.WaitForExitAsync(timeoutSource.Token);
+            await processExited.Task.WaitAsync(timeoutSource.Token);
         }
         catch (OperationCanceledException)
         {
-            string timeoutOutput = string.Empty;
+            timedOut = true;
             try
             {
                 if (!process.HasExited)
@@ -2211,7 +2261,24 @@ public sealed class LauncherService
                     process.Kill(entireProcessTree: true);
                 }
 
-                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                await processExited.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch
+            {
+            }
+        }
+
+        bool outputClosed = false;
+        try
+        {
+            await Task.WhenAll(stdoutClosed.Task, stderrClosed.Task).WaitAsync(TimeSpan.FromMilliseconds(outputDrainTimeoutMs));
+            outputClosed = true;
+        }
+        catch (TimeoutException)
+        {
+            try
+            {
+                process.CancelOutputRead();
             }
             catch
             {
@@ -2219,25 +2286,43 @@ public sealed class LauncherService
 
             try
             {
-                await Task.WhenAll(stdoutTask, stderrTask).WaitAsync(TimeSpan.FromSeconds(5));
-                timeoutOutput = string.Join(
-                    Environment.NewLine,
-                    new[] { stdoutTask.Result, stderrTask.Result }.Where(text => !string.IsNullOrWhiteSpace(text)));
+                process.CancelErrorRead();
             }
             catch
             {
             }
-
-            string timeoutMessage = $"Process timed out after {timeoutMs} ms.";
-            return (-1, string.IsNullOrWhiteSpace(timeoutOutput)
-                ? timeoutMessage
-                : timeoutMessage + Environment.NewLine + timeoutOutput);
         }
 
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-        var output = string.Join(Environment.NewLine, new[] { stdout, stderr }.Where(text => !string.IsNullOrWhiteSpace(text)));
-        return (process.ExitCode, output);
+        string capturedStdout;
+        string capturedStderr;
+        lock (outputGate)
+        {
+            capturedStdout = stdout.ToString().TrimEnd();
+            capturedStderr = stderr.ToString().TrimEnd();
+        }
+
+        var outputParts = new List<string>(3);
+        if (timedOut)
+        {
+            outputParts.Add($"Process timed out after {timeoutMs} ms.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(capturedStdout))
+        {
+            outputParts.Add(capturedStdout);
+        }
+
+        if (!string.IsNullOrWhiteSpace(capturedStderr))
+        {
+            outputParts.Add(capturedStderr);
+        }
+
+        if (!outputClosed)
+        {
+            outputParts.Add($"[launcher] Redirected output remained open for {outputDrainTimeoutMs} ms after process exit; capture was stopped explicitly.");
+        }
+
+        return (timedOut ? -1 : process.ExitCode, string.Join(Environment.NewLine, outputParts));
     }
 
     private static string ResolveDotnetCommand()
