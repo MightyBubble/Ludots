@@ -2642,17 +2642,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationBusinessShowcaseMods_DoNotDependOnMassNavigationDataMod()
+        public void MassNavigationBusinessShowcaseMods_ComposeMassNavigationDataOnlyWhenTheyReuseItsAuthoredAssets()
         {
             string modsRoot = Path.Combine(FindRepoRoot(), "mods");
-            string[] applyingMods =
+            string formationModRoot = Path.Combine(
+                modsRoot,
+                "showcases",
+                "formation_capability",
+                "FormationCapabilityShowcaseMod");
+            JsonObject formationManifest = ReadObject(Path.Combine(formationModRoot, "mod.json"));
+            JsonObject formationDependencies = formationManifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapabilityShowcaseMod mod.json must author dependencies.");
+            Assert.That(formationDependencies.ContainsKey("MassNavigationMod"), Is.True,
+                "Formation Capability extends MassNavigation-authored performers and mesh assets, so the provider Mod must be explicit in the launch graph.");
+
+            string[] independentMods =
             {
-                Path.Combine(modsRoot, "showcases", "formation_capability", "FormationCapabilityShowcaseMod"),
                 Path.Combine(modsRoot, "showcases", "road_network", "RoadNetworkShowcaseMod"),
                 Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardParticipantViewsMod"),
             };
 
-            foreach (string modRoot in applyingMods)
+            foreach (string modRoot in independentMods)
             {
                 JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
                 JsonObject dependencies = manifest["dependencies"]?.AsObject()
@@ -2664,6 +2674,11 @@ namespace Ludots.Tests.Presentation
                 Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
                     $"MassNavigation-using showcase projects must not reference the MassNavigation data mod. Mod: {modRoot}");
             }
+
+            string[] formationProjectReferences = ReadProjectReferenceIncludes(
+                Directory.EnumerateFiles(formationModRoot, "*.csproj").Single());
+            Assert.That(formationProjectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
+                "Formation Capability consumes the data Mod through declared composition, not a code-level project reference.");
         }
 
         [Test]
