@@ -688,7 +688,11 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
+            var activation = inputMapping.ActivateMappedAction(
+                actionId,
+                new InputOrderActivationContext(target, inputMapping.PlayerId),
+                preferUiAiming: true);
+            return activation.State != InputOrderActivationState.Rejected;
         }
 
         private bool CanActivateProgressionRequirement(Entity target, int slotIndex)

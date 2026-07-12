@@ -1763,6 +1763,35 @@ namespace Ludots.Tests.GAS
             };
         }
 
+        [Test]
+        public void ActivateMappedAction_RejectsMissingExplicitActor()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Skill1",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
+                    }
+                }
+            };
+            var system = new InputOrderMappingSystem(input, config);
+
+            InputOrderActivationResult result = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(Entity.Null, 1));
+
+            Assert.That(result.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(result.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
         private static string FindRepoRoot()
         {
             string dir = TestContext.CurrentContext.TestDirectory;

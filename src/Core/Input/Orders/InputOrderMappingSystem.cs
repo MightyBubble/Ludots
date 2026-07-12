@@ -59,6 +59,43 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate void OrderSubmitHandler(in Order order);
 
+    public readonly struct InputOrderActivationContext
+    {
+        public InputOrderActivationContext(Entity actor, int playerId)
+        {
+            Actor = actor;
+            PlayerId = playerId;
+        }
+
+        public Entity Actor { get; }
+        public int PlayerId { get; }
+    }
+
+    public enum InputOrderActivationState : byte
+    {
+        EnteredAiming = 0,
+        Submitted = 1,
+        Rejected = 2
+    }
+
+    public readonly struct InputOrderActivationResult
+    {
+        private InputOrderActivationResult(InputOrderActivationState state, int orderId, OrderSubmitResult rejection)
+        {
+            State = state;
+            OrderId = orderId;
+            Rejection = rejection;
+        }
+
+        public InputOrderActivationState State { get; }
+        public int OrderId { get; }
+        public OrderSubmitResult Rejection { get; }
+
+        public static InputOrderActivationResult EnteredAiming() => new(InputOrderActivationState.EnteredAiming, 0, default);
+        public static InputOrderActivationResult Submitted(int orderId) => new(InputOrderActivationState.Submitted, orderId, default);
+        public static InputOrderActivationResult Rejected(OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, 0, reason);
+    }
+
     /// <summary>
     /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
     /// </summary>
@@ -218,6 +255,10 @@ namespace Ludots.Core.Input.Orders
         // Context
         private Entity _localPlayer;
         private int _playerId;
+        private Entity _explicitActivationActor;
+        private int _explicitActivationPlayerId;
+        private bool _hasExplicitActivationContext;
+        private int _lastSubmittedOrderId;
         private float _elapsedSeconds;
         private readonly List<Entity> _collectionActorsScratch = new(InitialScratchCapacity);
 
@@ -244,6 +285,7 @@ namespace Ludots.Core.Input.Orders
         private bool _isAiming;
         private string _aimingActionId = string.Empty;
         private InputOrderMapping? _aimingMapping;
+        private InputOrderActivationContext _aimingContext;
         
         // Held Start/End tracking
         private readonly Dictionary<string, HeldStartEndState> _activeHeldStartEndActions = new();
@@ -278,6 +320,7 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>Whether the system is currently in aiming state (AimCast).</summary>
         public bool IsAiming => _isAiming;
+        public int PlayerId => _playerId;
 
         /// <summary>Whether the current aiming interaction is a two-phase vector aim.</summary>
         public bool IsVectorAiming => _isVectorAiming;
@@ -676,6 +719,7 @@ namespace Ludots.Core.Input.Orders
             _isAiming = false;
             _aimingActionId = string.Empty;
             _aimingMapping = null;
+            _aimingContext = default;
             _smartCastWithIndicatorActive = false;
             _isVectorAiming = false;
             _vectorAimSlot = VectorAimInputSlot.Origin;
@@ -960,7 +1004,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             order.OrderTypeId = orderTypeId;
-            order.PlayerId = _playerId;
+            order.PlayerId = CurrentActivationPlayerId;
             order.Actor = actor;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
@@ -1049,7 +1093,7 @@ namespace Ludots.Core.Input.Orders
             args.I0 = resolution.SlotIndex;
 
             order.OrderTypeId = orderTypeId;
-            order.PlayerId = _playerId;
+            order.PlayerId = CurrentActivationPlayerId;
             order.Actor = actor;
             order.Target = resolution.Target;
             order.Args = args;
@@ -1153,7 +1197,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             order.OrderTypeId = orderTypeId;
-            order.PlayerId = _playerId;
+            order.PlayerId = CurrentActivationPlayerId;
             order.Actor = actor;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
@@ -1184,7 +1228,7 @@ namespace Ludots.Core.Input.Orders
             args.Spatial.AddPointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
             
             order.OrderTypeId = orderTypeId;
-            order.PlayerId = _playerId;
+            order.PlayerId = CurrentActivationPlayerId;
             order.Actor = actor;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
@@ -1288,7 +1332,7 @@ namespace Ludots.Core.Input.Orders
             }
             
             order.OrderTypeId = orderTypeId;
-            order.PlayerId = _playerId;
+            order.PlayerId = CurrentActivationPlayerId;
             order.Actor = actor;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
@@ -1515,7 +1559,7 @@ namespace Ludots.Core.Input.Orders
                 var order = new Order
                 {
                     OrderTypeId = route.OrderTypeId,
-                    PlayerId = _playerId,
+                    PlayerId = CurrentActivationPlayerId,
                     Actor = dispatchActor,
                     Args = args,
                     SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
@@ -1680,6 +1724,16 @@ namespace Ludots.Core.Input.Orders
 
         private Entity ResolvePrimaryActor(InputOrderMapping mapping)
         {
+            if (_hasExplicitActivationContext)
+            {
+                return _explicitActivationActor;
+            }
+
+            if (_isAiming && _aimingContext.Actor != Entity.Null)
+            {
+                return _aimingContext.Actor;
+            }
+
             if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
             {
                 return actor;
@@ -1702,6 +1756,12 @@ namespace Ludots.Core.Input.Orders
             return _localPlayer;
         }
 
+        private int CurrentActivationPlayerId => _hasExplicitActivationContext
+            ? _explicitActivationPlayerId
+            : _isAiming && _aimingContext.PlayerId > 0
+                ? _aimingContext.PlayerId
+                : _playerId;
+
         private bool HasExplicitLocalPlayer()
         {
             return _playerId > 0 && _localPlayer != Entity.Null;
@@ -1719,7 +1779,10 @@ namespace Ludots.Core.Input.Orders
         {
             if (mapping.TargetType == OrderTargetType.Entities)
             {
-                _orderSubmitHandler!(in order);
+                var submitted = order;
+                _orderIdentityAssigner?.Invoke(ref submitted);
+                _lastSubmittedOrderId = submitted.OrderId;
+                _orderSubmitHandler!(in submitted);
                 return;
             }
 
@@ -1727,7 +1790,10 @@ namespace Ludots.Core.Input.Orders
                 !TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch) ||
                 _collectionActorsScratch.Count <= 1)
             {
-                _orderSubmitHandler!(in order);
+                var submitted = order;
+                _orderIdentityAssigner?.Invoke(ref submitted);
+                _lastSubmittedOrderId = submitted.OrderId;
+                _orderSubmitHandler!(in submitted);
                 return;
             }
 
@@ -1741,6 +1807,8 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
+                _orderIdentityAssigner?.Invoke(ref cloned);
+                _lastSubmittedOrderId = cloned.OrderId;
                 ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
                 _orderSubmitHandler!(in cloned);
             }
@@ -2018,6 +2086,47 @@ namespace Ludots.Core.Input.Orders
 
             SubmitOrder(effectiveMapping, in order);
             return true;
+        }
+
+        public InputOrderActivationResult ActivateMappedAction(
+            string actionId,
+            in InputOrderActivationContext context,
+            bool preferUiAiming = false)
+        {
+            if (context.Actor == Entity.Null || context.PlayerId <= 0)
+            {
+                return InputOrderActivationResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            Entity previousActor = _explicitActivationActor;
+            int previousPlayerId = _explicitActivationPlayerId;
+            bool previousHasContext = _hasExplicitActivationContext;
+            _explicitActivationActor = context.Actor;
+            _explicitActivationPlayerId = context.PlayerId;
+            _hasExplicitActivationContext = true;
+            _lastSubmittedOrderId = 0;
+            try
+            {
+                bool activated = TryActivateMappedAction(actionId, preferUiAiming);
+                if (!activated)
+                {
+                    return InputOrderActivationResult.Rejected(OrderSubmitResult.RejectedByRule);
+                }
+
+                if (_isAiming && string.Equals(_aimingActionId, actionId, StringComparison.Ordinal))
+                {
+                    _aimingContext = context;
+                    return InputOrderActivationResult.EnteredAiming();
+                }
+
+                return InputOrderActivationResult.Submitted(_lastSubmittedOrderId);
+            }
+            finally
+            {
+                _explicitActivationActor = previousActor;
+                _explicitActivationPlayerId = previousPlayerId;
+                _hasExplicitActivationContext = previousHasContext;
+            }
         }
 
         private static int ResolveSkillActionPriority(string actionId, InputOrderMapping mapping)
