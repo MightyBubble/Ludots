@@ -11,7 +11,9 @@
   "gasRuntimeCapacity": {
     "abilityExecSnapshotCapacity": 16384,
     "effectLifetimeSnapshotCapacity": 16384,
-    "orderTerminalResultCapacity": 4096
+    "orderTerminalResultCapacity": 4096,
+    "abilityExecMaxWorkUnitsPerSlice": 4096,
+    "effectProcessingMaxWorkUnitsPerSlice": 4096
   },
   "gridCellSizeCm": 100,
   "worldWidthInMacroTiles": 64,

@@ -58,7 +58,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
-        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null)
+        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, int maxWorkUnitsPerSlice = int.MaxValue)
             : base(world)
         {
             _effectRequests = effectRequests;
@@ -77,7 +77,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 relationshipRuntime, knowledgeAreaRevealRuntime);
             _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime);
             _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime);
-            _runtimeStateEntity = world.Create(new GasRuntimeState());
+            MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
+            _runtimeStateEntity = world.Create(new GasRuntimeState
+            {
+                EffectLifetimeSnapshotCapacity = lifetimeSnapshotCapacity,
+                EffectProcessingMaxWorkUnitsPerSlice = maxWorkUnitsPerSlice,
+            });
         }
 
         public override void Update(in float dt)
@@ -219,6 +224,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 EffectLifetimeProcessedLastSlice = _lifetime.LastSliceProcessed,
                 EffectLifetimeDeferredCount = _lifetime.DeferredEntityCount,
                 EffectLifetimeSnapshotCapacity = _lifetime.SnapshotCapacity,
+                EffectProcessingMaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice,
             };
 
             World.Set(_runtimeStateEntity, state);

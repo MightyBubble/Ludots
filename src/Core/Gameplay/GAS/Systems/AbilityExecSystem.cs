@@ -77,7 +77,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IGraphRuntimeApi graphApi = null,
             TagOps tagOps = null,
             OrderTypeRegistry orderTypeRegistry = null,
-            ProgressionRequirementEvaluator progressionRequirements = null)
+            ProgressionRequirementEvaluator progressionRequirements = null,
+            int maxWorkUnitsPerSlice = int.MaxValue)
             : base(world)
         {
             if (snapshotCapacity <= 0)
@@ -101,9 +102,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps ?? new TagOps();
             _orderTypeRegistry = orderTypeRegistry;
             _progressionRequirements = progressionRequirements;
+            MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
             _runtimeStateEntity = world.Create(new AbilityExecRuntimeState
             {
                 SnapshotCapacity = snapshotCapacity,
+                MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice,
             });
         }
 
@@ -598,6 +601,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 DeferredEntityCount = DeferredEntityCount,
                 SnapshotEntityCount = _execEntityCount,
                 SnapshotCapacity = _execEntities.Length,
+                MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice,
             });
         }
 

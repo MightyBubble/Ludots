@@ -19,6 +19,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int EffectLifetimeProcessedLastSlice;
         public int EffectLifetimeDeferredCount;
         public int EffectLifetimeSnapshotCapacity;
+        public int EffectProcessingMaxWorkUnitsPerSlice;
     }
 
     public struct AbilityExecRuntimeState
@@ -27,5 +28,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int DeferredEntityCount;
         public int SnapshotEntityCount;
         public int SnapshotCapacity;
+        public int MaxWorkUnitsPerSlice;
     }
 }

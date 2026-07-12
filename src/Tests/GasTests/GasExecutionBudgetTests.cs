@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -16,6 +17,30 @@ namespace Ludots.Tests.GAS
 
         private static readonly QueryDescription EffectQuery = new QueryDescription()
             .WithAll<GameplayEffect>();
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase(int.MaxValue)]
+        public void GasRuntimeCapacity_RejectsNonFiniteAbilityWorkBudget(int invalidBudget)
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.AbilityExecMaxWorkUnitsPerSlice = invalidBudget;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("abilityExecMaxWorkUnitsPerSlice"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase(int.MaxValue)]
+        public void GasRuntimeCapacity_RejectsNonFiniteEffectWorkBudget(int invalidBudget)
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectProcessingMaxWorkUnitsPerSlice = invalidBudget;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectProcessingMaxWorkUnitsPerSlice"));
+        }
 
         [Test]
         public void AbilityExec_AdvancesMoreThanTwoThousandEntitiesAcrossSlices()
@@ -173,6 +198,18 @@ namespace Ludots.Tests.GAS
             var definitions = new AbilityDefinitionRegistry();
             definitions.Register(1, new AbilityDefinition { ExecSpec = spec });
             return definitions;
+        }
+
+        private static GasRuntimeCapacityConfig CreateValidRuntimeCapacity()
+        {
+            return new GasRuntimeCapacityConfig
+            {
+                AbilityExecSnapshotCapacity = 64,
+                EffectLifetimeSnapshotCapacity = 64,
+                OrderTerminalResultCapacity = 64,
+                AbilityExecMaxWorkUnitsPerSlice = 32,
+                EffectProcessingMaxWorkUnitsPerSlice = 32,
+            };
         }
     }
 }

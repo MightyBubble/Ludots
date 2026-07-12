@@ -102,6 +102,23 @@ namespace Ludots.Tests.GasTests
             Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
         }
 
+        [Test]
+        public void CoreBootstrap_WiresFiniteGasWorkBudgetsIntoRuntimeState()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                Path.Combine(repoRoot, "assets"));
+
+            AbilityExecRuntimeState ability = ReadSingle<AbilityExecRuntimeState>(engine.World);
+            GasRuntimeState effects = ReadSingle<GasRuntimeState>(engine.World);
+            Assert.That(ability.MaxWorkUnitsPerSlice, Is.EqualTo(4096));
+            Assert.That(effects.EffectProcessingMaxWorkUnitsPerSlice, Is.EqualTo(4096));
+            Assert.That(ability.MaxWorkUnitsPerSlice, Is.LessThan(int.MaxValue));
+            Assert.That(effects.EffectProcessingMaxWorkUnitsPerSlice, Is.LessThan(int.MaxValue));
+        }
+
         private static bool Find(
             GasDiagnosticEventBuffer diagnostics,
             GasDiagnosticMetric metric,
@@ -118,6 +135,25 @@ namespace Ludots.Tests.GasTests
 
             value = default;
             return false;
+        }
+
+        private static T ReadSingle<T>(World world) where T : struct
+        {
+            var query = new QueryDescription().WithAll<T>();
+            T value = default;
+            int count = 0;
+            foreach (ref var chunk in world.Query(in query))
+            {
+                var values = chunk.GetSpan<T>();
+                foreach (int i in chunk)
+                {
+                    value = values[i];
+                    count++;
+                }
+            }
+
+            Assert.That(count, Is.EqualTo(1), $"Expected exactly one {typeof(T).Name} runtime state.");
+            return value;
         }
 
         private static string FindRepoRoot()

@@ -79,6 +79,8 @@ namespace Ludots.Core.Config
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
+        public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
+        public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
 
         public void Validate()
         {
@@ -98,6 +100,22 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.orderTerminalResultCapacity must be positive.");
+            }
+
+            ValidateFiniteWorkBudget(
+                AbilityExecMaxWorkUnitsPerSlice,
+                "GameConfig.gasRuntimeCapacity.abilityExecMaxWorkUnitsPerSlice");
+            ValidateFiniteWorkBudget(
+                EffectProcessingMaxWorkUnitsPerSlice,
+                "GameConfig.gasRuntimeCapacity.effectProcessingMaxWorkUnitsPerSlice");
+        }
+
+        private static void ValidateFiniteWorkBudget(int value, string path)
+        {
+            if (value <= 0 || value == int.MaxValue)
+            {
+                throw new System.InvalidOperationException(
+                    $"{path} must be positive and finite.");
             }
         }
     }

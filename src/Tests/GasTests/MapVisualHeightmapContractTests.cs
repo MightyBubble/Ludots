@@ -38,7 +38,9 @@ namespace Ludots.Tests.Gas
               "gasRuntimeCapacity": {
                 "abilityExecSnapshotCapacity": 64,
                 "effectLifetimeSnapshotCapacity": 64,
-                "orderTerminalResultCapacity": 64
+                "orderTerminalResultCapacity": 64,
+                "abilityExecMaxWorkUnitsPerSlice": 64,
+                "effectProcessingMaxWorkUnitsPerSlice": 64
               }
             }
             """);
