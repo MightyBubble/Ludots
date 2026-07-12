@@ -732,14 +732,19 @@ namespace EntityCommandPanelMod.UI
                 return "Blocked";
             }
 
-            if (flags.HasFlag(EntityCommandSlotStateFlags.FormOverride))
-            {
-                return "Form Override";
-            }
-
             if (flags.HasFlag(EntityCommandSlotStateFlags.GrantedOverride))
             {
                 return "Granted";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.ItemGrantedOverride))
+            {
+                return "Item Granted";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.FormOverride))
+            {
+                return "Form Override";
             }
 
             if (flags.HasFlag(EntityCommandSlotStateFlags.Empty))

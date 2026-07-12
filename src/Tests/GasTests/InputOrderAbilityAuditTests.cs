@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
@@ -260,11 +261,13 @@ namespace Ludots.Tests.GAS
 
             var granted = new GrantedSlotBuffer();
             granted.Grant(0, abilityId: 999, sourceTagId: 1);
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
-            var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, hasGranted: true, slotIndex: 0);
+            var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, hasForm: false, in itemGranted, hasItemGranted: false, in granted, hasGranted: true, slotIndex: 0);
             That(resolved.AbilityId, Is.EqualTo(999), "Should return granted override");
 
-            var resolvedBase = AbilitySlotResolver.Resolve(in baseSlots, in granted, hasGranted: true, slotIndex: 1);
+            var resolvedBase = AbilitySlotResolver.Resolve(in baseSlots, in form, hasForm: false, in itemGranted, hasItemGranted: false, in granted, hasGranted: true, slotIndex: 1);
             That(resolvedBase.AbilityId, Is.EqualTo(200), "Slot 1 has no override, should return base");
         }
 
@@ -276,8 +279,10 @@ namespace Ludots.Tests.GAS
 
             var granted = new GrantedSlotBuffer();
             granted.Grant(0, abilityId: 999, sourceTagId: 1);
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
-            var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, hasGranted: false, slotIndex: 0);
+            var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, hasForm: false, in itemGranted, hasItemGranted: false, in granted, hasGranted: false, slotIndex: 0);
             That(resolved.AbilityId, Is.EqualTo(100), "hasGranted=false should skip granted buffer");
         }
 

@@ -157,3 +157,55 @@ N/A。
 ### 8. Next variant test
 
 下一个 Mod 变体继续通过现有 graph 连线和服务集合接入，不修改 Core enum。
+
+---
+
+## GAS Composition Gate — #653 Self Review
+
+- **Task / Issue**: #653
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+主要交付物为 A：收口现有有效技能槽位解析与输入/展示接线；没有新增 ability profile、preset、graph op 或第二套优先级规则。
+
+结论：PASS。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|---|---:|---|
+| 有效技能槽位解析 | N/A | 唯一 `AbilitySlotResolver.Resolve` |
+| 输入覆盖 | N/A | `SkillMappingOverrideResolver` |
+| 面板与实体信息展示 | N/A | 现有 EntityCommandPanel / EntityInfo 消费者 |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing input mapping, routing, aiming and execution systems
+- Resolvers / Registries: `AbilitySlotResolver`, `AbilityDefinitionRegistry`
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A。
+
+### 5. Transaction boundary
+
+同一 actor/slot 的 base、form、item、granted 来源必须一起参与一次确定性解析；不完整重载被删除，生产调用无法再省略 item 层。
+
+### 6. Config SSOT
+
+没有新增配置 schema。优先级 SSOT 固定为 `granted > item > form > base`，输入覆盖继续来自有效 `AbilityDefinition.InputBindingOverride`。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile enum 或输入 fallback
+- [x] 未在消费者复制第二套优先级梯子
+- [x] 不完整 resolver 重载已删除
+- [x] 预热后的输入覆盖解析 0 分配
+
+### 8. Next variant test
+
+新增技能来源必须扩展唯一 resolver 合同和全链路一致性测试，不得只改单个消费者。

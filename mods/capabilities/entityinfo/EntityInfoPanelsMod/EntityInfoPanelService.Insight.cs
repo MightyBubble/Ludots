@@ -4,6 +4,7 @@ using Arch.Core.Extensions;
 using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Spawning;
 
 namespace EntityInfoPanelsMod;
@@ -357,6 +358,7 @@ public sealed partial class EntityInfoPanelService
         bool dirty = false;
         bool hasAbilities = world.TryGet(entity, out AbilityStateBuffer baseSlots);
         bool hasForm = world.TryGet(entity, out AbilityFormSlotBuffer formSlots);
+        bool hasItemGranted = world.TryGet(entity, out ItemGrantedSlotBuffer itemGrantedSlots);
         bool hasGranted = world.TryGet(entity, out GrantedSlotBuffer grantedSlots);
         bool hasTags = world.TryGet(entity, out GameplayTagContainer tags);
         bool hasExec = world.TryGet(entity, out AbilityExecInstance activeExec);
@@ -367,7 +369,16 @@ public sealed partial class EntityInfoPanelService
             EntityInsightActionProfile action = profile.Actions[actionIndex];
             EntityInsightActionRuntimeFlags flags = EntityInsightActionRuntimeFlags.None;
             if (hasAbilities &&
-                TryResolveAbilitySlot(in baseSlots, in formSlots, hasForm, in grantedSlots, hasGranted, action.AbilityId, out int slotIndex))
+                TryResolveAbilitySlot(
+                    in baseSlots,
+                    in formSlots,
+                    hasForm,
+                    in itemGrantedSlots,
+                    hasItemGranted,
+                    in grantedSlots,
+                    hasGranted,
+                    action.AbilityId,
+                    out int slotIndex))
             {
                 flags |= EntityInsightActionRuntimeFlags.Present;
                 if (IsAbilityBlocked(action.AbilityId, hasTags, in tags))
@@ -409,6 +420,8 @@ public sealed partial class EntityInfoPanelService
         in AbilityStateBuffer baseSlots,
         in AbilityFormSlotBuffer formSlots,
         bool hasForm,
+        in ItemGrantedSlotBuffer itemGrantedSlots,
+        bool hasItemGranted,
         in GrantedSlotBuffer grantedSlots,
         bool hasGranted,
         int abilityId,
@@ -416,7 +429,15 @@ public sealed partial class EntityInfoPanelService
     {
         for (int i = 0; i < baseSlots.Count; i++)
         {
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(in baseSlots, in formSlots, hasForm, in grantedSlots, hasGranted, i);
+            AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                in baseSlots,
+                in formSlots,
+                hasForm,
+                in itemGrantedSlots,
+                hasItemGranted,
+                in grantedSlots,
+                hasGranted,
+                i);
             if (slot.AbilityId == abilityId)
             {
                 slotIndex = i;

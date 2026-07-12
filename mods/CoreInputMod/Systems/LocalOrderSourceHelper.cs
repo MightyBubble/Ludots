@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
@@ -460,10 +461,11 @@ namespace CoreInputMod.Systems
             return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
         }
 
-        private sealed class SkillMappingOverrideResolver
+        public sealed class SkillMappingOverrideResolver
         {
             private readonly World _world;
             private readonly AbilityDefinitionRegistry _abilityDefinitions;
+            private readonly Dictionary<SkillMappingOverrideCacheKey, InputOrderMapping> _cache = new(64);
 
             public SkillMappingOverrideResolver(World world, AbilityDefinitionRegistry abilityDefinitions)
             {
@@ -491,9 +493,19 @@ namespace CoreInputMod.Systems
 
                 bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
                 AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
+                bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
+                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
                 bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
                 GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in grantedSlots, hasGranted, slotIndex);
+                AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                    in abilities,
+                    in formSlots,
+                    hasForm,
+                    in itemGrantedSlots,
+                    hasItemGranted,
+                    in grantedSlots,
+                    hasGranted,
+                    slotIndex);
                 if (slot.AbilityId <= 0 ||
                     !_abilityDefinitions.TryGet(slot.AbilityId, out var abilityDefinition) ||
                     !abilityDefinition.HasInputBindingOverride)
@@ -501,7 +513,13 @@ namespace CoreInputMod.Systems
                     return false;
                 }
 
-                overrideMapping = CloneMapping(mapping);
+                var cacheKey = new SkillMappingOverrideCacheKey(mapping, slot.AbilityId);
+                if (_cache.TryGetValue(cacheKey, out overrideMapping))
+                {
+                    return true;
+                }
+
+                overrideMapping = mapping.Clone();
                 ref readonly var inputOverride = ref abilityDefinition.InputBindingOverride;
                 if (inputOverride.HasTrigger)
                 {
@@ -528,13 +546,13 @@ namespace CoreInputMod.Systems
                     overrideMapping.AutoTargetRangeCm = inputOverride.AutoTargetRangeCm;
                 }
 
+                _cache.Add(cacheKey, overrideMapping);
                 return true;
             }
 
-            private static InputOrderMapping CloneMapping(InputOrderMapping mapping)
-            {
-                return mapping.Clone();
-            }
+            private readonly record struct SkillMappingOverrideCacheKey(
+                InputOrderMapping Mapping,
+                int AbilityId);
         }
 
         private sealed class AutoTargetResolver

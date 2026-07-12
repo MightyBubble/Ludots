@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -60,12 +61,13 @@ namespace Ludots.Tests.GAS.Production
             routing.Update(0f);
 
             ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(entity);
+            var itemGrantedSlots = default(ItemGrantedSlotBuffer);
             var grantedSlots = default(GrantedSlotBuffer);
             int meleeQ = AbilityIdRegistry.GetId("Ability.Interaction.Arcweaver.FireLance");
             int meleeW = AbilityIdRegistry.GetId("Ability.Interaction.Arcweaver.ArcDash");
 
-            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId, Is.EqualTo(meleeQ));
-            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId, Is.EqualTo(meleeW));
+            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId, Is.EqualTo(meleeQ));
+            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId, Is.EqualTo(meleeW));
         }
 
         [Test]

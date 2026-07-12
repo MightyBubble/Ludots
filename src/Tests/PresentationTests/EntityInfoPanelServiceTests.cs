@@ -8,6 +8,7 @@ using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
@@ -397,14 +398,17 @@ public sealed class EntityInfoPanelServiceTests
         attributes.SetCurrent(healthId, 45f);
 
         var abilities = new AbilityStateBuffer();
-        abilities.AddAbility(abilityId);
+        abilities.AddAbility(abilityId + 1);
+        var itemGrantedSlots = new ItemGrantedSlotBuffer();
+        itemGrantedSlots.SetOverride(0, abilityId, Entity.Null);
 
         Entity owner = world.Create();
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
             new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
             attributes,
-            abilities);
+            abilities,
+            itemGrantedSlots);
 
         var collectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
         var collections = new EntityCollectionStore(collectionRegistry);
@@ -467,6 +471,8 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(service.GetSubtitle(standalone.Slot), Is.EqualTo("Profile subtitle"));
         Assert.That(service.GetInsightStatCount(standalone.Slot), Is.EqualTo(1));
         Assert.That(service.GetInsightActionCount(standalone.Slot), Is.EqualTo(1));
+        Assert.That(service.IsInsightActionPresent(standalone.Slot, 0), Is.True,
+            "Entity insight must resolve the item-granted effective ability, not only base/form/granted layers.");
         Assert.That(service.TryGetEntityCollectionRow(collection.Slot, 0, out EntityCollectionPanelRow row), Is.True);
         Assert.That(row.TemplateId, Is.EqualTo("tests.entityinfo.template.compact"));
         Assert.That(row.TemplateSubtitle, Is.EqualTo("Profile subtitle"));

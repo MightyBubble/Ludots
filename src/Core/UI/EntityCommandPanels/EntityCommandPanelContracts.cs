@@ -64,7 +64,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
         TemplateBacked = 1 << 4,
         Blocked = 1 << 5,
         Active = 1 << 6,
-        PendingTarget = 1 << 7
+        PendingTarget = 1 << 7,
+        ItemGrantedOverride = 1 << 8
     }
 
     public readonly struct EntityCommandPanelOpenRequest

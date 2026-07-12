@@ -240,32 +240,14 @@ namespace Ludots.Core.Gameplay.GAS.Components
     }
 
     /// <summary>
-    /// Utility for resolving the effective ability at a slot index
-    /// by merging base slots + granted overrides.
+    /// Utility for resolving the effective ability at a slot index by merging
+    /// transient granted, item-granted, form, and base sources.
     /// </summary>
     public static class AbilitySlotResolver
     {
         /// <summary>
-        /// Resolve the effective ability for a slot.
-        /// If the entity has a <see cref="GrantedSlotBuffer"/> and the slot has an override, use it.
-        /// Otherwise, use the base slot from <see cref="AbilityStateBuffer"/>.
-        /// </summary>
-        public static AbilitySlotState Resolve(
-            in AbilityStateBuffer baseSlots,
-            in GrantedSlotBuffer grantedSlots,
-            bool hasGranted,
-            int slotIndex)
-        {
-            if (hasGranted && grantedSlots.HasOverride(slotIndex))
-            {
-                return grantedSlots.GetOverride(slotIndex);
-            }
-            return baseSlots.Get(slotIndex);
-        }
-
-        /// <summary>
         /// Resolve the effective ability for a slot with layered overrides:
-        /// transient granted override > form override > base slot.
+        /// transient granted override &gt; item-granted override &gt; form override &gt; base slot.
         /// </summary>
         public static AbilitySlotState Resolve(
             in AbilityStateBuffer baseSlots,
@@ -277,6 +259,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
             bool hasGranted,
             int slotIndex)
         {
+            if ((uint)slotIndex >= AbilityStateBuffer.CAPACITY)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(slotIndex));
+            }
+
             if (hasGranted && grantedSlots.HasOverride(slotIndex))
             {
                 return grantedSlots.GetOverride(slotIndex);
@@ -293,18 +280,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
 
             return baseSlots.Get(slotIndex);
-        }
-
-        public static AbilitySlotState Resolve(
-            in AbilityStateBuffer baseSlots,
-            in AbilityFormSlotBuffer formSlots,
-            bool hasForm,
-            in GrantedSlotBuffer grantedSlots,
-            bool hasGranted,
-            int slotIndex)
-        {
-            ItemGrantedSlotBuffer itemGranted = default;
-            return Resolve(in baseSlots, in formSlots, hasForm, in itemGranted, hasItemGranted: false, in grantedSlots, hasGranted, slotIndex);
         }
     }
 }

@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -196,6 +197,8 @@ namespace Ludots.Tests.GAS
             sb.AppendLine("[MUD][SLOT] 基础技能栏: [Fireball(10), IceBlast(20), HealingWave(30), Teleport(40)]");
 
             var granted = new GrantedSlotBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
             // Item grants an override to slot 1
             int itemBuffTag = 500;
@@ -204,12 +207,12 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 4; i++)
             {
-                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, hasGranted: true, i);
+                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, i);
                 sb.AppendLine($"  Slot[{i}] = AbilityId={resolved.AbilityId}{(granted.HasOverride(i) ? " (OVERRIDE)" : "")}");
             }
 
-            That(AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 1).AbilityId, Is.EqualTo(99));
-            That(AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 0).AbilityId, Is.EqualTo(10));
+            That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 1).AbilityId, Is.EqualTo(99));
+            That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 0).AbilityId, Is.EqualTo(10));
 
             // Buff expires — revoke by source
             sb.AppendLine("───────────────────────────────────────────────────────────────");
@@ -217,7 +220,7 @@ namespace Ludots.Tests.GAS
             int revoked = granted.RevokeBySource(itemBuffTag);
             sb.AppendLine($"  Revoked={revoked} slots");
 
-            var resolvedAfter = AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 1);
+            var resolvedAfter = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 1);
             sb.AppendLine($"  Slot[1] = AbilityId={resolvedAfter.AbilityId} (restored)");
             That(resolvedAfter.AbilityId, Is.EqualTo(20), "Should be restored to IceBlast");
 
@@ -413,6 +416,8 @@ namespace Ludots.Tests.GAS
             var sw = Stopwatch.StartNew();
 
             var granted = new GrantedSlotBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
             for (int c = 0; c < cycles; c++)
             {
@@ -424,7 +429,7 @@ namespace Ludots.Tests.GAS
                 totalGrants++;
 
                 // Resolve
-                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, true, slot);
+                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, slot);
                 totalResolves++;
 
                 // Every 3rd cycle: revoke
