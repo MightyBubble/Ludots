@@ -3,10 +3,32 @@ using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
-    public struct CompletedOrderSignal
+    public enum OrderTerminalState : byte
+    {
+        Completed = 0,
+        Cancelled = 1,
+        Failed = 2
+    }
+
+    public enum OrderFailureReason : byte
+    {
+        None = 0,
+        MissingBlackboardSlot = 1,
+        NegativeAbilitySlot = 2,
+        AbilitySlotOutOfRange = 3,
+        AbilityUnavailable = 4,
+        AbilityDefinitionMissing = 5,
+        ActivationBlocked = 6,
+        PreconditionFailed = 7,
+        Interrupted = 8
+    }
+
+    public struct OrderTerminalSignal
     {
         public int OrderId;
         public int OrderTypeId;
+        public OrderTerminalState State;
+        public OrderFailureReason FailureReason;
     }
 
     public struct OrderContinuationEntry

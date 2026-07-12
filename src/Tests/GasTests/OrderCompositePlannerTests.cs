@@ -148,7 +148,12 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new OrderContinuationBuffer(),
-                new CompletedOrderSignal { OrderId = 7, OrderTypeId = MoveToOrderTypeId });
+                new OrderTerminalSignal
+                {
+                    OrderId = 7,
+                    OrderTypeId = MoveToOrderTypeId,
+                    State = OrderTerminalState.Completed
+                });
 
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
             continuations.TryAdd(7, new Order
@@ -177,11 +182,53 @@ namespace Ludots.Tests.GAS
             var system = new OrderContinuationSystem(world, clock, orderTypes, rules);
             system.Update(0f);
 
-            ref var updatedSignal = ref world.Get<CompletedOrderSignal>(actor);
+            ref var updatedSignal = ref world.Get<OrderTerminalSignal>(actor);
             Assert.That(updatedSignal.OrderId, Is.EqualTo(0));
             Assert.That(buffer.QueuedCount, Is.EqualTo(2));
             Assert.That(buffer.GetQueued(0).Order.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
             Assert.That(buffer.GetQueued(1).Order.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
+        }
+
+        [Test]
+        public void FinalizeCurrent_Failed_RemovesContinuationAndOnlyFinalizesOnce()
+        {
+            using var world = World.Create();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+
+            var active = new Order { OrderId = 17, OrderTypeId = CastAbilityOrderTypeId };
+            var buffer = OrderBuffer.CreateEmpty();
+            buffer.SetActiveDirect(in active, 100);
+            Entity actor = world.Create(buffer, new OrderContinuationBuffer(), new OrderTerminalSignal());
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            continuations.TryAdd(17, new Order { OrderId = 18, OrderTypeId = CastAbilityOrderTypeId });
+
+            bool first = OrderSubmitter.FinalizeCurrent(
+                world,
+                actor,
+                orderTypes,
+                OrderTerminalState.Failed,
+                OrderFailureReason.AbilityDefinitionMissing);
+            bool second = OrderSubmitter.FinalizeCurrent(
+                world,
+                actor,
+                orderTypes,
+                OrderTerminalState.Completed);
+
+            Assert.That(first, Is.True);
+            Assert.That(second, Is.False);
+            Assert.That(continuations.HasEntries, Is.False);
+            ref var terminal = ref world.Get<OrderTerminalSignal>(actor);
+            Assert.That(terminal.OrderId, Is.EqualTo(17));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.AbilityDefinitionMissing));
         }
 
         private static AbilityDefinitionRegistry CreateAbilityRegistry(

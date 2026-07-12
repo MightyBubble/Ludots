@@ -142,16 +142,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ref var bbInts = ref World.Get<BlackboardIntBuffer>(actor);
                     if (!bbInts.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex))
                     {
+                        FailAbilityStart(actor, -1, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.MissingBlackboardSlot);
                         continue;
                     }
                     if (slotIndex < 0)
                     {
+                        FailAbilityStart(actor, slotIndex, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.NegativeAbilitySlot);
                         continue;
                     }
                     
                     ref var abilities = ref World.Get<AbilityStateBuffer>(actor);
                     if ((uint)slotIndex >= (uint)abilities.Count)
                     {
+                        FailAbilityStart(actor, slotIndex, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilitySlotOutOfRange);
                         continue;
                     }
 
@@ -271,6 +274,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         : hasTemplateEntity && World.Has<AbilityExecSpec>(templateEntity)
                             ? World.Get<AbilityExecSpec>(templateEntity)
                             : default;
+                    if (!hasAbilityDef && !hasTemplateEntity)
+                    {
+                        FailAbilityStart(actor, slotIndex, slot.AbilityId, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilityDefinitionMissing);
+                        continue;
+                    }
                     int useRequirementId = ResolveUseProgressionRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
                     bool pendingProgressionUseRequirement = false;
                     if (useRequirementId > 0)
@@ -422,6 +430,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (instance.AbilitySlot < 0 || instance.AbilitySlot >= abilities.Count)
                 {
+                    if (_orderTypeRegistry != null)
+                    {
+                        OrderSubmitter.FinalizeCurrent(World, actor, _orderTypeRegistry, OrderTerminalState.Failed, OrderFailureReason.AbilitySlotOutOfRange);
+                    }
                     World.Remove<AbilityExecInstance>(actor);
                     workUnits++;
                     continue;
@@ -456,7 +468,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (!hasDefinition && (!hasTemplateEntity || !World.Has<AbilityExecSpec>(templateEntity)))
                 {
-                    // No valid ability definition found; fail-fast, remove exec instance.
+                    if (_orderTypeRegistry != null)
+                    {
+                        OrderSubmitter.FinalizeCurrent(World, actor, _orderTypeRegistry, OrderTerminalState.Failed, OrderFailureReason.AbilityDefinitionMissing);
+                    }
                     World.Remove<AbilityExecInstance>(actor);
                     workUnits++;
                     continue;
@@ -690,7 +705,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_orderTypeRegistry != null)
             {
-                OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
+                OrderSubmitter.FinalizeCurrent(
+                    World,
+                    actor,
+                    _orderTypeRegistry,
+                    OrderTerminalState.Failed,
+                    reason == AbilityCastFailReason.PreconditionFailed
+                        ? OrderFailureReason.PreconditionFailed
+                        : OrderFailureReason.ActivationBlocked);
             }
 
             _presentationEvents?.Publish(new GasPresentationEvent
@@ -701,6 +723,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 AbilitySlot = slotIndex,
                 AbilityId = abilityId,
                 FailReason = reason
+            });
+        }
+
+        private void FailAbilityStart(
+            Entity actor,
+            int slotIndex,
+            int abilityId,
+            AbilityCastFailReason presentationReason,
+            OrderFailureReason orderReason)
+        {
+            if (_orderTypeRegistry != null)
+            {
+                OrderSubmitter.FinalizeCurrent(World, actor, _orderTypeRegistry, OrderTerminalState.Failed, orderReason);
+            }
+
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.CastFailed,
+                Actor = actor,
+                AbilitySlot = slotIndex,
+                AbilityId = abilityId,
+                FailReason = presentationReason
             });
         }
 

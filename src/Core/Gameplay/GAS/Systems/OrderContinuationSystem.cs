@@ -15,7 +15,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class OrderContinuationSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<OrderBuffer, OrderContinuationBuffer, CompletedOrderSignal>();
+            .WithAll<OrderBuffer, OrderContinuationBuffer, OrderTerminalSignal>();
 
         private readonly IClock _clock;
         private readonly OrderTypeRegistry _orderTypeRegistry;
@@ -51,10 +51,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var buffers = chunk.GetSpan<OrderBuffer>();
                 var continuations = chunk.GetSpan<OrderContinuationBuffer>();
-                var signals = chunk.GetSpan<CompletedOrderSignal>();
+                var signals = chunk.GetSpan<OrderTerminalSignal>();
                 foreach (var index in chunk)
                 {
-                    ref CompletedOrderSignal signal = ref signals[index];
+                    ref OrderTerminalSignal signal = ref signals[index];
                     ref OrderContinuationBuffer continuation = ref continuations[index];
                     if (signal.OrderId <= 0 || !continuation.HasEntries)
                     {
@@ -62,7 +62,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    int count = continuation.Extract(signal.OrderId, extracted);
+                    int count;
+                    if (signal.State == OrderTerminalState.Completed)
+                    {
+                        count = continuation.Extract(signal.OrderId, extracted);
+                    }
+                    else
+                    {
+                        continuation.RemoveByTrigger(signal.OrderId);
+                        count = 0;
+                    }
                     signal = default;
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     ref OrderBuffer buffer = ref buffers[index];

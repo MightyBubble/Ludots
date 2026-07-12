@@ -269,18 +269,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return currentStep + bufferTicks;
         }
 
-        public static void NotifyOrderComplete(World world, Entity entity, OrderTypeRegistry registry)
+        public static bool FinalizeCurrent(
+            World world,
+            Entity entity,
+            OrderTypeRegistry registry,
+            OrderTerminalState state,
+            OrderFailureReason failureReason = OrderFailureReason.None)
         {
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
-                return;
+                return false;
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
-            int completedOrderId = buffer.HasActive ? buffer.ActiveOrder.Order.OrderId : 0;
-            int completedOrderTypeId = buffer.HasActive ? buffer.ActiveOrder.Order.OrderTypeId : 0;
+            if (!buffer.HasActive)
+            {
+                return false;
+            }
+
+            int completedOrderId = buffer.ActiveOrder.Order.OrderId;
+            int completedOrderTypeId = buffer.ActiveOrder.Order.OrderTypeId;
             DeactivateCurrentOrder(world, entity, ref buffer, registry);
-            WriteCompletedOrderSignal(world, entity, completedOrderId, completedOrderTypeId);
+            WriteTerminalSignal(world, entity, completedOrderId, completedOrderTypeId, state, failureReason);
 
             if (buffer.PromoteNext())
             {
@@ -288,7 +298,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 var nextConfig = registry.Get(nextOrder.OrderTypeId);
                 ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
             }
+
+            return true;
         }
+
+        public static bool NotifyOrderComplete(World world, Entity entity, OrderTypeRegistry registry)
+            => FinalizeCurrent(world, entity, registry, OrderTerminalState.Completed);
 
         public static bool TryPromoteNextQueuedToActive(World world, Entity entity, OrderTypeRegistry registry)
         {
@@ -325,7 +340,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static void CancelCurrent(World world, Entity entity, OrderTypeRegistry registry)
         {
-            NotifyOrderComplete(world, entity, registry);
+            FinalizeCurrent(world, entity, registry, OrderTerminalState.Cancelled);
         }
 
         public static void CancelAll(World world, Entity entity, OrderTypeRegistry registry)
@@ -341,28 +356,35 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteCompletedOrderSignal(World world, Entity entity, int orderId, int orderTypeId)
+        private static void WriteTerminalSignal(
+            World world,
+            Entity entity,
+            int orderId,
+            int orderTypeId,
+            OrderTerminalState state,
+            OrderFailureReason failureReason)
         {
-            if (orderId <= 0 ||
-                !world.Has<OrderContinuationBuffer>(entity) ||
-                !world.Get<OrderContinuationBuffer>(entity).HasEntries)
+            if (orderId <= 0)
             {
                 return;
             }
 
-            if (!world.Has<CompletedOrderSignal>(entity))
+            if (world.Has<OrderContinuationBuffer>(entity) && state != OrderTerminalState.Completed)
             {
-                world.Add(entity, new CompletedOrderSignal
-                {
-                    OrderId = orderId,
-                    OrderTypeId = orderTypeId
-                });
+                ref var continuation = ref world.Get<OrderContinuationBuffer>(entity);
+                continuation.RemoveByTrigger(orderId);
+            }
+
+            if (!world.Has<OrderTerminalSignal>(entity))
+            {
                 return;
             }
 
-            ref var signal = ref world.Get<CompletedOrderSignal>(entity);
+            ref var signal = ref world.Get<OrderTerminalSignal>(entity);
             signal.OrderId = orderId;
             signal.OrderTypeId = orderTypeId;
+            signal.State = state;
+            signal.FailureReason = failureReason;
         }
     }
 }

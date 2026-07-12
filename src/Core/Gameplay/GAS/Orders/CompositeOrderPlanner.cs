@@ -52,7 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (!_world.Has<OrderContinuationBuffer>(order.Actor))
             {
-                _world.Add(order.Actor, new OrderContinuationBuffer());
+                _world.Add(order.Actor, new OrderContinuationBuffer(), new OrderTerminalSignal());
             }
 
             _incomingOrders.EnsureOrderId(ref primaryMove);
