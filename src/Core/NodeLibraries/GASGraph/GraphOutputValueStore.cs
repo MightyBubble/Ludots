@@ -50,9 +50,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private int[] _entryOwnerVersions;
         private int[] _entryKeyIds;
         private int[] _entrySlots;
+        private bool[] _entryActive;
+        private int[] _slotEntries;
+        private int _freeEntryHead = -1;
+
+        private int[] _ownerBucketHeads;
+        private int[] _ownerEntryNext;
+        private int[] _ownerEntryIds;
+        private int[] _ownerEntryWorldIds;
+        private int[] _ownerEntryVersions;
+        private int[] _ownerEntryHeadSlots;
+        private bool[] _ownerEntryActive;
+        private bool[] _ownerRetirementPending;
+        private int[] _slotOwnerEntries;
+        private int[] _slotOwnerNext;
+        private Entity[] _pendingRetiredOwners;
+        private int _pendingRetiredOwnerCount;
+        private int _freeOwnerEntryHead = -1;
 
         private int _slotCount;
         private int _entryCount;
+        private int _activeEntryCount;
+        private int _ownerEntryCount;
+        private int _activeOwnerEntryCount;
 
         public GraphOutputValueStore(StringIntRegistry keyRegistry, int initialCapacity = 64)
         {
@@ -86,6 +106,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _entryOwnerVersions = new int[initialCapacity];
             _entryKeyIds = new int[initialCapacity];
             _entrySlots = new int[initialCapacity];
+            _entryActive = new bool[initialCapacity];
+            _slotEntries = new int[initialCapacity];
+            Array.Fill(_slotEntries, -1);
+
+            _ownerBucketHeads = new int[bucketCount];
+            Array.Fill(_ownerBucketHeads, -1);
+            _ownerEntryNext = new int[initialCapacity];
+            _ownerEntryIds = new int[initialCapacity];
+            _ownerEntryWorldIds = new int[initialCapacity];
+            _ownerEntryVersions = new int[initialCapacity];
+            _ownerEntryHeadSlots = new int[initialCapacity];
+            Array.Fill(_ownerEntryHeadSlots, -1);
+            _ownerEntryActive = new bool[initialCapacity];
+            _ownerRetirementPending = new bool[initialCapacity];
+            _slotOwnerEntries = new int[initialCapacity];
+            Array.Fill(_slotOwnerEntries, -1);
+            _slotOwnerNext = new int[initialCapacity];
+            Array.Fill(_slotOwnerNext, -1);
+            _pendingRetiredOwners = new Entity[initialCapacity];
         }
 
         public StringIntRegistry KeyRegistry => _keyRegistry;
@@ -193,51 +232,56 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public int RemoveOwner(Entity owner)
         {
-            if (owner == Entity.Null)
+            if (owner == Entity.Null || !TryFindOwnerEntry(owner, out int ownerEntry))
             {
                 return 0;
             }
 
             int removed = 0;
-            for (int slot = 0; slot < _slotCount; slot++)
+            int slot = _ownerEntryHeadSlots[ownerEntry];
+            RemoveOwnerEntry(ownerEntry);
+            while (slot >= 0)
             {
-                if (_active[slot] && _owners[slot] == owner)
-                {
-                    ReleaseSlot(slot);
-                    removed++;
-                }
-            }
-
-            if (removed > 0)
-            {
-                RebuildEntries();
+                int next = _slotOwnerNext[slot];
+                ReleaseSlot(slot, unlinkOwner: false);
+                removed++;
+                slot = next;
             }
 
             return removed;
         }
 
-        public int ReleaseDeadOwners(World world)
+        public bool QueueOwnerRetirement(Entity owner)
         {
-            if (world == null)
+            if (owner == Entity.Null ||
+                !TryFindOwnerEntry(owner, out int ownerEntry) ||
+                _ownerRetirementPending[ownerEntry])
             {
-                throw new ArgumentNullException(nameof(world));
+                return false;
             }
 
+            if (_pendingRetiredOwnerCount >= _pendingRetiredOwners.Length)
+            {
+                throw new InvalidOperationException("Graph output owner retirement queue capacity exceeded.");
+            }
+
+            _ownerRetirementPending[ownerEntry] = true;
+            _pendingRetiredOwners[_pendingRetiredOwnerCount++] = owner;
+            return true;
+        }
+
+        public int ReleaseQueuedOwners(out int retiredOwnersProcessed)
+        {
+            retiredOwnersProcessed = _pendingRetiredOwnerCount;
             int removed = 0;
-            for (int slot = 0; slot < _slotCount; slot++)
+            for (int i = 0; i < _pendingRetiredOwnerCount; i++)
             {
-                if (_active[slot] && !world.IsAlive(_owners[slot]))
-                {
-                    ReleaseSlot(slot);
-                    removed++;
-                }
+                Entity owner = _pendingRetiredOwners[i];
+                _pendingRetiredOwners[i] = Entity.Null;
+                removed += RemoveOwner(owner);
             }
 
-            if (removed > 0)
-            {
-                RebuildEntries();
-            }
-
+            _pendingRetiredOwnerCount = 0;
             return removed;
         }
 
@@ -307,10 +351,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             EnsureSlotCapacity(_slotCount + 1);
-            EnsureEntryCapacity(_entryCount + 1);
-            if ((_entryCount + 1) > (int)(_bucketHeads.Length * LoadFactor))
+            if ((_activeEntryCount + 1) > (int)(_bucketHeads.Length * LoadFactor))
             {
                 Rehash(_bucketHeads.Length * 2);
+            }
+            if ((_activeOwnerEntryCount + 1) > (int)(_ownerBucketHeads.Length * LoadFactor))
+            {
+                RehashOwners(_ownerBucketHeads.Length * 2);
             }
 
             int slot;
@@ -322,12 +369,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 slot = _slotCount++;
             }
-            int entry = _entryCount++;
+
+            int ownerEntry = GetOrCreateOwnerEntry(owner);
+            _slotOwnerEntries[slot] = ownerEntry;
+            _slotOwnerNext[slot] = _ownerEntryHeadSlots[ownerEntry];
+            _ownerEntryHeadSlots[ownerEntry] = slot;
+
+            int entry = AllocateEntry();
             _entryOwnerIds[entry] = owner.Id;
             _entryOwnerWorldIds[entry] = owner.WorldId;
             _entryOwnerVersions[entry] = owner.Version;
             _entryKeyIds[entry] = keyId;
             _entrySlots[entry] = slot;
+            _slotEntries[slot] = entry;
             int bucket = BucketIndex(owner.Id, owner.WorldId, owner.Version, keyId, _bucketHeads.Length);
             _entryNext[entry] = _bucketHeads[bucket];
             _bucketHeads[bucket] = entry;
@@ -335,8 +389,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return slot;
         }
 
-        private void ReleaseSlot(int slot)
+        private void ReleaseSlot(int slot, bool unlinkOwner)
         {
+            RemoveEntry(_slotEntries[slot]);
+            if (unlinkOwner)
+            {
+                UnlinkSlotFromOwner(_slotOwnerEntries[slot], slot);
+            }
+
             _active[slot] = false;
             _owners[slot] = Entity.Null;
             _ownerIds[slot] = 0;
@@ -348,6 +408,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _intValues[slot] = 0;
             _floatValues[slot] = 0f;
             _entityValues[slot] = Entity.Null;
+            _slotEntries[slot] = -1;
+            _slotOwnerEntries[slot] = -1;
+            _slotOwnerNext[slot] = -1;
             _handleGenerations[slot]++;
             if (_handleGenerations[slot] == 0)
             {
@@ -358,33 +421,69 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ActiveCount--;
         }
 
-        private void RebuildEntries()
+        private int AllocateEntry()
         {
-            Array.Fill(_bucketHeads, -1);
-            _entryCount = 0;
-            EnsureEntryCapacity(ActiveCount);
-            for (int slot = 0; slot < _slotCount; slot++)
+            int entry;
+            if (_freeEntryHead >= 0)
             {
-                if (!_active[slot])
+                entry = _freeEntryHead;
+                _freeEntryHead = _entryNext[entry];
+            }
+            else
+            {
+                EnsureEntryCapacity(_entryCount + 1);
+                entry = _entryCount++;
+            }
+
+            _entryActive[entry] = true;
+            _activeEntryCount++;
+            return entry;
+        }
+
+        private void RemoveEntry(int entry)
+        {
+            if (entry < 0 || !_entryActive[entry])
+            {
+                throw new InvalidOperationException("Graph output key entry is missing for an active slot.");
+            }
+
+            int bucket = BucketIndex(
+                _entryOwnerIds[entry],
+                _entryOwnerWorldIds[entry],
+                _entryOwnerVersions[entry],
+                _entryKeyIds[entry],
+                _bucketHeads.Length);
+            int previous = -1;
+            for (int current = _bucketHeads[bucket]; current >= 0; current = _entryNext[current])
+            {
+                if (current != entry)
                 {
+                    previous = current;
                     continue;
                 }
 
-                int entry = _entryCount++;
-                _entryOwnerIds[entry] = _ownerIds[slot];
-                _entryOwnerWorldIds[entry] = _ownerWorldIds[slot];
-                _entryOwnerVersions[entry] = _ownerVersions[slot];
-                _entryKeyIds[entry] = _keyIds[slot];
-                _entrySlots[entry] = slot;
-                int bucket = BucketIndex(
-                    _ownerIds[slot],
-                    _ownerWorldIds[slot],
-                    _ownerVersions[slot],
-                    _keyIds[slot],
-                    _bucketHeads.Length);
-                _entryNext[entry] = _bucketHeads[bucket];
-                _bucketHeads[bucket] = entry;
+                if (previous < 0)
+                {
+                    _bucketHeads[bucket] = _entryNext[current];
+                }
+                else
+                {
+                    _entryNext[previous] = _entryNext[current];
+                }
+
+                _entryActive[entry] = false;
+                _entryOwnerIds[entry] = 0;
+                _entryOwnerWorldIds[entry] = 0;
+                _entryOwnerVersions[entry] = 0;
+                _entryKeyIds[entry] = 0;
+                _entrySlots[entry] = -1;
+                _entryNext[entry] = _freeEntryHead;
+                _freeEntryHead = entry;
+                _activeEntryCount--;
+                return;
             }
+
+            throw new InvalidOperationException("Graph output key entry is not linked from its hash bucket.");
         }
 
         private bool TryFindSlot(Entity owner, int keyId, out int slot)
@@ -404,6 +503,126 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             slot = -1;
             return false;
+        }
+
+        private int GetOrCreateOwnerEntry(Entity owner)
+        {
+            if (TryFindOwnerEntry(owner, out int existing))
+            {
+                return existing;
+            }
+
+            int entry;
+            if (_freeOwnerEntryHead >= 0)
+            {
+                entry = _freeOwnerEntryHead;
+                _freeOwnerEntryHead = _ownerEntryNext[entry];
+            }
+            else
+            {
+                EnsureOwnerEntryCapacity(_ownerEntryCount + 1);
+                entry = _ownerEntryCount++;
+            }
+
+            _ownerEntryActive[entry] = true;
+            _ownerEntryIds[entry] = owner.Id;
+            _ownerEntryWorldIds[entry] = owner.WorldId;
+            _ownerEntryVersions[entry] = owner.Version;
+            _ownerEntryHeadSlots[entry] = -1;
+            _ownerRetirementPending[entry] = false;
+            int bucket = OwnerBucketIndex(owner.Id, owner.WorldId, owner.Version, _ownerBucketHeads.Length);
+            _ownerEntryNext[entry] = _ownerBucketHeads[bucket];
+            _ownerBucketHeads[bucket] = entry;
+            _activeOwnerEntryCount++;
+            return entry;
+        }
+
+        private bool TryFindOwnerEntry(Entity owner, out int entry)
+        {
+            int bucket = OwnerBucketIndex(owner.Id, owner.WorldId, owner.Version, _ownerBucketHeads.Length);
+            for (int current = _ownerBucketHeads[bucket]; current >= 0; current = _ownerEntryNext[current])
+            {
+                if (_ownerEntryIds[current] == owner.Id &&
+                    _ownerEntryWorldIds[current] == owner.WorldId &&
+                    _ownerEntryVersions[current] == owner.Version)
+                {
+                    entry = current;
+                    return true;
+                }
+            }
+
+            entry = -1;
+            return false;
+        }
+
+        private void RemoveOwnerEntry(int entry)
+        {
+            int bucket = OwnerBucketIndex(
+                _ownerEntryIds[entry],
+                _ownerEntryWorldIds[entry],
+                _ownerEntryVersions[entry],
+                _ownerBucketHeads.Length);
+            int previous = -1;
+            for (int current = _ownerBucketHeads[bucket]; current >= 0; current = _ownerEntryNext[current])
+            {
+                if (current != entry)
+                {
+                    previous = current;
+                    continue;
+                }
+
+                if (previous < 0)
+                {
+                    _ownerBucketHeads[bucket] = _ownerEntryNext[current];
+                }
+                else
+                {
+                    _ownerEntryNext[previous] = _ownerEntryNext[current];
+                }
+
+                _ownerEntryActive[entry] = false;
+                _ownerEntryIds[entry] = 0;
+                _ownerEntryWorldIds[entry] = 0;
+                _ownerEntryVersions[entry] = 0;
+                _ownerEntryHeadSlots[entry] = -1;
+                _ownerRetirementPending[entry] = false;
+                _ownerEntryNext[entry] = _freeOwnerEntryHead;
+                _freeOwnerEntryHead = entry;
+                _activeOwnerEntryCount--;
+                return;
+            }
+
+            throw new InvalidOperationException("Graph output owner entry is not linked from its hash bucket.");
+        }
+
+        private void UnlinkSlotFromOwner(int ownerEntry, int slot)
+        {
+            int previous = -1;
+            for (int current = _ownerEntryHeadSlots[ownerEntry]; current >= 0; current = _slotOwnerNext[current])
+            {
+                if (current != slot)
+                {
+                    previous = current;
+                    continue;
+                }
+
+                if (previous < 0)
+                {
+                    _ownerEntryHeadSlots[ownerEntry] = _slotOwnerNext[current];
+                }
+                else
+                {
+                    _slotOwnerNext[previous] = _slotOwnerNext[current];
+                }
+
+                if (_ownerEntryHeadSlots[ownerEntry] < 0)
+                {
+                    RemoveOwnerEntry(ownerEntry);
+                }
+                return;
+            }
+
+            throw new InvalidOperationException("Graph output slot is not linked from its owner entry.");
         }
 
         private bool TryValidateSlot(int slot)
@@ -438,6 +657,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Array.Resize(ref _floatValues, next);
             Array.Resize(ref _entityValues, next);
             Array.Resize(ref _freeSlots, next);
+            int oldSlotEntryLength = _slotEntries.Length;
+            Array.Resize(ref _slotEntries, next);
+            Array.Fill(_slotEntries, -1, oldSlotEntryLength, next - oldSlotEntryLength);
+            int oldOwnerEntryLength = _slotOwnerEntries.Length;
+            Array.Resize(ref _slotOwnerEntries, next);
+            Array.Fill(_slotOwnerEntries, -1, oldOwnerEntryLength, next - oldOwnerEntryLength);
+            int oldOwnerNextLength = _slotOwnerNext.Length;
+            Array.Resize(ref _slotOwnerNext, next);
+            Array.Fill(_slotOwnerNext, -1, oldOwnerNextLength, next - oldOwnerNextLength);
         }
 
         private void EnsureEntryCapacity(int required)
@@ -459,6 +687,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Array.Resize(ref _entryOwnerVersions, next);
             Array.Resize(ref _entryKeyIds, next);
             Array.Resize(ref _entrySlots, next);
+            Array.Resize(ref _entryActive, next);
+        }
+
+        private void EnsureOwnerEntryCapacity(int required)
+        {
+            if (required <= _ownerEntryNext.Length)
+            {
+                return;
+            }
+
+            int next = _ownerEntryNext.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _ownerEntryNext, next);
+            Array.Resize(ref _ownerEntryIds, next);
+            Array.Resize(ref _ownerEntryWorldIds, next);
+            Array.Resize(ref _ownerEntryVersions, next);
+            int oldHeadLength = _ownerEntryHeadSlots.Length;
+            Array.Resize(ref _ownerEntryHeadSlots, next);
+            Array.Fill(_ownerEntryHeadSlots, -1, oldHeadLength, next - oldHeadLength);
+            Array.Resize(ref _ownerEntryActive, next);
+            Array.Resize(ref _ownerRetirementPending, next);
+            Array.Resize(ref _pendingRetiredOwners, next);
         }
 
         private void Rehash(int bucketCount)
@@ -468,6 +722,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Array.Fill(_bucketHeads, -1);
             for (int entry = 0; entry < _entryCount; entry++)
             {
+                if (!_entryActive[entry])
+                {
+                    continue;
+                }
+
                 int bucket = BucketIndex(
                     _entryOwnerIds[entry],
                     _entryOwnerWorldIds[entry],
@@ -476,6 +735,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     _bucketHeads.Length);
                 _entryNext[entry] = _bucketHeads[bucket];
                 _bucketHeads[bucket] = entry;
+            }
+        }
+
+        private void RehashOwners(int bucketCount)
+        {
+            int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
+            Array.Resize(ref _ownerBucketHeads, nextBucketCount);
+            Array.Fill(_ownerBucketHeads, -1);
+            for (int entry = 0; entry < _ownerEntryCount; entry++)
+            {
+                if (!_ownerEntryActive[entry])
+                {
+                    continue;
+                }
+
+                int bucket = OwnerBucketIndex(
+                    _ownerEntryIds[entry],
+                    _ownerEntryWorldIds[entry],
+                    _ownerEntryVersions[entry],
+                    _ownerBucketHeads.Length);
+                _ownerEntryNext[entry] = _ownerBucketHeads[bucket];
+                _ownerBucketHeads[bucket] = entry;
             }
         }
 
@@ -488,6 +769,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hash = (hash ^ (uint)ownerWorldId) * 16777619u;
                 hash = (hash ^ (uint)ownerVersion) * 16777619u;
                 hash = (hash ^ (uint)keyId) * 16777619u;
+                return (int)(hash & (uint)(bucketCount - 1));
+            }
+        }
+
+        private static int OwnerBucketIndex(int ownerId, int ownerWorldId, int ownerVersion, int bucketCount)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = (hash ^ (uint)ownerId) * 16777619u;
+                hash = (hash ^ (uint)ownerWorldId) * 16777619u;
+                hash = (hash ^ (uint)ownerVersion) * 16777619u;
                 return (int)(hash & (uint)(bucketCount - 1));
             }
         }

@@ -53,12 +53,10 @@ public partial class World
     /// <param name="handler">The delegate to call.</param>
     public void SubscribeEntityDestroyed(EntityDestroyedHandler handler)
     {
-#if EVENTS
         lock (_entityDestroyedHandlers)
         {
             _entityDestroyedHandlers.Add(handler);
         }
-#endif
     }
 
     /// <summary>
@@ -174,14 +172,13 @@ public partial class World
 
     public void OnEntityDestroyed(Entity entity)
     {
-#if EVENTS
         int count;
         lock (_entityDestroyedHandlers)
         {
             count = _entityDestroyedHandlers.Count;
         }
 
-        for (var i = 0; i < _entityDestroyedHandlers.Count; i++)
+        for (var i = 0; i < count; i++)
         {
             EntityDestroyedHandler handler;
             lock (_entityDestroyedHandlers)
@@ -191,7 +188,6 @@ public partial class World
 
             handler.Invoke(in entity);
         }
-#endif
     }
 
     /// <summary>

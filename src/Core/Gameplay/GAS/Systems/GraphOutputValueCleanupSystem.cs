@@ -14,16 +14,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _values = values ?? throw new ArgumentNullException(nameof(values));
+            _world.SubscribeEntityDestroyed(QueueRetiredOwner);
         }
 
         public int ReleasedLastUpdate { get; private set; }
+        public int RetiredOwnersProcessedLastUpdate { get; private set; }
 
         public void Initialize() { }
         public void BeforeUpdate(in float dt) { }
 
         public void Update(in float dt)
         {
-            ReleasedLastUpdate = _values.ReleaseDeadOwners(_world);
+            ReleasedLastUpdate = _values.ReleaseQueuedOwners(out int retiredOwnersProcessed);
+            RetiredOwnersProcessedLastUpdate = retiredOwnersProcessed;
+        }
+
+        private void QueueRetiredOwner(in Entity owner)
+        {
+            _values.QueueOwnerRetirement(owner);
         }
 
         public void AfterUpdate(in float dt) { }

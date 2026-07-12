@@ -28,8 +28,8 @@ namespace Ludots.Tests.GasTests
             Assert.That(values.TryGetView(retiredHandle, out GraphOutputValueView updated), Is.True);
             Assert.That(updated.IntValue, Is.EqualTo(8));
 
-            world.Destroy(retiredOwner);
             var cleanup = new GraphOutputValueCleanupSystem(world, values);
+            world.Destroy(retiredOwner);
             float dt = 0f;
             cleanup.Update(in dt);
 
@@ -42,6 +42,112 @@ namespace Ludots.Tests.GasTests
             Assert.That(values.TryGetView(currentHandle, out GraphOutputValueView current), Is.True);
             Assert.That(current.IntValue, Is.EqualTo(11));
             Assert.That(values.TryGetView(retiredHandle, out _), Is.False);
+        }
+
+        [Test]
+        public void GraphOutputs_AfterHistoricalPeak_CleanupWorkReturnsToCurrentRetirements()
+        {
+            using World world = World.Create();
+            var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var values = new GraphOutputValueStore(keys, initialCapacity: 2);
+            var cleanup = new GraphOutputValueCleanupSystem(world, values);
+            var peakOwners = new Entity[512];
+
+            for (int i = 0; i < peakOwners.Length; i++)
+            {
+                Entity owner = world.Create();
+                peakOwners[i] = owner;
+                values.SetInt(owner, "score", i);
+                values.SetBool(owner, "ready", true);
+            }
+
+            for (int i = 0; i < peakOwners.Length; i++)
+            {
+                world.Destroy(peakOwners[i]);
+            }
+
+            float dt = 0f;
+            cleanup.Update(in dt);
+            Assert.That(cleanup.RetiredOwnersProcessedLastUpdate, Is.EqualTo(peakOwners.Length));
+            Assert.That(cleanup.ReleasedLastUpdate, Is.EqualTo(peakOwners.Length * 2));
+            Assert.That(values.ActiveCount, Is.Zero);
+
+            Entity steadyOwner = world.Create();
+            values.SetInt(steadyOwner, "score", 1);
+            cleanup.Update(in dt);
+
+            Assert.That(cleanup.RetiredOwnersProcessedLastUpdate, Is.Zero);
+            Assert.That(cleanup.ReleasedLastUpdate, Is.Zero);
+            Assert.That(values.ActiveCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GraphOutputs_WhenOwnersRetireInBatch_CleanupVisitsEachOwnerAndOutputOnce()
+        {
+            using World world = World.Create();
+            var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            var values = new GraphOutputValueStore(keys, initialCapacity: 2);
+            var cleanup = new GraphOutputValueCleanupSystem(world, values);
+            var owners = new Entity[32];
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                Entity owner = world.Create();
+                owners[i] = owner;
+                values.SetInt(owner, "a", i);
+                values.SetInt(owner, "b", i);
+                values.SetInt(owner, "c", i);
+                values.SetInt(owner, "d", i);
+            }
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                world.Destroy(owners[i]);
+            }
+
+            float dt = 0f;
+            cleanup.Update(in dt);
+
+            Assert.That(cleanup.RetiredOwnersProcessedLastUpdate, Is.EqualTo(owners.Length));
+            Assert.That(cleanup.ReleasedLastUpdate, Is.EqualTo(owners.Length * 4));
+            Assert.That(values.ActiveCount, Is.Zero);
+        }
+
+        [Test]
+        public void GraphOutputs_DestroyAndCleanupHotPath_AllocatesZeroAfterWarmup()
+        {
+            using World world = World.Create();
+            var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+            int scoreKey = keys.Register("score");
+            var values = new GraphOutputValueStore(keys, initialCapacity: 16);
+            var cleanup = new GraphOutputValueCleanupSystem(world, values);
+            float dt = 0f;
+
+            for (int i = 0; i < 32; i++)
+            {
+                Entity owner = world.Create();
+                values.SetInt(owner, scoreKey, i);
+                world.Destroy(owner);
+                cleanup.Update(in dt);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+
+            for (int i = 0; i < 1_000; i++)
+            {
+                Entity owner = world.Create();
+                values.SetInt(owner, scoreKey, i);
+                world.Destroy(owner);
+                cleanup.Update(in dt);
+            }
+
+            long after = GC.GetAllocatedBytesForCurrentThread();
+            Assert.That(after - before, Is.LessThanOrEqualTo(64));
+            Assert.That(values.ActiveCount, Is.Zero);
         }
 
         [Test]
