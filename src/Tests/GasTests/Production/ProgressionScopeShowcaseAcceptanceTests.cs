@@ -197,27 +197,10 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AddTag(GameEngine engine, Entity entity, int tagId)
         {
-            if (!engine.World.Has<GameplayTagContainer>(entity))
-            {
-                engine.World.Add(entity, new GameplayTagContainer());
-            }
-
-            if (!engine.World.Has<TagCountContainer>(entity))
-            {
-                engine.World.Add(entity, new TagCountContainer());
-            }
-
-            if (!engine.World.Has<DirtyFlags>(entity))
-            {
-                engine.World.Add(entity, new DirtyFlags());
-            }
-
             var tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("TagOps service is missing.");
-            ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
-            ref var counts = ref engine.World.Get<TagCountContainer>(entity);
-            ref var dirty = ref engine.World.Get<DirtyFlags>(entity);
-            Assert.That(tagOps.AddTag(ref tags, ref counts, tagId, ref dirty), Is.True);
+            TagStateInstaller.EnsureInstalled(engine.World, entity);
+            Assert.That(tagOps.AddTag(engine.World, entity, tagId), Is.True);
         }
 
         private static void Tick(GameEngine engine, int frames, List<double> frameTimesMs)
