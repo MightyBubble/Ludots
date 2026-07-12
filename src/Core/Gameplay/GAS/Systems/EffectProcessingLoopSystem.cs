@@ -56,6 +56,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private Entity _runtimeStateEntity;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int ProcessedLastSlice { get; private set; }
+        public int ProposalProcessedLastSlice { get; private set; }
+        public int ApplicationProcessedLastSlice { get; private set; }
+        public int LifetimeProcessedLastSlice { get; private set; }
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
         public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, int lifetimeSnapshotCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, int maxWorkUnitsPerSlice = int.MaxValue)
@@ -92,6 +96,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            if (MaxWorkUnitsPerSlice <= 0)
+            {
+                throw new InvalidOperationException("GAS.EFFECT_PROCESSING.ERR.InvalidWorkBudget");
+            }
+
+            ProcessedLastSlice = 0;
+            ProposalProcessedLastSlice = 0;
+            ApplicationProcessedLastSlice = 0;
+            LifetimeProcessedLastSlice = 0;
+            int remainingWorkUnits = MaxWorkUnitsPerSlice;
+
             if (!_inSlice)
             {
                 _inSlice = true;
@@ -107,16 +122,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var start = System.Diagnostics.Stopwatch.GetTimestamp();
             long budgetTicks = timeBudgetMs * (System.Diagnostics.Stopwatch.Frequency / 1000);
 
-            _proposal.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
-            _application.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
-            _lifetime.MaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice;
-
             while (true)
             {
+                if (remainingWorkUnits == 0)
+                {
+                    return YieldIncomplete();
+                }
+
                 long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
                 if (elapsed >= budgetTicks)
                 {
-                    return false;
+                    return YieldIncomplete();
                 }
 
                 int remainingMs = (int)((budgetTicks - elapsed) * 1000 / System.Diagnostics.Stopwatch.Frequency);
@@ -126,12 +142,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (_substage == EffectLoopSubstage.Proposal)
                     {
-                        if (!_proposal.UpdateSlice(dt, remainingMs)) return false;
+                        _proposal.MaxWorkUnitsPerSlice = remainingWorkUnits;
+                        bool completed = _proposal.UpdateSlice(dt, remainingMs);
+                        ConsumeWork(_proposal.LastSliceProcessed, ref remainingWorkUnits);
+                        ProposalProcessedLastSlice += _proposal.LastSliceProcessed;
+                        if (!completed) return YieldIncomplete();
                         _substage = EffectLoopSubstage.Application;
                         continue;
                     }
 
-                    if (!_application.UpdateSlice(dt, remainingMs)) return false;
+                    _application.MaxWorkUnitsPerSlice = remainingWorkUnits;
+                    bool applicationCompleted = _application.UpdateSlice(dt, remainingMs);
+                    ConsumeWork(_application.LastSliceProcessed, ref remainingWorkUnits);
+                    ApplicationProcessedLastSlice += _application.LastSliceProcessed;
+                    if (!applicationCompleted) return YieldIncomplete();
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
                     _hasPendingEffectsCached = HasFollowUpEffectRequests();
@@ -147,8 +171,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (_stage == EffectLoopStage.Lifetime)
                 {
                     elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
-                    if (elapsed >= budgetTicks) return false;
-                    if (!_lifetime.UpdateSlice(dt, remainingMs)) return false;
+                    if (elapsed >= budgetTicks) return YieldIncomplete();
+                    _lifetime.MaxWorkUnitsPerSlice = remainingWorkUnits;
+                    bool lifetimeCompleted = _lifetime.UpdateSlice(dt, remainingMs);
+                    ConsumeWork(_lifetime.LastSliceProcessed, ref remainingWorkUnits);
+                    LifetimeProcessedLastSlice += _lifetime.LastSliceProcessed;
+                    if (!lifetimeCompleted) return YieldIncomplete();
                     _stage = EffectLoopStage.PostLifetimeProposalAndApply;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass = 0;
@@ -159,12 +187,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (_substage == EffectLoopSubstage.Proposal)
                     {
-                        if (!_proposal.UpdateSlice(dt, remainingMs)) return false;
+                        _proposal.MaxWorkUnitsPerSlice = remainingWorkUnits;
+                        bool completed = _proposal.UpdateSlice(dt, remainingMs);
+                        ConsumeWork(_proposal.LastSliceProcessed, ref remainingWorkUnits);
+                        ProposalProcessedLastSlice += _proposal.LastSliceProcessed;
+                        if (!completed) return YieldIncomplete();
                         _substage = EffectLoopSubstage.Application;
                         continue;
                     }
 
-                    if (!_application.UpdateSlice(dt, remainingMs)) return false;
+                    _application.MaxWorkUnitsPerSlice = remainingWorkUnits;
+                    bool applicationCompleted = _application.UpdateSlice(dt, remainingMs);
+                    ConsumeWork(_application.LastSliceProcessed, ref remainingWorkUnits);
+                    ApplicationProcessedLastSlice += _application.LastSliceProcessed;
+                    if (!applicationCompleted) return YieldIncomplete();
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
                     _hasPendingEffectsCached = HasFollowUpEffectRequests();
@@ -180,6 +216,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 UpdateRuntimeState();
                 return true;
             }
+        }
+
+        private void ConsumeWork(int consumed, ref int remaining)
+        {
+            if ((uint)consumed > (uint)remaining)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_PROCESSING.ERR.InvalidStageConsumption: consumed={consumed}, remaining={remaining}.");
+            }
+
+            remaining -= consumed;
+            ProcessedLastSlice += consumed;
+        }
+
+        private bool YieldIncomplete()
+        {
+            UpdateRuntimeState();
+            return false;
         }
 
         public void ResetSlice()
@@ -222,6 +276,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 OrderRequestCount = _orderRequests?.Count ?? 0,
 
                 EffectLifetimeProcessedLastSlice = _lifetime.LastSliceProcessed,
+                EffectProcessingProcessedLastSlice = ProcessedLastSlice,
+                EffectProposalProcessedLastSlice = ProposalProcessedLastSlice,
+                EffectApplicationProcessedLastSlice = ApplicationProcessedLastSlice,
+                EffectLifetimeStageProcessedLastSlice = LifetimeProcessedLastSlice,
                 EffectLifetimeDeferredCount = _lifetime.DeferredEntityCount,
                 EffectLifetimeSnapshotCapacity = _lifetime.SnapshotCapacity,
                 EffectProcessingMaxWorkUnitsPerSlice = MaxWorkUnitsPerSlice,

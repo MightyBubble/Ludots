@@ -190,6 +190,80 @@ namespace Ludots.Tests.GAS
             Assert.That(ex.Message, Does.Contain("required=6"));
         }
 
+        [Test]
+        public void EffectProcessingLoop_AllStagesShareOneDeterministicWorkBudget()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(0, ModifierOp.Add, -1f);
+            templates.Register(1, new EffectTemplateData
+            {
+                LifetimeKind = EffectLifetimeKind.After,
+                ClockId = GasClockId.FixedFrame,
+                DurationTicks = 10,
+                ParticipatesInResponse = false,
+                Modifiers = modifiers,
+            });
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TemplateId = 1,
+            });
+
+            Entity expired = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 2,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Get<GameplayEffect>(expired).State = EffectState.Committed;
+            Assert.That(world.Get<ActiveEffectContainer>(target).Add(expired), Is.True);
+
+            var loop = new EffectProcessingLoopSystem(
+                world,
+                requests,
+                clock,
+                new GasConditionRegistry(),
+                lifetimeSnapshotCapacity: 16,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                maxWorkUnitsPerSlice: 4);
+
+            bool completed;
+            bool sawProposal = false;
+            bool sawApplication = false;
+            bool sawLifetime = false;
+            int slices = 0;
+            do
+            {
+                completed = loop.UpdateSlice(0f, int.MaxValue);
+                slices++;
+                sawProposal |= loop.ProposalProcessedLastSlice > 0;
+                sawApplication |= loop.ApplicationProcessedLastSlice > 0;
+                sawLifetime |= loop.LifetimeProcessedLastSlice > 0;
+                Assert.That(loop.ProcessedLastSlice, Is.EqualTo(
+                    loop.ProposalProcessedLastSlice +
+                    loop.ApplicationProcessedLastSlice +
+                    loop.LifetimeProcessedLastSlice));
+                Assert.That(loop.ProcessedLastSlice, Is.LessThanOrEqualTo(loop.MaxWorkUnitsPerSlice));
+                Assert.That(slices, Is.LessThan(32));
+            } while (!completed);
+
+            Assert.That(slices, Is.GreaterThan(1));
+            Assert.That(sawProposal, Is.True);
+            Assert.That(sawApplication, Is.True);
+            Assert.That(sawLifetime, Is.True);
+        }
+
         private static AbilityDefinitionRegistry CreateImmediateAbilityDefinitions()
         {
             AbilityExecSpec spec = default;

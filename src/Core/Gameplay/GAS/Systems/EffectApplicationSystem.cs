@@ -87,6 +87,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private int _listenerRegistrationDropped;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int LastSliceProcessed { get; private set; }
 
         /// <summary>
         /// Time-sliced application stages for EffectApplicationSystem.
@@ -170,6 +171,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            LastSliceProcessed = 0;
             if (!_sliceActive)
             {
                 _sliceActive = true;
@@ -228,7 +230,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             effect.State = EffectState.Committed;
                             _effectsToDestroy.Add(effectEntity);
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -336,7 +338,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
 
                     _sliceStage = ApplicationStage.DestroyEffects;
@@ -359,7 +361,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ref var context = ref World.Get<EffectContext>(e);
                         }
                         if (World.IsAlive(e)) World.Destroy(e);
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     _sliceStage = ApplicationStage.CreateContainers;
                     _playbackCursor = 0;
@@ -379,7 +381,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             World.Add(target, new ActiveEffectContainer());
                         }
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     _sliceStage = ApplicationStage.AttachEffects;
                     _playbackCursor = 0;
@@ -395,8 +397,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             return false;
                         }
                         var item = _pendingAttach[_playbackCursor++];
-                        if (!World.IsAlive(item.Target)) { workUnits++; continue; }
-                        if (!World.IsAlive(item.Effect)) { workUnits++; continue; }
+                        if (!World.IsAlive(item.Target)) { ConsumeWork(ref workUnits); continue; }
+                        if (!World.IsAlive(item.Effect)) { ConsumeWork(ref workUnits); continue; }
                         if (World.Has<ActiveEffectContainer>(item.Target))
                         {
                             ref var container = ref World.Get<ActiveEffectContainer>(item.Target);
@@ -413,7 +415,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 MarkAggregateDirtyIfNeeded(item.Target, item.Effect);
                             }
                         }
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     _sliceStage = ApplicationStage.ActivateEffects;
                     _playbackCursor = 0;
@@ -457,7 +459,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 });
                             }
                         }
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     _sliceStage = ApplicationStage.FanOutTargets;
                     _playbackCursor = 0;
@@ -478,7 +480,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             TargetResolverFanOutHelper.PublishCommand(in cmd, _effectRequests);
                         }
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     if (_fanOutDropped > 0)
                     {
@@ -504,7 +506,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ref readonly var tplData = ref _templates.GetRef(tplIdx);
                             RegisterListenersFromTemplate(in reg.Context, in tplData, reg.OwnerEffectId);
                         }
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
                     _sliceStage = ApplicationStage.Done;
                     _playbackCursor = 0;
@@ -545,6 +547,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 World.Add(target, new AttributeAggregateDirty());
             }
+        }
+
+        private void ConsumeWork(ref int workUnits)
+        {
+            workUnits++;
+            LastSliceProcessed++;
         }
 
         public void ResetSlice()

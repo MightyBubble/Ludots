@@ -86,6 +86,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly ProposalResponseQueue _responseQueue = new();
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int LastSliceProcessed { get; private set; }
         public byte DebugWindowPhase => (byte)_phase;
 
         private bool _sliceActive;
@@ -315,6 +316,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            LastSliceProcessed = 0;
             if (_queue == null || _queue.Count == 0)
             {
                 _sliceActive = false;
@@ -361,13 +363,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var req = _queue[_rootCursor++];
                     if (!World.IsAlive(req.Target))
                     {
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
 
                     if (_templates == null || req.TemplateId <= 0 || !_templates.TryGetRef(req.TemplateId, out int rootTplIdx))
                     {
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
                     ref readonly var rootTpl = ref _templates.GetRef(rootTplIdx);
@@ -408,7 +410,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (_budget != null) _budget.ResponseDepthDropped++;
                         _phase = WindowPhase.None;
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
  
@@ -440,7 +442,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (_budget != null) _budget.ResponseWindows++;
                     }
 
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
                 }
 
@@ -521,7 +523,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
 
@@ -632,7 +634,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     break;
                                 }
 
-                                workUnits++;
+                                ConsumeWork(ref workUnits);
                                 continue;
                             }
 
@@ -655,7 +657,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     });
                                 }
                                 _pendingNegates++;
-                                workUnits++;
+                                ConsumeWork(ref workUnits);
                                 continue;
                             }
 
@@ -679,12 +681,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
                                 {
                                     if (_budget != null) _budget.ResponseCreatesDropped++;
-                                    workUnits++;
+                                    ConsumeWork(ref workUnits);
                                     continue;
                                 }
                                 if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
                                 {
-                                    workUnits++;
+                                    ConsumeWork(ref workUnits);
                                     continue;
                                 }
                                 ref readonly var tpl = ref _templates.GetRef(tplIdx);
@@ -708,7 +710,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 if (!_window.TryAdd(chained))
                                 {
                                     if (_budget != null) _budget.ResponseDepthDropped++;
-                                    workUnits++;
+                                    ConsumeWork(ref workUnits);
                                     continue;
                                 }
                                 _creates++;
@@ -734,11 +736,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }
 
                                 _phase = WindowPhase.Collect;
-                                workUnits++;
+                                ConsumeWork(ref workUnits);
                                 goto ContinueOuter;
                             }
 
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                         }
                     }
 
@@ -755,7 +757,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         return true;
                     }
 
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
 
                 ContinueOuter:
@@ -787,7 +789,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -809,7 +811,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -830,7 +832,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -851,7 +853,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
@@ -899,7 +901,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
 
                     if (_telemetry != null && _emitTelemetry)
@@ -924,10 +926,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _inputRequestSent = false;
                     _pendingNegates = 0;
                     _passStreak = 0;
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
                 }
             }
+        }
+
+        private void ConsumeWork(ref int workUnits)
+        {
+            workUnits++;
+            LastSliceProcessed++;
         }
 
         public void ResetSlice()

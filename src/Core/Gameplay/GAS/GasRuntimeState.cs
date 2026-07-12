@@ -17,6 +17,10 @@ namespace Ludots.Core.Gameplay.GAS
         public int OrderRequestCount;
 
         public int EffectLifetimeProcessedLastSlice;
+        public int EffectProcessingProcessedLastSlice;
+        public int EffectProposalProcessedLastSlice;
+        public int EffectApplicationProcessedLastSlice;
+        public int EffectLifetimeStageProcessedLastSlice;
         public int EffectLifetimeDeferredCount;
         public int EffectLifetimeSnapshotCapacity;
         public int EffectProcessingMaxWorkUnitsPerSlice;
