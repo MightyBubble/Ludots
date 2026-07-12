@@ -652,6 +652,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             // Convert EffectArgs to CallerParams
             var req = new Ludots.Core.Gameplay.GAS.EffectRequest
             {
+                RootId = ResolveChildEffectRootId(),
                 Source = caster,
                 Target = target,
                 TargetContext = default,
@@ -688,7 +689,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             TargetResolverContextMapping mapping = RequireTargetDispatchPresets().Get(payloadPresetId);
             TargetResolverFanOutHelper.PublishResolvedTargets(
-                rootId: 0,
+                rootId: ResolveChildEffectRootId(),
                 source,
                 target,
                 targetContext,
@@ -696,6 +697,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 templateId,
                 in mapping,
                 _effectRequests);
+        }
+
+        private int ResolveChildEffectRootId()
+        {
+            if (!_hasEffectContext)
+            {
+                return 0;
+            }
+
+            if (_currentEffectContext.RootId <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingParentEffectRoot");
+            }
+
+            return _currentEffectContext.RootId;
         }
 
         public void RemoveEffectTemplate(Entity target, int templateId)

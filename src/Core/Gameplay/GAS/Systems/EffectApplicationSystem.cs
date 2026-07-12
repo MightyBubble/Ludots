@@ -402,7 +402,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 _activeEffectAttachDropped++;
                                 if (World.IsAlive(item.Effect))
                                 {
-                                    _effectsToDestroy.Add(item.Effect);
+                                    World.Destroy(item.Effect);
                                 }
                             }
                             else

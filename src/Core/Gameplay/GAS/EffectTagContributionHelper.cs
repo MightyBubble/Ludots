@@ -74,15 +74,30 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            if (newStackCount > oldStackCount)
-            {
-                GrantToEntity(world, target, in grantedTags, newStackCount - oldStackCount, tagOps, budget);
-                return;
-            }
+            EnsureTagState(world, target);
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
+            tagOps ??= new TagOps();
 
-            if (newStackCount < oldStackCount)
+            for (int i = 0; i < grantedTags.Count; i++)
             {
-                RevokeFromEntity(world, target, in grantedTags, oldStackCount - newStackCount, tagOps, budget);
+                var contribution = grantedTags.Get(i);
+                int delta = contribution.Compute(newStackCount) - contribution.Compute(oldStackCount);
+                if (delta > 0)
+                {
+                    for (int repeat = 0; repeat < delta; repeat++)
+                    {
+                        tagOps.AddTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
+                    }
+                }
+                else if (delta < 0)
+                {
+                    for (int repeat = 0; repeat < -delta; repeat++)
+                    {
+                        tagOps.RemoveTag(ref tags, ref counts, contribution.TagId, ref dirtyFlags);
+                    }
+                }
             }
         }
 

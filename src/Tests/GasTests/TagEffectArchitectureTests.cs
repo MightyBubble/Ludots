@@ -1462,6 +1462,42 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UpdateOnEntity_UsesComputedContributionDeltaForFixedAndLinearPlusBase()
+        {
+            using var world = World.Create();
+            Entity target = world.Create(
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+            var grantedTags = new EffectGrantedTags();
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 51,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 4
+            });
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 52,
+                Formula = TagContributionFormula.LinearPlusBase,
+                Amount = 3,
+                Base = 7
+            });
+            var tagOps = new TagOps();
+
+            EffectTagContributionHelper.GrantToEntity(world, target, in grantedTags, 1, tagOps);
+            EffectTagContributionHelper.UpdateOnEntity(world, target, in grantedTags, 1, 3, tagOps);
+
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            That(counts.GetCount(51), Is.EqualTo(4), "Fixed contribution must not grow with stack delta.");
+            That(counts.GetCount(52), Is.EqualTo(16), "LinearPlusBase must apply Compute(3) - Compute(1).");
+
+            EffectTagContributionHelper.UpdateOnEntity(world, target, in grantedTags, 3, 1, tagOps);
+            That(counts.GetCount(51), Is.EqualTo(4));
+            That(counts.GetCount(52), Is.EqualTo(10));
+        }
+
+        [Test]
         public void Integration_TwoEffects_SameTag_DifferentFormulas()
         {
             // Plan scenario: 5 layers effectA (Linear*6=30) + 10 layers effectB (Linear*7=70) = 100
