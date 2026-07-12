@@ -33,6 +33,8 @@ namespace Ludots.Core.Gameplay.GAS
         OrderRejectedValidation = 15,
         OrderRejectedInvalidActor = 16,
         OrderRejectedInvalidOrderType = 17,
+        OrderAdmissionResultBacklog = 18,
+        OrderAdmissionResultHighWatermark = 19,
     }
 
     public readonly struct GasDiagnosticEvent

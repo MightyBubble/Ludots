@@ -8,13 +8,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private readonly GasBudget _budget;
         private readonly OrderTerminalResultBuffer? _orderTerminalResults;
+        private readonly OrderAdmissionResultBuffer? _orderAdmissionResults;
 
         public GasBudgetResetSystem(
             GasBudget budget,
-            OrderTerminalResultBuffer? orderTerminalResults = null)
+            OrderTerminalResultBuffer? orderTerminalResults = null,
+            OrderAdmissionResultBuffer? orderAdmissionResults = null)
         {
             _budget = budget;
             _orderTerminalResults = orderTerminalResults;
+            _orderAdmissionResults = orderAdmissionResults;
         }
 
         public void Initialize() { }
@@ -24,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _budget?.Reset();
             _orderTerminalResults?.Clear();
+            _orderAdmissionResults?.Clear();
         }
 
         public void AfterUpdate(in float dt) { }

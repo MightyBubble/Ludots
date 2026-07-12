@@ -43,6 +43,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (_admissionResults != null)
             {
+                Publish(
+                    GasDiagnosticSystem.OrderAdmission,
+                    GasDiagnosticMetric.OrderAdmissionResultBacklog,
+                    _admissionResults.Capacity,
+                    _admissionResults.Count);
+                Publish(
+                    GasDiagnosticSystem.OrderAdmission,
+                    GasDiagnosticMetric.OrderAdmissionResultHighWatermark,
+                    _admissionResults.Capacity,
+                    _admissionResults.HighWatermark);
+
                 long overflow = _admissionResults.OverflowCount;
                 long delta = overflow - _reportedAdmissionOverflow;
                 if (delta < 0)

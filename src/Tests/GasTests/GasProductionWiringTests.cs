@@ -73,6 +73,12 @@ namespace Ludots.Tests.GasTests
             Assert.That(admission.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
             Assert.That(admission.Capacity, Is.EqualTo(1));
             Assert.That(admission.Count, Is.EqualTo(1));
+            Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultBacklog, out GasDiagnosticEvent backlog), Is.True);
+            Assert.That(backlog.Capacity, Is.EqualTo(1));
+            Assert.That(backlog.Count, Is.EqualTo(1));
+            Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultHighWatermark, out GasDiagnosticEvent highWatermark), Is.True);
+            Assert.That(highWatermark.Capacity, Is.EqualTo(1));
+            Assert.That(highWatermark.Count, Is.EqualTo(1));
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedQueueFull, out GasDiagnosticEvent rejectedQueue), Is.True);
             Assert.That(rejectedQueue.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
             Assert.That(rejectedQueue.Count, Is.EqualTo(1));

@@ -34,6 +34,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
     }
 
+    /// <summary>
+    /// Fixed-capacity admission outcome snapshot retained for one logic step.
+    /// Producers append during the step; the SchemaUpdate reset is the sole clear owner.
+    /// </summary>
     public sealed class OrderAdmissionResultBuffer
     {
         private readonly OrderAdmissionOutcome[] _items;
@@ -53,7 +57,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public int HighWatermark { get; private set; }
         public long OverflowCount { get; private set; }
+        public uint Generation { get; private set; }
+
+        public ref readonly OrderAdmissionOutcome this[int index]
+        {
+            get
+            {
+                if ((uint)index >= (uint)_count)
+                {
+                    throw new System.ArgumentOutOfRangeException(nameof(index));
+                }
+
+                return ref _items[(_head + index) % _items.Length];
+            }
+        }
 
         public bool TryWrite(in OrderAdmissionOutcome outcome)
         {
@@ -74,6 +93,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int tail = (_head + _count) % _items.Length;
             _items[tail] = outcome;
             _count++;
+            if (_count > HighWatermark)
+            {
+                HighWatermark = _count;
+            }
             return true;
         }
 
@@ -88,24 +111,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _observedByResult[index];
         }
 
-        public bool TryRead(out OrderAdmissionOutcome outcome)
-        {
-            if (_count == 0)
-            {
-                outcome = default;
-                return false;
-            }
-
-            outcome = _items[_head];
-            _head = (_head + 1) % _items.Length;
-            _count--;
-            return true;
-        }
-
         public void Clear()
         {
             _head = 0;
             _count = 0;
+            Generation++;
         }
     }
 }
