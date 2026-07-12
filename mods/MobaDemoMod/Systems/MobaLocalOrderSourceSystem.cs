@@ -141,7 +141,7 @@ namespace MobaDemoMod.Systems
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
-                _orders.TryEnqueue(order);
+                return _orders.Submit(in order);
             });
 
             // Aiming state -> Performer direct API (for AimCast mode)

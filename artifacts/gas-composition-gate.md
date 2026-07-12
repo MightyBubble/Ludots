@@ -209,3 +209,55 @@ N/A。
 ### 8. Next variant test
 
 新增技能来源必须扩展唯一 resolver 合同和全链路一致性测试，不得只改单个消费者。
+
+---
+
+## GAS Composition Gate — #651 Production Closeout
+
+- **Task / Issue**: #651
+- **Date**: 2026-07-12
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+主要交付物为 A：沿现有 InputOrderMapping / OrderQueue 管线贯穿 actor context 与类型化接单结果；没有新增面板专用 order 管线。
+
+结论：PASS。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|---|---:|---|
+| 程序化激活 | N/A | `InputOrderMappingSystem.ActivateMappedAction` |
+| 接单结果 | N/A | `OrderSubmitResult` + `OrderQueue.Submit` |
+| 瞄准主体固定 | N/A | 现有 aiming state + `InputOrderActivationContext` |
+
+### 3. Reuse list
+
+- Handlers: typed `OrderSubmitHandler`
+- Queues / Systems: `OrderQueue`, `CompositeOrderPlanner`, `InputOrderMappingSystem`
+- Resolvers / Registries: existing mapping and command-intent routing
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A。
+
+### 5. Transaction boundary
+
+一次激活固定 actor/player；进入瞄准后确认、取消和拒绝继续使用该上下文。提交结果携带 actor、orderId 和共享 `OrderSubmitResult`。
+
+### 6. Config SSOT
+
+没有新增配置 schema；mapping、order type 和 actor source 继续来自现有正式配置与服务。
+
+### 7. Red flag scan
+
+- [x] 无 actor 的程序化入口已删除
+- [x] `void OrderSubmitHandler` 已删除
+- [x] 显式 actor 不回退 provider 或 collection fan-out
+- [x] aiming actor 失效返回 `RejectedInvalidActor`
+
+### 8. Next variant test
+
+新入口必须返回共享接单结果，不得恢复 bool/void 或临时替换 actor provider。

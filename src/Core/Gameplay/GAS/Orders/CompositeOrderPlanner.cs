@@ -37,17 +37,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _moveToOrderTypeId = moveToOrderTypeId;
         }
 
-        public bool TrySubmit(in Order order)
+        public OrderSubmitResult Submit(in Order order)
         {
             if (!TryBuildMoveThenCastPlan(in order, out var primaryMove, out var followUpCast))
             {
                 var passthrough = order;
-                return _incomingOrders.TryEnqueueAssigned(ref passthrough);
+                return _incomingOrders.SubmitAssigned(ref passthrough);
             }
 
             if (!_world.IsAlive(order.Actor))
             {
-                return false;
+                return OrderSubmitResult.RejectedInvalidActor;
             }
 
             if (!_world.Has<OrderContinuationBuffer>(order.Actor))
@@ -60,16 +60,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ref var continuations = ref _world.Get<OrderContinuationBuffer>(order.Actor);
             if (!continuations.TryAdd(primaryMove.OrderId, in followUpCast))
             {
-                return false;
+                return OrderSubmitResult.RejectedQueueFull;
             }
 
-            if (_incomingOrders.TryEnqueueAssigned(ref primaryMove))
+            OrderSubmitResult result = _incomingOrders.SubmitAssigned(ref primaryMove);
+            if (result == OrderSubmitResult.Queued)
             {
-                return true;
+                return result;
             }
 
             continuations.RemoveByTrigger(primaryMove.OrderId);
-            return false;
+            return result;
         }
 
         private bool TryBuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)

@@ -259,7 +259,7 @@ namespace Ludots.Tests.GAS
                 }
             });
             mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetOrderSubmitHandler((in Order _) => { });
+            mapping.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.Queued);
             return mapping;
         }
 

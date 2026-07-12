@@ -43,31 +43,46 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryEnqueue(in Order order)
         {
-            var value = order;
-            return TryEnqueueAssigned(ref value);
+            return IsAccepted(Submit(in order));
         }
 
         public bool TryEnqueueAssigned(ref Order order)
+        {
+            return IsAccepted(SubmitAssigned(ref order));
+        }
+
+        public OrderSubmitResult Submit(in Order order)
+        {
+            var value = order;
+            return SubmitAssigned(ref value);
+        }
+
+        public OrderSubmitResult SubmitAssigned(ref Order order)
         {
             EnsureOrderId(ref order);
             if (!IsValidOrderTypeId(order.OrderTypeId))
             {
                 WriteAdmission(in order, OrderSubmitResult.RejectedInvalidOrderType);
-                return false;
+                return OrderSubmitResult.RejectedInvalidOrderType;
             }
 
             if (_count >= _items.Length)
             {
                 WriteAdmission(in order, OrderSubmitResult.RejectedQueueFull);
-                return false;
+                return OrderSubmitResult.RejectedQueueFull;
             }
 
             _items[_tail] = order;
             _tail = (_tail + 1) % _items.Length;
             _count++;
             WriteAdmission(in order, OrderSubmitResult.Queued);
-            return true;
+            return OrderSubmitResult.Queued;
         }
+
+        private static bool IsAccepted(OrderSubmitResult result) =>
+            result == OrderSubmitResult.Activated ||
+            result == OrderSubmitResult.Queued ||
+            result == OrderSubmitResult.Pending;
 
         public void EnsureOrderId(ref Order order)
         {

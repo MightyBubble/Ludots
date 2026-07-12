@@ -1220,6 +1220,7 @@ namespace Ludots.Tests.ThreeC
             system.SetOrderSubmitHandler((in Order order) =>
             {
                 capturedOrder = order;
+                return OrderSubmitResult.Queued;
             });
 
             using var world = World.Create();
@@ -1242,4 +1243,3 @@ namespace Ludots.Tests.ThreeC
         }
     }
 }
-

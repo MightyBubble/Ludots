@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
@@ -126,7 +127,7 @@ namespace Ludots.Tests.GAS
                 return true;
             });
             mapping.SetContextScoredProvider(resolver.TryResolve);
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
             input.Update();

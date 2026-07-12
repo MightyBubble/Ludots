@@ -40,7 +40,7 @@ namespace Ludots.Tests.GAS
 
             var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
 
-            Assert.That(planner.TrySubmit(in castOrder), Is.True);
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(orderQueue.TryDequeue(out var moveOrder), Is.True);
             Assert.That(moveOrder.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
             Assert.That(moveOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
@@ -82,7 +82,7 @@ namespace Ludots.Tests.GAS
 
             var queuedCast = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Queued);
 
-            Assert.That(planner.TrySubmit(in queuedCast), Is.True);
+            Assert.That(planner.Submit(in queuedCast), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
             Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
             Assert.That(submittedOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
@@ -111,7 +111,7 @@ namespace Ludots.Tests.GAS
 
             var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
 
-            Assert.That(planner.TrySubmit(in castOrder), Is.True);
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
             Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
             Assert.That(submittedOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));

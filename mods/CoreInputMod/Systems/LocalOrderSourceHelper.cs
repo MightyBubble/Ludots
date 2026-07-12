@@ -138,6 +138,7 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
+            mapping.SetActivationActorValidator(_world.IsAlive);
             mapping.SetCollectionPrimaryEntityProvider(TryResolveCollectionPrimary);
             mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
@@ -155,16 +156,24 @@ namespace CoreInputMod.Systems
 
                 if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in order))
                 {
-                    return;
+                    return OrderSubmitResult.RejectedByRule;
                 }
 
-                bool accepted = _planner != null
-                    ? _planner.TrySubmit(in order)
-                    : _orders.TryEnqueue(order);
-                if (accepted)
+                if (!_world.IsAlive(order.Actor))
+                {
+                    return OrderSubmitResult.RejectedInvalidActor;
+                }
+
+                OrderSubmitResult result = _planner != null
+                    ? _planner.Submit(in order)
+                    : _orders.Submit(in order);
+                if (result == OrderSubmitResult.Activated ||
+                    result == OrderSubmitResult.Queued ||
+                    result == OrderSubmitResult.Pending)
                 {
                     AfterOrderAccepted?.Invoke(in order);
                 }
+                return result;
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {

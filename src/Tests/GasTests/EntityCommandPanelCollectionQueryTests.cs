@@ -163,7 +163,8 @@ namespace Ludots.Tests.GAS
             Assert.That(activated, Is.True);
             Assert.That(submitted.Count, Is.EqualTo(1));
             Assert.That(submitted[0].Args.I0, Is.EqualTo(1), "Displayed slot 2 must route to the original owner slot 1/action SkillW.");
-            Assert.That(submitted[0].Actor, Is.EqualTo(collectionOwner));
+            Assert.That(submitted[0].Actor, Is.EqualTo(second),
+                "Collection panel activation must preserve the member that owns the displayed ability.");
             Assert.That(submitted[0].OrderTypeId, Is.EqualTo(100));
         }
 
@@ -293,7 +294,10 @@ namespace Ludots.Tests.GAS
                 }
             });
             mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+            mapping.SetActivationActorValidator(actor => actor != Entity.Null);
+            int nextOrderId = 1;
+            mapping.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            mapping.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
             return mapping;
         }
 

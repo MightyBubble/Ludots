@@ -24,6 +24,8 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate bool ActorProvider(out Entity entity);
 
+    public delegate bool ActivationActorValidator(Entity entity);
+
     /// <summary>
     /// Delegate for resolving the owner of the active actor collection.
     /// </summary>
@@ -57,7 +59,7 @@ namespace Ludots.Core.Input.Orders
     /// <summary>
     /// Delegate for submitting an order.
     /// </summary>
-    public delegate void OrderSubmitHandler(in Order order);
+    public delegate OrderSubmitResult OrderSubmitHandler(in Order order);
 
     public readonly struct InputOrderActivationContext
     {
@@ -80,20 +82,27 @@ namespace Ludots.Core.Input.Orders
 
     public readonly struct InputOrderActivationResult
     {
-        private InputOrderActivationResult(InputOrderActivationState state, int orderId, OrderSubmitResult rejection)
+        private InputOrderActivationResult(
+            InputOrderActivationState state,
+            Entity actor,
+            int orderId,
+            OrderSubmitResult rejection)
         {
             State = state;
+            Actor = actor;
             OrderId = orderId;
             Rejection = rejection;
         }
 
         public InputOrderActivationState State { get; }
+        public Entity Actor { get; }
         public int OrderId { get; }
         public OrderSubmitResult Rejection { get; }
 
-        public static InputOrderActivationResult EnteredAiming() => new(InputOrderActivationState.EnteredAiming, 0, default);
-        public static InputOrderActivationResult Submitted(int orderId) => new(InputOrderActivationState.Submitted, orderId, default);
-        public static InputOrderActivationResult Rejected(OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, 0, reason);
+        public static InputOrderActivationResult EnteredAiming(Entity actor) => new(InputOrderActivationState.EnteredAiming, actor, 0, default);
+        public static InputOrderActivationResult Submitted(Entity actor, int orderId) => new(InputOrderActivationState.Submitted, actor, orderId, default);
+        public static InputOrderActivationResult Rejected(Entity actor, OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, actor, 0, reason);
+        public static InputOrderActivationResult Rejected(Entity actor, int orderId, OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, actor, orderId, reason);
     }
 
     /// <summary>
@@ -255,6 +264,7 @@ namespace Ludots.Core.Input.Orders
         // Context
         private Entity _localPlayer;
         private int _playerId;
+        private ActivationActorValidator? _activationActorValidator;
         private Entity _explicitActivationActor;
         private int _explicitActivationPlayerId;
         private bool _hasExplicitActivationContext;
@@ -286,6 +296,7 @@ namespace Ludots.Core.Input.Orders
         private string _aimingActionId = string.Empty;
         private InputOrderMapping? _aimingMapping;
         private InputOrderActivationContext _aimingContext;
+        public InputOrderActivationResult LastActivationResult { get; private set; }
         
         // Held Start/End tracking
         private readonly Dictionary<string, HeldStartEndState> _activeHeldStartEndActions = new();
@@ -297,6 +308,7 @@ namespace Ludots.Core.Input.Orders
         private bool _pressReleaseAimPending;
         private string _pressReleaseAimActionId = string.Empty;
         private InputOrderMapping? _pressReleaseAimMapping;
+        private InputOrderActivationContext _pressReleaseAimContext;
         
         // Vector aim state (two-point targeting)
         private VectorAimInputSlot _vectorAimSlot;
@@ -408,6 +420,8 @@ namespace Ludots.Core.Input.Orders
         }
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
+        public void SetActivationActorValidator(ActivationActorValidator validator) =>
+            _activationActorValidator = validator ?? throw new ArgumentNullException(nameof(validator));
         public void SetCollectionPrimaryEntityProvider(CollectionPrimaryEntityProvider provider) => _collectionPrimaryEntityProvider = provider;
         public void SetCollectionEntityListProvider(CollectionEntityListProvider provider) => _collectionEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
@@ -550,7 +564,7 @@ namespace Ludots.Core.Input.Orders
                     var effectiveMode = effectiveMapping.CastModeOverride ?? mode;
                     if (effectiveMode != InteractionModeType.TargetFirst)
                     {
-                        HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode);
+                        HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
                         continue;
                     }
                 }
@@ -629,13 +643,26 @@ namespace Ludots.Core.Input.Orders
 
         // Interaction mode handling
 
-        private void HandleSkillMappingWithMode(string actionId, InputOrderMapping mapping, InteractionModeType mode)
+        private void HandleSkillMappingWithMode(
+            string actionId,
+            InputOrderMapping mapping,
+            InteractionModeType mode,
+            Entity resolvedActor)
         {
+            Entity activationActor = _hasExplicitActivationContext
+                ? _explicitActivationActor
+                : resolvedActor != default
+                    ? resolvedActor
+                    : ResolvePrimaryActor(mapping);
+            var activationContext = new InputOrderActivationContext(
+                activationActor,
+                CurrentActivationPlayerId);
+
             // Vector target input always requires two-click interaction (origin + endpoint),
             // so all modes fall through to AimCast for vector-targeted abilities.
             if (mapping.TargetType == OrderTargetType.Vector)
             {
-                EnterAimingState(actionId, mapping);
+                EnterAimingState(actionId, mapping, in activationContext);
                 return;
             }
             
@@ -646,18 +673,18 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case InteractionModeType.AimCast:
-                    EnterAimingState(actionId, mapping);
+                    EnterAimingState(actionId, mapping, in activationContext);
                     break;
 
                 case InteractionModeType.SmartCastWithIndicator:
                     // Press -> enter aiming and publish aim preview.
                     // Release is handled in the aiming state.
-                    EnterAimingState(actionId, mapping);
+                    EnterAimingState(actionId, mapping, in activationContext);
                     _smartCastWithIndicatorActive = true;
                     break;
 
                 case InteractionModeType.PressReleaseAimCast:
-                    QueuePressReleaseAim(actionId, mapping);
+                    QueuePressReleaseAim(actionId, mapping, in activationContext);
                     break;
 
                 case InteractionModeType.ContextScored:
@@ -688,7 +715,10 @@ namespace Ludots.Core.Input.Orders
         /// AimCast: enter aiming state. The confirm action will later trigger the order.
         /// Automatically enters vector aiming mode for Vector target type.
         /// </summary>
-        private void EnterAimingState(string actionId, InputOrderMapping mapping)
+        private void EnterAimingState(
+            string actionId,
+            InputOrderMapping mapping,
+            in InputOrderActivationContext context)
         {
             // If already aiming a different skill, cancel old first
             if (_isAiming && _aimingActionId != actionId)
@@ -699,6 +729,7 @@ namespace Ludots.Core.Input.Orders
             _isAiming = true;
             _aimingActionId = actionId;
             _aimingMapping = mapping;
+            _aimingContext = context;
             
             // Auto-detect vector aiming mode
             if (mapping.TargetType == OrderTargetType.Vector)
@@ -727,11 +758,15 @@ namespace Ludots.Core.Input.Orders
             _aimingStateChangedHandler?.Invoke(false, mapping);
         }
 
-        private void QueuePressReleaseAim(string actionId, InputOrderMapping mapping)
+        private void QueuePressReleaseAim(
+            string actionId,
+            InputOrderMapping mapping,
+            in InputOrderActivationContext context)
         {
             _pressReleaseAimPending = true;
             _pressReleaseAimActionId = actionId ?? string.Empty;
             _pressReleaseAimMapping = mapping;
+            _pressReleaseAimContext = context;
         }
 
         private void ClearPressReleaseAimPending()
@@ -739,6 +774,7 @@ namespace Ludots.Core.Input.Orders
             _pressReleaseAimPending = false;
             _pressReleaseAimActionId = string.Empty;
             _pressReleaseAimMapping = null;
+            _pressReleaseAimContext = default;
         }
 
         private void ProcessPressReleaseAimPending()
@@ -770,8 +806,9 @@ namespace Ludots.Core.Input.Orders
 
             string actionId = _pressReleaseAimActionId;
             InputOrderMapping mapping = _pressReleaseAimMapping;
+            InputOrderActivationContext context = _pressReleaseAimContext;
             ClearPressReleaseAimPending();
-            EnterAimingState(actionId, mapping);
+            EnterAimingState(actionId, mapping, in context);
         }
 
         /// <summary>
@@ -781,6 +818,16 @@ namespace Ludots.Core.Input.Orders
         private void HandleAimingState()
         {
             if (_aimingMapping == null) { ExitAimingState(); return; }
+            if (_aimingContext.Actor != Entity.Null &&
+                _activationActorValidator != null &&
+                !_activationActorValidator(_aimingContext.Actor))
+            {
+                LastActivationResult = InputOrderActivationResult.Rejected(
+                    _aimingContext.Actor,
+                    OrderSubmitResult.RejectedInvalidActor);
+                ExitAimingState();
+                return;
+            }
 
             string confirmActionId = RequireConfirmActionId();
             string cancelActionId = RequireCancelActionId();
@@ -844,7 +891,7 @@ namespace Ludots.Core.Input.Orders
                 string actionId = entry.ActionId;
                 InputOrderMapping mapping = entry.Mapping;
                 if (actionId == _aimingActionId) continue;
-                var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out _);
+                var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out Entity resolvedActor);
                 if (!effectiveMapping.IsSkillMapping) continue;
                 if (!_input.PressedThisFrame(actionId)) continue;
 
@@ -852,7 +899,7 @@ namespace Ludots.Core.Input.Orders
                 var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
                 if (effectiveMode != InteractionModeType.TargetFirst)
                 {
-                    HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode);
+                    HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
                     return;
                 }
 
@@ -1420,7 +1467,7 @@ namespace Ludots.Core.Input.Orders
                     formationIndex++;
                 }
 
-                _orderSubmitHandler!(in order);
+                SubmitToHandler(in order);
             }
         }
 
@@ -1476,13 +1523,22 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+            int actorCount;
+            if (_hasExplicitActivationContext)
             {
-                return false;
+                _commandIntentActorsScratch[0] = _explicitActivationActor;
+                actorCount = 1;
             }
+            else
+            {
+                if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+                {
+                    return false;
+                }
 
-            EnsureCommandIntentScratch(handle);
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _commandIntentActorsScratch);
+                EnsureCommandIntentScratch(handle);
+                actorCount = _entityCollections.CopyEntities(handle, 0, _commandIntentActorsScratch);
+            }
             if (actorCount <= 0)
             {
                 return false;
@@ -1582,7 +1638,7 @@ namespace Ludots.Core.Input.Orders
                     order.OrderId = sharedOrderId;
                 }
 
-                _orderSubmitHandler!(in order);
+                SubmitToHandler(in order);
             }
             return true;
         }
@@ -1775,28 +1831,24 @@ namespace Ludots.Core.Input.Orders
                    entities.Count > 0;
         }
 
-        private void SubmitOrder(InputOrderMapping mapping, in Order order)
+        private OrderSubmitResult SubmitOrder(InputOrderMapping mapping, in Order order)
         {
             if (mapping.TargetType == OrderTargetType.Entities)
             {
-                var submitted = order;
-                _orderIdentityAssigner?.Invoke(ref submitted);
-                _lastSubmittedOrderId = submitted.OrderId;
-                _orderSubmitHandler!(in submitted);
-                return;
+                return SubmitToHandler(in order);
             }
 
-            if (string.IsNullOrWhiteSpace(mapping.ActorCollectionKey) ||
+            bool actorPinned = _hasExplicitActivationContext ||
+                               (_isAiming && _aimingContext.Actor != Entity.Null);
+            if (actorPinned ||
+                string.IsNullOrWhiteSpace(mapping.ActorCollectionKey) ||
                 !TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch) ||
                 _collectionActorsScratch.Count <= 1)
             {
-                var submitted = order;
-                _orderIdentityAssigner?.Invoke(ref submitted);
-                _lastSubmittedOrderId = submitted.OrderId;
-                _orderSubmitHandler!(in submitted);
-                return;
+                return SubmitToHandler(in order);
             }
 
+            OrderSubmitResult aggregate = OrderSubmitResult.Queued;
             for (int i = 0; i < _collectionActorsScratch.Count; i++)
             {
                 Entity actor = _collectionActorsScratch[i];
@@ -1807,12 +1859,37 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
-                _orderIdentityAssigner?.Invoke(ref cloned);
-                _lastSubmittedOrderId = cloned.OrderId;
                 ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
-                _orderSubmitHandler!(in cloned);
+                OrderSubmitResult result = SubmitToHandler(in cloned);
+                if (!IsAccepted(result))
+                {
+                    aggregate = result;
+                }
             }
+
+            return aggregate;
         }
+
+        private OrderSubmitResult SubmitToHandler(in Order order)
+        {
+            var submitted = order;
+            if (submitted.OrderId <= 0)
+            {
+                _orderIdentityAssigner?.Invoke(ref submitted);
+            }
+
+            OrderSubmitResult result = _orderSubmitHandler!(in submitted);
+            _lastSubmittedOrderId = submitted.OrderId;
+            LastActivationResult = IsAccepted(result)
+                ? InputOrderActivationResult.Submitted(submitted.Actor, submitted.OrderId)
+                : InputOrderActivationResult.Rejected(submitted.Actor, submitted.OrderId, result);
+            return result;
+        }
+
+        private static bool IsAccepted(OrderSubmitResult result) =>
+            result == OrderSubmitResult.Activated ||
+            result == OrderSubmitResult.Queued ||
+            result == OrderSubmitResult.Pending;
 
         private void ApplyGroupMoveFormation(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
         {
@@ -2025,22 +2102,24 @@ namespace Ludots.Core.Input.Orders
             return resolved;
         }
 
-        /// <summary>
-        /// Activates a mapped action programmatically.
-        /// UI callers may prefer aiming over hold/release semantics when no key lifecycle exists.
-        /// </summary>
-        public bool TryActivateMappedAction(string actionId, bool preferUiAiming = false)
+        private InputOrderActivationResult ActivateMappedActionCore(
+            string actionId,
+            bool preferUiAiming)
         {
             if (string.IsNullOrWhiteSpace(actionId) ||
                 _orderSubmitHandler == null ||
                 _orderTypeKeyResolver == null)
             {
-                return false;
+                return InputOrderActivationResult.Rejected(
+                    _explicitActivationActor,
+                    OrderSubmitResult.RejectedInvalidOrderType);
             }
 
             if (!_mappingsByActionId.TryGetValue(actionId, out var mapping))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(
+                    _explicitActivationActor,
+                    OrderSubmitResult.RejectedInvalidOrderType);
             }
 
             var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out var resolvedActor);
@@ -2050,16 +2129,23 @@ namespace Ludots.Core.Input.Orders
                 Entity heldActor = resolvedActor != default ? resolvedActor : ResolvePrimaryActor(effectiveMapping);
                 if (!TryBuildOrderWithOrderTypeSuffix(effectiveMapping, heldActor, ".Start", out var startOrder))
                 {
-                    return false;
+                    return InputOrderActivationResult.Rejected(
+                        _explicitActivationActor,
+                        OrderSubmitResult.RejectedValidation);
                 }
 
-                SubmitOrder(effectiveMapping, in startOrder);
-                return true;
+                OrderSubmitResult submitResult = SubmitOrder(effectiveMapping, in startOrder);
+                return BuildActivationResult(startOrder.Actor, submitResult);
             }
 
             if (IsCommandAction(actionId))
             {
-                return SubmitCommandIntentOrder(effectiveMapping);
+                bool submitted = SubmitCommandIntentOrder(effectiveMapping);
+                return submitted
+                    ? LastActivationResult
+                    : InputOrderActivationResult.Rejected(
+                        _explicitActivationActor,
+                        OrderSubmitResult.RejectedByRule);
             }
 
             if (effectiveMapping.IsSkillMapping)
@@ -2074,18 +2160,31 @@ namespace Ludots.Core.Input.Orders
 
                 if (effectiveMode != InteractionModeType.TargetFirst)
                 {
-                    HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode);
-                    return true;
+                    HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
+                    if (_isAiming && string.Equals(_aimingActionId, actionId, StringComparison.Ordinal))
+                    {
+                        LastActivationResult = InputOrderActivationResult.EnteredAiming(_aimingContext.Actor);
+                        return LastActivationResult;
+                    }
+
+                    return LastActivationResult.State == InputOrderActivationState.Submitted ||
+                           LastActivationResult.State == InputOrderActivationState.Rejected
+                        ? LastActivationResult
+                        : InputOrderActivationResult.Rejected(
+                            _explicitActivationActor,
+                            OrderSubmitResult.RejectedByRule);
                 }
             }
 
             if (!TryBuildOrder(effectiveMapping, out var order))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(
+                    _explicitActivationActor,
+                    OrderSubmitResult.RejectedValidation);
             }
 
-            SubmitOrder(effectiveMapping, in order);
-            return true;
+            OrderSubmitResult result = SubmitOrder(effectiveMapping, in order);
+            return BuildActivationResult(order.Actor, result);
         }
 
         public InputOrderActivationResult ActivateMappedAction(
@@ -2095,7 +2194,28 @@ namespace Ludots.Core.Input.Orders
         {
             if (context.Actor == Entity.Null || context.PlayerId <= 0)
             {
-                return InputOrderActivationResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
+                return InputOrderActivationResult.Rejected(
+                    context.Actor,
+                    OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            if (_activationActorValidator == null)
+            {
+                throw new InvalidOperationException(
+                    "Programmatic mapped-action activation requires an explicit actor validator.");
+            }
+
+            if (!_activationActorValidator(context.Actor))
+            {
+                return InputOrderActivationResult.Rejected(
+                    context.Actor,
+                    OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            if (_orderIdentityAssigner == null)
+            {
+                throw new InvalidOperationException(
+                    "Programmatic mapped-action activation requires an order identity assigner.");
             }
 
             Entity previousActor = _explicitActivationActor;
@@ -2105,21 +2225,12 @@ namespace Ludots.Core.Input.Orders
             _explicitActivationPlayerId = context.PlayerId;
             _hasExplicitActivationContext = true;
             _lastSubmittedOrderId = 0;
+            LastActivationResult = InputOrderActivationResult.Rejected(
+                context.Actor,
+                OrderSubmitResult.RejectedByRule);
             try
             {
-                bool activated = TryActivateMappedAction(actionId, preferUiAiming);
-                if (!activated)
-                {
-                    return InputOrderActivationResult.Rejected(OrderSubmitResult.RejectedByRule);
-                }
-
-                if (_isAiming && string.Equals(_aimingActionId, actionId, StringComparison.Ordinal))
-                {
-                    _aimingContext = context;
-                    return InputOrderActivationResult.EnteredAiming();
-                }
-
-                return InputOrderActivationResult.Submitted(_lastSubmittedOrderId);
+                return ActivateMappedActionCore(actionId, preferUiAiming);
             }
             finally
             {
@@ -2127,6 +2238,16 @@ namespace Ludots.Core.Input.Orders
                 _explicitActivationPlayerId = previousPlayerId;
                 _hasExplicitActivationContext = previousHasContext;
             }
+        }
+
+        private InputOrderActivationResult BuildActivationResult(
+            Entity actor,
+            OrderSubmitResult result)
+        {
+            LastActivationResult = IsAccepted(result)
+                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
+                : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
+            return LastActivationResult;
         }
 
         private static int ResolveSkillActionPriority(string actionId, InputOrderMapping mapping)

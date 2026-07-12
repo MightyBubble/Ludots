@@ -103,6 +103,9 @@ namespace RoadNetworkShowcaseMod.Systems
                     $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},submit:{order.SubmitMode}";
                 bool accepted = _expander.TrySubmit(in order);
                 EmitSubmitCue(in order, accepted);
+                return accepted
+                    ? OrderSubmitResult.Queued
+                    : OrderSubmitResult.RejectedQueueFull;
             });
             _mapping.SetQueueModifierProvider(() =>
             {

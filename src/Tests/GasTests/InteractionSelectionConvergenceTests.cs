@@ -188,7 +188,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -251,7 +251,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -303,7 +303,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Stop");
             input.Update();
@@ -933,7 +933,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
             globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
 
             input.InjectButtonPress("SkillQ");
