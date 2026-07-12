@@ -200,6 +200,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AuthoredAgentBindingSystem_UnchangedRelationshipRevisionDoesNotResolveDomainsAgain()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+
+            harness.BindingSystem.Update(0f);
+            int firstRefreshResolutionCount = harness.BindingSystem.DomainResolutionCount;
+            Assert.That(firstRefreshResolutionCount, Is.GreaterThanOrEqualTo(2));
+
+            harness.BindingSystem.Update(0f);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(
+                harness.BindingSystem.DomainResolutionCount,
+                Is.EqualTo(firstRefreshResolutionCount),
+                "A stable relationship revision must reuse the bounded domain projection instead of resolving every authored agent again.");
+
+            Entity nextTeam = harness.MoveAgentToNewTeam(harness.Agent0, teamId: 2);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.BindingSystem.DomainResolutionCount, Is.EqualTo(firstRefreshResolutionCount + 2));
+            Assert.That(harness.Simulation.GetAgentDomainId(0), Is.EqualTo(nextTeam.Id));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_MissingCommittedAgentIndexRebuildsInsteadOfRepeatedlyResolving()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int resolutionCountBeforeDamage = harness.BindingSystem.DomainResolutionCount;
+
+            harness.Engine.World.Remove<MassNavigationAgentIndex>(harness.Agent0);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex restored), Is.True);
+            Assert.That(restored.Value, Is.GreaterThanOrEqualTo(0));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            int resolutionCountAfterRepair = harness.BindingSystem.DomainResolutionCount;
+
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.BindingSystem.DomainResolutionCount, Is.EqualTo(resolutionCountAfterRepair));
+            Assert.That(resolutionCountAfterRepair, Is.GreaterThan(resolutionCountBeforeDamage));
+        }
+
+        [Test]
         public void AppendAuthoredAgents_ExceedsMembershipCapacity_Throws()
         {
             using var world = World.Create();
@@ -564,6 +608,14 @@ namespace Ludots.Tests.Presentation
                 Entity entity = CreateAuthoredAgentEntity(Engine.World, localX, localY, Layer);
                 Relationships.EnsureLink(entity, TeamRep, MemberOfTypeId);
                 return entity;
+            }
+
+            public Entity MoveAgentToNewTeam(Entity agent, int teamId)
+            {
+                Relationships.RemoveLink(agent, TeamRep, MemberOfTypeId);
+                Entity nextTeam = Engine.World.Create(new TeamIdentity { TeamId = teamId });
+                Relationships.EnsureLink(agent, nextTeam, MemberOfTypeId);
+                return nextTeam;
             }
 
             public void Dispose()

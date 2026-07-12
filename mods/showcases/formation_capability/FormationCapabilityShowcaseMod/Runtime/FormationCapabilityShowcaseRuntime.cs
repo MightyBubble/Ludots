@@ -78,6 +78,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private byte[] _soldierSeenByPlan = Array.Empty<byte>();
     private int[] _aliveSoldierCountByFormation = Array.Empty<int>();
     private byte[] _targetChangedByFormation = Array.Empty<byte>();
+    private MassNavigationPreparedMovePlanExecution[] _preparedAnchorExecutionByFormation = Array.Empty<MassNavigationPreparedMovePlanExecution>();
+    private byte[] _anchorExecutionPreparedByFormation = Array.Empty<byte>();
+    private MassNavigationPreparedMovePlanExecution[] _preparedSoldierExecutionByPlan = Array.Empty<MassNavigationPreparedMovePlanExecution>();
+    private byte[] _soldierExecutionPreparedByPlan = Array.Empty<byte>();
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private bool _executionBindingReady;
@@ -704,6 +708,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _anchorSeenByFormation = new byte[config.Formations.Length];
             _aliveSoldierCountByFormation = new int[config.Formations.Length];
             _targetChangedByFormation = new byte[config.Formations.Length];
+            _preparedAnchorExecutionByFormation = new MassNavigationPreparedMovePlanExecution[config.Formations.Length];
+            _anchorExecutionPreparedByFormation = new byte[config.Formations.Length];
         }
         else
         {
@@ -713,6 +719,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
         if (_soldierSeenByPlan.Length != soldierCount)
         {
             _soldierSeenByPlan = new byte[soldierCount];
+            _preparedSoldierExecutionByPlan = new MassNavigationPreparedMovePlanExecution[soldierCount];
+            _soldierExecutionPreparedByPlan = new byte[soldierCount];
         }
 
         for (int formationIndex = 0; formationIndex < config.Formations.Length; formationIndex++)
@@ -1049,8 +1057,11 @@ internal sealed class FormationCapabilityShowcaseRuntime
             Span<FormationCapabilityShowcaseFormationAgent> agents = chunk.GetSpan<FormationCapabilityShowcaseFormationAgent>();
             Span<FormationCapabilityShowcaseCommandState> commands = chunk.GetSpan<FormationCapabilityShowcaseCommandState>();
             Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                sink.ValidateBinding(engine.World, entity);
                 int formationIndex = agents[index].FormationIndex;
                 if ((uint)formationIndex >= (uint)_formationPlans.Length)
                 {
@@ -1083,8 +1094,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
         foreach (ref var chunk in engine.World.Query(in FormationExecutionSoldierQuery))
         {
             Span<FormationCapabilityShowcaseFormationSoldier> soldiers = chunk.GetSpan<FormationCapabilityShowcaseFormationSoldier>();
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
+                sink.ValidateBinding(engine.World, Unsafe.Add(ref entityFirst, index));
                 ref readonly FormationCapabilityShowcaseFormationSoldier soldier = ref soldiers[index];
                 int planIndex = ResolveSoldierPlanIndex(soldier.FormationIndex, soldier.SlotIndex);
                 if ((uint)planIndex >= (uint)_soldierAgentPlans.Length)
@@ -1119,11 +1132,22 @@ internal sealed class FormationCapabilityShowcaseRuntime
             if (_anchorSeenByFormation[formationIndex] == 0)
             {
                 Entity cachedAnchor = _formationEntities[formationIndex];
-                if (!engine.World.IsAlive(cachedAnchor) ||
-                    engine.World.Has<PresentationDestroyPending>(cachedAnchor) ||
-                    engine.World.Has<SuspendedTag>(cachedAnchor))
+                if (!engine.World.IsAlive(cachedAnchor))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Formation Capability formation index {formationIndex} has an invalid anchor entity.");
+                }
+
+                if (engine.World.Has<PresentationDestroyPending>(cachedAnchor))
+                {
+                    throw new InvalidOperationException(
+                        $"Formation Capability formation index {formationIndex} anchor is pending destruction.");
+                }
+
+                if (engine.World.Has<SuspendedTag>(cachedAnchor))
+                {
+                    throw new InvalidOperationException(
+                        $"Formation Capability formation index {formationIndex} anchor is suspended outside the active map.");
                 }
 
                 throw new InvalidOperationException(
@@ -1145,14 +1169,36 @@ internal sealed class FormationCapabilityShowcaseRuntime
             }
         }
 
+        for (int planIndex = 0; planIndex < _soldierAgentPlans.Length; planIndex++)
+        {
+            if (_soldierSeenByPlan[planIndex] != 0)
+            {
+                continue;
+            }
+
+            Entity cachedSoldier = _soldierEntitiesByPlanIndex[planIndex];
+            if (!engine.World.IsAlive(cachedSoldier) ||
+                engine.World.Has<PresentationDestroyPending>(cachedSoldier))
+            {
+                continue;
+            }
+
+            if (engine.World.Has<SuspendedTag>(cachedSoldier))
+            {
+                throw new InvalidOperationException(
+                    $"Formation Capability soldier plan index {planIndex} is suspended outside the active map.");
+            }
+
+            throw new InvalidOperationException(
+                $"Formation Capability soldier plan index {planIndex} has a live member that is missing required execution components.");
+        }
+
         float anchorStopRadius = simulation.Config.Semantics.Group.UnitTargetStopThresholdCm;
+        Array.Clear(_anchorExecutionPreparedByFormation);
         foreach (ref var chunk in engine.World.Query(in FormationExecutionAnchorQuery))
         {
             Span<FormationCapabilityShowcaseFormationAgent> agents = chunk.GetSpan<FormationCapabilityShowcaseFormationAgent>();
             Span<FormationCapabilityShowcaseCommandState> commands = chunk.GetSpan<FormationCapabilityShowcaseCommandState>();
-            Span<FormationCapabilityShowcaseFormationState> states = chunk.GetSpan<FormationCapabilityShowcaseFormationState>();
-            Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
-            Span<WorldPositionCm> worldPositions = chunk.GetSpan<WorldPositionCm>();
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
@@ -1164,37 +1210,35 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     StopRadiusCm = anchorStopRadius,
                     HasTarget = 1,
                 };
-                if (!sink.TryApply(engine.World, Unsafe.Add(ref entityFirst, index), in intent))
-                {
-                    throw new InvalidOperationException(
-                        $"Formation Capability failed to apply anchor target for formation {formationIndex}.");
-                }
+                _preparedAnchorExecutionByFormation[formationIndex] = sink.PrepareApply(
+                    engine.World,
+                    Unsafe.Add(ref entityFirst, index),
+                    in intent);
+                _anchorExecutionPreparedByFormation[formationIndex] = 1;
+            }
+        }
 
-                facings[index].AngleRad = command.TargetFacingRad;
-                Vector2 center = _anchorCenterByFormation[formationIndex];
-                ref FormationCapabilityShowcaseFormationState state = ref states[index];
-                state.SoldierCount = _formationPlans[formationIndex].SoldierCount;
-                state.AliveSoldierCount = _aliveSoldierCountByFormation[formationIndex];
-                state.CenterXCm = center.X;
-                state.CenterYCm = center.Y;
-                state.FacingRad = command.TargetFacingRad;
-                worldPositions[index].Value = Fix64Vec2.FromInt(
-                    (int)MathF.Round(center.X),
-                    (int)MathF.Round(center.Y));
+        for (int formationIndex = 0; formationIndex < _formationPlans.Length; formationIndex++)
+        {
+            if (_anchorExecutionPreparedByFormation[formationIndex] == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Formation Capability formation index {formationIndex} did not prepare an anchor execution target.");
             }
         }
 
         float memberStopRadius = simulation.Config.Semantics.Group.UnitTargetStopThresholdCm;
         float minimumClearance = simulation.Config.Semantics.TargetProjection.GroupSlotClearanceCm;
+        Array.Clear(_soldierExecutionPreparedByPlan);
         foreach (ref var chunk in engine.World.Query(in FormationExecutionSoldierQuery))
         {
             Span<FormationCapabilityShowcaseFormationSoldier> soldiers = chunk.GetSpan<FormationCapabilityShowcaseFormationSoldier>();
-            Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 ref readonly FormationCapabilityShowcaseFormationSoldier soldier = ref soldiers[index];
                 int formationIndex = soldier.FormationIndex;
+                int planIndex = ResolveSoldierPlanIndex(formationIndex, soldier.SlotIndex);
                 if (_targetChangedByFormation[formationIndex] == 0)
                 {
                     continue;
@@ -1217,13 +1261,63 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     HasTarget = 1,
                     ResolveNavigableTarget = 1,
                 };
-                if (!sink.TryApply(engine.World, Unsafe.Add(ref entityFirst, index), in intent))
-                {
-                    throw new InvalidOperationException(
-                        $"Formation Capability failed to apply member target for formation {formationIndex}, slot {soldier.SlotIndex}.");
-                }
+                _preparedSoldierExecutionByPlan[planIndex] = sink.PrepareApply(
+                    engine.World,
+                    Unsafe.Add(ref entityFirst, index),
+                    in intent);
+                _soldierExecutionPreparedByPlan[planIndex] = 1;
+            }
+        }
 
-                facings[index].AngleRad = facing;
+        for (int formationIndex = 0; formationIndex < _formationPlans.Length; formationIndex++)
+        {
+            sink.ApplyPrepared(engine.World, in _preparedAnchorExecutionByFormation[formationIndex]);
+        }
+
+        for (int planIndex = 0; planIndex < _soldierAgentPlans.Length; planIndex++)
+        {
+            if (_soldierExecutionPreparedByPlan[planIndex] != 0)
+            {
+                sink.ApplyPrepared(engine.World, in _preparedSoldierExecutionByPlan[planIndex]);
+            }
+        }
+
+        foreach (ref var chunk in engine.World.Query(in FormationExecutionAnchorQuery))
+        {
+            Span<FormationCapabilityShowcaseFormationAgent> agents = chunk.GetSpan<FormationCapabilityShowcaseFormationAgent>();
+            Span<FormationCapabilityShowcaseCommandState> commands = chunk.GetSpan<FormationCapabilityShowcaseCommandState>();
+            Span<FormationCapabilityShowcaseFormationState> states = chunk.GetSpan<FormationCapabilityShowcaseFormationState>();
+            Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
+            Span<WorldPositionCm> worldPositions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                int formationIndex = agents[index].FormationIndex;
+                FormationCapabilityShowcaseCommandState command = commands[index];
+                facings[index].AngleRad = command.TargetFacingRad;
+                Vector2 center = _anchorCenterByFormation[formationIndex];
+                ref FormationCapabilityShowcaseFormationState state = ref states[index];
+                state.SoldierCount = _formationPlans[formationIndex].SoldierCount;
+                state.AliveSoldierCount = _aliveSoldierCountByFormation[formationIndex];
+                state.CenterXCm = center.X;
+                state.CenterYCm = center.Y;
+                state.FacingRad = command.TargetFacingRad;
+                worldPositions[index].Value = Fix64Vec2.FromInt(
+                    (int)MathF.Round(center.X),
+                    (int)MathF.Round(center.Y));
+            }
+        }
+
+        foreach (ref var chunk in engine.World.Query(in FormationExecutionSoldierQuery))
+        {
+            Span<FormationCapabilityShowcaseFormationSoldier> soldiers = chunk.GetSpan<FormationCapabilityShowcaseFormationSoldier>();
+            Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
+            foreach (int index in chunk)
+            {
+                int formationIndex = soldiers[index].FormationIndex;
+                if (_targetChangedByFormation[formationIndex] != 0)
+                {
+                    facings[index].AngleRad = _commandByFormation[formationIndex].TargetFacingRad;
+                }
             }
         }
 

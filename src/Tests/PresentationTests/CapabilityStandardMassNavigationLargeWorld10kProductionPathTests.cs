@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Reflection;
 using Arch.Core;
+using Arch.System;
 using CapabilityStandardMassNavigationLargeWorld10kMod;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
@@ -20,6 +22,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Assets;
@@ -127,6 +130,32 @@ namespace Ludots.Tests.Presentation
             Assert.That(minimapMarkers.DroppedTotal, Is.Zero, diagnostics);
             Assert.That(minimapScreenMarkers.DroppedTotal, Is.Zero, diagnostics);
             AssertFixedAnchorChain(engine, simulation, sampleCount: 64, toleranceCm: 25f);
+        }
+
+        [Test]
+        public void Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            MassNavigationAuthoredAgentBindingSystem bindingSystem = RequireSystem<MassNavigationAuthoredAgentBindingSystem>(
+                engine,
+                SystemGroup.RuntimeEntityBinding);
+            ControlDomainQuery controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
+            uint relationshipRevision = controlDomains.Revision;
+            int resolutionCount = bindingSystem.DomainResolutionCount;
+            Assert.That(resolutionCount, Is.GreaterThanOrEqualTo(ExpectedAgentCount));
+
+            TickProjectionFrames(engine, hudProjection, 3);
+
+            Assert.That(controlDomains.Revision, Is.EqualTo(relationshipRevision));
+            Assert.That(bindingSystem.DomainResolutionCount, Is.EqualTo(resolutionCount),
+                "Stable 10K fixed steps must consume the committed domain projection without per-agent relationship queries.");
         }
 
         [Test]
@@ -317,6 +346,29 @@ namespace Ludots.Tests.Presentation
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);
             return engine;
+        }
+
+        private static TSystem RequireSystem<TSystem>(GameEngine engine, SystemGroup group)
+            where TSystem : class, ISystem<float>
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine system groups field is unavailable.");
+            var groups = field.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>
+                ?? throw new InvalidOperationException("GameEngine system groups could not be inspected.");
+            if (!groups.TryGetValue(group, out List<ISystem<float>>? systems))
+            {
+                throw new InvalidOperationException($"System group {group} is not registered.");
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i] is TSystem system)
+                {
+                    return system;
+                }
+            }
+
+            throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
         }
 
         private static void ApplyHostAssets(GameEngine engine)

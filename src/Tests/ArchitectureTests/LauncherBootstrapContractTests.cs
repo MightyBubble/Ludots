@@ -596,9 +596,10 @@ namespace Ludots.Tests.Architecture
                         "LudotsCoreMod",
                         "CoreInputMod",
                         "CameraProfilesMod",
+                        "MassNavigationMod",
                         "FormationCapabilityShowcaseMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(

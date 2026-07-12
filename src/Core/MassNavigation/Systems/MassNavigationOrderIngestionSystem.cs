@@ -29,8 +29,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
     private readonly List<OrderBucket> _buckets;
     private readonly HashSet<int> _activeTokens;
     private readonly List<int> _completedTokens;
-    private readonly List<int> _staleSignatureTokens;
-    private readonly Dictionary<int, OrderApplicationSignature> _appliedOrderSignatures;
     private readonly Entity[] _orderMemberEntities;
     private MassNavigationRouteExecutionSink? _routeSink;
     private int _usedBucketCount;
@@ -50,8 +48,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         _buckets = new List<OrderBucket>(_orderTokenCapacity);
         _activeTokens = new HashSet<int>(_orderTokenCapacity);
         _completedTokens = new List<int>(_orderTokenCapacity);
-        _staleSignatureTokens = new List<int>(_orderTokenCapacity);
-        _appliedOrderSignatures = new Dictionary<int, OrderApplicationSignature>(_orderTokenCapacity);
         _orderMemberEntities = new Entity[_bucketMemberCapacity];
         for (int i = 0; i < _orderTokenCapacity; i++)
         {
@@ -142,18 +138,14 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 continue;
             }
 
-            OrderApplicationSignature signature = bucket.CreateSignature();
-            bool commandChanged = !_appliedOrderSignatures.TryGetValue(bucket.Token, out OrderApplicationSignature previous) ||
-                previous != signature;
-            _appliedOrderSignatures[bucket.Token] = signature;
-
             _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 _simulation.MassNavigationFlow,
                 _simulation.AgentState,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
                 bucket.TeamId,
-                bucket.Destination);
+                bucket.Destination,
+                out bool commandChanged);
 
             if (commandChanged)
             {
@@ -205,7 +197,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.MassNavigationFlow, _activeTokens);
-        PruneInactiveOrderSignatures();
         _lastIncomingRevision = incomingRevision;
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
         {
@@ -222,23 +213,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         return count;
-    }
-
-    private void PruneInactiveOrderSignatures()
-    {
-        _staleSignatureTokens.Clear();
-        foreach (int token in _appliedOrderSignatures.Keys)
-        {
-            if (!_activeTokens.Contains(token))
-            {
-                _staleSignatureTokens.Add(token);
-            }
-        }
-
-        for (int i = 0; i < _staleSignatureTokens.Count; i++)
-        {
-            _appliedOrderSignatures.Remove(_staleSignatureTokens[i]);
-        }
     }
 
     private int ResolveMoveOrderType()
@@ -380,7 +354,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         public Vector2 Destination { get; set; }
         public List<int> Members { get; }
         private bool HasPayload { get; set; }
-        private int MemberHash { get; set; }
 
         public void AssignOrValidatePayload(
             int teamId,
@@ -406,16 +379,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         public void AddMember(int memberIndex)
         {
             Members.Add(memberIndex);
-            MemberHash = unchecked((MemberHash * 397) ^ memberIndex);
-        }
-
-        public OrderApplicationSignature CreateSignature()
-        {
-            return new OrderApplicationSignature(
-                TeamId,
-                Destination,
-                Members.Count,
-                MemberHash);
         }
 
         public void Reset()
@@ -424,7 +387,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             TeamId = 0;
             Destination = default;
             HasPayload = false;
-            MemberHash = 0;
             Members.Clear();
         }
 
@@ -434,14 +396,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             TeamId = 0;
             Destination = default;
             HasPayload = false;
-            MemberHash = 0;
             Members.Clear();
         }
     }
-
-    private readonly record struct OrderApplicationSignature(
-        int TeamId,
-        Vector2 Destination,
-        int MemberCount,
-        int MemberHash);
 }

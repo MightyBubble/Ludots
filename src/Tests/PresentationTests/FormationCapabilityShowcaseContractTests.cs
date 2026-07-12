@@ -854,10 +854,208 @@ namespace Ludots.Tests.Presentation
             UpdateSystem(system);
             long secondBytes = GC.GetAllocatedBytesForCurrentThread() - secondStart;
 
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            command.TargetCenterXCm += 500f;
+            command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
+            long changedStart = GC.GetAllocatedBytesForCurrentThread();
+            UpdateSystem(system);
+            long changedBytes = GC.GetAllocatedBytesForCurrentThread() - changedStart;
+
             Assert.That(firstBytes, Is.Zero,
                 $"Stable Formation target refresh must allocate 0 B after warmup; first sample was {firstBytes} B.");
             Assert.That(secondBytes, Is.Zero,
                 $"Stable Formation target refresh must allocate 0 B after warmup; samples were {firstBytes} B and {secondBytes} B.");
+            Assert.That(changedBytes, Is.Zero,
+                $"Changed Formation target preparation and commit must allocate 0 B after warmup; sample was {changedBytes} B.");
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_InvalidSoldierAgentIndexFailsBeforeAnyAnchorStateChanges()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before atomic execution validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+            int committedAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
+
+            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            command.TargetCenterXCm += 500f;
+            command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
+            engine.World.Get<MassNavigationAgentIndex>(soldier).Value = simulation.NavigationAgentCount + 7;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("agent index"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
+
+            engine.World.Get<MassNavigationAgentIndex>(soldier).Value = committedAgentIndex;
+            Assert.DoesNotThrow(() => UpdateSystem(system));
+            Assert.That(engine.World.Get<FacingDirection>(anchor).AngleRad, Is.EqualTo(command.TargetFacingRad));
+            AssertFormationMemberTargetChanged(simulation, before);
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_StableTargetStillRejectsInvalidSoldierBindingBeforeAnyCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before stable-target validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+
+            engine.World.Get<MassNavigationAgentIndex>(soldier).Value = simulation.NavigationAgentCount + 7;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("committed MassNavigation binding"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_SoldierAgentIndexAtCapacityFailsBeforeAnyCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before capacity validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+
+            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            command.TargetCenterYCm += 500f;
+            engine.World.Get<MassNavigationAgentIndex>(soldier).Value =
+                simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("exceeding configured capacity"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_DuplicateSoldierSlotFailsBeforeAnyCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before duplicate-slot validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            Entity[] soldiers = FindSoldierEntities(engine, formation.FormationIndex, expectedCount: 2);
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+
+            engine.World.Get<FormationCapabilityShowcaseFormationSoldier>(soldiers[1]) =
+                engine.World.Get<FormationCapabilityShowcaseFormationSoldier>(soldiers[0]);
+            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            command.TargetCenterXCm += 500f;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("bound more than once"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_SuspendedSoldierFailsWholeBatchBeforeAnchorCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before cross-map execution validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+
+            engine.World.Add(soldier, new SuspendedTag());
+            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            command.TargetCenterYCm += 500f;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("suspended"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
+        }
+
+        [Test]
+        public void FormationCapabilityExecution_SuspendedAnchorFailsExplicitlyWithoutMemberCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before invalid-anchor validation.");
+
+            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+                .Single();
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
+            engine.World.Add(anchor, new SuspendedTag());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(ex.Message, Does.Contain("anchor"));
+            AssertFormationExecutionBatchSnapshotUnchanged(engine, simulation, before);
         }
 
         [Test]
@@ -1041,6 +1239,93 @@ namespace Ludots.Tests.Presentation
                 Assert.That(simulation.CommandCountFrame, Is.EqualTo(3),
                     "A token reused after becoming inactive must not inherit its pruned application signature.");
             }
+        }
+
+        [Test]
+        public void MassNavigationOrderCommand_MemberChangeUsesExactComparisonForFormerHashCollision()
+        {
+            const int agentCount = 397;
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
+                Path.Combine(FindRepoRoot(), "assets"));
+            MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 512;
+            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 512;
+            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 512;
+            var simulation = new MassNavigationSimulationRuntime(config);
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            FocusCurrentMapSession(engine, config.MapId);
+            var binding = new MassNavigationRuntimeBinding();
+            MapId mapId = engine.CurrentMapSession!.MapId;
+            binding.Activate(mapId, simulation);
+            binding.MarkPrepared(mapId, simulation);
+            engine.SetService(MassNavigationKeys.RuntimeBinding, binding);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = MassNavigationOrderKeys.Move,
+                OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                Priority = 100,
+                CanInterruptSelf = true,
+            });
+            var orderBufferSystem = new OrderBufferSystem(
+                engine.World,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry());
+            engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
+            engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
+
+            var entities = new Entity[agentCount];
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            var controllable = new bool[agentCount];
+            int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.orderMemberCollision");
+            for (int i = 0; i < agentCount; i++)
+            {
+                entities[i] = engine.World.Create(
+                    new MassNavigationAgent { ProfileId = profileId },
+                    new FacingDirection { AngleRad = 0f },
+                    OrderBuffer.CreateEmpty());
+                seeds[i] = CreateAgentSeed(
+                    simulation,
+                    worldXCm: 1000f + ((i % 20) * 100f),
+                    worldYCm: 1000f + ((i / 20) * 100f));
+                controllable[i] = true;
+            }
+
+            simulation.RebuildFromAuthoredAgents(engine.World, entities, seeds, controllable);
+            Vector2 destination = new(4000f, 4000f);
+            Order CreateOrder(Entity actor) => new()
+            {
+                OrderId = 77,
+                OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = MassNavigationMoveOrderArgs.Encode(destination),
+            };
+
+            Order firstOrder = CreateOrder(entities[0]);
+            Order secondOrder = CreateOrder(entities[1]);
+            engine.World.Get<OrderBuffer>(entities[0]).SetActiveDirect(in firstOrder, priority: 100);
+            engine.World.Get<OrderBuffer>(entities[1]).SetActiveDirect(in secondOrder, priority: 100);
+            var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation);
+
+            UpdateSystem(ingestion);
+            Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
+
+            engine.World.Get<OrderBuffer>(entities[0]).ClearActive();
+            Order replacementOrder = CreateOrder(entities[396]);
+            engine.World.Get<OrderBuffer>(entities[396]).SetActiveDirect(in replacementOrder, priority: 100);
+            UpdateSystem(ingestion);
+
+            Assert.That(simulation.CommandCountFrame, Is.EqualTo(2),
+                "[0,1] and [1,396] shared the retired integer hash but are different command memberships.");
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out _, out _), Is.False);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(396, out _, out _), Is.True);
         }
 
         [Test]
@@ -3341,6 +3626,207 @@ namespace Ludots.Tests.Presentation
 
             return agentIndex;
         }
+
+        private static Entity FindFirstSoldierEntity(GameEngine engine, int formationIndex)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier) =>
+            {
+                if (result == Entity.Null && soldier.FormationIndex == formationIndex)
+                {
+                    result = entity;
+                }
+            });
+
+            if (result == Entity.Null)
+            {
+                throw new InvalidOperationException($"No Formation Capability soldier entity was bound for formation index {formationIndex}.");
+            }
+
+            return result;
+        }
+
+        private static Entity[] FindSoldierEntities(GameEngine engine, int formationIndex, int expectedCount)
+        {
+            var soldiers = new List<(int SlotIndex, Entity Entity)>(expectedCount);
+            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier) =>
+            {
+                if (soldier.FormationIndex == formationIndex)
+                {
+                    soldiers.Add((soldier.SlotIndex, entity));
+                }
+            });
+
+            soldiers.Sort(static (left, right) => left.SlotIndex.CompareTo(right.SlotIndex));
+            Assert.That(soldiers.Count, Is.GreaterThanOrEqualTo(expectedCount));
+            var result = new Entity[expectedCount];
+            for (int i = 0; i < expectedCount; i++)
+            {
+                result[i] = soldiers[i].Entity;
+            }
+
+            return result;
+        }
+
+        private static FormationExecutionBatchSnapshot CaptureFormationExecutionBatchSnapshot(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation)
+        {
+            var anchors = new List<FormationAnchorExecutionSnapshot>(FormationCapabilityAcceptance.ExpectedTotalFormations);
+            var anchorQuery = new QueryDescription().WithAll<
+                FormationCapabilityShowcaseFormationAgent,
+                FormationCapabilityShowcaseFormationState,
+                FacingDirection,
+                WorldPositionCm,
+                MassNavigationAgentIndex>();
+            engine.World.Query(in anchorQuery, (
+                Entity entity,
+                ref FormationCapabilityShowcaseFormationAgent formation,
+                ref FormationCapabilityShowcaseFormationState state,
+                ref FacingDirection facing,
+                ref WorldPositionCm worldPosition,
+                ref MassNavigationAgentIndex agentIndex) =>
+            {
+                bool hasTarget = simulation.TryGetAgentNavigationTargetWorldCm(agentIndex.Value, out float targetX, out float targetY);
+                anchors.Add(new FormationAnchorExecutionSnapshot(
+                    formation.FormationIndex,
+                    entity,
+                    agentIndex.Value,
+                    facing.AngleRad,
+                    state,
+                    worldPosition.Value,
+                    hasTarget,
+                    targetX,
+                    targetY));
+            });
+
+            var soldiers = new List<FormationSoldierExecutionSnapshot>(FormationCapabilityAcceptance.ExpectedTotalSoldiers);
+            var soldierQuery = new QueryDescription().WithAll<
+                FormationCapabilityShowcaseFormationSoldier,
+                FacingDirection,
+                WorldPositionCm,
+                MassNavigationAgentIndex>();
+            engine.World.Query(in soldierQuery, (
+                Entity entity,
+                ref FormationCapabilityShowcaseFormationSoldier soldier,
+                ref FacingDirection facing,
+                ref WorldPositionCm worldPosition,
+                ref MassNavigationAgentIndex agentIndex) =>
+            {
+                bool hasTarget = simulation.TryGetAgentNavigationTargetWorldCm(agentIndex.Value, out float targetX, out float targetY);
+                soldiers.Add(new FormationSoldierExecutionSnapshot(
+                    soldier.FormationIndex,
+                    soldier.SlotIndex,
+                    entity,
+                    agentIndex.Value,
+                    facing.AngleRad,
+                    worldPosition.Value,
+                    hasTarget,
+                    targetX,
+                    targetY));
+            });
+
+            anchors.Sort(static (left, right) => left.FormationIndex.CompareTo(right.FormationIndex));
+            soldiers.Sort(static (left, right) =>
+            {
+                int formationComparison = left.FormationIndex.CompareTo(right.FormationIndex);
+                return formationComparison != 0
+                    ? formationComparison
+                    : left.SlotIndex.CompareTo(right.SlotIndex);
+            });
+            return new FormationExecutionBatchSnapshot(anchors.ToArray(), soldiers.ToArray());
+        }
+
+        private static void AssertFormationExecutionBatchSnapshotUnchanged(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            in FormationExecutionBatchSnapshot before)
+        {
+            Assert.That(before.Anchors.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalFormations));
+            Assert.That(before.Soldiers.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalSoldiers));
+
+            for (int i = 0; i < before.Anchors.Length; i++)
+            {
+                FormationAnchorExecutionSnapshot expected = before.Anchors[i];
+                Assert.That(engine.World.IsAlive(expected.Entity), Is.True);
+                Assert.That(engine.World.Get<FacingDirection>(expected.Entity).AngleRad, Is.EqualTo(expected.FacingRad));
+                Assert.That(engine.World.Get<FormationCapabilityShowcaseFormationState>(expected.Entity), Is.EqualTo(expected.FormationState));
+                Assert.That(engine.World.Get<WorldPositionCm>(expected.Entity).Value, Is.EqualTo(expected.WorldPositionCm));
+                bool hasTarget = simulation.TryGetAgentNavigationTargetWorldCm(
+                    expected.AgentIndex,
+                    out float targetX,
+                    out float targetY);
+                Assert.That(hasTarget, Is.EqualTo(expected.HasNavigationTarget));
+                Assert.That(targetX, Is.EqualTo(expected.NavigationTargetXCm));
+                Assert.That(targetY, Is.EqualTo(expected.NavigationTargetYCm));
+            }
+
+            for (int i = 0; i < before.Soldiers.Length; i++)
+            {
+                FormationSoldierExecutionSnapshot expected = before.Soldiers[i];
+                Assert.That(engine.World.IsAlive(expected.Entity), Is.True);
+                Assert.That(engine.World.Get<FacingDirection>(expected.Entity).AngleRad, Is.EqualTo(expected.FacingRad));
+                Assert.That(engine.World.Get<WorldPositionCm>(expected.Entity).Value, Is.EqualTo(expected.WorldPositionCm));
+                bool hasTarget = simulation.TryGetAgentNavigationTargetWorldCm(
+                    expected.AgentIndex,
+                    out float targetX,
+                    out float targetY);
+                Assert.That(hasTarget, Is.EqualTo(expected.HasNavigationTarget));
+                Assert.That(targetX, Is.EqualTo(expected.NavigationTargetXCm));
+                Assert.That(targetY, Is.EqualTo(expected.NavigationTargetYCm));
+            }
+        }
+
+        private static void AssertFormationMemberTargetChanged(
+            MassNavigationSimulationRuntime simulation,
+            in FormationExecutionBatchSnapshot before)
+        {
+            for (int i = 0; i < before.Soldiers.Length; i++)
+            {
+                FormationSoldierExecutionSnapshot expected = before.Soldiers[i];
+                if (!simulation.TryGetAgentNavigationTargetWorldCm(expected.AgentIndex, out float targetX, out float targetY))
+                {
+                    continue;
+                }
+
+                if (!expected.HasNavigationTarget ||
+                    targetX != expected.NavigationTargetXCm ||
+                    targetY != expected.NavigationTargetYCm)
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail("Repairing a failed Formation batch must retry the same command and update at least one member target.");
+        }
+
+        private readonly record struct FormationExecutionBatchSnapshot(
+            FormationAnchorExecutionSnapshot[] Anchors,
+            FormationSoldierExecutionSnapshot[] Soldiers);
+
+        private readonly record struct FormationAnchorExecutionSnapshot(
+            int FormationIndex,
+            Entity Entity,
+            int AgentIndex,
+            float FacingRad,
+            FormationCapabilityShowcaseFormationState FormationState,
+            Fix64Vec2 WorldPositionCm,
+            bool HasNavigationTarget,
+            float NavigationTargetXCm,
+            float NavigationTargetYCm);
+
+        private readonly record struct FormationSoldierExecutionSnapshot(
+            int FormationIndex,
+            int SlotIndex,
+            Entity Entity,
+            int AgentIndex,
+            float FacingRad,
+            Fix64Vec2 WorldPositionCm,
+            bool HasNavigationTarget,
+            float NavigationTargetXCm,
+            float NavigationTargetYCm);
 
         private static bool SimulationTimeScaleMatches(GameEngine engine, int expectedScalePermille)
         {

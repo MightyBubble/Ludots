@@ -73,6 +73,39 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Run MassNavigation PR acceptance contracts
+        shell: pwsh
+        run: |
+          $architectureFilter = @(
+            'FullyQualifiedName~Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots',
+            'FullyQualifiedName~MassNavigationEvidenceContractTests',
+            'FullyQualifiedName~FormationOwnershipContractTests'
+          ) -join '|'
+
+          dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj -c Debug --no-build --filter $architectureFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $presentationFilter = @(
+            'FullyQualifiedName~AuthoredAgentBindingSystem_UnchangedRelationshipRevisionDoesNotResolveDomainsAgain',
+            'FullyQualifiedName~AuthoredAgentBindingSystem_MissingCommittedAgentIndexRebuildsInsteadOfRepeatedlyResolving',
+            'FullyQualifiedName~Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution',
+            'FullyQualifiedName~FormationCapabilityExecution_InvalidSoldierAgentIndexFailsBeforeAnyAnchorStateChanges',
+            'FullyQualifiedName~FormationCapabilityExecution_StableTargetStillRejectsInvalidSoldierBindingBeforeAnyCommit',
+            'FullyQualifiedName~FormationCapabilityExecution_SoldierAgentIndexAtCapacityFailsBeforeAnyCommit',
+            'FullyQualifiedName~FormationCapabilityExecution_DuplicateSoldierSlotFailsBeforeAnyCommit',
+            'FullyQualifiedName~FormationCapabilityExecution_SuspendedSoldierFailsWholeBatchBeforeAnchorCommit',
+            'FullyQualifiedName~FormationCapabilityExecution_SuspendedAnchorFailsExplicitlyWithoutMemberCommit',
+            'FullyQualifiedName~MassNavigationOrderCommand_MemberChangeUsesExactComparisonForFormerHashCollision',
+            'FullyQualifiedName~FormationCapabilityExecutionHotPath_AfterWarmupAllocatesZeroBytes'
+          ) -join '|'
+
+          dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       # Full GasTests and full PresentationTests are already red on origin/main.
       # Keep this workflow honest by gating the AAC slice that currently passes on main.
       - name: Run association core GasTests slice

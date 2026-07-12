@@ -34,7 +34,13 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly int _agentCapacity;
     private readonly ControlDomainQuery _controlDomains;
     private readonly DomainStanceQuery _stances;
+    private readonly Entity[] _projectedEntitiesByAgentIndex;
+    private readonly Entity[] _projectedDomainsByAgentIndex;
+    private readonly byte[] _projectedDomainValidByAgentIndex;
     private long _lastAuthoringSignature;
+    private uint _projectedRelationshipRevision = uint.MaxValue;
+
+    internal int DomainResolutionCount { get; private set; }
 
     public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
@@ -48,6 +54,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         _entities = new List<Entity>(_agentCapacity);
         _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
         _controllableFlags = new List<bool>(_agentCapacity);
+        _projectedEntitiesByAgentIndex = new Entity[_agentCapacity];
+        _projectedDomainsByAgentIndex = new Entity[_agentCapacity];
+        _projectedDomainValidByAgentIndex = new byte[_agentCapacity];
     }
 
     public void Initialize() { }
@@ -62,7 +71,9 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return;
         }
 
-        AuthoredAgentBindingScan scan = ScanAuthoredAgentBindingState();
+        uint relationshipRevision = ResolveRelationshipRevision();
+        bool refreshRelationshipProjection = relationshipRevision != _projectedRelationshipRevision;
+        AuthoredAgentBindingScan scan = ScanAuthoredAgentBindingState(refreshRelationshipProjection);
         if (scan.AuthoredCount <= 0)
         {
             if (_simulation.AgentState.TotalAgents > 0)
@@ -70,8 +81,10 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 _simulation.ClearAuthoredRuntimeBindings(_engine.World);
                 _simulation.MarkStructuralChange();
                 _lastAuthoringSignature = 0L;
+                ClearProjectedDomains();
             }
 
+            _projectedRelationshipRevision = relationshipRevision;
             return;
         }
 
@@ -81,20 +94,25 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 $"MassNavigation authored binding observed {scan.AuthoredCount} agents, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_agentCapacity}.");
         }
 
-        if (_simulation.AgentState.TotalAgents == scan.AuthoredCount &&
+        if (scan.UnboundCount == 0 &&
+            !scan.ProjectedDomainChanged &&
+            _simulation.AgentState.TotalAgents == scan.AuthoredCount &&
             _lastAuthoringSignature == scan.AuthoringSignature)
         {
+            _projectedRelationshipRevision = relationshipRevision;
             return;
         }
 
         if (TryAppendUnboundAuthoredAgents(in scan))
         {
             _lastAuthoringSignature = scan.AuthoringSignature;
+            _projectedRelationshipRevision = relationshipRevision;
             return;
         }
 
         RebuildAuthoredAgents();
         _lastAuthoringSignature = scan.AuthoringSignature;
+        _projectedRelationshipRevision = relationshipRevision;
     }
 
     private bool TryAppendUnboundAuthoredAgents(in AuthoredAgentBindingScan scan)
@@ -148,10 +166,11 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             CollectionsMarshal.AsSpan(_entities),
             CollectionsMarshal.AsSpan(_seeds),
             CollectionsMarshal.AsSpan(_controllableFlags));
+        StoreProjectedDomainsForBoundEntities(_entities, _seeds);
         return true;
     }
 
-    private AuthoredAgentBindingScan ScanAuthoredAgentBindingState()
+    private AuthoredAgentBindingScan ScanAuthoredAgentBindingState(bool refreshRelationshipProjection)
     {
         long xor = 0L;
         long sum = 0L;
@@ -162,16 +181,39 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         int authoredCount = 0;
         int unboundCount = 0;
         int boundCount = 0;
+        bool projectedDomainChanged = false;
         foreach (ref var chunk in _engine.World.Query(in AuthoredAgentsQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
             Span<MassNavigationAgent> agents = chunk.GetSpan<MassNavigationAgent>();
             bool chunkIsBound = chunk.Has<MassNavigationAgentIndex>();
+            Span<MassNavigationAgentIndex> agentIndices = chunkIsBound
+                ? chunk.GetSpan<MassNavigationAgentIndex>()
+                : default;
             foreach (int index in chunk)
             {
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 MassNavigationAgent agent = agents[index];
-                long entityHash = ComputeEntityAuthoringHash(entity, in agent);
+                Entity domainRep;
+                if (!chunkIsBound)
+                {
+                    domainRep = ResolveDomain(entity);
+                }
+                else
+                {
+                    int agentIndex = agentIndices[index].Value;
+                    if (refreshRelationshipProjection)
+                    {
+                        domainRep = ResolveAndStoreProjectedDomain(entity, agentIndex, out bool domainChanged);
+                        projectedDomainChanged |= domainChanged;
+                    }
+                    else
+                    {
+                        domainRep = RequireProjectedDomain(entity, agentIndex);
+                    }
+                }
+
+                long entityHash = ComputeEntityAuthoringHash(entity, in agent, domainRep);
                 xor ^= entityHash;
                 sum += entityHash;
                 rotatedSum += RotateLeft(entityHash, 17);
@@ -194,16 +236,16 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             authoredCount,
             unboundCount,
             boundCount,
+            projectedDomainChanged,
             FinalizeAuthoringSignature(authoredCount, xor, sum, rotatedSum),
             FinalizeAuthoringSignature(boundCount, boundXor, boundSum, boundRotatedSum));
     }
 
-    private long ComputeEntityAuthoringHash(Entity entity, in MassNavigationAgent agent)
+    private long ComputeEntityAuthoringHash(Entity entity, in MassNavigationAgent agent, Entity domainRep)
     {
         long entityHash = 1469598103934665603L;
         entityHash = Mix(entityHash, entity.Id);
         entityHash = Mix(entityHash, agent.ProfileId);
-        Entity domainRep = ResolveDomain(entity);
         entityHash = Mix(entityHash, domainRep.Id);
         entityHash = Mix(entityHash, domainRep.Version);
         if (_engine.World.TryGet(entity, out EntityLayer layer))
@@ -295,12 +337,19 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             CollectionsMarshal.AsSpan(_entities),
             CollectionsMarshal.AsSpan(_seeds),
             CollectionsMarshal.AsSpan(_controllableFlags));
+        ClearProjectedDomains();
+        StoreProjectedDomainsForBoundEntities(_entities, _seeds);
     }
 
     private MassNavigationAgentSeed CreateSeed(Entity entity, in MassNavigationAgent agent)
     {
         World world = _engine.World;
-        Entity domainRep = ResolveDomain(entity);
+        Entity domainRep = world.TryGet(entity, out MassNavigationAgentIndex agentIndex) &&
+                           (uint)agentIndex.Value < (uint)_projectedDomainValidByAgentIndex.Length &&
+                           _projectedDomainValidByAgentIndex[agentIndex.Value] != 0 &&
+                           _projectedEntitiesByAgentIndex[agentIndex.Value] == entity
+            ? _projectedDomainsByAgentIndex[agentIndex.Value]
+            : ResolveDomain(entity);
 
         if (!world.TryGet(entity, out WorldPositionCm worldPosition))
         {
@@ -336,6 +385,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 
     private Entity ResolveDomain(Entity entity)
     {
+        DomainResolutionCount++;
         if (_controlDomains.TryResolveControlDomain(entity, out Entity controlDomain))
         {
             return controlDomain;
@@ -350,18 +400,110 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             $"MassNavigationAgent entity {entity.Id} requires an authored control-domain or member-of relationship.");
     }
 
+    private uint ResolveRelationshipRevision()
+    {
+        uint controlRevision = _controlDomains.Revision;
+        uint stanceRevision = _stances.Revision;
+        if (controlRevision != stanceRevision)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation relationship projection requires one committed relationship revision, but control-domain is {controlRevision} and stance-domain is {stanceRevision}.");
+        }
+
+        return controlRevision;
+    }
+
+    private Entity ResolveAndStoreProjectedDomain(Entity entity, int agentIndex, out bool changed)
+    {
+        Entity domain = ResolveDomain(entity);
+        changed = (uint)agentIndex >= (uint)_projectedDomainValidByAgentIndex.Length ||
+                  _projectedDomainValidByAgentIndex[agentIndex] == 0 ||
+                  _projectedEntitiesByAgentIndex[agentIndex] != entity ||
+                  _projectedDomainsByAgentIndex[agentIndex] != domain;
+        StoreProjectedDomain(entity, agentIndex, domain);
+        return domain;
+    }
+
+    private Entity RequireProjectedDomain(Entity entity, int agentIndex)
+    {
+        if ((uint)agentIndex >= (uint)_projectedDomainValidByAgentIndex.Length)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored binding references agent index {agentIndex}, exceeding configured capacity {_projectedDomainValidByAgentIndex.Length}.");
+        }
+
+        if (_projectedDomainValidByAgentIndex[agentIndex] == 0 ||
+            _projectedEntitiesByAgentIndex[agentIndex] != entity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation relationship projection has no committed domain for entity {entity.Id} at agent index {agentIndex}.");
+        }
+
+        return _projectedDomainsByAgentIndex[agentIndex];
+    }
+
+    private void StoreProjectedDomainsForBoundEntities(
+        IReadOnlyList<Entity> entities,
+        IReadOnlyList<MassNavigationAgentSeed> seeds)
+    {
+        if (entities.Count != seeds.Count)
+        {
+            throw new InvalidOperationException("MassNavigation relationship projection requires one domain seed per bound entity.");
+        }
+
+        for (int i = 0; i < entities.Count; i++)
+        {
+            Entity entity = entities[i];
+            if (!_engine.World.TryGet(entity, out MassNavigationAgentIndex agentIndex))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation relationship projection could not find the committed agent index for entity {entity.Id}.");
+            }
+
+            StoreProjectedDomain(entity, agentIndex.Value, seeds[i].DomainRep);
+        }
+    }
+
+    private void StoreProjectedDomain(Entity entity, int agentIndex, Entity domain)
+    {
+        if ((uint)agentIndex >= (uint)_projectedDomainValidByAgentIndex.Length)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation relationship projection agent index {agentIndex} exceeds configured capacity {_projectedDomainValidByAgentIndex.Length}.");
+        }
+
+        if (domain == Entity.Null)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation relationship projection requires a non-null domain for entity {entity.Id}.");
+        }
+
+        _projectedEntitiesByAgentIndex[agentIndex] = entity;
+        _projectedDomainsByAgentIndex[agentIndex] = domain;
+        _projectedDomainValidByAgentIndex[agentIndex] = 1;
+    }
+
+    private void ClearProjectedDomains()
+    {
+        Array.Clear(_projectedEntitiesByAgentIndex);
+        Array.Clear(_projectedDomainsByAgentIndex);
+        Array.Clear(_projectedDomainValidByAgentIndex);
+    }
+
     private readonly struct AuthoredAgentBindingScan
     {
         public AuthoredAgentBindingScan(
             int authoredCount,
             int unboundCount,
             int boundCount,
+            bool projectedDomainChanged,
             long authoringSignature,
             long boundAuthoringSignature)
         {
             AuthoredCount = authoredCount;
             UnboundCount = unboundCount;
             BoundCount = boundCount;
+            ProjectedDomainChanged = projectedDomainChanged;
             AuthoringSignature = authoringSignature;
             BoundAuthoringSignature = boundAuthoringSignature;
         }
@@ -369,6 +511,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         public int AuthoredCount { get; }
         public int UnboundCount { get; }
         public int BoundCount { get; }
+        public bool ProjectedDomainChanged { get; }
         public long AuthoringSignature { get; }
         public long BoundAuthoringSignature { get; }
     }

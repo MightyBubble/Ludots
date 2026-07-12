@@ -11,10 +11,133 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$sourceSha = (& git -C $repoRoot rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceSha -notmatch '^[0-9a-f]{40}$') {
-    throw "Could not resolve the repository HEAD for MassNavigation evidence."
+
+function Get-SourceSha {
+    $sha = (& git -C $repoRoot rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $sha -notmatch '^[0-9a-f]{40}$') {
+        throw "Could not resolve the repository HEAD for MassNavigation evidence."
+    }
+
+    return $sha
 }
+
+function Assert-CleanSourceTree {
+    param([string]$Stage)
+    $dirty = @(& git -C $repoRoot status --porcelain)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not inspect the repository worktree at $Stage."
+    }
+
+    if ($dirty.Count -gt 0) {
+        throw "MassNavigation evidence requires a clean worktree at $Stage. Commit or remove local changes before recording."
+    }
+}
+
+function Test-FiniteJsonNumber {
+    param([object]$Value)
+    if ($null -eq $Value) {
+        return $false
+    }
+
+    $typeCode = [System.Type]::GetTypeCode($Value.GetType())
+    $isJsonNumber = $typeCode -in @(
+        [System.TypeCode]::Byte,
+        [System.TypeCode]::SByte,
+        [System.TypeCode]::UInt16,
+        [System.TypeCode]::UInt32,
+        [System.TypeCode]::UInt64,
+        [System.TypeCode]::Int16,
+        [System.TypeCode]::Int32,
+        [System.TypeCode]::Int64,
+        [System.TypeCode]::Decimal,
+        [System.TypeCode]::Double,
+        [System.TypeCode]::Single
+    )
+    if (-not $isJsonNumber) {
+        return $false
+    }
+
+    try {
+        $number = [double]$Value
+        return -not [double]::IsNaN($number) -and -not [double]::IsInfinity($number)
+    }
+    catch {
+        return $false
+    }
+}
+
+function Get-PointDistanceSquared {
+    param([object]$Left, [object]$Right)
+    $dx = ([double]$Left.x_cm) - ([double]$Right.x_cm)
+    $dy = ([double]$Left.y_cm) - ([double]$Right.y_cm)
+    return ($dx * $dx) + ($dy * $dy)
+}
+
+function Test-MassNavigationSummaryContract {
+    param(
+        [object]$Summary,
+        [string]$ExpectedAdapter,
+        [string]$ExpectedSourceSha
+    )
+
+    $failures = New-Object System.Collections.Generic.List[string]
+    if ($Summary.scenario -ne "mass_navigation_large_world") {
+        $failures.Add("scenario mismatch: expected mass_navigation_large_world, got $($Summary.scenario)")
+    }
+    if ($Summary.adapter -ne $ExpectedAdapter) {
+        $failures.Add("adapter mismatch: expected $ExpectedAdapter, got $($Summary.adapter)")
+    }
+    if ($Summary.source_sha -ne $ExpectedSourceSha) {
+        $failures.Add("source SHA mismatch: expected $ExpectedSourceSha, got $($Summary.source_sha)")
+    }
+
+    $selectors = @($Summary.selectors)
+    if ($selectors.Count -ne 1 -or $selectors[0] -ne '$capability_standard_mass_navigation_large_world_10k') {
+        $failures.Add("selector mismatch: expected only `$capability_standard_mass_navigation_large_world_10k")
+    }
+    $rootMods = @($Summary.root_mods)
+    if ($rootMods.Count -ne 1 -or $rootMods[0] -ne "CapabilityStandardMassNavigationLargeWorld10kMod") {
+        $failures.Add("root mod mismatch: expected only CapabilityStandardMassNavigationLargeWorld10kMod")
+    }
+
+    $samples = @($Summary.anchor_samples)
+    if ($samples.Count -ne 64) {
+        $failures.Add("anchor sample count mismatch: expected 64, got $($samples.Count)")
+    }
+
+    $pointNames = @("solver_world_cm", "ecs_world_cm", "visual_world_cm", "performer_world_cm")
+    for ($sampleIndex = 0; $sampleIndex -lt $samples.Count; $sampleIndex++) {
+        $sample = $samples[$sampleIndex]
+        $validPoints = $true
+        foreach ($pointName in $pointNames) {
+            $point = $sample.$pointName
+            if ($null -eq $point -or
+                -not (Test-FiniteJsonNumber $point.x_cm) -or
+                -not (Test-FiniteJsonNumber $point.y_cm)) {
+                $failures.Add("anchor sample $sampleIndex has unreadable $pointName x_cm/y_cm")
+                $validPoints = $false
+            }
+        }
+
+        if ($validPoints) {
+            $toleranceSq = 25.0 * 25.0
+            if ((Get-PointDistanceSquared $sample.solver_world_cm $sample.ecs_world_cm) -gt $toleranceSq) {
+                $failures.Add("anchor sample $sampleIndex solver->ECS distance exceeds 25cm")
+            }
+            if ((Get-PointDistanceSquared $sample.ecs_world_cm $sample.visual_world_cm) -gt $toleranceSq) {
+                $failures.Add("anchor sample $sampleIndex ECS->visual distance exceeds 25cm")
+            }
+            if ((Get-PointDistanceSquared $sample.visual_world_cm $sample.performer_world_cm) -gt $toleranceSq) {
+                $failures.Add("anchor sample $sampleIndex visual->performer distance exceeds 25cm")
+            }
+        }
+    }
+
+    return @($failures)
+}
+
+Assert-CleanSourceTree -Stage "recording start"
+$sourceSha = Get-SourceSha
 $launcher = Join-Path $repoRoot "scripts\run-mod-launcher.cmd"
 if (-not (Test-Path $launcher)) {
     throw "Launcher script not found: $launcher"
@@ -168,10 +291,24 @@ while ($true) {
     $summaryFile = Join-Path $runDir "summary.json"
     $summary = $null
     $success = $false
+    $summaryValidationFailures = @()
+    $sourceStateFailures = New-Object System.Collections.Generic.List[string]
+    $postRunSha = Get-SourceSha
+    if ($postRunSha -ne $sourceSha) {
+        $sourceStateFailures.Add("repository HEAD changed during evidence run: expected $sourceSha, got $postRunSha")
+    }
+    $postRunDirty = @(& git -C $repoRoot status --porcelain)
+    if ($LASTEXITCODE -ne 0) {
+        $sourceStateFailures.Add("could not inspect repository cleanliness after evidence run")
+    }
+    elseif ($postRunDirty.Count -gt 0) {
+        $sourceStateFailures.Add("repository worktree became dirty during evidence run")
+    }
     if ($exitCode -eq 0 -and (Test-Path $summaryFile)) {
         $summary = Get-Content -Path $summaryFile -Raw -Encoding UTF8 | ConvertFrom-Json
         $success = [bool]$summary.success
-        if ($summary.source_sha -ne $sourceSha) {
+        $summaryValidationFailures = @(Test-MassNavigationSummaryContract -Summary $summary -ExpectedAdapter $Adapter -ExpectedSourceSha $sourceSha)
+        if ($summaryValidationFailures.Count -gt 0 -or $sourceStateFailures.Count -gt 0) {
             $success = $false
         }
     }
@@ -219,7 +356,7 @@ while ($true) {
         projection_failure_count = if ($summary) { $summary.projection_failure_count } else { $null }
         capacity_failure_count = if ($summary) { $summary.capacity_failure_count } else { $null }
         missing_evidence = $missingEvidence
-        failed_checks = if ($summary) { @($summary.failed_checks) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) + @(if ($summary.source_sha -ne $sourceSha) { "source SHA mismatch: expected $sourceSha, got $($summary.source_sha)" }) } else { @("missing summary.json or launcher failure") + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) }
+        failed_checks = if ($summary) { @($summary.failed_checks) + @($summaryValidationFailures) + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) } else { @("missing summary.json or launcher failure") + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) }
         log = $logPath
     }
 

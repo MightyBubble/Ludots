@@ -3029,7 +3029,7 @@ public static class LauncherEvidenceRecorder
         int transformFailureCount = 0;
         int emissionFailureCount = 0;
         int cullingFailureCount = 0;
-        var samplePositions = new List<MassNavigationAgentSample>(MassNavigationPositionSampleCount);
+        var samplePositions = new List<MassNavigationAnchorEvidenceSample>(MassNavigationPositionSampleCount);
         float positionToleranceSq = MassNavigationPositionToleranceCm * MassNavigationPositionToleranceCm;
         engine.World.Query(in OrderableMassNavigationAgentQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref OrderBuffer orders, ref WorldPositionCm position, ref CommandSourceSelectableTag selectable) =>
         {
@@ -3092,15 +3092,15 @@ public static class LauncherEvidenceRecorder
                 transformFailureCount++;
             }
 
-            samplePositions.Add(new MassNavigationAgentSample(
+            samplePositions.Add(new MassNavigationAnchorEvidenceSample(
                 AgentIndex: agentIndex.Value,
                 TeamId: domainId,
                 OwnerEntityId: entity.Id,
                 PerformerStableId: performerState.StableId,
-                SolverWorldCm: solverWorldCm,
-                EcsWorldCm: ecsWorldCm,
-                VisualWorldCm: visualWorldCm,
-                PerformerWorldCm: performerWorldCm,
+                SolverWorldCm: MassNavigationEvidencePoint.From(solverWorldCm),
+                EcsWorldCm: MassNavigationEvidencePoint.From(ecsWorldCm),
+                VisualWorldCm: MassNavigationEvidencePoint.From(visualWorldCm),
+                PerformerWorldCm: MassNavigationEvidencePoint.From(performerWorldCm),
                 OwnerVisible: ownerVisible));
         });
 
@@ -3662,9 +3662,9 @@ public static class LauncherEvidenceRecorder
 
         for (int i = 0; i < snapshot.SamplePositions.Count; i++)
         {
-            MassNavigationAgentSample sample = snapshot.SamplePositions[i];
+            MassNavigationAnchorEvidenceSample sample = snapshot.SamplePositions[i];
             using var teamPaint = new SKPaint { Color = ResolveMassNavigationTeamColor(sample.TeamId), IsAntialias = true, Style = SKPaintStyle.Fill };
-            SKPoint point = ToMassNavigationScreen(sample.EcsWorldCm, snapshot, worldRect);
+            SKPoint point = ToMassNavigationScreen(sample.EcsWorldCm.ToVector2(), snapshot, worldRect);
             canvas.DrawCircle(point.X, point.Y, 2.5f, teamPaint);
         }
 
@@ -4188,17 +4188,6 @@ public static class LauncherEvidenceRecorder
         string ResetChunkSignature,
         string NormalizedSignature);
 
-    private readonly record struct MassNavigationAgentSample(
-        int AgentIndex,
-        int TeamId,
-        int OwnerEntityId,
-        int PerformerStableId,
-        Vector2 SolverWorldCm,
-        Vector2 EcsWorldCm,
-        Vector2 VisualWorldCm,
-        Vector2 PerformerWorldCm,
-        bool OwnerVisible);
-
     private readonly record struct MassNavigationAvoidanceFrameMetrics(
         int FrameIndex,
         float WindowCenterXCm,
@@ -4330,7 +4319,7 @@ public static class LauncherEvidenceRecorder
         float PerformerMs,
         float MinimapMs,
         float MassNavigationMs,
-        IReadOnlyList<MassNavigationAgentSample> SamplePositions);
+        IReadOnlyList<MassNavigationAnchorEvidenceSample> SamplePositions);
 
     private sealed record MassNavigationAcceptanceResult(
         bool Success,

@@ -251,6 +251,26 @@ internal sealed class MassNavigationGroupRuntime
         int teamId,
         Vector2 destinationWorldCm)
     {
+        return UpsertOrderMoveCommand(
+            simulation,
+            agentState,
+            orderToken,
+            memberIndices,
+            teamId,
+            destinationWorldCm,
+            out _);
+    }
+
+    public int UpsertOrderMoveCommand(
+        MassNavigationFlowSolverState simulation,
+        MassNavigationAgentState agentState,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 destinationWorldCm,
+        out bool commandChanged)
+    {
+        commandChanged = false;
         if (orderToken <= 0 || memberIndices.Length <= 0)
         {
             return 0;
@@ -285,6 +305,7 @@ internal sealed class MassNavigationGroupRuntime
             }
 
             ActiveGroupCount = CountActiveGroups();
+            commandChanged = true;
             return memberIndices.Length;
         }
 
@@ -299,6 +320,8 @@ internal sealed class MassNavigationGroupRuntime
         {
             return group.MemberCount;
         }
+
+        commandChanged = true;
 
         Vector2 nextResolvedWorldDestination = singleMemberOrder
             ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
