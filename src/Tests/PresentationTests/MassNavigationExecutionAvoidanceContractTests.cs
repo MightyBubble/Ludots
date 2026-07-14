@@ -198,9 +198,10 @@ namespace Ludots.Tests.Presentation
         private static Entity[] CreateAgentEntities(World world, int count)
         {
             var entities = new Entity[count];
+            int profileId = MassNavigationProfileRegistry.Register("light");
             for (int i = 0; i < count; i++)
             {
-                entities[i] = world.Create();
+                entities[i] = world.Create(new MassNavigationAgent { ProfileId = profileId });
             }
 
             return entities;

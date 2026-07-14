@@ -79,6 +79,7 @@ jobs:
           $architectureFilter = @(
             'FullyQualifiedName~Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots',
             'FullyQualifiedName~MassNavigationEvidenceContractTests',
+            'FullyQualifiedName~MassNavigationIssue671ArchitectureTests',
             'FullyQualifiedName~FormationOwnershipContractTests'
           ) -join '|'
 
@@ -98,7 +99,8 @@ jobs:
             'FullyQualifiedName~FormationCapabilityExecution_SuspendedSoldierFailsWholeBatchBeforeAnchorCommit',
             'FullyQualifiedName~FormationCapabilityExecution_SuspendedAnchorFailsExplicitlyWithoutMemberCommit',
             'FullyQualifiedName~MassNavigationOrderCommand_MemberChangeUsesExactComparisonForFormerHashCollision',
-            'FullyQualifiedName~FormationCapabilityExecutionHotPath_AfterWarmupAllocatesZeroBytes'
+            'FullyQualifiedName~FormationCapabilityExecutionHotPath_AfterWarmupAllocatesZeroBytes',
+            'FullyQualifiedName~MassNavigationIssue671RuntimeTests'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal

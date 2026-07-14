@@ -2,7 +2,6 @@ using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
@@ -46,44 +45,9 @@ public sealed partial class MassNavigationFlowSolverState
             Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;
-
         }
 
         _entitySyncDirtyCount = 0;
-    }
-
-    internal void SyncCullStates(
-        World world,
-        MassNavigationAgentState agentState,
-        float localMinXCm,
-        float localMaxXCm,
-        float localMinYCm,
-        float localMaxYCm)
-    {
-        int count = Math.Min(UnitCount, agentState.ControllableAgentSlotCount);
-        for (int i = 0; i < count; i++)
-        {
-            if (!agentState.TryGetControllableEntity(i, out Entity entity))
-            {
-                continue;
-            }
-
-            if (!world.IsAlive(entity) || !world.Has<CullState>(entity))
-            {
-                continue;
-            }
-
-            int i2 = i << 1;
-            float xCm = _positionsCm[i2];
-            float yCm = _positionsCm[i2 + 1];
-            bool visible = xCm >= localMinXCm &&
-                xCm <= localMaxXCm &&
-                yCm >= localMinYCm &&
-                yCm <= localMaxYCm;
-            ref CullState cull = ref world.Get<CullState>(entity);
-            cull.IsVisible = visible;
-            cull.LOD = visible ? LODLevel.High : LODLevel.Culled;
-        }
     }
 
     private void MarkEntityDirty(int index)

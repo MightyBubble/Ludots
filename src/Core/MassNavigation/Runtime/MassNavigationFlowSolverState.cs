@@ -6,7 +6,6 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.Avoidance;
-using Ludots.Core.Presentation.Components;
 using Schedulers;
 
 namespace Ludots.Core.MassNavigation.Runtime;
@@ -134,6 +133,10 @@ public sealed partial class MassNavigationFlowSolverState
     public int GridHeight => _gridHeight;
     public int MaxObstacleCount => _maxObstacleCount;
     public int ParallelWorkerCount => _parallelWorkerCount;
+    internal int AvoidanceNeighborScratchCapacity => _avoidanceNeighborScratch.Length;
+    internal int OrcaLineScratchCapacity => _orcaLineScratch.Length;
+    internal int OrcaProjectionLineScratchCapacity => _orcaProjectionLineScratch.Length;
+    internal int SonarIntervalScratchCapacity => _sonarIntervalScratch.Length;
     public int SeparationHashCellSizeCm => _separationHashCellSizeCm;
     public int SeparationHashWidth => _separationHashWidth;
     public int SeparationHashHeight => _separationHashHeight;
@@ -1005,7 +1008,7 @@ public sealed partial class MassNavigationFlowSolverState
         if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
+            StepRange(0, UnitCount, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1033,6 +1036,7 @@ public sealed partial class MassNavigationFlowSolverState
             job.Owner = this;
             job.StartIndex = startIndex;
             job.EndIndex = startIndex + length;
+            job.ScratchWorkerIndex = workerIndex;
             job.Dt = clampedDt;
             job.NavGroupRuntime = navGroupRuntime;
             job.SepRadiusSq = sepRadiusSq;
@@ -1168,25 +1172,25 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _arrivalEventAgentIndices, unitCount);
         }
 
-        int avoidanceNeighborCapacity = Math.Max(0, unitCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
+        int avoidanceNeighborCapacity = checked(_parallelWorkerCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
         if (_avoidanceNeighborScratch.Length < avoidanceNeighborCapacity)
         {
             Array.Resize(ref _avoidanceNeighborScratch, avoidanceNeighborCapacity);
         }
 
-        int orcaLineCapacity = Math.Max(0, unitCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
+        int orcaLineCapacity = checked(_parallelWorkerCount * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors);
         if (_orcaLineScratch.Length < orcaLineCapacity)
         {
             Array.Resize(ref _orcaLineScratch, orcaLineCapacity);
         }
 
-        int orcaProjectionLineCapacity = Math.Max(0, unitCount * OrcaSolver2D.MaxProjectionLines);
+        int orcaProjectionLineCapacity = checked(_parallelWorkerCount * OrcaSolver2D.MaxProjectionLines);
         if (_orcaProjectionLineScratch.Length < orcaProjectionLineCapacity)
         {
             Array.Resize(ref _orcaProjectionLineScratch, orcaProjectionLineCapacity);
         }
 
-        int sonarIntervalCapacity = Math.Max(0, unitCount * SonarSolver2D.MaxIntervals);
+        int sonarIntervalCapacity = checked(_parallelWorkerCount * SonarSolver2D.MaxIntervals);
         if (_sonarIntervalScratch.Length < sonarIntervalCapacity)
         {
             Array.Resize(ref _sonarIntervalScratch, sonarIntervalCapacity);
@@ -1683,6 +1687,7 @@ public sealed partial class MassNavigationFlowSolverState
     private void StepRange(
         int startIndex,
         int endIndex,
+        int scratchWorkerIndex,
         float clampedDt,
         MassNavigationGroupRuntime navGroupRuntime,
         float sepRadiusSq,
@@ -1932,7 +1937,7 @@ public sealed partial class MassNavigationFlowSolverState
 
             float separationX = 0f;
             float separationY = 0f;
-            int neighborScratchBase = i * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors;
+            int neighborScratchBase = scratchWorkerIndex * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors;
             int avoidanceNeighborCount = 0;
             int avoidanceNeighborLimit = AvoidanceTuning.ParsedMode switch
             {
@@ -2055,6 +2060,7 @@ public sealed partial class MassNavigationFlowSolverState
 
             ApplyConfiguredAvoidanceMode(
                 i,
+                scratchWorkerIndex,
                 neighborScratchBase,
                 avoidanceNeighborCount,
                 px,
@@ -2209,6 +2215,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void ApplyConfiguredAvoidanceMode(
         int unitIndex,
+        int scratchWorkerIndex,
         int neighborScratchBase,
         int neighborCount,
         float positionXCm,
@@ -2256,8 +2263,8 @@ public sealed partial class MassNavigationFlowSolverState
                 neighborPositions,
                 neighborVelocities,
                 neighborRadii,
-                _orcaLineScratch.AsSpan(unitIndex * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors, MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors),
-                _orcaProjectionLineScratch.AsSpan(unitIndex * OrcaSolver2D.MaxProjectionLines, OrcaSolver2D.MaxProjectionLines)),
+                _orcaLineScratch.AsSpan(scratchWorkerIndex * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors, MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors),
+                _orcaProjectionLineScratch.AsSpan(scratchWorkerIndex * OrcaSolver2D.MaxProjectionLines, OrcaSolver2D.MaxProjectionLines)),
             MassNavigationFlowAvoidanceMode.Sonar => SonarSolver2D.ComputeDesiredVelocity(
                 position,
                 velocity,
@@ -2270,7 +2277,7 @@ public sealed partial class MassNavigationFlowSolverState
                 neighborVelocities,
                 neighborRadii,
                 CreateSonarSolveConfig(AvoidanceTuning.Sonar),
-                _sonarIntervalScratch.AsSpan(unitIndex * SonarSolver2D.MaxIntervals, SonarSolver2D.MaxIntervals)),
+                _sonarIntervalScratch.AsSpan(scratchWorkerIndex * SonarSolver2D.MaxIntervals, SonarSolver2D.MaxIntervals)),
             _ => preferredVelocity
         };
 

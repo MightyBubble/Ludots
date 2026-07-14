@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
@@ -9,11 +10,19 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
+    private readonly Action<double> _observeStepPrep;
+    private readonly Action<double> _observeLocalSteering;
+    private readonly Action<double> _observeHardResolve;
+    private readonly Action<double> _observeFlowFieldRebuild;
 
     public MassNavigationSimulationStepSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
         _simulation = simulation;
+        _observeStepPrep = simulation.ObserveStepPrep;
+        _observeLocalSteering = simulation.ObserveLocalSteering;
+        _observeHardResolve = simulation.ObserveHardResolve;
+        _observeFlowFieldRebuild = simulation.ObserveFlowFieldRebuild;
     }
 
     public void Initialize() { }
@@ -54,7 +63,7 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                     step.RefreshFlow,
                     step.RefreshCrowd,
                     step.RefreshObstacles,
-                    _simulation.ObserveFlowFieldRebuild))
+                    _observeFlowFieldRebuild))
             {
                 _simulation.MarkFlowReconcile();
             }
@@ -66,9 +75,9 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 _simulation.NavGroupRuntime,
                 step.RunHardResolve,
                 _simulation.Cadence.HardResolveCandidateThresholdAgents,
-                _simulation.ObserveStepPrep,
-                _simulation.ObserveLocalSteering,
-                _simulation.ObserveHardResolve);
+                _observeStepPrep,
+                _observeLocalSteering,
+                _observeHardResolve);
             _simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
             if (step.SyncEntities)

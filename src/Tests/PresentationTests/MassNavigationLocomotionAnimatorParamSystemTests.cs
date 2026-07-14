@@ -16,9 +16,10 @@ namespace Ludots.Tests.Presentation
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
+            int profileId = MassNavigationProfileRegistry.Register("light");
 
-            Entity movingAgent = world.Create();
-            Entity idleAgent = world.Create();
+            Entity movingAgent = world.Create(new MassNavigationAgent { ProfileId = profileId });
+            Entity idleAgent = world.Create(new MassNavigationAgent { ProfileId = profileId });
             simulation.RebuildFromAuthoredAgents(
                 world,
                 new[] { movingAgent, idleAgent },
@@ -63,9 +64,10 @@ namespace Ludots.Tests.Presentation
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
+            int profileId = MassNavigationProfileRegistry.Register("light");
 
-            Entity movingAgent = world.Create();
-            Entity idleAgent = world.Create();
+            Entity movingAgent = world.Create(new MassNavigationAgent { ProfileId = profileId });
+            Entity idleAgent = world.Create(new MassNavigationAgent { ProfileId = profileId });
             simulation.RebuildFromAuthoredAgents(
                 world,
                 new[] { movingAgent, idleAgent },

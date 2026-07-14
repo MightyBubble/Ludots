@@ -127,6 +127,12 @@ public sealed class MassNavigationSimulationRuntime
     private int _flowWorkAreaRevision;
     private string _flowWorkAreaReason = "initial contact";
     private string _solverWindowDriver = "initial nav area";
+    private readonly string _activeHotZoneId;
+    private readonly string _activeHotZoneLabel;
+    private readonly int _activeHotZoneCenterXCm;
+    private readonly int _activeHotZoneCenterYCm;
+    private readonly int _activeHotZoneWidthCm;
+    private readonly int _activeHotZoneHeightCm;
 
     private struct FocusState
     {
@@ -233,8 +239,12 @@ public sealed class MassNavigationSimulationRuntime
     public int WorldWidthCm => RequireBoardWorldSize().Bounds.Width;
     public int WorldHeightCm => RequireBoardWorldSize().Bounds.Height;
     public WorldAabbCm WorldBounds => RequireBoardWorldSize().Bounds;
-    public string ActiveHotZoneId => WorldConfig.ActiveHotZoneId;
-    public string ActiveHotZoneLabel => WorldConfig.ActiveHotZoneLabel;
+    public string ActiveHotZoneId => _activeHotZoneId;
+    public string ActiveHotZoneLabel => _activeHotZoneLabel;
+    public int ActiveHotZoneCenterXCm => _activeHotZoneCenterXCm;
+    public int ActiveHotZoneCenterYCm => _activeHotZoneCenterYCm;
+    public int ActiveHotZoneWidthCm => _activeHotZoneWidthCm;
+    public int ActiveHotZoneHeightCm => _activeHotZoneHeightCm;
     public ReadOnlySpan<MassNavigationHotZoneConfig> HotZones => WorldConfig.HotZones;
 
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
@@ -243,6 +253,13 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
+        MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
+        _activeHotZoneId = activeHotZone.Id;
+        _activeHotZoneLabel = activeHotZone.Label;
+        _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
+        _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
+        _activeHotZoneWidthCm = activeHotZone.WidthCm;
+        _activeHotZoneHeightCm = activeHotZone.HeightCm;
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
@@ -251,8 +268,8 @@ public sealed class MassNavigationSimulationRuntime
         _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);
         _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
-        _simWindowCenterXCm = WorldConfig.ActiveHotZone.CenterXCm;
-        _simWindowCenterYCm = WorldConfig.ActiveHotZone.CenterYCm;
+        _simWindowCenterXCm = _activeHotZoneCenterXCm;
+        _simWindowCenterYCm = _activeHotZoneCenterYCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
         _flowWorkAreaCenterYCm = _simWindowCenterYCm;
         _flowWorkAreaWidthCm = _simWindowWidthCm;
@@ -941,7 +958,20 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException($"MassNavigation entity {entity.Id} was already bound as an agent.");
         }
 
-        int profileId = world.TryGet(entity, out MassNavigationAgent agent) ? agent.ProfileId : 0;
+        if (!world.TryGet(entity, out MassNavigationAgent agent))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent entity {entity.Id} requires MassNavigationAgent before binding.");
+        }
+
+        if (agent.ProfileId <= MassNavigationProfileRegistry.InvalidId)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
+        }
+
+        AgentState.ValidateAgentRegistration(agentIndex, controllable);
+        int profileId = agent.ProfileId;
         world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
         world.Add(entity, new MassNavigationAgentProfile
         {
@@ -1162,14 +1192,14 @@ public sealed class MassNavigationSimulationRuntime
             bounds.Left,
             bounds.Right,
             _simWindowWidthCm,
-            WorldConfig.ActiveHotZoneId,
+            _activeHotZoneId,
             "x");
         EnsurePointInsideWindowCenterBounds(
             _simWindowCenterYCm,
             bounds.Top,
             bounds.Bottom,
             _simWindowHeightCm,
-            WorldConfig.ActiveHotZoneId,
+            _activeHotZoneId,
             "y");
     }
 

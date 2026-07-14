@@ -2907,14 +2907,13 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("MassNavigation UAT requires at least two configured hot zone debug landmarks.");
         }
 
-        MassNavigationHotZoneConfig active = simulation.WorldConfig.ActiveHotZone;
         MassNavigationHotZoneConfig best = hotZones[0];
         long bestDistanceSq = -1;
         for (int i = 0; i < hotZones.Length; i++)
         {
             MassNavigationHotZoneConfig zone = hotZones[i];
-            long dx = zone.CenterXCm - active.CenterXCm;
-            long dy = zone.CenterYCm - active.CenterYCm;
+            long dx = zone.CenterXCm - simulation.ActiveHotZoneCenterXCm;
+            long dy = zone.CenterYCm - simulation.ActiveHotZoneCenterYCm;
             long distanceSq = (dx * dx) + (dy * dy);
             if (distanceSq > bestDistanceSq)
             {

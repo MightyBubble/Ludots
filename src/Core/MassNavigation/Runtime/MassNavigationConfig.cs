@@ -900,8 +900,6 @@ public sealed class MassNavigationTeamPresentationConfig
 
 public sealed class MassNavigationWorldConfig
 {
-    private int _activeHotZoneIndex = -1;
-
     public int SolverWindowWidthCm { get; set; }
     public int SolverWindowHeightCm { get; set; }
     public int StreamingChunkSizeCm { get; set; }
@@ -912,48 +910,14 @@ public sealed class MassNavigationWorldConfig
     public string ActiveHotZoneId { get; set; } = string.Empty;
     public MassNavigationHotZoneConfig[] HotZones { get; set; } = Array.Empty<MassNavigationHotZoneConfig>();
 
-    [JsonIgnore]
-    public MassNavigationHotZoneConfig ActiveHotZone => _activeHotZoneIndex >= 0 && _activeHotZoneIndex < HotZones.Length
-        ? HotZones[_activeHotZoneIndex]
-        : throw new InvalidOperationException("MassNavigation world active hot zone was not validated.");
-
-    [JsonIgnore]
-    public float HotZoneMinXCm => ActiveHotZone.CenterXCm - (ActiveHotZone.WidthCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMinYCm => ActiveHotZone.CenterYCm - (ActiveHotZone.HeightCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMaxXCm => ActiveHotZone.CenterXCm + (ActiveHotZone.WidthCm * 0.5f);
-
-    [JsonIgnore]
-    public float HotZoneMaxYCm => ActiveHotZone.CenterYCm + (ActiveHotZone.HeightCm * 0.5f);
-
-    [JsonIgnore]
-    public int HotZoneWidthCm => ActiveHotZone.WidthCm;
-
-    [JsonIgnore]
-    public int HotZoneHeightCm => ActiveHotZone.HeightCm;
-
-    [JsonIgnore]
-    public int HotZoneCenterXCm => ActiveHotZone.CenterXCm;
-
-    [JsonIgnore]
-    public int HotZoneCenterYCm => ActiveHotZone.CenterYCm;
-
-    [JsonIgnore]
-    public string ActiveHotZoneLabel => ActiveHotZone.Label;
-
-    public void SetActiveHotZone(string hotZoneId)
+    public MassNavigationHotZoneConfig GetRequiredHotZone(string hotZoneId)
     {
-        int index = FindHotZoneIndex(hotZoneId);
-        if (index < 0)
+        if (!TryGetHotZone(hotZoneId, out MassNavigationHotZoneConfig hotZone))
         {
             throw new InvalidOperationException($"MassNavigation world hot zone '{hotZoneId}' is not configured.");
         }
 
-        _activeHotZoneIndex = index;
-        ActiveHotZoneId = HotZones[index].Id;
+        return hotZone;
     }
 
     public bool TryGetHotZone(string hotZoneId, out MassNavigationHotZoneConfig hotZone)
@@ -1030,7 +994,7 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires ActiveHotZoneId as the initial hotspot debug landmark.");
         }
 
-        SetActiveHotZone(ActiveHotZoneId);
+        GetRequiredHotZone(ActiveHotZoneId);
     }
 
     private int FindHotZoneIndex(string hotZoneId)

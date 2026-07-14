@@ -123,23 +123,7 @@ internal sealed class MassNavigationAgentState
 
     public void RegisterAgentAtIndex(Entity entity, int agentIndex, bool controllable)
     {
-        if (agentIndex < 0)
-        {
-            throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
-        }
-
-        if ((uint)agentIndex < (uint)_allAgents.Count &&
-            _allAgents[agentIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {agentIndex} is already registered.");
-        }
-
-        if (controllable &&
-            (uint)agentIndex < (uint)_controllableAgents.Count &&
-            _controllableAgents[agentIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {agentIndex} is already registered.");
-        }
+        ValidateAgentRegistration(agentIndex, controllable);
 
         TrackSpawnedEntity(entity);
         while (_allAgents.Count <= agentIndex)
@@ -162,6 +146,27 @@ internal sealed class MassNavigationAgentState
         _controllableAgents[agentIndex] = entity;
         _controllableIndexByEntityId[entity.Id] = agentIndex;
         _controllableAgentSlotCount++;
+    }
+
+    public void ValidateAgentRegistration(int agentIndex, bool controllable)
+    {
+        if (agentIndex < 0)
+        {
+            throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
+        }
+
+        if ((uint)agentIndex < (uint)_allAgents.Count &&
+            _allAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {agentIndex} is already registered.");
+        }
+
+        if (controllable &&
+            (uint)agentIndex < (uint)_controllableAgents.Count &&
+            _controllableAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {agentIndex} is already registered.");
+        }
     }
 
     private static void RemoveMassNavigationRuntimeBindings(World world, Entity entity)
