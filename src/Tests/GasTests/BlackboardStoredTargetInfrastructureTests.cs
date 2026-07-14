@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Orders;
 using NUnit.Framework;
 
@@ -96,6 +99,129 @@ namespace Ludots.Tests.GAS
             Assert.That(target.WorldPositionCm.X, Is.EqualTo(500f).Within(0.01f));
         }
 
+        [TestCase(nameof(BlackboardIntBuffer))]
+        [TestCase(nameof(BlackboardSpatialBuffer))]
+        [TestCase(nameof(BlackboardEntityBuffer))]
+        public void InstantCompleteOrderSystem_MissingStoredTargetBlackboard_HardFailsBeforeMutation(string missingComponent)
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(OrderBuffer.CreateEmpty());
+            if (missingComponent != nameof(BlackboardIntBuffer))
+            {
+                world.Add(host, new BlackboardIntBuffer());
+            }
+            if (missingComponent != nameof(BlackboardSpatialBuffer))
+            {
+                world.Add(host, new BlackboardSpatialBuffer());
+            }
+            if (missingComponent != nameof(BlackboardEntityBuffer))
+            {
+                world.Add(host, new BlackboardEntityBuffer());
+            }
+            world.Get<OrderBuffer>(host).SetActiveDirect(new Order
+            {
+                OrderId = 77,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(500f, 0f, 700f),
+                    },
+                },
+            }, priority: 40);
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.ORDER_BLACKBOARD.ERR.MissingState"));
+            ref OrderBuffer result = ref world.Get<OrderBuffer>(host);
+            Assert.That(result.HasActive, Is.True);
+            Assert.That(result.ActiveOrder.Order.OrderId, Is.EqualTo(77));
+            Assert.That(world.Has<BlackboardIntBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardIntBuffer)));
+            Assert.That(world.Has<BlackboardSpatialBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardSpatialBuffer)));
+            Assert.That(world.Has<BlackboardEntityBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardEntityBuffer)));
+        }
+
+        [Test]
+        public void EntityBuilder_OrderBuffer_InstallsStoredTargetBlackboards()
+        {
+            using World world = World.Create();
+            var template = new EntityTemplate
+            {
+                Id = "order_actor",
+                Components =
+                {
+                    ["OrderBuffer"] = JsonNode.Parse("{}")!,
+                },
+            };
+            var templates = new Dictionary<string, EntityTemplate>
+            {
+                [template.Id] = template,
+            };
+
+            Entity entity = new EntityBuilder(world, templates)
+                .UseTemplate(template.Id)
+                .Build();
+
+            Assert.That(world.Has<OrderBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardIntBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardSpatialBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardEntityBuffer>(entity), Is.True);
+        }
+
+        [Test]
+        public void TemplateBatchSpawner_OrderBuffer_InstallsStoredTargetBlackboardsInArchetype()
+        {
+            using World world = World.Create();
+            var template = new EntityTemplate
+            {
+                Id = "batch_order_actor",
+                Components =
+                {
+                    ["Name"] = JsonNode.Parse("{ \"Value\": \"BatchOrderActor\" }")!,
+                    ["WorldPositionCm"] = JsonNode.Parse("{ \"Value\": { \"X\": 0, \"Y\": 0 } }")!,
+                    ["FacingDirection"] = JsonNode.Parse("{ \"AngleRad\": 0 }")!,
+                    ["OrderBuffer"] = JsonNode.Parse("{}")!,
+                },
+            };
+            var spawner = new TemplateEntityBatchSpawner(
+                world,
+                new EntityTemplateKeyRegistry(),
+                scratchCapacity: 1);
+            var requests = new[]
+            {
+                new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(default, hasWorldPosition: false),
+            };
+
+            bool created = spawner.TryCreateBatch(
+                template.Id,
+                template,
+                requests,
+                TemplateBatchSpawnFeatures.None,
+                out ReadOnlySpan<Entity> entities);
+
+            Assert.That(created, Is.True);
+            Assert.That(entities.Length, Is.EqualTo(1));
+            Assert.That(world.Has<OrderBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardIntBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardSpatialBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardEntityBuffer>(entities[0]), Is.True);
+        }
+
         [Test]
         public void SubmitOrderFromBlackboardHandler_SubmitsMoveOrderForPointTarget()
         {
@@ -106,7 +232,12 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
+            Entity spawned = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer(),
+                new PlayerOwner { PlayerId = 1 });
             BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(900f, 0f, 1200f), in keys);
 
             var registry = new BuiltinHandlerRegistry();
@@ -199,7 +330,12 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
+            Entity spawned = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer(),
+                new PlayerOwner { PlayerId = 1 });
             Entity garrison = world.Create();
             BlackboardStoredTargetOps.SetEntity(world, source, garrison, in keys);
 

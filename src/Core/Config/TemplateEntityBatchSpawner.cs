@@ -243,6 +243,9 @@ namespace Ludots.Core.Config
                 Span<DirtyFlags> dirtyFlags = descriptor.HasDirtyFlags ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
+                Span<BlackboardIntBuffer> blackboardInts = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardIntBuffer>() : default;
+                Span<BlackboardSpatialBuffer> blackboardSpatial = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardSpatialBuffer>() : default;
+                Span<BlackboardEntityBuffer> blackboardEntities = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardEntityBuffer>() : default;
                 Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
                 Span<Ludots.Core.Gameplay.Components.EntityLayer> entityLayers = descriptor.HasEntityLayer ? chunk.GetSpan<Ludots.Core.Gameplay.Components.EntityLayer>() : default;
                 Span<Team> teams = descriptor.HasTeam ? chunk.GetSpan<Team>() : default;
@@ -304,6 +307,9 @@ namespace Ludots.Core.Config
                     if (descriptor.HasOrderBuffer)
                     {
                         orderBuffers[componentIndex] = OrderBuffer.CreateEmpty();
+                        blackboardInts[componentIndex] = default;
+                        blackboardSpatial[componentIndex] = default;
+                        blackboardEntities[componentIndex] = default;
                     }
 
                     if (descriptor.HasCommandSourceSelectableState)
@@ -764,6 +770,9 @@ namespace Ludots.Core.Config
                 if (hasOrderBuffer)
                 {
                     signature += Component<OrderBuffer>.Signature;
+                    signature += Component<BlackboardIntBuffer>.Signature;
+                    signature += Component<BlackboardSpatialBuffer>.Signature;
+                    signature += Component<BlackboardEntityBuffer>.Signature;
                 }
 
                 if (hasCommandSourceSelectableState)

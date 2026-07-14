@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Config
 {
@@ -101,6 +102,11 @@ namespace Ludots.Core.Config
             foreach (var kvp in _overrides)
             {
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
+            }
+
+            if (_world.Has<OrderBuffer>(entity))
+            {
+                OrderBlackboardStateInstaller.EnsureInstalled(_world, entity);
             }
 
             if (_world.Has<AbilityStateBuffer>(entity))

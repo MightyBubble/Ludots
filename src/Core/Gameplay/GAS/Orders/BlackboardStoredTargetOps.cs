@@ -138,23 +138,24 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return;
             }
 
+            OrderBlackboardStateInstaller.RequireInstalled(world, host);
             Clear(world, host, in keys);
 
             if (order.Target != Entity.Null && world.IsAlive(order.Target))
             {
-                SetEntity(world, host, order.Target, in keys);
+                SetEntityPrepared(world, host, order.Target, in keys);
                 return;
             }
 
             if (order.Args.Spatial.Kind == OrderSpatialKind.Hex)
             {
-                SetHex(world, host, order.Args.Spatial.A0, order.Args.Spatial.A1, in keys);
+                SetHexPrepared(world, host, order.Args.Spatial.A0, order.Args.Spatial.A1, in keys);
                 return;
             }
 
             if (order.Args.Spatial.Mode == OrderCollectionMode.Single)
             {
-                SetPoint(world, host, order.Args.Spatial.WorldCm, in keys);
+                SetPointPrepared(world, host, order.Args.Spatial.WorldCm, in keys);
             }
         }
 
@@ -164,7 +165,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             Vector3 worldPositionCm,
             in BlackboardStoredTargetKeys keys)
         {
-            EnsureBlackboardBuffers(world, host);
+            OrderBlackboardStateInstaller.RequireInstalled(world, host);
+            SetPointPrepared(world, host, worldPositionCm, in keys);
+        }
+
+        private static void SetPointPrepared(
+            World world,
+            Entity host,
+            Vector3 worldPositionCm,
+            in BlackboardStoredTargetKeys keys)
+        {
             ref var ints = ref world.Get<BlackboardIntBuffer>(host);
             ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
             ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
@@ -184,7 +194,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int hexR,
             in BlackboardStoredTargetKeys keys)
         {
-            EnsureBlackboardBuffers(world, host);
+            OrderBlackboardStateInstaller.RequireInstalled(world, host);
+            SetHexPrepared(world, host, hexQ, hexR, in keys);
+        }
+
+        private static void SetHexPrepared(
+            World world,
+            Entity host,
+            int hexQ,
+            int hexR,
+            in BlackboardStoredTargetKeys keys)
+        {
             ref var ints = ref world.Get<BlackboardIntBuffer>(host);
             ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
             ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
@@ -205,7 +225,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             Entity targetEntity,
             in BlackboardStoredTargetKeys keys)
         {
-            EnsureBlackboardBuffers(world, host);
+            OrderBlackboardStateInstaller.RequireInstalled(world, host);
+            SetEntityPrepared(world, host, targetEntity, in keys);
+        }
+
+        private static void SetEntityPrepared(
+            World world,
+            Entity host,
+            Entity targetEntity,
+            in BlackboardStoredTargetKeys keys)
+        {
             ref var ints = ref world.Get<BlackboardIntBuffer>(host);
             ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
             ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
@@ -233,22 +262,5 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private static void EnsureBlackboardBuffers(World world, Entity host)
-        {
-            if (!world.Has<BlackboardIntBuffer>(host))
-            {
-                world.Add(host, new BlackboardIntBuffer());
-            }
-
-            if (!world.Has<BlackboardSpatialBuffer>(host))
-            {
-                world.Add(host, new BlackboardSpatialBuffer());
-            }
-
-            if (!world.Has<BlackboardEntityBuffer>(host))
-            {
-                world.Add(host, new BlackboardEntityBuffer());
-            }
-        }
     }
 }
