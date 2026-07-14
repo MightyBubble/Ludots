@@ -156,7 +156,12 @@ namespace Ludots.Tests.GAS
                 "AttributeDerivedGraphBinding",
                 JsonNode.Parse("""{ "graphs": [ "tests.graph.derived-attribute" ] }""")!);
 
-            var system = new AttributeAggregatorSystem(world, programs, new RecordingGraphApi(world), new TagOps());
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                programs,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(derivedAttr), Is.EqualTo(12.5f));

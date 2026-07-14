@@ -3,9 +3,13 @@ using System.IO;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
@@ -223,6 +227,59 @@ namespace Ludots.Tests.GasTests
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);
             Assert.That(dirtyEntities.Capacity, Is.EqualTo(16_384));
+        }
+
+        [Test]
+        public void CoreBootstrap_DerivedAttributeGraph_RunsThroughEngineOwnedGraphApi()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(
+                    repoRoot,
+                    new[] { "LudotsCoreMod", "DerivedAttributeGraphAcceptanceMod" }),
+                Path.Combine(repoRoot, "assets"));
+
+            GasGraphRuntimeApi graphApi = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi);
+            GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry);
+            Assert.That(graphApi, Is.Not.Null);
+            Assert.That(programs, Is.Not.Null);
+
+            int sourceAttributeId = AttributeRegistry.Register("tests.production-derived-graph.source");
+            int doubledAttributeId = AttributeRegistry.Register("tests.production-derived-graph.doubled");
+            int offsetAttributeId = AttributeRegistry.Register("tests.production-derived-graph.offset");
+            Assert.That(sourceAttributeId, Is.LessThan(AttributeBuffer.MAX_ATTRS));
+            Assert.That(doubledAttributeId, Is.LessThan(AttributeBuffer.MAX_ATTRS));
+            Assert.That(offsetAttributeId, Is.LessThan(AttributeBuffer.MAX_ATTRS));
+            int graphId = GraphIdRegistry.GetId("Tests.DerivedAttributeGraph.EngineOwned");
+            Assert.That(graphId, Is.GreaterThan(0));
+            Assert.That(programs.TryGetProgram(graphId, out _), Is.True);
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(sourceAttributeId, 10f);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(graphId);
+            Entity entity = engine.World.Create(
+                attributes,
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+
+            var simulationLoop = engine.GetService(CoreServiceKeys.SimulationLoopController);
+            engine.Start();
+            simulationLoop.Step();
+            Assert.DoesNotThrow(() =>
+            {
+                for (int frame = 0; frame < 16 && engine.World.Has<AttributeAggregateDirty>(entity); frame++)
+                {
+                    engine.Tick(1f / 60f);
+                }
+            });
+
+            ref AttributeBuffer result = ref engine.World.Get<AttributeBuffer>(entity);
+            Assert.That(result.GetCurrent(doubledAttributeId), Is.EqualTo(20f));
+            Assert.That(result.GetCurrent(offsetAttributeId), Is.EqualTo(13f));
+            Assert.That(engine.World.Has<AttributeAggregateDirty>(entity), Is.False);
         }
 
         [Test]

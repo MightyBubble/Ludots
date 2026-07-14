@@ -1033,17 +1033,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // F[dst] = Caster.Attribute[Imm] — reads current aggregated value from self entity
-            var self = s.Caster;
-            if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
-            {
-                ref var buf = ref s.World.Get<AttributeBuffer>(self);
-                s.F[ins.Dst] = buf.GetCurrent(ins.Imm);
-            }
-            else
-            {
-                s.F[ins.Dst] = 0f;
-            }
+            s.F[ins.Dst] = s.Api.TryGetAttributeCurrent(s.Caster, ins.Imm, out float value)
+                ? value
+                : 0f;
         }
 
         private static void HandleWriteSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

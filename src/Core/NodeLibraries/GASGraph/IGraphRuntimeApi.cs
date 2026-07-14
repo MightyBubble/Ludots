@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
@@ -22,6 +23,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public static EffectArgs None => default;
+    }
+
+    public interface IDerivedAttributeGraphRuntimeApi : IGraphRuntimeApi
+    {
+        const string MissingContractError = "GAS.GRAPH.ERR.MissingDerivedAttributeWriteContract";
+        const string SideEffectForbiddenError = "GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden";
+
+        void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes);
+        void EndDerivedAttributeWrites(Entity entity, ref AttributeBuffer attributes, bool commit);
     }
 
     /// <summary>

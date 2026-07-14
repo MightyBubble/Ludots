@@ -61,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe void ExecuteDerivedGraphs(
-            World world, Entity entity,
+            World world, Entity entity, ref AttributeBuffer attributes,
             GraphProgramRegistry graphPrograms, IGraphRuntimeApi graphApi)
         {
             if (!world.Has<AttributeDerivedGraphBinding>(entity)) return;
@@ -79,29 +79,44 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 throw new InvalidOperationException(
                     "AttributeDerivedGraphBinding requires configured graph program registry and graph runtime API.");
             }
-
-            for (int g = 0; g < binding.Count; g++)
+            if (graphApi is not IDerivedAttributeGraphRuntimeApi derivedAttributeApi)
             {
-                int programId = binding.GraphProgramIds[g];
-                if (programId <= 0)
+                throw new InvalidOperationException(IDerivedAttributeGraphRuntimeApi.MissingContractError);
+            }
+
+            derivedAttributeApi.BeginDerivedAttributeWrites(entity, in attributes);
+            bool commit = false;
+            try
+            {
+                for (int g = 0; g < binding.Count; g++)
                 {
-                    throw new InvalidOperationException(
-                        $"AttributeDerivedGraphBinding contains invalid graph program id {programId}.");
+                    int programId = binding.GraphProgramIds[g];
+                    if (programId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"AttributeDerivedGraphBinding contains invalid graph program id {programId}.");
+                    }
+
+                    if (!graphPrograms.TryGetProgram(programId, out var program))
+                    {
+                        throw new InvalidOperationException(
+                            $"AttributeDerivedGraphBinding references missing graph program {programId}.");
+                    }
+
+                    NodeLibraries.GASGraph.GraphExecutor.Execute(
+                        world,
+                        caster: entity,
+                        explicitTarget: entity,
+                        targetPosCm: default,
+                        program,
+                        graphApi);
                 }
 
-                if (!graphPrograms.TryGetProgram(programId, out var program))
-                {
-                    throw new InvalidOperationException(
-                        $"AttributeDerivedGraphBinding references missing graph program {programId}.");
-                }
-
-                NodeLibraries.GASGraph.GraphExecutor.Execute(
-                    world,
-                    caster: entity,        // E[0] = Self
-                    explicitTarget: entity, // E[1] = Self (derived graphs operate on self)
-                    targetPosCm: default,
-                    program,
-                    graphApi);
+                commit = true;
+            }
+            finally
+            {
+                derivedAttributeApi.EndDerivedAttributeWrites(entity, ref attributes, commit);
             }
         }
 
@@ -163,7 +178,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 beforeDerived[i] = attrBuffer.CurrentValues[i];
             }
 
-            ExecuteDerivedGraphs(world, entity, graphPrograms, graphApi);
+            ExecuteDerivedGraphs(world, entity, ref attrBuffer, graphPrograms, graphApi);
 
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {

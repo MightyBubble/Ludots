@@ -1,9 +1,12 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -12,6 +15,429 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class AttributeDerivedGraphTests
     {
+        [Test]
+        public void DerivedGraph_SideEffectingAttributeAdd_HardFailsWithoutMutation()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.attribute");
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5f },
+                new() { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = attributeId },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(world.Get<DirtyFlags>(entity).IsAnyAttributeDirty(), Is.False);
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_EffectRequest_HardFailsBeforePublish()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.effect-source");
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var effectRequests = new EffectRequestQueue();
+            var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(effectRequests.Count, Is.Zero);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_RemoveEffect_HardFailsBeforeCancellation()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.remove-effect-source");
+            const int effectTemplateId = 123;
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.RemoveEffectTemplate, A = 2, Imm = effectTemplateId },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            Entity effect = world.Create(
+                new GameplayEffect(),
+                new EffectTemplateRef { TemplateId = effectTemplateId });
+            Assert.That(world.Get<ActiveEffectContainer>(entity).Add(effect), Is.True);
+            var tagOps = new TagOps();
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(world.Get<GameplayEffect>(effect).CancelRequested, Is.False);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_SendEvent_HardFailsBeforePublish()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.event-source");
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 7f },
+                new() { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 0, Imm = 123 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var eventBus = new GameplayEventBus();
+            var graphApi = new GasGraphRuntimeApi(world, eventBus: eventBus, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            eventBus.Update();
+            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(eventBus.Events.Count, Is.Zero);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_FanOutEffect_HardFailsBeforeDispatch()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.fan-out-source");
+            var program = new GraphInstruction[]
+            {
+                new()
+                {
+                    Op = (ushort)GraphNodeOp.FanOutDispatchEffect,
+                    Imm = 123,
+                    Dst = 1,
+                },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var effectRequests = new EffectRequestQueue();
+            var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(effectRequests.Count, Is.Zero);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [TestCase(GraphNodeOp.RelationshipEnsureLink)]
+        [TestCase(GraphNodeOp.RelationshipRemoveLink)]
+        [TestCase(GraphNodeOp.RelationshipSetMetric)]
+        [TestCase(GraphNodeOp.RelationshipAddMetric)]
+        [TestCase(GraphNodeOp.RelationshipSetFlag)]
+        public void DerivedGraph_RelationshipMutation_HardFailsWithoutChangingGraph(GraphNodeOp operation)
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.relationship-source");
+            Entity source = world.Create(CreateAttributes(attributeId, 10f));
+            Entity target = world.Create();
+            var typeRegistry = new RelationshipTypeRegistry();
+            var metricRegistry = new RelationshipMetricRegistry();
+            var flagRegistry = new RelationshipFlagRegistry();
+            int typeId = typeRegistry.Register("tests.derived-graph.relationship.type");
+            int metricId = metricRegistry.Register("tests.derived-graph.relationship.metric", -100, 100, 0);
+            int flagId = flagRegistry.Register("tests.derived-graph.relationship.flag");
+            var runtime = new RelationshipRuntime(
+                world,
+                typeRegistry,
+                metricRegistry,
+                flagRegistry,
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(),
+                new RelationshipReverseIndex(world));
+            var graphApi = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+
+            if (operation != GraphNodeOp.RelationshipEnsureLink)
+            {
+                runtime.EnsureLink(source, target, typeId);
+            }
+            if (operation is GraphNodeOp.RelationshipSetMetric or GraphNodeOp.RelationshipAddMetric)
+            {
+                runtime.SetMetric(source, target, typeId, metricId, 11, reasonId: 0);
+            }
+
+            AttributeBuffer staged = world.Get<AttributeBuffer>(source);
+            graphApi.BeginDerivedAttributeWrites(source, in staged);
+            try
+            {
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    switch (operation)
+                    {
+                        case GraphNodeOp.RelationshipEnsureLink:
+                            graphApi.EnsureRelationshipLink(source, target, typeId);
+                            break;
+                        case GraphNodeOp.RelationshipRemoveLink:
+                            graphApi.RemoveRelationshipLink(source, target, typeId);
+                            break;
+                        case GraphNodeOp.RelationshipSetMetric:
+                            graphApi.SetRelationshipMetric(source, target, metricId, 42, reasonId: 0, typeId);
+                            break;
+                        case GraphNodeOp.RelationshipAddMetric:
+                            graphApi.AddRelationshipMetric(source, target, metricId, 4, reasonId: 0, typeId);
+                            break;
+                        case GraphNodeOp.RelationshipSetFlag:
+                            graphApi.SetRelationshipFlag(source, target, flagId, enabled: true, reasonId: 0, typeId);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Unsupported relationship mutation test operation {operation}.");
+                    }
+                })!;
+
+                Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            }
+            finally
+            {
+                graphApi.EndDerivedAttributeWrites(source, ref staged, commit: false);
+            }
+
+            Assert.That(
+                runtime.HasLink(source, target, typeId),
+                Is.EqualTo(operation != GraphNodeOp.RelationshipEnsureLink));
+            Assert.That(runtime.GetMetric(source, target, typeId, metricId),
+                Is.EqualTo(operation is GraphNodeOp.RelationshipSetMetric or GraphNodeOp.RelationshipAddMetric ? 11 : 0));
+            Assert.That(runtime.HasFlag(source, target, typeId, flagId), Is.False);
+        }
+
+        [TestCase(GraphNodeOp.BeginLifecycleTransaction)]
+        [TestCase(GraphNodeOp.InvokeBuiltin)]
+        public void DerivedGraph_LifecycleMutation_HardFailsBeforeRuntimeDispatch(GraphNodeOp operation)
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.lifecycle-source");
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)operation, Imm = 1 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(attributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_WhenLaterSideEffectFails_DiscardsEarlierDerivedWrites()
+        {
+            using var world = World.Create();
+            int sourceAttributeId = AttributeRegistry.Register("tests.derived-graph.rollback.source");
+            int derivedAttributeId = AttributeRegistry.Register("tests.derived-graph.rollback.result");
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = sourceAttributeId },
+                new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 0, Imm = derivedAttributeId },
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(sourceAttributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            var effectRequests = new EffectRequestQueue();
+            var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(world.Get<AttributeBuffer>(entity).HasAttribute(derivedAttributeId), Is.False);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
+            Assert.That(effectRequests.Count, Is.Zero);
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraph_BlackboardWrite_HardFailsBeforeMutation()
+        {
+            using var world = World.Create();
+            int sourceAttributeId = AttributeRegistry.Register("tests.derived-graph.side-effect.blackboard-source");
+            const int blackboardKeyId = 1;
+            var program = new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 7f },
+                new() { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 2, B = 0, Imm = blackboardKeyId },
+            };
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, program);
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            Entity entity = world.Create(
+                CreateAttributes(sourceAttributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                new BlackboardFloatBuffer(),
+                binding);
+            var tagOps = new TagOps();
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(world.Get<BlackboardFloatBuffer>(entity).TryGet(blackboardKeyId, out _), Is.False);
+            Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
+            Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
+            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
+        }
+
+        [Test]
+        public void DerivedGraphs_InOneAggregation_ReadPriorStagedWritesAndCommitOnce()
+        {
+            using var world = World.Create();
+            int sourceAttributeId = AttributeRegistry.Register("tests.derived-graph.chained.source");
+            int intermediateAttributeId = AttributeRegistry.Register("tests.derived-graph.chained.intermediate");
+            int resultAttributeId = AttributeRegistry.Register("tests.derived-graph.chained.result");
+            var programs = new GraphProgramRegistry();
+            programs.Register(1, new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = sourceAttributeId },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2f },
+                new() { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
+                new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = intermediateAttributeId },
+            });
+            programs.Register(2, new GraphInstruction[]
+            {
+                new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = intermediateAttributeId },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 3f },
+                new() { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
+                new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = resultAttributeId },
+            });
+            var binding = new AttributeDerivedGraphBinding();
+            binding.Add(1);
+            binding.Add(2);
+            Entity entity = world.Create(
+                CreateAttributes(sourceAttributeId, 10f),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new DirtyFlags(),
+                binding);
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                programs,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
+
+            system.Update(0f);
+
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
+            Assert.That(attributes.GetCurrent(intermediateAttributeId), Is.EqualTo(20f));
+            Assert.That(attributes.GetCurrent(resultAttributeId), Is.EqualTo(23f));
+            ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+            Assert.That(dirty.IsAttributeDirty(intermediateAttributeId), Is.True);
+            Assert.That(dirty.IsAttributeDirty(resultAttributeId), Is.True);
+            Assert.That(tagOps.DirtyEntities.Count, Is.EqualTo(1));
+            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.True);
+            ref GameplayAttributeChangedBits presentation = ref world.Get<GameplayAttributeChangedBits>(entity);
+            Assert.That(presentation.IsSet(intermediateAttributeId), Is.True);
+            Assert.That(presentation.IsSet(resultAttributeId), Is.True);
+            Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.False);
+        }
+
         [Test]
         public void DerivedGraph_NonLinearFormula_ComputesCDMultiplier()
         {
@@ -58,8 +484,12 @@ namespace Ludots.Tests.GAS
             world.Add(entity, binding);
 
             // Act: run aggregator
-            var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                registry,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             // Assert
@@ -119,8 +549,12 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                registry,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -144,8 +578,12 @@ namespace Ludots.Tests.GAS
             buf.SetBase(1, 42f);
 
             var registry = new GraphProgramRegistry();
-            var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                registry,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
@@ -189,8 +627,12 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var mockApi = new MinimalGraphApi(world);
-            var system = new AttributeAggregatorSystem(world, registry, mockApi, new TagOps());
+            var tagOps = new TagOps();
+            using var system = new AttributeAggregatorSystem(
+                world,
+                registry,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             // Entity keeps its preinstalled DirtyFlags and records the derived change.
@@ -202,56 +644,13 @@ namespace Ludots.Tests.GAS
                 "Derived attribute should be marked dirty");
         }
 
-        /// <summary>
-        /// Minimal IGraphRuntimeApi for testing — only supports attribute reading.
-        /// </summary>
-        private class MinimalGraphApi : IGraphRuntimeApi
+        private static AttributeBuffer CreateAttributes(int attributeId, float value)
         {
-            private readonly World _world;
-            public MinimalGraphApi(World world) => _world = world;
-
-            public bool TryGetAttributeCurrent(Arch.Core.Entity entity, int attributeId, out float value)
-            {
-                if (_world.IsAlive(entity) && _world.Has<AttributeBuffer>(entity))
-                {
-                    ref var buf = ref _world.Get<AttributeBuffer>(entity);
-                    value = buf.GetCurrent(attributeId);
-                    return true;
-                }
-                value = 0f;
-                return false;
-            }
-
-            // Stubs for unused methods
-            public bool TryGetGridPos(Arch.Core.Entity entity, out Ludots.Core.Mathematics.IntVector2 gridPos) { gridPos = default; return false; }
-            public bool HasTag(Arch.Core.Entity entity, int tagId) => false;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryRadius(Ludots.Core.Mathematics.IntVector2 center, float radius, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryCone(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryRectangle(Ludots.Core.Mathematics.IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryLine(Ludots.Core.Mathematics.IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRange(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRing(Ludots.Core.Mathematics.IntVector2 center, int hexRadius, System.Span<Arch.Core.Entity> buffer) => default;
-            public Ludots.Core.Spatial.SpatialQueryResult QueryHexNeighbors(Ludots.Core.Mathematics.IntVector2 center, System.Span<Arch.Core.Entity> buffer) => default;
-            public int GetTeamId(Arch.Core.Entity entity) => 0;
-            public uint GetEntityLayerCategory(Arch.Core.Entity entity) => 0;
-        public int GetRelationship(int teamA, int teamB) => 0;
-        public void ApplyEffectTemplate(Arch.Core.Entity caster, Arch.Core.Entity target, int templateId) { }
-        public void ApplyEffectTemplate(Arch.Core.Entity caster, Arch.Core.Entity target, int templateId, in EffectArgs args) { }
-        public void RemoveEffectTemplate(Arch.Core.Entity target, int templateId) { }
-        public void ModifyAttributeAdd(Arch.Core.Entity caster, Arch.Core.Entity target, int attributeId, float delta) { }
-        public void ModifyAttributeSet(Arch.Core.Entity caster, Arch.Core.Entity target, int attributeId, float value)
-        {
-            _world.Get<AttributeBuffer>(target).SetCurrent(attributeId, value);
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(attributeId, value);
+            attributes.SetCurrent(attributeId, value);
+            return attributes;
         }
-        public void SendEvent(Arch.Core.Entity caster, Arch.Core.Entity target, int eventTagId, float magnitude) { }
-            public bool TryReadBlackboardFloat(Arch.Core.Entity entity, int keyId, out float value) { value = 0f; return false; }
-            public bool TryReadBlackboardInt(Arch.Core.Entity entity, int keyId, out int value) { value = 0; return false; }
-            public bool TryReadBlackboardEntity(Arch.Core.Entity entity, int keyId, out Arch.Core.Entity value) { value = default; return false; }
-            public void WriteBlackboardFloat(Arch.Core.Entity entity, int keyId, float value) { }
-            public void WriteBlackboardInt(Arch.Core.Entity entity, int keyId, int value) { }
-            public void WriteBlackboardEntity(Arch.Core.Entity entity, int keyId, Arch.Core.Entity value) { }
-            public bool TryLoadConfigFloat(int keyId, out float value) { value = 0f; return false; }
-            public bool TryLoadConfigInt(int keyId, out int value) { value = 0; return false; }
-        }
+
     }
 }
