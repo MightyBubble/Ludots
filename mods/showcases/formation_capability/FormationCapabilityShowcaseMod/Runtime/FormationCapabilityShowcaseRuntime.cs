@@ -1818,6 +1818,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         private readonly GameEngine _engine;
         private readonly FormationCapabilityShowcaseRuntime _owner;
         private readonly Entity[] _completedEntities;
+        private readonly int[] _moveBatchOrderIds;
         private readonly int[] _moveBatchPlayerIds;
         private readonly int[] _moveBatchSubmitSteps;
         private readonly OrderSubmitMode[] _moveBatchSubmitModes;
@@ -1843,6 +1844,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             }
 
             _completedEntities = new Entity[capacity];
+            _moveBatchOrderIds = new int[capacity];
             _moveBatchPlayerIds = new int[capacity];
             _moveBatchSubmitSteps = new int[capacity];
             _moveBatchSubmitModes = new OrderSubmitMode[capacity];
@@ -1969,7 +1971,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             float targetYCm = order.Args.Spatial.WorldCm.Z;
             for (int i = 0; i < _moveBatchCount; i++)
             {
-                if (_moveBatchPlayerIds[i] == order.PlayerId &&
+                if (_moveBatchOrderIds[i] == order.OrderId &&
+                    _moveBatchPlayerIds[i] == order.PlayerId &&
                     _moveBatchSubmitSteps[i] == order.SubmitStep &&
                     _moveBatchSubmitModes[i] == order.SubmitMode &&
                     _moveBatchTargetXCm[i] == targetXCm &&
@@ -1992,6 +1995,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             }
 
             int batchIndex = _moveBatchCount++;
+            _moveBatchOrderIds[batchIndex] = order.OrderId;
             _moveBatchPlayerIds[batchIndex] = order.PlayerId;
             _moveBatchSubmitSteps[batchIndex] = order.SubmitStep;
             _moveBatchSubmitModes[batchIndex] = order.SubmitMode;
@@ -2016,6 +2020,13 @@ internal sealed class FormationCapabilityShowcaseRuntime
                     }
 
                     ref readonly Order order = ref buffers[index].ActiveOrder.Order;
+                    if ((order.OrderTypeId == _moveOrderTypeId || order.OrderTypeId == _rotateOrderTypeId) &&
+                        order.OrderId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Formation order requires a positive OrderId before batch classification; got {order.OrderId}.");
+                    }
+
                     if (order.OrderTypeId == _moveOrderTypeId)
                     {
                         if (order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||

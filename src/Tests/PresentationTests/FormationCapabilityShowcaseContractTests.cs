@@ -59,6 +59,19 @@ namespace Ludots.Tests.Presentation
     {
         private const string MassNavigationAgentLayerName = "massNavigation.agent";
         private const int TestMassNavigationMoveOrderTypeId = 37;
+        private const string TeamAuthoredBatchTemplateJson = """
+[
+  {
+    "id": "team_authored_batch_agent",
+    "components": {
+      "Name": { "Value": "Team Authored Batch Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 7 }
+    }
+  }
+]
+""";
 
         [Test]
         public void FormationCapabilityConfig_AuthorsFormationAndSoldierMassNavAgents()
@@ -2002,16 +2015,7 @@ namespace Ludots.Tests.Presentation
             var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
             templates.Load("Entities/templates.json", temp.Catalog);
             using var world = World.Create();
-            var relationshipTypes = new RelationshipTypeRegistry();
-            int memberOfTypeId = relationshipTypes.Register("MemberOf");
-            var relationships = new RelationshipRuntime(
-                world,
-                relationshipTypes,
-                new RelationshipMetricRegistry(),
-                new RelationshipFlagRegistry(),
-                new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 8),
-                new RelationshipReverseIndex(world));
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
             Entity membershipTarget = world.Create(new TeamIdentity { TeamId = 7 });
             var requests = new RuntimeEntitySpawnQueue(capacity: 8);
             var system = new RuntimeEntitySpawnSystem(
@@ -2047,6 +2051,102 @@ namespace Ludots.Tests.Presentation
                 spawned++;
             });
             Assert.That(spawned, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RuntimeTemplateSpawn_BatchTemplateAuthoredTeamLinksMembershipForEveryEntity()
+        {
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(TeamAuthoredBatchTemplateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            Entity teamRepresentative = world.Create(new TeamIdentity { TeamId = 7 });
+            var teamLookup = new TeamEntityLookup();
+            teamLookup.Register(7, teamRepresentative);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                teamLookup: teamLookup,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "team_authored_batch_agent",
+                    MapId = new MapId("team_authored_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            int templateKeyId = templateKeys.GetId("team_authored_batch_agent");
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef, Team>();
+            world.Query(in query, (Entity entity, ref EntityTemplateKeyRef templateKey, ref Team team) =>
+            {
+                if (templateKey.TemplateKeyId != templateKeyId)
+                {
+                    return;
+                }
+
+                Assert.That(team.Id, Is.EqualTo(7));
+                Assert.That(relationships.HasLink(entity, teamRepresentative, memberOfTypeId), Is.True);
+                spawned++;
+            });
+
+            Assert.That(spawned, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RuntimeTemplateSpawn_BatchTemplateAuthoredTeamMissingRepresentativeFailsBeforeCreation()
+        {
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(TeamAuthoredBatchTemplateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                teamLookup: new TeamEntityLookup(),
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "team_authored_batch_agent",
+                    MapId = new MapId("team_authored_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("no live team relationship representative"));
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
+            Assert.That(spawned, Is.Zero, "Missing relationship prerequisites must fail before batch entities are created.");
         }
 
         [Test]
@@ -2221,6 +2321,13 @@ namespace Ludots.Tests.Presentation
             int moveOrderTypeId = orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Move);
             int rotateOrderTypeId = orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Rotate);
             ref OrderBuffer buffer = ref engine.World.Get<OrderBuffer>(formation);
+
+            OrderArgs validMoveArgs = OrderArgs.CreateSingleWorldCm(new Vector3(1000f, 0f, 2000f));
+            var missingOrderId = new Order { OrderId = 0, OrderTypeId = moveOrderTypeId, Actor = formation, Args = validMoveArgs };
+            buffer.SetActiveDirect(in missingOrderId, priority: 100);
+            InvalidOperationException missingOrderIdEx = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+            Assert.That(missingOrderIdEx.Message, Does.Contain("positive OrderId"));
+            buffer.ClearActive();
 
             string[] retiredMoveFields = { "I0", "I1", "F0", "I2", "F1" };
             for (int i = 0; i < retiredMoveFields.Length; i++)
@@ -2642,6 +2749,53 @@ namespace Ludots.Tests.Presentation
                 orderMinDistanceSq,
                 Is.GreaterThanOrEqualTo(initialMinDistanceSq * FormationCapabilityAcceptance.MultiFormationSpacingRetentionRatio),
                 "Multiple formation agents must translate their current relative shape to the move target instead of being repacked into a compact fallback layout.");
+        }
+
+        [Test]
+        public void FormationCapabilityMoveBatch_DifferentOrderIdsAtSameTargetRemainIndependent()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            var target = new Vector2(9_000f, 7_000f);
+
+            SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, orderId: 501, target);
+            SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, orderId: 502, target);
+            UpdateSystem(system);
+
+            for (int i = 0; i < formations.Length; i++)
+            {
+                FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[i]);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(command.TargetCenterXCm, Is.EqualTo(target.X).Within(0.001f));
+                    Assert.That(command.TargetCenterYCm, Is.EqualTo(target.Y).Within(0.001f));
+                });
+            }
+        }
+
+        [Test]
+        public void FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            Vector2 firstPosition = GetWorldPositionCm(engine, formations[0]);
+            Vector2 secondPosition = GetWorldPositionCm(engine, formations[1]);
+            Vector2 expectedOffset = firstPosition - secondPosition;
+            var target = new Vector2(9_000f, 7_000f);
+
+            SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, orderId: 601, target);
+            SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, orderId: 601, target);
+            UpdateSystem(system);
+
+            FormationCapabilityShowcaseCommandState first = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[0]);
+            FormationCapabilityShowcaseCommandState second = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[1]);
+            Assert.Multiple(() =>
+            {
+                Assert.That(first.TargetCenterXCm - second.TargetCenterXCm, Is.EqualTo(expectedOffset.X).Within(0.001f));
+                Assert.That(first.TargetCenterYCm - second.TargetCenterYCm, Is.EqualTo(expectedOffset.Y).Within(0.001f));
+            });
         }
 
         [Test]
@@ -3158,6 +3312,70 @@ namespace Ludots.Tests.Presentation
                 Path.Combine(modsRoot, "CoreInputMod"),
                 Path.Combine(modsRoot, "capabilities", "navigation", "MassNavigationMod"),
             };
+        }
+
+        private static RelationshipRuntime CreateRelationshipRuntime(World world, out int memberOfTypeId)
+        {
+            var relationshipTypes = new RelationshipTypeRegistry();
+            memberOfTypeId = relationshipTypes.Register("MemberOf");
+            return new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
+        }
+
+        private static (
+            Entity[] Formations,
+            FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem System,
+            int MoveOrderTypeId) PrepareFormationMoveBatchTest(GameEngine engine, int formationCount)
+        {
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation) &&
+                      CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must be ready before move-batch order verification.");
+
+            Entity[] formations = CaptureFormationAgents(engine, formationCount);
+            FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system = GetSystems(engine, SystemGroup.AbilityActivation)
+                .OfType<FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem>()
+                .Single();
+            OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("Formation Capability requires OrderTypeRegistry.");
+            return (formations, system, orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Move));
+        }
+
+        private static void SetActiveFormationMoveOrder(
+            GameEngine engine,
+            Entity formation,
+            int moveOrderTypeId,
+            int orderId,
+            Vector2 target)
+        {
+            var order = new Order
+            {
+                OrderId = orderId,
+                OrderTypeId = moveOrderTypeId,
+                PlayerId = 1,
+                Actor = formation,
+                SubmitStep = 42,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = OrderArgs.CreateSingleWorldCm(new Vector3(target.X, 0f, target.Y)),
+            };
+            engine.World.Get<OrderBuffer>(formation).SetActiveDirect(in order, priority: 100);
+        }
+
+        private static Vector2 GetWorldPositionCm(GameEngine engine, Entity entity)
+        {
+            Fix64Vec2 position = engine.World.Get<WorldPositionCm>(entity).Value;
+            return new Vector2(position.X.ToFloat(), position.Y.ToFloat());
         }
 
         private static List<string> FormationCapabilityDependencyPaths()

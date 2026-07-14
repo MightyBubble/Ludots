@@ -100,7 +100,13 @@ jobs:
             'FullyQualifiedName~FormationCapabilityExecution_SuspendedAnchorFailsExplicitlyWithoutMemberCommit',
             'FullyQualifiedName~MassNavigationOrderCommand_MemberChangeUsesExactComparisonForFormerHashCollision',
             'FullyQualifiedName~FormationCapabilityExecutionHotPath_AfterWarmupAllocatesZeroBytes',
-            'FullyQualifiedName~MassNavigationIssue671RuntimeTests'
+            'FullyQualifiedName~MassNavigationIssue671RuntimeTests',
+            'FullyQualifiedName~RuntimeTemplateSpawn_BatchTemplateAuthoredTeamLinksMembershipForEveryEntity',
+            'FullyQualifiedName~RuntimeTemplateSpawn_BatchTemplateAuthoredTeamMissingRepresentativeFailsBeforeCreation',
+            'FullyQualifiedName~RuntimeTemplateBatchSpawn_AppliesExplicitMembershipRelationshipsForEveryEntity',
+            'FullyQualifiedName~FormationCapabilityMoveBatch_DifferentOrderIdsAtSameTargetRemainIndependent',
+            'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
+            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal

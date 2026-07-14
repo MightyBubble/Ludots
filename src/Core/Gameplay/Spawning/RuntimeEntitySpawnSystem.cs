@@ -283,6 +283,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
             bool hasExplicitRelationshipWork = false;
+            bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
@@ -292,6 +293,11 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
                 hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
+            }
+
+            if (templateAuthorsTeam)
+            {
+                PreflightTemplateBatchImplicitMembership(templateId, in templateTeam, count);
             }
 
             TemplateBatchSpawnFeatures features =
@@ -330,6 +336,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             bool requiresPostSpawnLoop =
                 hasTeamWork ||
+                templateAuthorsTeam ||
                 hasPlayerOwnerWork ||
                 hasParentWork ||
                 hasExplicitRelationshipWork ||
@@ -701,6 +708,56 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 _relationships.EnsureLink(entity, teamRep, _memberOfTypeId);
             }
+        }
+
+        private void PreflightTemplateBatchImplicitMembership(
+            string templateId,
+            in Team templateTeam,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
+                if (request.HasMembershipTarget != 0)
+                {
+                    continue;
+                }
+
+                int teamId = ResolveTemplateBatchFinalTeamId(in request, templateTeam.Id);
+                if (teamId <= 0)
+                {
+                    continue;
+                }
+
+                if (_relationships == null || _teamLookup == null || _memberOfTypeId < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch '{templateId}' authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
+                }
+
+                if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !World.IsAlive(teamRepresentative))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch '{templateId}' authors Team {teamId}, but no live team relationship representative exists.");
+                }
+            }
+        }
+
+        private int ResolveTemplateBatchFinalTeamId(in RuntimeEntitySpawnRequest request, int templateTeamId)
+        {
+            if (request.TeamIdOverride > 0)
+            {
+                return request.TeamIdOverride;
+            }
+
+            if (request.CopySourceTeam != 0 &&
+                World.IsAlive(request.Source) &&
+                World.TryGet(request.Source, out Team sourceTeam))
+            {
+                return sourceTeam.Id;
+            }
+
+            return templateTeamId;
         }
 
         private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)

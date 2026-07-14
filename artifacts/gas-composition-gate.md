@@ -1,5 +1,62 @@
 ## GAS Composition Gate - Self Review
 
+- **Task / Issue**: PR #658 merge blocker — issue #681 batch spawn relationship linking, Formation OrderId grouping, and MassNavigation UAT wording.
+- **Date**: 2026-07-14
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本次只修正现有 `MaterializeTemplate` 批量路径的关系后置条件、现有 Formation Showcase 订单组合的逻辑命令边界和验收文本；没有新增 profile 字段、preset 开关、Core enum、graph op、loader 或平行 spawn/order 管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 模板批量物化与 Team 元数据解析 | Layer 0 existing op | `RuntimeEntitySpawnSystem` / `TemplateEntityBatchSpawner` |
+| `Team -> MemberOf` 关系后置条件 | Layer 0 existing op | `RelationshipRuntime` / `TeamEntityLookup` / registered `MemberOf` type |
+| Formation move 逻辑命令分组 | Layer 2 existing Mod composition | `FormationCapabilityOrderSystem` over formal `OrderBuffer` state |
+| 10K 验收链路说明 | Evidence only | `LauncherEvidenceRecorder` |
+
+### 3. Reuse list
+
+- Handlers: N/A；不新增或修改 GAS BuiltinHandler。
+- Queues / Systems: `RuntimeEntitySpawnQueue`、`RuntimeEntitySpawnSystem`、`TemplateEntityBatchSpawner`、`OrderQueue.TryEnqueueSharedBatch`、`OrderBufferSystem`、`FormationCapabilityOrderSystem`。
+- Resolvers / Registries: `RelationshipRuntime`、`TeamEntityLookup`、`RelationshipTypeRegistry`、既有 template descriptor cache。
+- Existing presets / graphs: N/A；不修改 lifecycle preset 或 graph。
+
+### 4. New Layer 0 ops (if any)
+
+N/A。只补齐现有 batch `MaterializeTemplate` 与单体路径已经拥有的 relationship-domain 契约。
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: 模板自带 Team 的批量生成必须在 `TryCreateBatch` 前预检 relationship runtime、`MemberOf` 类型和 live team representative；缺失时在任何实体创建前失败。成功创建后继续复用既有 per-entity relationship link 入口，不新建 transaction executor。
+
+### 6. Config SSOT
+
+行为配置落在: 既有 `Entities/templates.json` Team 组件、既有 Order/OrderId 合同和 Formation Showcase 订单数据。
+
+是否新增 JSON schema: NO — 不新增配置字段或行为开关。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: 既有 effect/订单组合和模板数据；不会修改 Core enum。
+
+---
+
+## GAS Composition Gate - Self Review
+
 - **Task / Issue**: Formation responsibility governance, issue #659.
 - **Date**: 2026-07-12
 - **Agent / Author**: Codex

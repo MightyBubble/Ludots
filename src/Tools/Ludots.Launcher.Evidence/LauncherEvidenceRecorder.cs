@@ -3401,7 +3401,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore and submit a `massNavigationMove` order through OrderBufferSystem.");
+        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
@@ -3517,7 +3517,7 @@ public static class LauncherEvidenceRecorder
             "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify performer owners and minimap markers]",
             "    C --> D[Seed collection.command.source]",
-            "    D --> E[Submit massNavigationMove through OrderBuffer]",
+            "    D --> E[OrderQueue shared batch then formal OrderBuffer activation]",
             "    E --> F[Jump core minimap camera to remote 64km coordinate]",
             "    F --> G[Jump back to original area]",
             "    G --> H{No respawn, reset, marker drop, or old minimap path?}",

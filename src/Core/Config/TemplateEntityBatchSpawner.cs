@@ -82,6 +82,20 @@ namespace Ludots.Core.Config
             return descriptor.OnSpawnEffectTemplateId;
         }
 
+        public bool TryGetAuthoredTeam(string templateId, EntityTemplate template, out Team team)
+        {
+            if (TryGetDescriptor(templateId, template, out TemplateSpawnDescriptor descriptor) &&
+                descriptor.IsCompatible &&
+                descriptor.HasTeam)
+            {
+                team = descriptor.Team;
+                return true;
+            }
+
+            team = default;
+            return false;
+        }
+
         public bool TryCreateBatch(
             string templateId,
             EntityTemplate template,
