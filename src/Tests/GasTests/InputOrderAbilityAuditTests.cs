@@ -235,6 +235,128 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderQueue_WhenAdmissionCapacityIsExhausted_DoesNotEnqueueAnUnobservableOrder()
+        {
+            var results = new OrderAdmissionResultBuffer(1);
+            var queue = new OrderQueue(64, results);
+            var first = new Order { OrderTypeId = 2 };
+            var second = new Order { OrderTypeId = 2 };
+
+            That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref second))!;
+
+            That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(queue.Count, Is.EqualTo(1));
+            That(second.OrderId, Is.GreaterThan(0));
+            That(results.Count, Is.EqualTo(1));
+            That(results[0].OrderId, Is.EqualTo(first.OrderId));
+            That(results.ReservedCount, Is.Zero);
+            That(results.OverflowCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void OrderBufferSystem_WhenEntityAdmissionCapacityIsExhausted_LeavesQueueAndActorStateUntouched()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(1);
+            results.BeginLogicStep();
+            var incoming = new OrderQueue(64, results);
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            var order = new Order
+            {
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            That(incoming.SubmitAssigned(ref order), Is.EqualTo(OrderSubmitResult.Queued));
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                incoming,
+                admissionResults: results);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => intake.Update(0f))!;
+
+            That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(incoming.Count, Is.EqualTo(1));
+            ref OrderBuffer actorOrders = ref world.Get<OrderBuffer>(actor);
+            That(actorOrders.HasActive, Is.False);
+            That(actorOrders.HasQueued, Is.False);
+            That(actorOrders.HasPending, Is.False);
+            That(results.Count, Is.EqualTo(1));
+            That(results[0].OrderId, Is.EqualTo(order.OrderId));
+            That(results[0].Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
+            That(results.ReservedCount, Is.Zero);
+            That(results.OverflowCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
+        {
+            var results = new OrderAdmissionResultBuffer(4);
+            var gameplayOrders = new OrderQueue(64, results);
+            var responseOrders = new OrderQueue(64, results);
+            var gameplayOrder = new Order { OrderTypeId = 2 };
+            var responseOrder = new Order { OrderTypeId = 3 };
+
+            That(gameplayOrders.SubmitAssigned(ref gameplayOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            That(responseOrders.SubmitAssigned(ref responseOrder), Is.EqualTo(OrderSubmitResult.Queued));
+
+            That(responseOrder.OrderId, Is.Not.EqualTo(gameplayOrder.OrderId));
+            That(results.TryGet(gameplayOrder.OrderId, OrderAdmissionStage.GlobalIntake, out var gameplayOutcome), Is.True);
+            That(gameplayOutcome.OrderTypeId, Is.EqualTo(gameplayOrder.OrderTypeId));
+            That(results.TryGet(responseOrder.OrderId, OrderAdmissionStage.GlobalIntake, out var responseOutcome), Is.True);
+            That(responseOutcome.OrderTypeId, Is.EqualTo(responseOrder.OrderTypeId));
+        }
+
+        [Test]
+        public void OrderBufferSystem_DirectSubmitReservesAdmissionBeforeChangingActorState()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(1);
+            results.BeginLogicStep();
+            var occupied = new OrderAdmissionOutcome(
+                orderId: 1,
+                orderTypeId: 2,
+                OrderAdmissionStage.EntityIntake,
+                OrderSubmitResult.Activated);
+            That(results.TryWrite(in occupied), Is.True);
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults: results);
+            var order = new Order
+            {
+                OrderId = 2,
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                intake.SubmitOrder(actor, in order))!;
+
+            That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            ref OrderBuffer actorOrders = ref world.Get<OrderBuffer>(actor);
+            That(actorOrders.HasActive, Is.False);
+            That(actorOrders.HasQueued, Is.False);
+            That(actorOrders.HasPending, Is.False);
+            That(results.ReservedCount, Is.Zero);
+            That(results.OverflowCount, Is.EqualTo(1));
+        }
+
+        [Test]
         public void OrderAdmissionResults_PresentationGlobalAndNextStepEntityRemainReadable()
         {
             using var world = World.Create();

@@ -60,23 +60,40 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public OrderSubmitResult SubmitAssigned(ref Order order)
         {
             EnsureOrderId(ref order);
-            if (!IsValidOrderTypeId(order.OrderTypeId))
+            OrderAdmissionReservation reservation = _admissionResults == null
+                ? default
+                : _admissionResults.Reserve(OrderAdmissionStage.GlobalIntake, order.OrderId);
+            bool committed = false;
+            try
             {
-                WriteAdmission(in order, OrderSubmitResult.RejectedInvalidOrderType);
-                return OrderSubmitResult.RejectedInvalidOrderType;
-            }
+                OrderSubmitResult result;
+                if (!IsValidOrderTypeId(order.OrderTypeId))
+                {
+                    result = OrderSubmitResult.RejectedInvalidOrderType;
+                }
+                else if (_count >= _items.Length)
+                {
+                    result = OrderSubmitResult.RejectedQueueFull;
+                }
+                else
+                {
+                    _items[_tail] = order;
+                    _tail = (_tail + 1) % _items.Length;
+                    _count++;
+                    result = OrderSubmitResult.Queued;
+                }
 
-            if (_count >= _items.Length)
+                CommitAdmission(in reservation, in order, result);
+                committed = true;
+                return result;
+            }
+            finally
             {
-                WriteAdmission(in order, OrderSubmitResult.RejectedQueueFull);
-                return OrderSubmitResult.RejectedQueueFull;
+                if (!committed && reservation.IsValid)
+                {
+                    _admissionResults!.Cancel(in reservation);
+                }
             }
-
-            _items[_tail] = order;
-            _tail = (_tail + 1) % _items.Length;
-            _count++;
-            WriteAdmission(in order, OrderSubmitResult.Queued);
-            return OrderSubmitResult.Queued;
         }
 
         private static bool IsAccepted(OrderSubmitResult result) =>
@@ -86,6 +103,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public void EnsureOrderId(ref Order order)
         {
+            if (_admissionResults != null)
+            {
+                _admissionResults.EnsureOrderId(ref order);
+                return;
+            }
+
             if (order.OrderId == 0)
             {
                 order.OrderId = _nextOrderId++;
@@ -97,11 +120,26 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return orderTypeId > 0 && orderTypeId < OrderTypeRegistry.MaxOrderTypes;
         }
 
-        private void WriteAdmission(in Order order, OrderSubmitResult result)
+        private void CommitAdmission(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result)
         {
             if (_admissionResults == null) return;
             var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.GlobalIntake, result);
-            _admissionResults.TryWrite(in outcome);
+            _admissionResults.Commit(in reservation, in outcome);
+        }
+
+        public bool TryPeek(out Order order)
+        {
+            if (_count == 0)
+            {
+                order = default;
+                return false;
+            }
+
+            order = _items[_head];
+            return true;
         }
 
         public bool TryDequeue(out Order order)

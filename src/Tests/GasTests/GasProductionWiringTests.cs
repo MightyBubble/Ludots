@@ -204,7 +204,11 @@ namespace Ludots.Tests.GasTests
             Assert.That(engine.GetService(CoreServiceKeys.GraphProgramRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GraphOutputValueStore), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GasDiagnosticEventBuffer), Is.Not.Null);
-            Assert.That(engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer), Is.Not.Null);
+            OrderAdmissionResultBuffer admissionResults = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
+            Assert.That(admissionResults, Is.Not.Null);
+            Assert.That(
+                admissionResults.Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity));
             Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);

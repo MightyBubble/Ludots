@@ -934,7 +934,8 @@ namespace Ludots.Core.Engine
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
-            var orderAdmissionResults = new OrderAdmissionResultBuffer();
+            var orderAdmissionResults = new OrderAdmissionResultBuffer(
+                gasRuntimeCapacity.OrderAdmissionResultCapacity);
             var orderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
             var chainOrderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
             var orderRequestQueue = new OrderRequestQueue();
