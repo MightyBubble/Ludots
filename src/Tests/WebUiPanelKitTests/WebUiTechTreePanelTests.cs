@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -68,7 +69,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -147,7 +148,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -210,7 +211,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -256,7 +257,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create();
 		Entity actor = world.Create();
@@ -298,7 +299,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = new ProgressionDefinitionRegistry();
 		RegisterSampleProgressionDefinition(progressions, WebUiTechTreeSampleCatalog.RootProgressionId);
 		// Branch progression id is registered, but its definition is intentionally omitted.
@@ -343,7 +344,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -405,7 +406,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -693,7 +694,7 @@ public sealed class WebUiTechTreePanelTests
 		var requirements = new ProgressionRequirementRegistry();
 		requirements.Register(rootReqId, CreateAlwaysTrueRequirement(rootReqId));
 		requirements.Register(branchReqId, CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps());
 		var progressions = CreateSampleProgressionDefinitions();
 
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());

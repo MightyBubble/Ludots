@@ -92,7 +92,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static void RequireTagState(World world, Entity entity)
+        public static void RequireTagState(World world, Entity entity)
         {
             if (!world.IsAlive(entity)) throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
             if (!world.Has<GameplayTagContainer>(entity)) throw new InvalidOperationException(MissingGameplayTagContainerError);

@@ -985,7 +985,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             GasClockId clockId = spec.GetClockId(idx);
             if ((byte)clockId == 0) clockId = inst.ActiveClockId;
 
-            EnsureTagComponents(actor);
+            TagOps.RequireTagState(World, actor);
+            if (durationTicks > 0 && !World.Has<TimedTagBuffer>(actor))
+            {
+                throw new InvalidOperationException("GAS.ABILITY_EXEC.ERR.MissingTimedTagBuffer");
+            }
             _tagOps.AddTag(World, actor, tagId);
 
             if (durationTicks > 0)
@@ -1007,14 +1011,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (isRemove)
             {
-                if (World.Has<GameplayTagContainer>(actor) && World.Has<TagCountContainer>(actor))
-                {
-                    _tagOps.RemoveTag(World, actor, tagId);
-                }
+                _tagOps.RemoveTag(World, actor, tagId);
             }
             else
             {
-                EnsureTagComponents(actor);
                 _tagOps.AddTag(World, actor, tagId);
             }
         }
@@ -1209,7 +1209,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void ActivateToggle(Entity actor, in AbilityToggleSpec toggleSpec)
         {
             if (!World.IsAlive(actor)) return;
-            EnsureTagComponents(actor);
+            TagOps.RequireTagState(World, actor);
 
             ref var tags = ref World.Get<GameplayTagContainer>(actor);
             if (tags.HasTag(toggleSpec.ToggleTagId)) return;
@@ -1243,7 +1243,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void DeactivateToggle(Entity actor,
             in AbilityToggleSpec toggleSpec, int slotIndex, int abilityId, Entity targetEntity)
         {
-            EnsureTagComponents(actor);
             _tagOps.RemoveTag(World, actor, toggleSpec.ToggleTagId);
             
             // Remove active effects by tag (the effects are tagged with the toggle tag,
@@ -1298,12 +1297,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         // Helpers
-
-        private void EnsureTagComponents(Entity actor)
-        {
-            TagStateInstaller.EnsureInstalled(World, actor);
-            if (!World.Has<TimedTagBuffer>(actor)) World.Add(actor, new TimedTagBuffer());
-        }
 
         private int ClockNow(GasClockId clockId, Entity actor)
         {

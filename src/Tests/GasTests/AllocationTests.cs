@@ -56,14 +56,15 @@ namespace Ludots.Tests.GAS
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps();
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
                     requests,
                     budget: null,
                     templates: templates,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps());
+                    tagOps: tagOps);
 
                 var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
 

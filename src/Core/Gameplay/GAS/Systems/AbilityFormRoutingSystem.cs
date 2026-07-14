@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             : base(world)
         {
             _formSets = formSets;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
         }
 
         public override void Update(in float dt)

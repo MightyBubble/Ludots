@@ -1127,7 +1127,13 @@ namespace Ludots.Tests.GAS
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(world, effectRequests, defs, graphPrograms: graphPrograms, graphApi: graphApi);
+            var system = new AbilitySystem(
+                world,
+                effectRequests,
+                defs,
+                tagOps: new TagOps(),
+                graphPrograms: graphPrograms,
+                graphApi: graphApi);
 
             bool activated = system.TryActivateAbility(actor, 0);
 
@@ -1166,7 +1172,12 @@ namespace Ludots.Tests.GAS
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(world, effectRequests, graphPrograms: graphPrograms, graphApi: graphApi);
+            var system = new AbilitySystem(
+                world,
+                effectRequests,
+                tagOps: new TagOps(),
+                graphPrograms: graphPrograms,
+                graphApi: graphApi);
 
             bool activated = system.TryActivateAbility(actor, 0);
 

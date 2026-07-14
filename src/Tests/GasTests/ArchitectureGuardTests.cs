@@ -86,6 +86,47 @@ namespace GasTests
         }
 
         [Test]
+        public void GasProductionCode_MustNotFallbackToPrivateTagOpsOrInstallTagStateInAbilityExec()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods")
+            };
+            var hits = new List<string>();
+
+            foreach (string root in roots)
+            {
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    string source = File.ReadAllText(file);
+                    if (source.Contains("?? new TagOps()", StringComparison.Ordinal) ||
+                        source.Contains("??= new TagOps()", StringComparison.Ordinal))
+                    {
+                        hits.Add(ToRepoRelativePath(repoRoot, file));
+                    }
+                }
+            }
+
+            string abilityExec = Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "Systems",
+                "AbilityExecSystem.cs");
+            if (File.ReadAllText(abilityExec).Contains("TagStateInstaller.EnsureInstalled", StringComparison.Ordinal))
+            {
+                hits.Add(ToRepoRelativePath(repoRoot, abilityExec));
+            }
+
+            Assert.That(hits, Is.Empty,
+                "Production tag consumers must use the injected world TagOps, and AbilityExec must not change archetypes while executing a timeline.");
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();

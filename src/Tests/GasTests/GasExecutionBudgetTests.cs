@@ -118,6 +118,48 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityExec_TagSignalWithoutInstalledTagState_FailsBeforeStructuralChange()
+        {
+            using var world = World.Create();
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.TagSignal, tick: 0, tagId: 17);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(1, new AbilityDefinition { ExecSpec = spec });
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(1);
+            Entity actor = world.Create(
+                abilities,
+                new AbilityExecInstance
+                {
+                    AbilitySlot = 0,
+                    AbilityId = 1,
+                    State = AbilityExecRunState.Running,
+                    ActiveClockId = GasClockId.Step,
+                });
+
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                snapshotCapacity: 4,
+                abilityDefinitions: definitions,
+                tagOps: new TagOps());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                system.UpdateSlice(0f, int.MaxValue))!;
+
+            Assert.That(ex.Message, Is.EqualTo(TagOps.MissingGameplayTagContainerError));
+            Assert.That(world.Has<GameplayTagContainer>(actor), Is.False);
+            Assert.That(world.Has<TagCountContainer>(actor), Is.False);
+            Assert.That(world.Has<DirtyFlags>(actor), Is.False);
+            Assert.That(world.Has<TimedTagBuffer>(actor), Is.False);
+        }
+
+        [Test]
         public void EffectLifetime_ResumesExpiredEffectsAcrossWorkSlices()
         {
             using var world = World.Create();

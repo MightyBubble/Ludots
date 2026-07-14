@@ -140,7 +140,8 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinA).SetCurrent(attrHealth, 100f);
                 world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps();
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -154,7 +155,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps())
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = 2048
                 };
@@ -314,7 +315,8 @@ namespace Ludots.Tests.GAS
                 abilityDefs.RegisterFromEntity(world, abilityVolley, 7001);
                 abilities.AddAbility(7001);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps();
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -328,7 +330,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps())
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

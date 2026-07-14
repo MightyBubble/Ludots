@@ -12,21 +12,21 @@ public sealed class EntityDestroyedEventTests
     {
         using var world = World.Create();
         Entity entity = world.Create();
-        FieldInfo handlersField = typeof(World).GetField(
-            "_entityDestroyedHandlers",
+        FieldInfo writeLockField = typeof(World).GetField(
+            "_entityDestroyedHandlersWriteLock",
             BindingFlags.Instance | BindingFlags.NonPublic)!;
-        object handlerStorage = handlersField.GetValue(world)!;
+        object writeLock = writeLockField.GetValue(world)!;
 
-        Monitor.Enter(handlerStorage);
+        Monitor.Enter(writeLock);
         try
         {
             Task destroy = Task.Run(() => world.Destroy(entity));
             Assert.That(destroy.Wait(TimeSpan.FromSeconds(1)), Is.True,
-                "Destroy without subscribers must not wait on handler storage.");
+                "Destroy without subscribers must not wait on the subscriber write lock.");
         }
         finally
         {
-            Monitor.Exit(handlerStorage);
+            Monitor.Exit(writeLock);
         }
     }
 

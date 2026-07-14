@@ -58,7 +58,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var abilitySystem = new AbilitySystem(_world, effectRequests);
+            var abilitySystem = new AbilitySystem(_world, effectRequests, tagOps: _tagOps);
             var proposalSystem = new EffectProposalProcessingSystem(
                 _world,
                 effectRequests,
