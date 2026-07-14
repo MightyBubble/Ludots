@@ -3,7 +3,6 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
@@ -84,13 +83,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 WorldCmInt2 cm = world.Get<WorldPositionCm>(entity).ToWorldCmInt2();
                 worldCm = new Vector3(cm.X, 0f, cm.Y);
-                return true;
-            }
-
-            if (world.Has<VisualTransform>(entity))
-            {
-                Vector3 visual = world.Get<VisualTransform>(entity).Position;
-                worldCm = new Vector3(visual.X * 100f, 0f, visual.Z * 100f);
                 return true;
             }
 

@@ -20,6 +20,21 @@ namespace Ludots.Tests.GAS
         private const int TestAbilityId = 900;
 
         [Test]
+        public void OrderWorldSpatialResolver_VisualOnlyEntity_IsNotGameplayPositionTruth()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create(new Ludots.Core.Presentation.Components.VisualTransform
+            {
+                Position = new Vector3(12f, 0f, 34f),
+            });
+
+            bool resolved = OrderWorldSpatialResolver.TryGetEntityWorldCm(world, entity, out Vector3 worldCm);
+
+            Assert.That(resolved, Is.False);
+            Assert.That(worldCm, Is.EqualTo(Vector3.Zero));
+        }
+
+        [Test]
         public void CompositeOrderPlanner_ImmediateOutOfRangeCast_EnqueuesMoveAndContinuation()
         {
             using var world = World.Create();
