@@ -335,6 +335,253 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectApplicationSystem_WhenPersistentAttachFails_DoesNotRunOnApplyOrPublishActivation()
+        {
+            using var world = World.Create();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
+            templates.Register(2003, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+                Modifiers = modifiers,
+            });
+
+            var phaseExecutor = CreateBuffOnApplyModifierExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var tagOps = new TagOps();
+            var application = new EffectApplicationSystem(
+                world,
+                effectRequests: null,
+                budget: new GasBudget(),
+                presentationEvents,
+                templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps);
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            TagStateInstaller.EnsureInstalled(world, target);
+            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            ref ActiveEffectContainer container = ref world.Get<ActiveEffectContainer>(target);
+            for (int i = 0; i < ActiveEffectContainer.CAPACITY; i++)
+            {
+                Assert.That(container.Add(world.Create()), Is.True);
+            }
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 60,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Get<EffectModifiers>(effect) = modifiers;
+            world.Add(effect, new EffectTemplateRef { TemplateId = 2003 });
+
+            application.Update(0.016f);
+
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(100f));
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(ActiveEffectContainer.CAPACITY));
+            Assert.That(presentationEvents.Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectProposalProcessingSystem_WhenStackTagCommitFails_RestoresStackAndDuration()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                presentationEvents: presentationEvents,
+                tagOps: null);
+
+            var grantedTags = default(EffectGrantedTags);
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 10,
+                Formula = TagContributionFormula.Linear,
+                Amount = 1,
+            });
+            templates.Register(2004, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+                HasStackPolicy = true,
+                StackPolicy = StackPolicy.RefreshDuration,
+                StackOverflowPolicy = StackOverflowPolicy.RejectNew,
+                StackLimit = 5,
+                GrantedTags = grantedTags,
+            });
+
+            Entity source = world.Create();
+            Entity target = world.Create(new ActiveEffectContainer());
+            TagStateInstaller.EnsureInstalled(world, target);
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(target);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(target);
+            tags.AddTag(10);
+            counts.AddCount(10);
+
+            Entity existing = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 25,
+                lifetimeKind: EffectLifetimeKind.After);
+            ref GameplayEffect existingEffect = ref world.Get<GameplayEffect>(existing);
+            existingEffect.State = EffectState.Committed;
+            existingEffect.RemainingTicks = 25;
+            existingEffect.ExpiresAtTick = 99;
+            world.Add(existing, new EffectTemplateRef { TemplateId = 2004 });
+            world.Add(existing, new EffectStack
+            {
+                Count = 1,
+                Limit = 5,
+                Policy = StackPolicy.RefreshDuration,
+                OverflowPolicy = StackOverflowPolicy.RejectNew,
+            });
+            world.Add(existing, grantedTags);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Add(existing), Is.True);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 2,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 2004,
+            });
+
+            var error = Assert.Throws<InvalidOperationException>(() => proposal.Update(0f));
+
+            Assert.That(error!.Message, Is.EqualTo(TagOps.MissingTagOpsError));
+            Assert.That(world.Get<EffectStack>(existing).Count, Is.EqualTo(1));
+            Assert.That(world.Get<GameplayEffect>(existing).RemainingTicks, Is.EqualTo(25));
+            Assert.That(world.Get<GameplayEffect>(existing).ExpiresAtTick, Is.EqualTo(99));
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(10), Is.True);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(10), Is.EqualTo(1));
+            Assert.That(world.Get<DirtyFlags>(target).IsTagDirty(10), Is.False);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+            Assert.That(presentationEvents.Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectApplicationSystem_WhenTargetDiesBeforeDeferredAttach_DestroysEffectWithoutActivation()
+        {
+            using var world = World.Create();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2005, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+            });
+            var application = new EffectApplicationSystem(
+                world,
+                presentationEvents: presentationEvents,
+                templates: templates)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 60,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Add(effect, new EffectTemplateRef { TemplateId = 2005 });
+
+            Assert.That(application.UpdateSlice(0f, timeBudgetMs: 0), Is.False);
+            world.Destroy(target);
+            while (!application.UpdateSlice(0f, timeBudgetMs: 0)) { }
+
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(presentationEvents.Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectApplicationSystem_WhenTagCommitFails_RollsBackAttachmentBeforeRunningPhases()
+        {
+            using var world = World.Create();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
+            templates.Register(2006, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+                Modifiers = modifiers,
+            });
+
+            var phaseExecutor = CreateBuffOnApplyModifierExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var application = new EffectApplicationSystem(
+                world,
+                presentationEvents: presentationEvents,
+                templates: templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: null);
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer());
+            TagStateInstaller.EnsureInstalled(world, target);
+            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            var grantedTags = default(EffectGrantedTags);
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 20,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 1,
+            });
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 60,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Get<EffectModifiers>(effect) = modifiers;
+            world.Add(effect, new EffectTemplateRef { TemplateId = 2006 });
+            world.Add(effect, grantedTags);
+
+            var error = Assert.Throws<InvalidOperationException>(() => application.Update(0f));
+
+            Assert.That(error!.Message, Is.EqualTo(TagOps.MissingTagOpsError));
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Has<ActiveEffectContainer>(target), Is.False);
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(100f));
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(20), Is.False);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(20), Is.Zero);
+            Assert.That(world.Get<DirtyFlags>(target).IsTagDirty(20), Is.False);
+            Assert.That(presentationEvents.Count, Is.Zero);
+        }
+
+        [Test]
         public void EffectApplicationSystem_DoT_UsesActiveEffectContainerForStackMerge_ButDoesNotAggregateModifiers()
         {
             using var world = World.Create();
@@ -504,6 +751,29 @@ namespace Ludots.Tests.GAS
             dispatch.Update(0.016f);
 
             That(budget.GameplayEventBusDropped, Is.EqualTo(7));
+        }
+
+        private static EffectPhaseExecutor CreateBuffOnApplyModifierExecutor(EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Buff,
+                Components = ComponentFlags.ModifierParams | ComponentFlags.DurationParams,
+                ActivePhases = PhaseFlags.OnApply,
+                AllowedLifetimes = LifetimeFlags.Duration,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            return new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
         }
     }
 }

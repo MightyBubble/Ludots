@@ -1183,30 +1183,50 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Entity existing = FindExistingEffectByTemplate(in container, proposal.TemplateId);
                 if (existing != Entity.Null && World.IsAlive(existing) && World.Has<EffectStack>(existing))
                 {
-                    ref var stack = ref World.Get<EffectStack>(existing);
-                    int oldCount = stack.Count;
-                    if (stack.TryAddStack())
+                    EffectStack stackBefore = World.Get<EffectStack>(existing);
+                    EffectStack stackAfter = stackBefore;
+                    if (stackAfter.TryAddStack())
                     {
                         // Apply duration policy
-                        ref var effect = ref World.Get<GameplayEffect>(existing);
+                        GameplayEffect effectBefore = World.Get<GameplayEffect>(existing);
+                        GameplayEffect effectAfter = effectBefore;
                         switch (tpl.StackPolicy)
                         {
                             case StackPolicy.RefreshDuration:
-                                effect.RemainingTicks = tpl.DurationTicks;
-                                effect.ExpiresAtTick = 0; // Will be recomputed next tick
+                                effectAfter.RemainingTicks = tpl.DurationTicks;
+                                effectAfter.ExpiresAtTick = 0; // Will be recomputed next tick
                                 break;
                             case StackPolicy.AddDuration:
-                                effect.RemainingTicks += tpl.DurationTicks;
-                                effect.ExpiresAtTick = 0;
+                                effectAfter.RemainingTicks += tpl.DurationTicks;
+                                effectAfter.ExpiresAtTick = 0;
                                 break;
                             // KeepDuration: do nothing
                         }
 
-                        // Update tag contributions (delta from oldCount 鈫?newCount)
-                        if (World.Has<EffectGrantedTags>(existing))
+                        World.Get<EffectStack>(existing) = stackAfter;
+                        World.Get<GameplayEffect>(existing) = effectAfter;
+
+                        // Update tag contributions for the committed stack delta.
+                        try
                         {
-                            ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(existing);
-                            EffectTagContributionHelper.UpdateOnEntity(World, proposal.Target, in grantedTags, oldCount, stack.Count, _tagOps, _budget);
+                            if (World.Has<EffectGrantedTags>(existing))
+                            {
+                                EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(existing);
+                                EffectTagContributionHelper.UpdateOnEntity(
+                                    World,
+                                    proposal.Target,
+                                    in grantedTags,
+                                    stackBefore.Count,
+                                    stackAfter.Count,
+                                    _tagOps,
+                                    _budget);
+                            }
+                        }
+                        catch
+                        {
+                            World.Get<EffectStack>(existing) = stackBefore;
+                            World.Get<GameplayEffect>(existing) = effectBefore;
+                            throw;
                         }
                         MarkAggregateDirtyIfNeeded(proposal.Target, existing);
                         return; // Merged into existing stack, no new entity
