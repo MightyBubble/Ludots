@@ -41,7 +41,7 @@ namespace Ludots.Core.Gameplay.Camera
         public const byte FollowHold = 13;
         public const byte PointerActive = 14;
 
-        public static void Validate(byte channel, string bindingId)
+        public static void Validate(byte channel, string bindingId, string relativePath)
         {
             if (channel <= PointerActive)
             {
@@ -49,7 +49,7 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             throw new InvalidOperationException(
-                $"Camera behavior binding '{bindingId}' declares unsupported channel {channel}.");
+                $"Attribute binding '{bindingId}' in {relativePath}: camera behavior sink supports channels 0..{PointerActive}; found {channel}.");
         }
     }
 
