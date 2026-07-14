@@ -178,7 +178,7 @@ namespace Ludots.Tests.GAS.Production
             effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = dotId });
             Tick(engine, 25);
             float e1AfterDot = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
-            steps.Add(CheckNear("DoT Burn ticks once", e1AfterE - 3f, e1AfterDot));
+            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e1AfterE - 6f, e1AfterDot));
 
             int hotId = EffectTemplateIdRegistry.GetId("Effect.Moba.HOT.Regen");
             int qId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");

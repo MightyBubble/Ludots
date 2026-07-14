@@ -55,6 +55,10 @@ namespace Ludots.Tests.GAS.Production
                 }
 
                 var (hero, enemy) = FindHeroAndEnemy(engine.World);
+                Assert.That(
+                    engine.World.Has<TimedTagBuffer>(hero),
+                    Is.True,
+                    "MOBA heroes execute TagClip timelines and must enter gameplay with TimedTagBuffer installed.");
 
                 ref var enemyAttrsBefore = ref engine.World.Get<AttributeBuffer>(enemy);
                 int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");

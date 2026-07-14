@@ -3,6 +3,7 @@
     "id": "moba_hero",
     "components": {
       "CommandSourceSelectableTag": {},
+      "TimedTagBuffer": {},
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Moba.SkillQ",
