@@ -52,6 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 _world.Add(order.Actor, new OrderContinuationBuffer());
             }
 
+            _incomingOrders.EnsureOrderId(ref followUpCast);
             _incomingOrders.EnsureOrderId(ref primaryMove);
 
             ref var continuations = ref _world.Get<OrderContinuationBuffer>(order.Actor);

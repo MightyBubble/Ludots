@@ -31,7 +31,7 @@ namespace Ludots.Tests.GAS
             });
 
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
-            world.Get<AttributeBuffer>(target).SetCurrent(healthAttributeId, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(healthAttributeId, 100f);
             var queue = new EffectRequestQueue();
             var system = new EffectProposalProcessingSystem(
                 world,

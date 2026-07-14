@@ -69,6 +69,9 @@ namespace Ludots.Tests.GAS
 
             Assert.That(continuationCount, Is.EqualTo(1));
             Assert.That(extracted[0].OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Assert.That(moveOrder.OrderId, Is.GreaterThan(0));
+            Assert.That(extracted[0].OrderId, Is.GreaterThan(0));
+            Assert.That(extracted[0].OrderId, Is.Not.EqualTo(moveOrder.OrderId));
             Assert.That(extracted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
             Assert.That(extracted[0].Args.I0, Is.EqualTo(0));
         }
