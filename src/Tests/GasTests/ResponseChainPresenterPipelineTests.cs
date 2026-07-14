@@ -70,7 +70,8 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     telemetry,
                     orderReq,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps())
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

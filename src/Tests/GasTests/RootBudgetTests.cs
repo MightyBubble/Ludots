@@ -115,6 +115,7 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var tagOps = new TagOps();
             var application = new EffectApplicationSystem(
                 world,
                 effectRequests: null,
@@ -122,11 +123,12 @@ namespace Ludots.Tests.GAS
                 presentationEvents,
                 templates,
                 phaseExecutor: phaseExecutor,
-                graphApi: graphApi);
+                graphApi: graphApi,
+                tagOps: tagOps);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
             Entity effect = GameplayEffectFactory.CreateEffect(
                 world,
                 rootId: 1,
@@ -173,11 +175,12 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates: templates,
                 presentationEvents: presentationEvents,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps());
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
 
             requests.Publish(new EffectRequest
             {
@@ -233,11 +236,12 @@ namespace Ludots.Tests.GAS
                 telemetry: new ResponseChainTelemetryBuffer(),
                 orderRequests: new OrderRequestQueue(),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                presentationEvents: presentationEvents);
+                presentationEvents: presentationEvents,
+                tagOps: new TagOps());
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
 
             requests.Publish(new EffectRequest
             {
