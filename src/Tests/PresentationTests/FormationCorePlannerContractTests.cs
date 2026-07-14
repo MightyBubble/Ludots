@@ -48,6 +48,14 @@ namespace Ludots.Tests.Presentation
                     previousInitialized: true));
         }
 
+        [Test]
+        public void Planner_RejectsNonNormalizableFacingInsteadOfSpinningForever()
+        {
+            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.MaxValue));
+            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.PositiveInfinity));
+            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.NaN));
+        }
+
         private static void AssertVectorNearlyEqual(Vector2 expected, Vector2 actual)
         {
             Assert.That(actual.X, Is.EqualTo(expected.X).Within(0.001f));

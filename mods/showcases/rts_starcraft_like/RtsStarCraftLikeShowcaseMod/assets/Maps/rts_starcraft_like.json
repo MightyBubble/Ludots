@@ -77,5 +77,35 @@
         "Team": { "Id": 2 }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "terran_scv" },
+    { "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" },
+    { "TeamId": 3, "RepresentativeInstanceId": "protoss_probe" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "terran_scv" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" },
+    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "protoss_probe" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 3, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 3, "TypeId": "RtsStarCraftLike.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true },
+      { "PlayerA": 1, "PlayerB": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true },
+      { "PlayerA": 2, "PlayerB": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false },
+      { "PlayerId": 3, "TeamId": 3, "TypeId": "RtsStarCraftLike.Participant", "Symmetric": false }
+    ]
+  }
 }

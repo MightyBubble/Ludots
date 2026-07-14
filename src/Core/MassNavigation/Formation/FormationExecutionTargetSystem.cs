@@ -14,6 +14,9 @@ namespace Ludots.Core.MassNavigation.Formation;
 
 public sealed class FormationExecutionTargetSystem : ISystem<float>
 {
+    private const ulong SignatureSeed = 14695981039346656037UL;
+    private const ulong SignaturePrime = 1099511628211UL;
+
     private static readonly QueryDescription AnchorQuery = new QueryDescription()
         .WithAll<FormationAnchorState, FormationCommandState, FormationRuntimeState, MassNavigationAgentIndex, FacingDirection, WorldPositionCm>()
         .WithNone<SuspendedTag>();
@@ -36,6 +39,8 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
     private readonly float[] _lastTargetCenterXByFormation;
     private readonly float[] _lastTargetCenterYByFormation;
     private readonly float[] _lastTargetFacingByFormation;
+    private readonly ulong[] _targetIdentitySignatureByFormation;
+    private readonly ulong[] _lastTargetIdentitySignatureByFormation;
     private readonly byte[] _targetSnapshotInitializedByFormation;
     private readonly Vector2[] _anchorCenterByFormation;
     private readonly FormationCommandState[] _commandByFormation;
@@ -75,6 +80,8 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
         _lastTargetCenterXByFormation = new float[formationCapacity];
         _lastTargetCenterYByFormation = new float[formationCapacity];
         _lastTargetFacingByFormation = new float[formationCapacity];
+        _targetIdentitySignatureByFormation = new ulong[formationCapacity];
+        _lastTargetIdentitySignatureByFormation = new ulong[formationCapacity];
         _targetSnapshotInitializedByFormation = new byte[formationCapacity];
         _anchorCenterByFormation = new Vector2[formationCapacity];
         _commandByFormation = new FormationCommandState[formationCapacity];
@@ -108,6 +115,7 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
         Array.Clear(_memberSeenBySlot);
         Array.Clear(_aliveMemberCountByFormation);
         Array.Clear(_targetChangedByFormation);
+        Array.Clear(_targetIdentitySignatureByFormation);
 
         ScanAnchors(simulation, sink);
         ScanMembers(sink);
@@ -190,6 +198,7 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                 _commandByFormation[formationIndex] = commands[index];
                 _anchorConfigByFormation[formationIndex] = anchors[index];
                 _anchorCenterByFormation[formationIndex] = simulation.GetAgentWorldPositionCm(agentIndices[index].Value);
+                _targetIdentitySignatureByFormation[formationIndex] = BuildAnchorIdentitySignature(entity, in anchors[index]);
             }
         }
     }
@@ -214,6 +223,9 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
 
                 _memberSeenBySlot[slot] = 1;
                 _aliveMemberCountByFormation[member.FormationIndex]++;
+                _targetIdentitySignatureByFormation[member.FormationIndex] = CombineSignature(
+                    _targetIdentitySignatureByFormation[member.FormationIndex],
+                    BuildMemberIdentitySignature(entity, in member));
             }
         }
     }
@@ -236,7 +248,9 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                     _lastTargetCenterXByFormation[formationIndex],
                     _lastTargetCenterYByFormation[formationIndex]),
                 _lastTargetFacingByFormation[formationIndex]);
-            if (FormationTargetPlanner.HasTargetChanged(
+            ulong currentIdentitySignature = BuildCurrentTargetIdentitySignature(formationIndex);
+            if (currentIdentitySignature != _lastTargetIdentitySignatureByFormation[formationIndex] ||
+                FormationTargetPlanner.HasTargetChanged(
                     in currentPose,
                     in previousPose,
                     anchor.TargetChangeEpsilonCm,
@@ -409,10 +423,69 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
             _lastTargetCenterXByFormation[formationIndex] = _anchorCenterByFormation[formationIndex].X;
             _lastTargetCenterYByFormation[formationIndex] = _anchorCenterByFormation[formationIndex].Y;
             _lastTargetFacingByFormation[formationIndex] = _commandByFormation[formationIndex].TargetFacingRad;
+            _lastTargetIdentitySignatureByFormation[formationIndex] = BuildCurrentTargetIdentitySignature(formationIndex);
             _targetSnapshotInitializedByFormation[formationIndex] = 1;
         }
 
         _ = simulation;
+    }
+
+    private ulong BuildCurrentTargetIdentitySignature(int formationIndex)
+    {
+        ulong signature = _targetIdentitySignatureByFormation[formationIndex];
+        signature = MixSignature(signature, _aliveMemberCountByFormation[formationIndex]);
+        return signature;
+    }
+
+    private static ulong BuildAnchorIdentitySignature(Entity entity, in FormationAnchorState anchor)
+    {
+        ulong signature = SignatureSeed;
+        signature = MixEntity(signature, entity);
+        signature = MixSignature(signature, anchor.FormationIndex);
+        signature = MixSignature(signature, anchor.SlotCount);
+        return signature;
+    }
+
+    private static ulong BuildMemberIdentitySignature(Entity entity, in FormationMemberState member)
+    {
+        ulong signature = SignatureSeed;
+        signature = MixEntity(signature, entity);
+        signature = MixSignature(signature, member.FormationIndex);
+        signature = MixSignature(signature, member.SlotIndex);
+        signature = MixSignature(signature, BitConverter.SingleToInt32Bits(member.LocalOffsetXCm));
+        signature = MixSignature(signature, BitConverter.SingleToInt32Bits(member.LocalOffsetYCm));
+        return signature;
+    }
+
+    private static ulong MixEntity(ulong signature, Entity entity)
+    {
+        signature = MixSignature(signature, entity.Id);
+        signature = MixSignature(signature, entity.WorldId);
+        signature = MixSignature(signature, entity.Version);
+        return signature;
+    }
+
+    private static ulong MixSignature(ulong signature, int value)
+    {
+        unchecked
+        {
+            signature ^= (uint)value;
+            signature *= SignaturePrime;
+            return signature;
+        }
+    }
+
+    private static ulong CombineSignature(ulong aggregate, ulong value)
+    {
+        unchecked
+        {
+            return aggregate + (value ^ RotateLeft(value, 32));
+        }
+    }
+
+    private static ulong RotateLeft(ulong value, int bits)
+    {
+        return (value << bits) | (value >> (64 - bits));
     }
 
     private void RequireFormationIndex(int formationIndex)

@@ -16,6 +16,7 @@
   "Entities": [
     {
       "Template": "rts_ra2_war_factory",
+      "InstanceId": "cnc_training_war_factory",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
         "Name": { "Value": "War Factory" }
@@ -28,5 +29,20 @@
         "Name": { "Value": "Armor Display" }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "cnc_training_war_factory" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "cnc_training_war_factory" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsDemo.Participant", "Symmetric": false }
+    ]
+  }
 }

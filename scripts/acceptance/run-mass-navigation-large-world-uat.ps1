@@ -375,3 +375,9 @@ Write-Host "output=$OutputRoot"
 Write-Host "report=$reportPath"
 Write-Host "summary=$summaryPath"
 Write-Host "source_sha=$sourceSha"
+
+$failedRuns = @($runs | Where-Object { $_.success -ne $true }).Count
+if ($failedRuns -gt 0) {
+    Write-Error "MassNavigation UAT soak failed: $failedRuns run(s) failed. See $reportPath"
+    exit 1
+}

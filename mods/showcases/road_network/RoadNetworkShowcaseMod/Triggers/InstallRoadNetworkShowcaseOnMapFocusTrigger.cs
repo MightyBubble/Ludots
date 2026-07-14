@@ -46,8 +46,6 @@ namespace RoadNetworkShowcaseMod.Triggers
                 return Task.CompletedTask;
             }
 
-            engine.GlobalContext[RoadNetworkShowcaseIds.InstalledKey] = true;
-
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
             MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
@@ -60,6 +58,9 @@ namespace RoadNetworkShowcaseMod.Triggers
                     $"RoadNetworkShowcaseMod active MassNavigation runtime map '{binding.CurrentMapId.Value}' does not match focused map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}'.");
             }
 
+            OrderTypeRegistry orderTypeRegistry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderTypeRegistry.");
+            int roadMoveFollowOrderTypeId = ResolveRoadMoveFollowOrderTypeId(engine, orderTypeRegistry);
             var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.RegisterSystem(
@@ -74,44 +75,53 @@ namespace RoadNetworkShowcaseMod.Triggers
             engine.RegisterSystem(
                 new RoadNetworkCameraResetSystem(engine.GlobalContext, engine, _runtime),
                 SystemGroup.InputCollection);
-            if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is OrderTypeRegistry orderTypeRegistry &&
-                TryResolveRoadMoveFollowOrderTypeId(engine, out int roadMoveFollowOrderTypeId))
-            {
-                engine.RegisterSystem(
-                    new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMoveExecutionSystem(engine.World, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
-            }
+            engine.RegisterSystem(
+                new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMoveExecutionSystem(engine.World, binding),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, binding),
+                SystemGroup.RuntimeEntityBinding);
+            engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
 
             engine.RegisterPresentationSystem(new RoadNetworkPresentationSystem(engine, _runtime));
             MovePlanStore presentationPlans = engine.GlobalContext.TryGetValue(typeof(MovePlanStore).FullName!, out var planObj) && planObj is MovePlanStore resolvedPlans
                 ? resolvedPlans
                 : new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, presentationPlans));
+            engine.GlobalContext[RoadNetworkShowcaseIds.InstalledKey] = true;
             _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;
         }
 
-        private static bool TryResolveRoadMoveFollowOrderTypeId(GameEngine engine, out int orderTypeId)
+        private static int ResolveRoadMoveFollowOrderTypeId(GameEngine engine, OrderTypeRegistry orderTypeRegistry)
         {
-            orderTypeId = 0;
             if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
                 configObj is not GameConfig config)
             {
-                return false;
+                throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires GameConfig before resolving roadMoveFollow order type.");
             }
 
-            return config.Constants.OrderTypeIds.TryGetValue(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out orderTypeId) &&
-                   orderTypeId > 0;
+            if (!config.Constants.OrderTypeIds.TryGetValue(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out int orderTypeId) ||
+                orderTypeId <= 0)
+            {
+                throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires configured roadMoveFollow order type id.");
+            }
+
+            if (!orderTypeRegistry.TryGetId(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out int registeredOrderTypeId) ||
+                registeredOrderTypeId != orderTypeId ||
+                !orderTypeRegistry.IsRegistered(orderTypeId))
+            {
+                throw new System.InvalidOperationException(
+                    $"RoadNetworkShowcaseMod requires registered order type '{RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey}' id {orderTypeId}.");
+            }
+
+            return orderTypeId;
         }
     }
 }

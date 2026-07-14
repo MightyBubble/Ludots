@@ -93,7 +93,6 @@ namespace Ludots.Core.Presentation.Systems
             for (int ei = 0; ei < span.Length; ei++)
             {
                 ref readonly var evt = ref span[ei];
-
                 // 1. Check exact-match rules: (eventKind, keyId)
                 long exactKey = PackKey(evt.Kind, evt.KeyId);
                 if (_exactIndex.TryGetValue(exactKey, out var exactRules))
@@ -520,6 +519,7 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
             }
+
         }
 
         private static Entity ResolveCommandOwner(in PerformerCommand cmd, in PresentationEvent evt)

@@ -6,6 +6,7 @@ namespace Ludots.Core.MassNavigation.Formation;
 public static class FormationTargetPlanner
 {
     public static readonly float DiscSlotGoldenAngleRadians = MathF.PI * (3f - MathF.Sqrt(5f));
+    private const float MaxNormalizableFacingMagnitudeRadians = 1_000_000f;
 
     public static Vector2 ResolveSlotOffset(in FormationSlotPlan plan, int slotIndex)
     {
@@ -95,12 +96,18 @@ public static class FormationTargetPlanner
 
     public static float NormalizeFacingRadians(float angle)
     {
-        while (angle > MathF.PI)
+        if (!float.IsFinite(angle) || MathF.Abs(angle) > MaxNormalizableFacingMagnitudeRadians)
+        {
+            throw new InvalidOperationException(
+                $"Formation facing radians must be finite and within ±{MaxNormalizableFacingMagnitudeRadians} before normalization.");
+        }
+
+        angle %= MathF.Tau;
+        if (angle > MathF.PI)
         {
             angle -= MathF.Tau;
         }
-
-        while (angle < -MathF.PI)
+        else if (angle < -MathF.PI)
         {
             angle += MathF.Tau;
         }

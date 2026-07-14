@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.ViewMode;
@@ -34,6 +35,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private static readonly Vector4 SelectionPanelTitle = new(0.94f, 0.83f, 0.47f, 1f);
         private static readonly Vector4 SelectionPanelText = new(0.90f, 0.94f, 0.98f, 1f);
         private static readonly Vector4 SelectionPanelHint = new(0.70f, 0.78f, 0.86f, 1f);
+        private const int ShowcaseLocalPlayerId = 1;
         private const string PlayerFormationCollectionKey = "collection.champion.player.formation";
         private const string AiTargetsCollectionKey = "collection.champion.ai.targets";
         private const string AiFormationCollectionKey = "collection.champion.ai.formation";
@@ -49,6 +51,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private readonly List<Entity> _teamAFormation = new();
         private readonly List<Entity> _teamBFormation = new();
         private readonly List<Entity> _teamBTargets = new();
+        private readonly List<Entity> _activeSelectionMirror = new();
 
         public void PrepareInput(GameEngine engine)
         {
@@ -193,7 +196,7 @@ namespace ChampionSkillSandboxMod.Runtime
             if (!ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value))
             {
                 PublishSelectableKnowledge(engine, playerViewer, aiViewer: Entity.Null, debugViewer: Entity.Null);
-                ApplySelectionViewChoice(engine, playerViewer, aiViewer: Entity.Null, debugViewer: Entity.Null);
+                ApplySelectionViewChoice(engine, collections, playerViewer, aiViewer: Entity.Null, debugViewer: Entity.Null);
                 return;
             }
 
@@ -207,7 +210,7 @@ namespace ChampionSkillSandboxMod.Runtime
             CollectStressSelectionState(engine);
             PublishSelectableKnowledge(engine, playerViewer, _teamBViewer, _debugViewer);
             BindStressCollections(collections, playerViewer, _teamBViewer, _debugViewer);
-            ApplySelectionViewChoice(engine, playerViewer, _teamBViewer, _debugViewer);
+            ApplySelectionViewChoice(engine, collections, playerViewer, _teamBViewer, _debugViewer);
             if (drawOverlay)
             {
                 DrawStressSelectionOverlay(engine, collections);
@@ -330,11 +333,61 @@ namespace ChampionSkillSandboxMod.Runtime
             ReplaceCollection(collections, debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, commandSource, "Command preview");
         }
 
-        private void ApplySelectionViewChoice(GameEngine engine, Entity playerViewer, Entity aiViewer, Entity debugViewer)
+        private void ApplySelectionViewChoice(
+            GameEngine engine,
+            EntityCollectionStore collections,
+            Entity playerViewer,
+            Entity aiViewer,
+            Entity debugViewer)
         {
             ResolveActiveCollectionChoice(engine, playerViewer, aiViewer, debugViewer, out Entity owner, out string key);
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = key;
+            MirrorActiveSelectionViewToCommandSource(engine, collections, playerViewer, owner, key);
+        }
+
+        private void MirrorActiveSelectionViewToCommandSource(
+            GameEngine engine,
+            EntityCollectionStore collections,
+            Entity playerViewer,
+            Entity owner,
+            string key)
+        {
+            if (playerViewer == Entity.Null ||
+                owner == Entity.Null ||
+                string.IsNullOrWhiteSpace(key) ||
+                owner != playerViewer ||
+                (owner == playerViewer && string.Equals(key, EntityCollectionKeys.CommandSource, StringComparison.Ordinal)))
+            {
+                return;
+            }
+
+            if (!collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return;
+            }
+
+            _activeSelectionMirror.Clear();
+            for (int i = 0; i < view.Count; i++)
+            {
+                if (collections.TryGetEntityAt(handle, i, out Entity entity) &&
+                    entity != Entity.Null &&
+                    engine.World.IsAlive(entity))
+                {
+                    _activeSelectionMirror.Add(entity);
+                }
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                playerViewer,
+                _activeSelectionMirror.Count > 0 ? _activeSelectionMirror[0] : Entity.Null,
+                "Champion active selection",
+                $"{_activeSelectionMirror.Count} entity(s) mirrored from {key}.");
+            collections.Replace(playerViewer, descriptor, CollectionsMarshal.AsSpan(_activeSelectionMirror), playerViewer);
         }
 
         private void DrawStressSelectionOverlay(GameEngine engine, EntityCollectionStore collections)
@@ -421,49 +474,74 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static Entity ResolveOrAssignLocalPlayer(GameEngine engine, Entity preferredLocalPlayer)
         {
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (engine.World.IsAlive(local))
+            int playerId = ResolveLocalPlayerId(engine, preferredLocalPlayer);
+            if (playerId <= 0)
             {
-                PublishLocalPlayerBinding(engine, local);
-                return local;
+                return Entity.Null;
             }
 
-            Entity resolved = IsControllableChampion(engine, preferredLocalPlayer)
-                ? preferredLocalPlayer
-                : ResolveFirstControllableChampion(engine);
-            if (resolved != Entity.Null)
-            {
-                PublishLocalPlayerBinding(engine, resolved);
-            }
-
-            return resolved;
+            return PublishLocalPlayerBinding(engine, playerId);
         }
 
-        private static void PublishLocalPlayerBinding(GameEngine engine, Entity localPlayer)
+        private static int ResolveLocalPlayerId(GameEngine engine, Entity preferredLocalPlayer)
         {
-            if (localPlayer == Entity.Null ||
-                !engine.World.IsAlive(localPlayer) ||
-                !engine.World.TryGet(localPlayer, out PlayerOwner owner) ||
-                owner.PlayerId <= 0)
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? localPlayerIdObj) &&
+                localPlayerIdObj is int localPlayerId &&
+                localPlayerId > 0)
             {
-                return;
+                return localPlayerId;
+            }
+
+            if (preferredLocalPlayer != Entity.Null &&
+                engine.World.IsAlive(preferredLocalPlayer) &&
+                engine.World.TryGet(preferredLocalPlayer, out PlayerOwner preferredOwner) &&
+                preferredOwner.PlayerId > 0)
+            {
+                return preferredOwner.PlayerId;
+            }
+
+            Entity firstControllable = ResolveFirstControllableChampion(engine);
+            if (firstControllable != Entity.Null &&
+                engine.World.TryGet(firstControllable, out PlayerOwner firstOwner) &&
+                firstOwner.PlayerId > 0)
+            {
+                return firstOwner.PlayerId;
+            }
+
+            return ShowcaseLocalPlayerId;
+        }
+
+        private static Entity PublishLocalPlayerBinding(GameEngine engine, int playerId)
+        {
+            if (playerId <= 0)
+            {
+                return Entity.Null;
             }
 
             if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
-                lookup == null ||
-                (lookup.TryGet(owner.PlayerId, out Entity existing) && existing != localPlayer))
+                lookup == null)
             {
-                lookup = new PlayerEntityLookup();
-                engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
+                throw new InvalidOperationException("ChampionSkillSandbox requires PlayerEntityLookup from map participant bindings.");
             }
 
-            if (!lookup.TryGet(owner.PlayerId, out _))
+            if (!lookup.TryGet(playerId, out Entity localPlayer) ||
+                localPlayer == Entity.Null ||
+                !engine.World.IsAlive(localPlayer))
             {
-                lookup.Register(owner.PlayerId, localPlayer);
+                throw new InvalidOperationException(
+                    $"ChampionSkillSandbox requires a live player representative for PlayerId {playerId}. " +
+                    "Declare the player in the map Players binding instead of using a controllable champion as the representative.");
             }
 
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+            if (engine.CurrentMapSession != null)
+            {
+                engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
+                engine.CurrentMapSession.LocalPlayerId = playerId;
+            }
+
+            return localPlayer;
         }
 
         private static void ApplyInitialTag(GameEngine engine, string entityName, string tagName)
@@ -1002,6 +1080,7 @@ namespace ChampionSkillSandboxMod.Runtime
             _teamAFormation.Clear();
             _teamBFormation.Clear();
             _teamBTargets.Clear();
+            _activeSelectionMirror.Clear();
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.ResetCameraRequestKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.CameraFollowModeKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -68,7 +69,7 @@ namespace Ludots.Core.Gameplay.Relationships
         public bool TryResolveRelationshipEntity(Entity source, Entity target, int typeId, out Entity relationshipEntity)
         {
             relationshipEntity = Entity.Null;
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
                 return false;
             }
@@ -76,7 +77,7 @@ namespace Ludots.Core.Gameplay.Relationships
             int validatedTypeId = ValidateTypeId(typeId);
             RelationshipEntityKey key = new(source, target, validatedTypeId);
             if (_entityIndex.TryGetValue(key, out Entity indexed) &&
-                _world.IsAlive(indexed) &&
+                IsAliveInRuntimeWorld(indexed) &&
                 _world.Has<RelationshipInstanceCm>(indexed) &&
                 HasLink(source, target, validatedTypeId))
             {
@@ -86,7 +87,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
             RebuildEntityIndexFromWorld();
             if (_entityIndex.TryGetValue(key, out indexed) &&
-                _world.IsAlive(indexed) &&
+                IsAliveInRuntimeWorld(indexed) &&
                 _world.Has<RelationshipInstanceCm>(indexed) &&
                 HasLink(source, target, validatedTypeId))
             {
@@ -99,20 +100,19 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public Entity MaterializeRelationshipEntity(Entity source, Entity target, int typeId)
         {
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
-            {
-                throw new InvalidOperationException("RelationshipRuntime requires both source and target entities to be alive.");
-            }
+            EnsureAliveInRuntimeWorld(source, target);
 
             int validatedTypeId = ValidateTypeId(typeId);
             if (!HasLink(source, target, validatedTypeId))
             {
-                throw new InvalidOperationException("RelationshipRuntime cannot materialize a relationship entity without an existing relationship edge.");
+                throw new InvalidOperationException(
+                    "RelationshipRuntime cannot materialize a relationship entity without an existing relationship edge. " +
+                    DescribeEdgeState(source, target, validatedTypeId));
             }
 
             RelationshipEntityKey key = new(source, target, validatedTypeId);
             if (_entityIndex.TryGetValue(key, out Entity existing) &&
-                _world.IsAlive(existing) &&
+                IsAliveInRuntimeWorld(existing) &&
                 _world.Has<RelationshipInstanceCm>(existing))
             {
                 return existing;
@@ -141,7 +141,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public bool HasLink(Entity source, Entity target, int typeId)
         {
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
                 return false;
             }
@@ -158,10 +158,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public void EnsureLink(Entity source, Entity target, int typeId)
         {
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
-            {
-                throw new InvalidOperationException("RelationshipRuntime requires both source and target entities to be alive.");
-            }
+            EnsureAliveInRuntimeWorld(source, target);
 
             int validatedTypeId = ValidateTypeId(typeId);
             bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
@@ -175,11 +172,11 @@ namespace Ludots.Core.Gameplay.Relationships
             set.Set(validatedTypeId, RelationshipEdge.CreateDefault(_metrics));
             if (hasExisting)
             {
-                source.SetRelationship(target, set);
+                _world.SetRelationship(source, target, set);
             }
             else
             {
-                source.AddRelationship(target, set);
+                _world.AddRelationship(source, target, set);
             }
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
@@ -188,7 +185,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public void RemoveLink(Entity source, Entity target, int typeId)
         {
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
                 return;
             }
@@ -208,11 +205,11 @@ namespace Ludots.Core.Gameplay.Relationships
 
             if (set.Count == 0)
             {
-                source.RemoveRelationship<RelationshipEdgeSet>(target);
+                _world.RemoveRelationship<RelationshipEdgeSet>(source, target);
             }
             else
             {
-                source.SetRelationship(target, set);
+                _world.SetRelationship(source, target, set);
             }
 
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
@@ -248,7 +245,7 @@ namespace Ludots.Core.Gameplay.Relationships
             _metrics.Get(metricId);
 
             int validatedTypeId = ValidateTypeId(typeId);
-            RelationshipEdgeSet set = source.GetRelationship<RelationshipEdgeSet>(target);
+            RelationshipEdgeSet set = _world.GetRelationship<RelationshipEdgeSet>(source, target);
             RelationshipEdge edge = set.GetOrAdd(validatedTypeId, _metrics, out _);
             Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
             bool resized = edge.EnsureMetricCapacity(_metrics);
@@ -259,7 +256,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 if (resized)
                 {
                     set.Set(validatedTypeId, edge);
-                    source.SetRelationship(target, set);
+                    _world.SetRelationship(source, target, set);
                 }
 
                 return clamped;
@@ -271,7 +268,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Flags = ApplyBands(validatedTypeId, metricId, edge.Flags, clamped);
             edge.Version++;
             set.Set(validatedTypeId, edge);
-            source.SetRelationship(target, set);
+            _world.SetRelationship(source, target, set);
             _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, metricId, reasonId, oldValue, clamped, oldFlags, edge.Flags));
             return clamped;
         }
@@ -304,7 +301,7 @@ namespace Ludots.Core.Gameplay.Relationships
             EnsureLink(source, target, typeId);
 
             int validatedTypeId = ValidateTypeId(typeId);
-            RelationshipEdgeSet set = source.GetRelationship<RelationshipEdgeSet>(target);
+            RelationshipEdgeSet set = _world.GetRelationship<RelationshipEdgeSet>(source, target);
             RelationshipEdge edge = set.GetOrAdd(validatedTypeId, _metrics, out _);
             Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
             bool resized = edge.EnsureMetricCapacity(_metrics);
@@ -316,7 +313,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 if (resized)
                 {
                     set.Set(validatedTypeId, edge);
-                    source.SetRelationship(target, set);
+                    _world.SetRelationship(source, target, set);
                 }
 
                 return;
@@ -326,7 +323,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Flags = newFlags;
             edge.Version++;
             set.Set(validatedTypeId, edge);
-            source.SetRelationship(target, set);
+            _world.SetRelationship(source, target, set);
             _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, metricId: -1, reasonId, oldValue: 0, newValue: 0, oldFlags, newFlags));
         }
 
@@ -339,7 +336,7 @@ namespace Ludots.Core.Gameplay.Relationships
             for (int i = 0; i < candidates.Length; i++)
             {
                 Entity candidate = candidates[i];
-                if (!_world.IsAlive(candidate))
+                if (!IsAliveInRuntimeWorld(candidate))
                 {
                     continue;
                 }
@@ -367,7 +364,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectOutgoing(Entity source, int typeId, Span<Entity> buffer)
         {
-            if (!_world.IsAlive(source) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(source))
+            if (!IsAliveInRuntimeWorld(source) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(source))
             {
                 return 0;
             }
@@ -405,7 +402,7 @@ namespace Ludots.Core.Gameplay.Relationships
         /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
         {
-            if (!_world.IsAlive(target) || buffer.Length == 0)
+            if (!IsAliveInRuntimeWorld(target) || buffer.Length == 0)
             {
                 return 0;
             }
@@ -420,7 +417,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectMutual(Entity first, Entity second, int typeId, Span<Entity> buffer)
         {
-            if (!_world.IsAlive(first) || !_world.IsAlive(second) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(first))
+            if (!IsAliveInRuntimeWorld(first) || !IsAliveInRuntimeWorld(second) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(first))
             {
                 return 0;
             }
@@ -435,7 +432,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     break;
                 }
 
-                if (!_world.IsAlive(candidate) || !MatchesType(set, validatedTypeId))
+                if (!IsAliveInRuntimeWorld(candidate) || !MatchesType(set, validatedTypeId))
                 {
                     continue;
                 }
@@ -456,7 +453,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectBetweenPair(Entity source, Entity target, int typeId, Span<Entity> buffer)
         {
-            if (!_world.IsAlive(source) || !_world.IsAlive(target) || buffer.Length == 0)
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target) || buffer.Length == 0)
             {
                 return 0;
             }
@@ -480,7 +477,7 @@ namespace Ludots.Core.Gameplay.Relationships
         {
             edge = default;
             resized = false;
-            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
                 return false;
             }
@@ -519,7 +516,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _entityIndex.Remove(key);
-            if (_world.IsAlive(entity) && _world.Has<RelationshipInstanceCm>(entity))
+            if (IsAliveInRuntimeWorld(entity) && _world.Has<RelationshipInstanceCm>(entity))
             {
                 _world.Destroy(entity);
             }
@@ -527,7 +524,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private void BumpMaterializedRelationshipRevision(Entity relationshipEntity)
         {
-            if (!_world.IsAlive(relationshipEntity) || !_world.Has<RelationshipInstanceCm>(relationshipEntity))
+            if (!IsAliveInRuntimeWorld(relationshipEntity) || !_world.Has<RelationshipInstanceCm>(relationshipEntity))
             {
                 return;
             }
@@ -544,7 +541,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     $"Relationship entity {entity.Id}:{entity.WorldId}:{entity.Version} has invalid type id {relationship.TypeId}.");
             }
 
-            if (!_world.IsAlive(relationship.Source) || !_world.IsAlive(relationship.Target))
+            if (!IsAliveInRuntimeWorld(relationship.Source) || !IsAliveInRuntimeWorld(relationship.Target))
             {
                 throw new InvalidOperationException(
                     $"Relationship entity {entity.Id}:{entity.WorldId}:{entity.Version} references a missing source or target entity.");
@@ -561,6 +558,35 @@ namespace Ludots.Core.Gameplay.Relationships
         {
             _types.Get(typeId);
             return typeId;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsAliveInRuntimeWorld(Entity entity)
+            => entity != Entity.Null && entity.WorldId == _world.Id && _world.IsAlive(entity);
+
+        private void EnsureAliveInRuntimeWorld(Entity source, Entity target)
+        {
+            if (IsAliveInRuntimeWorld(source) && IsAliveInRuntimeWorld(target))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"RelationshipRuntime requires both source and target entities to be alive in World {_world.Id}; " +
+                $"source={source.Id}:{source.WorldId}:{source.Version}, target={target.Id}:{target.WorldId}:{target.Version}.");
+        }
+
+        private string DescribeEdgeState(Entity source, Entity target, int typeId)
+        {
+            bool sourceHasRelationships = _world.Has<Relationship<RelationshipEdgeSet>>(source);
+            if (!sourceHasRelationships)
+            {
+                return $"source={source.Id}:{source.WorldId}:{source.Version}, target={target.Id}:{target.WorldId}:{target.Version}, type={typeId}, sourceHasRelationships=false.";
+            }
+
+            ref Relationship<RelationshipEdgeSet> relationships = ref _world.Get<Relationship<RelationshipEdgeSet>>(source);
+            bool hasTarget = relationships.TryGetValueNoAlloc(target, out RelationshipEdgeSet set);
+            return $"source={source.Id}:{source.WorldId}:{source.Version}, target={target.Id}:{target.WorldId}:{target.Version}, type={typeId}, sourceHasRelationships=true, targetEdgeSet={hasTarget}, edgeTypeCount={(hasTarget ? set.Count : 0)}.";
         }
 
         private int ValidateFilterTypeId(int typeId)

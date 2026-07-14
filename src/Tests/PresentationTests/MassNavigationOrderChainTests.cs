@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Layers;
 using Ludots.Core.MassNavigation;
@@ -122,11 +123,31 @@ public sealed class MassNavigationOrderChainTests
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             loadedChunks);
+        using var world = World.Create();
+        simulation.ResetRuntimeState(
+            world,
+            new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: LocalTeamId,
+                    localPositionXCm: 1200f,
+                    localPositionYCm: 1300f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    new MassNavigationAgentLayer(1u, 1u)),
+            });
 
         float solverX = simulation.SolverWindowCenterXCm;
         float solverY = simulation.SolverWindowCenterYCm;
         float workAreaX = simulation.FlowWorkAreaCenterXCm;
         float workAreaY = simulation.FlowWorkAreaCenterYCm;
+        float originX = simulation.MassNavigationFlow.WorldOriginXCm;
+        float originY = simulation.MassNavigationFlow.WorldOriginYCm;
+        Vector2 localPosition = simulation.GetAgentLocalPositionCm(0);
+        Vector2 worldPosition = simulation.GetAgentWorldPositionCm(0);
         long[] loadedBefore = simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray();
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
@@ -137,6 +158,10 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(simulation.SolverWindowCenterYCm, Is.EqualTo(solverY));
         Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(workAreaX));
         Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(workAreaY));
+        Assert.That(simulation.MassNavigationFlow.WorldOriginXCm, Is.EqualTo(originX));
+        Assert.That(simulation.MassNavigationFlow.WorldOriginYCm, Is.EqualTo(originY));
+        Assert.That(simulation.GetAgentLocalPositionCm(0), Is.EqualTo(localPosition));
+        Assert.That(simulation.GetAgentWorldPositionCm(0), Is.EqualTo(worldPosition));
         Assert.That(simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(loadedBefore));
     }
 

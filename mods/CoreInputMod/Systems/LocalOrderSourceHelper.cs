@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -164,6 +165,35 @@ namespace CoreInputMod.Systems
                 {
                     AfterOrderAccepted?.Invoke(in order);
                 }
+            });
+            mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
+            {
+                if (orders.IsEmpty)
+                {
+                    return true;
+                }
+
+                _globals[LastOrderDebugKey] = DescribeOrder(in orders[0]);
+                for (int i = 0; i < orders.Length; i++)
+                {
+                    if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in orders[i]))
+                    {
+                        return false;
+                    }
+                }
+
+                bool accepted = _planner != null
+                    ? _planner.TrySubmitSharedBatch(orders)
+                    : _orders.TryEnqueueSharedBatch(orders);
+                if (accepted)
+                {
+                    for (int i = 0; i < orders.Length; i++)
+                    {
+                        AfterOrderAccepted?.Invoke(in orders[i]);
+                    }
+                }
+
+                return accepted;
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {
@@ -396,7 +426,14 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            resolver = new AutoTargetResolver(_world, spatialQueries, RequireCommandTargetGate().CanTarget);
+            if (!_globals.TryGetValue(CoreServiceKeys.ControlDomainQuery.Name, out var domainsObj) ||
+                domainsObj is not ControlDomainQuery controlDomains)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {CoreServiceKeys.ControlDomainQuery.Name} before auto-target routing can resolve knowledge-gated command targets.");
+            }
+
+            resolver = new AutoTargetResolver(_world, spatialQueries, controlDomains, RequireCommandTargetGate().CanTarget);
             return true;
         }
 
@@ -541,12 +578,18 @@ namespace CoreInputMod.Systems
         {
             private readonly World _world;
             private readonly ISpatialQueryService _spatialQueries;
+            private readonly ControlDomainQuery _controlDomains;
             private readonly CommandIntentTargetGate _targetGate;
 
-            public AutoTargetResolver(World world, ISpatialQueryService spatialQueries, CommandIntentTargetGate targetGate)
+            public AutoTargetResolver(
+                World world,
+                ISpatialQueryService spatialQueries,
+                ControlDomainQuery controlDomains,
+                CommandIntentTargetGate targetGate)
             {
                 _world = world;
                 _spatialQueries = spatialQueries;
+                _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
                 _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             }
 
@@ -584,6 +627,11 @@ namespace CoreInputMod.Systems
             private bool TryResolveNear(Entity actor, AutoTargetPolicy policy, in WorldCmInt2 center, int rangeCm, out Entity target)
             {
                 target = Entity.Null;
+                if (!_controlDomains.TryResolveControlDomain(actor, out Entity viewerRep))
+                {
+                    return false;
+                }
+
                 int actorTeamId = _world.TryGet(actor, out Team actorTeam) ? actorTeam.Id : 0;
                 Span<Entity> candidates = stackalloc Entity[128];
                 int candidateCount = _spatialQueries.QueryRadius(center, rangeCm, candidates).Count;
@@ -599,7 +647,7 @@ namespace CoreInputMod.Systems
                     if (!_world.IsAlive(candidate) ||
                         candidate == actor ||
                         !_world.Has<WorldPositionCm>(candidate) ||
-                        !_targetGate(actor, candidate))
+                        !_targetGate(viewerRep, candidate))
                     {
                         continue;
                     }

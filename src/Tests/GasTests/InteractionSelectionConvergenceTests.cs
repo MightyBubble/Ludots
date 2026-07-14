@@ -187,7 +187,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -250,7 +259,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -302,7 +320,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Stop");
             input.Update();
@@ -313,6 +340,53 @@ namespace Ludots.Tests.GAS
             That(orders[1].Actor, Is.EqualTo(second));
             That(orders[0].OrderTypeId, Is.EqualTo(1003));
             That(orders[1].OrderTypeId, Is.EqualTo(1003));
+        }
+
+        [Test]
+        public void InputOrderMapping_MultiActorCollectionWithoutBatchHandler_FailsFast()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        ActorCollectionKey = "collection.test.actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var local = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetLocalPlayer(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            {
+                That(collectionKey, Is.EqualTo("collection.test.actors"));
+                entities.Clear();
+                entities.Add(first);
+                entities.Add(second);
+                return true;
+            });
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must not silently fall back to direct per-order submission."));
+
+            input.InjectButtonPress("Stop");
+            input.Update();
+
+            var ex = Throws<InvalidOperationException>(() => mapping.Update(0f));
+
+            That(ex!.Message, Does.Contain("atomic batch submit handler"));
         }
 
         [Test]

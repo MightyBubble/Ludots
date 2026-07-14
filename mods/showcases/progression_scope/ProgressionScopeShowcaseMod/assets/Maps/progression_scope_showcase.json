@@ -22,11 +22,14 @@
     }
   ],
   "Entities": [
-    { "Template": "progression_scope_city_host" },
+    { "Template": "progression_scope_city_host", "InstanceId": "progression-scope-city-host" },
     { "Template": "progression_scope_faction_host" },
     { "Template": "progression_scope_region_host" },
     { "Template": "progression_scope_province_host" },
     { "Template": "progression_scope_barracks" },
     { "Template": "progression_scope_hero" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "progression-scope-city-host" }
   ]
 }

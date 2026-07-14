@@ -243,6 +243,81 @@ internal sealed class MassNavigationGroupRuntime
         return true;
     }
 
+    internal bool RequiresNewOrderGroup(int orderToken)
+    {
+        return orderToken > 0 &&
+            (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
+             (uint)groupId >= (uint)_groups.Count ||
+             _groups[groupId] == null);
+    }
+
+    internal void EnsureCanAllocateNewOrderGroups(int newGroupCount)
+    {
+        if (newGroupCount <= 0)
+        {
+            return;
+        }
+
+        if (ActiveGroupCount + newGroupCount <= _groups.Count)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+    }
+
+    internal bool PreflightOrderMoveCommand(
+        MassNavigationFlowSolverState simulation,
+        MassNavigationAgentState agentState,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 destinationWorldCm)
+    {
+        if (orderToken <= 0 || memberIndices.Length <= 0)
+        {
+            return false;
+        }
+
+        bool singleMemberOrder = memberIndices.Length == 1;
+        if (RequiresNewOrderGroup(orderToken))
+        {
+            EnsureMembershipCapacityForMembers(memberIndices);
+            EnsureGroupMemberCapacity(memberIndices.Length);
+            ValidateGroupMembersBound(agentState, memberIndices);
+            _ = singleMemberOrder
+                ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
+                : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
+            return true;
+        }
+
+        int groupId = _orderTokenToGroupId[orderToken];
+        NavGroupState group = _groups[groupId]!;
+        bool rebuildOffsets = !HaveSameMembers(group, memberIndices);
+        bool retarget =
+            group.TeamId != teamId ||
+            group.RequestedDestinationWorldX != destinationWorldCm.X ||
+            group.RequestedDestinationWorldY != destinationWorldCm.Y ||
+            rebuildOffsets;
+        if (!retarget)
+        {
+            return false;
+        }
+
+        if (rebuildOffsets)
+        {
+            EnsureMembershipCapacityForMembers(memberIndices);
+            EnsureGroupMemberCapacity(memberIndices.Length);
+            ValidateGroupMembersBound(agentState, memberIndices);
+        }
+
+        _ = singleMemberOrder
+            ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
+            : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
+        return true;
+    }
+
     public int UpsertOrderMoveCommand(
         MassNavigationFlowSolverState simulation,
         MassNavigationAgentState agentState,
@@ -282,6 +357,7 @@ internal sealed class MassNavigationGroupRuntime
             _groups[groupId] == null)
         {
             EnsureMembershipCapacityForMembers(memberIndices);
+            EnsureGroupMemberCapacity(memberIndices.Length);
             ValidateGroupMembersBound(agentState, memberIndices);
             groupId = AllocateGroupId();
             Vector2 resolvedWorldDestination = singleMemberOrder
@@ -327,6 +403,7 @@ internal sealed class MassNavigationGroupRuntime
         if (rebuildOffsets)
         {
             EnsureMembershipCapacityForMembers(memberIndices);
+            EnsureGroupMemberCapacity(memberIndices.Length);
             ValidateGroupMembersBound(agentState, memberIndices);
         }
 
@@ -535,6 +612,17 @@ internal sealed class MassNavigationGroupRuntime
         }
 
         EnsureMembershipCapacity(maxIndex + 1);
+    }
+
+    private void EnsureGroupMemberCapacity(int memberCount)
+    {
+        if (memberCount <= _groupMemberCapacity)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"MassNavigation group state required {memberCount} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {_groupMemberCapacity}.");
     }
 
     private void DetachMembersFromOtherGroups(MassNavigationFlowSolverState simulation, ReadOnlySpan<int> members, int keepGroupId)

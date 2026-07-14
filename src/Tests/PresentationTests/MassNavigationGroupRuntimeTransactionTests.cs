@@ -134,4 +134,61 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         Assert.That(secondAfterX, Is.EqualTo(secondBeforeX));
         Assert.That(secondAfterY, Is.EqualTo(secondBeforeY));
     }
+
+    [Test]
+    public void ExistingOrderGroupMemberCapacityFailure_PreservesExistingGroupMembershipAndTargets()
+    {
+        MassNavigationProfileRegistry.Reset();
+        using World world = World.Create();
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 2;
+        config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 3;
+        config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 1;
+
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+
+        int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupMemberCapacity");
+        Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
+        Entity second = world.Create(new MassNavigationAgent { ProfileId = profileId });
+        var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+        simulation.RebuildFromAuthoredAgents(
+            world,
+            new[] { first, second },
+            new[]
+            {
+                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+            },
+            new[] { true, true });
+
+        int[] originalMembers = { 0 };
+        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+            simulation.MassNavigationFlow,
+            simulation.AgentState,
+            orderToken: 101,
+            originalMembers,
+            teamId: 1,
+            destinationWorldCm: new Vector2(4_000f, 4_000f));
+        Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float firstBeforeX, out float firstBeforeY), Is.True);
+
+        int[] replacementMembers = { 0, 1 };
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                simulation.MassNavigationFlow,
+                simulation.AgentState,
+                orderToken: 101,
+                replacementMembers,
+                teamId: 1,
+                destinationWorldCm: new Vector2(5_000f, 5_000f)))!;
+
+        Assert.That(ex.Message, Does.Contain("groupMemberCapacity"));
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(101, out _), Is.True);
+        Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float firstAfterX, out float firstAfterY), Is.True);
+        Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(1, out _, out _), Is.False);
+        Assert.That(firstAfterX, Is.EqualTo(firstBeforeX));
+        Assert.That(firstAfterY, Is.EqualTo(firstBeforeY));
+    }
 }

@@ -298,6 +298,99 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AuthoredAgentBindingSystem_RelationshipDomainCapacityFailurePreservesCommittedRuntime()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8, relationshipDomainCapacity: 1);
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0IndexBefore), Is.True);
+            Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1IndexBefore), Is.True);
+
+            int orderToken = 191;
+            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                harness.Simulation.MassNavigationFlow,
+                harness.Simulation.AgentState,
+                orderToken,
+                new[] { agent0IndexBefore.Value, agent1IndexBefore.Value },
+                TeamId,
+                new Vector2(2400f, 2200f));
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(
+                harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    agent0IndexBefore.Value,
+                    out float orderTargetX,
+                    out float orderTargetY),
+                Is.True);
+            Assert.That(
+                harness.Simulation.TryGetAgentNavigationTargetLocalCm(
+                    agent0IndexBefore.Value,
+                    out float navigationTargetX,
+                    out float navigationTargetY),
+                Is.True);
+
+            harness.MoveAgentToNewTeam(harness.Agent1, teamId: 2);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => harness.BindingSystem.Update(0f));
+            Assert.That(ex!.Message, Does.Contain("relationshipDomainCapacity"));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0IndexAfter), Is.True);
+            Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1IndexAfter), Is.True);
+            Assert.That(agent0IndexAfter.Value, Is.EqualTo(agent0IndexBefore.Value));
+            Assert.That(agent1IndexAfter.Value, Is.EqualTo(agent1IndexBefore.Value));
+            Assert.That(harness.Simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(
+                harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    agent0IndexAfter.Value,
+                    out float preservedOrderTargetX,
+                    out float preservedOrderTargetY),
+                Is.True);
+            Assert.That(preservedOrderTargetX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderTargetY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
+            Assert.That(
+                harness.Simulation.TryGetAgentNavigationTargetLocalCm(
+                    agent0IndexAfter.Value,
+                    out float preservedNavigationTargetX,
+                    out float preservedNavigationTargetY),
+                Is.True);
+            Assert.That(preservedNavigationTargetX, Is.EqualTo(navigationTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedNavigationTargetY, Is.EqualTo(navigationTargetY).Within(PositionToleranceCm));
+        }
+
+        [Test]
+        public void AppendAuthoredAgents_RelationshipDomainCapacityFailureDoesNotReserveRejectedDomains()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8, relationshipDomainCapacity: 2);
+            harness.BindingSystem.Update(0f);
+            Entity rejectedTeam = harness.CreateTeamRepresentative(teamId: 2);
+            Entity retryTeam = harness.CreateTeamRepresentative(teamId: 3);
+            Entity rejectedAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1400f, localY: 1000f, harness.Layer);
+            Entity retryAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1600f, localY: 1000f, harness.Layer);
+            MassNavigationAgentSeed rejectedSeed = CreateSeed(rejectedTeam, localX: 1400f, localY: 1000f, harness.Layer);
+            MassNavigationAgentSeed retrySeed = CreateSeed(retryTeam, localX: 1600f, localY: 1000f, harness.Layer);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.Simulation.AppendAuthoredAgents(
+                    harness.Engine.World,
+                    new[] { rejectedAgent, retryAgent },
+                    new[] { rejectedSeed, retrySeed },
+                    new[] { true, true }));
+            Assert.That(ex!.Message, Does.Contain("relationshipDomainCapacity"));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(rejectedAgent), Is.False);
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(retryAgent), Is.False);
+
+            Assert.DoesNotThrow(() =>
+                harness.Simulation.AppendAuthoredAgents(
+                    harness.Engine.World,
+                    new[] { retryAgent },
+                    new[] { retrySeed },
+                    new[] { true }));
+            Assert.That(harness.Engine.World.TryGet(retryAgent, out MassNavigationAgentIndex retryIndex), Is.True);
+            Assert.That(retryIndex.Value, Is.EqualTo(2));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
+        }
+
+        [Test]
         public void RebuildFromAuthoredAgents_RestoresOrderGroupAcrossAgentIndexDrift()
         {
             using var world = World.Create();
@@ -462,15 +555,21 @@ namespace Ludots.Tests.Presentation
             return simulation;
         }
 
-        private static BindingHarness CreateBindingHarness(int membershipCapacity)
+        private static BindingHarness CreateBindingHarness(int membershipCapacity, int? relationshipDomainCapacity = null)
         {
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
                 Path.Combine(FindRepoRoot(), "assets"));
 
-            MassNavigationConfig config = CreateTestConfig(membershipCapacity);
+            MassNavigationConfig config = CreateTestConfig(membershipCapacity, relationshipDomainCapacity);
             var simulation = CreateConfiguredSimulation(config);
+            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+                ?? throw new InvalidOperationException("Test requires DomainStanceQuery.");
+            simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
+                stances,
+                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+                config.RelationshipPolicy.CooperativeStance));
             var mapId = new MapId(config.MapId);
             var runtimeBinding = new MassNavigationRuntimeBinding();
             runtimeBinding.Activate(mapId, simulation);
@@ -493,12 +592,17 @@ namespace Ludots.Tests.Presentation
             return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1, teamRep, relationships, memberOfTypeId);
         }
 
-        private static MassNavigationConfig CreateTestConfig(int membershipCapacity)
+        private static MassNavigationConfig CreateTestConfig(int membershipCapacity, int? relationshipDomainCapacity = null)
         {
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = membershipCapacity;
+            if (relationshipDomainCapacity.HasValue)
+            {
+                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = relationshipDomainCapacity.Value;
+            }
+
             return config;
         }
 
@@ -522,6 +626,20 @@ namespace Ludots.Tests.Presentation
         {
             return new MassNavigationAgentSeed(
                 teamId: TeamId,
+                localPositionXCm: localX,
+                localPositionYCm: localY,
+                heavy: false,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer);
+        }
+
+        private static MassNavigationAgentSeed CreateSeed(Entity domainRep, float localX, float localY, MassNavigationAgentLayer layer)
+        {
+            return new MassNavigationAgentSeed(
+                domainRep,
                 localPositionXCm: localX,
                 localPositionYCm: localY,
                 heavy: false,
@@ -608,6 +726,11 @@ namespace Ludots.Tests.Presentation
                 Entity entity = CreateAuthoredAgentEntity(Engine.World, localX, localY, Layer);
                 Relationships.EnsureLink(entity, TeamRep, MemberOfTypeId);
                 return entity;
+            }
+
+            public Entity CreateTeamRepresentative(int teamId)
+            {
+                return Engine.World.Create(new TeamIdentity { TeamId = teamId });
             }
 
             public Entity MoveAgentToNewTeam(Entity agent, int teamId)

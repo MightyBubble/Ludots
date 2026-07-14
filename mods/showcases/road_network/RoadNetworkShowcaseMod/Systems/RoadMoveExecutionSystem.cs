@@ -12,11 +12,11 @@ namespace RoadNetworkShowcaseMod.Systems
         private static readonly QueryDescription Query = new QueryDescription()
             .WithAll<RoadColumnTag, MovePlanOrderRuntime, MovePlanExecutionIntent>();
 
-        private readonly IMovePlanExecutionSink _sink;
+        private readonly RoadNetworkMassNavigationRuntimeAccessor _navigation;
 
-        public RoadMoveExecutionSystem(World world, MassNavigationSimulationRuntime simulation) : base(world)
+        public RoadMoveExecutionSystem(World world, MassNavigationRuntimeBinding binding) : base(world)
         {
-            _sink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            _navigation = new RoadNetworkMassNavigationRuntimeAccessor(binding);
         }
 
         public override void Update(in float dt)
@@ -26,6 +26,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 Span<MovePlanOrderRuntime> orderStates = chunk.GetSpan<MovePlanOrderRuntime>();
                 Span<MovePlanExecutionIntent> intents = chunk.GetSpan<MovePlanExecutionIntent>();
                 ref Entity entityFirst = ref chunk.Entity(0);
+                MassNavigationMovePlanExecutionSink? sink = null;
 
                 foreach (int index in chunk)
                 {
@@ -34,18 +35,20 @@ namespace RoadNetworkShowcaseMod.Systems
                     ref var intent = ref intents[index];
                     if (orderRuntime.LifecycleState != MovePlanLifecycleState.Active || intent.HasTarget == 0)
                     {
-                        _sink.Clear(World, entity);
+                        sink ??= _navigation.RequireExecutionSink(nameof(RoadMoveExecutionSystem));
+                        sink.Clear(World, entity);
                         continue;
                     }
 
-                    if (_sink.TryApply(World, entity, in intent))
+                    sink ??= _navigation.RequireExecutionSink(nameof(RoadMoveExecutionSystem));
+                    if (sink.TryApply(World, entity, in intent))
                     {
                         continue;
                     }
 
                     orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
                     orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;
-                    _sink.Clear(World, entity);
+                    sink.Clear(World, entity);
                 }
             }
         }

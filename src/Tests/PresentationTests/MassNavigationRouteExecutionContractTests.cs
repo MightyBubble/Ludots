@@ -223,6 +223,38 @@ namespace Ludots.Tests.Presentation
                 "A push/pop map restore rebuilds pathing services, so ingestion must replace its cached route sink.");
         }
 
+        [Test]
+        public void RouteSink_FullCapacityCanRetargetAllMembersWhenOldRoutesWillBeReleased()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntimeWithTwoRoutedAgents(world, out Entity firstOrderAgent, out Entity secondOrderAgent);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var sink = new MassNavigationRouteExecutionSink(
+                new GoalEchoPathService(store),
+                store,
+                CreatePathingConfig(),
+                routeStateCapacity: 1,
+                waypointCapacityPerAgent: 8);
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, firstOrderAgent, 0, new Vector2(5_800, 5_000), requestId: 101, maxExpanded: 128, maxPoints: 8);
+            sink.EndSync();
+            sink.TryApplyTrackedRouteTargets(runtime, world);
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, secondOrderAgent, 1, new Vector2(6_200, 5_200), requestId: 202, maxExpanded: 128, maxPoints: 8);
+
+            Assert.DoesNotThrow(() => sink.EndSync(),
+                "Capacity preflight must account for old inactive routes that EndSync will release before allocating replacement routes.");
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+            MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
+
+            Assert.That(applied.Applied, Is.True);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out float secondX, out float secondY), Is.True);
+            Assert.That(new Vector2(secondX, secondY), Is.EqualTo(new Vector2(6_200, 5_200)));
+        }
+
         private static MassNavigationSimulationRuntime CreateRuntime(
             World world,
             out Entity routed,

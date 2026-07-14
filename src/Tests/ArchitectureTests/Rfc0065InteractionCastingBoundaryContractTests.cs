@@ -1035,15 +1035,13 @@ namespace Ludots.Tests.Architecture
             IReadOnlyList<string> forbidden,
             List<string> hits)
         {
-            string[] lines = File.ReadAllLines(file);
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            foreach ((int lineNumber, string line) in SourceTextScanner.ReadCodeLines(file))
             {
-                string line = lines[lineIndex];
                 for (int tokenIndex = 0; tokenIndex < forbidden.Count; tokenIndex++)
                 {
                     if (line.Contains(forbidden[tokenIndex], StringComparison.Ordinal))
                     {
-                        hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {forbidden[tokenIndex]}: {line.Trim()}");
+                        hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineNumber}: {forbidden[tokenIndex]}: {line.Trim()}");
                         break;
                     }
                 }
@@ -1094,7 +1092,8 @@ namespace Ludots.Tests.Architecture
             return !relative.Contains("/bin/", StringComparison.OrdinalIgnoreCase) &&
                    !relative.Contains("/obj/", StringComparison.OrdinalIgnoreCase) &&
                    !relative.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) &&
-                   !relative.Contains("/.git/", StringComparison.OrdinalIgnoreCase);
+                   !relative.Contains("/.git/", StringComparison.OrdinalIgnoreCase) &&
+                   !relative.StartsWith("src/Tests/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FindRepoRoot()

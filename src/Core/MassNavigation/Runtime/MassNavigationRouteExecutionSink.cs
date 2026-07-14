@@ -148,6 +148,18 @@ public sealed class MassNavigationRouteExecutionSink
         _syncInProgress = true;
     }
 
+    public void CancelSync()
+    {
+        if (!_syncInProgress)
+        {
+            return;
+        }
+
+        _syncPlanCount = 0;
+        _syncInProgress = false;
+        _activeKeys.Clear();
+    }
+
     public MassNavigationRouteSinkResult TrackRouteTarget(
         MassNavigationSimulationRuntime simulation,
         World world,
@@ -240,23 +252,10 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         PreflightSyncRouteCapacity();
+        ReleaseInactiveRoutes();
         for (int i = 0; i < _syncPlanCount; i++)
         {
             ApplyRouteTrackPlan(_syncPlans[i]);
-        }
-
-        _keysToRemove.Clear();
-        foreach (long key in _routesByKey.Keys)
-        {
-            if (!_activeKeys.Contains(key))
-            {
-                _keysToRemove.Add(key);
-            }
-        }
-
-        for (int i = 0; i < _keysToRemove.Count; i++)
-        {
-            ReleaseRoute(_keysToRemove[i]);
         }
 
         _syncPlanCount = 0;
@@ -301,9 +300,35 @@ public sealed class MassNavigationRouteExecutionSink
             }
         }
 
-        if (missingRouteCount > _freeRoutes.Count)
+        int releasableRouteCount = 0;
+        foreach (long key in _routesByKey.Keys)
+        {
+            if (!_activeKeys.Contains(key))
+            {
+                releasableRouteCount++;
+            }
+        }
+
+        if (missingRouteCount > _freeRoutes.Count + releasableRouteCount)
         {
             throw new InvalidOperationException("MassNavigation route state capacity exceeded.");
+        }
+    }
+
+    private void ReleaseInactiveRoutes()
+    {
+        _keysToRemove.Clear();
+        foreach (long key in _routesByKey.Keys)
+        {
+            if (!_activeKeys.Contains(key))
+            {
+                _keysToRemove.Add(key);
+            }
+        }
+
+        for (int i = 0; i < _keysToRemove.Count; i++)
+        {
+            ReleaseRoute(_keysToRemove[i]);
         }
     }
 

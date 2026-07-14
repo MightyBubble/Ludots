@@ -60,6 +60,11 @@ namespace Ludots.Core.Input.Orders
     public delegate void OrderSubmitHandler(in Order order);
 
     /// <summary>
+    /// Delegate for atomically submitting a caller-owned order batch.
+    /// </summary>
+    public delegate bool OrderBatchSubmitHandler(Span<Order> orders);
+
+    /// <summary>
     /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
     /// </summary>
     public delegate bool ActorOrderRoutingResolver(
@@ -193,6 +198,7 @@ namespace Ludots.Core.Input.Orders
         private CollectionEntityListProvider? _collectionEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
+        private OrderBatchSubmitHandler? _orderBatchSubmitHandler;
         private ModifierKeyProvider? _queueModifierProvider;
         private AimingStateChangedHandler? _aimingStateChangedHandler;
         private AimingUpdateHandler? _aimingUpdateHandler;
@@ -239,6 +245,7 @@ namespace Ludots.Core.Input.Orders
         private CommandIntentRoute[] _commandIntentRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
         private CommandIntentRoute[] _commandIntentRoutedRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
         private Entity[] _commandIntentDispatchActorsScratch = new Entity[InitialScratchCapacity];
+        private Order[] _commandIntentOrdersScratch = new Order[InitialScratchCapacity];
 
         // Aiming state (AimCast mode)
         private bool _isAiming;
@@ -369,6 +376,7 @@ namespace Ludots.Core.Input.Orders
         public void SetCollectionEntityListProvider(CollectionEntityListProvider provider) => _collectionEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
+        public void SetOrderBatchSubmitHandler(OrderBatchSubmitHandler handler) => _orderBatchSubmitHandler = handler;
         public void SetQueueModifierProvider(ModifierKeyProvider provider) => _queueModifierProvider = provider;
         public void SetAimingStateChangedHandler(AimingStateChangedHandler handler) => _aimingStateChangedHandler = handler;
         public void SetAimingUpdateHandler(AimingUpdateHandler handler) => _aimingUpdateHandler = handler;
@@ -1361,6 +1369,14 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
+            if (_routedOrdersScratch.Count > 1 && _orderBatchSubmitHandler == null)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' actorOrderRouting produced {_routedOrdersScratch.Count} orders, but no atomic batch submit handler is configured.");
+            }
+
+            EnsureOrderScratch(ref _commandIntentOrdersScratch, _routedOrdersScratch.Count);
+            int batchCount = 0;
             int layoutIndex = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
@@ -1376,7 +1392,22 @@ namespace Ludots.Core.Input.Orders
                     layoutIndex++;
                 }
 
-                _orderSubmitHandler!(in order);
+                if (_routedOrdersScratch.Count == 1)
+                {
+                    _orderSubmitHandler!(in order);
+                }
+                else
+                {
+                    _commandIntentOrdersScratch[batchCount++] = order;
+                }
+            }
+
+            if (batchCount > 0)
+            {
+                SubmitAtomicOrderBatchOrThrow(
+                    mapping,
+                    _commandIntentOrdersScratch.AsSpan(0, batchCount),
+                    "actorOrderRouting");
             }
         }
 
@@ -1491,6 +1522,49 @@ namespace Ludots.Core.Input.Orders
             {
                 throw new InvalidOperationException(
                     "Command intent dispatch profile returned multiple actors for a sequential router; sequential dispatch must select exactly one actor per trigger.");
+            }
+
+            if (routing.SharedOrderId && dispatchCount > 1)
+            {
+                if (_orderBatchSubmitHandler == null)
+                {
+                    throw new InvalidOperationException(
+                        "Command intent dispatch profile requires shared order ids for a multi-actor fan-out, but no order batch submit handler is configured.");
+                }
+
+                EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
+                for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
+                {
+                    Entity dispatchActor = _commandIntentDispatchActorsScratch[dispatchIndex];
+                    int actorIndex = IndexOfEntity(routedActors, dispatchActor);
+                    if (actorIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Cast dispatch returned actor '{dispatchActor}' that was not present in the routed actor group.");
+                    }
+
+                    CommandIntentRoute route = routedRoutes[actorIndex];
+
+                    var args = new OrderArgs();
+                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+                    args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                    args.Spatial.Mode = OrderCollectionMode.Single;
+                    args.Spatial.WorldCm = groundWorldCm;
+
+                    _commandIntentOrdersScratch[dispatchIndex] = new Order
+                    {
+                        OrderTypeId = route.OrderTypeId,
+                        PlayerId = _playerId,
+                        Actor = dispatchActor,
+                        Args = args,
+                        SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
+                    };
+                }
+
+                return SubmitAtomicOrderBatchOrThrow(
+                    mapping,
+                    _commandIntentOrdersScratch.AsSpan(0, dispatchCount),
+                    "command intent shared fan-out");
             }
 
             int sharedOrderId = 0;
@@ -1678,6 +1752,22 @@ namespace Ludots.Core.Input.Orders
             Array.Resize(ref scratch, next);
         }
 
+        private static void EnsureOrderScratch(ref Order[] scratch, int required)
+        {
+            if (scratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = scratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref scratch, next);
+        }
+
         private Entity ResolvePrimaryActor(InputOrderMapping mapping)
         {
             if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
@@ -1731,6 +1821,14 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
+            if (_orderBatchSubmitHandler == null)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' targets actorCollectionKey '{mapping.ActorCollectionKey}' with {_collectionActorsScratch.Count} actors, but no atomic batch submit handler is configured.");
+            }
+
+            EnsureOrderScratch(ref _commandIntentOrdersScratch, _collectionActorsScratch.Count);
+            int batchCount = 0;
             for (int i = 0; i < _collectionActorsScratch.Count; i++)
             {
                 Entity actor = _collectionActorsScratch[i];
@@ -1742,8 +1840,33 @@ namespace Ludots.Core.Input.Orders
                 var cloned = order;
                 cloned.Actor = actor;
                 ApplyGroupMoveTargetLayout(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
-                _orderSubmitHandler!(in cloned);
+                _commandIntentOrdersScratch[batchCount++] = cloned;
             }
+
+            if (batchCount > 0)
+            {
+                SubmitAtomicOrderBatchOrThrow(
+                    mapping,
+                    _commandIntentOrdersScratch.AsSpan(0, batchCount),
+                    "actorCollectionKey fan-out");
+            }
+        }
+
+        private bool SubmitAtomicOrderBatchOrThrow(InputOrderMapping mapping, Span<Order> orders, string context)
+        {
+            if (_orderBatchSubmitHandler == null)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' requires atomic batch submission for {context}, but no order batch submit handler is configured.");
+            }
+
+            if (_orderBatchSubmitHandler(orders))
+            {
+                return true;
+            }
+
+            throw new InvalidOperationException(
+                $"Input mapping '{mapping.ActionId}' atomic batch submit was rejected for {context}; no partial orders were accepted.");
         }
 
         private void ApplyGroupMoveTargetLayout(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)

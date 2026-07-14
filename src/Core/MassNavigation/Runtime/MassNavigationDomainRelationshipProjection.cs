@@ -49,14 +49,39 @@ internal sealed class MassNavigationDomainStanceProjection : IMassNavigationDoma
 
     public uint Revision => _stances.Revision;
 
+    public void ValidateResetDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds)
+    {
+        ValidateDomains(seeds, includeExistingDomains: false);
+    }
+
+    public void ValidateAppendDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds)
+    {
+        ValidateDomains(seeds, includeExistingDomains: true);
+    }
+
     public void ResetDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds)
     {
+        ValidateResetDomains(seeds);
         _domainById.Clear();
-        AppendDomains(seeds);
+        AppendDomainsWithoutValidation(seeds);
     }
 
     public void AppendDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds)
     {
+        ValidateAppendDomains(seeds);
+        AppendDomainsWithoutValidation(seeds);
+    }
+
+    public bool IsCooperative(int sourceDomainId, int targetDomainId)
+    {
+        Entity source = RequireDomain(sourceDomainId);
+        Entity target = RequireDomain(targetDomainId);
+        return _stances.GetStance(source, target) == _cooperativeStanceId;
+    }
+
+    private void ValidateDomains(ReadOnlySpan<MassNavigationAgentSeed> seeds, bool includeExistingDomains)
+    {
+        int newDomainCount = 0;
         for (int i = 0; i < seeds.Length; i++)
         {
             Entity domain = seeds[i].DomainRep;
@@ -65,7 +90,7 @@ internal sealed class MassNavigationDomainStanceProjection : IMassNavigationDoma
                 continue;
             }
 
-            if (_domainById.TryGetValue(domain.Id, out Entity existing))
+            if (includeExistingDomains && _domainById.TryGetValue(domain.Id, out Entity existing))
             {
                 if (existing != domain)
                 {
@@ -76,21 +101,60 @@ internal sealed class MassNavigationDomainStanceProjection : IMassNavigationDoma
                 continue;
             }
 
-            if (_domainById.Count >= _capacity)
+            if (HasEarlierDomain(seeds, i, domain))
+            {
+                continue;
+            }
+
+            newDomainCount++;
+            int requiredDomainCount = includeExistingDomains ? _domainById.Count + newDomainCount : newDomainCount;
+            if (requiredDomainCount > _capacity)
             {
                 throw new InvalidOperationException(
                     $"MassNavigation relationship projection requires more than configured relationshipDomainCapacity {_capacity} domains.");
             }
-
-            _domainById.Add(domain.Id, domain);
         }
     }
 
-    public bool IsCooperative(int sourceDomainId, int targetDomainId)
+    private static bool HasEarlierDomain(ReadOnlySpan<MassNavigationAgentSeed> seeds, int currentIndex, Entity domain)
     {
-        Entity source = RequireDomain(sourceDomainId);
-        Entity target = RequireDomain(targetDomainId);
-        return _stances.GetStance(source, target) == _cooperativeStanceId;
+        for (int i = 0; i < currentIndex; i++)
+        {
+            Entity previous = seeds[i].DomainRep;
+            if (previous == Entity.Null || previous.Id != domain.Id)
+            {
+                continue;
+            }
+
+            if (previous != domain)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation domain id {domain.Id} resolved to more than one entity generation.");
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void AppendDomainsWithoutValidation(ReadOnlySpan<MassNavigationAgentSeed> seeds)
+    {
+        for (int i = 0; i < seeds.Length; i++)
+        {
+            Entity domain = seeds[i].DomainRep;
+            if (domain == Entity.Null)
+            {
+                continue;
+            }
+
+            if (_domainById.TryGetValue(domain.Id, out _))
+            {
+                continue;
+            }
+
+            _domainById.Add(domain.Id, domain);
+        }
     }
 
     private Entity RequireDomain(int domainId)

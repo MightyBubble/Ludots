@@ -594,6 +594,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
+        _domainStanceProjection?.ValidateResetDomains(agentSeeds);
         ClearAuthoredRuntimeBindings(world);
         _domainStanceProjection?.ResetDomains(agentSeeds);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
@@ -631,6 +632,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         int startIndex = MassNavigationFlow.UnitCount;
+        _domainStanceProjection?.ValidateAppendDomains(newAgentSeeds);
         _domainStanceProjection?.AppendDomains(newAgentSeeds);
         MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
         for (int i = 0; i < newEntities.Length; i++)
@@ -647,6 +649,7 @@ public sealed class MassNavigationSimulationRuntime
         try
         {
             ObserveFlowWorkArea(worldCenterCm, _simWindowWidthCm, _simWindowHeightCm, ReadOnlySpan<Entity>.Empty, "manual focus");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
             MoveSolverWindow(worldCenterCm, "manual nav focus");
             UpdateStreamingWindow(ResolveStreamingFocus());
         }
@@ -673,6 +676,7 @@ public sealed class MassNavigationSimulationRuntime
                 _simWindowHeightCm,
                 orderMembers,
                 orderMembers.Length > 0 ? "order members" : "order");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
             MoveSolverWindow(ResolveSolverFocusForWorkArea(), orderMembers.Length > 0 ? "order members" : "order");
             UpdateStreamingWindow(ResolveStreamingFocus());
         }
@@ -680,6 +684,30 @@ public sealed class MassNavigationSimulationRuntime
         {
             RestoreFocusState(in previous);
             throw;
+        }
+    }
+
+    internal void PreflightOrderTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> orderMembers)
+    {
+        FocusState previous = CaptureFocusState();
+        try
+        {
+            _hasCommandFocus = true;
+            _lastCommandFocusXCm = worldCenterCm.X;
+            _lastCommandFocusYCm = worldCenterCm.Y;
+            _lastOrderMemberCount = orderMembers.Length;
+            _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
+            ObserveFlowWorkArea(
+                worldCenterCm,
+                _simWindowWidthCm,
+                _simWindowHeightCm,
+                orderMembers,
+                orderMembers.Length > 0 ? "order members" : "order");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
+        }
+        finally
+        {
+            RestoreFocusState(in previous);
         }
     }
 

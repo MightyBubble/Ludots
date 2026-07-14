@@ -356,10 +356,8 @@ namespace Ludots.Tests.Architecture
                 yield return relative + ": file name";
             }
 
-            int lineNumber = 0;
-            foreach (string line in File.ReadLines(file))
+            foreach ((int lineNumber, string line) in SourceTextScanner.ReadCodeLines(file))
             {
-                lineNumber++;
                 if (line.Contains("Formation", StringComparison.Ordinal) ||
                     Regex.IsMatch(line, @"\bformation\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 {
@@ -371,10 +369,8 @@ namespace Ludots.Tests.Architecture
         private static IEnumerable<string> FindTokenHits(string repoRoot, string file, IReadOnlyList<string> tokens)
         {
             string relative = ToRepoRelativePath(repoRoot, file);
-            int lineNumber = 0;
-            foreach (string line in File.ReadLines(file))
+            foreach ((int lineNumber, string line) in SourceTextScanner.ReadCodeLines(file))
             {
-                lineNumber++;
                 for (int i = 0; i < tokens.Count; i++)
                 {
                     string token = tokens[i];

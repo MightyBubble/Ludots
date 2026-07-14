@@ -981,6 +981,49 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityExecution_MemberLayoutChangeRetargetsStableFormationPose()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before stable-pose member retarget validation.");
+
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
+                .Single();
+            UpdateSystem(system);
+            UpdateSystem(system);
+
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            int soldierAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
+            Assert.That(
+                simulation.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out float targetBeforeX, out float targetBeforeY),
+                Is.True);
+
+            ref FormationMemberState member = ref engine.World.Get<FormationMemberState>(soldier);
+            member.LocalOffsetXCm += 450f;
+            member.LocalOffsetYCm += 125f;
+
+            UpdateSystem(system);
+
+            Assert.That(
+                simulation.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out float targetAfterX, out float targetAfterY),
+                Is.True);
+            Assert.That(
+                MathF.Abs(targetAfterX - targetBeforeX) + MathF.Abs(targetAfterY - targetBeforeY),
+                Is.GreaterThan(1f),
+                "Changing a Formation member's slot layout must refresh that member target even when the formation center and facing are stable.");
+        }
+
+        [Test]
         public void FormationCapabilityExecution_SoldierAgentIndexAtCapacityFailsBeforeAnyCommit()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
@@ -2081,6 +2124,129 @@ namespace Ludots.Tests.Presentation
                 spawned++;
             });
             Assert.That(spawned, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RuntimeTemplateBatchSpawn_InvalidExplicitMembershipDoesNotPublishSuccessOrCreateEntities()
+        {
+            string templateJson = """
+[
+  {
+    "id": "relationship_batch_agent",
+    "components": {
+      "Name": { "Value": "Relationship Batch Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var presentationEvents = new PresentationEventStream(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                presentationEvents: presentationEvents,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            const int receiptChannel = 202;
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "relationship_batch_agent",
+                    MapId = new MapId("relationship_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = Entity.Null,
+                    HasMembershipTarget = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("MembershipTarget"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
+            Assert.That(spawned, Is.Zero, "Invalid explicit relationship prerequisites must fail before batch entities are created.");
+        }
+
+        [Test]
+        public void RuntimeTemplateBatchSpawn_TemplateTeamAndExplicitMembershipTargetMustNotConflict()
+        {
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(TeamAuthoredBatchTemplateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            Entity teamSevenRepresentative = world.Create(new TeamIdentity { TeamId = 7 });
+            Entity teamEightRepresentative = world.Create(new TeamIdentity { TeamId = 8 });
+            var teamLookup = new TeamEntityLookup();
+            teamLookup.Register(7, teamSevenRepresentative);
+            teamLookup.Register(8, teamEightRepresentative);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                teamLookup: teamLookup,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            const int receiptChannel = 203;
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "team_authored_batch_agent",
+                    MapId = new MapId("team_authored_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = teamEightRepresentative,
+                    HasMembershipTarget = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("conflicts"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
+            Assert.That(spawned, Is.Zero, "Conflicting relationship authoring must fail before batch entities are created.");
         }
 
         [Test]

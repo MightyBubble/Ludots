@@ -4,6 +4,7 @@
   "Entities": [
     {
       "Template": "rts_sc2_gateway",
+      "InstanceId": "protoss_gateway",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 6200, "Y": 6200 } },
         "Name": { "Value": "Gateway Prime" }
@@ -25,6 +26,7 @@
     },
     {
       "Template": "rts_zerg_drone",
+      "InstanceId": "zerg_drone",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 30500, "Y": 33200 } },
         "Name": { "Value": "Drone" }
@@ -64,5 +66,27 @@
     "Pitch": 45,
     "DistanceCm": 14142,
     "FovYDeg": 60
+  },
+  "Teams": [
+    { "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" },
+    { "TeamId": 3, "RepresentativeInstanceId": "protoss_gateway" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 3, "RepresentativeInstanceId": "protoss_gateway" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "zerg_drone" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 3, "TeamB": 3, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 3, "TypeId": "RtsShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 3, "TypeId": "RtsShowcase.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": false }
+    ]
   }
 }

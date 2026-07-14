@@ -12,12 +12,14 @@
   "Entities": [
     {
       "Template": "entityquery_tactics_player_commander",
+      "InstanceId": "entityquery-tactics-player-commander",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 1040, "Y": 920 } }
       }
     },
     {
       "Template": "entityquery_tactics_enemy_commander_owner",
+      "InstanceId": "entityquery-tactics-enemy-commander",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 2420, "Y": 920 } }
       }
@@ -146,5 +148,18 @@
         "WorldPositionCm": { "Value": { "X": 1660, "Y": 920 } }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "entityquery-tactics-player-commander" },
+    { "TeamId": 2, "RepresentativeInstanceId": "entityquery-tactics-enemy-commander" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "EntityQueryTactics.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

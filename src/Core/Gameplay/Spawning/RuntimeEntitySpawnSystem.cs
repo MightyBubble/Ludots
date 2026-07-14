@@ -283,6 +283,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
             bool hasExplicitRelationshipWork = false;
+            bool hasOwnershipEdgeWork = _ownership != null && _playerLookup != null;
             bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
             for (int i = 0; i < count; i++)
             {
@@ -295,10 +296,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
             }
 
-            if (templateAuthorsTeam)
-            {
-                PreflightTemplateBatchImplicitMembership(templateId, in templateTeam, count);
-            }
+            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
+            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
 
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
@@ -340,6 +339,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasPlayerOwnerWork ||
                 hasParentWork ||
                 hasExplicitRelationshipWork ||
+                hasOwnershipEdgeWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||
@@ -372,13 +372,15 @@ namespace Ludots.Core.Gameplay.Spawning
                         TryApplyParentLink(in request, entity);
                     }
 
+                    TryLinkOwnershipEdge(entity);
+                    TryLinkExplicitRelationships(in request, entity);
+
                     if (publishSpawnedEvent)
                     {
                         PublishSpawnedPresentationEvent(entity);
                     }
 
                     PublishSpawnReceipt(in request, entity);
-                    TryLinkExplicitRelationships(in request, entity);
 
                     if (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0)
                     {
@@ -387,16 +389,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);
-            }
-
-            if (_ownership != null && _playerLookup != null)
-            {
-                // Template-authored PlayerOwner components bypass the per-request owner work flags,
-                // so ownership edges are linked per created entity regardless of the post-spawn loop.
-                for (int i = 0; i < created.Length; i++)
-                {
-                    OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, created[i]);
-                }
             }
 
             double performerBatchMs = 0d;
@@ -710,20 +702,24 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void PreflightTemplateBatchImplicitMembership(
+        private void PreflightTemplateBatchRelationships(
             string templateId,
+            bool templateAuthorsTeam,
             in Team templateTeam,
             int count)
         {
             for (int i = 0; i < count; i++)
             {
                 ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
+                PreflightExplicitRelationship(in request);
+
+                int teamId = ResolveTemplateBatchFinalTeamId(in request, templateAuthorsTeam ? templateTeam.Id : 0);
                 if (request.HasMembershipTarget != 0)
                 {
+                    PreflightMembershipTargetMatchesTeam(templateId, in request, teamId);
                     continue;
                 }
 
-                int teamId = ResolveTemplateBatchFinalTeamId(in request, templateTeam.Id);
                 if (teamId <= 0)
                 {
                     continue;
@@ -740,6 +736,76 @@ namespace Ludots.Core.Gameplay.Spawning
                     throw new InvalidOperationException(
                         $"Runtime template batch '{templateId}' authors Team {teamId}, but no live team relationship representative exists.");
                 }
+            }
+        }
+
+        private void PreflightExplicitRelationship(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.HasOwnershipSource != 0 &&
+                (_ownership == null || !World.IsAlive(request.OwnershipSource)))
+            {
+                throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
+            }
+
+            if (request.HasMembershipTarget != 0 &&
+                (_relationships == null || _memberOfTypeId < 0 || !World.IsAlive(request.MembershipTarget)))
+            {
+                throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
+            }
+        }
+
+        private void PreflightMembershipTargetMatchesTeam(
+            string templateId,
+            in RuntimeEntitySpawnRequest request,
+            int teamId)
+        {
+            if (teamId <= 0)
+            {
+                return;
+            }
+
+            if (!World.TryGet(request.MembershipTarget, out TeamIdentity targetTeam))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
+            }
+
+            if (targetTeam.TeamId != teamId)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
+            }
+        }
+
+        private void PreflightTemplateBatchSuccessSignals(int count, bool publishSpawnedEvent)
+        {
+            int receiptCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_batchRequests[i].EmitReceipt != 0)
+                {
+                    receiptCount++;
+                }
+            }
+
+            if (receiptCount > 0)
+            {
+                if (_receipts == null)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+                }
+
+                if (receiptCount > _receipts.FreeCapacity)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+                }
+            }
+
+            if (publishSpawnedEvent &&
+                _presentationEvents != null &&
+                count > _presentationEvents.Capacity - _presentationEvents.Count)
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing batch EntitySpawned.");
             }
         }
 

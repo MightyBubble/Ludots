@@ -10,5 +10,54 @@
     "Pitch": 58,
     "FovYDeg": 44
   },
-  "Entities": []
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-stress-team-blue-anchor",
+      "Overrides": {
+        "Name": { "Value": "Stress Blue Team Anchor" }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-stress-player-blue-anchor",
+      "Overrides": {
+        "Name": { "Value": "Stress Blue Player Anchor" }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-stress-team-red-anchor",
+      "Overrides": {
+        "Name": { "Value": "Stress Red Team Anchor" }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-stress-player-red-anchor",
+      "Overrides": {
+        "Name": { "Value": "Stress Red Player Anchor" }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "champion-stress-team-blue-anchor" },
+    { "TeamId": 2, "RepresentativeInstanceId": "champion-stress-team-red-anchor" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "champion-stress-player-blue-anchor" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "champion-stress-player-red-anchor" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false }
+    ]
+  }
 }

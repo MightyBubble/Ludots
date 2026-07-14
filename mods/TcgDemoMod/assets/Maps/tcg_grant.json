@@ -4,6 +4,7 @@
   "Entities": [
     {
       "Template": "tcg_hero",
+      "InstanceId": "tcg-grant-hero",
       "Overrides": {
         "AbilityStateBuffer": {
           "abilityIds": [
@@ -13,6 +14,19 @@
         }
       }
     },
-    { "Template": "tcg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
-  ]
+    { "Template": "tcg_enemy", "InstanceId": "tcg-grant-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "tcg-grant-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "tcg-grant-enemy" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "TcgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "TcgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "TcgDemo.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

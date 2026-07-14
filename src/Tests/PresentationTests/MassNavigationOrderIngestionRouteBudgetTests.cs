@@ -101,6 +101,67 @@ public sealed class MassNavigationOrderIngestionRouteBudgetTests
         Assert.That(pathService.LastMaxPoints, Is.EqualTo(expectedMaxPoints));
     }
 
+    [Test]
+    public void OrderIngestion_RouteCapacityFailureDoesNotPartiallyApplyEarlierBucket()
+    {
+        MassNavigationProfileRegistry.Reset();
+        const string routedProfileId = "test.massNavigation.atomicRouteCapacity";
+
+        using var engine = CreateEngine();
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        config.ScenarioRuntime.RuntimeCapacity.RouteStateCapacity = 1;
+
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+        PublishPreparedRuntime(engine, config.MapId, simulation);
+        RegisterMoveOrderServices(engine);
+
+        int profileId = MassNavigationProfileRegistry.Register(routedProfileId);
+        Entity first = engine.World.Create(
+            new MassNavigationAgent { ProfileId = profileId },
+            new FacingDirection { AngleRad = 0f },
+            OrderBuffer.CreateEmpty());
+        Entity second = engine.World.Create(
+            new MassNavigationAgent { ProfileId = profileId },
+            new FacingDirection { AngleRad = 0f },
+            OrderBuffer.CreateEmpty());
+        SetActiveMoveOrder(engine.World, first, orderId: 701, new Vector2(2_500f, 2_500f));
+        SetActiveMoveOrder(engine.World, second, orderId: 702, new Vector2(3_500f, 2_500f));
+
+        simulation.RebuildFromAuthoredAgents(
+            engine.World,
+            new[] { first, second },
+            new[]
+            {
+                CreateSeed(simulation, teamId: 1, worldX: 1_000f, worldY: 1_000f),
+                CreateSeed(simulation, teamId: 1, worldX: 1_200f, worldY: 1_000f),
+            },
+            new[] { true, true });
+
+        var store = new PathStore(maxPaths: 4, maxPointsPerPath: config.ScenarioRuntime.RuntimeCapacity.RouteWaypointCapacityPerAgent);
+        engine.SetService(CoreServiceKeys.PathStore, store);
+        engine.SetService(CoreServiceKeys.PathService, new CapturingPathService(store));
+        engine.SetService(CoreServiceKeys.PathingConfig, CreatePathingConfig(routedProfileId));
+
+        float focusX = simulation.FlowWorkAreaCenterXCm;
+        float focusY = simulation.FlowWorkAreaCenterYCm;
+        var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(ingestion))!;
+        Assert.That(ex.Message, Does.Contain("route state capacity"));
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(701, out _), Is.False);
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(702, out _), Is.False);
+        Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out _, out _), Is.False);
+        Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(1, out _, out _), Is.False);
+        Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(focusX));
+        Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(focusY));
+        MassNavigationRouteExecutionSink routeSink = engine.GetService(MassNavigationKeys.RouteExecutionSink)
+            ?? throw new InvalidOperationException("Expected route sink to be published before capacity preflight fails.");
+        Assert.That(routeSink.ActiveRouteCount, Is.Zero);
+    }
+
     private static GameEngine CreateEngine()
     {
         var engine = new GameEngine();
@@ -141,6 +202,37 @@ public sealed class MassNavigationOrderIngestionRouteBudgetTests
             new OrderQueue(capacity: 16));
         engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
         engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
+    }
+
+    private static void SetActiveMoveOrder(World world, Entity agent, int orderId, Vector2 destination)
+    {
+        var move = new Order
+        {
+            OrderId = orderId,
+            OrderTypeId = MoveOrderTypeId,
+            Actor = agent,
+            SubmitMode = OrderSubmitMode.Immediate,
+            Args = MassNavigationMoveOrderArgs.Encode(destination),
+        };
+        world.Get<OrderBuffer>(agent).SetActiveDirect(in move, priority: 100);
+    }
+
+    private static MassNavigationAgentSeed CreateSeed(
+        MassNavigationSimulationRuntime simulation,
+        int teamId,
+        float worldX,
+        float worldY)
+    {
+        return new MassNavigationAgentSeed(
+            teamId,
+            localPositionXCm: simulation.ToLocalXCm(worldX),
+            localPositionYCm: simulation.ToLocalYCm(worldY),
+            heavy: false,
+            navMass: 1f,
+            visualScale: 1f,
+            bodyRadiusCm: 20f,
+            speedCmPerSecond: 800f,
+            new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u));
     }
 
     private static PathingConfig CreatePathingConfig(string routedProfileId)
