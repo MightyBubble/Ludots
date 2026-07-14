@@ -13,6 +13,7 @@ namespace Ludots.Core.Navigation.GraphWorld
     {
         private readonly HashSet<long> _activeChunks;
         private readonly HashSet<long> _nextActiveChunks;
+        private readonly List<long> _eventScratch;
 
         public int ChunkSizeCm { get; }
         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
@@ -38,6 +39,9 @@ namespace Ludots.Core.Navigation.GraphWorld
             _nextActiveChunks = loadedChunkCapacity > 0
                 ? new HashSet<long>(loadedChunkCapacity)
                 : new HashSet<long>();
+            _eventScratch = loadedChunkCapacity > 0
+                ? new List<long>(loadedChunkCapacity)
+                : new List<long>();
             ChunkSizeCm = chunkSizeCm;
         }
 
@@ -92,20 +96,32 @@ namespace Ludots.Core.Navigation.GraphWorld
                 }
             }
 
+            _eventScratch.Clear();
             foreach (long chunkKey in _activeChunks)
             {
                 if (!_nextActiveChunks.Contains(chunkKey))
                 {
-                    ChunkUnloaded?.Invoke(chunkKey);
+                    _eventScratch.Add(chunkKey);
                 }
             }
+            _eventScratch.Sort();
+            for (int i = 0; i < _eventScratch.Count; i++)
+            {
+                ChunkUnloaded?.Invoke(_eventScratch[i]);
+            }
 
+            _eventScratch.Clear();
             foreach (long chunkKey in _nextActiveChunks)
             {
                 if (!_activeChunks.Contains(chunkKey))
                 {
-                    ChunkLoaded?.Invoke(chunkKey);
+                    _eventScratch.Add(chunkKey);
                 }
+            }
+            _eventScratch.Sort();
+            for (int i = 0; i < _eventScratch.Count; i++)
+            {
+                ChunkLoaded?.Invoke(_eventScratch[i]);
             }
 
             _activeChunks.Clear();
@@ -122,13 +138,17 @@ namespace Ludots.Core.Navigation.GraphWorld
                 return;
             }
 
-            long[] snapshot = new long[_activeChunks.Count];
-            _activeChunks.CopyTo(snapshot);
+            _eventScratch.Clear();
+            foreach (long chunkKey in _activeChunks)
+            {
+                _eventScratch.Add(chunkKey);
+            }
+            _eventScratch.Sort();
             _activeChunks.Clear();
 
-            for (int i = 0; i < snapshot.Length; i++)
+            for (int i = 0; i < _eventScratch.Count; i++)
             {
-                ChunkUnloaded?.Invoke(snapshot[i]);
+                ChunkUnloaded?.Invoke(_eventScratch[i]);
             }
         }
     }

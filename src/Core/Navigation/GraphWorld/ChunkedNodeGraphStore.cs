@@ -80,121 +80,77 @@ namespace Ludots.Core.Navigation.GraphWorld
 
         public LoadedGraphView BuildLoadedView()
         {
-            int totalNodes = 0;
-            int totalEdges = 0;
-            int totalCrossEdges = 0;
-
-            foreach (var kv in _chunks)
+            if (_chunks.Count == 0)
             {
-                var g = kv.Value.Graph;
-                totalNodes += g.NodeCount;
-                totalEdges += g.EdgeCount;
-                totalCrossEdges += kv.Value.CrossEdges.Length;
+                return BuildLoadedViewCore(Array.Empty<long>(), 0);
             }
 
-            var builder = new NodeGraphBuilder(totalNodes, totalEdges + totalCrossEdges);
-            var nodeKeys = totalNodes == 0 ? Array.Empty<GraphNodeKey>() : new GraphNodeKey[totalNodes];
-            var nodeIdByKey = new Dictionary<GraphNodeKey, int>(totalNodes);
-
-            var chunkOffsets = new Dictionary<long, int>(_chunks.Count);
-            int offset = 0;
-            foreach (var kv in _chunks)
-            {
-                chunkOffsets[kv.Key] = offset;
-                var g = kv.Value.Graph;
-
-                var xs = g.PosXcmArray;
-                var ys = g.PosYcmArray;
-                var tags = g.NodeTagSetIdArray;
-                var tagSets = g.TagSetsArray;
-                int n = g.NodeCount;
-                for (int i = 0; i < n; i++)
-                {
-                    ushort tagSetId = builder.AddTagSet(in tagSets[tags[i]]);
-                    int nodeId = builder.AddNode(xs[i], ys[i], tagSetId);
-                    var key = new GraphNodeKey(kv.Key, (ushort)i);
-                    nodeKeys[nodeId] = key;
-                    nodeIdByKey[key] = nodeId;
-                }
-
-                offset += n;
-            }
-
-            foreach (var kv in _chunks)
-            {
-                var g = kv.Value.Graph;
-                int chunkOffset = chunkOffsets[kv.Key];
-
-                var edgeStart = g.EdgeStartArray;
-                var edgeTo = g.EdgeToArray;
-                var edgeCost = g.EdgeBaseCostArray;
-                var edgeTags = g.EdgeTagSetIdArray;
-                var edgeDepth = g.EdgeDepthCmArray;
-                var edgeWidth = g.EdgeWidthCmArray;
-                var tagSets = g.TagSetsArray;
-
-                int nodeCount = g.NodeCount;
-                for (int n = 0; n < nodeCount; n++)
-                {
-                    int fromGlobal = chunkOffset + n;
-                    for (int e = edgeStart[n]; e < edgeStart[n + 1]; e++)
-                    {
-                        int toGlobal = chunkOffset + edgeTo[e];
-                        ushort tagSetId = builder.AddTagSet(in tagSets[edgeTags[e]]);
-                        builder.AddEdge(fromGlobal, toGlobal, edgeCost[e], tagSetId, edgeDepth[e], edgeWidth[e]);
-                    }
-                }
-
-                var cross = kv.Value.CrossEdges;
-                for (int i = 0; i < cross.Length; i++)
-                {
-                    var ce = cross[i];
-                    int fromGlobal = chunkOffset + ce.FromLocalNodeId;
-                    var toKey = new GraphNodeKey(ce.ToChunkKey, ce.ToLocalNodeId);
-                    if (!nodeIdByKey.TryGetValue(toKey, out int toGlobal)) continue;
-                    TagBits256 crossTags = ResolveCrossEdgeTags(g, in ce);
-                    ushort tagSetId = builder.AddTagSet(in crossTags);
-                    builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, tagSetId, ce.DepthCm, ce.WidthCm);
-                }
-            }
-
-            var graph = builder.Build();
-            return new LoadedGraphView(graph, nodeKeys, nodeIdByKey);
+            var sortedKeys = new long[_chunks.Count];
+            _chunks.Keys.CopyTo(sortedKeys, 0);
+            Array.Sort(sortedKeys);
+            return BuildLoadedViewCore(sortedKeys, sortedKeys.Length);
         }
 
         public LoadedGraphView BuildLoadedView(IReadOnlyList<long> chunkKeys)
         {
             if (chunkKeys == null) throw new ArgumentNullException(nameof(chunkKeys));
-            if (chunkKeys.Count == 0) return new LoadedGraphView(new NodeGraphBuilder(0, 0).Build(), Array.Empty<GraphNodeKey>(), new Dictionary<GraphNodeKey, int>());
+            if (chunkKeys.Count == 0)
+            {
+                return BuildLoadedViewCore(Array.Empty<long>(), 0);
+            }
 
-            var included = new HashSet<long>();
-            for (int i = 0; i < chunkKeys.Count; i++) included.Add(chunkKeys[i]);
+            var sortedKeys = new long[chunkKeys.Count];
+            for (int i = 0; i < chunkKeys.Count; i++)
+            {
+                sortedKeys[i] = chunkKeys[i];
+            }
+            Array.Sort(sortedKeys);
+
+            int uniqueCount = 1;
+            for (int i = 1; i < sortedKeys.Length; i++)
+            {
+                if (sortedKeys[i] != sortedKeys[uniqueCount - 1])
+                {
+                    sortedKeys[uniqueCount++] = sortedKeys[i];
+                }
+            }
+
+            return BuildLoadedViewCore(sortedKeys, uniqueCount);
+        }
+
+        private LoadedGraphView BuildLoadedViewCore(long[] sortedChunkKeys, int chunkKeyCount)
+        {
+            if (chunkKeyCount == 0)
+            {
+                return new LoadedGraphView(
+                    new NodeGraphBuilder(0, 0).Build(),
+                    Array.Empty<GraphNodeKey>(),
+                    new Dictionary<GraphNodeKey, int>());
+            }
 
             int totalNodes = 0;
             int totalEdges = 0;
             int totalCrossEdges = 0;
 
-            foreach (var key in included)
+            for (int keyIndex = 0; keyIndex < chunkKeyCount; keyIndex++)
             {
+                long key = sortedChunkKeys[keyIndex];
                 if (!_chunks.TryGetValue(key, out var chunk)) continue;
                 var g = chunk.Graph;
                 totalNodes += g.NodeCount;
                 totalEdges += g.EdgeCount;
-                var cross = chunk.CrossEdges;
-                for (int i = 0; i < cross.Length; i++)
-                {
-                    if (included.Contains(cross[i].ToChunkKey)) totalCrossEdges++;
-                }
+                totalCrossEdges += chunk.CrossEdges.Length;
             }
 
             var builder = new NodeGraphBuilder(totalNodes, totalEdges + totalCrossEdges);
             var nodeKeys = totalNodes == 0 ? Array.Empty<GraphNodeKey>() : new GraphNodeKey[totalNodes];
             var nodeIdByKey = new Dictionary<GraphNodeKey, int>(totalNodes);
-            var chunkOffsets = new Dictionary<long, int>(included.Count);
+            var chunkOffsets = new Dictionary<long, int>(chunkKeyCount);
 
             int offset = 0;
-            foreach (var key in included)
+            for (int keyIndex = 0; keyIndex < chunkKeyCount; keyIndex++)
             {
+                long key = sortedChunkKeys[keyIndex];
                 if (!_chunks.TryGetValue(key, out var chunk)) continue;
                 chunkOffsets[key] = offset;
                 var g = chunk.Graph;
@@ -216,8 +172,9 @@ namespace Ludots.Core.Navigation.GraphWorld
                 offset += n;
             }
 
-            foreach (var key in included)
+            for (int keyIndex = 0; keyIndex < chunkKeyCount; keyIndex++)
             {
+                long key = sortedChunkKeys[keyIndex];
                 if (!_chunks.TryGetValue(key, out var chunk)) continue;
                 var g = chunk.Graph;
                 int chunkOffset = chunkOffsets[key];
@@ -246,10 +203,14 @@ namespace Ludots.Core.Navigation.GraphWorld
                 for (int i = 0; i < cross.Length; i++)
                 {
                     var ce = cross[i];
-                    if (!included.Contains(ce.ToChunkKey)) continue;
+                    if (!chunkOffsets.ContainsKey(ce.ToChunkKey)) continue;
                     int fromGlobal = chunkOffset + ce.FromLocalNodeId;
                     var toKey = new GraphNodeKey(ce.ToChunkKey, ce.ToLocalNodeId);
-                    if (!nodeIdByKey.TryGetValue(toKey, out int toGlobal)) continue;
+                    if (!nodeIdByKey.TryGetValue(toKey, out int toGlobal))
+                    {
+                        throw new InvalidOperationException(
+                            $"NAV.GRAPH.ERR.CrossEdgeTargetMissing: sourceChunk={key}, targetChunk={ce.ToChunkKey}, targetLocalNode={ce.ToLocalNodeId}.");
+                    }
                     TagBits256 crossTags = ResolveCrossEdgeTags(g, in ce);
                     ushort tagSetId = builder.AddTagSet(in crossTags);
                     builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, tagSetId, ce.DepthCm, ce.WidthCm);
@@ -267,9 +228,13 @@ namespace Ludots.Core.Navigation.GraphWorld
                 return edge.TagBits;
             }
 
-            return edge.TagSetId < sourceGraph.TagSetsArray.Length
-                ? sourceGraph.TagSetsArray[edge.TagSetId]
-                : default;
+            if (edge.TagSetId >= sourceGraph.TagSetsArray.Length)
+            {
+                throw new InvalidOperationException(
+                    $"NAV.GRAPH.ERR.CrossEdgeTagSetOutOfRange: tagSetId={edge.TagSetId}, tagSetCount={sourceGraph.TagSetsArray.Length}.");
+            }
+
+            return sourceGraph.TagSetsArray[edge.TagSetId];
         }
     }
 }

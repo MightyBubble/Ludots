@@ -277,5 +277,35 @@ namespace Ludots.Tests.GAS
             That(store.TryGetChunk(key, out _), Is.False,
                 "New source events should be processed");
         }
+
+        [Test]
+        public void WorldGridLoadedChunks_UpdateAndReset_EmitSortedEvents()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 100);
+            var loaded = new List<long>();
+            var unloaded = new List<long>();
+            loadedChunks.ChunkLoaded += loaded.Add;
+            loadedChunks.ChunkUnloaded += unloaded.Add;
+
+            loadedChunks.Update(centerXcm: 0, centerYcm: 0, radiusCm: 150);
+            AssertSorted(loaded);
+
+            loaded.Clear();
+            unloaded.Clear();
+            loadedChunks.Update(centerXcm: 1000, centerYcm: -1000, radiusCm: 150);
+            AssertSorted(unloaded);
+            AssertSorted(loaded);
+
+            unloaded.Clear();
+            loadedChunks.Reset();
+            AssertSorted(unloaded);
+        }
+
+        private static void AssertSorted(List<long> keys)
+        {
+            long[] sorted = keys.ToArray();
+            Array.Sort(sorted);
+            That(keys, Is.EqualTo(sorted));
+        }
     }
 }
