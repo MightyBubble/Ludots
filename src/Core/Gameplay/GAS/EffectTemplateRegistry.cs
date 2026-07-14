@@ -309,8 +309,8 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationEntitySlot SourceSlot;
         public RelationEntitySlot TargetSlot;
         public BlackboardStoredTargetKeys StoredTargetKeys;
-        public string PointMoveOrderTypeKey;
-        public string EntityOrderTypeKey;
+        public int PointMoveOrderTypeId;
+        public int EntityOrderTypeId;
         public int EntityOrderIntArg0;
         public OrderSubmitMode SubmitMode;
     }

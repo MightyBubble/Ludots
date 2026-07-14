@@ -672,6 +672,10 @@ namespace Ludots.Core.Engine
             var gasRuntimeCapacity = config.GasRuntimeCapacity
                 ?? throw new InvalidOperationException("GameConfig.gasRuntimeCapacity is required.");
             gasRuntimeCapacity.Validate();
+            var orderTerminalResults = new OrderTerminalResultBuffer(
+                gasRuntimeCapacity.OrderTerminalResultCapacity);
+            var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);
+            var orderRuleRegistry = new OrderRuleRegistry();
             var dirtyEntities = new DirtyEntityQueue(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget, dirtyEntities);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -727,14 +731,6 @@ namespace Ludots.Core.Engine
             var progressionScopeKeys = new ScopeKeyRegistry();
             var targetDispatchPresetLoader = new TargetDispatchPresetLoader(ConfigPipeline, targetDispatchPresetRegistry);
             targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
-            _effectTemplateLoader = new EffectTemplateLoader(
-                ConfigPipeline,
-                effectTemplateRegistry,
-                gasConditions,
-                targetDispatchPresetRegistry,
-                progressionScopeKeys: progressionScopeKeys,
-                entityTemplateKeys: MapLoader.EntityTemplateKeys,
-                relationshipTypes: relationshipTypeRegistry);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -828,7 +824,11 @@ namespace Ludots.Core.Engine
                 progressionScopeKeys,
                 entityCollectionStore,
                 relationshipTypeRegistry).Load(ConfigCatalog, ConfigConflictReport);
-            new OrderTypeConfigLoader(ConfigPipeline).RegisterBlackboardKeys(ConfigCatalog, ConfigConflictReport);
+            new OrderTypeConfigLoader(ConfigPipeline).Load(
+                orderTypeRegistry,
+                orderRuleRegistry,
+                ConfigCatalog,
+                ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
                 ConfigPipeline,
                 effectTemplateRegistry,
@@ -838,7 +838,8 @@ namespace Ludots.Core.Engine
                 progressionScopeKeys,
                 MapLoader.EntityTemplateKeys,
                 relationshipTypes: relationshipTypeRegistry,
-                fogLayers: visionFogLayerRegistry);
+                fogLayers: visionFogLayerRegistry,
+                orderTypes: orderTypeRegistry);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
@@ -938,9 +939,6 @@ namespace Ludots.Core.Engine
 
             var orderTypeIds = config.Constants.OrderTypeIds;
             var responseChainOrderTypeIds = config.Constants.ResponseChainOrderTypeIds;
-            var orderTerminalResults = new OrderTerminalResultBuffer(
-                gasRuntimeCapacity.OrderTerminalResultCapacity);
-
             var deferredTriggerQueue = new DeferredTriggerQueue();
             var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps, dirtyEntities);
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
@@ -1229,12 +1227,7 @@ namespace Ludots.Core.Engine
             // respondChainOrderTagId = -1 (invalid sentinel): chain orders are routed directly
             // to chainOrderQueue by ResponseChain*Systems, not through the dispatch system.
             // Using -1 prevents accidental match with default OrderTagId == 0.
-            var orderRuleRegistry = new OrderRuleRegistry();
-
             // ── OrderBuffer pipeline ──
-            var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);
-            new OrderTypeConfigLoader(ConfigPipeline).Load(orderTypeRegistry, orderRuleRegistry, ConfigCatalog, ConfigConflictReport);
-
             int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
             int cfgMoveTo = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "moveTo", "constants.orderTypeIds");
             int cfgAttackTarget = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "attackTarget", "constants.orderTypeIds");

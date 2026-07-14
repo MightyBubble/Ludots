@@ -132,6 +132,38 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ContextGroupConfigLoader_RequiresTargetIsRequired()
+        {
+            WriteConfig("config_catalog.json",
+                @"[{ ""Path"": ""GAS/context_groups.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteConfig("GAS/context_groups.json",
+                """
+                [
+                  {
+                    "id": "strict_context",
+                    "rootAbilityId": "Ability.Root",
+                    "searchRadiusCm": 500,
+                    "candidates": [
+                      {
+                        "abilityId": "Ability.Candidate",
+                        "basePriority": 10
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            AbilityIdRegistry.Register("Ability.Root");
+            AbilityIdRegistry.Register("Ability.Candidate");
+            var (pipeline, catalog) = BuildPipeline();
+            var loader = new ContextGroupConfigLoader(pipeline, new ContextGroupRegistry());
+
+            var ex = Throws<InvalidOperationException>(() => loader.Load(catalog));
+
+            That(ex!.Message, Does.Contain("candidates[0].requiresTarget"));
+        }
+
+        [Test]
         public void AbilityFormSetConfigLoader_RoutePriorityIsRequired()
         {
             WriteConfig("config_catalog.json",

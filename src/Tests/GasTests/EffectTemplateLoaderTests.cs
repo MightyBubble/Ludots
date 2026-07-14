@@ -116,6 +116,39 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_MultipleTags_AreRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.MultipleTags",
+                        "tags": ["Effect.First", "Effect.Second"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("tags"));
+                That(ex.Message, Does.Contain("at most one"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_TargetFilterWithoutRelationFilter_IsRejected()
         {
             string root = CreateTempRoot();
@@ -884,10 +917,67 @@ namespace Ludots.Tests.GAS
                     ]
                     """);
 
-                var loader = CreateLoader(root, out _);
+                var loader = CreateLoader(root, out _, CreateOrderTypes());
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
                 That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SubmitOrderFromBlackboard_UnknownOrderTypeKeyIsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Kind");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Position");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Entity");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
+
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Test.SubmitOrderUnknownType",
+                        "tags": ["Effect.Test.SubmitOrder"],
+                        "presetType": "SubmitOrderFromBlackboard",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "submitOrderFromBlackboard": {
+                          "source": "Source",
+                          "target": "Target",
+                          "storedTarget": {
+                            "targetKindKey": "Test.SpawnTarget.Kind",
+                            "targetPositionKey": "Test.SpawnTarget.Position",
+                            "targetEntityKey": "Test.SpawnTarget.Entity",
+                            "hexQKey": "Test.SpawnTarget.HexQ",
+                            "hexRKey": "Test.SpawnTarget.HexR"
+                          },
+                          "pointMoveOrderTypeKey": "moveTypo",
+                          "entityOrderTypeKey": "castAbility",
+                          "entityOrderIntArg0": 1,
+                          "submitMode": "Immediate"
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _, CreateOrderTypes());
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("pointMoveOrderTypeKey"));
+                That(ex.Message, Does.Contain("moveTypo"));
+                That(ex.Message, Does.Contain("unknown order type"));
             }
             finally
             {
@@ -981,7 +1071,10 @@ namespace Ludots.Tests.GAS
             return root;
         }
 
-        private static EffectTemplateLoader CreateLoader(string root, out EffectTemplateRegistry registry)
+        private static EffectTemplateLoader CreateLoader(
+            string root,
+            out EffectTemplateRegistry registry,
+            OrderTypeRegistry? orderTypes = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", root);
@@ -989,7 +1082,15 @@ namespace Ludots.Tests.GAS
             var pipeline = new ConfigPipeline(vfs, modLoader);
 
             registry = new EffectTemplateRegistry();
-            return new EffectTemplateLoader(pipeline, registry);
+            return new EffectTemplateLoader(pipeline, registry, orderTypes: orderTypes);
+        }
+
+        private static OrderTypeRegistry CreateOrderTypes()
+        {
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 });
+            return orderTypes;
         }
 
         private static ConfigCatalog CreateEffectsCatalog()

@@ -32,6 +32,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly FogLayerRegistry? _fogLayers;
+        private readonly OrderTypeRegistry? _orderTypes;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -50,7 +51,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ScopeKeyRegistry? progressionScopeKeys = null,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
-            FogLayerRegistry? fogLayers = null)
+            FogLayerRegistry? fogLayers = null,
+            OrderTypeRegistry? orderTypes = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -61,6 +63,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _entityTemplateKeys = entityTemplateKeys;
             _relationshipTypes = relationshipTypes;
             _fogLayers = fogLayers;
+            _orderTypes = orderTypes;
         }
 
         public void Load(
@@ -200,11 +203,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 periodTicks = 0;
             }
 
-            int tagId = 0;
-            if (cfg.Tags != null && cfg.Tags.Count > 0)
+            if (cfg.Tags != null && cfg.Tags.Count > 1)
             {
-                tagId = TagRegistry.Register(cfg.Tags[0]);
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'tags' supports at most one tag.");
             }
+            int tagId = cfg.Tags != null && cfg.Tags.Count == 1
+                ? TagRegistry.Register(RequireString(cfg.Tags[0], cfg.Id, relativePath, "tags[0]"))
+                : 0;
 
             EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
             int presetAttr0 = 0;
@@ -747,7 +753,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 (byte)detectionStrength);
         }
 
-        private static SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
+        private SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
             SubmitOrderFromBlackboardConfig? cfg,
             string ownerId,
             string relativePath)
@@ -770,6 +776,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "submitOrderFromBlackboard.storedTarget");
             string pointMoveOrderTypeKey = RequireString(cfg.PointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
             string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
+            int pointMoveOrderTypeId = ResolveOrderTypeId(pointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
+            int entityOrderTypeId = ResolveOrderTypeId(entityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
             int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
             OrderSubmitMode submitMode = ParseOrderSubmitMode(
                 RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
@@ -787,11 +795,28 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 SourceSlot = sourceSlot,
                 TargetSlot = targetSlot,
                 StoredTargetKeys = storedTargetKeys,
-                PointMoveOrderTypeKey = pointMoveOrderTypeKey,
-                EntityOrderTypeKey = entityOrderTypeKey,
+                PointMoveOrderTypeId = pointMoveOrderTypeId,
+                EntityOrderTypeId = entityOrderTypeId,
                 EntityOrderIntArg0 = entityOrderIntArg0,
                 SubmitMode = submitMode,
             };
+        }
+
+        private int ResolveOrderTypeId(string key, string ownerId, string relativePath, string fieldName)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} requires OrderTypeRegistry during loading.");
+            }
+
+            if (!_orderTypes.TryGetId(key, out int orderTypeId) || orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} references unknown order type '{key}'.");
+            }
+
+            return orderTypeId;
         }
 
         private static BlackboardStoredTargetKeys CompileStoredTargetKeys(

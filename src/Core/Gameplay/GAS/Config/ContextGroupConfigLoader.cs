@@ -66,7 +66,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 int abilityId = ResolveAbilityId(candidateNode["abilityId"]?.GetValue<string>(), groupName, $"candidates[{i}].abilityId");
                 int preconditionGraphId = ResolveGraphId(candidateNode["preconditionGraph"]?.GetValue<string>());
                 int scoreGraphId = ResolveGraphId(candidateNode["scoreGraph"]?.GetValue<string>());
-                bool requiresTarget = candidateNode["requiresTarget"]?.GetValue<bool>() ?? true;
+                if (candidateNode["requiresTarget"] is not JsonNode requiresTargetNode)
+                {
+                    throw new InvalidOperationException(
+                        $"Context group '{groupName}' requires candidates[{i}].requiresTarget.");
+                }
+
+                bool requiresTarget = requiresTargetNode.GetValue<bool>();
                 float basePriority = RequireFloat(candidateNode, "basePriority", groupName, i);
                 int maxDistanceCm = requiresTarget
                     ? RequireInt(candidateNode, "maxDistanceCm", groupName, i)

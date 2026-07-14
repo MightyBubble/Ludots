@@ -570,7 +570,8 @@ namespace Ludots.Core.Gameplay.GAS
             Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);
             if (!world.IsAlive(sourceEntity) || !world.IsAlive(orderActor))
             {
-                return;
+                throw new InvalidOperationException(
+                    "SubmitOrderFromBlackboard requires live source and order actor entities.");
             }
 
             if (!BlackboardStoredTargetOps.TryRead(world, sourceEntity, in descriptor.StoredTargetKeys, out BlackboardStoredTargetSnapshot storedTarget) ||
@@ -590,20 +591,16 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException("SubmitOrderFromBlackboard requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
             }
 
-            if (!TryBuildOrderFromStoredTarget(
-                    in storedTarget,
-                    in descriptor,
-                    orderActor,
-                    ResolvePlayerId(world, orderActor),
-                    runtime.OrderTypeRegistry,
-                    out Order order))
-            {
-                return;
-            }
+            Order order = BuildOrderFromStoredTarget(
+                in storedTarget,
+                in descriptor,
+                orderActor,
+                ResolvePlayerId(world, orderActor));
 
             if (!world.Has<OrderBuffer>(orderActor))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"SubmitOrderFromBlackboard requires OrderBuffer on order actor entity {orderActor.Id}.");
             }
 
             OrderSubmitter.Submit(
@@ -616,29 +613,31 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.StepRateHz);
         }
 
-        private static bool TryBuildOrderFromStoredTarget(
+        private static Order BuildOrderFromStoredTarget(
             in BlackboardStoredTargetSnapshot storedTarget,
             in SubmitOrderFromBlackboardDescriptor descriptor,
             Entity orderActor,
-            int playerId,
-            OrderTypeRegistry orderTypeRegistry,
-            out Order order)
+            int playerId)
         {
-            order = default;
             switch (storedTarget.Kind)
             {
                 case BlackboardStoredTargetKind.Point:
                 case BlackboardStoredTargetKind.HexCell:
-                    if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
-                        !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
-                        !BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
+                    if (descriptor.PointMoveOrderTypeId <= 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard requires a positive point move order type id compiled at load time.");
                     }
 
-                    order = new Order
+                    if (!BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
                     {
-                        OrderTypeId = pointMoveOrderTypeId,
+                        throw new InvalidOperationException(
+                            $"SubmitOrderFromBlackboard cannot resolve world position for stored target kind '{storedTarget.Kind}'.");
+                    }
+
+                    return new Order
+                    {
+                        OrderTypeId = descriptor.PointMoveOrderTypeId,
                         PlayerId = playerId,
                         Actor = orderActor,
                         SubmitMode = descriptor.SubmitMode,
@@ -652,29 +651,33 @@ namespace Ludots.Core.Gameplay.GAS
                             },
                         },
                     };
-                    return true;
 
                 case BlackboardStoredTargetKind.Entity:
-                    if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
-                        !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
-                        storedTarget.TargetEntity == Entity.Null)
+                    if (descriptor.EntityOrderTypeId <= 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard requires a positive entity order type id compiled at load time.");
                     }
 
-                    order = new Order
+                    if (storedTarget.TargetEntity == Entity.Null)
                     {
-                        OrderTypeId = entityOrderTypeId,
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard entity stored target requires a non-null target entity.");
+                    }
+
+                    return new Order
+                    {
+                        OrderTypeId = descriptor.EntityOrderTypeId,
                         PlayerId = playerId,
                         Actor = orderActor,
                         Target = storedTarget.TargetEntity,
                         SubmitMode = descriptor.SubmitMode,
                         Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
                     };
-                    return true;
 
                 default:
-                    return false;
+                    throw new InvalidOperationException(
+                        $"SubmitOrderFromBlackboard does not support stored target kind '{storedTarget.Kind}'.");
             }
         }
 
