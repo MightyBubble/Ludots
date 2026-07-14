@@ -160,6 +160,133 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityExec_SixteenthTimedTagClip_CommitsTagAndExpirationTogether()
+        {
+            using var world = World.Create();
+            const int abilityId = 2;
+            const int acceptedTagId = 45;
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(
+                0,
+                ExecItemKind.TagClip,
+                tick: 0,
+                durationTicks: 30,
+                clockId: GasClockId.Step,
+                tagId: acceptedTagId);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = spec });
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(abilityId);
+            TimedTagBuffer timed = default;
+            for (int i = 0; i < TimedTagBuffer.Capacity - 1; i++)
+            {
+                Assert.That(timed.TryAdd(tagId: 100 + i, expireAt: 500 + i, clockId: GasClockId.Step), Is.True);
+            }
+
+            Entity actor = world.Create(
+                abilities,
+                new AbilityExecInstance
+                {
+                    AbilitySlot = 0,
+                    AbilityId = abilityId,
+                    State = AbilityExecRunState.Running,
+                    ActiveClockId = GasClockId.Step,
+                },
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags(),
+                timed);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                snapshotCapacity: 4,
+                abilityDefinitions: definitions,
+                tagOps: new TagOps());
+
+            system.UpdateSlice(0f, int.MaxValue);
+
+            Assert.That(world.Get<GameplayTagContainer>(actor).HasTag(acceptedTagId), Is.True);
+            Assert.That(world.Get<TagCountContainer>(actor).GetCount(acceptedTagId), Is.EqualTo(1));
+            Assert.That(world.Get<DirtyFlags>(actor).IsTagDirty(acceptedTagId), Is.True);
+            ref TimedTagBuffer actualTimed = ref world.Get<TimedTagBuffer>(actor);
+            Assert.That(actualTimed.Count, Is.EqualTo(TimedTagBuffer.Capacity));
+            Assert.That(actualTimed.GetTagId(TimedTagBuffer.Capacity - 1), Is.EqualTo(acceptedTagId));
+            Assert.That(actualTimed.GetExpireAt(TimedTagBuffer.Capacity - 1), Is.EqualTo(30));
+            Assert.That(actualTimed.GetClockId(TimedTagBuffer.Capacity - 1), Is.EqualTo(GasClockId.Step));
+        }
+
+        [Test]
+        public void AbilityExec_SeventeenthTimedTagClip_FailsBeforeAnyTagStateChanges()
+        {
+            using var world = World.Create();
+            const int abilityId = 2;
+            const int rejectedTagId = 46;
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(
+                0,
+                ExecItemKind.TagClip,
+                tick: 0,
+                durationTicks: 30,
+                clockId: GasClockId.Step,
+                tagId: rejectedTagId);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = spec });
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(abilityId);
+            TimedTagBuffer timed = default;
+            for (int i = 0; i < TimedTagBuffer.Capacity; i++)
+            {
+                Assert.That(timed.TryAdd(tagId: 100 + i, expireAt: 500 + i, clockId: GasClockId.Step), Is.True);
+            }
+
+            Entity actor = world.Create(
+                abilities,
+                new AbilityExecInstance
+                {
+                    AbilitySlot = 0,
+                    AbilityId = abilityId,
+                    State = AbilityExecRunState.Running,
+                    ActiveClockId = GasClockId.Step,
+                },
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags(),
+                timed);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                snapshotCapacity: 4,
+                abilityDefinitions: definitions,
+                tagOps: new TagOps());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                system.UpdateSlice(0f, int.MaxValue))!;
+
+            Assert.That(ex.Message, Is.EqualTo(AbilityExecSystem.TimedTagCapacityExceededError));
+            Assert.That(world.Get<GameplayTagContainer>(actor).HasTag(rejectedTagId), Is.False);
+            Assert.That(world.Get<TagCountContainer>(actor).GetCount(rejectedTagId), Is.EqualTo(0));
+            Assert.That(world.Get<DirtyFlags>(actor).IsTagDirty(rejectedTagId), Is.False);
+            ref TimedTagBuffer actualTimed = ref world.Get<TimedTagBuffer>(actor);
+            Assert.That(actualTimed.Count, Is.EqualTo(TimedTagBuffer.Capacity));
+            for (int i = 0; i < TimedTagBuffer.Capacity; i++)
+            {
+                Assert.That(actualTimed.GetTagId(i), Is.EqualTo(100 + i));
+                Assert.That(actualTimed.GetExpireAt(i), Is.EqualTo(500 + i));
+                Assert.That(actualTimed.GetClockId(i), Is.EqualTo(GasClockId.Step));
+            }
+        }
+
+        [Test]
         public void EffectLifetime_ResumesExpiredEffectsAcrossWorkSlices()
         {
             using var world = World.Create();

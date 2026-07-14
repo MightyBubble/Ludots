@@ -49,6 +49,8 @@ namespace Ludots.Core.Config
 
     public static class ComponentAuthoringServiceKeys
     {
+        public const string AbilityDefinitionRegistry = "AbilityDefinitionRegistry";
+        public const string AbilityFormSetRegistry = "AbilityFormSetRegistry";
         public const string Physics2DShapeStorage = "Physics2D.ShapeStorage";
     }
 }

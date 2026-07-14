@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Config;
@@ -1084,6 +1085,66 @@ namespace Ludots.Tests.GAS
             });
 
             That(count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplateAbilityPatch_PreinstallsTimedTagState()
+        {
+            using var world = World.Create();
+            const int abilityId = 7004;
+            var definitions = new AbilityDefinitionRegistry();
+            var exec = new AbilityExecSpec();
+            exec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 20, tagId: 43);
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+            var authoring = new ComponentAuthoringContext();
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, new AbilityFormSetRegistry());
+
+            string templateJson = @"[
+              {
+                ""id"": ""runtime_ability_patch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Runtime Ability Patch"" }
+                }
+              }
+            ]";
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                authoringContext: authoring);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "runtime_ability_patch",
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(
+                        "AbilityStateBuffer",
+                        JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!),
+                },
+                ReceiptChannelId = 14,
+                ReceiptId = 669,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
         }
 
         [Test]

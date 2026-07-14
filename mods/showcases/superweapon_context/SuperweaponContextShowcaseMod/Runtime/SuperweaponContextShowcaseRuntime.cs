@@ -256,6 +256,16 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return -1;
             }
 
+            AbilityDefinitionRegistry abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires AbilityDefinitionRegistry.");
+            Span<int> grantedAbilityIds = stackalloc int[1] { State.AbilityId };
+            AbilityRuntimeStateInstaller.EnsureForAbilities(
+                engine.World,
+                State.Commander,
+                abilityDefinitions,
+                grantedAbilityIds,
+                "Superweapon context commander grant");
+
             if (!engine.World.Has<AbilityStateBuffer>(State.Commander))
             {
                 engine.World.Add(State.Commander, new AbilityStateBuffer());

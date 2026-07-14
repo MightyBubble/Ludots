@@ -738,6 +738,7 @@ namespace Ludots.Core.Engine
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var componentAuthoringContext = new ComponentAuthoringContext();
+            MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
@@ -843,6 +844,8 @@ namespace Ludots.Core.Engine
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, abilityDefinitions);
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, abilityFormSets);
             var tagRules = new TagRuleSetLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             for (int i = 0; i < tagRules.Count; i++)
             {
@@ -1559,7 +1562,9 @@ namespace Ludots.Core.Engine
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
-            RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
+            RegisterSystem(
+                new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions),
+                SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
@@ -1828,7 +1833,6 @@ namespace Ludots.Core.Engine
                 ?? Activator.CreateInstance(shapeStorageType)
                 ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
-            MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
             object? physics2dSystemObj = Activator.CreateInstance(

@@ -61,7 +61,6 @@ namespace FourXDemoMod.Triggers
         private static void EnsureTagComponents(World world, Entity e)
         {
             TagStateInstaller.EnsureInstalled(world, e);
-            if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
         }
 
         private static (Entity Governor, Entity Site, Entity City, Entity Camp, Entity Caravan) FindFourXEntities(World world)

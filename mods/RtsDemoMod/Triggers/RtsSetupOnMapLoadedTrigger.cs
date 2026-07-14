@@ -45,7 +45,6 @@ namespace RtsDemoMod.Triggers
             {
                 // Ensure all named entities have tag components for GAS interaction
                 TagStateInstaller.EnsureInstalled(world, e);
-                if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
                 if (world.Has<CommandSourceSelectableTag>(e) && !world.Has<CommandSourceSelectableState>(e))
                 {
                     world.Add(e, CommandSourceSelectableState.EnabledByDefault);

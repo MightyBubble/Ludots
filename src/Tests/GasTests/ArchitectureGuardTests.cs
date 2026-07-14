@@ -148,6 +148,14 @@ namespace GasTests
                     {
                         hits.Add(ToRepoRelativePath(repoRoot, file));
                     }
+
+                    if (source.Contains("new TimedTagBuffer()", StringComparison.Ordinal) &&
+                        !file.EndsWith(
+                            Path.Combine("Gameplay", "GAS", "AbilityRuntimeStateInstaller.cs"),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        hits.Add(ToRepoRelativePath(repoRoot, file));
+                    }
                 }
             }
 
@@ -165,7 +173,7 @@ namespace GasTests
             }
 
             Assert.That(hits, Is.Empty,
-                "Production tag consumers must use the injected world TagOps, and AbilityExec must not change archetypes while executing a timeline.");
+                "Production tag consumers must use injected TagOps, TimedTagBuffer assembly must stay centralized, and AbilityExec must not change archetypes while executing a timeline.");
         }
 
         [Test]

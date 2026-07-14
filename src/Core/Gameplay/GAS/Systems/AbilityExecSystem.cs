@@ -24,6 +24,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class AbilityExecSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
+        public const string TimedTagCapacityExceededError = "GAS.ABILITY_EXEC.ERR.TimedTagCapacityExceeded";
+
         private readonly IClock _clock;
         private readonly GameplayEventBus _eventBus;
         private readonly AbilityDefinitionRegistry _abilityDefinitions;
@@ -967,13 +969,30 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 throw new InvalidOperationException("GAS.ABILITY_EXEC.ERR.MissingTimedTagBuffer");
             }
-            _tagOps.AddTag(World, actor, tagId);
-
-            if (durationTicks > 0)
+            if (durationTicks <= 0)
             {
-                ref var timed = ref World.Get<TimedTagBuffer>(actor);
-                int expireAt = ClockNow(clockId, actor) + durationTicks;
-                timed.TryAdd(tagId, expireAt, clockId);
+                _tagOps.AddTag(World, actor, tagId);
+                return;
+            }
+
+            int reservationIndex = World.Get<TimedTagBuffer>(actor).Count;
+            int expireAt = ClockNow(clockId, actor) + durationTicks;
+            if (!World.Get<TimedTagBuffer>(actor).TryAdd(tagId, expireAt, clockId))
+            {
+                throw new InvalidOperationException(TimedTagCapacityExceededError);
+            }
+
+            try
+            {
+                if (!_tagOps.AddTag(World, actor, tagId))
+                {
+                    World.Get<TimedTagBuffer>(actor).RemoveAtSwapBack(reservationIndex);
+                }
+            }
+            catch
+            {
+                World.Get<TimedTagBuffer>(actor).RemoveAtSwapBack(reservationIndex);
+                throw;
             }
         }
 

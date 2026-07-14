@@ -40,7 +40,6 @@ namespace ArpgDemoMod.Triggers
                 }
 
                 TagStateInstaller.EnsureInstalled(world, e);
-                if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
             });
 
             return Task.CompletedTask;

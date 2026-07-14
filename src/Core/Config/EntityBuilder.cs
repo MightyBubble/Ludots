@@ -103,6 +103,19 @@ namespace Ludots.Core.Config
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
+            if (_world.Has<AbilityStateBuffer>(entity))
+            {
+                AbilityFormSetRegistry? formSets = _world.Has<AbilityFormSetRef>(entity)
+                    ? _authoringContext.Require<AbilityFormSetRegistry>(ComponentAuthoringServiceKeys.AbilityFormSetRegistry)
+                    : null;
+                AbilityRuntimeStateInstaller.EnsureForAuthoredAbilities(
+                    _world,
+                    entity,
+                    _authoringContext.Require<AbilityDefinitionRegistry>(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry),
+                    formSets,
+                    BuildEntityContext());
+            }
+
             if (_world.Has<GameplayTagContainer>(entity))
             {
                 TagStateInstaller.EnsureInstalled(_world, entity);
@@ -140,9 +153,7 @@ namespace Ludots.Core.Config
         private string BuildComponentContext(string componentName, bool isOverride)
         {
             string templateId = string.IsNullOrWhiteSpace(_activeTemplateId) ? "<no-template>" : _activeTemplateId;
-            string context = string.IsNullOrWhiteSpace(_activeEntityContext)
-                ? $"EntityBuilder template '{templateId}'"
-                : _activeEntityContext;
+            string context = BuildEntityContext();
 
             if (isOverride)
             {
@@ -153,6 +164,14 @@ namespace Ludots.Core.Config
                 ? sourceUri
                 : "Entities/templates.json";
             return $"{context} template '{templateId}' source '{source}' component '{componentName}'";
+        }
+
+        private string BuildEntityContext()
+        {
+            string templateId = string.IsNullOrWhiteSpace(_activeTemplateId) ? "<no-template>" : _activeTemplateId;
+            return string.IsNullOrWhiteSpace(_activeEntityContext)
+                ? $"EntityBuilder template '{templateId}'"
+                : _activeEntityContext;
         }
     }
 }

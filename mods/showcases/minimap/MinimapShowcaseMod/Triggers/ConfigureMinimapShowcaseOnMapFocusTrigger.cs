@@ -139,7 +139,6 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
     private static void EnsureTagComponents(World world, Entity entity)
     {
         TagStateInstaller.EnsureInstalled(world, entity);
-        if (!world.Has<TimedTagBuffer>(entity)) world.Add(entity, new TimedTagBuffer());
     }
 
     private static bool IsCapital(string name)
