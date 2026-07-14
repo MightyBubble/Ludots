@@ -127,6 +127,34 @@ namespace GasTests
         }
 
         [Test]
+        public void ResponseChainListenerProductionRegistration_MustUseCanonicalOps()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] producers =
+            {
+                Path.Combine(repoRoot, "mods", "TcgDemoMod", "Triggers", "TcgSetupOnMapLoadedTrigger.cs"),
+                Path.Combine(repoRoot, "mods", "Physics2DPlaygroundMod", "Systems", "Physics2DPlaygroundInteractionSystem.cs")
+            };
+            var directRegistration = new Regex(
+                @"\b(?:world|_world)\.(?:Create|Add)\s*\([^;]*\b(?:listener|chainListener)\b[^;]*\)",
+                RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Singleline);
+            var hits = new List<string>();
+
+            foreach (string producer in producers)
+            {
+                string source = File.ReadAllText(producer);
+                if (!source.Contains("ResponseChainListenerOps.Add", StringComparison.Ordinal) ||
+                    directRegistration.IsMatch(source))
+                {
+                    hits.Add(ToRepoRelativePath(repoRoot, producer));
+                }
+            }
+
+            Assert.That(hits, Is.Empty,
+                "Production response-chain listeners must register through ResponseChainListenerOps so the cache revision cannot be skipped.");
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();

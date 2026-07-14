@@ -37,6 +37,8 @@ namespace TcgDemoMod.Triggers
             if (!modify && !hook && !chain && !stack && !grant) return Task.CompletedTask;
 
             var world = engine.World;
+            var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
+                ?? throw new InvalidOperationException(ResponseChainListenerOps.MissingQueueError);
             EnsureTagComponents(world);
 
             int spellTagId = TagRegistry.Register("Effect.Tcg.Spell");
@@ -47,10 +49,9 @@ namespace TcgDemoMod.Triggers
                 listener.Add(spellTagId, hook ? ResponseType.Hook : ResponseType.Modify,
                     priority: 100, modifyValue: 10, modifyOp: ModifierOp.Add);
 
-                world.Create(
-                    new Name { Value = hook ? "TcgHookListener" : "TcgModifyListener" },
-                    listener
-                );
+                Entity listenerEntity = world.Create(
+                    new Name { Value = hook ? "TcgHookListener" : "TcgModifyListener" });
+                ResponseChainListenerOps.Add(world, listenerEntity, in listener, effectRequests);
             }
 
             if (chain)
@@ -61,10 +62,8 @@ namespace TcgDemoMod.Triggers
                 chainListener.Add(spellTagId, ResponseType.Chain, priority: 50,
                     effectTemplateId: counterBlastId);
 
-                world.Create(
-                    new Name { Value = "TcgChainListener" },
-                    chainListener
-                );
+                Entity listenerEntity = world.Create(new Name { Value = "TcgChainListener" });
+                ResponseChainListenerOps.Add(world, listenerEntity, in chainListener, effectRequests);
             }
 
             return Task.CompletedTask;

@@ -87,12 +87,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int LastSliceProcessed { get; private set; }
+        public int ListenerCacheRebuildCount { get; private set; }
         public byte DebugWindowPhase => (byte)_phase;
 
         private bool _sliceActive;
         private int _rootCursor;
         private int _rootCountSnapshot;
-        private bool _listenersDirty = true;
+        private int _lastListenerRevision = -1;
 
         private enum WindowPhase : byte
         {
@@ -310,11 +311,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             MaxWorkUnitsPerSlice = prev;
         }
 
-        public void MarkListenersDirty()
-        {
-            _listenersDirty = true;
-        }
-
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
             LastSliceProcessed = 0;
@@ -337,13 +333,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _rootCountSnapshot = _queue.Count;
                 _phase = WindowPhase.None;
 
-                if (_listenersDirty)
+                int listenerRevision = _queue.ResponseChainListenerRevision;
+                if (_lastListenerRevision != listenerRevision)
                 {
-                    _listenersDirty = false;
+                    _lastListenerRevision = listenerRevision;
                     _listeners.Clear();
                     var job = new CollectListenerEntitiesJob { Entities = _listeners };
                     World.InlineEntityQuery<CollectListenerEntitiesJob, ResponseChainListener>(in _listenersQuery, ref job);
                     if (_listeners.Count > 1) _listeners.Sort(EntityStableComparer.Instance);
+                    ListenerCacheRebuildCount++;
                 }
             }
 

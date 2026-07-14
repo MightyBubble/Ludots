@@ -31,6 +31,7 @@ namespace Ludots.Core.Gameplay.GAS
         private int _overflowCount;
         private int _dropped;
         private bool _budgetFused;
+        private int _responseChainListenerRevision;
 
         public EffectRequestQueue(int initialCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
         {
@@ -45,6 +46,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int OverflowCount => _overflowCount;
         public int DroppedCount => _dropped;
         public bool BudgetFused => _budgetFused;
+        public int ResponseChainListenerRevision => _responseChainListenerRevision;
 
         public EffectRequest this[int index] => _items[index];
 
@@ -139,6 +141,14 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 _overflowHead = 0;
                 _overflowTail = 0;
+            }
+        }
+
+        internal void NotifyResponseChainListenersChanged()
+        {
+            unchecked
+            {
+                _responseChainListenerRevision++;
             }
         }
     }
