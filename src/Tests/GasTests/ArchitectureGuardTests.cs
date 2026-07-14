@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Ludots.Core.Engine;
+using Ludots.Core.Navigation.GraphEcs;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -152,6 +154,13 @@ namespace GasTests
 
             Assert.That(hits, Is.Empty,
                 "Production response-chain listeners must register through ResponseChainListenerOps so the cache revision cannot be skipped.");
+        }
+
+        [Test]
+        public void GraphPathBuffer_MustRemainBlittableInlineEcsState()
+        {
+            Assert.That(RuntimeHelpers.IsReferenceOrContainsReferences<GraphPathBuffer>(), Is.False);
+            Assert.That(GraphPathBuffer.Capacity, Is.EqualTo(128));
         }
 
         [Test]
