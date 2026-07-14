@@ -367,7 +367,7 @@ namespace Ludots.Tests.GAS
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
             TagStateInstaller.EnsureInstalled(world, target);
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
             ref ActiveEffectContainer container = ref world.Get<ActiveEffectContainer>(target);
             for (int i = 0; i < ActiveEffectContainer.CAPACITY; i++)
             {
@@ -549,7 +549,7 @@ namespace Ludots.Tests.GAS
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer());
             TagStateInstaller.EnsureInstalled(world, target);
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
             var grantedTags = default(EffectGrantedTags);
             grantedTags.Add(new TagContribution
             {
