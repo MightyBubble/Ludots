@@ -23,9 +23,29 @@ namespace RtsDemoMod.Systems
         private const string WarpingTagName = "State.Rts.Warping";
         private const string UngarrisonAllTagName = "Command.Rts.UngarrisonAll";
 
+        private static readonly QueryDescription TaggedPositionQuery = new QueryDescription()
+            .WithAll<GameplayTagContainer, WorldPositionCm>();
+        private static readonly QueryDescription UngarrisonHostQuery = new QueryDescription()
+            .WithAll<GameplayTagContainer, ChildrenBuffer, WorldPositionCm>();
+        private static readonly QueryDescription ConstructionHostQuery = new QueryDescription()
+            .WithAll<ChildrenBuffer, WorldPositionCm>();
+        private static readonly QueryDescription AttachedChildQuery = new QueryDescription()
+            .WithAll<ChildOf>();
+        private static readonly QueryDescription SelectableWithStateQuery = new QueryDescription()
+            .WithAll<CommandSourceSelectableTag, CommandSourceSelectableState>();
+        private static readonly QueryDescription SelectableWithoutStateQuery = new QueryDescription()
+            .WithAll<CommandSourceSelectableTag>()
+            .WithNone<CommandSourceSelectableState>();
+
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly TagOps _tagOps;
+        private readonly List<Entity> _constructingHosts = new(64);
+        private readonly List<Entity> _pendingAttachEntities = new(256);
+        private readonly List<Entity> _ungarrisonHosts = new(64);
+        private readonly List<Entity> _completedHosts = new(64);
+        private readonly List<Entity> _attachedChildren = new(256);
+        private readonly List<Entity> _missingSelectableStates = new(64);
 
         private int _constructingTagId;
         private int _builderAttachedTagId;
@@ -81,7 +101,7 @@ namespace RtsDemoMod.Systems
             _ungarrisonAllTagId = ResolveTagId(_ungarrisonAllTagId, UngarrisonAllTagName);
         }
 
-        private int ResolveTagId(int current, string tagName)
+        private static int ResolveTagId(int current, string tagName)
         {
             if (current > 0)
             {
@@ -99,65 +119,87 @@ namespace RtsDemoMod.Systems
 
         private void AttachPendingUnitsToConstruction()
         {
-            var pendingQuery = new QueryDescription().WithAll<GameplayTagContainer, WorldPositionCm>();
-            _world.Query(in pendingQuery, (Entity entity, ref GameplayTagContainer tags, ref WorldPositionCm position) =>
+            _constructingHosts.Clear();
+            var hostJob = new CollectConstructingHostsJob
             {
-                bool wantsBuilderAttach = tags.HasTag(_builderAttachedTagId);
-                bool wantsMorphAttach = tags.HasTag(_morphConsumedTagId);
-                if (!wantsBuilderAttach && !wantsMorphAttach)
+                Entities = _constructingHosts,
+                ConstructingTagId = _constructingTagId,
+            };
+            _world.InlineEntityQuery<CollectConstructingHostsJob, GameplayTagContainer, WorldPositionCm>(
+                in TaggedPositionQuery,
+                ref hostJob);
+            SortEntities(_constructingHosts);
+
+            _pendingAttachEntities.Clear();
+            var pendingJob = new CollectPendingAttachEntitiesJob
+            {
+                Entities = _pendingAttachEntities,
+                BuilderAttachedTagId = _builderAttachedTagId,
+                MorphConsumedTagId = _morphConsumedTagId,
+            };
+            _world.InlineEntityQuery<CollectPendingAttachEntitiesJob, GameplayTagContainer, WorldPositionCm>(
+                in TaggedPositionQuery,
+                ref pendingJob);
+            SortEntities(_pendingAttachEntities);
+
+            for (int i = 0; i < _pendingAttachEntities.Count; i++)
+            {
+                Entity entity = _pendingAttachEntities[i];
+                if (!_world.IsAlive(entity) || _world.Has<ChildOf>(entity))
                 {
-                    return;
+                    continue;
                 }
 
-                if (_world.Has<ChildOf>(entity))
+                Fix64Vec2 position = _world.Get<WorldPositionCm>(entity).Value;
+                if (!TryFindNearestConstructingHost(entity, in position, out Entity host))
                 {
-                    return;
-                }
-
-                if (!TryFindNearestConstructingHost(entity, position.Value, out Entity host))
-                {
-                    return;
+                    continue;
                 }
 
                 RelationOps.SetParent(_world, entity, host);
+                if (!_world.Has<ChildOf>(entity) || _world.Get<ChildOf>(entity).Parent != host)
+                {
+                    throw new InvalidOperationException(
+                        $"RTS.RELATION.ERR.AttachFailed: child={entity.Id}, host={host.Id}.");
+                }
+
                 SnapEntityToHost(entity, host);
-            });
+            }
         }
 
         private bool TryFindNearestConstructingHost(Entity child, in Fix64Vec2 childPosition, out Entity host)
         {
             Entity resolvedHost = Entity.Null;
-            Fix64Vec2 searchPosition = childPosition;
             bool childHasTeam = _world.Has<Team>(child);
             int childTeamId = childHasTeam ? _world.Get<Team>(child).Id : 0;
             bool found = false;
             Fix64 bestDistanceSq = Fix64.Zero;
 
-            var hostQuery = new QueryDescription().WithAll<GameplayTagContainer, WorldPositionCm>();
-            _world.Query(in hostQuery, (Entity candidate, ref GameplayTagContainer tags, ref WorldPositionCm position) =>
+            for (int i = 0; i < _constructingHosts.Count; i++)
             {
-                if (candidate == child || !tags.HasTag(_constructingTagId))
+                Entity candidate = _constructingHosts[i];
+                if (candidate == child || !_world.IsAlive(candidate))
                 {
-                    return;
+                    continue;
                 }
 
-                if (childHasTeam)
+                if (childHasTeam &&
+                    (!_world.Has<Team>(candidate) || _world.Get<Team>(candidate).Id != childTeamId))
                 {
-                    if (!_world.Has<Team>(candidate) || _world.Get<Team>(candidate).Id != childTeamId)
-                    {
-                        return;
-                    }
+                    continue;
                 }
 
-                Fix64Vec2 delta = position.Value - searchPosition;
+                Fix64Vec2 delta = _world.Get<WorldPositionCm>(candidate).Value - childPosition;
                 Fix64 distanceSq = delta.LengthSquared();
-                if (!found || distanceSq < bestDistanceSq)
+                if (!found ||
+                    distanceSq < bestDistanceSq ||
+                    (distanceSq == bestDistanceSq && EntityStableComparer.Instance.Compare(candidate, resolvedHost) < 0))
                 {
                     resolvedHost = candidate;
                     bestDistanceSq = distanceSq;
                     found = true;
                 }
-            });
+            }
 
             host = resolvedHost;
             return found;
@@ -165,45 +207,69 @@ namespace RtsDemoMod.Systems
 
         private void ProcessUngarrisonCommands()
         {
-            var hostQuery = new QueryDescription().WithAll<GameplayTagContainer, ChildrenBuffer, WorldPositionCm>();
-            _world.Query(in hostQuery, (Entity host, ref GameplayTagContainer tags, ref ChildrenBuffer children, ref WorldPositionCm position) =>
+            _ungarrisonHosts.Clear();
+            var job = new CollectUngarrisonHostsJob
             {
-                if (!tags.HasTag(_ungarrisonAllTagId) || children.Count <= 0)
+                Entities = _ungarrisonHosts,
+                UngarrisonAllTagId = _ungarrisonAllTagId,
+            };
+            _world.InlineEntityQuery<CollectUngarrisonHostsJob, GameplayTagContainer, ChildrenBuffer, WorldPositionCm>(
+                in UngarrisonHostQuery,
+                ref job);
+            SortEntities(_ungarrisonHosts);
+
+            Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
+            for (int hostIndex = 0; hostIndex < _ungarrisonHosts.Count; hostIndex++)
+            {
+                Entity host = _ungarrisonHosts[hostIndex];
+                if (!_world.IsAlive(host))
                 {
-                    return;
+                    continue;
                 }
 
-                var childList = SnapshotChildren(in children);
-                for (int i = 0; i < childList.Count; i++)
+                ChildrenBuffer children = _world.Get<ChildrenBuffer>(host);
+                int childCount = SnapshotChildren(in children, childrenSnapshot);
+                Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
+                for (int i = 0; i < childCount; i++)
                 {
-                    Entity child = childList[i];
+                    Entity child = childrenSnapshot[i];
                     if (!_world.IsAlive(child))
                     {
                         continue;
                     }
 
-                    DetachChildToHostPerimeter(child, host, position.Value, i, childList.Count);
+                    DetachChildToHostPerimeter(child, host, in hostPosition, i, childCount);
                 }
 
                 RemovePersistentTag(host, _ungarrisonAllTagId);
-            });
+            }
         }
 
         private void ProcessCompletedConstructionHosts()
         {
-            var hostQuery = new QueryDescription().WithAll<ChildrenBuffer, WorldPositionCm>();
-            _world.Query(in hostQuery, (Entity host, ref ChildrenBuffer children, ref WorldPositionCm position) =>
+            _completedHosts.Clear();
+            var job = new CollectConstructionHostsJob { Entities = _completedHosts };
+            _world.InlineEntityQuery<CollectConstructionHostsJob, ChildrenBuffer, WorldPositionCm>(
+                in ConstructionHostQuery,
+                ref job);
+            SortEntities(_completedHosts);
+
+            Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
+            for (int hostIndex = 0; hostIndex < _completedHosts.Count; hostIndex++)
             {
-                if (children.Count <= 0 || HasTag(host, _constructingTagId))
+                Entity host = _completedHosts[hostIndex];
+                if (!_world.IsAlive(host) || HasTag(host, _constructingTagId))
                 {
-                    return;
+                    continue;
                 }
 
-                var childList = SnapshotChildren(in children);
+                ChildrenBuffer children = _world.Get<ChildrenBuffer>(host);
+                int childCount = SnapshotChildren(in children, childrenSnapshot);
+                Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
                 int detachIndex = 0;
-                for (int i = 0; i < childList.Count; i++)
+                for (int i = 0; i < childCount; i++)
                 {
-                    Entity child = childList[i];
+                    Entity child = childrenSnapshot[i];
                     if (!_world.IsAlive(child))
                     {
                         continue;
@@ -219,61 +285,111 @@ namespace RtsDemoMod.Systems
                     if (isMorph)
                     {
                         RemovePersistentTag(child, _morphConsumedTagId);
-                        RelationOps.RemoveParent(_world, child);
+                        RemoveRequiredParent(child, host);
                         _world.Destroy(child);
                         continue;
                     }
 
                     RemovePersistentTag(child, _builderAttachedTagId);
-                    DetachChildToHostPerimeter(child, host, position.Value, detachIndex, Math.Max(1, childList.Count));
+                    DetachChildToHostPerimeter(
+                        child,
+                        host,
+                        in hostPosition,
+                        detachIndex,
+                        Math.Max(1, childCount));
                     detachIndex++;
                 }
-            });
+            }
         }
 
         private void SyncAttachedChildrenToParents()
         {
-            var childQuery = new QueryDescription().WithAll<ChildOf>();
-            _world.Query(in childQuery, (Entity child, ref ChildOf childOf) =>
+            _attachedChildren.Clear();
+            var job = new CollectAttachedChildrenJob { Entities = _attachedChildren };
+            _world.InlineEntityQuery<CollectAttachedChildrenJob, ChildOf>(in AttachedChildQuery, ref job);
+            SortEntities(_attachedChildren);
+
+            for (int i = 0; i < _attachedChildren.Count; i++)
             {
-                if (!_world.IsAlive(childOf.Parent))
+                Entity child = _attachedChildren[i];
+                if (!_world.IsAlive(child) || !_world.Has<ChildOf>(child))
                 {
-                    RelationOps.RemoveParent(_world, child);
-                    return;
+                    continue;
                 }
 
-                SnapEntityToHost(child, childOf.Parent);
-            });
+                Entity parent = _world.Get<ChildOf>(child).Parent;
+                if (!_world.IsAlive(parent))
+                {
+                    RelationOps.RemoveParent(_world, child);
+                    continue;
+                }
+
+                SnapEntityToHost(child, parent);
+            }
         }
 
         private void SyncCommandSourceAvailability()
         {
-            var selectableQuery = new QueryDescription().WithAll<CommandSourceSelectableTag>();
-            _world.Query(in selectableQuery, (Entity entity, ref CommandSourceSelectableTag _) =>
+            var job = new SyncCommandSourceAvailabilityJob
             {
-                bool disabled =
-                    _world.Has<ChildOf>(entity) ||
-                    HasTag(entity, _constructingTagId) ||
-                    HasTag(entity, _warpingTagId) ||
-                    HasTag(entity, _builderAttachedTagId) ||
-                    HasTag(entity, _morphConsumedTagId);
+                World = _world,
+                ConstructingTagId = _constructingTagId,
+                WarpingTagId = _warpingTagId,
+                BuilderAttachedTagId = _builderAttachedTagId,
+                MorphConsumedTagId = _morphConsumedTagId,
+            };
+            _world.InlineEntityQuery<SyncCommandSourceAvailabilityJob, CommandSourceSelectableTag, CommandSourceSelectableState>(
+                in SelectableWithStateQuery,
+                ref job);
 
-                if (_world.Has<CommandSourceSelectableState>(entity))
-                {
-                    ref var state = ref _world.Get<CommandSourceSelectableState>(entity);
-                    state = disabled ? CommandSourceSelectableState.Disabled : CommandSourceSelectableState.EnabledByDefault;
-                }
-                else
-                {
-                    _world.Add(entity, disabled ? CommandSourceSelectableState.Disabled : CommandSourceSelectableState.EnabledByDefault);
-                }
-            });
+            _missingSelectableStates.Clear();
+            var missingJob = new CollectMissingSelectableStatesJob { Entities = _missingSelectableStates };
+            _world.InlineEntityQuery<CollectMissingSelectableStatesJob, CommandSourceSelectableTag>(
+                in SelectableWithoutStateQuery,
+                ref missingJob);
+            if (_missingSelectableStates.Count > 0)
+            {
+                SortEntities(_missingSelectableStates);
+                throw new InvalidOperationException(
+                    $"RTS.COMMAND_SOURCE.ERR.MissingSelectableState: entity={_missingSelectableStates[0].Id}, count={_missingSelectableStates.Count}.");
+            }
         }
 
-        private void DetachChildToHostPerimeter(Entity child, Entity host, in Fix64Vec2 hostPosition, int index, int total)
+        private void DetachChildToHostPerimeter(
+            Entity child,
+            Entity host,
+            in Fix64Vec2 hostPosition,
+            int index,
+            int total)
         {
-            RelationOps.RemoveParent(_world, child);
+            RemoveRequiredParent(child, host);
             SetWorldPosition(child, hostPosition + ComputeDetachOffset(index, total));
+        }
+
+        private void RemoveRequiredParent(Entity child, Entity expectedParent)
+        {
+            if (!_world.Has<ChildOf>(child))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.MissingChildOf: child={child.Id}, expectedParent={expectedParent.Id}.");
+            }
+
+            Entity actualParent = _world.Get<ChildOf>(child).Parent;
+            if (actualParent != expectedParent)
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.ParentMismatch: child={child.Id}, expectedParent={expectedParent.Id}, actualParent={actualParent.Id}.");
+            }
+
+            RelationOps.RemoveParent(_world, child);
+            if (_world.Has<ChildOf>(child) ||
+                (_world.IsAlive(expectedParent) &&
+                 _world.Has<ChildrenBuffer>(expectedParent) &&
+                 _world.Get<ChildrenBuffer>(expectedParent).Contains(in child)))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.DetachFailed: child={child.Id}, parent={expectedParent.Id}.");
+            }
         }
 
         private static Fix64Vec2 ComputeDetachOffset(int index, int total)
@@ -287,76 +403,77 @@ namespace RtsDemoMod.Systems
             return Fix64Vec2.FromFloat(MathF.Cos(angle) * 180f, MathF.Sin(angle) * 180f);
         }
 
-        private List<Entity> SnapshotChildren(in ChildrenBuffer children)
+        private static int SnapshotChildren(in ChildrenBuffer children, Span<Entity> destination)
         {
-            var result = new List<Entity>(children.Count);
-            for (int i = 0; i < children.Count; i++)
+            if (children.Count > destination.Length)
             {
-                result.Add(children.Get(i));
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.ChildrenSnapshotOverflow: count={children.Count}, capacity={destination.Length}.");
             }
 
-            return result;
+            for (int i = 0; i < children.Count; i++)
+            {
+                destination[i] = children.Get(i);
+            }
+
+            return children.Count;
         }
 
         private void SnapEntityToHost(Entity entity, Entity host)
         {
-            if (!_world.Has<WorldPositionCm>(host))
-            {
-                return;
-            }
-
+            RequirePositionState(host, "host");
             Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
-            Fix64Vec2 previousPosition = _world.Has<PreviousWorldPositionCm>(host)
-                ? _world.Get<PreviousWorldPositionCm>(host).Value
-                : hostPosition;
-
-            SetWorldPosition(entity, hostPosition, previousPosition);
+            Fix64Vec2 previousPosition = _world.Get<PreviousWorldPositionCm>(host).Value;
+            SetWorldPosition(entity, in hostPosition, in previousPosition);
         }
 
         private void SetWorldPosition(Entity entity, in Fix64Vec2 position)
         {
-            SetWorldPosition(entity, position, position);
+            SetWorldPosition(entity, in position, in position);
         }
 
         private void SetWorldPosition(Entity entity, in Fix64Vec2 position, in Fix64Vec2 previous)
         {
-            if (_world.Has<WorldPositionCm>(entity))
-            {
-                ref var current = ref _world.Get<WorldPositionCm>(entity);
-                current.Value = position;
-            }
-            else
-            {
-                _world.Add(entity, new WorldPositionCm { Value = position });
-            }
+            RequirePositionState(entity, "entity");
+            ref WorldPositionCm current = ref _world.Get<WorldPositionCm>(entity);
+            current.Value = position;
+            ref PreviousWorldPositionCm previousPosition = ref _world.Get<PreviousWorldPositionCm>(entity);
+            previousPosition.Value = previous;
+        }
 
-            if (_world.Has<PreviousWorldPositionCm>(entity))
+        private void RequirePositionState(Entity entity, string role)
+        {
+            if (!_world.IsAlive(entity) ||
+                !_world.Has<WorldPositionCm>(entity) ||
+                !_world.Has<PreviousWorldPositionCm>(entity))
             {
-                ref var previousPosition = ref _world.Get<PreviousWorldPositionCm>(entity);
-                previousPosition.Value = previous;
-            }
-            else
-            {
-                _world.Add(entity, new PreviousWorldPositionCm { Value = previous });
+                throw new InvalidOperationException(
+                    $"RTS.POSITION.ERR.MissingPositionState: role={role}, entity={entity.Id}.");
             }
         }
 
         private bool HasTag(Entity entity, int tagId)
         {
+            return HasTag(_world, entity, tagId);
+        }
+
+        private static bool HasTag(World world, Entity entity, int tagId)
+        {
             return tagId > 0 &&
-                   _world.IsAlive(entity) &&
-                   _world.Has<GameplayTagContainer>(entity) &&
-                   _world.Get<GameplayTagContainer>(entity).HasTag(tagId);
+                   world.IsAlive(entity) &&
+                   world.Has<GameplayTagContainer>(entity) &&
+                   world.Get<GameplayTagContainer>(entity).HasTag(tagId);
         }
 
         private void RemovePersistentTag(Entity entity, int tagId)
         {
-            if (tagId <= 0 || !_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity) || !_world.Has<TagCountContainer>(entity))
+            TagOps.RequireTagState(_world, entity);
+            if (!_world.Get<GameplayTagContainer>(entity).HasTag(tagId) ||
+                !_tagOps.RemoveTag(_world, entity, tagId))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"RTS.TAG.ERR.RemovePersistentTagFailed: entity={entity.Id}, tagId={tagId}.");
             }
-
-            _tagOps.RemoveTag(_world, entity, tagId);
         }
 
         private bool IsRtsMapActive()
@@ -377,6 +494,134 @@ namespace RtsDemoMod.Systems
             }
 
             return false;
+        }
+
+        private static void SortEntities(List<Entity> entities)
+        {
+            if (entities.Count > 1)
+            {
+                entities.Sort(EntityStableComparer.Instance);
+            }
+        }
+
+        private sealed class EntityStableComparer : IComparer<Entity>
+        {
+            public static readonly EntityStableComparer Instance = new EntityStableComparer();
+
+            public int Compare(Entity x, Entity y)
+            {
+                int compare = x.WorldId.CompareTo(y.WorldId);
+                if (compare != 0) return compare;
+                compare = x.Id.CompareTo(y.Id);
+                if (compare != 0) return compare;
+                return x.Version.CompareTo(y.Version);
+            }
+        }
+
+        private struct CollectConstructingHostsJob : IForEachWithEntity<GameplayTagContainer, WorldPositionCm>
+        {
+            public List<Entity> Entities;
+            public int ConstructingTagId;
+
+            public void Update(Entity entity, ref GameplayTagContainer tags, ref WorldPositionCm _)
+            {
+                if (tags.HasTag(ConstructingTagId))
+                {
+                    Entities.Add(entity);
+                }
+            }
+        }
+
+        private struct CollectPendingAttachEntitiesJob : IForEachWithEntity<GameplayTagContainer, WorldPositionCm>
+        {
+            public List<Entity> Entities;
+            public int BuilderAttachedTagId;
+            public int MorphConsumedTagId;
+
+            public void Update(Entity entity, ref GameplayTagContainer tags, ref WorldPositionCm _)
+            {
+                if (tags.HasTag(BuilderAttachedTagId) || tags.HasTag(MorphConsumedTagId))
+                {
+                    Entities.Add(entity);
+                }
+            }
+        }
+
+        private struct CollectUngarrisonHostsJob : IForEachWithEntity<GameplayTagContainer, ChildrenBuffer, WorldPositionCm>
+        {
+            public List<Entity> Entities;
+            public int UngarrisonAllTagId;
+
+            public void Update(
+                Entity entity,
+                ref GameplayTagContainer tags,
+                ref ChildrenBuffer children,
+                ref WorldPositionCm _)
+            {
+                if (children.Count > 0 && tags.HasTag(UngarrisonAllTagId))
+                {
+                    Entities.Add(entity);
+                }
+            }
+        }
+
+        private struct CollectConstructionHostsJob : IForEachWithEntity<ChildrenBuffer, WorldPositionCm>
+        {
+            public List<Entity> Entities;
+
+            public void Update(Entity entity, ref ChildrenBuffer children, ref WorldPositionCm _)
+            {
+                if (children.Count > 0)
+                {
+                    Entities.Add(entity);
+                }
+            }
+        }
+
+        private struct CollectAttachedChildrenJob : IForEachWithEntity<ChildOf>
+        {
+            public List<Entity> Entities;
+
+            public void Update(Entity entity, ref ChildOf _)
+            {
+                Entities.Add(entity);
+            }
+        }
+
+        private struct SyncCommandSourceAvailabilityJob : IForEachWithEntity<CommandSourceSelectableTag, CommandSourceSelectableState>
+        {
+            public World World;
+            public int ConstructingTagId;
+            public int WarpingTagId;
+            public int BuilderAttachedTagId;
+            public int MorphConsumedTagId;
+
+            public void Update(
+                Entity entity,
+                ref CommandSourceSelectableTag _,
+                ref CommandSourceSelectableState state)
+            {
+                bool disabled =
+                    World.Has<ChildOf>(entity) ||
+                    HasTag(World, entity, ConstructingTagId) ||
+                    HasTag(World, entity, WarpingTagId) ||
+                    HasTag(World, entity, BuilderAttachedTagId) ||
+                    HasTag(World, entity, MorphConsumedTagId);
+
+                state = disabled
+                    ? CommandSourceSelectableState.Disabled
+                    : CommandSourceSelectableState.EnabledByDefault;
+            }
+        }
+
+        private struct CollectMissingSelectableStatesJob : IForEachWithEntity<CommandSourceSelectableTag>
+        {
+            public List<Entity> Entities;
+
+            public void Update(Entity entity, ref CommandSourceSelectableTag _)
+            {
+                Entities.Add(entity);
+            }
         }
     }
 }

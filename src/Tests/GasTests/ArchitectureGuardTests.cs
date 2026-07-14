@@ -164,6 +164,27 @@ namespace GasTests
         }
 
         [Test]
+        public void RtsRelationRuntime_MustDeferStructuralChangesOutsideQueries()
+        {
+            string repoRoot = FindRepoRoot();
+            string file = Path.Combine(
+                repoRoot,
+                "mods",
+                "RtsDemoMod",
+                "Systems",
+                "RtsRelationRuntimeSystem.cs");
+            string source = File.ReadAllText(file);
+
+            Assert.That(source, Does.Not.Contain("_world.Query("));
+            Assert.That(source, Does.Not.Contain("new List<Entity>"));
+            Assert.That(source, Does.Not.Contain("_world.Add(entity"));
+            Assert.That(source, Does.Not.Contain("if (_world.Has<WorldPositionCm>(entity))"));
+            Assert.That(
+                Regex.Matches(source, @"private static readonly QueryDescription\s+\w+Query").Count,
+                Is.EqualTo(6));
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();
