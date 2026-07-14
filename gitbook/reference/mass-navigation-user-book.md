@@ -64,7 +64,7 @@ Formation Capability 示例的文件入口：
 | `Runtime/FormationCapabilityShowcaseConfig.cs` | `FormationCapabilityShowcaseConfig.json` 的强类型配置。 |
 | `Runtime/FormationCapabilityShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、向 `RuntimeEntitySpawnQueue` 填参数。 |
 | `Runtime/FormationCapabilityShowcaseScenarioBindingSystem.cs` | 在 Core MassNavigation agent 绑定完成后，绑定 showcase 自有方阵与士兵组件。 |
-| `Runtime/FormationCapabilityShowcaseFormationRuntimeSystem.cs` | 消费 showcase 订单，计算方阵与成员目标，并通过 MovePlanning 执行出口交给 MassNavigation。 |
+| `src/Core/MassNavigation/Formation/FormationExecutionTargetSystem.cs` | 消费 Formation 组件与语义订单状态，计算方阵成员目标，并通过 MovePlanning 执行出口交给 MassNavigation。 |
 | `Runtime/FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
 | `Runtime/FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
 | `Runtime/FormationCapabilityShowcaseFormationComponents.cs` | showcase 专属的方阵、成员、命令状态，以及严格大小写的 layout/outline 名称。 |
@@ -295,8 +295,9 @@ Formation Capability Showcase 的右键移动链路：
 Local input
   -> EntityCollectionStore
   -> OrderBuffer(formationMove)
-  -> FormationCapabilityOrderSystem
-  -> FormationCapabilityShowcaseCommandState
+  -> FormationOrderSystem
+  -> FormationCommandState
+  -> FormationExecutionTargetSystem
   -> MovePlanExecutionIntent
   -> MassNavigationMovePlanExecutionSink
   -> MassNavigationFlowSolverState
@@ -314,12 +315,12 @@ Local input
 
 在这个 showcase 里，业务 runtime 会创建：
 
-- 作为控制单位的普通 MassNavigation agent。
-- 归属这个控制单位的普通 MassNavigation soldier agents。
+- 带有核心 Formation anchor 组件的普通 MassNavigation agent。
+- 带有核心 Formation member/slot 组件的普通 MassNavigation soldier agents。
 
-Showcase 自己持有方阵身份、成员范围、槽位偏移和目标朝向。每次目标姿态需要更新时，Showcase 计算明确的逐成员世界目标，构造 `MovePlanExecutionIntent`，再通过 `MassNavigationMovePlanExecutionSink` 交给 MassNavigation 执行。它不访问 solver 或 `MassNavigationGroupRuntime` 内部状态，也不会每帧制造 N 条士兵订单。
+Showcase 负责开局场景、模板、玩家归属、输入快捷键和表现。稳定的方阵身份、成员槽位、目标姿态和逐成员执行目标由可选核心 Formation 能力处理：`FormationExecutionTargetSystem` 构造 `MovePlanExecutionIntent`，再通过 `MassNavigationMovePlanExecutionSink` 交给 MassNavigation 执行。它不访问 solver 或 `MassNavigationGroupRuntime` 内部状态，也不会每帧制造 N 条士兵订单。
 
-这个“方阵有哪些士兵、士兵用什么模板和 slot、什么时候转向”的规则全部是业务逻辑，应该放在 `FormationCapabilityShowcaseMod` 或你的游戏 Mod。Core 只负责 MassNavigation agent 绑定和明确目标执行。
+这个“开局摆几队、士兵用什么模板、Q/E 怎么映射、HUD/轮廓怎么展示”的规则是 Showcase 或游戏 Mod 逻辑；“方阵 anchor/member/slot 如何转成明确成员目标”属于可选核心 Formation 能力。
 
 ## 障碍物
 

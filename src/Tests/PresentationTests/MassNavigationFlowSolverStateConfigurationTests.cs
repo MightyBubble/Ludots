@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -14,6 +15,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
@@ -287,6 +289,61 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity()
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 5;
+
+            var runtime = new MassNavigationSimulationRuntime(config);
+            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
+
+            Assert.That(
+                flow.DomainRelationshipMatrixCapacity,
+                Is.EqualTo(25),
+                "Relationship-domain cooperative matrix must be prepared from runtime capacity before fixed-step; it must not grow on demand while stepping.");
+        }
+
+        [Test]
+        public void SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity()
+        {
+            using var world = World.Create();
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 4;
+            var runtime = new MassNavigationSimulationRuntime(config);
+            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            Entity agent = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateAvoidanceSeed(teamId: 1, localX: 1000f, localY: 1200f, heavy: false, layer),
+            };
+
+            runtime.RebuildFromAuthoredAgents(world, new[] { agent }, seeds, new[] { true });
+
+            Assert.That(
+                flow.DomainRelationshipMatrixCapacity,
+                Is.EqualTo(16),
+                "Authored map binding must keep the cold-preallocated relationship matrix capacity; shrinking it would make later domain append fail or allocate during fixed-step.");
+        }
+
+        [Test]
+        public void MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored()
+        {
+            using var engine = new GameEngine();
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.AutoSpawnConfiguredScenario = false;
+            engine.RemoveService(CoreServiceKeys.PerformerDefinitionRegistry);
+            engine.RemoveService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            engine.RemoveService(CoreServiceKeys.VisualHeightmap);
+
+            Assert.That(
+                () => MassNavigationAuthoringContract.Require(engine, config),
+                Throws.Nothing,
+                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation performer, mesh, or VisualHeightmap services.");
+        }
+
+        [Test]
         public void SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot()
         {
             using var world = World.Create();
@@ -467,6 +524,7 @@ namespace Ludots.Tests.Presentation
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,
                 RouteStateCapacity = 8,
+                RouteMaxExpandedPerRequest = 128,
                 RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 RelationshipDomainCapacity = 4,

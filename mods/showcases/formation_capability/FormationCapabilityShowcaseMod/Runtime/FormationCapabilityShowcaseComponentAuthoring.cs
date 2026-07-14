@@ -1,5 +1,6 @@
 using Ludots.Core.Config;
 using Ludots.Core.Layers;
+using Ludots.Core.MassNavigation.Formation;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -12,10 +13,7 @@ internal static class FormationCapabilityShowcaseComponentAuthoring
     {
         LayerRegistry.Register(FormationAgentLayer);
         LayerRegistry.Register(FormationSoldierLayer);
-        ComponentRegistry.Register<FormationCapabilityShowcaseFormationSoldier>("FormationCapabilityShowcaseFormationSoldier", modId);
-        ComponentRegistry.Register<FormationCapabilityShowcaseFormationAgent>("FormationCapabilityShowcaseFormationAgent", modId);
-        ComponentRegistry.Register<FormationCapabilityShowcaseCommandState>("FormationCapabilityShowcaseCommandState", modId);
-        ComponentRegistry.Register<FormationCapabilityShowcaseFormationState>("FormationCapabilityShowcaseFormationState", modId);
+        FormationComponentAuthoring.Register(modId);
         ComponentRegistry.Register<FormationCapabilityShowcaseFormationOutline>("FormationCapabilityShowcaseFormationOutline", modId);
         ComponentRegistry.Register<FormationCapabilityShowcaseObstacleOverlay>("FormationCapabilityShowcaseObstacleOverlay", modId);
     }

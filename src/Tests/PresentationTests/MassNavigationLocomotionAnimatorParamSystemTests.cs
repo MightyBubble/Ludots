@@ -1,4 +1,11 @@
 using Arch.Core;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Map;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Presentation.Performers;
@@ -60,9 +67,20 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationLocomotionAnimatorParamSystem_VisibleOwnedPerformer_WritesNormalizedSpeed()
         {
-            using World world = World.Create();
+            using var engine = new GameEngine();
+            string repoRoot = FindRepoRoot();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                Path.Combine(repoRoot, "assets"));
+            World world = engine.World;
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
+            var mapId = new MapId(config.MapId);
+            engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
+            var binding = new MassNavigationRuntimeBinding();
+            binding.Activate(mapId, simulation);
+            binding.MarkPrepared(mapId, simulation);
+            engine.SetService(MassNavigationKeys.RuntimeBinding, binding);
             var layer = new MassNavigationAgentLayer(1u, 1u);
             int profileId = MassNavigationProfileRegistry.Register("light");
 
@@ -111,7 +129,7 @@ namespace Ludots.Tests.Presentation
                 new PerformerFloatParams(),
                 new PerformerCullState { OwnerCullVisible = false });
 
-            var system = new MassNavigationLocomotionAnimatorParamSystem(world, simulation);
+            var system = new MassNavigationLocomotionAnimatorParamSystem(engine);
             system.Update(0f);
 
             int speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
@@ -131,6 +149,22 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(world.Get<PerformerState>(movingPerformer).Version, Is.EqualTo(11));
             Assert.That(world.Get<PerformerState>(idlePerformer).Version, Is.EqualTo(21));
+        }
+
+        private static string FindRepoRoot()
+        {
+            var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            while (current != null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, "src", "Core", "Ludots.Core.csproj")))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
         }
     }
 }

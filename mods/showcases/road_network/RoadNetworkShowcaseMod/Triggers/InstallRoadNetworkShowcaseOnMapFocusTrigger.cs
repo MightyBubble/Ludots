@@ -50,8 +50,16 @@ namespace RoadNetworkShowcaseMod.Triggers
 
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
-            MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.RuntimeBinding)?.RequireCurrent()
-                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires a prepared MassNavigation runtime binding.");
+            MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation runtime binding.");
+            MassNavigationSimulationRuntime simulation = binding.Current
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires an active MassNavigation runtime binding during map focus.");
+            if (!string.Equals(binding.CurrentMapId.Value, engine.CurrentMapSession?.MapId.Value, System.StringComparison.Ordinal))
+            {
+                throw new System.InvalidOperationException(
+                    $"RoadNetworkShowcaseMod active MassNavigation runtime map '{binding.CurrentMapId.Value}' does not match focused map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}'.");
+            }
+
             var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.RegisterSystem(

@@ -30,9 +30,15 @@ public sealed class MassNavigationRuntime
         }
 
         EnsureSystemsInstalled(engine, config);
-        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime("activating map focus");
+        MassNavigationSimulationRuntime simulation = EnsureSimulationRuntime(engine, config);
         MassNavigationRuntimeBinding binding = RequireRuntimeBinding(engine);
+        bool resumePreparedRuntime = simulation.RuntimeBindingPreparationComplete;
         binding.Activate(mapId, simulation);
+        if (!resumePreparedRuntime)
+        {
+            simulation.BeginRuntimeBindingPreparation();
+        }
+
         try
         {
             BindBoardWorld(engine);
@@ -40,14 +46,17 @@ public sealed class MassNavigationRuntime
             {
                 EnsureScenario(engine);
             }
-
-            binding.MarkPrepared(mapId, simulation);
         }
         catch
         {
             binding.Clear(mapId, simulation);
             simulation.ReleaseLoadedChunkContribution();
             throw;
+        }
+
+        if (resumePreparedRuntime)
+        {
+            MassNavigationIds.PublishPreparedWhenBindingComplete(engine, simulation);
         }
 
         return true;
@@ -84,6 +93,12 @@ public sealed class MassNavigationRuntime
 
         engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
         _simulation?.ReleaseLoadedChunkContribution();
+        if (unloadScenario)
+        {
+            _simulation?.ClearAuthoredRuntimeBindings(engine.World);
+            _simulation = null;
+        }
+
         return true;
     }
 
@@ -94,6 +109,38 @@ public sealed class MassNavigationRuntime
             return;
         }
 
+        if (engine.GetService(MassNavigationKeys.RuntimeBinding) == null)
+        {
+            engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
+        }
+
+        engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
+        engine.RegisterSystem(
+            new MassNavigationAuthoredAgentBindingSystem(engine, config),
+            SystemGroup.RuntimeEntityBinding);
+        engine.RegisterSystem(
+            new MassNavigationEnvironmentBindingSystem(engine),
+            SystemGroup.RuntimeEntityBinding);
+        engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(
+            new MassNavigationPreSimulationStepSystem(engine),
+            SystemGroup.PostMovement);
+        engine.RegisterSystem(
+            new MassNavigationOrderIngestionSystem(engine, config),
+            SystemGroup.AbilityActivation);
+        engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
+            new MassNavigationLocomotionAnimatorParamSystem(engine));
+        _systemsInstalled = true;
+        Log.Info(in LogChannels.Engine, "[MassNavigation runtime] Installed mass-navigation runtime.");
+    }
+
+    private MassNavigationSimulationRuntime EnsureSimulationRuntime(GameEngine engine, MassNavigationConfig config)
+    {
+        if (_simulation is MassNavigationSimulationRuntime existing)
+        {
+            return existing;
+        }
+
         var simulation = new MassNavigationSimulationRuntime(config);
         DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
             ?? throw new InvalidOperationException("MassNavigation runtime requires DomainStanceQuery.");
@@ -102,25 +149,7 @@ public sealed class MassNavigationRuntime
             config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
             config.RelationshipPolicy.CooperativeStance));
         _simulation = simulation;
-        engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
-        engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine, simulation), SystemGroup.PostMovement);
-        engine.RegisterSystem(
-            new MassNavigationAuthoredAgentBindingSystem(engine, simulation),
-            SystemGroup.RuntimeEntityBinding);
-        engine.RegisterSystem(
-            new MassNavigationEnvironmentBindingSystem(engine, simulation),
-            SystemGroup.RuntimeEntityBinding);
-        engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(
-            new MassNavigationPreSimulationStepSystem(engine, simulation),
-            SystemGroup.PostMovement);
-        engine.RegisterSystem(
-            new MassNavigationOrderIngestionSystem(engine, simulation),
-            SystemGroup.AbilityActivation);
-        engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
-            new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
-        _systemsInstalled = true;
-        Log.Info(in LogChannels.Engine, "[MassNavigation runtime] Installed mass-navigation runtime.");
+        return simulation;
     }
 
     private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig config)
@@ -209,24 +238,20 @@ public sealed class MassNavigationRuntime
 public sealed class MassNavigationPreSimulationStepSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
 
-    public MassNavigationPreSimulationStepSystem(
-        GameEngine engine,
-        MassNavigationSimulationRuntime simulation)
+    public MassNavigationPreSimulationStepSystem(GameEngine engine)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
     }
 
     public void Initialize() { }
     public void BeforeUpdate(in float dt) { }
     public void Update(in float dt)
     {
-        if (MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        if (MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
-            _simulation.BeginFrame(dt);
-            _simulation.ObserveControlTick();
+            simulation.BeginFrame(dt);
+            simulation.ObserveControlTick();
         }
     }
     public void AfterUpdate(in float dt) { }

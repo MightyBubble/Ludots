@@ -291,11 +291,32 @@ namespace Ludots.Tests.Presentation
             engine.Start();
             engine.LoadStartupMap();
             AssertStartupParticipantBindings(engine);
+            WaitForMassNavigationRuntimeReady(engine);
         }
 
         private static MassNavigationSimulationRuntime RequireMassNavigationSimulation(GameEngine engine)
         {
             return RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
+        }
+
+        private static void WaitForMassNavigationRuntimeReady(GameEngine engine)
+        {
+            for (int frame = 0; frame < MaxWarmupFrames; frame++)
+            {
+                if (MassNavigationIds.IsCurrentNavigationRuntimeReady(engine))
+                {
+                    return;
+                }
+
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+            }
+
+            MassNavigationRuntimeBinding binding = RequireService(engine, MassNavigationKeys.RuntimeBinding);
+            Assert.Fail(
+                $"MassNavigation runtime did not become prepared within {MaxWarmupFrames} frames. " +
+                $"currentMap={engine.CurrentMapSession?.MapId.Value ?? "<none>"}, bindingMap={binding.CurrentMapId.Value ?? "<none>"}, revision={binding.Revision}, preparedRevision={binding.PreparedRevision}.");
         }
 
         private static void AssertStartupParticipantBindings(GameEngine engine)

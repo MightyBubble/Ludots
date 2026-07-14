@@ -217,6 +217,7 @@ public sealed class MassNavigationOrderChainTests
                     OrderIngestionTokenCapacity = 8,
                     OrderIngestionMemberCapacity = 8,
                     RouteStateCapacity = 16,
+                    RouteMaxExpandedPerRequest = 128,
                     RouteWaypointCapacityPerAgent = 64,
                     LoadedChunkCapacity = 32,
                     RelationshipDomainCapacity = 2,

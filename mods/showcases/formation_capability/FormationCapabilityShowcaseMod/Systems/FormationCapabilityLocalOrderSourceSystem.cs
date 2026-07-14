@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.MassNavigation.Formation;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using FormationCapabilityShowcaseMod.Runtime;
@@ -114,7 +115,7 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         {
             if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out object? orderTypesObj) ||
                 orderTypesObj is not OrderTypeRegistry orderTypes ||
-                !orderTypes.TryGetId(FormationCapabilityShowcaseOrderKeys.Move, out _formationMoveOrderTypeId))
+                !orderTypes.TryGetId(FormationOrderKeys.Move, out _formationMoveOrderTypeId))
             {
                 return false;
             }

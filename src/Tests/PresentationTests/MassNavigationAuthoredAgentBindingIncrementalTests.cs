@@ -489,7 +489,7 @@ namespace Ludots.Tests.Presentation
             int memberOfTypeId = relationshipTypes.GetId("MemberOf");
             relationships.EnsureLink(agent0, teamRep, memberOfTypeId);
             relationships.EnsureLink(agent1, teamRep, memberOfTypeId);
-            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, simulation);
+            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, config);
             return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1, teamRep, relationships, memberOfTypeId);
         }
 

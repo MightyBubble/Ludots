@@ -9,6 +9,11 @@
   "orderBatchCapacity": 512,
   "targetChangeEpsilonCm": 12.0,
   "facingChangeEpsilonRadians": 0.035,
+  "input": {
+    "rotateLeftActionId": "FormationCapability_RotateLeft",
+    "rotateRightActionId": "FormationCapability_RotateRight",
+    "rotateStepRadians": 0.3926991
+  },
   "obstacleOverlay": {
     "templateId": "formation_capability_showcase_obstacle_overlay",
     "heightOffsetM": 0.28,

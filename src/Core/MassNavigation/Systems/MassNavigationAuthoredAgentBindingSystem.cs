@@ -27,7 +27,6 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         .WithNone<MassNavigationAgentIndex, PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
     private readonly List<Entity> _entities;
     private readonly List<MassNavigationAgentSeed> _seeds;
     private readonly List<bool> _controllableFlags;
@@ -37,16 +36,21 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
     private readonly Entity[] _projectedEntitiesByAgentIndex;
     private readonly Entity[] _projectedDomainsByAgentIndex;
     private readonly byte[] _projectedDomainValidByAgentIndex;
+    private MassNavigationSimulationRuntime? _lastSimulation;
     private long _lastAuthoringSignature;
     private uint _projectedRelationshipRevision = uint.MaxValue;
 
     internal int DomainResolutionCount { get; private set; }
 
-    public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationConfig config)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
-        _agentCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (config == null)
+        {
+            throw new ArgumentNullException(nameof(config));
+        }
+
+        _agentCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
         _controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation authored binding requires ControlDomainQuery.");
         _stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
@@ -66,9 +70,17 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        if (!MassNavigationIds.TryGetActiveNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
             return;
+        }
+
+        if (!ReferenceEquals(_lastSimulation, simulation))
+        {
+            _lastSimulation = simulation;
+            _lastAuthoringSignature = 0L;
+            _projectedRelationshipRevision = uint.MaxValue;
+            ClearProjectedDomains();
         }
 
         uint relationshipRevision = ResolveRelationshipRevision();
@@ -76,15 +88,16 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         AuthoredAgentBindingScan scan = ScanAuthoredAgentBindingState(refreshRelationshipProjection);
         if (scan.AuthoredCount <= 0)
         {
-            if (_simulation.AgentState.TotalAgents > 0)
+            if (simulation.AgentState.TotalAgents > 0)
             {
-                _simulation.ClearAuthoredRuntimeBindings(_engine.World);
-                _simulation.MarkStructuralChange();
+                simulation.ClearAuthoredRuntimeBindings(_engine.World);
+                simulation.MarkStructuralChange();
                 _lastAuthoringSignature = 0L;
                 ClearProjectedDomains();
             }
 
             _projectedRelationshipRevision = relationshipRevision;
+            CompleteAgentBindingPass(simulation);
             return;
         }
 
@@ -96,35 +109,46 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 
         if (scan.UnboundCount == 0 &&
             !scan.ProjectedDomainChanged &&
-            _simulation.AgentState.TotalAgents == scan.AuthoredCount &&
+            simulation.AgentState.TotalAgents == scan.AuthoredCount &&
             _lastAuthoringSignature == scan.AuthoringSignature)
         {
             _projectedRelationshipRevision = relationshipRevision;
+            CompleteAgentBindingPass(simulation);
             return;
         }
 
-        if (TryAppendUnboundAuthoredAgents(in scan))
+        if (TryAppendUnboundAuthoredAgents(simulation, in scan))
         {
             _lastAuthoringSignature = scan.AuthoringSignature;
             _projectedRelationshipRevision = relationshipRevision;
+            CompleteAgentBindingPass(simulation);
             return;
         }
 
-        RebuildAuthoredAgents();
+        RebuildAuthoredAgents(simulation);
         _lastAuthoringSignature = scan.AuthoringSignature;
         _projectedRelationshipRevision = relationshipRevision;
+        CompleteAgentBindingPass(simulation);
     }
 
-    private bool TryAppendUnboundAuthoredAgents(in AuthoredAgentBindingScan scan)
+    private void CompleteAgentBindingPass(MassNavigationSimulationRuntime simulation)
     {
-        int boundCount = _simulation.AgentState.TotalAgents;
+        simulation.MarkAuthoredAgentBindingPassComplete();
+        MassNavigationIds.PublishPreparedWhenBindingComplete(_engine, simulation);
+    }
+
+    private bool TryAppendUnboundAuthoredAgents(
+        MassNavigationSimulationRuntime simulation,
+        in AuthoredAgentBindingScan scan)
+    {
+        int boundCount = simulation.AgentState.TotalAgents;
         int unboundCount = scan.UnboundCount;
         if (unboundCount <= 0 || boundCount <= 0 || scan.AuthoredCount <= boundCount)
         {
             return false;
         }
 
-        if (!_simulation.AgentState.HasBoundAgents(boundCount))
+        if (!simulation.AgentState.HasBoundAgents(boundCount))
         {
             return false;
         }
@@ -151,7 +175,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 MassNavigationAgent agent = agents[index];
                 _entities.Add(entity);
-                _seeds.Add(CreateSeed(entity, in agent));
+                _seeds.Add(CreateSeed(simulation, entity, in agent));
                 _controllableFlags.Add(_engine.World.Has<OrderBuffer>(entity));
             }
         }
@@ -161,7 +185,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             return false;
         }
 
-        _simulation.AppendAuthoredAgents(
+        simulation.AppendAuthoredAgents(
             _engine.World,
             CollectionsMarshal.AsSpan(_entities),
             CollectionsMarshal.AsSpan(_seeds),
@@ -312,7 +336,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         }
     }
 
-    private void RebuildAuthoredAgents()
+    private void RebuildAuthoredAgents(MassNavigationSimulationRuntime simulation)
     {
         _entities.Clear();
         _seeds.Clear();
@@ -327,12 +351,12 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 Entity entity = Unsafe.Add(ref entityFirst, index);
                 MassNavigationAgent agent = agents[index];
                 _entities.Add(entity);
-                _seeds.Add(CreateSeed(entity, in agent));
+                _seeds.Add(CreateSeed(simulation, entity, in agent));
                 _controllableFlags.Add(_engine.World.Has<OrderBuffer>(entity));
             }
         }
 
-        _simulation.RebuildFromAuthoredAgents(
+        simulation.RebuildFromAuthoredAgents(
             _engine.World,
             CollectionsMarshal.AsSpan(_entities),
             CollectionsMarshal.AsSpan(_seeds),
@@ -341,7 +365,10 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         StoreProjectedDomainsForBoundEntities(_entities, _seeds);
     }
 
-    private MassNavigationAgentSeed CreateSeed(Entity entity, in MassNavigationAgent agent)
+    private MassNavigationAgentSeed CreateSeed(
+        MassNavigationSimulationRuntime simulation,
+        Entity entity,
+        in MassNavigationAgent agent)
     {
         World world = _engine.World;
         Entity domainRep = world.TryGet(entity, out MassNavigationAgentIndex agentIndex) &&
@@ -367,14 +394,14 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
         }
 
         string profileKey = MassNavigationProfileRegistry.GetName(agent.ProfileId);
-        MassNavigationAgentProfileConfig profile = _simulation.Config.AgentProfiles.Resolve(profileKey);
-        AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
+        MassNavigationAgentProfileConfig profile = simulation.Config.AgentProfiles.Resolve(profileKey);
+        AgentProfileConfig geometry = simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
         float worldXCm = worldPosition.Value.X.ToFloat();
         float worldYCm = worldPosition.Value.Y.ToFloat();
         return new MassNavigationAgentSeed(
             domainRep,
-            _simulation.ToLocalXCm(worldXCm),
-            _simulation.ToLocalYCm(worldYCm),
+            simulation.ToLocalXCm(worldXCm),
+            simulation.ToLocalYCm(worldYCm),
             profile.Heavy,
             geometry.Mass,
             profile.VisualScale,

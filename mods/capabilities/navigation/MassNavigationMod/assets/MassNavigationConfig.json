@@ -140,6 +140,7 @@
       "orderIngestionTokenCapacity": 256,
       "orderIngestionMemberCapacity": 10000,
       "routeStateCapacity": 10000,
+      "routeMaxExpandedPerRequest": 2048,
       "routeWaypointCapacityPerAgent": 64,
       "loadedChunkCapacity": 256,
       "relationshipDomainCapacity": 4

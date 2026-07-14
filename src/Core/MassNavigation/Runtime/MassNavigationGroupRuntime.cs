@@ -281,12 +281,13 @@ internal sealed class MassNavigationGroupRuntime
             (uint)groupId >= (uint)_groups.Count ||
             _groups[groupId] == null)
         {
+            EnsureMembershipCapacityForMembers(memberIndices);
+            ValidateGroupMembersBound(agentState, memberIndices);
+            groupId = AllocateGroupId();
             Vector2 resolvedWorldDestination = singleMemberOrder
                 ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
                 : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
             DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
-            EnsureMembershipCapacityForMembers(memberIndices);
-            groupId = AllocateGroupId();
             var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId);
             created.CommandToken = orderToken;
             created.RequestedDestinationWorldX = destinationWorldCm.X;
@@ -323,13 +324,18 @@ internal sealed class MassNavigationGroupRuntime
 
         commandChanged = true;
 
+        if (rebuildOffsets)
+        {
+            EnsureMembershipCapacityForMembers(memberIndices);
+            ValidateGroupMembersBound(agentState, memberIndices);
+        }
+
         Vector2 nextResolvedWorldDestination = singleMemberOrder
             ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
             : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
         if (rebuildOffsets)
         {
             DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
-            EnsureMembershipCapacityForMembers(memberIndices);
             ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId);
         }
 
@@ -547,16 +553,28 @@ internal sealed class MassNavigationGroupRuntime
 
     private int AllocateGroupId()
     {
-        for (int i = 0; i < _groups.Count; i++)
+        if (TryFindAvailableGroupId(out int groupId))
         {
-            if (_groups[i] == null)
-            {
-                return i;
-            }
+            return groupId;
         }
 
         throw new InvalidOperationException(
             $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+    }
+
+    private bool TryFindAvailableGroupId(out int groupId)
+    {
+        for (int i = 0; i < _groups.Count; i++)
+        {
+            if (_groups[i] == null)
+            {
+                groupId = i;
+                return true;
+            }
+        }
+
+        groupId = -1;
+        return false;
     }
 
     private void RemoveFromExistingGroup(MassNavigationFlowSolverState simulation, int unitIndex)
@@ -824,6 +842,20 @@ internal sealed class MassNavigationGroupRuntime
 
         group.MemberCount = members.Length;
         BuildCurrentRelativeOffsets(simulation, group);
+    }
+
+    private static void ValidateGroupMembersBound(
+        MassNavigationAgentState agentState,
+        ReadOnlySpan<int> members)
+    {
+        for (int i = 0; i < members.Length; i++)
+        {
+            if (!agentState.TryGetAgentEntity(members[i], out _))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation group member agent index {members[i]} is not bound to a live entity.");
+            }
+        }
     }
 
     private static void BuildCurrentRelativeOffsets(MassNavigationFlowSolverState simulation, NavGroupState group)

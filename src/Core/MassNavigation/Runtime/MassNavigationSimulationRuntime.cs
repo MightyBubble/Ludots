@@ -133,6 +133,8 @@ public sealed class MassNavigationSimulationRuntime
     private readonly int _activeHotZoneCenterYCm;
     private readonly int _activeHotZoneWidthCm;
     private readonly int _activeHotZoneHeightCm;
+    private bool _authoredAgentBindingPassComplete;
+    private bool _environmentBindingPassComplete;
 
     private struct FocusState
     {
@@ -183,6 +185,7 @@ public sealed class MassNavigationSimulationRuntime
     public int SolverWindowMovesTotal => Telemetry.SolverWindowMovesTotal;
     public int ScenarioSpawnCount => Telemetry.ScenarioSpawnCount;
     public int AuthoredRuntimeBindingRevision => Telemetry.AuthoredRuntimeBindingRevision;
+    internal bool RuntimeBindingPreparationComplete => _authoredAgentBindingPassComplete && _environmentBindingPassComplete;
     public MassNavigationConfig Config { get; }
     internal MassNavigationAgentState AgentState { get; } = new();
     public MassNavigationFlowTuning FlowTuning { get; }
@@ -252,6 +255,7 @@ public sealed class MassNavigationSimulationRuntime
         Config = config ?? throw new ArgumentNullException(nameof(config));
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
+        MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
         _activeHotZoneId = activeHotZone.Id;
@@ -509,6 +513,22 @@ public sealed class MassNavigationSimulationRuntime
     public void MarkScenarioSpawned()
     {
         Telemetry.MarkScenarioSpawned();
+    }
+
+    internal void BeginRuntimeBindingPreparation()
+    {
+        _authoredAgentBindingPassComplete = false;
+        _environmentBindingPassComplete = false;
+    }
+
+    internal void MarkAuthoredAgentBindingPassComplete()
+    {
+        _authoredAgentBindingPassComplete = true;
+    }
+
+    internal void MarkEnvironmentBindingPassComplete()
+    {
+        _environmentBindingPassComplete = true;
     }
 
     public void MarkFlowReconcile()

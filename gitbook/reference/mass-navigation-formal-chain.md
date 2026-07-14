@@ -9,16 +9,18 @@ Current status: formal Selection APIs are retired. MassNavigation command author
 
 - Core runtime: `src/Core/MassNavigation/`
 - Capability assets: `mods/capabilities/navigation/MassNavigationMod/`
-- Formation business consumer: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/`
+- Optional Formation capability: `src/Core/MassNavigation/Formation/`
+- Formation showcase adapter: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/`
 - User-facing tutorial: `gitbook/reference/mass-navigation-user-book.md`
 
 ## Responsibility Boundary
 
 | Layer | Owns | Must Not Own |
 | --- | --- | --- |
-| Core | Config pipeline, MassNavigation agent binding, MassNavigationFlow simulation, explicit spatial-target ingestion, MovePlanning execution sink, ECS writeback, collection events, performer/minimap integration | Formation identity, membership, slots, facing, rotation input, formation-specific orders or presentation |
+| Core MassNavigation | Config pipeline, MassNavigation agent binding, MassNavigationFlow simulation, explicit spatial-target ingestion, MovePlanning execution sink, ECS writeback, collection events, performer/minimap integration | Physical input, Selection, showcase scenario policy, camera/HUD/outline/colour/presentation |
+| Optional Core Formation | Stable formation identity, membership/slots, facing, semantic formation orders and deterministic member-target planning through MovePlanning | Physical input keys, local shortcut/debug policy, camera, HUD, outlines, colours, templates, performers, scenario teams/players, direct solver/private group access |
 | MassNavigationMod | Asset/config package and optional UI adapter | Core binding/runtime/order ingestion or any formation business state |
-| FormationCapabilityShowcaseMod | Scenario config, formation identity and membership, slot layout, facing, `formationMove` / `formationRotate` orders, explicit per-member target production, player-readable showcase UI | Private Selection runtime, private config loader, private MassNavigation binding runtime or direct solver access |
+| FormationCapabilityShowcaseMod | Showcase scenario config, physical Q/E mapping, configured rotate step, local-player command policy, camera/HUD/outlines/colours and player-readable UI | Private Selection runtime, private config loader, private MassNavigation binding runtime, direct solver access, or stable Formation domain ownership |
 
 ## End-To-End Chain
 
@@ -44,15 +46,15 @@ flowchart TD
 
     AgentBinding --> Agents["MassNavigation agents"]
     EnvBinding --> Obstacles["MassNavigation blockers / hot zones"]
-    ShowcaseBinding --> Formations["Showcase-owned formation state"]
+    ShowcaseBinding --> Formations["Core Formation anchor/member state"]
 
     GenericOrders["OrderBuffer(massNavigationMove)"] --> Ingestion["MassNavigationOrderIngestionSystem"]
     Ingestion --> Groups["MassNavigationGroupRuntime"]
     Groups --> Solver["MassNavigationFlowSolverState"]
 
     CommandSource["EntityCollectionStore(collection.command.source)"] --> FormationOrders["OrderBuffer(formationMove / formationRotate)"]
-    FormationOrders --> FormationOrderSystem["FormationCapabilityOrderSystem"]
-    FormationOrderSystem --> FormationTargets["Showcase slot and facing policy"]
+    FormationOrders --> FormationOrderSystem["Optional Formation capability"]
+    FormationOrderSystem --> FormationTargets["Formation member target planner"]
     FormationTargets --> Intent["MovePlanExecutionIntent"]
     Intent --> Sink["MassNavigationMovePlanExecutionSink"]
     Sink --> Solver
@@ -86,8 +88,8 @@ showcase-only command-source keys, or Selection fallback.
 Local input
   -> EntityCollectionStore(collection.command.source)
   -> OrderBuffer(formationMove / formationRotate)
-  -> FormationCapabilityOrderSystem
-  -> showcase-owned command state and slot policy
+  -> optional Formation capability
+  -> formation command state and member target planner
   -> MovePlanExecutionIntent
   -> MassNavigationMovePlanExecutionSink
   -> MassNavigationFlowSolverState
@@ -111,19 +113,20 @@ FormationCapabilityShowcaseRuntime
   -> MassNavigationAuthoredAgentBindingSystem
   -> MassNavigationEnvironmentBindingSystem
   -> FormationCapabilityShowcaseScenarioBindingSystem
-  -> showcase-owned formation components and preallocated member ranges
+  -> optional core Formation components and preallocated member ranges
 ```
 
-Formation is not a MassNavigation Core feature. Loading MassNavigation without the Formation
-Capability Showcase must not register formation components, orders, slot state, rotation state, or
-follower systems.
+Formation is an optional MassNavigation Core capability. Loading MassNavigation without authored
+Formation data must not register Formation systems, require Formation config, or allocate Formation
+state.
 
 ## Config Rules
 
 - Use semantic order keys in assets; runtime ids are implementation details.
 - Keep command marker definition ids in command-source terminology.
 - Keep obstacle authoring in map/template ECS components.
-- Keep formation identity, membership, slots, facing, rotation and presentation inside the showcase mod.
+- Keep stable formation identity, membership, slots, facing and semantic formation orders inside the optional Formation capability.
+- Keep physical input mappings, Q/E rotation shortcuts, configured rotate step, camera, HUD, outlines, colours, templates and initial battlefield setup inside the showcase mod.
 - Use `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` for explicit member targets;
   do not access `MassNavigationFlowSolverState` or `MassNavigationGroupRuntime` from the showcase.
 - Keep MassNavigation capability assets reusable by other mods.

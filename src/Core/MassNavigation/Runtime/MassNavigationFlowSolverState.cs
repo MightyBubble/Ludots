@@ -137,6 +137,7 @@ public sealed partial class MassNavigationFlowSolverState
     internal int OrcaLineScratchCapacity => _orcaLineScratch.Length;
     internal int OrcaProjectionLineScratchCapacity => _orcaProjectionLineScratch.Length;
     internal int SonarIntervalScratchCapacity => _sonarIntervalScratch.Length;
+    internal int DomainRelationshipMatrixCapacity => _teamRelationshipMatrix.Length;
     public int SeparationHashCellSizeCm => _separationHashCellSizeCm;
     public int SeparationHashWidth => _separationHashWidth;
     public int SeparationHashHeight => _separationHashHeight;
@@ -214,6 +215,23 @@ public sealed partial class MassNavigationFlowSolverState
     public void SetDomainRelationshipProjection(IMassNavigationDomainRelationshipProjection projection)
     {
         _domainRelationships = projection ?? throw new ArgumentNullException(nameof(projection));
+        _teamRelationshipRevision = uint.MaxValue;
+    }
+
+    internal void PreallocateDomainRelationshipCapacity(int relationshipDomainCapacity)
+    {
+        if (relationshipDomainCapacity <= 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation relationship-domain matrix preallocation requires relationshipDomainCapacity > 0.");
+        }
+
+        int required = checked(relationshipDomainCapacity * relationshipDomainCapacity);
+        if (_teamRelationshipMatrix.Length != required)
+        {
+            _teamRelationshipMatrix = new byte[required];
+        }
+
         _teamRelationshipRevision = uint.MaxValue;
     }
 
@@ -1244,8 +1262,7 @@ public sealed partial class MassNavigationFlowSolverState
             _teamStates.Add(state);
         }
 
-        _teamRelationshipMatrix = new byte[_teamStates.Count * _teamStates.Count];
-        _teamRelationshipRevision = uint.MaxValue;
+        PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
     }
 
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -1272,8 +1289,7 @@ public sealed partial class MassNavigationFlowSolverState
             _teamStates.Add(state);
         }
 
-        _teamRelationshipMatrix = new byte[_teamStates.Count * _teamStates.Count];
-        _teamRelationshipRevision = uint.MaxValue;
+        PrepareTeamRelationshipMatrixForTeamCount(_teamStates.Count);
     }
 
     private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
@@ -1667,7 +1683,8 @@ public sealed partial class MassNavigationFlowSolverState
         int required = teamCount * teamCount;
         if (_teamRelationshipMatrix.Length < required)
         {
-            _teamRelationshipMatrix = new byte[required];
+            throw new InvalidOperationException(
+                $"MassNavigation relationship-domain matrix requires {required} entries for {teamCount} domains, but only {_teamRelationshipMatrix.Length} entries were preallocated.");
         }
 
         for (int a = 0; a < teamCount; a++)
@@ -1682,6 +1699,22 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         _teamRelationshipRevision = currentRevision;
+    }
+
+    private void PrepareTeamRelationshipMatrixForTeamCount(int teamCount)
+    {
+        int required = checked(teamCount * teamCount);
+        if (_teamRelationshipMatrix.Length == 0)
+        {
+            _teamRelationshipMatrix = new byte[required];
+        }
+        else if (_teamRelationshipMatrix.Length < required)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation relationship-domain matrix requires {required} entries for {teamCount} domains, but only {_teamRelationshipMatrix.Length} entries were preallocated.");
+        }
+
+        _teamRelationshipRevision = uint.MaxValue;
     }
 
     private void StepRange(

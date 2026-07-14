@@ -3,12 +3,6 @@ using System.Numerics;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
-internal static class FormationCapabilityShowcaseOrderKeys
-{
-    public const string Move = "formationMove";
-    public const string Rotate = "formationRotate";
-}
-
 internal enum FormationCapabilityShowcaseFormationOutlineShape : byte
 {
     Rectangle = 1,
@@ -71,39 +65,6 @@ internal static class FormationCapabilityShowcaseFormationOutlineSegments
             outline.FrontIndicatorLengthCm > 0f,
             outline.CurveSampleCount);
     }
-}
-
-internal struct FormationCapabilityShowcaseFormationSoldier
-{
-    public int FormationIndex;
-    public int SlotIndex;
-    public float LocalOffsetXCm;
-    public float LocalOffsetYCm;
-}
-
-internal struct FormationCapabilityShowcaseFormationAgent
-{
-    public int FormationIndex;
-    public int SlotCount;
-    public float TargetChangeEpsilonCm;
-    public float FacingChangeEpsilonRadians;
-}
-
-internal struct FormationCapabilityShowcaseCommandState
-{
-    public float TargetCenterXCm;
-    public float TargetCenterYCm;
-    public float TargetFacingRad;
-    public byte HasMoveTarget;
-}
-
-internal struct FormationCapabilityShowcaseFormationState
-{
-    public int SoldierCount;
-    public int AliveSoldierCount;
-    public float CenterXCm;
-    public float CenterYCm;
-    public float FacingRad;
 }
 
 internal struct FormationCapabilityShowcaseFormationOutline

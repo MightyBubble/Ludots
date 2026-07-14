@@ -1,26 +1,20 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Runtime;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
-internal sealed class FormationCapabilityShowcaseFormationRuntimeSystem : ISystem<float>
+internal sealed class FormationCapabilityShowcaseStateSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
-    private readonly MassNavigationSimulationRuntime _simulation;
 
-    internal FormationCapabilityShowcaseRuntime Runtime => _runtime;
-
-    public FormationCapabilityShowcaseFormationRuntimeSystem(
+    public FormationCapabilityShowcaseStateSystem(
         GameEngine engine,
-        FormationCapabilityShowcaseRuntime runtime,
-        MassNavigationSimulationRuntime simulation)
+        FormationCapabilityShowcaseRuntime runtime)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
     }
 
     public void Initialize() { }
@@ -35,6 +29,6 @@ internal sealed class FormationCapabilityShowcaseFormationRuntimeSystem : ISyste
             return;
         }
 
-        _runtime.Tick(_engine, _simulation);
+        _runtime.Tick(_engine, _runtime.RequireCurrentSimulation(_engine));
     }
 }

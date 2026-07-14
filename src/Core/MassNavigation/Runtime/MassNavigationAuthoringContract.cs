@@ -13,16 +13,16 @@ namespace Ludots.Core.MassNavigation.Runtime;
 internal sealed class MassNavigationAuthoringContract
 {
     private readonly Dictionary<string, EntityTemplate> _templates;
-    private readonly EntityTemplateKeyRegistry _templateKeys;
-    private readonly PerformerDefinitionRegistry _performers;
-    private readonly MeshAssetRegistry _meshAssets;
+    private readonly EntityTemplateKeyRegistry? _templateKeys;
+    private readonly PerformerDefinitionRegistry? _performers;
+    private readonly MeshAssetRegistry? _meshAssets;
     private readonly MassNavigationConfig _config;
 
     private MassNavigationAuthoringContract(
         Dictionary<string, EntityTemplate> templates,
-        EntityTemplateKeyRegistry templateKeys,
-        PerformerDefinitionRegistry performers,
-        MeshAssetRegistry meshAssets,
+        EntityTemplateKeyRegistry? templateKeys,
+        PerformerDefinitionRegistry? performers,
+        MeshAssetRegistry? meshAssets,
         MassNavigationConfig config)
     {
         _templates = templates;
@@ -46,17 +46,27 @@ internal sealed class MassNavigationAuthoringContract
             throw new ArgumentNullException(nameof(config));
         }
 
+        if (!config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            return new MassNavigationAuthoringContract(
+                new Dictionary<string, EntityTemplate>(StringComparer.Ordinal),
+                templateKeys: null,
+                performers: null,
+                meshAssets: null,
+                config);
+        }
+
         EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires EntityTemplateKeyRegistry.");
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires EntityTemplateKeyRegistry.");
         PerformerDefinitionRegistry performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires PerformerDefinitionRegistry.");
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PerformerDefinitionRegistry.");
         MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires PresentationMeshAssetRegistry.");
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PresentationMeshAssetRegistry.");
         IVisualHeightmap visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
         if (visualHeightmap is not IVisualHeightmapRenderSource)
         {
-            throw new InvalidOperationException("MassNavigation runtime requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
+            throw new InvalidOperationException("MassNavigation runtime auto-spawn requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
         }
 
         var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
@@ -77,7 +87,9 @@ internal sealed class MassNavigationAuthoringContract
 
     public int RequireTemplateKey(string templateId)
     {
-        if (!_templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
+        EntityTemplateKeyRegistry templateKeys = _templateKeys
+            ?? throw new InvalidOperationException("MassNavigation runtime requires EntityTemplateKeyRegistry before validating auto-spawn templates.");
+        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
         {
             throw new InvalidOperationException($"MassNavigation runtime template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
         }
@@ -139,8 +151,10 @@ internal sealed class MassNavigationAuthoringContract
             throw new InvalidOperationException("MassNavigation runtime performer id must be non-empty.");
         }
 
-        int performerDefinitionId = _performers.GetId(performerId);
-        if (performerDefinitionId <= 0 || !_performers.TryGet(performerDefinitionId, out _))
+        PerformerDefinitionRegistry performers = _performers
+            ?? throw new InvalidOperationException("MassNavigation runtime requires PerformerDefinitionRegistry before validating auto-spawn performers.");
+        int performerDefinitionId = performers.GetId(performerId);
+        if (performerDefinitionId <= 0 || !performers.TryGet(performerDefinitionId, out _))
         {
             throw new InvalidOperationException($"MassNavigation runtime requires configured performer definition '{performerId}'.");
         }
@@ -151,9 +165,11 @@ internal sealed class MassNavigationAuthoringContract
         for (int i = 0; i < _config.Presentation.RequiredMeshAssetIds.Length; i++)
         {
             string meshAssetId = _config.Presentation.RequiredMeshAssetIds[i];
-            int runtimeId = _meshAssets.GetId(meshAssetId);
+            MeshAssetRegistry meshAssets = _meshAssets
+                ?? throw new InvalidOperationException("MassNavigation runtime requires PresentationMeshAssetRegistry before validating auto-spawn mesh assets.");
+            int runtimeId = meshAssets.GetId(meshAssetId);
             if (runtimeId <= 0 ||
-                !_meshAssets.TryGetDescriptor(runtimeId, out MeshAssetDescriptor descriptor))
+                !meshAssets.TryGetDescriptor(runtimeId, out MeshAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException($"MassNavigation runtime requires configured mesh asset '{meshAssetId}'.");
             }

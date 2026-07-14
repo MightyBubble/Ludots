@@ -172,7 +172,7 @@ public sealed class MassNavigationIssue671RuntimeTests
                 new[] { entity },
                 new[] { CreateSeed(localX: 1_000f, localY: 1_000f, layer) },
                 new[] { true });
-            var system = new MassNavigationSimulationStepSystem(engine, simulation);
+            var system = new MassNavigationSimulationStepSystem(engine);
             float dt = 1f / 60f;
 
             for (int i = 0; i < 16; i++)

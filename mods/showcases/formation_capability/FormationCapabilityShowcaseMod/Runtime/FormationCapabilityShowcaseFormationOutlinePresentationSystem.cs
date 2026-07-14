@@ -6,6 +6,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.MassNavigation.Formation;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -21,7 +22,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private const string CrimsonOutlineKey = "formation_capability.formation_outline.crimson";
 
     private static readonly QueryDescription FormationOutlineQuery = new QueryDescription()
-        .WithAll<FormationCapabilityShowcaseFormationAgent, FormationCapabilityShowcaseFormationState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
+        .WithAll<FormationAnchorState, FormationRuntimeState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
         .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
@@ -92,7 +93,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
-            Span<FormationCapabilityShowcaseFormationState> states = chunk.GetSpan<FormationCapabilityShowcaseFormationState>();
+            Span<FormationRuntimeState> states = chunk.GetSpan<FormationRuntimeState>();
             Span<FormationCapabilityShowcaseFormationOutline> outlines = chunk.GetSpan<FormationCapabilityShowcaseFormationOutline>();
             Span<VisualTransform> transforms = chunk.GetSpan<VisualTransform>();
             Span<PresentationStableId> stableIds = chunk.GetSpan<PresentationStableId>();
@@ -127,7 +128,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
 
     private int EmitOutline(
         Entity entity,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform,
         int ownerStableId)
@@ -159,7 +160,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private int EmitRectangle(
         Entity entity,
         int ownerStableId,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform)
     {
@@ -216,7 +217,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private int EmitCircle(
         Entity entity,
         int ownerStableId,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform)
     {
@@ -592,7 +593,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         }
 
         public static OutlineEmissionState From(
-            in FormationCapabilityShowcaseFormationState state,
+            in FormationRuntimeState state,
             in FormationCapabilityShowcaseFormationOutline outline,
             in VisualTransform transform)
         {

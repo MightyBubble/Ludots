@@ -95,6 +95,7 @@ public sealed class MassNavigationConfig
             "orderIngestionTokenCapacity",
             "orderIngestionMemberCapacity",
             "routeStateCapacity",
+            "routeMaxExpandedPerRequest",
             "routeWaypointCapacityPerAgent",
             "loadedChunkCapacity",
             "relationshipDomainCapacity");
@@ -462,6 +463,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
     public int OrderIngestionTokenCapacity { get; set; }
     public int OrderIngestionMemberCapacity { get; set; }
     public int RouteStateCapacity { get; set; }
+    public int RouteMaxExpandedPerRequest { get; set; }
     public int RouteWaypointCapacityPerAgent { get; set; }
     public int LoadedChunkCapacity { get; set; }
     public int RelationshipDomainCapacity { get; set; }
@@ -474,6 +476,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
         RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
         RequirePositive(RouteStateCapacity, "routeStateCapacity");
+        RequirePositive(RouteMaxExpandedPerRequest, "routeMaxExpandedPerRequest");
         RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");

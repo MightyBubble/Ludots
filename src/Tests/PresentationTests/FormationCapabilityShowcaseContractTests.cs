@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
@@ -28,6 +29,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Formation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
@@ -90,6 +92,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(formationProfileId, Is.EqualTo("formation"));
             Assert.That(config.ContainsKey("selection"), Is.False,
                 "FormationCapability config must not invent a private selection scope block; command-source acquire uses game.json commandSource.targetFilter.");
+            JsonObject input = config["input"]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapability config must author showcase input policy.");
+            Assert.That(RequireString(input, "rotateLeftActionId"), Is.EqualTo("FormationCapability_RotateLeft"));
+            Assert.That(RequireString(input, "rotateRightActionId"), Is.EqualTo("FormationCapability_RotateRight"));
+            Assert.That(input["rotateStepRadians"]?.GetValue<float>(), Is.EqualTo(0.3926991f).Within(0.000001f),
+                "The 22.5 degree rotation step is showcase input policy and must be data-authored, not a runtime constant.");
             JsonObject gameConfig = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
             Assert.That(gameConfig["startupLocalPlayerId"]?.GetValue<int>(), Is.EqualTo(1),
                 "FormationCapability must publish LocalPlayerEntity through the formal startup player + map participant binding path before command-source mutation.");
@@ -518,6 +526,28 @@ namespace Ludots.Tests.Presentation
             Assert.That(legacySoldierField.Message, Does.Contain("speedCmPerSecond"));
 
             config = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
+            config.Remove("input");
+            InvalidOperationException missingInput = Assert.Throws<InvalidOperationException>(
+                () => FormationCapabilityShowcaseConfig.Load(config))!;
+            Assert.That(missingInput.Message, Does.Contain("input"));
+
+            config = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
+            JsonObject input = config["input"]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapability config must author input.");
+            input["rotateRightActionId"] = input["rotateLeftActionId"]?.GetValue<string>();
+            InvalidOperationException duplicateRotateAction = Assert.Throws<InvalidOperationException>(
+                () => FormationCapabilityShowcaseConfig.Load(config))!;
+            Assert.That(duplicateRotateAction.Message, Does.Contain("distinct rotate action ids"));
+
+            config = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
+            input = config["input"]?.AsObject()
+                ?? throw new InvalidOperationException("FormationCapability config must author input.");
+            input["rotateStepRadians"] = 0f;
+            InvalidOperationException invalidRotateStep = Assert.Throws<InvalidOperationException>(
+                () => FormationCapabilityShowcaseConfig.Load(config))!;
+            Assert.That(invalidRotateStep.Message, Does.Contain("input.rotateStepRadians"));
+
+            config = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
             loaded = FormationCapabilityShowcaseConfig.Load(config);
             massNavConfig = LoadMergedFormationCapabilityMassNavigationConfigObject();
             JsonObject profiles = massNavConfig["agentProfiles"]?.AsObject()
@@ -574,8 +604,8 @@ namespace Ludots.Tests.Presentation
                 "Formation Capability scenario should bind runtime-spawned formation agents.");
 
             Entity[] agents = CaptureTrackedAgents(simulation);
-            Assert.That(agents.Any(entity => engine.World.Has<FormationCapabilityShowcaseFormationAgent>(entity)), Is.True);
-            Assert.That(agents.Any(entity => engine.World.Has<FormationCapabilityShowcaseFormationSoldier>(entity)), Is.True);
+            Assert.That(agents.Any(entity => engine.World.Has<FormationAnchorState>(entity)), Is.True);
+            Assert.That(agents.Any(entity => engine.World.Has<FormationMemberState>(entity)), Is.True);
         }
 
         [Test]
@@ -594,9 +624,9 @@ namespace Ludots.Tests.Presentation
 
             int soldierFollowers = 0;
             var query = new QueryDescription().WithAll<
-                FormationCapabilityShowcaseFormationSoldier,
+                FormationMemberState,
                 MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier soldier, ref MassNavigationAgentIndex _) =>
+            engine.World.Query(in query, (ref FormationMemberState soldier, ref MassNavigationAgentIndex _) =>
             {
                 Assert.That(soldier.FormationIndex, Is.GreaterThanOrEqualTo(0));
                 Assert.That(soldier.SlotIndex, Is.GreaterThanOrEqualTo(0));
@@ -626,7 +656,7 @@ namespace Ludots.Tests.Presentation
                     offsetYCm: -20,
                     radiusCm: 175);
                 engine.World.Add(blocker, projection);
-                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine, simulation);
+                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine);
 
                 UpdateSystem(environmentSystem);
 
@@ -690,7 +720,7 @@ namespace Ludots.Tests.Presentation
                     ?? throw new InvalidOperationException("Physics2D shape storage service must be registered before manifestation obstacle bridge update.");
                 new Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem(engine.World, shapeStorage).Update(0f);
 
-                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine, simulation);
+                var environmentSystem = new MassNavigationEnvironmentBindingSystem(engine);
                 UpdateSystem(environmentSystem);
 
                 Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(1));
@@ -717,10 +747,10 @@ namespace Ludots.Tests.Presentation
 
             int soldierCount = 0;
             var query = new QueryDescription().WithAll<
-                FormationCapabilityShowcaseFormationSoldier,
+                FormationMemberState,
                 MassNavigationAgentIndex,
                 MassNavigationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier) =>
+            engine.World.Query(in query, (Entity entity, ref FormationMemberState soldier) =>
             {
                 Assert.That(soldier.FormationIndex, Is.GreaterThanOrEqualTo(0));
                 Assert.That(soldier.SlotIndex, Is.GreaterThanOrEqualTo(0));
@@ -852,8 +882,8 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before allocation measurement.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             for (int i = 0; i < 4; i++)
             {
@@ -868,7 +898,7 @@ namespace Ludots.Tests.Presentation
             long secondBytes = GC.GetAllocatedBytesForCurrentThread() - secondStart;
 
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
             command.TargetCenterXCm += 500f;
             command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
             long changedStart = GC.GetAllocatedBytesForCurrentThread();
@@ -897,16 +927,16 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before atomic execution validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
             Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
             int committedAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
 
-            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
             command.TargetCenterXCm += 500f;
             command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
             engine.World.Get<MassNavigationAgentIndex>(soldier).Value = simulation.NavigationAgentCount + 7;
@@ -935,11 +965,11 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before stable-target validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
             Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
 
@@ -964,15 +994,15 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before capacity validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
             Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
 
-            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
             command.TargetCenterYCm += 500f;
             engine.World.Get<MassNavigationAgentIndex>(soldier).Value =
                 simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
@@ -996,17 +1026,17 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before duplicate-slot validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
             Entity[] soldiers = FindSoldierEntities(engine, formation.FormationIndex, expectedCount: 2);
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
 
-            engine.World.Get<FormationCapabilityShowcaseFormationSoldier>(soldiers[1]) =
-                engine.World.Get<FormationCapabilityShowcaseFormationSoldier>(soldiers[0]);
-            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            engine.World.Get<FormationMemberState>(soldiers[1]) =
+                engine.World.Get<FormationMemberState>(soldiers[0]);
+            ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
             command.TargetCenterXCm += 500f;
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -1028,16 +1058,16 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before cross-map execution validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
-            FormationCapabilityShowcaseFormationAgent formation = engine.World.Get<FormationCapabilityShowcaseFormationAgent>(anchor);
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
             Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
 
             engine.World.Add(soldier, new SuspendedTag());
-            ref FormationCapabilityShowcaseCommandState command = ref engine.World.Get<FormationCapabilityShowcaseCommandState>(anchor);
+            ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
             command.TargetCenterYCm += 500f;
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -1059,8 +1089,8 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability must finish binding before invalid-anchor validation.");
 
-            FormationCapabilityShowcaseFormationRuntimeSystem system = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
                 .Single();
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
@@ -1115,8 +1145,8 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Formation Capability agents should be bound before OrderIngestion composition is verified.");
 
             int controllableOrderBuffers = 0;
-            var formationQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, MassNavigationAgentIndex, OrderBuffer>();
-            engine.World.Query(in formationQuery, (ref FormationCapabilityShowcaseFormationAgent _, ref MassNavigationAgentIndex index) =>
+            var formationQuery = new QueryDescription().WithAll<FormationAnchorState, MassNavigationAgentIndex, OrderBuffer>();
+            engine.World.Query(in formationQuery, (ref FormationAnchorState _, ref MassNavigationAgentIndex index) =>
             {
                 Assert.That(simulation.AgentState.TryGetControllableEntity(index.Value, out Entity controllable), Is.True);
                 Assert.That(controllable, Is.Not.EqualTo(Entity.Null));
@@ -1124,8 +1154,8 @@ namespace Ludots.Tests.Presentation
             });
 
             int soldierOrderBuffers = 0;
-            var soldierQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in soldierQuery, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier _, ref MassNavigationAgentIndex _) =>
+            var soldierQuery = new QueryDescription().WithAll<FormationMemberState, MassNavigationAgentIndex>();
+            engine.World.Query(in soldierQuery, (Entity entity, ref FormationMemberState _, ref MassNavigationAgentIndex _) =>
             {
                 if (engine.World.Has<OrderBuffer>(entity))
                 {
@@ -1150,7 +1180,7 @@ namespace Ludots.Tests.Presentation
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
                 CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
 
-                var system = new MassNavigationOrderIngestionSystem(engine, simulation);
+                var system = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
                 Assert.That(ex.Message, Does.Contain("orderIngestionTokenCapacity"));
             }
@@ -1166,7 +1196,7 @@ namespace Ludots.Tests.Presentation
                 Entity suspended = CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 999);
                 engine.World.Add(suspended, new SuspendedTag());
 
-                var system = new MassNavigationOrderIngestionSystem(engine, simulation);
+                var system = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
                 Assert.DoesNotThrow(() => UpdateSystem(system));
                 Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.Zero);
             }
@@ -1215,7 +1245,7 @@ namespace Ludots.Tests.Presentation
                     },
                     new[] { true, true });
 
-                var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation);
+                var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
                 UpdateSystem(ingestion);
                 Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.Zero);
 
@@ -1325,7 +1355,7 @@ namespace Ludots.Tests.Presentation
             Order secondOrder = CreateOrder(entities[1]);
             engine.World.Get<OrderBuffer>(entities[0]).SetActiveDirect(in firstOrder, priority: 100);
             engine.World.Get<OrderBuffer>(entities[1]).SetActiveDirect(in secondOrder, priority: 100);
-            var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation);
+            var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
 
             UpdateSystem(ingestion);
             Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
@@ -2244,7 +2274,7 @@ namespace Ludots.Tests.Presentation
                         return false;
                     }
 
-                    FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(selected[0]);
+                    FormationCommandState command = engine.World.Get<FormationCommandState>(selected[0]);
                     return MathF.Abs(command.TargetCenterXCm - expectedMoveTarget.X) <= 1f &&
                            MathF.Abs(command.TargetCenterYCm - expectedMoveTarget.Y) <= 1f;
                 },
@@ -2271,11 +2301,11 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Formation Capability must be ready before stationary rotation.");
 
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity formation), Is.True);
-            FormationCapabilityShowcaseCommandState before = engine.World.Get<FormationCapabilityShowcaseCommandState>(formation);
+            FormationCommandState before = engine.World.Get<FormationCommandState>(formation);
             int activeNavigationGroupsBefore = simulation.NavGroupRuntime.ActiveOrderGroupCount;
             OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("Formation Capability requires OrderTypeRegistry.");
-            Assert.That(orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Rotate),
+            Assert.That(orderTypes.GetId(FormationOrderKeys.Rotate),
                 Is.Not.EqualTo(orderTypes.GetId(MassNavigationOrderKeys.Move)));
 
             var input = engine.GetService(CoreServiceKeys.InputHandler)
@@ -2286,11 +2316,11 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => MathF.Abs(NormalizeAngleRadians(
-                    engine.World.Get<FormationCapabilityShowcaseCommandState>(formation).TargetFacingRad - before.TargetFacingRad)) > 0.0001f,
+                    engine.World.Get<FormationCommandState>(formation).TargetFacingRad - before.TargetFacingRad)) > 0.0001f,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Stationary rotate should update the Showcase-owned target facing.");
 
-            FormationCapabilityShowcaseCommandState after = engine.World.Get<FormationCapabilityShowcaseCommandState>(formation);
+            FormationCommandState after = engine.World.Get<FormationCommandState>(formation);
             Assert.That(after.TargetCenterXCm, Is.EqualTo(before.TargetCenterXCm));
             Assert.That(after.TargetCenterYCm, Is.EqualTo(before.TargetCenterYCm));
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(activeNavigationGroupsBefore),
@@ -2313,13 +2343,13 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Formation Capability must be ready before order payload validation.");
 
             Assert.That(Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity formation), Is.True);
-            FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system = GetSystems(engine, SystemGroup.AbilityActivation)
-                .OfType<FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem>()
+            FormationOrderSystem system = GetSystems(engine, SystemGroup.AbilityActivation)
+                .OfType<FormationOrderSystem>()
                 .Single();
             OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("Formation Capability requires OrderTypeRegistry.");
-            int moveOrderTypeId = orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Move);
-            int rotateOrderTypeId = orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Rotate);
+            int moveOrderTypeId = orderTypes.GetId(FormationOrderKeys.Move);
+            int rotateOrderTypeId = orderTypes.GetId(FormationOrderKeys.Rotate);
             ref OrderBuffer buffer = ref engine.World.Get<OrderBuffer>(formation);
 
             OrderArgs validMoveArgs = OrderArgs.CreateSingleWorldCm(new Vector3(1000f, 0f, 2000f));
@@ -2391,7 +2421,7 @@ namespace Ludots.Tests.Presentation
 
             Entity formation = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
-            Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
+            Assert.That(engine.World.TryGet(formation, out FormationAnchorState formationAgent), Is.True);
             float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(soldierAgentIndex, out _, out _), Is.True);
@@ -2403,7 +2433,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () =>
                 {
-                    FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(formation);
+                    FormationCommandState command = engine.World.Get<FormationCommandState>(formation);
                     return MathF.Abs(command.TargetCenterXCm - FormationCapabilityAcceptance.MoveTargetWorldCm.X) <= 1f &&
                            MathF.Abs(command.TargetCenterYCm - FormationCapabilityAcceptance.MoveTargetWorldCm.Y) <= 1f;
                 },
@@ -2445,7 +2475,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => MathF.Abs(NormalizeAngleRadians(
-                    engine.World.Get<FormationCapabilityShowcaseCommandState>(formation).TargetFacingRad - initialFacing)) > 0.0001f,
+                    engine.World.Get<FormationCommandState>(formation).TargetFacingRad - initialFacing)) > 0.0001f,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Explicit rotate input should change the Showcase-owned formation facing target.");
 
@@ -2546,7 +2576,7 @@ namespace Ludots.Tests.Presentation
                     out float _,
                     out float _),
                 Is.False);
-            FormationCapabilityShowcaseCommandState commandBefore = engine.World.Get<FormationCapabilityShowcaseCommandState>(enemyFormation);
+            FormationCommandState commandBefore = engine.World.Get<FormationCommandState>(enemyFormation);
 
             SelectFormations(engine, new[] { enemyFormation });
             TickUntil(
@@ -2559,7 +2589,7 @@ namespace Ludots.Tests.Presentation
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForInteraction);
 
-            FormationCapabilityShowcaseCommandState commandAfter = engine.World.Get<FormationCapabilityShowcaseCommandState>(enemyFormation);
+            FormationCommandState commandAfter = engine.World.Get<FormationCommandState>(enemyFormation);
             Assert.That(commandAfter.TargetCenterXCm, Is.EqualTo(commandBefore.TargetCenterXCm));
             Assert.That(commandAfter.TargetCenterYCm, Is.EqualTo(commandBefore.TargetCenterYCm));
             Assert.That(ResolveControlDomain(engine, enemyFormation), Is.Not.EqualTo(localDomain));
@@ -2612,7 +2642,7 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < selected.Length; i++)
             {
                 Entity entity = selected[i];
-                Assert.That(engine.World.Has<FormationCapabilityShowcaseFormationAgent>(entity), Is.True);
+                Assert.That(engine.World.Has<FormationAnchorState>(entity), Is.True);
                 Assert.That(IsFriendlyToLocalDomain(engine, entity), Is.True);
                 Assert.That(engine.World.Has<Team>(entity), Is.False);
                 Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False);
@@ -2639,8 +2669,8 @@ namespace Ludots.Tests.Presentation
             Entity enemyFormation = FindNonLocalControlDomainFormation(engine, localDomain);
             float localFacingBefore = engine.World.Get<FacingDirection>(localFormation).AngleRad;
             float enemyFacingBefore = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
-            FormationCapabilityShowcaseRuntime runtime = GetSystems(engine, SystemGroup.PostMovement)
-                .OfType<FormationCapabilityShowcaseFormationRuntimeSystem>()
+            FormationCapabilityShowcaseRuntime runtime = GetSystems(engine, SystemGroup.InputCollection)
+                .OfType<FormationCapabilityShowcaseRuntime.FormationCapabilityCommandSourceRotateSystem>()
                 .Single()
                 .Runtime;
             int rejectionCountBefore = runtime.RotateOrderRejectCount;
@@ -2687,7 +2717,7 @@ namespace Ludots.Tests.Presentation
 
             Entity formation = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
-            Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
+            Assert.That(engine.World.TryGet(formation, out FormationAnchorState formationAgent), Is.True);
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForInteraction);
 
@@ -2734,7 +2764,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => formations.All(formation =>
                 {
-                    FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(formation);
+                    FormationCommandState command = engine.World.Get<FormationCommandState>(formation);
                     Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex index), Is.True);
                     Vector2 current = simulation.GetAgentWorldPositionCm(index.Value);
                     float dx = command.TargetCenterXCm - current.X;
@@ -2755,7 +2785,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityMoveBatch_DifferentOrderIdsAtSameTargetRemainIndependent()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            (Entity[] formations, FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system, int moveOrderTypeId) =
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
                 PrepareFormationMoveBatchTest(engine, formationCount: 2);
             var target = new Vector2(9_000f, 7_000f);
 
@@ -2765,7 +2795,7 @@ namespace Ludots.Tests.Presentation
 
             for (int i = 0; i < formations.Length; i++)
             {
-                FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[i]);
+                FormationCommandState command = engine.World.Get<FormationCommandState>(formations[i]);
                 Assert.Multiple(() =>
                 {
                     Assert.That(command.TargetCenterXCm, Is.EqualTo(target.X).Within(0.001f));
@@ -2778,7 +2808,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            (Entity[] formations, FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system, int moveOrderTypeId) =
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
                 PrepareFormationMoveBatchTest(engine, formationCount: 2);
             Vector2 firstPosition = GetWorldPositionCm(engine, formations[0]);
             Vector2 secondPosition = GetWorldPositionCm(engine, formations[1]);
@@ -2789,8 +2819,8 @@ namespace Ludots.Tests.Presentation
             SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, orderId: 601, target);
             UpdateSystem(system);
 
-            FormationCapabilityShowcaseCommandState first = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[0]);
-            FormationCapabilityShowcaseCommandState second = engine.World.Get<FormationCapabilityShowcaseCommandState>(formations[1]);
+            FormationCommandState first = engine.World.Get<FormationCommandState>(formations[0]);
+            FormationCommandState second = engine.World.Get<FormationCommandState>(formations[1]);
             Assert.Multiple(() =>
             {
                 Assert.That(first.TargetCenterXCm - second.TargetCenterXCm, Is.EqualTo(expectedOffset.X).Within(0.001f));
@@ -2957,7 +2987,7 @@ namespace Ludots.Tests.Presentation
                 simulation.MarkCommandApply();
                 Assert.That(simulation.CommandCountFrame, Is.EqualTo(1));
                 int frameBefore = simulation.FrameIndex;
-                var system = new MassNavigationPreSimulationStepSystem(engine, simulation);
+                var system = new MassNavigationPreSimulationStepSystem(engine);
 
                 system.Update(1f / 60f);
 
@@ -2973,7 +3003,7 @@ namespace Ludots.Tests.Presentation
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
             LoadFormationCapabilityMap(engine);
-            Tick(engine, 2);
+            TickUntilMassNavigationReady(engine);
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             int frameBeforePush = simulation.FrameIndex;
 
@@ -3003,6 +3033,25 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityMap_UnloadAndReload_CreatesNewMassNavigationRuntime()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            TickUntilMassNavigationReady(engine);
+            MassNavigationSimulationRuntime first = RequireSimulation(engine);
+
+            engine.UnloadMap("formation_capability_showcase");
+            Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
+
+            LoadFormationCapabilityMap(engine);
+            TickUntilMassNavigationReady(engine);
+            MassNavigationSimulationRuntime second = RequireSimulation(engine);
+
+            Assert.That(second, Is.Not.SameAs(first),
+                "Unload destroys the map-scoped MassNavigation runtime; reloading the same map id must create a new simulation generation.");
+        }
+
+        [Test]
         public void GameEngine_WhenMassNavigationSystemsRegister_OrdersIngestAfterOrderBufferAndBeforeSimulationStep()
         {
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
@@ -3020,12 +3069,12 @@ namespace Ludots.Tests.Presentation
                     new DiscreteClock(),
                     orderTypes,
                     new OrderRuleRegistry());
-                engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine, simulation), SystemGroup.PostMovement);
+                engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
                 engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(
-                    new MassNavigationPreSimulationStepSystem(engine, simulation),
+                    new MassNavigationPreSimulationStepSystem(engine),
                     SystemGroup.PostMovement);
                 engine.RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
-                engine.RegisterSystem(new MassNavigationOrderIngestionSystem(engine, simulation), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new MassNavigationOrderIngestionSystem(engine, simulation.Config), SystemGroup.AbilityActivation);
 
                 List<ISystem<float>> postMovementSystems = GetSystems(engine, SystemGroup.PostMovement);
                 int simulationStepIndex = postMovementSystems.FindIndex(system => system is MassNavigationSimulationStepSystem);
@@ -3330,7 +3379,7 @@ namespace Ludots.Tests.Presentation
 
         private static (
             Entity[] Formations,
-            FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem System,
+            FormationOrderSystem System,
             int MoveOrderTypeId) PrepareFormationMoveBatchTest(GameEngine engine, int formationCount)
         {
             LoadFormationCapabilityMap(engine);
@@ -3344,12 +3393,12 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Formation Capability must be ready before move-batch order verification.");
 
             Entity[] formations = CaptureFormationAgents(engine, formationCount);
-            FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem system = GetSystems(engine, SystemGroup.AbilityActivation)
-                .OfType<FormationCapabilityShowcaseRuntime.FormationCapabilityOrderSystem>()
+            FormationOrderSystem system = GetSystems(engine, SystemGroup.AbilityActivation)
+                .OfType<FormationOrderSystem>()
                 .Single();
             OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("Formation Capability requires OrderTypeRegistry.");
-            return (formations, system, orderTypes.GetId(FormationCapabilityShowcaseOrderKeys.Move));
+            return (formations, system, orderTypes.GetId(FormationOrderKeys.Move));
         }
 
         private static void SetActiveFormationMoveOrder(
@@ -3443,7 +3492,7 @@ namespace Ludots.Tests.Presentation
 
         private static void EnsureFormationCapabilityEntryAssemblyPreloaded()
         {
-            GC.KeepAlive(typeof(FormationCapabilityShowcaseFormationAgent).Assembly);
+            GC.KeepAlive(typeof(FormationAnchorState).Assembly);
         }
 
         private static void InstallPlayableInput(GameEngine engine)
@@ -3488,6 +3537,25 @@ namespace Ludots.Tests.Presentation
                 engine.Tick(FormationCapabilityAcceptance.FrameSeconds);
                 HeadlessPresentationTestHost.UpdateCamera(engine);
             }
+        }
+
+        private static void TickUntilMassNavigationReady(GameEngine engine)
+        {
+            for (int frame = 0; frame < FormationCapabilityAcceptance.FrameBudgetForMapEntry; frame++)
+            {
+                if (MassNavigationIds.IsCurrentNavigationRuntimeReady(engine))
+                {
+                    return;
+                }
+
+                Tick(engine);
+            }
+
+            MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new InvalidOperationException("MassNavigationRuntimeBinding is missing.");
+            Assert.Fail(
+                $"MassNavigation runtime did not become prepared within {FormationCapabilityAcceptance.FrameBudgetForMapEntry} frames. " +
+                $"currentMap={engine.CurrentMapSession?.MapId.Value ?? "<none>"}, bindingMap={binding.CurrentMapId.Value ?? "<none>"}, revision={binding.Revision}, preparedRevision={binding.PreparedRevision}.");
         }
 
         private static MassNavigationSimulationRuntime CreateFocusedMassNavigationSimulation(out GameEngine engine)
@@ -3828,8 +3896,8 @@ namespace Ludots.Tests.Presentation
         private static int FindFirstSoldierAgentIndex(GameEngine engine, int formationIndex)
         {
             int agentIndex = -1;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier soldier, ref MassNavigationAgentIndex index) =>
+            var query = new QueryDescription().WithAll<FormationMemberState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref FormationMemberState soldier, ref MassNavigationAgentIndex index) =>
             {
                 if (agentIndex < 0 && soldier.FormationIndex == formationIndex)
                 {
@@ -3848,8 +3916,8 @@ namespace Ludots.Tests.Presentation
         private static Entity FindFirstSoldierEntity(GameEngine engine, int formationIndex)
         {
             Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier) =>
+            var query = new QueryDescription().WithAll<FormationMemberState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (Entity entity, ref FormationMemberState soldier) =>
             {
                 if (result == Entity.Null && soldier.FormationIndex == formationIndex)
                 {
@@ -3868,8 +3936,8 @@ namespace Ludots.Tests.Presentation
         private static Entity[] FindSoldierEntities(GameEngine engine, int formationIndex, int expectedCount)
         {
             var soldiers = new List<(int SlotIndex, Entity Entity)>(expectedCount);
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier soldier) =>
+            var query = new QueryDescription().WithAll<FormationMemberState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (Entity entity, ref FormationMemberState soldier) =>
             {
                 if (soldier.FormationIndex == formationIndex)
                 {
@@ -3894,15 +3962,15 @@ namespace Ludots.Tests.Presentation
         {
             var anchors = new List<FormationAnchorExecutionSnapshot>(FormationCapabilityAcceptance.ExpectedTotalFormations);
             var anchorQuery = new QueryDescription().WithAll<
-                FormationCapabilityShowcaseFormationAgent,
-                FormationCapabilityShowcaseFormationState,
+                FormationAnchorState,
+                FormationRuntimeState,
                 FacingDirection,
                 WorldPositionCm,
                 MassNavigationAgentIndex>();
             engine.World.Query(in anchorQuery, (
                 Entity entity,
-                ref FormationCapabilityShowcaseFormationAgent formation,
-                ref FormationCapabilityShowcaseFormationState state,
+                ref FormationAnchorState formation,
+                ref FormationRuntimeState state,
                 ref FacingDirection facing,
                 ref WorldPositionCm worldPosition,
                 ref MassNavigationAgentIndex agentIndex) =>
@@ -3922,13 +3990,13 @@ namespace Ludots.Tests.Presentation
 
             var soldiers = new List<FormationSoldierExecutionSnapshot>(FormationCapabilityAcceptance.ExpectedTotalSoldiers);
             var soldierQuery = new QueryDescription().WithAll<
-                FormationCapabilityShowcaseFormationSoldier,
+                FormationMemberState,
                 FacingDirection,
                 WorldPositionCm,
                 MassNavigationAgentIndex>();
             engine.World.Query(in soldierQuery, (
                 Entity entity,
-                ref FormationCapabilityShowcaseFormationSoldier soldier,
+                ref FormationMemberState soldier,
                 ref FacingDirection facing,
                 ref WorldPositionCm worldPosition,
                 ref MassNavigationAgentIndex agentIndex) =>
@@ -3970,7 +4038,7 @@ namespace Ludots.Tests.Presentation
                 FormationAnchorExecutionSnapshot expected = before.Anchors[i];
                 Assert.That(engine.World.IsAlive(expected.Entity), Is.True);
                 Assert.That(engine.World.Get<FacingDirection>(expected.Entity).AngleRad, Is.EqualTo(expected.FacingRad));
-                Assert.That(engine.World.Get<FormationCapabilityShowcaseFormationState>(expected.Entity), Is.EqualTo(expected.FormationState));
+                Assert.That(engine.World.Get<FormationRuntimeState>(expected.Entity), Is.EqualTo(expected.FormationState));
                 Assert.That(engine.World.Get<WorldPositionCm>(expected.Entity).Value, Is.EqualTo(expected.WorldPositionCm));
                 bool hasTarget = simulation.TryGetAgentNavigationTargetWorldCm(
                     expected.AgentIndex,
@@ -4029,7 +4097,7 @@ namespace Ludots.Tests.Presentation
             Entity Entity,
             int AgentIndex,
             float FacingRad,
-            FormationCapabilityShowcaseFormationState FormationState,
+            FormationRuntimeState FormationState,
             Fix64Vec2 WorldPositionCm,
             bool HasNavigationTarget,
             float NavigationTargetXCm,
@@ -4056,8 +4124,8 @@ namespace Ludots.Tests.Presentation
         private static Entity[] CaptureFormationAgents(GameEngine engine, int expectedCount)
         {
             var formations = new List<(int FormationIndex, Entity Entity)>(expectedCount);
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState formation) =>
             {
                 formations.Add((formation.FormationIndex, entity));
             });
@@ -4078,8 +4146,8 @@ namespace Ludots.Tests.Presentation
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
             int formationsWithoutDomain = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState formation) =>
             {
                 if (!TryResolveControlDomain(engine, entity, out Entity domain))
                 {
@@ -4106,8 +4174,8 @@ namespace Ludots.Tests.Presentation
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
             int formationsWithoutDomain = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState formation) =>
             {
                 if (!TryResolveControlDomain(engine, entity, out Entity domain))
                 {
@@ -4132,8 +4200,8 @@ namespace Ludots.Tests.Presentation
         private static int CountFriendlyDomainFormations(GameEngine engine)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent _) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState _) =>
             {
                 if (IsFriendlyToLocalDomain(engine, entity))
                 {
@@ -4149,8 +4217,8 @@ namespace Ludots.Tests.Presentation
             int friendlyFormationCount = 0;
             int rejectedFormationCount = 0;
             int formationsWithoutDomain = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, CommandSourceSelectableState>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation, ref CommandSourceSelectableState selectable) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState, CommandSourceSelectableState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState formation, ref CommandSourceSelectableState selectable) =>
             {
                 Assert.That(engine.World.Has<CommandSourceSelectableTag>(entity), Is.True,
                     "Runtime-spawned Formation Capability formation anchors must satisfy Core command-source candidate tagging.");
@@ -4181,8 +4249,8 @@ namespace Ludots.Tests.Presentation
         private static void AssertLocalControlDomainFormations(GameEngine engine, Entity localDomain)
         {
             int localFormationCount = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent _) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState _) =>
             {
                 if (!TryResolveControlDomain(engine, entity, out Entity domain) || domain != localDomain)
                 {
@@ -4294,7 +4362,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex agentIndex), Is.True);
             if (useOrderTarget)
             {
-                FormationCapabilityShowcaseCommandState command = engine.World.Get<FormationCapabilityShowcaseCommandState>(formation);
+                FormationCommandState command = engine.World.Get<FormationCommandState>(formation);
                 return new Vector2(command.TargetCenterXCm, command.TargetCenterYCm);
             }
 
@@ -4345,15 +4413,12 @@ namespace Ludots.Tests.Presentation
 
         private static Entity[] CaptureObstacleOverlays(GameEngine engine, int expectedCount)
         {
-            var overlays = new List<Entity>(expectedCount);
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseObstacleOverlay _) =>
-            {
-                overlays.Add(entity);
-            });
-
-            Assert.That(overlays.Count, Is.EqualTo(expectedCount));
-            return overlays.ToArray();
+            Entity[] overlays = CaptureEntitiesWithRuntimeComponents(
+                engine,
+                expectedCount,
+                ResolveRuntimeShowcaseType(engine, "FormationCapabilityShowcaseObstacleOverlay"));
+            Assert.That(overlays.Length, Is.EqualTo(expectedCount));
+            return overlays;
         }
 
         private static int CountAlive(GameEngine engine, ReadOnlySpan<Entity> entities)
@@ -4411,8 +4476,8 @@ namespace Ludots.Tests.Presentation
         {
             int[] agentIndices = new int[FormationCapabilityAcceptance.ExpectedTotalFormations];
             int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationAgent _, ref MassNavigationAgentIndex agentIndex) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref FormationAnchorState _, ref MassNavigationAgentIndex agentIndex) =>
             {
                 if (count >= agentIndices.Length)
                 {
@@ -4471,25 +4536,24 @@ namespace Ludots.Tests.Presentation
         private static int CountFormationAgents(GameEngine engine)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationAgent _, ref MassNavigationAgentIndex _) => count++);
+            var query = new QueryDescription().WithAll<FormationAnchorState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref FormationAnchorState _, ref MassNavigationAgentIndex _) => count++);
             return count;
         }
 
         private static int CountFormationSoldiers(GameEngine engine)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier _, ref MassNavigationAgentIndex _) => count++);
+            var query = new QueryDescription().WithAll<FormationMemberState, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref FormationMemberState _, ref MassNavigationAgentIndex _) => count++);
             return count;
         }
 
         private static int CountObstacleOverlays(GameEngine engine)
         {
-            int count = 0;
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay>();
-            engine.World.Query(in query, (ref FormationCapabilityShowcaseObstacleOverlay _) => count++);
-            return count;
+            return CountEntitiesWithRuntimeComponents(
+                engine,
+                ResolveRuntimeShowcaseType(engine, "FormationCapabilityShowcaseObstacleOverlay"));
         }
 
         private static string BuildFormationAgentDiagnostics(GameEngine engine)
@@ -4498,15 +4562,25 @@ namespace Ludots.Tests.Presentation
             int soldierOnly = 0;
             int indexOnly = 0;
             int orderable = 0;
-            var formationQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in formationQuery, (ref FormationCapabilityShowcaseFormationAgent _) => formationOnly++);
-            var soldierQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier>();
-            engine.World.Query(in soldierQuery, (ref FormationCapabilityShowcaseFormationSoldier _) => soldierOnly++);
+            var formationQuery = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in formationQuery, (ref FormationAnchorState _) => formationOnly++);
+            var soldierQuery = new QueryDescription().WithAll<FormationMemberState>();
+            engine.World.Query(in soldierQuery, (ref FormationMemberState _) => soldierOnly++);
             var indexQuery = new QueryDescription().WithAll<MassNavigationAgentIndex>();
             engine.World.Query(in indexQuery, (ref MassNavigationAgentIndex _) => indexOnly++);
             var orderableQuery = new QueryDescription().WithAll<MassNavigationAgentIndex, OrderBuffer>();
             engine.World.Query(in orderableQuery, (ref MassNavigationAgentIndex _, ref OrderBuffer _) => orderable++);
-            return $"formationOnly={formationOnly} soldier={soldierOnly} indexed={indexOnly} orderable={orderable} {BuildCommandSourceDiagnostics(engine)} {BuildSelectionCandidateDiagnostics(engine)}";
+            MassNavigationSimulationRuntime? simulation = engine.GetService(MassNavigationKeys.RuntimeBinding)?.Current;
+            int projections = CountMassNavigationFlowObstacleProjections(engine);
+            int overlays = CountObstacleOverlays(engine);
+            string obstacleDiagnostics = simulation != null
+                ? $"projections={projections} blockers={simulation.AgentState.BlockerCount} navObstacles={simulation.NavigationObstacleCount} overlays={overlays}"
+                : $"projections={projections} blockers=<no-runtime> navObstacles=<no-runtime> overlays={overlays}";
+            RuntimeEntitySpawnQueue? spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
+            string spawnDiagnostics = spawnQueue != null
+                ? $"spawnQueue={spawnQueue.Count}/{spawnQueue.Capacity}"
+                : "spawnQueue=<missing>";
+            return $"formationOnly={formationOnly} soldier={soldierOnly} indexed={indexOnly} orderable={orderable} {obstacleDiagnostics} {spawnDiagnostics} {BuildObstacleOverlayDiagnostics(engine)} {BuildCommandSourceDiagnostics(engine)} {BuildSelectionCandidateDiagnostics(engine)}";
         }
 
         private static string BuildSelectionCandidateDiagnostics(GameEngine engine)
@@ -4523,8 +4597,8 @@ namespace Ludots.Tests.Presentation
             RelationshipFilter relationFilter = acquisitionConfig.TargetFilter?.ParseRelationFilter() ?? RelationshipFilter.All;
             IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector is missing.");
-            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref FormationCapabilityShowcaseFormationAgent formation) =>
+            var query = new QueryDescription().WithAll<FormationAnchorState>();
+            engine.World.Query(in query, (Entity entity, ref FormationAnchorState formation) =>
             {
                 if (engine.World.Has<CommandSourceSelectableTag>(entity))
                 {
@@ -4621,18 +4695,26 @@ namespace Ludots.Tests.Presentation
         {
             float expectedBorderWidthCm = obstacleOverlay["borderWidthCm"]?.GetValue<float>()
                 ?? throw new InvalidOperationException("Formation Capability obstacleOverlay.borderWidthCm must be numeric.");
-            var overlaysByPosition = new Dictionary<(int X, int Y), FormationCapabilityShowcaseObstacleOverlay>(
+            Type overlayType = ResolveRuntimeShowcaseType(engine, "FormationCapabilityShowcaseObstacleOverlay");
+            var overlaysByPosition = new Dictionary<(int X, int Y), ObstacleOverlaySnapshot>(
                 simulation.NavigationObstacleCount);
-            var overlayQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay, WorldPositionCm>();
-            engine.World.Query(in overlayQuery, (ref FormationCapabilityShowcaseObstacleOverlay overlay, ref WorldPositionCm position) =>
+            Entity[] overlayEntities = CaptureEntitiesWithRuntimeComponents(
+                engine,
+                simulation.NavigationObstacleCount,
+                overlayType,
+                typeof(WorldPositionCm));
+            for (int i = 0; i < overlayEntities.Length; i++)
             {
+                Entity entity = overlayEntities[i];
+                ObstacleOverlaySnapshot overlay = ReadObstacleOverlaySnapshot(entity, overlayType);
+                WorldPositionCm position = engine.World.Get<WorldPositionCm>(entity);
                 var key = (position.Value.X.ToInt(), position.Value.Y.ToInt());
                 Assert.That(
                     overlaysByPosition.ContainsKey(key),
                     Is.False,
                     $"Formation Capability obstacle overlay position ({key.Item1}, {key.Item2}) must be unique.");
                 overlaysByPosition.Add(key, overlay);
-            });
+            }
 
             Assert.That(overlaysByPosition.Count, Is.EqualTo(simulation.NavigationObstacleCount));
             for (int i = 0; i < simulation.NavigationObstacleCount; i++)
@@ -4640,7 +4722,7 @@ namespace Ludots.Tests.Presentation
                 MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(i);
                 var key = ((int)MathF.Round(obstacle.WorldXCm), (int)MathF.Round(obstacle.WorldYCm));
                 Assert.That(
-                    overlaysByPosition.TryGetValue(key, out FormationCapabilityShowcaseObstacleOverlay overlay),
+                    overlaysByPosition.TryGetValue(key, out ObstacleOverlaySnapshot overlay),
                     Is.True,
                     $"Formation Capability obstacle overlay should exist at MassNavigation obstacle position ({key.Item1}, {key.Item2}).");
                 Assert.That(overlay.RadiusCm, Is.EqualTo(obstacle.RadiusCm).Within(0.001f));
@@ -4648,12 +4730,112 @@ namespace Ludots.Tests.Presentation
             }
         }
 
+        private static Type ResolveRuntimeShowcaseType(GameEngine engine, string typeName)
+        {
+            const string runtimeNamespace = "FormationCapabilityShowcaseMod.Runtime.";
+            foreach (ISystem<float> system in EnumerateRegisteredSystems(engine))
+            {
+                Type systemType = system.GetType();
+                if (!string.Equals(systemType.Assembly.GetName().Name, "FormationCapabilityShowcaseMod", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return systemType.Assembly.GetType(runtimeNamespace + typeName, throwOnError: true)
+                    ?? throw new InvalidOperationException($"Formation Capability runtime type '{runtimeNamespace}{typeName}' could not be resolved.");
+            }
+
+            throw new InvalidOperationException("Formation Capability runtime assembly is not loaded.");
+        }
+
+        private static IEnumerable<ISystem<float>> EnumerateRegisteredSystems(GameEngine engine)
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine system group field is missing.");
+            var systemGroups = field.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>
+                ?? throw new InvalidOperationException("GameEngine system groups are missing.");
+            foreach (List<ISystem<float>> systems in systemGroups.Values)
+            {
+                for (int i = 0; i < systems.Count; i++)
+                {
+                    yield return systems[i];
+                }
+            }
+        }
+
+        private static QueryDescription BuildRuntimeComponentQuery(params Type[] componentTypes)
+        {
+            if (componentTypes.Length == 0)
+            {
+                throw new InvalidOperationException("Runtime component query requires at least one component type.");
+            }
+
+            Arch.Core.Signature signature = Arch.Core.Signature.Null;
+            for (int i = 0; i < componentTypes.Length; i++)
+            {
+                Type componentMetadata = typeof(Arch.Core.Component<>).MakeGenericType(componentTypes[i]);
+                FieldInfo signatureField = componentMetadata.GetField("Signature", BindingFlags.Static | BindingFlags.Public)
+                    ?? throw new InvalidOperationException($"Arch component metadata for '{componentTypes[i].FullName}' does not expose Signature.");
+                signature += (Arch.Core.Signature)(signatureField.GetValue(null)
+                    ?? throw new InvalidOperationException($"Arch component signature for '{componentTypes[i].FullName}' is null."));
+            }
+
+            return new QueryDescription(all: signature);
+        }
+
+        private static int CountEntitiesWithRuntimeComponents(GameEngine engine, params Type[] componentTypes)
+        {
+            int count = 0;
+            QueryDescription query = BuildRuntimeComponentQuery(componentTypes);
+            foreach (ref Chunk chunk in engine.World.Query(in query))
+            {
+                count += chunk.Count;
+            }
+
+            return count;
+        }
+
+        private static Entity[] CaptureEntitiesWithRuntimeComponents(GameEngine engine, int expectedCount, params Type[] componentTypes)
+        {
+            var entities = new List<Entity>(expectedCount);
+            QueryDescription query = BuildRuntimeComponentQuery(componentTypes);
+            foreach (ref Chunk chunk in engine.World.Query(in query))
+            {
+                foreach (int index in chunk)
+                {
+                    entities.Add(chunk.Entity(index));
+                }
+            }
+
+            return entities.ToArray();
+        }
+
+        private static ObstacleOverlaySnapshot ReadObstacleOverlaySnapshot(Entity entity, Type overlayType)
+        {
+            object overlay = entity.GetAllComponents().FirstOrDefault(component => component?.GetType() == overlayType)
+                ?? throw new InvalidOperationException($"Entity {entity.Id} does not have runtime obstacle overlay component '{overlayType.FullName}'.");
+            return new ObstacleOverlaySnapshot(
+                ReadFloatField(overlay, overlayType, "RadiusCm"),
+                ReadFloatField(overlay, overlayType, "BorderWidthCm"));
+        }
+
+        private static float ReadFloatField(object value, Type type, string fieldName)
+        {
+            FieldInfo field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.Public)
+                ?? throw new InvalidOperationException($"Runtime obstacle overlay component '{type.FullName}' is missing field '{fieldName}'.");
+            return (float)(field.GetValue(value)
+                ?? throw new InvalidOperationException($"Runtime obstacle overlay field '{fieldName}' is null."));
+        }
+
+        private readonly record struct ObstacleOverlaySnapshot(float RadiusCm, float BorderWidthCm);
+
         private static string BuildObstacleOverlayDiagnostics(GameEngine engine)
         {
-            int overlayOnly = 0;
-            int overlayVisual = 0;
-            int overlayStable = 0;
-            int overlayRenderable = 0;
+            Type overlayType = ResolveRuntimeShowcaseType(engine, "FormationCapabilityShowcaseObstacleOverlay");
+            int overlayOnly = CountEntitiesWithRuntimeComponents(engine, overlayType);
+            int overlayVisual = CountEntitiesWithRuntimeComponents(engine, overlayType, typeof(VisualTransform));
+            int overlayStable = CountEntitiesWithRuntimeComponents(engine, overlayType, typeof(PresentationStableId));
+            int overlayRenderable = CountEntitiesWithRuntimeComponents(engine, overlayType, typeof(VisualTransform), typeof(PresentationStableId));
             int obstacleTemplate = 0;
             int obstacleTemplateVisualStable = 0;
             int obstacleTemplateKeyId = 0;
@@ -4662,14 +4844,6 @@ namespace Ludots.Tests.Presentation
                 obstacleTemplateKeyId = templateKeys.GetId("formation_capability_showcase_obstacle_overlay");
             }
 
-            var overlayQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay>();
-            engine.World.Query(in overlayQuery, (ref FormationCapabilityShowcaseObstacleOverlay _) => overlayOnly++);
-            var overlayVisualQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay, VisualTransform>();
-            engine.World.Query(in overlayVisualQuery, (ref FormationCapabilityShowcaseObstacleOverlay _, ref VisualTransform _) => overlayVisual++);
-            var overlayStableQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay, PresentationStableId>();
-            engine.World.Query(in overlayStableQuery, (ref FormationCapabilityShowcaseObstacleOverlay _, ref PresentationStableId _) => overlayStable++);
-            var overlayRenderableQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay, VisualTransform, PresentationStableId>();
-            engine.World.Query(in overlayRenderableQuery, (ref FormationCapabilityShowcaseObstacleOverlay _, ref VisualTransform _, ref PresentationStableId _) => overlayRenderable++);
             var templateQuery = new QueryDescription().WithAll<EntityTemplateKeyRef>();
             engine.World.Query(in templateQuery, (Entity entity, ref EntityTemplateKeyRef templateKey) =>
             {
@@ -4978,6 +5152,7 @@ namespace Ludots.Tests.Presentation
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,
                 RouteStateCapacity = 8,
+                RouteMaxExpandedPerRequest = 128,
                 RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 RelationshipDomainCapacity = 4,

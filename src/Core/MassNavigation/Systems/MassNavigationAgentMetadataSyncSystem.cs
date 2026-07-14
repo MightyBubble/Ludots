@@ -20,16 +20,20 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
         .WithNone<EntityLayer, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
     private readonly HashSet<int> _domainIdSet;
     private readonly int _relationshipDomainCapacity;
+    private MassNavigationSimulationRuntime? _lastSimulation;
     private int _lastSyncedStructuralChangeFrame = -1;
 
-    public MassNavigationAgentMetadataSyncSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationAgentMetadataSyncSystem(GameEngine engine, MassNavigationConfig config)
     {
-        _engine = engine;
-        _simulation = simulation;
-        _relationshipDomainCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity;
+        _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
+        if (config == null)
+        {
+            throw new System.ArgumentNullException(nameof(config));
+        }
+
+        _relationshipDomainCapacity = config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity;
         _domainIdSet = new HashSet<int>(_relationshipDomainCapacity);
     }
 
@@ -40,17 +44,23 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
             return;
         }
 
-        if (_lastSyncedStructuralChangeFrame == _simulation.StructuralChangeRevision)
+        if (!ReferenceEquals(_lastSimulation, simulation))
+        {
+            _lastSimulation = simulation;
+            _lastSyncedStructuralChangeFrame = -1;
+        }
+
+        if (_lastSyncedStructuralChangeFrame == simulation.StructuralChangeRevision)
         {
             return;
         }
 
-        _lastSyncedStructuralChangeFrame = _simulation.StructuralChangeRevision;
+        _lastSyncedStructuralChangeFrame = simulation.StructuralChangeRevision;
 
         _domainIdSet.Clear();
         ThrowIfAgentMissingEntityLayer();
@@ -61,7 +71,7 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
             Span<EntityLayer> layers = chunk.GetSpan<EntityLayer>();
             foreach (int index in chunk)
             {
-                int domainId = _simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value);
+                int domainId = simulation.MassNavigationFlow.GetTeam(agentIndices[index].Value);
                 if (!_domainIdSet.Contains(domainId) && _domainIdSet.Count >= _relationshipDomainCapacity)
                 {
                     throw new System.InvalidOperationException(
@@ -72,8 +82,8 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                 MassNavigationAgentProfile profile = profiles[index];
                 EntityLayer layer = layers[index];
                 string profileKey = MassNavigationProfileRegistry.GetName(profile.ProfileId);
-                AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
-                _simulation.MassNavigationFlow.SetUnitRuntimeProfile(
+                AgentProfileConfig geometry = simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
+                simulation.MassNavigationFlow.SetUnitRuntimeProfile(
                     agentIndices[index].Value,
                     domainId,
                     profile.Heavy,
