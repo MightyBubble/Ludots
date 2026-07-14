@@ -191,14 +191,12 @@ namespace Ludots.Core.Gameplay.GAS
 
     public enum ProjectileTravelMode : byte
     {
-        Legacy = 0,
         Direction = 1,
         TrackTarget = 2,
     }
 
     public enum ProjectileImpactPolicy : byte
     {
-        Legacy = 0,
         DestroyOnFirstHit = 1,
         ContinueOnHit = 2,
     }

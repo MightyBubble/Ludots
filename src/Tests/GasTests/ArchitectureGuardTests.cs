@@ -164,6 +164,28 @@ namespace GasTests
         }
 
         [Test]
+        public void ProjectileRuntime_MustNotRestoreLegacyModesOrMovementPath()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "EffectTemplateRegistry.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Systems", "ProjectileRuntimeSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Config", "EffectTemplateLoader.cs"),
+            };
+            var forbiddenIdentifiers = new Regex(
+                @"\b(?:ProjectileTravelMode|ProjectileImpactPolicy)\.Legacy\b|\bTryMoveLegacy\b|^\s*Legacy\s*=",
+                RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
+
+            string[] hits = files
+                .Where(file => forbiddenIdentifiers.IsMatch(File.ReadAllText(file)))
+                .Select(file => ToRepoRelativePath(repoRoot, file))
+                .ToArray();
+
+            Assert.That(hits, Is.Empty);
+        }
+
+        [Test]
         public void RtsRelationRuntime_MustDeferStructuralChangesOutsideQueries()
         {
             string repoRoot = FindRepoRoot();

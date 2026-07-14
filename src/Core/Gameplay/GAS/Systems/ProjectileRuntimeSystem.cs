@@ -122,10 +122,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 switch (projectile.TravelMode)
                 {
                     case ProjectileTravelMode.Direction:
-                        if (!TryMoveDirection(in projectile, current, stepBudgetCm, out next))
-                        {
-                            next = current + new Fix64Vec2(stepBudgetCm, Fix64.Zero);
-                        }
+                        next = MoveDirection(in projectile, current, stepBudgetCm);
                         break;
 
                     case ProjectileTravelMode.TrackTarget:
@@ -133,8 +130,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         break;
 
                     default:
-                        completed = TryMoveLegacy(in projectile, current, stepBudgetCm, out next, out actualStepCm);
-                        break;
+                        throw new InvalidOperationException(
+                            $"Projectile has unsupported travel mode value {(byte)projectile.TravelMode}.");
                 }
             }
 
@@ -175,8 +172,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             firstHit = Entity.Null;
             if (_spatialQueries == null ||
                 projectile.HitEffectTemplateId <= 0 ||
-                projectile.CollisionHalfWidthCm <= 0 ||
-                projectile.ImpactPolicy == ProjectileImpactPolicy.Legacy)
+                projectile.CollisionHalfWidthCm <= 0)
             {
                 return false;
             }
@@ -367,16 +363,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _effectRequests.Publish(request);
         }
 
-        private static bool TryMoveDirection(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next)
+        private static Fix64Vec2 MoveDirection(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm)
         {
             if (projectile.HasDirection == 0)
             {
-                next = current;
-                return false;
+                throw new InvalidOperationException("Projectile direction mode requires HasDirection=1.");
             }
 
-            next = current + projectile.Direction * stepBudgetCm;
-            return true;
+            return current + projectile.Direction * stepBudgetCm;
         }
 
         private bool TryMoveTrackTarget(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next, out Fix64 actualStepCm)
@@ -401,51 +395,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             next = current;
             actualStepCm = Fix64.Zero;
-            return false;
-        }
-
-        private bool TryMoveLegacy(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next, out Fix64 actualStepCm)
-        {
-            actualStepCm = stepBudgetCm;
-
-            if (World.IsAlive(projectile.Target) && World.Has<WorldPositionCm>(projectile.Target))
-            {
-                var targetPosition = World.Get<WorldPositionCm>(projectile.Target).Value;
-                var delta = targetPosition - current;
-                Fix64 distance = delta.Length();
-                if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
-                {
-                    next = targetPosition;
-                    actualStepCm = distance;
-                    return true;
-                }
-
-                next = current + delta.Normalized() * stepBudgetCm;
-                return false;
-            }
-
-            if (projectile.HasTargetPoint != 0)
-            {
-                var delta = projectile.TargetPointCm - current;
-                Fix64 distance = delta.Length();
-                if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
-                {
-                    next = projectile.TargetPointCm;
-                    actualStepCm = distance;
-                    return true;
-                }
-
-                next = current + delta.Normalized() * stepBudgetCm;
-                return false;
-            }
-
-            if (projectile.HasDirection != 0)
-            {
-                next = current + projectile.Direction * stepBudgetCm;
-                return false;
-            }
-
-            next = current + new Fix64Vec2(stepBudgetCm, Fix64.Zero);
             return false;
         }
 

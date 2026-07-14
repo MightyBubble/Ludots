@@ -262,7 +262,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_LegacyProjectileOmittedOptionalRefs_AreAccepted()
+        public void Load_LegacyProjectileMode_IsRejectedWithMigrationGuidance()
         {
             string root = CreateTempRoot();
             try
@@ -288,17 +288,13 @@ namespace Ludots.Tests.GAS
                     ]
                     """);
 
-                var loader = CreateLoader(root, out var registry);
-                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
 
-                int templateId = EffectTemplateIdRegistry.GetId("Effect_Projectile");
-                That(registry.TryGet(templateId, out var tpl), Is.True);
-                That(tpl.Projectile.ImpactEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.HitEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.PresentationEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.CollisionHalfWidthCm, Is.EqualTo(0));
-                That(tpl.Projectile.CollisionExcludeSource, Is.False);
-                That(tpl.Projectile.MaxHitCount, Is.EqualTo(0));
+                That(ex.Message, Does.Contain("travelMode 'Legacy' was removed"));
+                That(ex.Message, Does.Contain("Direction"));
+                That(ex.Message, Does.Contain("TrackTarget"));
             }
             finally
             {
@@ -327,8 +323,11 @@ namespace Ludots.Tests.GAS
                           "range": 1200,
                           "arcHeight": 0,
                           "impactEffect": "",
-                          "travelMode": "Legacy",
-                          "impactPolicy": "Legacy"
+                          "travelMode": "Direction",
+                          "impactPolicy": "DestroyOnFirstHit",
+                          "hitEffect": "Effect_Projectile",
+                          "collisionHalfWidth": 24,
+                          "collisionRelationFilter": "All"
                         }
                       }
                     ]
@@ -348,7 +347,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_NonLegacyProjectileMissingHitEffect_IsRejected()
+        public void Load_ProjectileMissingHitEffect_IsRejected()
         {
             string root = CreateTempRoot();
             try

@@ -222,6 +222,11 @@ namespace Ludots.Core.Gameplay.GAS
                 hasTargetPoint,
                 targetPointCm,
                 out var direction);
+            if (proj.TravelMode == ProjectileTravelMode.Direction && !hasDirection)
+            {
+                throw new InvalidOperationException(
+                    $"CreateProjectile direction mode requires a resolvable direction: source={context.Source.Id}, target={context.Target.Id}.");
+            }
 
             var request = new RuntimeEntitySpawnRequest
             {

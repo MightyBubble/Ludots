@@ -559,7 +559,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var caster = world.Create(WorldPositionCm.FromCm(1200, 800));
-            var target = world.Create();
+            var target = world.Create(WorldPositionCm.FromCm(1600, 800));
             var effect = world.Create();
             var queue = new RuntimeEntitySpawnQueue(capacity: 4);
             var runtime = new BuiltinHandlerExecutionContext
@@ -571,7 +571,15 @@ namespace Ludots.Tests.GAS
 
             var ctx = new EffectContext { Source = caster, Target = target };
             var tpl = new EffectTemplateData();
-            tpl.Projectile = new ProjectileDescriptor { Speed = 500, Range = 1000, ArcHeight = 0, ImpactEffectTemplateId = 42 };
+            tpl.Projectile = new ProjectileDescriptor
+            {
+                Speed = 500,
+                Range = 1000,
+                ArcHeight = 0,
+                ImpactEffectTemplateId = 42,
+                TravelMode = ProjectileTravelMode.TrackTarget,
+                ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+            };
 
             var mergedParams = new EffectConfigParams();
             registry.Invoke(BuiltinHandlerId.CreateProjectile, world, effect, ref ctx, in mergedParams, in tpl, runtime);
@@ -601,7 +609,15 @@ namespace Ludots.Tests.GAS
 
             var ctx = new EffectContext { Source = caster, Target = Entity.Null };
             var tpl = new EffectTemplateData();
-            tpl.Projectile = new ProjectileDescriptor { Speed = 600, Range = 1200, ArcHeight = 0, ImpactEffectTemplateId = 0 };
+            tpl.Projectile = new ProjectileDescriptor
+            {
+                Speed = 600,
+                Range = 1200,
+                ArcHeight = 0,
+                ImpactEffectTemplateId = 0,
+                TravelMode = ProjectileTravelMode.Direction,
+                ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+            };
 
             var mergedParams = new EffectConfigParams();
             mergedParams.TryAddFloat(EffectParamKeys.TargetPosX, 950f);
@@ -619,27 +635,71 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void BuiltinHandlers_CreateProjectile_DirectionWithoutDirection_IsRejectedBeforeSpawn()
+        {
+            using var world = World.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(300, 500));
+            var effect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 4);
+            var runtime = new BuiltinHandlerExecutionContext { SpawnRequests = queue };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var context = new EffectContext { Source = caster, Target = Entity.Null };
+            var template = new EffectTemplateData
+            {
+                Projectile = new ProjectileDescriptor
+                {
+                    Speed = 600,
+                    Range = 1200,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                },
+            };
+            var mergedParams = new EffectConfigParams();
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                registry.Invoke(
+                    BuiltinHandlerId.CreateProjectile,
+                    world,
+                    effect,
+                    ref context,
+                    in mergedParams,
+                    in template,
+                    runtime))!;
+
+            That(ex.Message, Does.Contain("requires a resolvable direction"));
+            That(queue.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void ProjectileRuntimeSystem_TargetPointImpact_PublishesCallerParams()
         {
             using var world = World.Create();
             var requests = new EffectRequestQueue();
-            var caster = world.Create(WorldPositionCm.FromCm(100, 200));
+            Fix64Vec2 launchOrigin = Fix64Vec2.FromFloat(100f, 200f);
+            Fix64Vec2 targetPoint = Fix64Vec2.FromFloat(160f, 200f);
+            Fix64Vec2 direction = (targetPoint - launchOrigin).Normalized();
+            var caster = world.Create(new WorldPositionCm { Value = launchOrigin });
             var projectile = world.Create(
                 new ProjectileState
                 {
                     Speed = Fix64.FromInt(400),
-                    Range = 1200,
+                    Range = (targetPoint - launchOrigin).Length().RoundToInt(),
                     ArcHeight = 0,
                     ImpactEffectTemplateId = 77,
                     Source = caster,
                     Target = Entity.Null,
-                    LaunchOriginCm = Fix64Vec2.FromFloat(100f, 200f),
+                    LaunchOriginCm = launchOrigin,
                     HasLaunchOrigin = 1,
-                    TargetPointCm = Fix64Vec2.FromFloat(160f, 240f),
+                    TargetPointCm = targetPoint,
                     HasTargetPoint = 1,
+                    Direction = direction,
+                    HasDirection = 1,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
                 },
-                WorldPositionCm.FromCm(100, 200),
-                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(100, 200).Value });
+                new WorldPositionCm { Value = launchOrigin },
+                new PreviousWorldPositionCm { Value = launchOrigin });
 
             using var system = new ProjectileRuntimeSystem(world, requests, spatialQueries: null);
             system.Update(0.2f);
@@ -657,7 +717,7 @@ namespace Ludots.Tests.GAS
             That(originX, Is.EqualTo(100f).Within(0.01f));
             That(originY, Is.EqualTo(200f).Within(0.01f));
             That(targetX, Is.EqualTo(160f).Within(0.01f));
-            That(targetY, Is.EqualTo(240f).Within(0.01f));
+            That(targetY, Is.EqualTo(200f).Within(0.01f));
         }
 
         [Test]

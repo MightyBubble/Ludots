@@ -840,52 +840,28 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             if (cfg == null) return default;
 
-            ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode);
-            ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy);
-            bool isLegacyTravel = travelMode == ProjectileTravelMode.Legacy;
-            bool isLegacyImpact = impactPolicy == ProjectileImpactPolicy.Legacy;
-            if (isLegacyTravel != isLegacyImpact)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode and projectile.impactPolicy must both be Legacy or both be non-Legacy.");
-            }
+            ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode, ownerId, relativePath);
+            ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy, ownerId, relativePath);
 
             int impactId = ResolveOptionalEffectTemplateId(cfg.ImpactEffect, ownerId, relativePath, "projectile.impactEffect");
             int hitId = ResolveOptionalEffectTemplateId(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect");
             int presentationId = ResolveOptionalEffectTemplateId(cfg.PresentationEffect, ownerId, relativePath, "projectile.presentationEffect");
             int collisionHalfWidth = cfg.CollisionHalfWidth ?? 0;
-            RelationshipFilter collisionRelationFilter = RelationshipFilter.All;
-            if (isLegacyImpact)
+            if (hitId <= 0)
             {
-                RequireAbsent(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionRelationFilter, ownerId, relativePath, "projectile.collisionRelationFilter", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionHalfWidth, ownerId, relativePath, "projectile.collisionHalfWidth", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource", "impactPolicy=Legacy");
-                RequireAbsent(cfg.MaxHitCount, ownerId, relativePath, "projectile.maxHitCount", "impactPolicy=Legacy");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.hitEffect.");
             }
 
-            if (impactPolicy != ProjectileImpactPolicy.Legacy)
+            if (collisionHalfWidth <= 0)
             {
-                if (hitId <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.hitEffect.");
-                }
-
-                if (collisionHalfWidth <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
-                }
-
-                collisionRelationFilter = ParseRequiredRelationshipFilter(
-                    cfg.CollisionRelationFilter,
-                    ownerId,
-                    "projectile.collisionRelationFilter",
-                    relativePath);
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
             }
-            else if (!string.IsNullOrWhiteSpace(cfg.CollisionRelationFilter))
-            {
-                collisionRelationFilter = RelationshipFilterUtil.Parse(cfg.CollisionRelationFilter);
-            }
+
+            RelationshipFilter collisionRelationFilter = ParseRequiredRelationshipFilter(
+                cfg.CollisionRelationFilter,
+                ownerId,
+                "projectile.collisionRelationFilter",
+                relativePath);
 
             RejectOptionalFalse(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource");
             if (cfg.MaxHitCount is < 0)
@@ -931,35 +907,37 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return templateId;
         }
 
-        private static ProjectileTravelMode ParseProjectileTravelMode(string? raw)
+        private static ProjectileTravelMode ParseProjectileTravelMode(string? raw, string ownerId, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                throw new InvalidOperationException("projectile.travelMode is required.");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.travelMode is required.");
             }
 
             return raw switch
             {
-                "Legacy" => ProjectileTravelMode.Legacy,
                 "Direction" => ProjectileTravelMode.Direction,
                 "TrackTarget" => ProjectileTravelMode.TrackTarget,
-                _ => throw new InvalidOperationException($"Unsupported projectile.travelMode '{raw}'.")
+                "Legacy" => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy' was removed; use 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.travelMode '{raw}'.")
             };
         }
 
-        private static ProjectileImpactPolicy ParseProjectileImpactPolicy(string? raw)
+        private static ProjectileImpactPolicy ParseProjectileImpactPolicy(string? raw, string ownerId, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                throw new InvalidOperationException("projectile.impactPolicy is required.");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy is required.");
             }
 
             return raw switch
             {
-                "Legacy" => ProjectileImpactPolicy.Legacy,
                 "DestroyOnFirstHit" => ProjectileImpactPolicy.DestroyOnFirstHit,
                 "ContinueOnHit" => ProjectileImpactPolicy.ContinueOnHit,
-                _ => throw new InvalidOperationException($"Unsupported projectile.impactPolicy '{raw}'.")
+                "Legacy" => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy' was removed; use 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.impactPolicy '{raw}'.")
             };
         }
 
