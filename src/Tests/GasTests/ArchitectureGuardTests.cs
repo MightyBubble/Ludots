@@ -186,6 +186,49 @@ namespace GasTests
         }
 
         [Test]
+        public void GasMovement_MustUseOrderPipelineAndFixedPointMath()
+        {
+            string repoRoot = FindRepoRoot();
+            string removedSystem = Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "Systems",
+                "AbilityMoveWorldCmSystem.cs");
+            string moveSystem = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "Systems",
+                "MoveToWorldCmOrderSystem.cs"));
+            string stepHelper = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "Systems",
+                "WorldMoveCmStepHelper.cs"));
+            string mobaRoot = Path.Combine(repoRoot, "mods", "MobaDemoMod");
+            string[] mobaFiles = Directory.EnumerateFiles(mobaRoot, "*", SearchOption.AllDirectories)
+                .Where(file => file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                               file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            Assert.That(File.Exists(removedSystem), Is.False);
+            Assert.That(moveSystem, Does.Not.Contain("MathF.Sqrt"));
+            Assert.That(moveSystem, Does.Not.Contain("ToFloat()"));
+            Assert.That(stepHelper, Does.Not.Contain("MathF.Sqrt"));
+            Assert.That(stepHelper, Does.Not.Contain("ToFloat()"));
+            Assert.That(mobaFiles.Where(file => File.ReadAllText(file).Contains("Ability.Nav.Move", StringComparison.Ordinal)), Is.Empty);
+            Assert.That(mobaFiles.Where(file => File.ReadAllText(file).Contains("Event.Nav.Arrived", StringComparison.Ordinal)), Is.Empty);
+        }
+
+        [Test]
         public void RtsRelationRuntime_MustDeferStructuralChangesOutsideQueries()
         {
             string repoRoot = FindRepoRoot();

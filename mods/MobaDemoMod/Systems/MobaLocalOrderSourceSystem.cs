@@ -39,6 +39,7 @@ namespace MobaDemoMod.Systems
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
         private readonly int _castAbilityOrderTypeId;
+        private readonly int _moveToOrderTypeId;
         private readonly int _stopOrderTypeId;
         private readonly EntityCollectionStore _entityCollections;
         private Entity[] _collectionScratch = new Entity[InitialCollectionScratchCapacity];
@@ -57,12 +58,13 @@ namespace MobaDemoMod.Systems
             if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
                 _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
+                _moveToOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
                 _stopOrderTypeId = config.Constants.OrderTypeIds["stop"];
             }
             else
             {
                 throw new System.InvalidOperationException(
-                    "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, stop). " +
+                    "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, moveTo, stop). " +
                     "Ensure game.json constants.orderTypeIds is properly configured.");
             }
 
@@ -97,6 +99,7 @@ namespace MobaDemoMod.Systems
             _inputOrderMapping.SetOrderTypeKeyResolver(key => key switch
             {
                 "castAbility" => _castAbilityOrderTypeId,
+                "moveTo" => _moveToOrderTypeId,
                 "stop" => _stopOrderTypeId,
                 _ => throw new InvalidOperationException(
                     $"[{_ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.")

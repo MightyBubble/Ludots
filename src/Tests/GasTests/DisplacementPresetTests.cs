@@ -368,19 +368,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Displacement_OverrideNavigation_SuppressesForceAndRestoresMoveTag()
+        public void Displacement_OverrideNavigation_InstallsAndClearsMovementSuppression()
         {
             using var world = World.Create();
 
-            int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
             var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
             var target = world.Create(
                 new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) },
-                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) },
-                new GameplayTagContainer(),
-                new AbilityExecInstance());
-            ref var tags = ref world.Get<GameplayTagContainer>(target);
-            tags.AddTag(navMoveTagId);
+                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) });
 
             world.Create(new DisplacementState
             {
@@ -397,12 +392,11 @@ namespace Ludots.Tests.GAS
             var system = new DisplacementRuntimeSystem(world);
             system.Update(0f);
 
-            That(world.Get<ForceInput2D>(target).Force, Is.EqualTo(Fix64Vec2.Zero));
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.False);
+            That(world.Has<MovementSuppressed2D>(target), Is.True);
 
             system.Update(0f);
 
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
+            That(world.Has<MovementSuppressed2D>(target), Is.False);
         }
 
         [Test]

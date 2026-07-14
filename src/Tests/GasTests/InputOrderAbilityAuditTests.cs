@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
-using MobaDemoMod.GAS;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -1318,35 +1317,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void StopOrderMoveCleanupSystem_ActiveStopOrder_ClearsMoveTag()
-        {
-            TagRegistry.Clear();
-            int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
-
-            using var world = World.Create();
-            var actor = world.Create(
-                OrderBuffer.CreateEmpty(),
-                new AbilityExecInstance(),
-                new GameplayTagContainer(),
-                new TagCountContainer(),
-                new DirtyFlags());
-            var tagOps = new TagOps();
-            tagOps.AddTag(world, actor, navMoveTagId);
-            ref var tags = ref world.Get<GameplayTagContainer>(actor);
-
-            ref var buffer = ref world.Get<OrderBuffer>(actor);
-            var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
-            buffer.SetActiveDirect(in stopOrder, priority: 200);
-
-            var system = new StopOrderNavMoveCleanupSystem(world, 103, navMoveTagId, tagOps);
-            system.Update(0f);
-
-            That(tags.HasTag(navMoveTagId), Is.False);
-            That(world.Has<AbilityExecInstance>(actor), Is.True, "Move tag cleanup must stay separate from generic stop processing.");
-            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
-        }
-
-        [Test]
         public void MoveToWorldCmOrderSystem_ActiveMoveToOrder_MovesAndCompletes()
         {
             using var world = World.Create();
@@ -1657,6 +1627,44 @@ namespace Ludots.Tests.GAS
             var pos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
             That(pos.X, Is.EqualTo(0), "MoveSpeed of 0 must not fall back to a default speed.");
             That(pos.Y, Is.EqualTo(0));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
+        }
+
+        [Test]
+        public void MoveToWorldCmOrderSystem_MovementSuppressed_DoesNotAdvance()
+        {
+            using var world = World.Create();
+            int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
+            var actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new AttributeBuffer(),
+                OrderBuffer.CreateEmpty(),
+                new MovementSuppressed2D());
+
+            ref var attributes = ref world.Get<AttributeBuffer>(actor);
+            attributes.SetBase(moveSpeedId, 300f);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "moveTo",
+                OrderTypeId = 101,
+                AllowQueuedMode = true,
+            });
+
+            var args = new OrderArgs();
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order { OrderId = 1, Actor = actor, OrderTypeId = 101, Args = args };
+            buffer.SetActiveDirect(in order, priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
+            system.Update(0.10f);
+
+            That(world.Get<WorldPositionCm>(actor).Value, Is.EqualTo(Fix64Vec2.Zero));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
         }
 

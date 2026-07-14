@@ -16,9 +16,6 @@ namespace MobaDemoMod
         [JsonPropertyName("abilities")]
         public AbilityConfig Abilities { get; set; } = new();
 
-        [JsonPropertyName("movement")]
-        public MovementConfig Movement { get; set; } = new();
-
         [JsonPropertyName("commands")]
         public CommandConfig Commands { get; set; } = new();
 
@@ -48,12 +45,6 @@ namespace MobaDemoMod
             [JsonPropertyName("validColor")] public float[] ValidColor { get; set; } = { 0.3f, 0.8f, 1f, 0.4f };
             [JsonPropertyName("invalidColor")] public float[] InvalidColor { get; set; } = { 1f, 0.3f, 0.2f, 0.3f };
             [JsonPropertyName("rangeCircleColor")] public float[] RangeCircleColor { get; set; } = { 0.3f, 0.7f, 1f, 0.2f };
-        }
-
-        public sealed class MovementConfig
-        {
-            [JsonPropertyName("speedCmPerSec")] public int SpeedCmPerSec { get; set; } = 600;
-            [JsonPropertyName("stopRadiusCm")] public int StopRadiusCm { get; set; } = 20;
         }
 
         public sealed class CommandConfig

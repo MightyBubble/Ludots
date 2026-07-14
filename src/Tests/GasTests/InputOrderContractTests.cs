@@ -309,6 +309,7 @@ namespace Ludots.Tests.GAS
                             OrderTypeIds = new Dictionary<string, int>
                             {
                                 ["castAbility"] = 101,
+                                ["moveTo"] = 102,
                                 ["stop"] = 1003,
                             },
                         },

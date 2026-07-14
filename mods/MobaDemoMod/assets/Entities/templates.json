@@ -9,8 +9,7 @@
           "Ability.Moba.SkillQ",
           "Ability.Moba.SkillW",
           "Ability.Moba.SkillE",
-          "Ability.Moba.SkillR",
-          "Ability.Nav.Move"
+          "Ability.Moba.SkillR"
         ]
       }
     }
