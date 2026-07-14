@@ -148,7 +148,10 @@ namespace Ludots.Tests.GAS
                 Label = "Cast",
                 Priority = 100,
                 AllowQueuedMode = true,
-                QueuedModeMaxSize = 8
+                QueuedModeMaxSize = 8,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
             orderTypes.Register(new OrderTypeConfig
             {
@@ -156,7 +159,10 @@ namespace Ludots.Tests.GAS
                 Label = "Move",
                 Priority = 60,
                 AllowQueuedMode = true,
-                QueuedModeMaxSize = 8
+                QueuedModeMaxSize = 8,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
 
             var rules = new OrderRuleRegistry();
@@ -311,7 +317,10 @@ namespace Ludots.Tests.GAS
                 OrderTypeId = CastAbilityOrderTypeId,
                 Label = "Cast",
                 Priority = 100,
-                CanInterruptSelf = true
+                CanInterruptSelf = true,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
 
             var active = new Order { OrderId = 31, OrderTypeId = CastAbilityOrderTypeId };
@@ -406,7 +415,10 @@ namespace Ludots.Tests.GAS
             {
                 OrderTypeId = CastAbilityOrderTypeId,
                 Label = "Cast",
-                Priority = 100
+                Priority = 100,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
 
             var first = new Order { OrderId = 61, OrderTypeId = CastAbilityOrderTypeId };
@@ -524,7 +536,10 @@ namespace Ludots.Tests.GAS
                 Label = "Cast",
                 Priority = 100,
                 AllowQueuedMode = true,
-                QueuedModeMaxSize = 8
+                QueuedModeMaxSize = 8,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
             return orderTypes;
         }

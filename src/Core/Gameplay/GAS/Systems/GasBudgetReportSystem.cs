@@ -11,7 +11,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasDiagnosticEventBuffer _diagnostics;
         private readonly OrderAdmissionResultBuffer? _admissionResults;
         private long _reportedAdmissionOverflow;
-        private readonly long[] _reportedAdmissionOutcomes = new long[8];
+        private readonly long[] _reportedAdmissionOutcomes = new long[OrderAdmissionResultBuffer.SubmitResultCount];
 
         public GasBudgetReportSystem(
             GasBudget budget,
@@ -83,6 +83,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             PublishAdmissionRejection(OrderSubmitResult.RejectedValidation, GasDiagnosticMetric.OrderRejectedValidation);
             PublishAdmissionRejection(OrderSubmitResult.RejectedInvalidActor, GasDiagnosticMetric.OrderRejectedInvalidActor);
             PublishAdmissionRejection(OrderSubmitResult.RejectedInvalidOrderType, GasDiagnosticMetric.OrderRejectedInvalidOrderType);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedBlackboardCapacity, GasDiagnosticMetric.OrderRejectedBlackboardCapacity);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedMissingBlackboard, GasDiagnosticMetric.OrderRejectedMissingBlackboard);
         }
 
         private void PublishAdmissionRejection(OrderSubmitResult result, GasDiagnosticMetric metric)

@@ -161,8 +161,12 @@ namespace Ludots.Tests.GasTests
             var admissions = new OrderAdmissionResultBuffer(capacity: 1);
             var outcome = new OrderAdmissionOutcome(1, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
             var rejected = new OrderAdmissionOutcome(2, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedQueueFull);
+            var blackboardCapacityRejected = new OrderAdmissionOutcome(3, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedBlackboardCapacity);
+            var missingBlackboardRejected = new OrderAdmissionOutcome(4, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedMissingBlackboard);
             Assert.That(admissions.TryWrite(in outcome), Is.True);
             Assert.That(admissions.TryWrite(in rejected), Is.False);
+            Assert.That(admissions.TryWrite(in blackboardCapacityRejected), Is.False);
+            Assert.That(admissions.TryWrite(in missingBlackboardRejected), Is.False);
 
             var diagnostics = new GasDiagnosticEventBuffer(capacity: 16);
             var report = new GasBudgetReportSystem(budget, diagnostics, admissions);
@@ -178,7 +182,7 @@ namespace Ludots.Tests.GasTests
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultOverflow, out GasDiagnosticEvent admission), Is.True);
             Assert.That(admission.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
             Assert.That(admission.Capacity, Is.EqualTo(1));
-            Assert.That(admission.Count, Is.EqualTo(1));
+            Assert.That(admission.Count, Is.EqualTo(3));
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultBacklog, out GasDiagnosticEvent backlog), Is.True);
             Assert.That(backlog.Capacity, Is.EqualTo(1));
             Assert.That(backlog.Count, Is.EqualTo(1));
@@ -188,6 +192,12 @@ namespace Ludots.Tests.GasTests
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedQueueFull, out GasDiagnosticEvent rejectedQueue), Is.True);
             Assert.That(rejectedQueue.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
             Assert.That(rejectedQueue.Count, Is.EqualTo(1));
+            Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedBlackboardCapacity, out GasDiagnosticEvent rejectedCapacity), Is.True);
+            Assert.That(rejectedCapacity.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
+            Assert.That(rejectedCapacity.Count, Is.EqualTo(1));
+            Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedMissingBlackboard, out GasDiagnosticEvent rejectedMissing), Is.True);
+            Assert.That(rejectedMissing.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
+            Assert.That(rejectedMissing.Count, Is.EqualTo(1));
         }
 
         [Test]

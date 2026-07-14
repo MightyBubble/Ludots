@@ -82,6 +82,26 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             bool canInterrupt = activeOrderTypeId == 0 || CanInterrupt(activeOrderTypeId, in order, in config, orderRuleRegistry);
             if (canInterrupt)
             {
+                OrderTypeConfig? activeConfig = buffer.HasActive
+                    ? registry.Get(buffer.ActiveOrder.Order.OrderTypeId)
+                    : null;
+                OrderSubmitResult preparationResult = TryPrepareActivationBlackboard(
+                    world,
+                    entity,
+                    in order,
+                    in config,
+                    activeConfig,
+                    out PreparedActivationBlackboard preparedBlackboard);
+                if (preparationResult != OrderSubmitResult.Activated)
+                {
+                    return preparationResult;
+                }
+
+                if (buffer.HasActive)
+                {
+                    registry.EnsureTerminalResultCapacity();
+                }
+
                 if (buffer.HasActive)
                 {
                     FinalizeActive(
@@ -99,7 +119,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     ReleaseQueuedOrders(world, ref buffer);
                 }
 
-                ActivateOrder(world, entity, ref buffer, in order, in config);
+                buffer.SetActiveDirect(in order, config.Priority);
+                CommitPreparedBlackboard(world, entity, in preparedBlackboard);
                 return OrderSubmitResult.Activated;
             }
 
@@ -148,18 +169,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private static void ActivateOrder(
-            World world,
-            Entity entity,
-            ref OrderBuffer buffer,
-            in Order order,
-            in OrderTypeConfig config)
+        private struct PreparedActivationBlackboard
         {
-            WriteOrderToBlackboard(world, entity, in order, in config);
-            if (!buffer.HasActive)
-            {
-                buffer.SetActiveDirect(in order, config.Priority);
-            }
+            public bool HasSpatial;
+            public bool HasEntity;
+            public bool HasInt;
+            public BlackboardSpatialBuffer Spatial;
+            public BlackboardEntityBuffer Entity;
+            public BlackboardIntBuffer Int;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -179,21 +196,59 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             buffer.ClearActiveTransferred();
         }
 
-        private static void WriteOrderToBlackboard(World world, Entity entity, in Order order, in OrderTypeConfig config)
+        private static OrderSubmitResult TryPrepareActivationBlackboard(
+            World world,
+            Entity entity,
+            in Order order,
+            in OrderTypeConfig config,
+            OrderTypeConfig? activeConfig,
+            out PreparedActivationBlackboard prepared)
         {
-            if (config.SpatialBlackboardKey >= 0 && world.Has<BlackboardSpatialBuffer>(entity))
+            prepared = default;
+
+            if (config.SpatialBlackboardKey >= 0)
             {
-                ref var spatial = ref world.Get<BlackboardSpatialBuffer>(entity);
+                if (!world.Has<BlackboardSpatialBuffer>(entity))
+                {
+                    return OrderSubmitResult.RejectedMissingBlackboard;
+                }
+
+                prepared.HasSpatial = true;
+                prepared.Spatial = world.Get<BlackboardSpatialBuffer>(entity);
                 int spatialKey = config.SpatialBlackboardKey;
-                spatial.ClearPoints(spatialKey);
+                if (activeConfig != null && activeConfig.SpatialBlackboardKey >= 0)
+                {
+                    int activeSpatialKey = activeConfig.SpatialBlackboardKey;
+                    if (activeSpatialKey == spatialKey)
+                    {
+                        prepared.Spatial.ClearPoints(activeSpatialKey);
+                    }
+                    else
+                    {
+                        prepared.Spatial.RemoveEntry(activeSpatialKey);
+                    }
+                }
+
+                if (!prepared.Spatial.HasKey(spatialKey) &&
+                    prepared.Spatial.EntryCount >= BlackboardSpatialBuffer.MAX_ENTRIES)
+                {
+                    return OrderSubmitResult.RejectedBlackboardCapacity;
+                }
+
+                prepared.Spatial.ClearPoints(spatialKey);
 
                 if (order.Args.Spatial.Mode == OrderCollectionMode.Single)
                 {
-                    spatial.SetPoint(spatialKey, order.Args.Spatial.WorldCm);
+                    prepared.Spatial.SetPoint(spatialKey, order.Args.Spatial.WorldCm);
                 }
                 else
                 {
                     int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(world, in order);
+                    if (pointCount > BlackboardSpatialBuffer.MAX_POINTS_PER_ENTRY)
+                    {
+                        return OrderSubmitResult.RejectedBlackboardCapacity;
+                    }
+
                     for (int i = 0; i < pointCount; i++)
                     {
                         if (!OrderWorldSpatialResolver.TryResolveSpatialPointAt(world, in order, i, out Vector3 point))
@@ -202,25 +257,80 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                                 $"ORDER.SPATIAL.ERR.PointMissing: actor={order.Actor.Id}, orderId={order.OrderId}, pointIndex={i}.");
                         }
 
-                        if (!spatial.AppendPoint(spatialKey, point))
+                        if (!prepared.Spatial.AppendPoint(spatialKey, point))
                         {
-                            throw new InvalidOperationException(
-                                $"ORDER.SPATIAL.ERR.BlackboardCapacity: actor={order.Actor.Id}, orderId={order.OrderId}, pointCount={pointCount}, capacity={BlackboardSpatialBuffer.MAX_POINTS_PER_ENTRY}.");
+                            return OrderSubmitResult.RejectedBlackboardCapacity;
                         }
                     }
                 }
             }
 
-            if (config.EntityBlackboardKey >= 0 && order.Target != default && world.Has<BlackboardEntityBuffer>(entity))
+            if (config.EntityBlackboardKey >= 0)
             {
-                ref var entities = ref world.Get<BlackboardEntityBuffer>(entity);
-                entities.Set(config.EntityBlackboardKey, order.Target);
+                if (!world.Has<BlackboardEntityBuffer>(entity))
+                {
+                    return OrderSubmitResult.RejectedMissingBlackboard;
+                }
+
+                prepared.HasEntity = true;
+                prepared.Entity = world.Get<BlackboardEntityBuffer>(entity);
+                if (activeConfig != null && activeConfig.EntityBlackboardKey >= 0)
+                {
+                    prepared.Entity.Remove(activeConfig.EntityBlackboardKey);
+                }
+
+                if (order.Target != default)
+                {
+                    if (!prepared.Entity.HasKey(config.EntityBlackboardKey) &&
+                        prepared.Entity.Count >= BlackboardEntityBuffer.MAX_ENTRIES)
+                    {
+                        return OrderSubmitResult.RejectedBlackboardCapacity;
+                    }
+                    prepared.Entity.Set(config.EntityBlackboardKey, order.Target);
+                }
             }
 
-            if (config.IntArg0BlackboardKey >= 0 && world.Has<BlackboardIntBuffer>(entity))
+            if (config.IntArg0BlackboardKey >= 0)
             {
-                ref var ints = ref world.Get<BlackboardIntBuffer>(entity);
-                ints.Set(config.IntArg0BlackboardKey, order.Args.I0);
+                if (!world.Has<BlackboardIntBuffer>(entity))
+                {
+                    return OrderSubmitResult.RejectedMissingBlackboard;
+                }
+
+                prepared.HasInt = true;
+                prepared.Int = world.Get<BlackboardIntBuffer>(entity);
+                if (activeConfig != null && activeConfig.IntArg0BlackboardKey >= 0)
+                {
+                    prepared.Int.Remove(activeConfig.IntArg0BlackboardKey);
+                }
+
+                if (!prepared.Int.TryGet(config.IntArg0BlackboardKey, out _) &&
+                    prepared.Int.Count >= GasConstants.MAX_BLACKBOARD_ENTRIES)
+                {
+                    return OrderSubmitResult.RejectedBlackboardCapacity;
+                }
+                prepared.Int.Set(config.IntArg0BlackboardKey, order.Args.I0);
+            }
+
+            return OrderSubmitResult.Activated;
+        }
+
+        private static void CommitPreparedBlackboard(
+            World world,
+            Entity entity,
+            in PreparedActivationBlackboard prepared)
+        {
+            if (prepared.HasSpatial)
+            {
+                world.Get<BlackboardSpatialBuffer>(entity) = prepared.Spatial;
+            }
+            if (prepared.HasEntity)
+            {
+                world.Get<BlackboardEntityBuffer>(entity) = prepared.Entity;
+            }
+            if (prepared.HasInt)
+            {
+                world.Get<BlackboardIntBuffer>(entity) = prepared.Int;
             }
         }
 
@@ -328,14 +438,26 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return false;
             }
 
+            var nextOrder = buffer.GetQueued(0).Order;
+            var nextConfig = registry.Get(nextOrder.OrderTypeId);
+            OrderSubmitResult preparationResult = TryPrepareActivationBlackboard(
+                world,
+                entity,
+                in nextOrder,
+                in nextConfig,
+                activeConfig: null,
+                out PreparedActivationBlackboard preparedBlackboard);
+            if (preparationResult != OrderSubmitResult.Activated)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ACTIVATION.ERR.QueuedRequirementsRejected: orderId={nextOrder.OrderId}, result={preparationResult}.");
+            }
+
             if (!buffer.PromoteNext())
             {
                 return false;
             }
-
-            var nextOrder = buffer.ActiveOrder.Order;
-            var nextConfig = registry.Get(nextOrder.OrderTypeId);
-            ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
+            CommitPreparedBlackboard(world, entity, in preparedBlackboard);
             return true;
         }
 
@@ -383,6 +505,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ValidateTerminalOutcome(in terminalOrder, state, failureReason);
             registry.EnsureTerminalResultCapacity();
 
+            bool hasPreparedPromotion = false;
+            PreparedActivationBlackboard preparedPromotion = default;
+            if (promoteNext && buffer.HasQueued)
+            {
+                Order nextOrder = buffer.GetQueued(0).Order;
+                OrderTypeConfig nextConfig = registry.Get(nextOrder.OrderTypeId);
+                OrderTypeConfig activeConfig = registry.Get(terminalOrder.OrderTypeId);
+                OrderSubmitResult preparationResult = TryPrepareActivationBlackboard(
+                    world,
+                    entity,
+                    in nextOrder,
+                    in nextConfig,
+                    activeConfig,
+                    out preparedPromotion);
+                if (preparationResult != OrderSubmitResult.Activated)
+                {
+                    throw new InvalidOperationException(
+                        $"ORDER.ACTIVATION.ERR.QueuedRequirementsRejected: orderId={nextOrder.OrderId}, result={preparationResult}.");
+                }
+                hasPreparedPromotion = true;
+            }
+
             DeactivateCurrentOrder(world, entity, ref buffer, registry);
             OrderSpatialPayloadOps.Release(world, in terminalOrder);
 
@@ -400,11 +544,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 entity);
             registry.PublishTerminalResult(in outcome);
 
-            if (promoteNext && buffer.PromoteNext())
+            if (hasPreparedPromotion && buffer.PromoteNext())
             {
-                var nextOrder = buffer.ActiveOrder.Order;
-                var nextConfig = registry.Get(nextOrder.OrderTypeId);
-                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
+                CommitPreparedBlackboard(world, entity, in preparedPromotion);
             }
 
             return true;

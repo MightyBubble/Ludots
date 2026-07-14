@@ -35,6 +35,8 @@ namespace Ludots.Core.Gameplay.GAS
         OrderRejectedInvalidOrderType = 17,
         OrderAdmissionResultBacklog = 18,
         OrderAdmissionResultHighWatermark = 19,
+        OrderRejectedBlackboardCapacity = 20,
+        OrderRejectedMissingBlackboard = 21,
     }
 
     public readonly struct GasDiagnosticEvent

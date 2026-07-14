@@ -356,6 +356,219 @@ namespace Ludots.Tests.GAS
             That(results.OverflowCount, Is.EqualTo(1));
         }
 
+        [TestCase(17)]
+        [TestCase(32)]
+        [TestCase(64)]
+        public void OrderBufferSystem_WhenImmediatePathExceedsBlackboardCapacity_PreservesOldOrderAndReleasesPayload(int pointCount)
+        {
+            using var world = World.Create();
+            const int orderTypeId = 20;
+            const int spatialKey = 3;
+            var results = new OrderAdmissionResultBuffer(8);
+            results.BeginLogicStep();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 100,
+                CanInterruptSelf = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardSpatialBuffer(),
+                new OrderSpatialPayloadBuffer());
+            ref OrderBuffer orders = ref world.Get<OrderBuffer>(actor);
+            var oldOrder = new Order { OrderId = 11, Actor = actor, OrderTypeId = orderTypeId };
+            var queuedOrder = new Order { OrderId = 12, Actor = actor, OrderTypeId = orderTypeId };
+            orders.SetActiveDirect(in oldOrder, priority: 100);
+            Assert.That(orders.Enqueue(in queuedOrder, priority: 90, expireStep: -1, insertStep: 0), Is.True);
+            ref BlackboardSpatialBuffer blackboard = ref world.Get<BlackboardSpatialBuffer>(actor);
+            blackboard.SetPoint(spatialKey, new Vector3(123f, 0f, 456f));
+
+            int[] pointXcm = new int[pointCount];
+            int[] pointYcm = new int[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                pointXcm[i] = 1000 + i;
+                pointYcm[i] = 2000 + i;
+            }
+            var newOrder = new Order
+            {
+                OrderId = 13,
+                Actor = actor,
+                OrderTypeId = orderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            OrderSpatialPayloadOps.SetPath(world, actor, ref newOrder, pointXcm, pointYcm, pointCount);
+            OrderSpatialPayloadHandle rejectedHandle = newOrder.Args.Spatial.Payload;
+            var system = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults: results);
+
+            OrderSubmitResult result = system.SubmitOrder(actor, in newOrder);
+
+            Assert.That(result, Is.EqualTo(OrderSubmitResult.RejectedBlackboardCapacity));
+            Assert.That(results.TryGet(newOrder.OrderId, OrderAdmissionStage.EntityIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedBlackboardCapacity));
+            Assert.That(orders.ActiveOrder.Order.OrderId, Is.EqualTo(oldOrder.OrderId));
+            Assert.That(orders.QueuedCount, Is.EqualTo(1));
+            Assert.That(orders.GetQueued(0).Order.OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(blackboard.GetPointCount(spatialKey), Is.EqualTo(1));
+            Assert.That(blackboard.TryGetPoint(spatialKey, out Vector3 oldPoint), Is.True);
+            Assert.That(oldPoint, Is.EqualTo(new Vector3(123f, 0f, 456f)));
+            Assert.That(orderTypes.TerminalResults.Count, Is.Zero);
+
+            var replacementOrder = new Order { Actor = actor, OrderTypeId = orderTypeId };
+            OrderSpatialPayloadOps.SetPath(world, actor, ref replacementOrder, pointXcm, pointYcm, pointCount);
+            Assert.That(replacementOrder.Args.Spatial.Payload.Slot, Is.EqualTo(rejectedHandle.Slot));
+            OrderSpatialPayloadOps.Release(world, in replacementOrder);
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void OrderBufferSystem_WhenRequiredBlackboardComponentIsMissing_PreservesOldOrderAndQueue(int missingComponent)
+        {
+            using var world = World.Create();
+            const int orderTypeId = 21;
+            var results = new OrderAdmissionResultBuffer(8);
+            results.BeginLogicStep();
+            var config = new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 100,
+                CanInterruptSelf = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = missingComponent == 0 ? 3 : -1,
+                EntityBlackboardKey = missingComponent == 1 ? 4 : -1,
+                IntArg0BlackboardKey = missingComponent == 2 ? 5 : -1,
+            };
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(config);
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer orders = ref world.Get<OrderBuffer>(actor);
+            var oldOrder = new Order { OrderId = 21, Actor = actor, OrderTypeId = orderTypeId };
+            var queuedOrder = new Order { OrderId = 22, Actor = actor, OrderTypeId = orderTypeId };
+            orders.SetActiveDirect(in oldOrder, priority: 100);
+            Assert.That(orders.Enqueue(in queuedOrder, priority: 90, expireStep: -1, insertStep: 0), Is.True);
+            Entity target = world.Create();
+            var newOrder = new Order
+            {
+                OrderId = 23,
+                Actor = actor,
+                Target = target,
+                OrderTypeId = orderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs { I0 = 7 },
+            };
+            if (missingComponent == 0)
+            {
+                newOrder.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                newOrder.Args.Spatial.Mode = OrderCollectionMode.Single;
+                newOrder.Args.Spatial.WorldCm = new Vector3(10f, 0f, 20f);
+            }
+            var system = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults: results);
+
+            OrderSubmitResult result = system.SubmitOrder(actor, in newOrder);
+
+            Assert.That(result, Is.EqualTo(OrderSubmitResult.RejectedMissingBlackboard));
+            Assert.That(results.TryGet(newOrder.OrderId, OrderAdmissionStage.EntityIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedMissingBlackboard));
+            Assert.That(orders.ActiveOrder.Order.OrderId, Is.EqualTo(oldOrder.OrderId));
+            Assert.That(orders.QueuedCount, Is.EqualTo(1));
+            Assert.That(orders.GetQueued(0).Order.OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(orderTypes.TerminalResults.Count, Is.Zero);
+        }
+
+        [Test]
+        public unsafe void OrderBufferSystem_WhenReplacingActiveSpatialKey_ReusesReleasedBlackboardEntry()
+        {
+            using var world = World.Create();
+            const int activeOrderTypeId = 22;
+            const int replacementOrderTypeId = 23;
+            const int activeSpatialKey = 0;
+            const int replacementSpatialKey = BlackboardSpatialBuffer.MAX_ENTRIES;
+            var results = new OrderAdmissionResultBuffer(4);
+            results.BeginLogicStep();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = activeOrderTypeId,
+                SpatialBlackboardKey = activeSpatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = replacementOrderTypeId,
+                SpatialBlackboardKey = replacementSpatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            var rules = new OrderRuleSet { InterruptsActiveCount = 1 };
+            rules.InterruptsActiveOrderTypeIds[0] = activeOrderTypeId;
+            var orderRules = new OrderRuleRegistry();
+            orderRules.Register(replacementOrderTypeId, in rules);
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer());
+            ref BlackboardSpatialBuffer blackboard = ref world.Get<BlackboardSpatialBuffer>(actor);
+            for (int key = 0; key < BlackboardSpatialBuffer.MAX_ENTRIES; key++)
+            {
+                blackboard.SetPoint(key, new Vector3(key, 0f, key));
+            }
+            var activeOrder = new Order
+            {
+                OrderId = 31,
+                Actor = actor,
+                OrderTypeId = activeOrderTypeId,
+            };
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in activeOrder, priority: 100);
+            var replacementOrder = new Order
+            {
+                OrderId = 32,
+                Actor = actor,
+                OrderTypeId = replacementOrderTypeId,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(900f, 0f, 700f),
+                    },
+                },
+            };
+            var system = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                orderRules,
+                admissionResults: results);
+
+            OrderSubmitResult result = system.SubmitOrder(actor, in replacementOrder);
+
+            Assert.That(result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(results.TryGet(replacementOrder.OrderId, OrderAdmissionStage.EntityIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(blackboard.EntryCount, Is.EqualTo(BlackboardSpatialBuffer.MAX_ENTRIES));
+            Assert.That(blackboard.HasKey(activeSpatialKey), Is.False);
+            Assert.That(blackboard.TryGetPoint(replacementSpatialKey, out Vector3 replacementPoint), Is.True);
+            Assert.That(replacementPoint, Is.EqualTo(new Vector3(900f, 0f, 700f)));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(activeOrder.OrderId));
+        }
+
         [Test]
         public void OrderAdmissionResults_PresentationGlobalAndNextStepEntityRemainReadable()
         {
@@ -1686,7 +1899,9 @@ namespace Ludots.Tests.GAS
                 OrderTypeId = 101,
                 AllowQueuedMode = true,
                 ClearQueueOnActivate = true,
-                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition
+                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
 
             var firstArgs = new OrderArgs();

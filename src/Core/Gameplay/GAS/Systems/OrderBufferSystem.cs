@@ -219,7 +219,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_admissionResults == null)
             {
-                return SubmitOrderState(entity, in order);
+                return SubmitOrderStateAndReleaseRejected(entity, in order);
             }
 
             if (order.OrderId <= 0)
@@ -227,13 +227,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 throw new InvalidOperationException("ORDER.ADMISSION.ERR.DirectSubmitRequiresOrderId");
             }
 
-            OrderAdmissionReservation reservation = _admissionResults.Reserve(
-                OrderAdmissionStage.EntityIntake,
-                order.OrderId);
+            OrderAdmissionReservation reservation;
+            try
+            {
+                reservation = _admissionResults.Reserve(
+                    OrderAdmissionStage.EntityIntake,
+                    order.OrderId);
+            }
+            catch
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+                throw;
+            }
+
             bool committed = false;
             try
             {
-                OrderSubmitResult result = SubmitOrderState(entity, in order);
+                OrderSubmitResult result = SubmitOrderStateAndReleaseRejected(entity, in order);
                 CommitAdmission(in reservation, in order, result);
                 committed = true;
                 return result;
@@ -245,6 +255,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _admissionResults.Cancel(in reservation);
                 }
             }
+        }
+
+        private OrderSubmitResult SubmitOrderStateAndReleaseRejected(Entity entity, in Order order)
+        {
+            OrderSubmitResult result = SubmitOrderState(entity, in order);
+            if (!IsAccepted(result))
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+            }
+            return result;
         }
 
         private OrderSubmitResult SubmitOrderState(Entity entity, in Order order)

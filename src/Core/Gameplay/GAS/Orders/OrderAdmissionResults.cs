@@ -15,7 +15,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         RejectedByRule = 4,
         RejectedValidation = 5,
         RejectedInvalidActor = 6,
-        RejectedInvalidOrderType = 7
+        RejectedInvalidOrderType = 7,
+        RejectedBlackboardCapacity = 8,
+        RejectedMissingBlackboard = 9
     }
 
     public readonly struct OrderAdmissionOutcome
@@ -53,10 +55,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public sealed class OrderAdmissionResultBuffer
     {
         public const string CapacityExceededError = "ORDER.ADMISSION.ERR.CapacityExceeded";
+        public const int SubmitResultCount = (int)OrderSubmitResult.RejectedMissingBlackboard + 1;
 
         private OrderAdmissionOutcome[] _currentItems;
         private OrderAdmissionOutcome[] _pendingItems;
-        private readonly long[] _observedByResult = new long[8];
+        private readonly long[] _observedByResult = new long[SubmitResultCount];
         private int _currentCount;
         private int _pendingCount;
         private int _currentReserved;
