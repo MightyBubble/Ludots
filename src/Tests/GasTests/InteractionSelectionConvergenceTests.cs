@@ -142,7 +142,6 @@ namespace Ludots.Tests.GAS
             That(exec.State, Is.EqualTo(AbilityExecRunState.Running));
             That(exec.Target, Is.EqualTo(enemy));
             That(exec.TargetContext, Is.EqualTo(targetContext));
-            That(exec.MultiTargetCount, Is.EqualTo(1));
         }
 
         [Test]

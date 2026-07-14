@@ -220,7 +220,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return value * (maxLength / length);
         }
 
-        private static bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
+        private bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
             if (!TryResolveCurrentTarget(in order, currentWaypointIndex, out target))
@@ -273,10 +273,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private static bool TryResolveCurrentTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
+        private bool TryResolveCurrentTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in order);
             if (pointCount <= 0)
             {
                 return false;
@@ -285,7 +285,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int pointIndex = order.Args.Spatial.Mode == OrderCollectionMode.List
                 ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;
-            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var worldCm))
+            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(World, in order, pointIndex, out var worldCm))
             {
                 return false;
             }
@@ -294,7 +294,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static bool TryAdvanceRoute(in Order order, ref int currentWaypointIndex)
+        private bool TryAdvanceRoute(in Order order, ref int currentWaypointIndex)
         {
             if (order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -302,7 +302,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             int nextIndex = currentWaypointIndex + 1;
-            if (nextIndex >= order.Args.Spatial.PointCount)
+            if (nextIndex >= OrderWorldSpatialResolver.GetSpatialPointCount(World, in order))
             {
                 return false;
             }
@@ -311,7 +311,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static int SyncMoveRuntime(ref QueuedOrder activeOrder)
+        private int SyncMoveRuntime(ref QueuedOrder activeOrder)
         {
             if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -319,14 +319,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return 0;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in activeOrder.Order);
             activeOrder.RuntimeInt0 = pointCount > 0
                 ? Math.Clamp(activeOrder.RuntimeInt0, 0, pointCount - 1)
                 : 0;
             return activeOrder.RuntimeInt0;
         }
 
-        private static void WriteMoveRuntimeIndex(ref QueuedOrder activeOrder, int currentWaypointIndex)
+        private void WriteMoveRuntimeIndex(ref QueuedOrder activeOrder, int currentWaypointIndex)
         {
             if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -334,7 +334,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in activeOrder.Order);
             activeOrder.RuntimeInt0 = pointCount > 0
                 ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;

@@ -41,6 +41,58 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
+        public void OrderSpatialPayloadBuffer_ReadsMaximumPath_AndRejectsStaleHandle()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+            var order = new Order { Actor = actor, OrderTypeId = 171 };
+            var x = new int[OrderSpatial.MaxPoints];
+            var y = new int[OrderSpatial.MaxPoints];
+            for (int i = 0; i < x.Length; i++)
+            {
+                x[i] = i * 10;
+                y[i] = i * -20;
+            }
+
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, x, y, x.Length);
+
+            That(OrderWorldSpatialResolver.GetSpatialPointCount(world, in order), Is.EqualTo(OrderSpatial.MaxPoints));
+            That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in order, 63, out Vector3 last), Is.True);
+            That(last.X, Is.EqualTo(630));
+            That(last.Z, Is.EqualTo(-1260));
+
+            OrderSpatialPayloadHandle firstHandle = order.Args.Spatial.Payload;
+            OrderSpatialPayloadOps.Release(world, in order);
+            var stale = Throws<InvalidOperationException>(
+                () => OrderWorldSpatialResolver.GetSpatialPointCount(world, in order));
+            That(stale!.Message, Does.Contain("StalePayloadHandle"));
+
+            order.Args.Spatial = default;
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, x, y, x.Length);
+            That(order.Args.Spatial.Payload.Generation, Is.Not.EqualTo(firstHandle.Generation));
+        }
+
+        [Test]
+        public void OrderSpatialPayloadBuffer_FullCapacityFailsExplicitly()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+            int[] x = { 0, 10, 20 };
+            int[] y = { 0, 10, 20 };
+            var orders = new Order[OrderSpatialPayloadBuffer.SlotCapacity];
+            for (int i = 0; i < orders.Length; i++)
+            {
+                orders[i] = new Order { Actor = actor, OrderTypeId = 171 };
+                OrderSpatialPayloadOps.SetPath(world, actor, ref orders[i], x, y, x.Length);
+            }
+
+            var overflow = new Order { Actor = actor, OrderTypeId = 171 };
+            var ex = Throws<InvalidOperationException>(
+                () => OrderSpatialPayloadOps.SetPath(world, actor, ref overflow, x, y, x.Length));
+            That(ex!.Message, Does.Contain("PayloadCapacity"));
+        }
+
+        [Test]
         public void PendingBuffer_SetPending_StoresOrderCorrectly()
         {
             var buffer = OrderBuffer.CreateEmpty();

@@ -111,7 +111,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                    buffer.SetPending(in order, config.Priority, expireStep, currentStep);
+                    OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
                 }
             }
         }

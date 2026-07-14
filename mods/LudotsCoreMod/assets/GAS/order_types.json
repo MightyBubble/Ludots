@@ -1,5 +1,8 @@
 {
-  "orderBlackboardKeys": {},
+  "orderBlackboardKeys": {
+    "Attack.MovePosition": true,
+    "Attack.TargetEntity": true
+  },
   "orderTypes": {
     "castAbility": {
       "orderTypeId": 100,

@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Navigation.GraphEcs;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -14,6 +17,43 @@ namespace GasTests
 {
     public class ArchitectureGuardTests
     {
+        [Test]
+        public void GasRuntimeState_RemainsCompactAndRetiredTypesStayDeleted()
+        {
+            Assert.That(Marshal.SizeOf<OrderBuffer>(), Is.LessThanOrEqualTo(2_048));
+            Assert.That(Marshal.SizeOf<AbilityExecInstance>(), Is.LessThanOrEqualTo(128));
+            Assert.That(Marshal.SizeOf<DirtyFlags>(), Is.LessThanOrEqualTo(48));
+
+            string repoRoot = FindRepoRoot();
+            string[] retired =
+            {
+                "Ability" + "TaskSpec",
+                "Instruction" + "Buffer",
+                "Extension" + "AttributeBuffer",
+                "IOp" + "HandlerTable",
+                "Effect" + "Modified",
+            };
+            List<string> hits = FindForbiddenSourceTokens(
+                repoRoot,
+                new[] { Path.Combine(repoRoot, "src", "Core"), Path.Combine(repoRoot, "mods") },
+                retired);
+
+            Assert.That(hits, Is.Empty, string.Join(Environment.NewLine, hits));
+
+            string orderKeys = File.ReadAllText(Path.Combine(
+                repoRoot, "src", "Core", "Gameplay", "GAS", "Orders", "OrderBlackboardKeys.cs"));
+            Assert.That(orderKeys, Does.Not.Contain("Attack.TargetEntity"));
+            Assert.That(orderKeys, Does.Not.Contain("Attack.MovePosition"));
+            Assert.That(orderKeys, Does.Not.Contain("Stop.Type"));
+            Assert.That(orderKeys, Does.Not.Contain("Hold.Active"));
+            Assert.That(orderKeys, Does.Not.Contain("Patrol.Waypoints"));
+
+            string coreOrderTypes = File.ReadAllText(Path.Combine(
+                repoRoot, "mods", "LudotsCoreMod", "assets", "GAS", "order_types.json"));
+            Assert.That(coreOrderTypes, Does.Contain("\"Attack.TargetEntity\": true"));
+            Assert.That(coreOrderTypes, Does.Contain("\"Attack.MovePosition\": true"));
+        }
+
         [Test]
         public void SystemGroup_MustMatchDesignDocument()
         {

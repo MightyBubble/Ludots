@@ -24,6 +24,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             string relativePath = "GAS/context_groups.json")
         {
             _registry.Clear();
+            ContextGroupIdRegistry.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
@@ -35,6 +36,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var definition = Compile(node, merged[i].Id);
                 _registry.Register(groupId, rootAbilityId, in definition);
             }
+
+            ContextGroupIdRegistry.Freeze();
         }
 
         public static ContextGroupDefinition Compile(JsonObject node, string groupName)

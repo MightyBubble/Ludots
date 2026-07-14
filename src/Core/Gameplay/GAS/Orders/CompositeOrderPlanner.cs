@@ -193,7 +193,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return true;
             }
 
-            return OrderWorldSpatialResolver.TryResolveSpatialTarget(in order.Args.Spatial, out targetWorldCm);
+            return OrderWorldSpatialResolver.TryResolveSpatialTarget(_world, in order, out targetWorldCm);
         }
 
         private static bool TryResolveMoveAnchor(Vector3 actorWorldCm, Vector3 targetWorldCm, float castRangeCm, out Vector3 moveAnchorWorldCm)
@@ -213,11 +213,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             Vector2 movePoint = actor + (direction * travelCm);
             moveAnchorWorldCm = new Vector3(movePoint.X, actorWorldCm.Y, movePoint.Y);
             return true;
-        }
-
-        private static bool TryResolveMoveDestination(in Order order, out Vector3 targetWorldCm)
-        {
-            return OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out targetWorldCm);
         }
 
         private bool TryGetEntityWorldCm(Entity entity, out Vector3 worldCm)

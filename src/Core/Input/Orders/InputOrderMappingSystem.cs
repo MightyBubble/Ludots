@@ -1271,8 +1271,8 @@ namespace Ludots.Core.Input.Orders
             args.Spatial.Kind = OrderSpatialKind.WorldCm;
             args.Spatial.Mode = OrderCollectionMode.List;
             args.Spatial.WorldCm = origin; // Primary point
-            args.Spatial.AddPointWorldCm((int)origin.X, (int)origin.Y, (int)origin.Z);
-            args.Spatial.AddPointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
+            args.Spatial.AddInlinePointWorldCm((int)origin.X, (int)origin.Y, (int)origin.Z);
+            args.Spatial.AddInlinePointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
             
             order.OrderTypeId = orderTypeId;
             order.PlayerId = CurrentActivationPlayerId;

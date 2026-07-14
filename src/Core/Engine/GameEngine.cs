@@ -1269,7 +1269,7 @@ namespace Ludots.Core.Engine
                 castCommitProfileRegistry,
                 MapLoader.EntityTemplateKeys.Register,
                 MapLoader.EntityTemplateKeys.GetName,
-                AbilityFormSetIdRegistry.Register,
+                RequireAbilityFormSetId,
                 AbilityFormSetIdRegistry.GetName);
             clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
@@ -1909,6 +1909,18 @@ namespace Ludots.Core.Engine
             }
 
             return orderTypeId;
+        }
+
+        private static int RequireAbilityFormSetId(string formSetKey)
+        {
+            int formSetId = AbilityFormSetIdRegistry.GetId(formSetKey);
+            if (formSetId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cast preference references unknown ability form set '{formSetKey}'. Declare it in GAS/ability_form_sets.json.");
+            }
+
+            return formSetId;
         }
 
         public void LoadMap(string mapId) => LoadMap(MapLoadRequest.FromMapId(mapId));

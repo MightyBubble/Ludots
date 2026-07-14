@@ -141,6 +141,7 @@ namespace Ludots.Tests.GAS
             var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
             Entity actor = world.Create(
                 new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
                 WorldPositionCm.FromCm(0, 0));
             var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = CreateMoveOrder(actor, orderTypeId: 77, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
@@ -157,11 +158,11 @@ namespace Ludots.Tests.GAS
             Assert.That(routeOrder.OrderTypeId, Is.EqualTo(171));
             Assert.That(routeOrder.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.List));
             Assert.That(routeOrder.Args.Spatial.PointCount, Is.EqualTo(3));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(in routeOrder, 0, out var startPoint), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in routeOrder, 0, out var startPoint), Is.True);
             Assert.That(startPoint.X, Is.EqualTo(0f));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(in routeOrder, 1, out var bendPoint), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in routeOrder, 1, out var bendPoint), Is.True);
             Assert.That(bendPoint.X, Is.EqualTo(200f));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(in routeOrder, out var finalPoint), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(world, in routeOrder, out var finalPoint), Is.True);
             Assert.That(finalPoint.X, Is.EqualTo(450f));
             Assert.That(finalPoint.Z, Is.EqualTo(150f));
             Assert.That(pathStore.IsAlive(pathService.LastHandle), Is.False, "Expanded road moves must release temporary path handles after copying.");
@@ -171,10 +172,10 @@ namespace Ludots.Tests.GAS
         public void RoadRouteSelectionStrategy_DoesNotSkipAheadBeforeReachingCurrentWaypoint()
         {
             using var world = World.Create();
-            Entity actor = world.Create();
-            Order order = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
+            Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+            Order order = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
             order.Args.Spatial.A0 = 2;
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             Assert.That(plans.TryBindFromOrder(actor, in order, out _, out _), Is.True);
             Assert.That(plans.TryGetPlan(actor, order.OrderId, out MovePlanView plan), Is.True);
 
@@ -206,19 +207,20 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(330, 170),
                 OrderBuffer.CreateEmpty(),
                 new AttributeBuffer(),
-                new GameplayTagContainer());
+                new GameplayTagContainer(),
+                new OrderSpatialPayloadBuffer());
             MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
             attributes.SetBase(moveSpeedId, 1200f);
 
-            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId, (0, 0), (250, 120), (500, 240));
+            Order routeOrder = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId, (0, 0), (250, 120), (500, 240));
             routeOrder.OrderId = 44;
             routeOrder.Args.Spatial.A0 = 2;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in routeOrder, priority: 100);
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             Assert.That(runtime.TryBindActiveOrder(actor, in routeOrder, preserveTimeoutCount: false, out _, out _), Is.True);
             ref var planRuntime = ref world.Get<MovePlanRuntime>(actor);
@@ -361,10 +363,11 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity actor = world.Create(
-                WorldPositionCm.FromCm(40, 340));
+                WorldPositionCm.FromCm(40, 340),
+                new OrderSpatialPayloadBuffer());
 
-            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            Order routeOrder = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
 
             Assert.That(plans.TryBindFromOrder(actor, in routeOrder, new Vector2(40f, 340f), out _, out _), Is.True);
             Assert.That(plans.TryGetPlan(actor, routeOrder.OrderId, out MovePlanView plan), Is.True);
@@ -389,14 +392,15 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(40, 340),
                 OrderBuffer.CreateEmpty(),
                 new AttributeBuffer(),
-                new GameplayTagContainer());
+                new GameplayTagContainer(),
+                new OrderSpatialPayloadBuffer());
 
-            Order eastbound = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
+            Order eastbound = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
             eastbound.OrderId = 101;
-            Order westbound = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (600, 900), (300, 620), (0, 300), (-300, 80), (-600, -120));
+            Order westbound = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (600, 900), (300, 620), (0, 300), (-300, 80), (-600, -120));
             westbound.OrderId = 102;
 
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             var selection = new RoadRouteSelectionStrategy();
             Vector2 actorPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
@@ -415,7 +419,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void RoadRouteComputeService_CreateFollowOrder_PreservesOriginalFinalDestinationBeyondSampledPrefix()
         {
-            Order sourceOrder = CreateMoveOrder(Entity.Null, orderTypeId: 102, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            using var world = World.Create();
+            Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+            Order sourceOrder = CreateMoveOrder(actor, orderTypeId: 102, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
             var pathXcm = new int[OrderSpatial.MaxPoints];
             var pathYcm = new int[OrderSpatial.MaxPoints];
             for (int i = 0; i < OrderSpatial.MaxPoints; i++)
@@ -426,15 +432,16 @@ namespace Ludots.Tests.GAS
 
             var compute = new RoadRouteComputeService(roadMoveFollowOrderTypeId: 171);
             Order followOrder = compute.CreateFollowOrder(
+                world,
                 in sourceOrder,
                 pathXcm,
                 pathYcm,
                 OrderSpatial.MaxPoints,
                 new Vector3(18000f, 0f, 0f));
 
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(in followOrder, out var sampledDestination), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(world, in followOrder, out var sampledDestination), Is.True);
             Assert.That(sampledDestination.X, Is.Not.EqualTo(18000f), "The sampled prefix intentionally ends before the player's true click target in this regression test.");
-            Assert.That(RoadRouteFinalTargetResolver.TryResolve(in followOrder, out var preservedDestination), Is.True);
+            Assert.That(RoadRouteFinalTargetResolver.TryResolve(world, in followOrder, out var preservedDestination), Is.True);
             Assert.That(preservedDestination.X, Is.EqualTo(18000f));
             Assert.That(preservedDestination.Z, Is.EqualTo(0f));
         }
@@ -454,7 +461,8 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 new RoadColumnTag(),
                 WorldPositionCm.FromCm(0, 0),
-                OrderBuffer.CreateEmpty());
+                OrderBuffer.CreateEmpty(),
+                new OrderSpatialPayloadBuffer());
 
             ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
             orderBuffer.SetActiveDirect(CreateMoveOrder(actor, orderTypeId: 55, xcm: 300, ycm: 0, submitMode: OrderSubmitMode.Immediate), priority: 60);
@@ -502,6 +510,7 @@ namespace Ludots.Tests.GAS
 
             Entity actor = world.Create(
                 new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
                 WorldPositionCm.FromCm(-9800, 0));
             var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = CreateMoveOrder(actor, orderTypeId: 77, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
@@ -511,7 +520,7 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.CurrentGraph.NodeCount, Is.GreaterThan(100));
             Assert.That(orderQueue.TryDequeue(out var routeOrder), Is.True);
             Assert.That(routeOrder.Args.Spatial.PointCount, Is.GreaterThan(20));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(in routeOrder, out var finalPoint), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(world, in routeOrder, out var finalPoint), Is.True);
             Assert.That(finalPoint.X, Is.EqualTo(18000f));
             Assert.That(finalPoint.Z, Is.EqualTo(0f));
         }
@@ -1008,15 +1017,22 @@ namespace Ludots.Tests.GAS
                 ? statusText
                 : "<missing>";
             Assert.That(built, Is.True, $"Branch clicks should resolve to a sampled road-follow route instead of failing path copy. Status={status}");
-            Assert.That(routeOrder.OrderTypeId, Is.EqualTo(engine.MergedConfig.Constants.OrderTypeIds[RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey]));
-            Assert.That(routeOrder.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.List));
-            Assert.That(routeOrder.Args.Spatial.PointCount, Is.GreaterThanOrEqualTo(1));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(in routeOrder, out var resolvedDestination), Is.True);
-            Assert.That(resolvedDestination.Z, Is.GreaterThan(2500f), "Branch clicks should snap onto the northern branch road instead of collapsing back to the origin road sample.");
-            float dx = resolvedDestination.X - (-2720f);
-            float dz = resolvedDestination.Z - 3810f;
-            float distanceToClickCm = System.MathF.Sqrt((dx * dx) + (dz * dz));
-            Assert.That(distanceToClickCm, Is.LessThanOrEqualTo(2000f), $"Resolved branch destination should stay near the clicked road sample after snapping to authored road nodes. Destination=({resolvedDestination.X},{resolvedDestination.Z})");
+            try
+            {
+                Assert.That(routeOrder.OrderTypeId, Is.EqualTo(engine.MergedConfig.Constants.OrderTypeIds[RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey]));
+                Assert.That(routeOrder.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.List));
+                Assert.That(routeOrder.Args.Spatial.PointCount, Is.GreaterThanOrEqualTo(1));
+                Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(engine.World, in routeOrder, out var resolvedDestination), Is.True);
+                Assert.That(resolvedDestination.Z, Is.GreaterThan(2500f), "Branch clicks should snap onto the northern branch road instead of collapsing back to the origin road sample.");
+                float dx = resolvedDestination.X - (-2720f);
+                float dz = resolvedDestination.Z - 3810f;
+                float distanceToClickCm = System.MathF.Sqrt((dx * dx) + (dz * dz));
+                Assert.That(distanceToClickCm, Is.LessThanOrEqualTo(2000f), $"Resolved branch destination should stay near the clicked road sample after snapping to authored road nodes. Destination=({resolvedDestination.X},{resolvedDestination.Z})");
+            }
+            finally
+            {
+                OrderSpatialPayloadOps.Release(engine.World, in routeOrder);
+            }
         }
 
         [Test]
@@ -1241,12 +1257,12 @@ namespace Ludots.Tests.GAS
             int[] pathYcm = { 0, 0, 0 };
             var compute = new RoadRouteComputeService(roadMoveFollowOrderTypeId);
             Order sourceOrder = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 600, ycm: 0, submitMode: OrderSubmitMode.Immediate);
-            Order followOrder = compute.CreateFollowOrder(in sourceOrder, pathXcm, pathYcm, pathXcm.Length, new Vector3(600f, 0f, 0f));
+            Order followOrder = compute.CreateFollowOrder(world, in sourceOrder, pathXcm, pathYcm, pathXcm.Length, new Vector3(600f, 0f, 0f));
             followOrder.OrderId = 7001;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in followOrder, priority: 100);
 
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
@@ -1307,7 +1323,7 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in moveOrder, priority: 100);
 
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
             var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, simulation);
@@ -1344,12 +1360,12 @@ namespace Ludots.Tests.GAS
             int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
             attributes.SetBase(moveSpeedId, 1200f);
 
-            Order staleRoute = CreateRouteOrder(actor, roadMoveFollowOrderTypeId, (0, 0), (300, 0), (600, 0));
+            Order staleRoute = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId, (0, 0), (300, 0), (600, 0));
             staleRoute.OrderId = 44;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in staleRoute, priority: 100);
 
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             Assert.That(runtime.TryBindActiveOrder(actor, in staleRoute, preserveTimeoutCount: false, out _, out _), Is.True);
 
@@ -1366,8 +1382,8 @@ namespace Ludots.Tests.GAS
 
             ref readonly Order refreshedActive = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
             Assert.That(refreshedActive.OrderId, Is.EqualTo(44));
-            Assert.That(OrderWorldSpatialResolver.GetSpatialPointCount(in refreshedActive.Args.Spatial), Is.GreaterThanOrEqualTo(3));
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(in refreshedActive, 1, out Vector3 refreshedWaypoint), Is.True);
+            Assert.That(OrderWorldSpatialResolver.GetSpatialPointCount(world, in refreshedActive), Is.GreaterThanOrEqualTo(3));
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in refreshedActive, 1, out Vector3 refreshedWaypoint), Is.True);
             Assert.That(refreshedWaypoint.Z, Is.GreaterThan(0f), "Timeout refresh should replace the stale straight-line payload with the replanned curved road route.");
             Assert.That(world.Get<MovePlanOrderRuntime>(actor).LifecycleState, Is.EqualTo(MovePlanLifecycleState.Active));
         }
@@ -1415,7 +1431,7 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static Order CreateRouteOrder(Entity actor, int roadMoveFollowOrderTypeId, params (int xcm, int ycm)[] points)
+        private static Order CreateRouteOrder(World world, Entity actor, int roadMoveFollowOrderTypeId, params (int xcm, int ycm)[] points)
         {
             var order = new Order
             {
@@ -1425,12 +1441,15 @@ namespace Ludots.Tests.GAS
                 Args = new OrderArgs()
             };
 
-            order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
-            order.Args.Spatial.Mode = OrderCollectionMode.List;
+            var pointXcm = new int[points.Length];
+            var pointYcm = new int[points.Length];
             for (int i = 0; i < points.Length; i++)
             {
-                order.Args.Spatial.AddPointWorldCm(points[i].xcm, 0, points[i].ycm);
+                pointXcm[i] = points[i].xcm;
+                pointYcm[i] = points[i].ycm;
             }
+
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, pointXcm, pointYcm, points.Length);
 
             return order;
         }
@@ -1450,33 +1469,40 @@ namespace Ludots.Tests.GAS
             string acceptedStatus = ReadRoadStatus(engine);
             Assert.That(built, Is.True, $"{actorName} should produce a route plan in the strategy matrix slice. Status={acceptedStatus}");
 
-            RoadRoutePlannerProfile planner = profiles.ResolvePlanner(actor);
-            RoadRouteExecutionProfile execution = profiles.ResolveExecution(actor);
-            int pointCount = routeOrder.Args.Spatial.PointCount;
-            float maxAbsYcm = 0f;
-            for (int waypointIndex = 0; waypointIndex < pointCount; waypointIndex++)
+            try
             {
-                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in routeOrder, waypointIndex, out Vector3 waypointWorldCm))
+                RoadRoutePlannerProfile planner = profiles.ResolvePlanner(actor);
+                RoadRouteExecutionProfile execution = profiles.ResolveExecution(actor);
+                int pointCount = routeOrder.Args.Spatial.PointCount;
+                float maxAbsYcm = 0f;
+                for (int waypointIndex = 0; waypointIndex < pointCount; waypointIndex++)
                 {
-                    continue;
+                    if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(engine.World, in routeOrder, waypointIndex, out Vector3 waypointWorldCm))
+                    {
+                        continue;
+                    }
+
+                    maxAbsYcm = System.MathF.Max(maxAbsYcm, System.MathF.Abs(waypointWorldCm.Z));
                 }
 
-                maxAbsYcm = System.MathF.Max(maxAbsYcm, System.MathF.Abs(waypointWorldCm.Z));
+                return new StrategyMatrixRow(
+                    actorName,
+                    planner.Label,
+                    execution.Label,
+                    acceptedStatus,
+                    pointCount,
+                    planner.DirectBiasCm,
+                    planner.NorthBiasCm,
+                    planner.SouthBiasCm,
+                    execution.SpeedMultiplier,
+                    execution.WaypointRadiusCm,
+                    execution.FinalArrivalRadiusCm,
+                    maxAbsYcm);
             }
-
-            return new StrategyMatrixRow(
-                actorName,
-                planner.Label,
-                execution.Label,
-                acceptedStatus,
-                pointCount,
-                planner.DirectBiasCm,
-                planner.NorthBiasCm,
-                planner.SouthBiasCm,
-                execution.SpeedMultiplier,
-                execution.WaypointRadiusCm,
-                execution.FinalArrivalRadiusCm,
-                maxAbsYcm);
+            finally
+            {
+                OrderSpatialPayloadOps.Release(engine.World, in routeOrder);
+            }
         }
 
         private static void SubmitRoadMove(RoadMoveOrderExpander expander, Entity actor, int moveToOrderTypeId, int xcm, int ycm)
@@ -1490,7 +1516,7 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.ClearQueued();
             buffer.ClearActive();
-            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId, points);
+            Order routeOrder = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId, points);
             buffer.SetActiveDirect(in routeOrder, priority: 100);
         }
 
@@ -1712,7 +1738,8 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(xcm, ycm),
                 OrderBuffer.CreateEmpty(),
                 new AttributeBuffer(),
-                new GameplayTagContainer());
+                new GameplayTagContainer(),
+                new OrderSpatialPayloadBuffer());
         }
 
         private static MassNavigationSimulationRuntime CreateRoadMassRuntime(World world, Entity actor)

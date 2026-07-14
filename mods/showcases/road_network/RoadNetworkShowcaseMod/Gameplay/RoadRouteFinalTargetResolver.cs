@@ -6,10 +6,10 @@ namespace RoadNetworkShowcaseMod.Gameplay
 {
     internal sealed class RoadRouteFinalTargetMovePlanResolver : IMovePlanFinalTargetResolver
     {
-        public bool TryResolveFinalTarget(in Order order, out Vector2 finalGoalWorldCm)
+        public bool TryResolveFinalTarget(Arch.Core.World world, in Order order, out Vector2 finalGoalWorldCm)
         {
             finalGoalWorldCm = default;
-            if (!RoadRouteFinalTargetResolver.TryResolve(in order, out Vector3 targetWorldCm))
+            if (!RoadRouteFinalTargetResolver.TryResolve(world, in order, out Vector3 targetWorldCm))
             {
                 return false;
             }
@@ -23,7 +23,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
     {
         private const int EncodedFlag = 1;
 
-        public static bool TryResolve(in Order order, out Vector3 targetWorldCm)
+        public static bool TryResolve(Arch.Core.World world, in Order order, out Vector3 targetWorldCm)
         {
             targetWorldCm = default;
             if (order.Args.I2 == EncodedFlag)
@@ -34,12 +34,12 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
             // Directly-authored showcase follow orders may omit the preserved click target.
             // In that case, the last sampled waypoint remains the correct fallback arrival goal.
-            return OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out targetWorldCm);
+            return OrderWorldSpatialResolver.TryResolveMoveDestination(world, in order, out targetWorldCm);
         }
 
-        public static bool TryEncodeFromSource(in Order sourceOrder, ref Order followOrder)
+        public static bool TryEncodeFromSource(Arch.Core.World world, in Order sourceOrder, ref Order followOrder)
         {
-            if (!OrderWorldSpatialResolver.TryResolveMoveDestination(in sourceOrder, out Vector3 targetWorldCm))
+            if (!OrderWorldSpatialResolver.TryResolveMoveDestination(world, in sourceOrder, out Vector3 targetWorldCm))
             {
                 return false;
             }

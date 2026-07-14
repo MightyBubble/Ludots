@@ -39,6 +39,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
             if (!_incomingOrders.TryEnqueueAssigned(ref routeOrder))
             {
+                OrderSpatialPayloadOps.Release(_planning.World, in routeOrder);
                 WriteStatus("Road command rejected: order queue is full.");
                 return false;
             }

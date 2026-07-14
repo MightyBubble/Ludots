@@ -378,7 +378,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.HasTargetPos = (byte)(hasTargetPos ? 1 : 0);
                     exec.TargetOriginPosCm = targetOriginPosCm;
                     exec.HasTargetOriginPos = (byte)(hasTargetOriginPos ? 1 : 0);
-                    exec.MultiTargetCount = 0;
                     exec.State = AbilityExecRunState.Running;
                     exec.CurrentTick = 0;
                     exec.StartAbsoluteTick = ClockNow(defaultClockId, actor);
@@ -881,32 +880,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var dispatchTarget = (ExecEffectDispatchTarget)spec.GetPayloadA(idx);
 
-            if (inst.MultiTargetCount > 0 && dispatchTarget == ExecEffectDispatchTarget.Default)
-            {
-                // Multi-target: dispatch to each
-                unsafe
-                {
-                    fixed (int* ids = inst.MultiTargetIds)
-                    fixed (int* wids = inst.MultiTargetWorldIds)
-                    fixed (int* vers = inst.MultiTargetVersions)
-                    {
-                        for (int i = 0; i < inst.MultiTargetCount; i++)
-                        {
-                            var t = EntityUtil.Reconstruct(ids[i], wids[i], vers[i]);
-                            if (!World.IsAlive(t)) continue;
-                            PublishEffectRequest(actor, t, inst.TargetContext, templateId,
-                                hasCp ? callerPool.Get(cpIdx) : default, hasCp, in inst);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                Entity target = ResolveEffectDispatchTarget(actor, dispatchTarget, in inst);
-                Entity targetContext = ResolveEffectDispatchTargetContext(dispatchTarget, in inst);
-                PublishEffectRequest(actor, target, targetContext, templateId,
-                    hasCp ? callerPool.Get(cpIdx) : default, hasCp, in inst);
-            }
+            Entity target = ResolveEffectDispatchTarget(actor, dispatchTarget, in inst);
+            Entity targetContext = ResolveEffectDispatchTargetContext(dispatchTarget, in inst);
+            PublishEffectRequest(actor, target, targetContext, templateId,
+                hasCp ? callerPool.Get(cpIdx) : default, hasCp, in inst);
         }
 
         private Entity ResolveEffectDispatchTarget(Entity actor, ExecEffectDispatchTarget dispatchTarget, in AbilityExecInstance inst)
@@ -1136,22 +1113,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (_inputResponses == null) return;
                     if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))
                     {
-                        inst.MultiTargetCount = 0;
                         if (World.IsAlive(resp.Target))
                         {
                             inst.Target = resp.Target;
-                            inst.MultiTargetCount = 1;
-                            unsafe
-                            {
-                                fixed (int* idsDst = inst.MultiTargetIds)
-                                fixed (int* widsDst = inst.MultiTargetWorldIds)
-                                fixed (int* verDst = inst.MultiTargetVersions)
-                                {
-                                    idsDst[0] = resp.Target.Id;
-                                    widsDst[0] = resp.Target.WorldId;
-                                    verDst[0] = resp.Target.Version;
-                                }
-                            }
                         }
                         if (World.IsAlive(resp.TargetContext))
                         {
@@ -1262,7 +1226,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 exec.AbilityId = abilityId;
                 exec.Target = targetEntity;
                 exec.TargetContext = default;
-                exec.MultiTargetCount = 0;
                 exec.State = AbilityExecRunState.Running;
                 exec.CurrentTick = 0;
                 exec.StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor);

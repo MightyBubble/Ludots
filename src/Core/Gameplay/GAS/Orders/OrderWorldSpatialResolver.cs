@@ -8,18 +8,21 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 {
     public static class OrderWorldSpatialResolver
     {
-        public static int GetSpatialPointCount(in OrderSpatial spatial)
+        public static int GetSpatialPointCount(World world, in Order order)
         {
+            ref readonly OrderSpatial spatial = ref order.Args.Spatial;
             return spatial.Mode switch
             {
                 OrderCollectionMode.Single when spatial.Kind == OrderSpatialKind.WorldCm => 1,
-                OrderCollectionMode.List when spatial.Kind == OrderSpatialKind.WorldCm && spatial.PointCount > 0 => spatial.PointCount,
+                OrderCollectionMode.List when spatial.Kind == OrderSpatialKind.WorldCm && spatial.PointCount > 0 =>
+                    ValidateListPointCount(world, in order),
                 _ => 0
             };
         }
 
-        public static bool TryResolveSpatialPointAt(in OrderSpatial spatial, int pointIndex, out Vector3 targetWorldCm)
+        public static bool TryResolveSpatialPointAt(World world, in Order order, int pointIndex, out Vector3 targetWorldCm)
         {
+            ref readonly OrderSpatial spatial = ref order.Args.Spatial;
             targetWorldCm = default;
             if (spatial.Kind != OrderSpatialKind.WorldCm || pointIndex < 0)
             {
@@ -39,36 +42,39 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (spatial.Mode == OrderCollectionMode.List && pointIndex < spatial.PointCount)
             {
-                unsafe
+                if (spatial.PointCount <= OrderSpatial.MaxInlinePoints)
                 {
-                    fixed (int* px = spatial.PointX)
-                    fixed (int* py = spatial.PointY)
-                    fixed (int* pz = spatial.PointZ)
+                    targetWorldCm = pointIndex switch
                     {
-                        targetWorldCm = new Vector3(px[pointIndex], py[pointIndex], pz[pointIndex]);
-                        return true;
-                    }
+                        0 => spatial.Point0WorldCm,
+                        1 => spatial.Point1WorldCm,
+                        _ => default,
+                    };
+                    return true;
                 }
+
+                ref readonly OrderSpatialPayloadBuffer payloads = ref RequirePayloadBuffer(world, in order);
+                return payloads.TryGetPoint(in spatial.Payload, pointIndex, out targetWorldCm);
             }
 
             return false;
         }
 
-        public static bool TryResolveSpatialTarget(in OrderSpatial spatial, out Vector3 targetWorldCm)
+        public static bool TryResolveSpatialTarget(World world, in Order order, out Vector3 targetWorldCm)
         {
             targetWorldCm = default;
-            int pointCount = GetSpatialPointCount(in spatial);
-            return pointCount > 0 && TryResolveSpatialPointAt(in spatial, pointCount - 1, out targetWorldCm);
+            int pointCount = GetSpatialPointCount(world, in order);
+            return pointCount > 0 && TryResolveSpatialPointAt(world, in order, pointCount - 1, out targetWorldCm);
         }
 
-        public static bool TryResolveMoveDestination(in Order order, out Vector3 targetWorldCm)
+        public static bool TryResolveMoveDestination(World world, in Order order, out Vector3 targetWorldCm)
         {
-            return TryResolveSpatialTarget(in order.Args.Spatial, out targetWorldCm);
+            return TryResolveSpatialTarget(world, in order, out targetWorldCm);
         }
 
-        public static bool TryResolveMoveWaypoint(in Order order, int pointIndex, out Vector3 targetWorldCm)
+        public static bool TryResolveMoveWaypoint(World world, in Order order, int pointIndex, out Vector3 targetWorldCm)
         {
-            return TryResolveSpatialPointAt(in order.Args.Spatial, pointIndex, out targetWorldCm);
+            return TryResolveSpatialPointAt(world, in order, pointIndex, out targetWorldCm);
         }
 
         public static bool TryGetEntityWorldCm(World world, Entity entity, out Vector3 worldCm)
@@ -101,7 +107,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             if (buffer.HasActive &&
                 buffer.ActiveOrder.Order.OrderTypeId == moveToOrderTypeId &&
-                TryResolveMoveDestination(in buffer.ActiveOrder.Order, out var activeMoveWorldCm))
+                TryResolveMoveDestination(world, in buffer.ActiveOrder.Order, out var activeMoveWorldCm))
             {
                 projectedWorldCm = activeMoveWorldCm;
             }
@@ -110,7 +116,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 Order queued = buffer.GetQueued(i).Order;
                 if (queued.OrderTypeId != moveToOrderTypeId ||
-                    !TryResolveMoveDestination(in queued, out var queuedMoveWorldCm))
+                    !TryResolveMoveDestination(world, in queued, out var queuedMoveWorldCm))
                 {
                     continue;
                 }
@@ -119,6 +125,44 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             return true;
+        }
+
+        private static int ValidateListPointCount(World world, in Order order)
+        {
+            ref readonly OrderSpatial spatial = ref order.Args.Spatial;
+            if (spatial.PointCount <= OrderSpatial.MaxInlinePoints)
+            {
+                if (spatial.Payload.IsValid)
+                {
+                    throw new System.InvalidOperationException(
+                        $"ORDER.SPATIAL.ERR.UnexpectedPayload: actor={order.Actor.Id}, pointCount={spatial.PointCount}.");
+                }
+
+                return spatial.PointCount;
+            }
+
+            ref readonly OrderSpatialPayloadBuffer payloads = ref RequirePayloadBuffer(world, in order);
+            int payloadPointCount = payloads.GetPointCount(in spatial.Payload);
+            if (payloadPointCount != spatial.PointCount)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.SPATIAL.ERR.PointCountMismatch: actor={order.Actor.Id}, authored={spatial.PointCount}, payload={payloadPointCount}.");
+            }
+
+            return payloadPointCount;
+        }
+
+        private static ref readonly OrderSpatialPayloadBuffer RequirePayloadBuffer(World world, in Order order)
+        {
+            if (!order.Args.Spatial.Payload.IsValid ||
+                !world.IsAlive(order.Actor) ||
+                !world.Has<OrderSpatialPayloadBuffer>(order.Actor))
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.SPATIAL.ERR.MissingPayloadBuffer: actor={order.Actor.Id}, orderId={order.OrderId}, pointCount={order.Args.Spatial.PointCount}.");
+            }
+
+            return ref world.Get<OrderSpatialPayloadBuffer>(order.Actor);
         }
     }
 }

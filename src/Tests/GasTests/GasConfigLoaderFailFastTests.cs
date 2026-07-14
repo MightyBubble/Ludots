@@ -41,6 +41,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void IdRegistries_FreezeAfterConfigLoad_AndClearReopensRegistration()
+        {
+            AbilityFormSetIdRegistry.Register("forms.test");
+            AbilityFormSetIdRegistry.Freeze();
+            That(AbilityFormSetIdRegistry.IsFrozen, Is.True);
+            Throws<InvalidOperationException>(() => AbilityFormSetIdRegistry.Register("forms.late"));
+            AbilityFormSetIdRegistry.Clear();
+            That(AbilityFormSetIdRegistry.IsFrozen, Is.False);
+            That(AbilityFormSetIdRegistry.Register("forms.reloaded"), Is.EqualTo(1));
+
+            ContextGroupIdRegistry.Register("context.test");
+            ContextGroupIdRegistry.Freeze();
+            That(ContextGroupIdRegistry.IsFrozen, Is.True);
+            Throws<InvalidOperationException>(() => ContextGroupIdRegistry.Register("context.late"));
+            ContextGroupIdRegistry.Clear();
+            That(ContextGroupIdRegistry.IsFrozen, Is.False);
+            That(ContextGroupIdRegistry.Register("context.reloaded"), Is.EqualTo(1));
+        }
+
+        [Test]
         public void AttributeConstraintsLoader_InvalidBool_IsRejected()
         {
             WriteConfig("config_catalog.json",

@@ -1750,14 +1750,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        private static void RejectOptionalZero(int? value, string effectId, string path, string fieldPath)
-        {
-            if (value.HasValue && value.Value == 0)
-            {
-                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath}=0 must be omitted.");
-            }
-        }
-
         private static float RequireFloat(float? value, string effectId, string path, string fieldPath)
         {
             if (!value.HasValue)

@@ -451,6 +451,70 @@ namespace Ludots.Tests.GAS
             Assert.That(terminalResults.Generation, Is.EqualTo(generation + 1));
         }
 
+        [Test]
+        public void OrderSpatialPayloadLifecycle_FinalizeCurrent_ReleasesActivePayload()
+        {
+            using var world = World.Create();
+            var orderTypes = CreateCastOrderTypes();
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
+            Order active = CreatePayloadOrder(world, actor, orderId: 81);
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetActiveDirect(in active, priority: 100);
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
+
+            var stale = Assert.Throws<InvalidOperationException>(
+                () => OrderWorldSpatialResolver.GetSpatialPointCount(world, in active));
+            Assert.That(stale!.Message, Does.Contain("StalePayloadHandle"));
+        }
+
+        [Test]
+        public void OrderSpatialPayloadLifecycle_CancelAll_ReleasesEveryOwnedPayload()
+        {
+            using var world = World.Create();
+            var orderTypes = CreateCastOrderTypes();
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
+            Order active = CreatePayloadOrder(world, actor, orderId: 91);
+            Order queued = CreatePayloadOrder(world, actor, orderId: 92);
+            Order pending = CreatePayloadOrder(world, actor, orderId: 93);
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetActiveDirect(in active, priority: 100);
+            Assert.That(buffer.Enqueue(in queued, priority: 100, expireStep: -1, insertStep: 1), Is.True);
+            buffer.SetPending(in pending, priority: 100, expireStep: -1, insertStep: 2);
+
+            OrderSubmitter.CancelAll(world, actor, orderTypes);
+
+            Assert.That(buffer.IsEmpty, Is.True);
+            Assert.That(buffer.HasPending, Is.False);
+            AssertPayloadIsStale(world, in active);
+            AssertPayloadIsStale(world, in queued);
+            AssertPayloadIsStale(world, in pending);
+        }
+
+        [Test]
+        public void OrderSpatialPayloadLifecycle_ReplacePending_ReleasesOnlyReplacedPayload()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
+            Order first = CreatePayloadOrder(world, actor, orderId: 101);
+            Order replacement = CreatePayloadOrder(world, actor, orderId: 102);
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetPending(in first, priority: 100, expireStep: -1, insertStep: 1);
+
+            OrderSubmitter.ReplacePending(
+                world,
+                ref buffer,
+                in replacement,
+                priority: 100,
+                expireStep: -1,
+                insertStep: 2);
+
+            AssertPayloadIsStale(world, in first);
+            Assert.That(
+                OrderWorldSpatialResolver.GetSpatialPointCount(world, in buffer.PendingOrder.Order),
+                Is.EqualTo(3));
+        }
+
         private static OrderTypeRegistry CreateCastOrderTypes()
         {
             var orderTypes = new OrderTypeRegistry();
@@ -463,6 +527,28 @@ namespace Ludots.Tests.GAS
                 QueuedModeMaxSize = 8
             });
             return orderTypes;
+        }
+
+        private static Order CreatePayloadOrder(World world, Entity actor, int orderId)
+        {
+            var order = new Order
+            {
+                OrderId = orderId,
+                OrderTypeId = CastAbilityOrderTypeId,
+                Actor = actor,
+            };
+            int[] x = { 0, 100, 200 };
+            int[] y = { 0, 50, 100 };
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, x, y, x.Length);
+            return order;
+        }
+
+        private static void AssertPayloadIsStale(World world, in Order order)
+        {
+            Order captured = order;
+            var stale = Assert.Throws<InvalidOperationException>(
+                () => OrderWorldSpatialResolver.GetSpatialPointCount(world, in captured));
+            Assert.That(stale!.Message, Does.Contain("StalePayloadHandle"));
         }
 
         private static AbilityDefinitionRegistry CreateAbilityRegistry(

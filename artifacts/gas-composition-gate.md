@@ -422,3 +422,95 @@ Tag and attribute writes validate complete state before mutation. The fixed-capa
 ### 8. Next variant test
 
 A new Mod or gameplay variant must install tag state through `TagStateInstaller`, mutate attributes through the shared production `TagOps` path, and rely on the same effect budget and order admission generation. It must not add a Mod-local dirty queue, fallback `TagOps`, alternate effect loop, or consumer-owned admission lifetime.
+
+---
+
+## GAS Composition Gate - #672-#680 Audit Closeout
+
+- **Task / Issues**: #672, #673, #674, #675, #676, #677, #678, #679, #680
+- **Date**: 2026-07-14
+- **Agent / Author**: Codex
+- **Result**: PASS
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing Order, GAS, Graph, and Navigation contracts without adding a gameplay profile, preset switch, graph operation, loader, or parallel runtime.
+
+The audit removes presentation-state fallback, repairs listener cache invalidation, makes graph paths blittable and deterministic, validates sink channels and GAS config at load time, removes legacy projectile and duplicate movement paths, deletes retired runtime types, freezes static registries, and moves long order paths into an explicit fixed-capacity component.
+
+### 2. Issue and commit map
+
+| Issue | Result | Commit |
+|---|---|---|
+| #672 | Order planning consumes only authoritative gameplay positions | `0e19772ed` |
+| #673 | Response listener registration and removal invalidate the cache | `31b92da18` |
+| #674 | Graph path ECS state is fixed-capacity and blittable | `ccbed8f4f` |
+| #675 | Loaded graph construction and chunk events are deterministic | `fef4f394b` |
+| #676 | Attribute sink channels fail during config load; hot paths do not validate strings | `5fef49d51` |
+| #677 | Legacy projectile modes and implicit direction fallback are removed | `9a1b8ac62` |
+| #678 | GAS config uses canonical required fields and load-time order ids | `4b2628769` |
+| #679 | Duplicate ability movement runtime and Core business tags are removed | `9d3ed6ead` |
+| #680 | Retired state is deleted; registries freeze; order path layout is compact | current issue commit |
+
+### 3. Layer assignment
+
+| Capability | Layer | Existing carrier |
+|---|---:|---|
+| Order position and path resolution | N/A | `OrderWorldSpatialResolver`, `OrderSubmitter`, `OrderBufferSystem` |
+| Long-path storage and ownership | N/A | `OrderSpatialPayloadBuffer` authored on capable actors |
+| Response listener lifecycle | N/A | `ResponseChainListenerOps` and existing effect request queue revision |
+| Graph path execution | N/A | Existing `GraphPathfindingSystem` and graph stores |
+| GAS config validation | N/A | Existing ability, effect, context, and attribute binding loaders |
+| Ability and context id lifecycle | N/A | Existing static id registries with `Clear` / `Freeze` |
+
+### 4. Reuse and new operations
+
+- Handlers: existing projectile, order, effect, and ability handlers
+- Queues / systems: existing Order queue/buffer/finalizer, effect request queue, response processing, and graph pathfinding system
+- Resolvers / registries: existing order spatial resolver, order type registry, ability form set registry, and context group registry
+- Existing presets / graphs: unchanged
+- New Layer 0 graph/effect operations: N/A
+- New gameplay schema: NO
+
+`OrderSpatialPayloadOps` is an ownership helper for an existing Order value. It does not interpret gameplay or create a second order pipeline.
+
+### 5. Transaction and ownership boundary
+
+Long order paths use one fixed-capacity `OrderSpatialPayloadBuffer` per capable actor. An order owns exactly one generation-checked slot while it is in global intake, active, queued, pending, or being rebuilt.
+
+The owner releases the slot on intake rejection, queue expiration/removal, pending replacement/expiration, active finalization, cancel-all, road replan replacement, or failed road enqueue. Public buffer and queue clearing APIs reject payload-bearing orders when no `World` owner is available. Missing buffers, exhausted slots, stale handles, point-count mismatches, and blackboard capacity failures are explicit errors; none silently truncate or leak.
+
+### 6. Config SSOT
+
+- Business blackboard keys are declared by `GAS/order_types.json`, not hard-coded in Core.
+- Ability form set and context group ids are declared during config load, then frozen.
+- Projectile modes, ability execution fields, order references, and attribute sink channels have one canonical name and load-time validation.
+- Runtime capacity is defined by fixed component constants derived from the formal Order slots; no dynamic allocation or hidden global pool is used.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn, order, graph, or movement runtime added
+- [x] No presentation component is used as gameplay position truth
+- [x] No legacy projectile compatibility mapping remains
+- [x] No silent config default, unknown order key, path truncation, or capacity drop remains
+- [x] No managed ECS path component or hot-path growth remains
+- [x] No long-path ECS component is added or removed in the hot path
+- [x] Every path ownership exit has an explicit release or hard failure
+
+### 8. Verification
+
+- #680 focused acceptance, including direct payload lifecycle tests: 41 / 41
+- GAS architecture workflow guard: 45 / 45
+- Association workflow slice: 127 / 127
+- Raylib field workflow slice: 4 / 4
+- Web UI Panel Kit tests: PASS
+- Maintained `src/Tests` project graphs: all build successfully
+- Production Mod smoke: 34 / 35; the only failure is the existing CameraAcceptance unbound local-player fixture
+- Full GasTests baseline remains red as documented by the workflow: 1729 passed, 82 existing failures, 1 skipped
+- Full ArchitectureTests after the two Order fixture corrections: 136 passed, 2 unrelated repository-wide legacy-token scan failures
+- `git diff --check`: PASS
+
+### 9. Next variant test
+
+A new Order variant must reuse `OrderSpatialPayloadOps` and the existing Order finalizer. A new GAS variant must change graph wiring or effect steps. Neither may add a Core gameplay enum, fallback field name, Mod-local path pool, or alternate movement/order runtime.

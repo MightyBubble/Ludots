@@ -60,12 +60,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int currentStep = _clock.Now(ClockDomainId.Step);
             ProcessIncomingOrders(currentStep);
 
-            var job = new OrderBufferUpdateJob
-            {
-                CurrentStep = currentStep
-            };
-            World.InlineQuery<OrderBufferUpdateJob, OrderBuffer>(in _orderBufferQuery, ref job);
-
             foreach (ref var chunk in World.Query(in _orderBufferQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -73,6 +67,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 foreach (var index in chunk)
                 {
                     ref OrderBuffer buffer = ref buffers[index];
+                    ReleaseExpiredOrders(ref buffer, currentStep);
                     if (!buffer.HasActive && buffer.HasQueued)
                     {
                         Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -82,15 +77,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private struct OrderBufferUpdateJob : IForEach<OrderBuffer>
+        private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)
         {
-            public int CurrentStep;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref OrderBuffer buffer)
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
             {
-                buffer.RemoveExpired(CurrentStep);
-                buffer.ExpirePending(CurrentStep);
+                QueuedOrder queued = buffer.GetQueued(i);
+                if (queued.ExpireStep < 0 || queued.ExpireStep > currentStep)
+                {
+                    continue;
+                }
+
+                QueuedOrder removed = buffer.RemoveAtTransferred(i);
+                OrderSpatialPayloadOps.Release(World, in removed.Order);
+            }
+
+            if (buffer.HasPending &&
+                buffer.PendingOrder.ExpireStep >= 0 &&
+                buffer.PendingOrder.ExpireStep <= currentStep)
+            {
+                OrderSubmitter.ReleasePendingOrder(World, ref buffer);
             }
         }
 
@@ -104,12 +109,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
                 {
+                    OrderSpatialPayloadOps.Release(World, in order);
                     WriteAdmission(in order, OrderSubmitResult.RejectedInvalidActor);
                     continue;
                 }
 
                 if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out var config))
                 {
+                    OrderSpatialPayloadOps.Release(World, in order);
                     WriteAdmission(in order, OrderSubmitResult.RejectedInvalidOrderType);
                     continue;
                 }
@@ -138,6 +145,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _graphApi);
                     if (!passed)
                     {
+                        OrderSpatialPayloadOps.Release(World, in order);
                         WriteAdmission(in order, OrderSubmitResult.RejectedValidation);
                         continue;
                     }
@@ -156,14 +164,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
                     ref var buffer = ref World.Get<OrderBuffer>(order.Actor);
-                    buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+                    OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, pendingExpireStep, currentStep);
                     result = OrderSubmitResult.Pending;
+                }
+                else if (!IsAccepted(result))
+                {
+                    OrderSpatialPayloadOps.Release(World, in order);
                 }
 
 
                 WriteAdmission(in order, result);
             }
         }
+
+        private static bool IsAccepted(OrderSubmitResult result) =>
+            result == OrderSubmitResult.Activated ||
+            result == OrderSubmitResult.Queued ||
+            result == OrderSubmitResult.Pending;
 
         private void WriteAdmission(in Order order, OrderSubmitResult result)
         {
@@ -205,10 +222,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var pendingOrder = buffer.PendingOrder.Order;
-            buffer.ClearPending();
+            buffer.ClearPendingTransferred();
 
             int currentStep = _clock.Now(ClockDomainId.Step);
-            OrderSubmitter.Submit(
+            OrderSubmitResult result = OrderSubmitter.Submit(
                 World,
                 entity,
                 in pendingOrder,
@@ -216,6 +233,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderRuleRegistry,
                 currentStep,
                 _stepRateHz);
+            if (!IsAccepted(result))
+            {
+                OrderSpatialPayloadOps.Release(World, in pendingOrder);
+            }
         }
 
         public bool TryGetActiveOrder(Entity entity, out Order order)
@@ -240,5 +261,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-
-

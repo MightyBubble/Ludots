@@ -14,7 +14,7 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": "Generic.TargetPosition",
+      "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
       "validationGraph": "none",

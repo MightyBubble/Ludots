@@ -275,7 +275,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return BuildPlanPointList("Path(plan)", in plan, planRuntime.CurrentWaypointIndex);
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in activeOrder);
             if (pointCount <= 0)
             {
                 return "Path  active order has no spatial waypoints";
@@ -285,7 +285,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             text.Append("Path(order) ").Append(pointCount).Append(" pts");
             for (int i = 0; i < pointCount; i++)
             {
-                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in activeOrder, i, out Vector3 waypoint))
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(_world, in activeOrder, i, out Vector3 waypoint))
                 {
                     continue;
                 }
@@ -404,7 +404,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private string DescribeOrder(in Order order, int roadMoveFollowOrderTypeId)
         {
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
             string orderType = order.OrderTypeId == roadMoveFollowOrderTypeId
                 ? "roadMoveFollow"
                 : order.OrderTypeId.ToString();

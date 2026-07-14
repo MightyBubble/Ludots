@@ -24,6 +24,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
             _query = new RoadRouteQueryService(world, globals, agentTypeId, MaxPathPoints);
         }
 
+        public World World => _world;
+
         public bool ShouldPlanRoadMove(in Order order, out int moveToOrderTypeId)
         {
             moveToOrderTypeId = 0;
@@ -71,7 +73,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             }
 
             var compute = new RoadRouteComputeService(roadMoveFollowOrderTypeId);
-            routeOrder = compute.CreateFollowOrder(in order, queryResult.PathXcm, queryResult.PathYcm, queryResult.Count, queryResult.FinalGoalWorldCm);
+            routeOrder = compute.CreateFollowOrder(_world, in order, queryResult.PathXcm, queryResult.PathYcm, queryResult.Count, queryResult.FinalGoalWorldCm);
             WriteStatus(status);
             return true;
         }

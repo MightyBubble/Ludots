@@ -76,6 +76,7 @@ namespace Ludots.Core.Config
             Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
+            Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
             Register<CommandSourceDragState>("CommandSourceDragState");

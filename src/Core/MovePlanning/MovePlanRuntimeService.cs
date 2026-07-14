@@ -55,7 +55,7 @@ public sealed class MovePlanRuntimeService
 
         int planPointCount = _plans.TryGetPlan(entity, order.OrderId, out MovePlanView plan)
             ? plan.Count
-            : OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            : OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
 
         short executionGeneration = orderState.ExecutionGeneration;
         executionGeneration++;

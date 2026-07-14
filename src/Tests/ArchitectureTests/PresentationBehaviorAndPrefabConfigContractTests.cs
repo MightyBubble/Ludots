@@ -206,7 +206,10 @@ namespace Ludots.Tests.Architecture
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
 {
-  "orderBlackboardKeys": {},
+  "orderBlackboardKeys": {
+    "Attack.MovePosition": true,
+    "Attack.TargetEntity": true
+  },
   "orderTypes": {
     "moveTo": {
       "orderTypeId": 101,
@@ -766,6 +769,10 @@ namespace Ludots.Tests.Architecture
       "queueFullPolicy": "DropOldest",
       "bufferWindowMs": 300,
       "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",

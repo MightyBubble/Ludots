@@ -20,10 +20,12 @@ public sealed class MovePlanStore : IMovePlanStore
     }
 
     private readonly IMovePlanFinalTargetResolver? _finalTargetResolver;
+    private readonly World _world;
     private readonly Dictionary<int, Slot> _slotsByEntityId = new();
 
-    public MovePlanStore(IMovePlanFinalTargetResolver? finalTargetResolver = null)
+    public MovePlanStore(World world, IMovePlanFinalTargetResolver? finalTargetResolver = null)
     {
+        _world = world ?? throw new ArgumentNullException(nameof(world));
         _finalTargetResolver = finalTargetResolver;
     }
 
@@ -47,7 +49,7 @@ public sealed class MovePlanStore : IMovePlanStore
     {
         planGeneration = 0;
         finalGoalWorldCm = default;
-        int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+        int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
         if (pointCount <= 0)
         {
             Clear(entity);
@@ -66,7 +68,7 @@ public sealed class MovePlanStore : IMovePlanStore
 
         for (int pointIndex = 0; pointIndex < pointCount && slot.PointCount < OrderSpatial.MaxPoints; pointIndex++)
         {
-            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out Vector3 pointWorldCm))
+            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(_world, in order, pointIndex, out Vector3 pointWorldCm))
             {
                 continue;
             }
@@ -88,9 +90,9 @@ public sealed class MovePlanStore : IMovePlanStore
         }
 
         slot.FinalGoalWorldCm = _finalTargetResolver != null &&
-            _finalTargetResolver.TryResolveFinalTarget(in order, out Vector2 resolvedFinalTargetWorldCm)
+            _finalTargetResolver.TryResolveFinalTarget(_world, in order, out Vector2 resolvedFinalTargetWorldCm)
             ? resolvedFinalTargetWorldCm
-            : OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out Vector3 destinationWorldCm)
+            : OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out Vector3 destinationWorldCm)
             ? new Vector2(destinationWorldCm.X, destinationWorldCm.Z)
             : new Vector2(slot.PathXcm[slot.PointCount - 1], slot.PathYcm[slot.PointCount - 1]);
 

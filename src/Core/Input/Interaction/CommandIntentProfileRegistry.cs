@@ -489,13 +489,19 @@ namespace Ludots.Core.Input.Interaction
                         $"Command intent profile '{profileId}' slot selector '{slot}' is missing the context group id.");
                 }
 
-                // Load-time declaration into the shared context group id space (same precedent as
-                // FilterProfileRegistry tag resolution); ContextScored evaluation resolves the group later.
+                int groupId = ContextGroupIdRegistry.GetId(groupName);
+                if (groupId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Command intent profile '{profileId}' slot selector '{slot}' references unknown context group '{groupName}'. " +
+                        "Declare it in GAS/context_groups.json before command intent profiles are loaded.");
+                }
+
                 return new CommandIntentRoute(
                     ruleIndex,
                     orderTypeId,
                     CommandIntentRouteKinds.ContextGroup,
-                    ContextGroupIdRegistry.Register(groupName));
+                    groupId);
             }
 
             // DEC-14: semantic routing forbids bare slot indices (bySlotIndex / slotN / anything else).

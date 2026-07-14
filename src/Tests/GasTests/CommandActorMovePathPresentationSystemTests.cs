@@ -95,7 +95,7 @@ namespace Ludots.Tests.GAS
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
-            orders.SetActiveDirect(CreateRouteOrder(actor, OrderSpatial.MaxPoints + 1), priority: 60);
+            orders.SetActiveDirect(CreateRouteOrder(fixture.World, actor, OrderSpatial.MaxPoints), priority: 60);
 
             Assert.DoesNotThrow(() => fixture.System.Update(0.016f));
             Assert.That(
@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static Order CreateRouteOrder(Entity actor, int pointCount)
+        private static Order CreateRouteOrder(World world, Entity actor, int pointCount)
         {
             var order = new Order
             {
@@ -185,10 +185,14 @@ namespace Ludots.Tests.GAS
                 }
             };
 
+            var pointXcm = new int[pointCount];
+            var pointYcm = new int[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                order.Args.Spatial.AddPointWorldCm((i + 1) * 100, 0, 0);
+                pointXcm[i] = (i + 1) * 100;
             }
+
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, pointXcm, pointYcm, pointCount);
 
             return order;
         }
@@ -260,7 +264,7 @@ namespace Ludots.Tests.GAS
 
             public Entity CreateSelectedActor(WorldPositionCm position)
             {
-                Entity actor = World.Create(position, OrderBuffer.CreateEmpty());
+                Entity actor = World.Create(position, OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
                 var descriptor = EntityCollectionDescriptor.Create(
                     EntityCollectionKeys.CommandSource,
                     EntityCollectionSourceKind.Explicit,

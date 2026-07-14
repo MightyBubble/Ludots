@@ -118,7 +118,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private void EmitSubmitCue(in Order order, bool accepted)
         {
             if (_transientMarkers == null ||
-                !OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out var targetWorldCm))
+                !OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out var targetWorldCm))
             {
                 return;
             }

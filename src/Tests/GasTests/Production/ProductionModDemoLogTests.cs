@@ -736,8 +736,8 @@ namespace Ludots.Tests.GAS.Production
                 Mode = OrderCollectionMode.List,
                 WorldCm = new Vector3(origin.X, 0f, origin.Y)
             };
-            spatial.AddPointWorldCm((int)origin.X, 0, (int)origin.Y);
-            spatial.AddPointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
+            spatial.AddInlinePointWorldCm((int)origin.X, 0, (int)origin.Y);
+            spatial.AddInlinePointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
 
             bool enqueued = orderQueue.TryEnqueue(new Order
             {

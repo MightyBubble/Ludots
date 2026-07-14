@@ -120,6 +120,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public void Clear()
         {
+            for (int i = 0, index = _head; i < _count; i++, index = (index + 1) % _items.Length)
+            {
+                if (_items[index].Args.Spatial.Payload.IsValid)
+                {
+                    throw new System.InvalidOperationException(
+                        "ORDER.QUEUE.ERR.PayloadClearRequiresOwner");
+                }
+            }
+
             _head = 0;
             _tail = 0;
             _count = 0;

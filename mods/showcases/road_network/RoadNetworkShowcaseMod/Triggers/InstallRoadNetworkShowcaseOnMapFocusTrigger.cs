@@ -52,7 +52,7 @@ namespace RoadNetworkShowcaseMod.Triggers
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
             MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation simulation runtime.");
-            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var plans = new MovePlanStore(engine.World, new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
             engine.RegisterSystem(
                 new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
@@ -87,7 +87,7 @@ namespace RoadNetworkShowcaseMod.Triggers
             engine.RegisterPresentationSystem(new RoadNetworkPresentationSystem(engine, _runtime));
             MovePlanStore presentationPlans = engine.GlobalContext.TryGetValue(typeof(MovePlanStore).FullName!, out var planObj) && planObj is MovePlanStore resolvedPlans
                 ? resolvedPlans
-                : new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+                : new MovePlanStore(engine.World, new RoadRouteFinalTargetMovePlanResolver());
             engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, presentationPlans));
             _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;
