@@ -84,6 +84,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
+        private readonly EffectPhaseSideEffectTransaction _persistentPhaseTransaction;
         private int _activeEffectAttachDropped;
         private int _listenerRegistrationDropped;
 
@@ -153,6 +154,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderRuleRegistry = orderRuleRegistry;
             _orderClock = orderClock;
             _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+            _persistentPhaseTransaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps,
+                effectRequests,
+                spawnRequests,
+                presentationEvents,
+                _resolverBuffer.Length);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -463,8 +471,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             GameplayTagContainer tagsBefore = default;
                             TagCountContainer tagCountsBefore = default;
                             DirtyFlags dirtyFlagsBefore = default;
+                            int fanOutCommandCountBefore = _fanOutCommands.Count;
+                            int fanOutDroppedBefore = _fanOutDropped;
+                            int listenerRegistrationCountBefore = _pendingListenerRegistrations.Count;
+                            bool graphTransactionBound = false;
+                            _persistentPhaseTransaction.Begin();
+                            _builtinRuntime.EffectSideEffects = _persistentPhaseTransaction;
                             try
                             {
+                                if (_graphApiHost != null)
+                                {
+                                    _graphApiHost.BeginEffectSideEffectTransaction(_persistentPhaseTransaction);
+                                    graphTransactionBound = true;
+                                }
+
                                 if (World.Has<EffectGrantedTags>(e))
                                 {
                                     EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(e);
@@ -475,16 +495,42 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     dirtyFlagsBefore = World.Get<DirtyFlags>(context.Target);
                                     hasGrantedTagSnapshot = true;
                                     EffectTagContributionHelper.PrepareGrantToEntity(World, context.Target, in grantedTags, stackCount, _tagOps, _budget);
+                                    if (World.Get<DirtyFlags>(context.Target).IsAnyTagDirty())
+                                    {
+                                        _persistentPhaseTransaction.StageDirtyEntity(context.Target);
+                                    }
                                 }
 
                                 ExecutePersistentPhases(e, in context, templateId);
-                                if (hasGrantedTagSnapshot && World.Get<DirtyFlags>(context.Target).IsAnyTagDirty())
+
+                                for (int commandIndex = fanOutCommandCountBefore; commandIndex < _fanOutCommands.Count; commandIndex++)
                                 {
-                                    _tagOps.MarkDirtyEntity(World, context.Target);
+                                    FanOutCommand command = _fanOutCommands[commandIndex];
+                                    _persistentPhaseTransaction.StageFanOutCommand(in command);
                                 }
+                                TrimTail(_fanOutCommands, fanOutCommandCountBefore);
+
+                                MarkAggregateDirtyIfNeeded(context.Target, e);
+
+                                if (_presentationEvents != null && templateId > 0)
+                                {
+                                    _persistentPhaseTransaction.StagePresentationEvent(new GasPresentationEvent
+                                    {
+                                        Kind = GasPresentationEventKind.EffectActivated,
+                                        Actor = context.Source,
+                                        Target = context.Target,
+                                        EffectTemplateId = templateId
+                                    });
+                                }
+
+                                _persistentPhaseTransaction.Commit();
                             }
                             catch
                             {
+                                _persistentPhaseTransaction.Rollback();
+                                TrimTail(_fanOutCommands, fanOutCommandCountBefore);
+                                _fanOutDropped = fanOutDroppedBefore;
+                                TrimTail(_pendingListenerRegistrations, listenerRegistrationCountBefore);
                                 if (hasGrantedTagSnapshot && World.IsAlive(context.Target))
                                 {
                                     World.Get<GameplayTagContainer>(context.Target) = tagsBefore;
@@ -494,8 +540,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 RollbackPersistentAttachment(context.Target, e);
                                 throw;
                             }
-
-                            MarkAggregateDirtyIfNeeded(context.Target, e);
+                            finally
+                            {
+                                if (graphTransactionBound)
+                                {
+                                    _graphApiHost!.EndEffectSideEffectTransaction(_persistentPhaseTransaction);
+                                }
+                                _builtinRuntime.EffectSideEffects = null;
+                            }
 
                             if (World.IsAlive(e) && World.Has<GameplayEffect>(e))
                             {
@@ -503,16 +555,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 effectForActivate.State = EffectState.Committed;
                             }
 
-                            if (_presentationEvents != null && templateId > 0)
-                            {
-                                _presentationEvents.Publish(new GasPresentationEvent
-                                {
-                                    Kind = GasPresentationEventKind.EffectActivated,
-                                    Actor = context.Source,
-                                    Target = context.Target,
-                                    EffectTemplateId = templateId
-                                });
-                            }
                         }
                         ConsumeWork(ref workUnits);
                     }
@@ -598,7 +640,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            if (!World.Has<AttributeAggregateDirty>(target))
+            if (_persistentPhaseTransaction.IsActive)
+            {
+                _persistentPhaseTransaction.StageAggregateDirty(target);
+            }
+            else if (!World.Has<AttributeAggregateDirty>(target))
             {
                 World.Add(target, new AttributeAggregateDirty());
             }
@@ -877,12 +923,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // Defer phase listener registration to Stage 6 (structural change safety)
             if (phase == EffectPhaseId.OnApply && tpl.ListenerSetup.Count > 0)
             {
-                _pendingListenerRegistrations.Add(new PendingListenerRegistration
+                if (_persistentPhaseTransaction.IsActive)
                 {
-                    Context = context,
-                    TemplateId = templateId,
-                    OwnerEffectId = effectEntity.Id,
-                });
+                    _persistentPhaseTransaction.StageListenerRegistration(
+                        in context,
+                        in tpl.ListenerSetup,
+                        effectEntity.Id);
+                }
+                else
+                {
+                    _pendingListenerRegistrations.Add(new PendingListenerRegistration
+                    {
+                        Context = context,
+                        TemplateId = templateId,
+                        OwnerEffectId = effectEntity.Id,
+                    });
+                }
             }
         }
 
@@ -896,7 +952,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            _presentationEvents.Publish(new GasPresentationEvent
+            var presentationEvent = new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.EffectApplied,
                 Actor = context.Source,
@@ -904,7 +960,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 EffectTemplateId = templateId,
                 AttributeId = runtime.AttributeDeltaId,
                 Delta = runtime.AttributeDelta
-            });
+            };
+            if (_persistentPhaseTransaction.IsActive)
+            {
+                _persistentPhaseTransaction.StagePresentationEvent(in presentationEvent);
+            }
+            else
+            {
+                _presentationEvents.Publish(in presentationEvent);
+            }
         }
 
         /// <summary>
@@ -958,6 +1022,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static uint Mix(uint hash, int value)
         {
             return (hash ^ unchecked((uint)value)) * 16777619u;
+        }
+
+        private static void TrimTail<T>(List<T> items, int retainedCount)
+        {
+            if (items.Count > retainedCount)
+            {
+                items.RemoveRange(retainedCount, items.Count - retainedCount);
+            }
         }
 
         private int ResolvePrimaryAttributeId(in EffectModifiers modifiers, int templateId)

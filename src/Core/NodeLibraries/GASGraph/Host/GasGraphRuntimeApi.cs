@@ -118,6 +118,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Entity _derivedAttributeWriteOwner;
         private AttributeBuffer _derivedAttributeWriteBuffer;
         private bool _derivedAttributeWritesActive;
+        private EffectPhaseSideEffectTransaction? _effectSideEffects;
 
         public static GasGraphRuntimeApi CreateProduction(
             World world,
@@ -282,6 +283,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
         }
 
+        private void RejectNonTransactionalEffectSideEffect(string operation)
+        {
+            if (_effectSideEffects?.IsActive == true)
+            {
+                throw new InvalidOperationException(
+                    $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
+            }
+        }
+
         private TargetDispatchPresetRegistry RequireTargetDispatchPresets()
         {
             return _targetDispatchPresets ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTargetDispatchPresetRegistry");
@@ -310,6 +320,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _currentConfigParams = default;
             _hasConfigContext = false;
         }
+
+        public void BeginEffectSideEffectTransaction(EffectPhaseSideEffectTransaction transaction)
+        {
+            if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+            if (_effectSideEffects != null)
+            {
+                throw new InvalidOperationException(EffectPhaseSideEffectTransaction.ScopeAlreadyActiveError);
+            }
+            if (!transaction.IsActive)
+            {
+                throw new InvalidOperationException(EffectPhaseSideEffectTransaction.ScopeNotActiveError);
+            }
+
+            _effectSideEffects = transaction;
+        }
+
+        public void EndEffectSideEffectTransaction(EffectPhaseSideEffectTransaction transaction)
+        {
+            if (!ReferenceEquals(_effectSideEffects, transaction))
+            {
+                throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ScopeMismatch");
+            }
+
+            _effectSideEffects = null;
+        }
+
+        internal bool HasActiveEffectSideEffectTransaction => _effectSideEffects?.IsActive == true;
 
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {
@@ -522,6 +559,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
         {
+            if (_effectSideEffects?.TryGetAttributeCurrent(entity, attributeId, out value) == true)
+            {
+                return true;
+            }
+
             if (_derivedAttributeWritesActive && entity == _derivedAttributeWriteOwner)
             {
                 value = _derivedAttributeWriteBuffer.GetCurrent(attributeId);
@@ -704,21 +746,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(EnsureRelationshipLink));
+            RejectNonTransactionalEffectSideEffect(nameof(EnsureRelationshipLink));
             RequireRelationshipRuntime().EnsureLink(source, target, typeId);
         }
         public void RemoveRelationshipLink(Entity source, Entity target, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(RemoveRelationshipLink));
+            RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
             RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         }
         public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
+            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
             return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
         }
         public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
+            RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
             return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
@@ -728,6 +774,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
+            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
             RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
         }
         public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
@@ -795,7 +842,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args)
         {
             RejectDerivedAttributeSideEffect(nameof(ApplyEffectTemplate));
-            if (_effectRequests == null)
+            if (_effectSideEffects == null && _effectRequests == null)
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
@@ -823,13 +870,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            _effectRequests.Publish(req);
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageEffectRequest(in req);
+                return;
+            }
+
+            _effectRequests!.Publish(req);
         }
 
         public void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
         {
             RejectDerivedAttributeSideEffect(nameof(FanOutDispatchEffect));
-            if (_effectRequests == null)
+            if (_effectSideEffects == null && _effectRequests == null)
             {
                 throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
@@ -840,6 +893,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             TargetResolverContextMapping mapping = RequireTargetDispatchPresets().Get(payloadPresetId);
+            if (_effectSideEffects != null)
+            {
+                int rootId = ResolveChildEffectRootId();
+                for (int i = 0; i < targets.Length; i++)
+                {
+                    var command = new FanOutCommand
+                    {
+                        RootId = rootId,
+                        OriginalSource = source,
+                        OriginalTarget = target,
+                        OriginalTargetContext = targetContext,
+                        PayloadEffectTemplateId = templateId,
+                        ContextMapping = mapping,
+                        ResolvedEntity = targets[i],
+                    };
+                    _effectSideEffects.StageFanOutCommand(in command);
+                }
+                return;
+            }
+
             TargetResolverFanOutHelper.PublishResolvedTargets(
                 rootId: ResolveChildEffectRootId(),
                 source,
@@ -869,6 +942,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void RemoveEffectTemplate(Entity target, int templateId)
         {
             RejectDerivedAttributeSideEffect(nameof(RemoveEffectTemplate));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageEffectCancellation(target, templateId);
+                return;
+            }
             if (!_world.IsAlive(target) || templateId <= 0 || !_world.Has<ActiveEffectContainer>(target))
             {
                 return;
@@ -902,11 +980,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
         {
             RejectDerivedAttributeSideEffect(nameof(ModifyAttributeAdd));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageAttributeAdd(target, attributeId, delta);
+                return;
+            }
             AttributeMutationOps.AddCurrent(_world, target, attributeId, delta, RequireTagOps());
         }
 
         public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
         {
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageAttributeSet(target, attributeId, value);
+                return;
+            }
+
             if (_derivedAttributeWritesActive)
             {
                 if (caster != _derivedAttributeWriteOwner || target != _derivedAttributeWriteOwner)
@@ -929,13 +1018,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingGameplayEventBus");
             }
-            _eventBus.Publish(new GameplayEvent
+            var gameplayEvent = new GameplayEvent
             {
                 TagId = eventTagId,
                 Source = caster,
                 Target = target,
                 Magnitude = magnitude
-            });
+            };
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageGameplayEvent(_eventBus, in gameplayEvent);
+                return;
+            }
+            _eventBus.Publish(gameplayEvent);
         }
 
         // ── Hex spatial queries ──
@@ -966,6 +1061,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
         {
+            if (_effectSideEffects?.TryReadBlackboardFloat(entity, keyId, out value) == true) return true;
             value = 0f;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardFloatBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardFloatBuffer>(entity);
@@ -974,6 +1070,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryReadBlackboardInt(Entity entity, int keyId, out int value)
         {
+            if (_effectSideEffects?.TryReadBlackboardInt(entity, keyId, out value) == true) return true;
             value = 0;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardIntBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardIntBuffer>(entity);
@@ -982,6 +1079,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value)
         {
+            if (_effectSideEffects?.TryReadBlackboardEntity(entity, keyId, out value) == true) return true;
             value = default;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardEntityBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardEntityBuffer>(entity);
@@ -991,6 +1089,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void WriteBlackboardFloat(Entity entity, int keyId, float value)
         {
             RejectDerivedAttributeSideEffect(nameof(WriteBlackboardFloat));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardFloat(entity, keyId, value);
+                return;
+            }
             if (!_world.IsAlive(entity)) return;
             if (!_world.Has<BlackboardFloatBuffer>(entity)) return; // Component must be pre-added at entity template creation
             ref var bb = ref _world.Get<BlackboardFloatBuffer>(entity);
@@ -1000,6 +1103,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void WriteBlackboardInt(Entity entity, int keyId, int value)
         {
             RejectDerivedAttributeSideEffect(nameof(WriteBlackboardInt));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardInt(entity, keyId, value);
+                return;
+            }
             if (!_world.IsAlive(entity)) return;
             if (!_world.Has<BlackboardIntBuffer>(entity)) return; // Component must be pre-added at entity template creation
             ref var bb = ref _world.Get<BlackboardIntBuffer>(entity);
@@ -1009,6 +1117,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void WriteBlackboardEntity(Entity entity, int keyId, Entity value)
         {
             RejectDerivedAttributeSideEffect(nameof(WriteBlackboardEntity));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardEntity(entity, keyId, value);
+                return;
+            }
             if (!_world.IsAlive(entity)) return;
             if (!_world.Has<BlackboardEntityBuffer>(entity)) return; // Component must be pre-added at entity template creation
             ref var bb = ref _world.Get<BlackboardEntityBuffer>(entity);

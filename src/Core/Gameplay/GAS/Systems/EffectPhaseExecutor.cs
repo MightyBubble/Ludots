@@ -359,6 +359,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if ((action.Flags & PhaseListenerActionFlags.PublishEvent) != 0 && action.EventTagId != 0 && _eventBus != null)
                 {
+                    if (api is GasGraphRuntimeApi graphHost && graphHost.HasActiveEffectSideEffectTransaction)
+                    {
+                        graphHost.SendEvent(caster, target, action.EventTagId, 0f);
+                        continue;
+                    }
+
                     _eventBus.Publish(new GameplayEvent
                     {
                         TagId = action.EventTagId,

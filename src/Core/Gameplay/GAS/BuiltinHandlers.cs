@@ -26,6 +26,15 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        private static void RejectNonTransactionalPersistentSideEffect(string operation)
+        {
+            if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
+            {
+                throw new InvalidOperationException(
+                    $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
+            }
+        }
+
         public static void RegisterAll(BuiltinHandlerRegistry registry)
         {
             registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers);
@@ -60,6 +69,21 @@ namespace Ludots.Core.Gameplay.GAS
                 ? runtime.ModifierOverride
                 : templateData.Modifiers;
             int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
+            if (runtime?.EffectSideEffects?.IsActive == true)
+            {
+                float stagedBefore = primaryAttrId >= 0 &&
+                    runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentBefore)
+                        ? currentBefore
+                        : 0f;
+                runtime.EffectSideEffects.StageModifiers(context.Target, in modifiers);
+                float stagedAfter = primaryAttrId >= 0 &&
+                    runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentAfter)
+                        ? currentAfter
+                        : 0f;
+                runtime.RecordAttributeDelta(primaryAttrId, stagedAfter - stagedBefore);
+                return;
+            }
+
             float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
             AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
             float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
@@ -78,6 +102,16 @@ namespace Ludots.Core.Gameplay.GAS
 
             mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
             mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
+
+            var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
+            if (transaction?.IsActive == true)
+            {
+                if (templateData.PresetAttribute0 > 0)
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
+                if (templateData.PresetAttribute1 > 0)
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
+                return;
+            }
 
             if (templateData.PresetAttribute0 > 0)
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
@@ -265,7 +299,11 @@ namespace Ludots.Core.Gameplay.GAS
                 request.HasWorldPosition = 1;
             }
 
-            if (!runtime.SpawnRequests.TryEnqueue(request))
+            if (runtime.EffectSideEffects?.IsActive == true)
+            {
+                runtime.EffectSideEffects.StageSpawnRequest(in request);
+            }
+            else if (!runtime.SpawnRequests.TryEnqueue(request))
             {
                 throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateProjectile.");
             }
@@ -319,7 +357,11 @@ namespace Ludots.Core.Gameplay.GAS
                     LinkSourceAsParent = (byte)(unit.LinkSourceAsParent ? 1 : 0),
                 };
 
-                if (!runtime.SpawnRequests.TryEnqueue(request))
+                if (runtime.EffectSideEffects?.IsActive == true)
+                {
+                    runtime.EffectSideEffects.StageSpawnRequest(in request);
+                }
+                else if (!runtime.SpawnRequests.TryEnqueue(request))
                 {
                     throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateUnit.");
                 }
@@ -333,6 +375,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleApplyDisplacement));
             if (!world.IsAlive(context.Target)) return;
 
             ref readonly var disp = ref templateData.Displacement;
@@ -386,6 +429,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleApplyRelation));
             ref readonly var relation = ref templateData.Relation;
             Entity subject = ResolveRelationEntity(in context, relation.Subject);
             if (!world.IsAlive(subject))
@@ -445,6 +489,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleRevealArea));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.KnowledgeAreaReveal == null)
             {
@@ -471,6 +516,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleDecayRevealArea));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.KnowledgeAreaReveal == null)
             {
@@ -497,6 +543,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleExecuteExchange));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.Exchange == null)
             {
@@ -532,6 +579,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleCompleteProgression));
             if (templateData.ProgressionId <= 0)
             {
                 throw new InvalidOperationException("CompleteProgression requires a valid progression id.");
@@ -565,6 +613,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleSubmitOrderFromBlackboard));
             ref readonly SubmitOrderFromBlackboardDescriptor descriptor = ref templateData.SubmitOrderFromBlackboard;
             Entity sourceEntity = ResolveRelationEntity(in context, descriptor.SourceSlot);
             Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);

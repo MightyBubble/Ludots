@@ -16,6 +16,9 @@ namespace Ludots.Core.Gameplay.GAS
         private int _droppedLastSwap;
         private bool _nextBudgetFused;
 
+        public int Capacity => _nextEvents.Length;
+        public int AvailableNextCapacity => _nextEvents.Length - _nextCount;
+
         public void Publish(GameplayEvent evt)
         {
             if (_nextCount >= _nextEvents.Length)

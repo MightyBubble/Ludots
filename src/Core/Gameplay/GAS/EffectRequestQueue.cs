@@ -43,6 +43,8 @@ namespace Ludots.Core.Gameplay.GAS
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public int TotalCapacity => _items.Length + _overflow.Length;
+        public int AvailableCapacity => (_items.Length - _count) + (_overflow.Length - _overflowCount);
         public int OverflowCount => _overflowCount;
         public int DroppedCount => _dropped;
         public bool BudgetFused => _budgetFused;

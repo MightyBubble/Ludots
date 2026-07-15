@@ -23,6 +23,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleMaterializeTemplate));
             var state = RequireTransactionState();
             var services = RequireServices();
             state.Target = EntityLifecycleAtomicOps.MaterializeTemplate(
@@ -40,6 +41,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleCopyIdentityComponents));
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.CopyIdentityComponents(world, state.Target, in state.Snapshot);
         }
@@ -51,6 +53,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleCopyAttributeSlice));
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.CopyAttributeSlice(
                 RequireServices(),
@@ -66,6 +69,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleClearActiveEffects));
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.ClearActiveEffects(world, state.Target);
         }
@@ -77,6 +81,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleTransferStableId));
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.TransferStableId(world, state.Target, in state.Snapshot);
         }
@@ -88,6 +93,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectOuterEffectTransaction(nameof(HandleConsumeEntity));
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.ConsumeEntity(world, state.Source, "Entity lifecycle ConsumeEntity");
             state.HasMaterializedTarget = false;
@@ -102,6 +108,15 @@ namespace Ludots.Core.Gameplay.Lifecycle
             }
 
             return runtime.LifecycleTransaction;
+        }
+
+        private static void RejectOuterEffectTransaction(string operation)
+        {
+            if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
+            {
+                throw new InvalidOperationException(
+                    $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
+            }
         }
 
         private static EntityLifecycleRuntimeServices RequireServices()

@@ -65,6 +65,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
 
         public int Count => _count;
         public int Capacity => _events.Length;
+        public int AvailableCapacity => _events.Length - _count;
 
         public GasPresentationEventBuffer(int capacity)
         {
