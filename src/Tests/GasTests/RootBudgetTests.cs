@@ -51,106 +51,54 @@ namespace Ludots.Tests.GAS
         // are available in the test fixture.
 
         [Test]
-        public void EffectApplicationSystem_ProcessesInstantEffects_WithoutCallbacks()
+        public void GameplayEffectFactory_RejectsInstantEntityMaterialization()
         {
-            var world = World.Create();
-            try
-            {
-                var budget = new GasBudget();
-                var requests = new EffectRequestQueue();
-                var app = new EffectApplicationSystem(world, requests, budget);
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
 
-                var source = world.Create();
-                var target = world.Create();
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: 1,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.Instant))!;
 
-                for (int i = 0; i < 10; i++)
-                {
-                    GameplayEffectFactory.CreateEffect(world, rootId: 1, source, target, durationTicks: 0, lifetimeKind: EffectLifetimeKind.Instant);
-                }
-
-                app.Update(0.016f);
-
-                // Without callbacks, no EffectRequests should be published
-                That(requests.Count, Is.EqualTo(0));
-            }
-            finally
-            {
-                world.Dispose();
-            }
+            That(error.Message, Does.StartWith("GAS.INSTANT.ERR.EntityMaterializationForbidden"));
         }
 
         [Test]
-        public void EffectApplicationSystem_InstantEffectPublishesEffectApplied_WhenPhaseExecutorAppliesModifiers()
+        public void EffectApplicationSystem_RejectsInstantEntityBeforeMutation()
         {
             using var world = World.Create();
-
-            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
-            var templates = new EffectTemplateRegistry();
             var modifiers = default(EffectModifiers);
             modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
-            templates.Register(2002, new EffectTemplateData
-            {
-                TagId = 10,
-                PresetType = EffectPresetType.InstantDamage,
-                LifetimeKind = EffectLifetimeKind.Instant,
-                Modifiers = modifiers,
-            });
-
-            var presetTypes = new PresetTypeRegistry();
-            var preset = new PresetTypeDefinition
-            {
-                Type = EffectPresetType.InstantDamage,
-                Components = ComponentFlags.ModifierParams,
-                ActivePhases = PhaseFlags.InstantCore,
-                AllowedLifetimes = LifetimeFlags.InstantOnly,
-            };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
-            presetTypes.Register(in preset);
-
-            var builtinHandlers = new BuiltinHandlerRegistry();
-            BuiltinHandlers.RegisterAll(builtinHandlers);
-            var phaseExecutor = new EffectPhaseExecutor(
-                new GraphProgramRegistry(),
-                presetTypes,
-                builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
-                templates);
-            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
-            var application = new EffectApplicationSystem(
-                world,
-                effectRequests: null,
-                budget: null,
-                presentationEvents,
-                templates,
-                phaseExecutor: phaseExecutor,
-                graphApi: graphApi,
-                tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, tagOps: tagOps);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(0, 100f);
-            Entity effect = GameplayEffectFactory.CreateEffect(
-                world,
-                rootId: 1,
-                source,
-                target,
-                durationTicks: 0,
-                lifetimeKind: EffectLifetimeKind.Instant);
-            world.Get<EffectModifiers>(effect) = modifiers;
-            world.Add(effect, new EffectTemplateRef { TemplateId = 2002 });
+            var instant = new GameplayEffect
+            {
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.FixedFrame,
+            };
+            instant.State = EffectState.Pending;
+            Entity effect = world.Create(
+                instant,
+                new EffectContext { RootId = 1, Source = source, Target = target },
+                modifiers,
+                new EffectResolveOrder());
 
-            application.Update(0.016f);
+            InvalidOperationException error = Throws<InvalidOperationException>(() => application.Update(0.016f))!;
 
-            That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(85f));
-            That(presentationEvents.Count, Is.EqualTo(1));
-            ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
-            That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));
-            That(evt.Actor, Is.EqualTo(source));
-            That(evt.Target, Is.EqualTo(target));
-            That(evt.EffectTemplateId, Is.EqualTo(2002));
-            That(evt.AttributeId, Is.EqualTo(0));
-            That(evt.Delta, Is.EqualTo(-15f));
+            That(error.Message, Does.StartWith("GAS.INSTANT.ERR.EntityRuntimeForbidden"));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(100f));
+            That(world.IsAlive(effect), Is.True);
+            That(world.Get<GameplayEffect>(effect).State, Is.EqualTo(EffectState.Pending));
         }
 
         [Test]

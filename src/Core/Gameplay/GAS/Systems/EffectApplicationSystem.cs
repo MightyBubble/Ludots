@@ -236,6 +236,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _cursor++;
                         if (!World.IsAlive(effectEntity)) continue;
                         ref var effect = ref World.Get<GameplayEffect>(effectEntity);
+                        if (effect.LifetimeKind == EffectLifetimeKind.Instant)
+                        {
+                            throw new InvalidOperationException(
+                                $"GAS.INSTANT.ERR.EntityRuntimeForbidden: effect={effectEntity.Id}.");
+                        }
 
                         if (World.Has<EffectCancelled>(effectEntity) || effect.CancelRequested)
                         {
@@ -246,108 +251,46 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
 
                         ref var context = ref World.Get<EffectContext>(effectEntity);
-                        ref var modifiers = ref World.Get<EffectModifiers>(effectEntity);
 
                         if (effect.State == EffectState.Created)
                         {
                             effect.State = EffectState.Pending;
                         }
 
-                        bool isInstant = effect.LifetimeKind == EffectLifetimeKind.Instant;
                         effect.State = EffectState.Calculate;
                         effect.State = EffectState.Apply;
 
-                        int templateId = World.Has<EffectTemplateRef>(effectEntity)
-                            ? World.Get<EffectTemplateRef>(effectEntity).TemplateId
-                            : 0;
-                        int primaryAttrId = ResolvePrimaryAttributeId(in modifiers, templateId);
-                        bool hasPrimaryAttributeSnapshot = isInstant &&
-                                                           primaryAttrId >= 0 &&
-                                                           World.IsAlive(context.Target) &&
-                                                           World.Has<AttributeBuffer>(context.Target);
-                        float primaryAttributeBefore = hasPrimaryAttributeSnapshot
-                            ? World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId)
-                            : 0f;
-                        bool phasePublishedAttributeDelta = false;
-
-                        // Instant effects have no attachment transaction. Persistent effects execute
-                        // phases only after their attachment and tag contribution commit succeeds.
-                        if (isInstant && _templates != null && World.Has<EffectTemplateRef>(effectEntity))
+                        bool attachRejectedByCapacity = false;
+                        if (World.IsAlive(context.Target))
                         {
-                            if (templateId > 0 && _templates.TryGetRef(templateId, out int tplIdx))
+                            if (World.Has<ActiveEffectContainer>(context.Target))
                             {
-                                ref readonly var tplData = ref _templates.GetRef(tplIdx);
-                                _builtinRuntime.ResetPerEffect();
-                                _builtinRuntime.SetModifierOverride(in modifiers);
-
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnResolve, _builtinRuntime);
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit, _builtinRuntime);
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
-
-                                _fanOutDropped += _builtinRuntime.DroppedCount;
-                                PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
-                                phasePublishedAttributeDelta = _builtinRuntime.HasAttributeDelta;
-                            }
-                        }
-
-                        if (isInstant)
-                        {
-                            if ((_phaseExecutor == null || _graphApi == null) && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
-                            {
-                                AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers, _tagOps);
-                            }
-
-                            if (!phasePublishedAttributeDelta && _presentationEvents != null && hasPrimaryAttributeSnapshot && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
-                            {
-                                float primaryAttributeAfter = World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId);
-                                _presentationEvents.Publish(new GasPresentationEvent
+                                ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
+                                if (!container.Add(effectEntity))
                                 {
-                                    Kind = GasPresentationEventKind.EffectApplied,
-                                    Actor = context.Source,
-                                    Target = context.Target,
-                                    EffectTemplateId = templateId,
-                                    AttributeId = primaryAttrId,
-                                    Delta = primaryAttributeAfter - primaryAttributeBefore
-                                });
-                            }
-
-                            effect.State = EffectState.Committed;
-                            _effectsToDestroy.Add(effectEntity);
-                        }
-                        else
-                        {
-                            bool attachRejectedByCapacity = false;
-                            if (World.IsAlive(context.Target))
-                            {
-                                if (World.Has<ActiveEffectContainer>(context.Target))
-                                {
-                                    ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
-                                    if (!container.Add(effectEntity))
-                                    {
-                                        _activeEffectAttachDropped++;
-                                        attachRejectedByCapacity = true;
-                                    }
-                                    else
-                                    {
-                                        _effectsToActivate.Add(effectEntity);
-                                    }
+                                    _activeEffectAttachDropped++;
+                                    attachRejectedByCapacity = true;
                                 }
                                 else
                                 {
-                                    _pendingCreateContainer.Add(new PendingCreateContainer { Target = context.Target });
-                                    _pendingAttach.Add(new PendingAttach { Target = context.Target, Effect = effectEntity });
+                                    _effectsToActivate.Add(effectEntity);
                                 }
                             }
                             else
                             {
-                                attachRejectedByCapacity = true;
+                                _pendingCreateContainer.Add(new PendingCreateContainer { Target = context.Target });
+                                _pendingAttach.Add(new PendingAttach { Target = context.Target, Effect = effectEntity });
                             }
+                        }
+                        else
+                        {
+                            attachRejectedByCapacity = true;
+                        }
 
-                            if (attachRejectedByCapacity)
-                            {
-                                effect.State = EffectState.Committed;
-                                _effectsToDestroy.Add(effectEntity);
-                            }
+                        if (attachRejectedByCapacity)
+                        {
+                            effect.State = EffectState.Committed;
+                            _effectsToDestroy.Add(effectEntity);
                         }
 
                         ConsumeWork(ref workUnits);
@@ -1022,22 +965,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private int ResolvePrimaryAttributeId(in EffectModifiers modifiers, int templateId)
-        {
-            if (modifiers.Count > 0)
-            {
-                return modifiers.Get(0).AttributeId;
-            }
-
-            if (_templates == null || templateId <= 0 || !_templates.TryGetRef(templateId, out int tplIdx))
-            {
-                return -1;
-            }
-
-            ref readonly EffectTemplateData template = ref _templates.GetRef(tplIdx);
-            return template.Modifiers.Count > 0
-                ? template.Modifiers.Get(0).AttributeId
-                : -1;
-        }
     }
 }

@@ -1,3 +1,4 @@
+using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -441,39 +442,20 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectApplication_ResetSlice_FinalizesProcessedInstantWithoutApplyingNextEffect()
+        public void GameplayEffectFactory_CommandBufferRejectsInstantEntityMaterialization()
         {
-            using var world = World.Create();
-            Entity source = world.Create();
-            Entity target = world.Create();
-            Entity first = GameplayEffectFactory.CreateEffect(
-                world,
-                rootId: 1,
-                source,
-                target,
-                durationTicks: 0,
-                lifetimeKind: EffectLifetimeKind.Instant);
-            Entity second = GameplayEffectFactory.CreateEffect(
-                world,
-                rootId: 2,
-                source,
-                target,
-                durationTicks: 0,
-                lifetimeKind: EffectLifetimeKind.Instant);
-            var system = new EffectApplicationSystem(world)
-            {
-                MaxWorkUnitsPerSlice = 1,
-            };
+            using var commandBuffer = new CommandBuffer();
 
-            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
-            Entity processed = world.Get<GameplayEffect>(first).State == EffectState.Committed ? first : second;
-            Entity pending = processed == first ? second : first;
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GameplayEffectFactory.CreateEffect(
+                    commandBuffer,
+                    rootId: 1,
+                    Entity.Null,
+                    Entity.Null,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.Instant))!;
 
-            system.ResetSlice();
-
-            Assert.That(world.IsAlive(processed), Is.False);
-            Assert.That(world.IsAlive(pending), Is.True);
-            Assert.That(world.Get<GameplayEffect>(pending).State, Is.EqualTo(EffectState.Pending));
+            Assert.That(error.Message, Does.StartWith("GAS.INSTANT.ERR.EntityMaterializationForbidden"));
         }
 
         [Test]
