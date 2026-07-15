@@ -118,26 +118,26 @@ N/A。只补齐现有 batch `MaterializeTemplate` 与单体路径已经拥有的
 
 ### 1. Core judgment
 
-主要交付物：A（使用现有订单目录、OrderQueue / OrderBuffer 和 MovePlanning 出口组合新的 Showcase 业务订单）。
+主要交付物：A（使用现有订单目录、OrderQueue / OrderBuffer 和 MovePlanning 出口，把 Formation 收口为可选 MassNavigation Core capability；Showcase 只提交展示层玩家意图）。
 
 结论：PASS
 
-一句话理由：`formationMove` 与 `formationRotate` 是现有订单 schema 下的 Mod 资产实例；没有新增 handler、profile enum、preset 开关、graph op、loader 或平行执行管线。
+一句话理由：`formationMove` 与 `formationRotate` 仍复用现有订单 schema，核心 Formation 复用正式 OrderBuffer 与 MovePlanning 执行端口；没有新增 handler、profile enum、preset 开关、graph op、loader 或平行执行管线。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer | 实现载体 |
 |---|---|---|
-| 玩家移动/旋转阵型意图 | 现有业务订单数据 | Formation Showcase `GAS/order_types.json` |
-| 原子批量入队 | 现有基础设施 | `OrderQueue.TryEnqueueBatch` |
+| 玩家移动/旋转阵型意图 | 展示层输入策略 | Formation Showcase input/config |
+| 原子批量入队 | 现有基础设施 | `OrderQueue.TryEnqueueBatch` / `OrderQueue.TryEnqueueSharedBatch` |
 | 订单激活与完成 | 现有基础设施 | `OrderBufferSystem` |
-| 阵型状态与成员目标编译 | Mod-owned composition | `FormationCapabilityShowcaseRuntime` |
+| 阵型身份、成员/槽位、朝向与目标编译 | Optional Core Formation capability | `src/Core/MassNavigation/Formation` |
 | 明确成员目标交付 | 现有中性端口 | `MovePlanExecutionIntent` / `IMovePlanExecutionSink` |
 
 ### 3. Reuse list
 
 - Handlers: N/A；未新增或修改 GAS handler。
-- Queues / Systems: `OrderQueue`、`OrderBufferSystem`、现有 system groups。
+- Queues / Systems: `OrderQueue`、`OrderBufferSystem`、`FormationOrderSystem`、`FormationExecutionTargetSystem`、现有 system groups。
 - Resolvers / Registries: `OrderTypeRegistry`、`ControlDomainQuery`、现有 ConfigPipeline order catalog。
 - Existing presets / graphs: N/A；未新增 preset 或 graph。
 
@@ -147,11 +147,11 @@ N/A。没有新增原子 op。
 
 ### 5. Transaction boundary
 
-Q/E 对当前 command source 的所有 rotate order 先完整预检 actor、control domain、容量和 payload，再通过 `TryEnqueueBatch` 一次提交。Formation order consumer 先统计容量并完整验证所有待处理 payload，再修改任何 command state；失败时不产生半批状态。
+Q/E 属于 Showcase 输入策略，对当前 command source 的所有 rotate order 先完整预检 actor、control domain、容量和 payload，再通过 `TryEnqueueBatch` 一次提交。核心 Formation order consumer 先统计容量并完整验证所有待处理 payload，再修改任何 command state；失败时不产生半批状态。
 
 ### 6. Config SSOT
 
-行为配置位于现有 schema 的 Mod-owned `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/GAS/order_types.json` 与 Input mapping；没有新增 JSON schema。
+语义订单键位于现有 schema 的 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/GAS/order_types.json`；Q/E、旋转步长、镜头、HUD、轮廓、颜色和初始战场配置位于 Showcase input/config；稳定 Formation 身份、成员/槽位、朝向和目标编译位于 Optional Core Formation capability；没有新增 JSON schema。
 
 ### 7. Red flag scan
 
@@ -162,7 +162,7 @@ Q/E 对当前 command source 的所有 rotate order 先完整预检 actor、cont
 
 ### 8. Next variant test
 
-下一个真实 Mod 变体应新增自己的订单数据和 Formation 组合，或在出现第二个稳定消费者后另立 capability 提炼 issue；不能通过 Core Formation enum 扩展。
+下一个真实 Mod 变体应复用 Optional Core Formation 的语义订单和成员目标规划，只新增自己的展示层输入/题材/场景数据；不能通过 Core Formation enum 或 Showcase 私有组件扩展。
 
 ---
 

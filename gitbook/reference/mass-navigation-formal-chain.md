@@ -99,8 +99,10 @@ Local input
 
 MassNavigation core does not read `CommandSource`, `InteractionContextStack`, or retired Selection
 authority APIs. Generic `massNavigationMove` accepts one explicit spatial destination and no formation
-payload. Formation-facing input and formation geometry stay in the consuming Mod; MassNavigation only
-executes the explicit targets that reach its Order or MovePlanning seams.
+payload. Formation-facing physical input and presentation policy stay in the consuming Mod; stable
+formation identity, slots, facing and member-target geometry stay in the optional Core Formation
+capability. Generic MassNavigation only executes the explicit targets that reach its Order or
+MovePlanning seams.
 
 ## Spawn Chain
 
@@ -117,8 +119,10 @@ FormationCapabilityShowcaseRuntime
 ```
 
 Formation is an optional MassNavigation Core capability. Loading MassNavigation without authored
-Formation data must not register Formation systems, require Formation config, or allocate Formation
-state.
+Formation data must not require Formation config, author Formation entities, or allocate per-map
+Formation state. Engines may keep the reusable Formation systems registered after first use, but
+those systems must be gated by the active MassNavigation runtime and remain dormant on maps that do
+not author Formation data.
 
 ## Config Rules
 

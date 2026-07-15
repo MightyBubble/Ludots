@@ -71,18 +71,19 @@ Feature: 万级大规模导航
 - contract tests 能覆盖配置、执行、arrival、performer 与 road move-plan 回归
 - `massNavigationMove` 只携带一个明确空间目标
 
-### 4.4 Formation Capability 业务消费者
+### 4.4 Formation Capability 可选核心能力展示
 
-`FormationCapabilityShowcaseMod` 自己拥有 `formationMove`、`formationRotate`、成员关系、槽位和朝向。它把逐成员目标转换为 `MovePlanExecutionIntent`，再通过 `MassNavigationMovePlanExecutionSink` 交给通用导航执行。
+Optional Core Formation 拥有 `formationMove`、`formationRotate`、成员关系、槽位、朝向和逐成员目标规划。`FormationCapabilityShowcaseMod` 是玩家上手展示层，只负责物理输入、旋转步长、镜头、HUD、轮廓、颜色、题材和初始战场配置；它提交语义 Formation 订单，不持有稳定 Formation gameplay 真相。
 
 ```gherkin
 Feature: 方阵业务通过明确成员目标使用大规模导航
 
-  Scenario: 玩家移动并旋转方阵
+  Scenario: 玩家通过展示层移动并旋转核心方阵能力
     Given 玩家进入 Formation Capability Showcase
     And 玩家选中了一个方阵
     When 玩家右键移动并使用旋转操作
-    Then 方阵和士兵向新的目标姿态移动
+    Then Optional Core Formation 接收语义订单并生成成员目标
+    And 方阵和士兵向新的目标姿态移动
     And 士兵绕开障碍后回到各自槽位
     And 旋转不会提交伪移动订单
 ```

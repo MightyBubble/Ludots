@@ -352,23 +352,39 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
         {
             FormationIndex = plan.FormationIndex,
             SlotCount = plan.SoldierCount,
-            TargetChangeEpsilonCm = ActiveConfig.TargetChangeEpsilonCm,
-            FacingChangeEpsilonRadians = ActiveConfig.FacingChangeEpsilonRadians,
+            TargetChangeEpsilonCm = FormationNumericEncoding.RoundCm(
+                ActiveConfig.TargetChangeEpsilonCm,
+                "Formation Capability target change epsilon"),
+            FacingChangeEpsilonMicroRad = FormationNumericEncoding.EncodeRadians(
+                ActiveConfig.FacingChangeEpsilonRadians,
+                "Formation Capability facing change epsilon"),
         });
         UpsertComponent(engine.World, entity, new FormationCommandState
         {
-            TargetCenterXCm = plan.InitialCenterXCm,
-            TargetCenterYCm = plan.InitialCenterYCm,
-            TargetFacingRad = plan.FacingRad,
+            TargetCenterXCm = FormationNumericEncoding.RoundCm(
+                plan.InitialCenterXCm,
+                $"Formation Capability formation '{plan.Id}' initial center X"),
+            TargetCenterYCm = FormationNumericEncoding.RoundCm(
+                plan.InitialCenterYCm,
+                $"Formation Capability formation '{plan.Id}' initial center Y"),
+            TargetFacingMicroRad = FormationNumericEncoding.EncodeRadians(
+                plan.FacingRad,
+                $"Formation Capability formation '{plan.Id}' initial facing"),
             HasMoveTarget = 1,
         });
         UpsertComponent(engine.World, entity, new FormationRuntimeState
         {
             MemberCount = plan.SoldierCount,
             AliveMemberCount = plan.SoldierCount,
-            CenterXCm = plan.InitialCenterXCm,
-            CenterYCm = plan.InitialCenterYCm,
-            FacingRad = plan.FacingRad,
+            CenterXCm = FormationNumericEncoding.RoundCm(
+                plan.InitialCenterXCm,
+                $"Formation Capability formation '{plan.Id}' runtime center X"),
+            CenterYCm = FormationNumericEncoding.RoundCm(
+                plan.InitialCenterYCm,
+                $"Formation Capability formation '{plan.Id}' runtime center Y"),
+            FacingMicroRad = FormationNumericEncoding.EncodeRadians(
+                plan.FacingRad,
+                $"Formation Capability formation '{plan.Id}' runtime facing"),
         });
         UpsertComponent(engine.World, entity, formation.Outline.ToComponent(plan.Id));
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialBounds());
@@ -860,8 +876,12 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
                 {
                     ["FormationIndex"] = formationIndex,
                     ["SlotCount"] = slotCount,
-                    ["TargetChangeEpsilonCm"] = targetChangeEpsilonCm,
-                    ["FacingChangeEpsilonRadians"] = facingChangeEpsilonRadians,
+                    ["TargetChangeEpsilonCm"] = FormationNumericEncoding.RoundCm(
+                        targetChangeEpsilonCm,
+                        "Formation Capability authored target change epsilon"),
+                    ["FacingChangeEpsilonMicroRad"] = FormationNumericEncoding.EncodeRadians(
+                        facingChangeEpsilonRadians,
+                        "Formation Capability authored facing change epsilon"),
                 }),
         ];
     }
@@ -880,8 +900,12 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
                 {
                     ["FormationIndex"] = formationIndex,
                     ["SlotIndex"] = slotIndex,
-                    ["LocalOffsetXCm"] = localOffsetXCm,
-                    ["LocalOffsetYCm"] = localOffsetYCm,
+                    ["LocalOffsetXCm"] = FormationNumericEncoding.RoundCm(
+                        localOffsetXCm,
+                        $"Formation Capability slot {formationIndex}:{slotIndex} local offset X"),
+                    ["LocalOffsetYCm"] = FormationNumericEncoding.RoundCm(
+                        localOffsetYCm,
+                        $"Formation Capability slot {formationIndex}:{slotIndex} local offset Y"),
                 }),
         ];
     }
@@ -1396,7 +1420,8 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
                 }
 
                 OrderArgs args = default;
-                args.F0 = FormationTargetPlanner.NormalizeFacingRadians(command.TargetFacingRad + deltaRadians);
+                args.F0 = FormationTargetPlanner.NormalizeFacingRadians(
+                    FormationNumericEncoding.DecodeRadians(command.TargetFacingMicroRad) + deltaRadians);
                 _ordersScratch[i] = new Order
                 {
                     OrderTypeId = _rotateOrderTypeId,

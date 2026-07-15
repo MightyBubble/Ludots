@@ -36,9 +36,9 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
     private readonly int _formationCapacity;
     private readonly int _maxSlotsPerFormation;
     private readonly int _slotCapacity;
-    private readonly float[] _lastTargetCenterXByFormation;
-    private readonly float[] _lastTargetCenterYByFormation;
-    private readonly float[] _lastTargetFacingByFormation;
+    private readonly int[] _lastTargetCenterXByFormation;
+    private readonly int[] _lastTargetCenterYByFormation;
+    private readonly int[] _lastTargetFacingByFormation;
     private readonly ulong[] _targetIdentitySignatureByFormation;
     private readonly ulong[] _lastTargetIdentitySignatureByFormation;
     private readonly byte[] _targetSnapshotInitializedByFormation;
@@ -77,9 +77,9 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
         _formationCapacity = formationCapacity;
         _maxSlotsPerFormation = maxSlotsPerFormation;
         _slotCapacity = checked(formationCapacity * maxSlotsPerFormation);
-        _lastTargetCenterXByFormation = new float[formationCapacity];
-        _lastTargetCenterYByFormation = new float[formationCapacity];
-        _lastTargetFacingByFormation = new float[formationCapacity];
+        _lastTargetCenterXByFormation = new int[formationCapacity];
+        _lastTargetCenterYByFormation = new int[formationCapacity];
+        _lastTargetFacingByFormation = new int[formationCapacity];
         _targetIdentitySignatureByFormation = new ulong[formationCapacity];
         _lastTargetIdentitySignatureByFormation = new ulong[formationCapacity];
         _targetSnapshotInitializedByFormation = new byte[formationCapacity];
@@ -196,8 +196,8 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
 
                 if (anchors[index].SlotCount < 0 ||
                     anchors[index].SlotCount > _maxSlotsPerFormation ||
-                    !(anchors[index].TargetChangeEpsilonCm > 0f) ||
-                    !(anchors[index].FacingChangeEpsilonRadians > 0f) ||
+                    anchors[index].TargetChangeEpsilonCm <= 0 ||
+                    anchors[index].FacingChangeEpsilonMicroRad <= 0 ||
                     commands[index].HasMoveTarget == 0)
                 {
                     throw new InvalidOperationException(
@@ -252,19 +252,20 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
             Vector2 center = _anchorCenterByFormation[formationIndex];
             FormationCommandState command = _commandByFormation[formationIndex];
             FormationAnchorState anchor = _anchorConfigByFormation[formationIndex];
-            var currentPose = new FormationPose(center, command.TargetFacingRad);
+            float commandFacing = FormationNumericEncoding.DecodeRadians(command.TargetFacingMicroRad);
+            var currentPose = new FormationPose(center, commandFacing);
             var previousPose = new FormationPose(
                 new Vector2(
                     _lastTargetCenterXByFormation[formationIndex],
                     _lastTargetCenterYByFormation[formationIndex]),
-                _lastTargetFacingByFormation[formationIndex]);
+                FormationNumericEncoding.DecodeRadians(_lastTargetFacingByFormation[formationIndex]));
             ulong currentIdentitySignature = BuildCurrentTargetIdentitySignature(formationIndex);
             if (currentIdentitySignature != _lastTargetIdentitySignatureByFormation[formationIndex] ||
                 FormationTargetPlanner.HasTargetChanged(
                     in currentPose,
                     in previousPose,
                     anchor.TargetChangeEpsilonCm,
-                    anchor.FacingChangeEpsilonRadians,
+                    FormationNumericEncoding.DecodeRadians(anchor.FacingChangeEpsilonMicroRad),
                     _targetSnapshotInitializedByFormation[formationIndex] != 0))
             {
                 _targetChangedByFormation[formationIndex] = 1;
@@ -338,7 +339,7 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                 int slot = ResolveSlotIndex(formationIndex, member.SlotIndex);
                 var pose = new FormationPose(
                     _anchorCenterByFormation[formationIndex],
-                    _commandByFormation[formationIndex].TargetFacingRad);
+                    FormationNumericEncoding.DecodeRadians(_commandByFormation[formationIndex].TargetFacingMicroRad));
                 FormationTargetPlan target = FormationTargetPlanner.PlanMemberTarget(
                     in pose,
                     new FormationMember(
@@ -395,17 +396,18 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
             {
                 int formationIndex = anchors[index].FormationIndex;
                 FormationCommandState command = commands[index];
-                facings[index].AngleRad = command.TargetFacingRad;
+                float commandFacing = FormationNumericEncoding.DecodeRadians(command.TargetFacingMicroRad);
+                facings[index].AngleRad = commandFacing;
                 Vector2 center = _anchorCenterByFormation[formationIndex];
                 ref FormationRuntimeState state = ref states[index];
                 state.MemberCount = anchors[index].SlotCount;
                 state.AliveMemberCount = _aliveMemberCountByFormation[formationIndex];
-                state.CenterXCm = center.X;
-                state.CenterYCm = center.Y;
-                state.FacingRad = command.TargetFacingRad;
+                state.CenterXCm = FormationNumericEncoding.RoundCm(center.X);
+                state.CenterYCm = FormationNumericEncoding.RoundCm(center.Y);
+                state.FacingMicroRad = command.TargetFacingMicroRad;
                 worldPositions[index].Value = Fix64Vec2.FromInt(
-                    (int)MathF.Round(center.X),
-                    (int)MathF.Round(center.Y));
+                    state.CenterXCm,
+                    state.CenterYCm);
             }
         }
 
@@ -418,7 +420,8 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                 int formationIndex = members[index].FormationIndex;
                 if (_targetChangedByFormation[formationIndex] != 0)
                 {
-                    facings[index].AngleRad = _commandByFormation[formationIndex].TargetFacingRad;
+                    facings[index].AngleRad = FormationNumericEncoding.DecodeRadians(
+                        _commandByFormation[formationIndex].TargetFacingMicroRad);
                 }
             }
         }
@@ -430,9 +433,11 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                 continue;
             }
 
-            _lastTargetCenterXByFormation[formationIndex] = _anchorCenterByFormation[formationIndex].X;
-            _lastTargetCenterYByFormation[formationIndex] = _anchorCenterByFormation[formationIndex].Y;
-            _lastTargetFacingByFormation[formationIndex] = _commandByFormation[formationIndex].TargetFacingRad;
+            _lastTargetCenterXByFormation[formationIndex] = FormationNumericEncoding.RoundCm(
+                _anchorCenterByFormation[formationIndex].X);
+            _lastTargetCenterYByFormation[formationIndex] = FormationNumericEncoding.RoundCm(
+                _anchorCenterByFormation[formationIndex].Y);
+            _lastTargetFacingByFormation[formationIndex] = _commandByFormation[formationIndex].TargetFacingMicroRad;
             _lastTargetIdentitySignatureByFormation[formationIndex] = BuildCurrentTargetIdentitySignature(formationIndex);
             _targetSnapshotInitializedByFormation[formationIndex] = 1;
         }
@@ -462,8 +467,8 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
         signature = MixEntity(signature, entity);
         signature = MixSignature(signature, member.FormationIndex);
         signature = MixSignature(signature, member.SlotIndex);
-        signature = MixSignature(signature, BitConverter.SingleToInt32Bits(member.LocalOffsetXCm));
-        signature = MixSignature(signature, BitConverter.SingleToInt32Bits(member.LocalOffsetYCm));
+        signature = MixSignature(signature, member.LocalOffsetXCm);
+        signature = MixSignature(signature, member.LocalOffsetYCm);
         return signature;
     }
 

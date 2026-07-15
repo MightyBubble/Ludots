@@ -105,6 +105,24 @@ function Test-MassNavigationSummaryContract {
         $failures.Add("anchor sample count mismatch: expected 64, got $($samples.Count)")
     }
 
+    if (-not (Test-FiniteJsonNumber $Summary.movement_sample_threshold_cm) -or [double]$Summary.movement_sample_threshold_cm -le 0) {
+        $failures.Add("movement sample threshold is missing or invalid")
+    }
+    if (-not (Test-FiniteJsonNumber $Summary.first_command_moved_sample_count) -or [int]$Summary.first_command_moved_sample_count -lt 8) {
+        $failures.Add("first command moved sample count too low: $($Summary.first_command_moved_sample_count)")
+    }
+    if (-not (Test-FiniteJsonNumber $Summary.second_command_moved_sample_count) -or [int]$Summary.second_command_moved_sample_count -lt 8) {
+        $failures.Add("second command moved sample count too low: $($Summary.second_command_moved_sample_count)")
+    }
+    if (-not (Test-FiniteJsonNumber $Summary.first_command_max_sample_displacement_cm) -or
+        [double]$Summary.first_command_max_sample_displacement_cm -lt [double]$Summary.movement_sample_threshold_cm) {
+        $failures.Add("first command max sample displacement is below threshold: $($Summary.first_command_max_sample_displacement_cm)")
+    }
+    if (-not (Test-FiniteJsonNumber $Summary.second_command_max_sample_displacement_cm) -or
+        [double]$Summary.second_command_max_sample_displacement_cm -lt [double]$Summary.movement_sample_threshold_cm) {
+        $failures.Add("second command max sample displacement is below threshold: $($Summary.second_command_max_sample_displacement_cm)")
+    }
+
     $pointNames = @("solver_world_cm", "ecs_world_cm", "visual_world_cm", "performer_world_cm")
     for ($sampleIndex = 0; $sampleIndex -lt $samples.Count; $sampleIndex++) {
         $sample = $samples[$sampleIndex]
@@ -221,7 +239,8 @@ function Write-SoakReport {
     $lines.Add("| --- | --- | --- |")
     $lines.Add("| 64km world boot | Designer sees one standard RTS battlefield | ``world_width_cm == 6400000 && world_height_cm == 6400000`` |")
     $lines.Add("| Four dynamic teams | Scenario is not a hard-coded two-team demo | ``teams >= 4`` |")
-    $lines.Add("| Formal order chain | The evidence harness fills CommandSource, then one shared move reaches every member through OrderQueue and OrderBuffer | command source and active move-order counts are positive; real box-drag/right-click gestures are covered by the production-path test |")
+    $lines.Add("| Formal order chain | The evidence harness fills CommandSource, then two shared moves reach every member through OrderQueue and formal OrderBuffer activation | command source and active move-order counts are positive; sampled units move after both logical commands; real box-drag/right-click gestures are covered by the production-path test |")
+    $lines.Add("| Commanded movement | Units visibly respond to both logical commands instead of only accepting orders | ``first_command_moved_sample_count >= 8`` and ``second_command_moved_sample_count >= 8`` |")
     $lines.Add("| Position chain | Models and HUD roots follow the same navigation result | 64 fixed solver/ECS/VisualTransform/performer-root samples stay within tolerance |")
     $lines.Add("| World HUD emission | Every authored agent emits a bar and text item | world bar/text counts cover all agents |")
     $lines.Add("| Screen HUD projection | Visible world HUD reaches the host screen buffer | screen bar/text counts are positive and projection failures are zero |")
@@ -231,16 +250,17 @@ function Write-SoakReport {
     $lines.Add("| Camera travel | Player can inspect a remote hot zone and return | camera displacement exceeds 5km and agent/spawn counts remain stable |")
     $lines.Add("")
     $lines.Add("## Runs")
-    $lines.Add("| # | Result | Source SHA | Signature | World HUD b/t/drop | Screen HUD b/t/drop | Stage failures | Timeline |")
-    $lines.Add("| --- | --- | --- | --- | --- | --- | --- | --- |")
+    $lines.Add("| # | Result | Source SHA | Signature | Movement samples | World HUD b/t/drop | Screen HUD b/t/drop | Stage failures | Timeline |")
+    $lines.Add("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     foreach ($run in $RunRows) {
         $result = if ($run.success) { "PASS" } else { "FAIL" }
         $signature = if ($run.normalized_signature) { $run.normalized_signature } else { "n/a" }
         $timeline = if ($run.timeline) { $run.timeline } else { "n/a" }
         $worldHud = "$($run.world_hud_bar_count)/$($run.world_hud_text_count)/$($run.world_hud_dropped_total)"
         $screenHud = "$($run.screen_hud_bar_count)/$($run.screen_hud_text_count)/$($run.screen_hud_dropped_total)"
+        $movement = "$($run.first_command_moved_sample_count)/$($run.second_command_moved_sample_count)"
         $stageFailures = "$($run.payload_failure_count)/$($run.transform_failure_count)/$($run.emission_failure_count)/$($run.culling_failure_count)/$($run.projection_failure_count)/$($run.capacity_failure_count)"
-        $lines.Add("| $($run.run) | $result | ``$($run.source_sha)`` | ``$signature`` | $worldHud | $screenHud | $stageFailures | ``$timeline`` |")
+        $lines.Add("| $($run.run) | $result | ``$($run.source_sha)`` | ``$signature`` | $movement | $worldHud | $screenHud | $stageFailures | ``$timeline`` |")
     }
 
     $lines.Add("")
@@ -349,6 +369,8 @@ while ($true) {
         screen_hud_bar_count = if ($summary) { $summary.screen_hud_bar_count } else { $null }
         screen_hud_text_count = if ($summary) { $summary.screen_hud_text_count } else { $null }
         screen_hud_dropped_total = if ($summary) { $summary.screen_hud_dropped_total } else { $null }
+        first_command_moved_sample_count = if ($summary) { $summary.first_command_moved_sample_count } else { $null }
+        second_command_moved_sample_count = if ($summary) { $summary.second_command_moved_sample_count } else { $null }
         payload_failure_count = if ($summary) { $summary.payload_failure_count } else { $null }
         transform_failure_count = if ($summary) { $summary.transform_failure_count } else { $null }
         emission_failure_count = if ($summary) { $summary.emission_failure_count } else { $null }

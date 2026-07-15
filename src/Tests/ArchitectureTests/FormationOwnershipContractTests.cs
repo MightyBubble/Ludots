@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Reflection;
 using System.Text.RegularExpressions;
+using Ludots.Core.MassNavigation.Formation;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -172,6 +175,37 @@ namespace Ludots.Tests.Architecture
                 text,
                 Does.Contain("public sealed class FormationOrderSystem"),
                 "Optional Core Formation capability must expose the semantic formation order consumer as its own system boundary.");
+        }
+
+        [Test]
+        public void FormationFormalEcsComponents_DoNotStoreFloatGameplayState()
+        {
+            Type[] componentTypes =
+            {
+                typeof(FormationCommandState),
+                typeof(FormationAnchorState),
+                typeof(FormationMemberState),
+                typeof(FormationRuntimeState),
+            };
+
+            Type[] forbiddenNumericTypes =
+            {
+                typeof(float),
+                typeof(double),
+                typeof(Vector2),
+                typeof(Vector3),
+            };
+
+            List<string> hits = componentTypes
+                .SelectMany(type => FindForbiddenNumericMembers(type, forbiddenNumericTypes))
+                .ToList();
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Formal Formation ECS components are long-lived gameplay truth and must store encoded integer/fixed-point values; planner DTOs may use float only as immediate math:" +
+                Environment.NewLine +
+                string.Join(Environment.NewLine, hits));
         }
 
         [Test]
@@ -388,6 +422,25 @@ namespace Ludots.Tests.Architecture
                 text,
                 $@"(?<![A-Za-z0-9_]){Regex.Escape(token)}(?![A-Za-z0-9_])",
                 RegexOptions.CultureInvariant);
+        }
+
+        private static IEnumerable<string> FindForbiddenNumericMembers(Type componentType, IReadOnlyList<Type> forbiddenTypes)
+        {
+            foreach (FieldInfo field in componentType.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (forbiddenTypes.Contains(field.FieldType))
+                {
+                    yield return $"{componentType.Name}.{field.Name}: {field.FieldType.Name}";
+                }
+            }
+
+            foreach (PropertyInfo property in componentType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (forbiddenTypes.Contains(property.PropertyType))
+                {
+                    yield return $"{componentType.Name}.{property.Name}: {property.PropertyType.Name}";
+                }
+            }
         }
 
         private static IEnumerable<string> EnumerateRepositorySourceAndConfigFiles(string repoRoot)

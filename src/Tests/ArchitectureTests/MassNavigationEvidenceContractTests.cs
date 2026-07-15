@@ -49,6 +49,28 @@ public sealed class MassNavigationEvidenceContractTests
         });
     }
 
+    [Test]
+    public void LargeWorldAcceptance_RequiresUnitMovementAndSecondCommandEvidence()
+    {
+        string repoRoot = FindRepoRoot();
+        string recorder = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Tools",
+            "Ludots.Launcher.Evidence",
+            "LauncherEvidenceRecorder.cs"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorder, Does.Contain("\"002_settled_before_crossing\""));
+            Assert.That(recorder, Does.Contain("\"003_crossing_order\""));
+            Assert.That(recorder, Does.Contain("CountMovedMassNavigationSamples"));
+            Assert.That(recorder, Does.Contain("First massNavigationMove"));
+            Assert.That(recorder, Does.Contain("Second massNavigationMove"));
+            Assert.That(recorder, Does.Contain("movement:"));
+        });
+    }
+
     private static void AssertCoordinate(JsonElement sample, string propertyName, float expectedX, float expectedY)
     {
         JsonElement point = sample.GetProperty(propertyName);

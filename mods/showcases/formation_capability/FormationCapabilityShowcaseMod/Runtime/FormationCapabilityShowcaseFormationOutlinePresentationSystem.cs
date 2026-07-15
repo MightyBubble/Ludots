@@ -168,7 +168,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         float depthM = WorldUnits.CmToM(outline.DepthCm);
         float edgeWidthM = WorldUnits.CmToM(outline.EdgeLineWidthCm);
         Vector3 center = ResolveCenter(in transform, outline.HeightOffsetM);
-        Vector2 forward = ResolveForward(state.FacingRad);
+        Vector2 forward = ResolveForward(FormationNumericEncoding.DecodeRadians(state.FacingMicroRad));
         Vector2 lateral = new(-forward.Y, forward.X);
         Vector3 forward3 = ToVisualVector(forward);
         Vector3 lateral3 = ToVisualVector(lateral);
@@ -230,7 +230,12 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
 
         Vector3 center = ResolveCenter(in transform, outline.HeightOffsetM);
         int count = EmitSampledCircle(entity, ownerStableId, center, radiusM, ringWidthM, in outline);
-        count += EmitFrontIndicator(entity, ownerStableId, center, ResolveForward(state.FacingRad), in outline);
+        count += EmitFrontIndicator(
+            entity,
+            ownerStableId,
+            center,
+            ResolveForward(FormationNumericEncoding.DecodeRadians(state.FacingMicroRad)),
+            in outline);
         return count;
     }
 
@@ -602,7 +607,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
                 transform.Position.X,
                 transform.Position.Y,
                 transform.Position.Z,
-                state.FacingRad,
+                FormationNumericEncoding.DecodeRadians(state.FacingMicroRad),
                 in outline);
         }
 

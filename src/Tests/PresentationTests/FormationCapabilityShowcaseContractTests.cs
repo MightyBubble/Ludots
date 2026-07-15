@@ -19,6 +19,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -899,8 +900,9 @@ namespace Ludots.Tests.Presentation
 
             Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
             ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
-            command.TargetCenterXCm += 500f;
-            command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
+            command.TargetCenterXCm += 500;
+            command.TargetFacingMicroRad = EncodeFormationFacing(
+                NormalizeAngleRadians(DecodeFormationFacing(command.TargetFacingMicroRad) + 0.25f));
             long changedStart = GC.GetAllocatedBytesForCurrentThread();
             UpdateSystem(system);
             long changedBytes = GC.GetAllocatedBytesForCurrentThread() - changedStart;
@@ -937,8 +939,9 @@ namespace Ludots.Tests.Presentation
             int committedAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
 
             ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
-            command.TargetCenterXCm += 500f;
-            command.TargetFacingRad = NormalizeAngleRadians(command.TargetFacingRad + 0.25f);
+            command.TargetCenterXCm += 500;
+            command.TargetFacingMicroRad = EncodeFormationFacing(
+                NormalizeAngleRadians(DecodeFormationFacing(command.TargetFacingMicroRad) + 0.25f));
             engine.World.Get<MassNavigationAgentIndex>(soldier).Value = simulation.NavigationAgentCount + 7;
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -947,7 +950,7 @@ namespace Ludots.Tests.Presentation
 
             engine.World.Get<MassNavigationAgentIndex>(soldier).Value = committedAgentIndex;
             Assert.DoesNotThrow(() => UpdateSystem(system));
-            Assert.That(engine.World.Get<FacingDirection>(anchor).AngleRad, Is.EqualTo(command.TargetFacingRad));
+            Assert.That(engine.World.Get<FacingDirection>(anchor).AngleRad, Is.EqualTo(DecodeFormationFacing(command.TargetFacingMicroRad)).Within(0.000001f));
             AssertFormationMemberTargetChanged(simulation, before);
         }
 
@@ -1009,8 +1012,8 @@ namespace Ludots.Tests.Presentation
                 Is.True);
 
             ref FormationMemberState member = ref engine.World.Get<FormationMemberState>(soldier);
-            member.LocalOffsetXCm += 450f;
-            member.LocalOffsetYCm += 125f;
+            member.LocalOffsetXCm += 450;
+            member.LocalOffsetYCm += 125;
 
             UpdateSystem(system);
 
@@ -1120,7 +1123,7 @@ namespace Ludots.Tests.Presentation
             FormationExecutionBatchSnapshot before = CaptureFormationExecutionBatchSnapshot(engine, simulation);
 
             ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
-            command.TargetCenterYCm += 500f;
+            command.TargetCenterYCm += 500;
             engine.World.Get<MassNavigationAgentIndex>(soldier).Value =
                 simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
 
@@ -1154,7 +1157,7 @@ namespace Ludots.Tests.Presentation
             engine.World.Get<FormationMemberState>(soldiers[1]) =
                 engine.World.Get<FormationMemberState>(soldiers[0]);
             ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
-            command.TargetCenterXCm += 500f;
+            command.TargetCenterXCm += 500;
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
             Assert.That(ex.Message, Does.Contain("bound more than once"));
@@ -1185,7 +1188,7 @@ namespace Ludots.Tests.Presentation
 
             engine.World.Add(soldier, new SuspendedTag());
             ref FormationCommandState command = ref engine.World.Get<FormationCommandState>(anchor);
-            command.TargetCenterYCm += 500f;
+            command.TargetCenterYCm += 500;
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
             Assert.That(ex.Message, Does.Contain("suspended"));
@@ -2088,6 +2091,10 @@ namespace Ludots.Tests.Presentation
             var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
             templates.Load("Entities/templates.json", temp.Catalog);
             using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            Entity teamSevenRepresentative = world.Create(new TeamIdentity { TeamId = 7 });
+            var teamLookup = new TeamEntityLookup();
+            teamLookup.Register(7, teamSevenRepresentative);
             var requests = new RuntimeEntitySpawnQueue(capacity: 8);
             var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
             var templateKeys = new EntityTemplateKeyRegistry();
@@ -2097,7 +2104,10 @@ namespace Ludots.Tests.Presentation
                 templates,
                 templateKeys,
                 new Ludots.Core.Presentation.PresentationStableIdAllocator(),
-                receipts: receipts);
+                receipts: receipts,
+                teamLookup: teamLookup,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
 
             const int receiptChannel = 101;
             for (int i = 0; i < 3; i++)
@@ -2127,6 +2137,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(world.IsAlive(entity), Is.True);
                 Assert.That(world.Has<MassNavigationAgent>(entity), Is.True);
                 Assert.That(world.Get<Team>(entity).Id, Is.EqualTo(7));
+                Assert.That(relationships.HasLink(entity, teamSevenRepresentative, memberOfTypeId), Is.True);
                 Assert.That(world.Get<PlayerOwner>(entity).PlayerId, Is.EqualTo(3));
                 Assert.That(world.Get<Ludots.Core.Gameplay.Components.EntityLayer>(entity).Value.Category, Is.EqualTo(LayerRegistry.GetBit(MassNavigationAgentLayerName)));
                 Assert.That(world.Get<EntityTemplateKeyRef>(entity).TemplateKeyId, Is.EqualTo(templateKeys.GetId("mass_navigation_batch_agent")));
@@ -2268,6 +2279,71 @@ namespace Ludots.Tests.Presentation
             Assert.That(spawned, Is.Zero, "Invalid explicit relationship prerequisites must fail before batch entities are created.");
         }
 
+        [TestCase(RuntimeEntitySpawnKind.Template)]
+        [TestCase(RuntimeEntitySpawnKind.UnitType)]
+        [TestCase(RuntimeEntitySpawnKind.Assembly)]
+        public void RuntimeSingleSpawn_InvalidExplicitMembershipDoesNotPublishSuccessOrCreateEntities(RuntimeEntitySpawnKind kind)
+        {
+            string templateJson = """
+[
+  {
+    "id": "relationship_single_agent",
+    "components": {
+      "Name": { "Value": "Relationship Single Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var presentationEvents = new PresentationEventStream(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                presentationEvents: presentationEvents,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            const int receiptChannel = 205;
+            int unitTypeId = UnitTypeRegistry.Register("RuntimeSingleSpawnInvalidMembershipUnit");
+            Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = kind,
+                TemplateId = kind == RuntimeEntitySpawnKind.Template ? "relationship_single_agent" : string.Empty,
+                UnitTypeId = kind == RuntimeEntitySpawnKind.UnitType ? unitTypeId : 0,
+                MapId = new MapId("relationship_single_map"),
+                WorldPositionCm = Fix64Vec2.FromInt(100, 200),
+                HasWorldPosition = 1,
+                MembershipTarget = Entity.Null,
+                HasMembershipTarget = 1,
+                EmitReceipt = 1,
+                ReceiptChannelId = receiptChannel,
+                ReceiptId = 1,
+            }), Is.True);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("MembershipTarget"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+            Assert.That(world.Size, Is.Zero, "Single runtime spawn paths must fail relationship preflight before creating an entity.");
+        }
+
         [Test]
         public void RuntimeTemplateBatchSpawn_CrossWorldExplicitMembershipFailsBeforeCreation()
         {
@@ -2392,6 +2468,60 @@ namespace Ludots.Tests.Presentation
             var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
             world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
             Assert.That(spawned, Is.Zero, "Conflicting relationship authoring must fail before batch entities are created.");
+        }
+
+        [Test]
+        public void RuntimeTemplateBatchSpawn_TemplateTeamAndRequestTeamOverrideMustNotConflict()
+        {
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(TeamAuthoredBatchTemplateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            Entity teamSevenRepresentative = world.Create(new TeamIdentity { TeamId = 7 });
+            Entity teamEightRepresentative = world.Create(new TeamIdentity { TeamId = 8 });
+            var teamLookup = new TeamEntityLookup();
+            teamLookup.Register(7, teamSevenRepresentative);
+            teamLookup.Register(8, teamEightRepresentative);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                teamLookup: teamLookup,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            const int receiptChannel = 206;
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "team_authored_batch_agent",
+                    MapId = new MapId("team_authored_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    TeamIdOverride = 8,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("conflicts"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
+            Assert.That(spawned, Is.Zero, "Conflicting Team sources must fail before batch entities are created.");
         }
 
         [Test]
@@ -2627,7 +2757,8 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => MathF.Abs(NormalizeAngleRadians(
-                    engine.World.Get<FormationCommandState>(formation).TargetFacingRad - before.TargetFacingRad)) > 0.0001f,
+                    DecodeFormationFacing(engine.World.Get<FormationCommandState>(formation).TargetFacingMicroRad) -
+                    DecodeFormationFacing(before.TargetFacingMicroRad))) > 0.0001f,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Stationary rotate should update the Showcase-owned target facing.");
 
@@ -2786,7 +2917,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => MathF.Abs(NormalizeAngleRadians(
-                    engine.World.Get<FormationCommandState>(formation).TargetFacingRad - initialFacing)) > 0.0001f,
+                    DecodeFormationFacing(engine.World.Get<FormationCommandState>(formation).TargetFacingMicroRad) - initialFacing)) > 0.0001f,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Explicit rotate input should change the Showcase-owned formation facing target.");
 
@@ -4767,6 +4898,16 @@ namespace Ludots.Tests.Presentation
             }
 
             return angle;
+        }
+
+        private static int EncodeFormationFacing(float angle)
+        {
+            return FormationNumericEncoding.EncodeRadians(angle, "Formation Capability test facing");
+        }
+
+        private static float DecodeFormationFacing(int encodedAngle)
+        {
+            return FormationNumericEncoding.DecodeRadians(encodedAngle);
         }
 
         private static void AssertInitialCommandSourceTargetsFormationAgents(GameEngine engine)

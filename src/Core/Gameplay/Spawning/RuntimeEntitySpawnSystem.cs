@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -170,6 +171,19 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException("Runtime unit spawn requires a positive UnitTypeId.");
             }
 
+            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
+            }
+
+            PreflightSingleSpawnRelationships(
+                "Runtime unit spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+
             var entity = World.Create(
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
@@ -177,12 +191,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new AttributeBuffer());
             EnsurePresentationStableId(entity);
-
-            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
-            if (string.IsNullOrWhiteSpace(typeName))
-            {
-                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
-            }
 
             World.Add(entity, new Name { Value = "Unit:" + typeName });
             TryApplyFacing(in request, entity);
@@ -204,6 +212,15 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
+            EntityTemplate template = _cachedTemplates[request.TemplateId];
+            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
+            PreflightSingleSpawnRelationships(
+                $"Runtime template '{request.TemplateId}'",
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
+
             var builder = _builder
                 .UseTemplate(request.TemplateId)
                 .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
@@ -459,6 +476,13 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
         {
+            PreflightSingleSpawnRelationships(
+                "Runtime assembly spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+
             var entity = base.World.Create();
 
             if (request.HasProjectileState != 0)
@@ -713,7 +737,10 @@ namespace Ludots.Core.Gameplay.Spawning
                 ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
                 PreflightExplicitRelationship(in request);
 
-                int teamId = ResolveTemplateBatchFinalTeamId(in request, templateAuthorsTeam ? templateTeam.Id : 0);
+                int teamId = ResolveTemplateFinalTeamId(
+                    $"Runtime template batch '{templateId}'",
+                    in request,
+                    templateAuthorsTeam ? templateTeam.Id : 0);
                 if (request.HasMembershipTarget != 0)
                 {
                     PreflightMembershipTargetMatchesTeam(templateId, in request, teamId);
@@ -725,17 +752,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
-                if (_relationships == null || _teamLookup == null || _memberOfTypeId < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Runtime template batch '{templateId}' authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
-                }
-
-                if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !IsAliveInCurrentWorld(teamRepresentative))
-                {
-                    throw new InvalidOperationException(
-                        $"Runtime template batch '{templateId}' authors Team {teamId}, but no live team relationship representative exists.");
-                }
+                PreflightImplicitMemberOfTarget($"Runtime template batch '{templateId}'", teamId);
             }
         }
 
@@ -751,6 +768,52 @@ namespace Ludots.Core.Gameplay.Spawning
                 (_relationships == null || _memberOfTypeId < 0 || !IsAliveInCurrentWorld(request.MembershipTarget)))
             {
                 throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
+            }
+        }
+
+        private void PreflightSingleSpawnRelationships(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            bool templateAuthorsTeam,
+            in Team templateTeam,
+            bool authorsRelationshipDomainIdentity)
+        {
+            PreflightExplicitRelationship(in request);
+            int teamId = ResolveTemplateFinalTeamId(
+                context,
+                in request,
+                templateAuthorsTeam ? templateTeam.Id : 0);
+            if (teamId <= 0)
+            {
+                return;
+            }
+
+            if (request.HasMembershipTarget != 0)
+            {
+                PreflightMembershipTargetMatchesTeam(context, in request, teamId);
+                return;
+            }
+
+            if (authorsRelationshipDomainIdentity)
+            {
+                return;
+            }
+
+            PreflightImplicitMemberOfTarget(context, teamId);
+        }
+
+        private void PreflightImplicitMemberOfTarget(string context, int teamId)
+        {
+            if (_relationships == null || _teamLookup == null || _memberOfTypeId < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context} authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
+            }
+
+            if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !IsAliveInCurrentWorld(teamRepresentative))
+            {
+                throw new InvalidOperationException(
+                    $"{context} authors Team {teamId}, but no live team relationship representative exists.");
             }
         }
 
@@ -814,21 +877,136 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private int ResolveTemplateBatchFinalTeamId(in RuntimeEntitySpawnRequest request, int templateTeamId)
+        private int ResolveTemplateFinalTeamId(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            int templateTeamId)
         {
+            int teamId = 0;
+            AddTeamSource(context, "template Team", templateTeamId, ref teamId);
+
             if (request.TeamIdOverride > 0)
             {
-                return request.TeamIdOverride;
+                AddTeamSource(context, "TeamIdOverride", request.TeamIdOverride, ref teamId);
             }
 
             if (request.CopySourceTeam != 0 &&
                 World.IsAlive(request.Source) &&
                 World.TryGet(request.Source, out Team sourceTeam))
             {
-                return sourceTeam.Id;
+                AddTeamSource(context, "source Team", sourceTeam.Id, ref teamId);
             }
 
-            return templateTeamId;
+            if (TryGetRequestPatchedTeam(in request, out Team patchedTeam))
+            {
+                AddTeamSource(context, "component patch Team", patchedTeam.Id, ref teamId);
+            }
+
+            return teamId;
+        }
+
+        private static void AddTeamSource(string context, string sourceName, int sourceTeamId, ref int teamId)
+        {
+            if (sourceTeamId <= 0)
+            {
+                return;
+            }
+
+            if (teamId <= 0)
+            {
+                teamId = sourceTeamId;
+                return;
+            }
+
+            if (teamId != sourceTeamId)
+            {
+                throw new InvalidOperationException(
+                    $"{context} has conflicting Team sources: resolved Team {teamId} conflicts with {sourceName} {sourceTeamId}.");
+            }
+        }
+
+        private static bool TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(
+            EntityTemplate template,
+            in RuntimeEntitySpawnRequest request)
+        {
+            return TemplateAuthorsRelationshipDomainIdentity(template) ||
+                   RequestPatchesAuthorRelationshipDomainIdentity(in request);
+        }
+
+        private static bool TemplateAuthorsRelationshipDomainIdentity(EntityTemplate template)
+        {
+            return template.Components != null &&
+                   (template.Components.ContainsKey("PlayerIdentity") ||
+                    template.Components.ContainsKey("TeamIdentity"));
+        }
+
+        private static bool RequestPatchesAuthorRelationshipDomainIdentity(in RuntimeEntitySpawnRequest request)
+        {
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            if (patches == null || patches.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < patches.Length; i++)
+            {
+                if (string.Equals(patches[i].ComponentName, "PlayerIdentity", StringComparison.Ordinal) ||
+                    string.Equals(patches[i].ComponentName, "TeamIdentity", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryGetTemplateAuthoredTeam(string templateId, EntityTemplate template, out Team team)
+        {
+            if (template.Components != null &&
+                template.Components.TryGetValue("Team", out JsonNode teamNode))
+            {
+                team = ParseTeamComponent($"Entity template '{templateId}' Team", teamNode);
+                return true;
+            }
+
+            team = default;
+            return false;
+        }
+
+        private static bool TryGetRequestPatchedTeam(in RuntimeEntitySpawnRequest request, out Team team)
+        {
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            if (patches != null)
+            {
+                for (int i = 0; i < patches.Length; i++)
+                {
+                    if (string.Equals(patches[i].ComponentName, "Team", StringComparison.Ordinal))
+                    {
+                        team = ParseTeamComponent("Runtime spawn component patch Team", patches[i].Data);
+                        return true;
+                    }
+                }
+            }
+
+            team = default;
+            return false;
+        }
+
+        private static Team ParseTeamComponent(string context, JsonNode node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            if (!obj.TryGetPropertyValue("Id", out JsonNode idNode) ||
+                idNode == null ||
+                !idNode.AsValue().TryGetValue(out int id))
+            {
+                throw new InvalidOperationException($"{context}.Id requires an integer value.");
+            }
+
+            return new Team { Id = id };
         }
 
         private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)

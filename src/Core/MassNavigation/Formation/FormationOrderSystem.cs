@@ -120,13 +120,14 @@ public sealed class FormationOrderSystem : ISystem<float>
                         targetYCm += worldPositions[index].Value.Y.ToFloat() - centerYCm;
                     }
 
-                    commands[index].TargetCenterXCm = targetXCm;
-                    commands[index].TargetCenterYCm = targetYCm;
+                    commands[index].TargetCenterXCm = FormationNumericEncoding.RoundCm(targetXCm);
+                    commands[index].TargetCenterYCm = FormationNumericEncoding.RoundCm(targetYCm);
                     commands[index].HasMoveTarget = 1;
                 }
                 else if (order.OrderTypeId == _rotateOrderTypeId)
                 {
-                    commands[index].TargetFacingRad = FormationTargetPlanner.NormalizeFacingRadians(order.Args.F0);
+                    commands[index].TargetFacingMicroRad = FormationNumericEncoding.EncodeRadians(
+                        FormationTargetPlanner.NormalizeFacingRadians(order.Args.F0));
                 }
                 else
                 {

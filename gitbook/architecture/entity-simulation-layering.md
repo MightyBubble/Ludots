@@ -79,22 +79,17 @@
 - `EntityLayer + LayerMask` 继续作为统一层级过滤真相，不再新造一套 collision matrix 类型
 - 历史 `FormationPhysics` 枚举与解析入口已删除；当前正式 `AvoidanceLane` 只有 `MassNavigation`
 
-### 3.3 业务编队与成员
+### 3.3 Optional Core Formation 与成员目标
 
-Formation 身份、成员、槽位、朝向和旋转属于业务 Mod，不是 MassNavigation Core 的正式组件轴。当前参考实现由 `FormationCapabilityShowcaseMod` 自己注册和持有：
-
-- `FormationCapabilityShowcaseFormationAgent`
-- `FormationCapabilityShowcaseFormationSoldier`
-- `FormationCapabilityShowcaseCommandState`
-- `FormationCapabilityShowcaseFormationState`
+Formation 是可选的 MassNavigation Core capability。核心能力拥有稳定的 Formation 身份、成员/槽位关系、朝向、语义化 `formationMove` / `formationRotate` 订单消费，以及预分配的成员目标规划；这些状态使用正式 ECS 组件，跨帧 gameplay 真相不得存 `float`，需要使用厘米整数或编码后的定点语义。
 
 解释如下：
 
-- 控制单位和成员仍是普通 MassNavigation agents
-- Showcase 把 `formationMove` / `formationRotate` 业务订单解析为方阵姿态
-- Showcase 计算逐成员明确空间目标，通过 `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` 交给 MassNavigation
-- Core 不拥有 formation registry、anchor/follower 组件、slot layout 或 rotation payload
-- 未来只有出现第二个真实业务消费者后，才另立治理任务讨论可复用 Formation capability
+- 控制单位、Formation anchor 和成员仍是普通 MassNavigation agents
+- Optional Core Formation 通过正式 `OrderQueue` / `OrderBuffer` 接收语义订单
+- Optional Core Formation 把 Formation 姿态和槽位编译成逐成员明确空间目标，通过 `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` 交给通用 MassNavigation
+- Optional Core Formation 不直接访问 `MassNavigationFlowSolverState`、`MassNavigationGroupRuntime` 私有状态或 solver 数组
+- `FormationCapabilityShowcaseMod` 只拥有上手展示策略：Q/E 输入、旋转步长、摄像机、HUD、轮廓、颜色、题材、模板和初始战场配置
 
 ### 3.4 AOI 与仿真 LOD
 

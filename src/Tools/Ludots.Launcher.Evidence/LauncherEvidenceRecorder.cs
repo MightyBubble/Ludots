@@ -101,6 +101,8 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationCommandActorSampleCount = 128;
     private const int MassNavigationPositionSampleCount = 64;
     private const float MassNavigationPositionToleranceCm = 25f;
+    private const int MassNavigationMinimumMovedSampleCount = 8;
+    private const float MassNavigationMovementSampleThresholdCm = 50f;
     private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
     private const int MassNavigationAvoidanceExtraOrderTicks = 210;
     private const int MassNavigationAvoidanceCrossingTicks = 420;
@@ -2407,6 +2409,7 @@ public static class LauncherEvidenceRecorder
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
 
         WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "002_settled_before_crossing", captureImage: true);
         // March the commanded group back across the settled central crowd. The crossing target
         // mirrors the first order target through the pre-command work-area center, scaled down so
         // the destination-following solver window keeps the whole march inside the active play
@@ -2414,6 +2417,7 @@ public static class LauncherEvidenceRecorder
         Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, commandActors, crossingTarget);
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true);
         WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
         Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
@@ -2422,11 +2426,11 @@ public static class LauncherEvidenceRecorder
             ?? throw new InvalidOperationException("MassNavigation UAT requires core MinimapRuntime.");
         minimap.JumpCameraTo(runtime.Engine, new Vector2(remoteZone.CenterXCm, remoteZone.CenterYCm));
         Tick(runtime, MassNavigationRemoteSettleTicks, frameTimesMs);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks + MassNavigationRemoteSettleTicks, "002_remote_minimap_jump", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "004_remote_minimap_jump", captureImage: true);
 
         minimap.JumpCameraTo(runtime.Engine, originalCameraTarget);
         Tick(runtime, MassNavigationReturnSettleTicks, frameTimesMs);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks + MassNavigationRemoteSettleTicks + MassNavigationReturnSettleTicks, "003_return_original_area", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "005_return_original_area", captureImage: true);
 
         WriteTimelineSheet("MassNavigation performer + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
@@ -3284,9 +3288,15 @@ public static class LauncherEvidenceRecorder
         var failures = new List<string>();
         MassNavigationSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
         MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_command_order");
-        MassNavigationSnapshot remote = timeline.First(snapshot => snapshot.Step == "002_remote_minimap_jump");
-        MassNavigationSnapshot returned = timeline.First(snapshot => snapshot.Step == "003_return_original_area");
+        MassNavigationSnapshot beforeCrossing = timeline.First(snapshot => snapshot.Step == "002_settled_before_crossing");
+        MassNavigationSnapshot crossing = timeline.First(snapshot => snapshot.Step == "003_crossing_order");
+        MassNavigationSnapshot remote = timeline.First(snapshot => snapshot.Step == "004_remote_minimap_jump");
+        MassNavigationSnapshot returned = timeline.First(snapshot => snapshot.Step == "005_return_original_area");
         string expectedMapId = simulation.Config.MapId;
+        int firstMoveSampleCount = CountMovedMassNavigationSamples(boot, afterOrder, MassNavigationMovementSampleThresholdCm);
+        int secondMoveSampleCount = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm);
+        float firstMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(boot, afterOrder);
+        float secondMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(beforeCrossing, crossing);
 
         AddAcceptanceCheck(boot.ActiveMapId == expectedMapId, $"Expected MassNavigation map '{expectedMapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
@@ -3304,6 +3314,13 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
         AddAcceptanceCheck(afterOrder.CommandSourceCount > 0, "The formal command source contains no MassNavigation agents.", failures);
         AddAcceptanceCheck(afterOrder.ActiveMoveOrderCount > 0, "massNavigationMove did not become active in any actor OrderBuffer.", failures);
+        AddAcceptanceCheck(firstMoveSampleCount >= MassNavigationMinimumMovedSampleCount,
+            $"First massNavigationMove did not move enough sampled units by {MassNavigationMovementSampleThresholdCm:F0}cm: moved={firstMoveSampleCount}/{MassNavigationPositionSampleCount}, max={firstMoveMaxDisplacement:F1}cm.",
+            failures);
+        AddAcceptanceCheck(crossing.ActiveMoveOrderCount > 0, "Second massNavigationMove did not become active in any actor OrderBuffer.", failures);
+        AddAcceptanceCheck(secondMoveSampleCount >= MassNavigationMinimumMovedSampleCount,
+            $"Second massNavigationMove did not move enough sampled units by {MassNavigationMovementSampleThresholdCm:F0}cm: moved={secondMoveSampleCount}/{MassNavigationPositionSampleCount}, max={secondMoveMaxDisplacement:F1}cm.",
+            failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
         AddAcceptanceCheck(returned.AgentCount == boot.AgentCount, $"Returning to original area changed agent count: {boot.AgentCount} -> {returned.AgentCount}.", failures);
         AddAcceptanceCheck(returned.ScenarioSpawnCount == boot.ScenarioSpawnCount, $"Returning to original area re-ran scenario spawn: {boot.ScenarioSpawnCount} -> {returned.ScenarioSpawnCount}.", failures);
@@ -3352,13 +3369,14 @@ public static class LauncherEvidenceRecorder
             $"markers:{boot.MinimapBufferCount}/{boot.MinimapDroppedTotal}",
             $"remote:{MathF.Round(remote.CameraTargetCm.X):F0},{MathF.Round(remote.CameraTargetCm.Y):F0}",
             $"spawns:{boot.ScenarioSpawnCount}->{returned.ScenarioSpawnCount}",
+            $"movement:{firstMoveSampleCount}/{firstMoveMaxDisplacement:F1}:{secondMoveSampleCount}/{secondMoveMaxDisplacement:F1}",
             $"hud:{boot.WorldHudBarCount}/{boot.WorldHudTextCount}/{boot.ScreenHudBarCount}/{boot.ScreenHudTextCount}",
             $"chain:{boot.PayloadFailureCount}/{boot.TransformFailureCount}/{boot.EmissionFailureCount}/{boot.CullingFailureCount}/{boot.ProjectionFailureCount}/{boot.CapacityFailureCount}",
             $"avoidance:{avoidance.FrameCount}/{avoidance.MaxVisibleAgentCount}/{avoidance.MaxHeavyAgentCount}/{avoidance.FinalDeepOverlapPairCount}/{avoidance.FinalMaxPenetrationRatio:0.0000}"
         });
 
         string verdict = failures.Count == 0
-            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and {avoidance.FrameCount} avoidance frames."
+            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT with {boot.AgentCount} agents, two movement-proven shared-batch orders, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and {avoidance.FrameCount} avoidance frames."
             : "MassNavigation large-world performer/minimap UAT failed.";
 
         return new MassNavigationAcceptanceResult(
@@ -3367,6 +3385,60 @@ public static class LauncherEvidenceRecorder
             FailureSummary: failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures),
             FailedChecks: failures,
             NormalizedSignature: normalizedSignature);
+    }
+
+    private static int CountMovedMassNavigationSamples(
+        MassNavigationSnapshot before,
+        MassNavigationSnapshot after,
+        float thresholdCm)
+    {
+        float thresholdSq = thresholdCm * thresholdCm;
+        int moved = 0;
+        foreach (MassNavigationAnchorEvidenceSample beforeSample in before.SamplePositions)
+        {
+            foreach (MassNavigationAnchorEvidenceSample afterSample in after.SamplePositions)
+            {
+                if (beforeSample.AgentIndex != afterSample.AgentIndex)
+                {
+                    continue;
+                }
+
+                Vector2 beforePoint = beforeSample.SolverWorldCm.ToVector2();
+                Vector2 afterPoint = afterSample.SolverWorldCm.ToVector2();
+                if (Vector2.DistanceSquared(beforePoint, afterPoint) >= thresholdSq)
+                {
+                    moved++;
+                }
+
+                break;
+            }
+        }
+
+        return moved;
+    }
+
+    private static float MaxMassNavigationSampleDisplacementCm(
+        MassNavigationSnapshot before,
+        MassNavigationSnapshot after)
+    {
+        float maxDistanceSq = 0f;
+        foreach (MassNavigationAnchorEvidenceSample beforeSample in before.SamplePositions)
+        {
+            foreach (MassNavigationAnchorEvidenceSample afterSample in after.SamplePositions)
+            {
+                if (beforeSample.AgentIndex != afterSample.AgentIndex)
+                {
+                    continue;
+                }
+
+                Vector2 beforePoint = beforeSample.SolverWorldCm.ToVector2();
+                Vector2 afterPoint = afterSample.SolverWorldCm.ToVector2();
+                maxDistanceSq = MathF.Max(maxDistanceSq, Vector2.DistanceSquared(beforePoint, afterPoint));
+                break;
+            }
+        }
+
+        return MathF.Sqrt(maxDistanceSq);
     }
 
     private static string BuildMassNavigationBattleReport(
@@ -3380,6 +3452,13 @@ public static class LauncherEvidenceRecorder
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_command_order");
+        MassNavigationSnapshot beforeCrossing = timeline.First(snapshot => snapshot.Step == "002_settled_before_crossing");
+        MassNavigationSnapshot crossing = timeline.First(snapshot => snapshot.Step == "003_crossing_order");
+        int firstMoveSampleCount = CountMovedMassNavigationSamples(boot, afterOrder, MassNavigationMovementSampleThresholdCm);
+        int secondMoveSampleCount = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm);
+        float firstMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(boot, afterOrder);
+        float secondMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(beforeCrossing, crossing);
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         double medianTickMs = Median(frameTimesMs.ToArray());
         double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
@@ -3402,8 +3481,9 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
         sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore, enqueue one logical `massNavigationMove` fan-out through an OrderQueue shared batch, then use formal OrderBuffer activation on each actor.");
-        sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
-        sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
+        sb.AppendLine("3. Wait for sampled agents to move, record a settled baseline, submit a second shared-batch `massNavigationMove` back across the crowd, and require sampled agents to move again from that baseline.");
+        sb.AppendLine("4. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
+        sb.AppendLine("5. Fail if sampled units do not move for both logical commands, units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
         foreach (MassNavigationSnapshot snapshot in timeline)
@@ -3432,6 +3512,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- ScreenHud count/capacity/bar/text/drop: `{boot.ScreenHudCount}` / `{boot.ScreenHudCapacity}` / `{boot.ScreenHudBarCount}` / `{boot.ScreenHudTextCount}` / `{boot.ScreenHudDroppedTotal}`");
         sb.AppendLine($"- chain failures payload/transform/emission/culling/projection/capacity: `{boot.PayloadFailureCount}` / `{boot.TransformFailureCount}` / `{boot.EmissionFailureCount}` / `{boot.CullingFailureCount}` / `{boot.ProjectionFailureCount}` / `{boot.CapacityFailureCount}`");
         sb.AppendLine($"- fixed position samples: `{boot.SamplePositions.Count}` (tolerance `{MassNavigationPositionToleranceCm:F0}cm`)");
+        sb.AppendLine($"- movement samples first/second command: `{firstMoveSampleCount}` / `{secondMoveSampleCount}` moved at least `{MassNavigationMovementSampleThresholdCm:F0}cm`; max displacement `{firstMoveMaxDisplacement:F1}` / `{secondMoveMaxDisplacement:F1}` cm");
         sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
         sb.AppendLine($"- avoidance frames: `{avoidance.FrameCount}`");
         sb.AppendLine($"- avoidance max visible/play-area/command-actor/heavy-profile agents: `{avoidance.MaxVisibleAgentCount}` / `{avoidance.MaxPlayAreaAgentCount}` / `{avoidance.MaxCommandActorVisibleCount}` / `{avoidance.MaxHeavyAgentCount}`");
@@ -3518,11 +3599,14 @@ public static class LauncherEvidenceRecorder
             "    B --> C[Verify performer owners and minimap markers]",
             "    C --> D[Seed collection.command.source]",
             "    D --> E[OrderQueue shared batch then formal OrderBuffer activation]",
-            "    E --> F[Jump core minimap camera to remote 64km coordinate]",
-            "    F --> G[Jump back to original area]",
-            "    G --> H{No respawn, reset, marker drop, or old minimap path?}",
-            "    H -->|yes| I[Write battle-report + trace + path + PNG timeline]",
-            "    H -->|no| X[Fail MassNavigation UAT]"
+            "    E --> F[Verify sampled units moved after first command]",
+            "    F --> G[Submit second shared batch crossing order]",
+            "    G --> H[Verify sampled units moved again]",
+            "    H --> I[Jump core minimap camera to remote 64km coordinate]",
+            "    I --> J[Jump back to original area]",
+            "    J --> K{No stalled units, respawn, reset, marker drop, or old minimap path?}",
+            "    K -->|yes| L[Write battle-report + trace + path + PNG timeline]",
+            "    K -->|no| X[Fail MassNavigation UAT]"
         }) + Environment.NewLine;
     }
 
@@ -3532,9 +3616,11 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Visible Checklist: mass-navigation-large-world");
         sb.AppendLine();
         sb.AppendLine("- `000_boot.png`: should show the configured 64km RTS world framing, MassNavigation unit samples, solver window, flow work area and minimap marker counts.");
-        sb.AppendLine("- `001_command_order.png`: command-actor/order counts should be non-zero and group counts should prove the OrderQueue/OrderBuffer path reached MassNavigation group runtime.");
-        sb.AppendLine("- `002_remote_minimap_jump.png`: camera coordinates should be far from boot coordinates while agent counts remain unchanged.");
-        sb.AppendLine("- `003_return_original_area.png`: agent count and scenario spawn/reset counters should match boot, proving camera movement did not recreate the scenario.");
+        sb.AppendLine("- `001_command_order.png`: command-actor/order counts should be non-zero, and sampled units must have moved from boot through the OrderQueue/OrderBuffer path.");
+        sb.AppendLine("- `002_settled_before_crossing.png`: sampled units establish the settled baseline before the second command.");
+        sb.AppendLine("- `003_crossing_order.png`: second shared-batch command should move the same sampled units again after the crossing order.");
+        sb.AppendLine("- `004_remote_minimap_jump.png`: camera coordinates should be far from boot coordinates while agent counts remain unchanged.");
+        sb.AppendLine("- `005_return_original_area.png`: agent count and scenario spawn/reset counters should match boot, proving camera movement did not recreate the scenario.");
         sb.AppendLine("- `screens/timeline.png` is the compact strip for side-by-side UAT review.");
         sb.AppendLine();
         foreach (CaptureFrame frame in frames)
@@ -3554,6 +3640,9 @@ public static class LauncherEvidenceRecorder
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_command_order");
+        MassNavigationSnapshot beforeCrossing = timeline.First(snapshot => snapshot.Step == "002_settled_before_crossing");
+        MassNavigationSnapshot crossing = timeline.First(snapshot => snapshot.Step == "003_crossing_order");
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         return JsonSerializer.Serialize(new
         {
@@ -3590,6 +3679,11 @@ public static class LauncherEvidenceRecorder
             projection_failure_count = boot.ProjectionFailureCount,
             capacity_failure_count = boot.CapacityFailureCount,
             anchor_samples = boot.SamplePositions,
+            first_command_moved_sample_count = CountMovedMassNavigationSamples(boot, afterOrder, MassNavigationMovementSampleThresholdCm),
+            second_command_moved_sample_count = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm),
+            movement_sample_threshold_cm = MassNavigationMovementSampleThresholdCm,
+            first_command_max_sample_displacement_cm = MaxMassNavigationSampleDisplacementCm(boot, afterOrder),
+            second_command_max_sample_displacement_cm = MaxMassNavigationSampleDisplacementCm(beforeCrossing, crossing),
             boot_scenario_spawn_count = boot.ScenarioSpawnCount,
             final_scenario_spawn_count = final.ScenarioSpawnCount,
             avoidance_frame_count = avoidance.FrameCount,
