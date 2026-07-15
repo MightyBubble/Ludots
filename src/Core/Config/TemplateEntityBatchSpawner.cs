@@ -665,11 +665,12 @@ namespace Ludots.Core.Config
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasAbilityTagGrantReceiver = template.Components.ContainsKey("AbilityTagGrantReceiver");
-                bool hasGameplayTagContainer = hasAbilityTagGrantReceiver || template.Components.ContainsKey("GameplayTagContainer");
-                bool hasTagCountContainer = hasGameplayTagContainer || template.Components.ContainsKey("TagCountContainer");
-                bool hasDirtyFlags = hasAttributeBuffer || hasGameplayTagContainer || template.Components.ContainsKey("DirtyFlags");
-                bool hasTimedTagBuffer = hasAbilityTagGrantReceiver || template.Components.ContainsKey("TimedTagBuffer");
-                bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
+                EntityRuntimeStatePlan runtimeStatePlan = EntityRuntimeStatePlan.FromAuthoredComponents(template.Components);
+                bool hasGameplayTagContainer = runtimeStatePlan.HasGameplayTagContainer;
+                bool hasTagCountContainer = runtimeStatePlan.HasTagCountContainer;
+                bool hasDirtyFlags = runtimeStatePlan.HasDirtyFlags;
+                bool hasTimedTagBuffer = runtimeStatePlan.HasTimedTagBuffer;
+                bool hasOrderBuffer = runtimeStatePlan.HasOrderBlackboardState;
                 bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
                 bool hasTeam = template.Components.ContainsKey("Team");

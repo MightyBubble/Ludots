@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Config
 {
@@ -104,10 +103,8 @@ namespace Ludots.Core.Config
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
-            if (_world.Has<OrderBuffer>(entity))
-            {
-                OrderBlackboardStateInstaller.EnsureInstalled(_world, entity);
-            }
+            EntityRuntimeStatePlan runtimeStatePlan = EntityRuntimeStatePlan.FromEntity(_world, entity);
+            runtimeStatePlan.EnsureInstalled(_world, entity);
 
             if (_world.Has<AbilityStateBuffer>(entity))
             {
@@ -120,19 +117,6 @@ namespace Ludots.Core.Config
                     _authoringContext.Require<AbilityDefinitionRegistry>(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry),
                     formSets,
                     BuildEntityContext());
-            }
-
-            if (_world.Has<AbilityTagGrantReceiver>(entity))
-            {
-                AbilityRuntimeStateInstaller.EnsureForTagGrantReceiver(_world, entity);
-            }
-            else if (_world.Has<GameplayTagContainer>(entity))
-            {
-                TagStateInstaller.EnsureInstalled(_world, entity);
-            }
-            else if (_world.Has<AttributeBuffer>(entity) && !_world.Has<DirtyFlags>(entity))
-            {
-                _world.Add(entity, new DirtyFlags());
             }
 
             // Reset for next use

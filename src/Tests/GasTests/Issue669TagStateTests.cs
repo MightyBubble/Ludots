@@ -317,6 +317,50 @@ public sealed class Issue669TagStateTests
     }
 
     [Test]
+    public void TemplateBatchSpawner_TagOnlyTemplate_MatchesScalarRequiredStateAssembly()
+    {
+        using var world = World.Create();
+        var template = new EntityTemplate
+        {
+            Id = "batch_tag_only",
+            Components =
+            {
+                ["Name"] = JsonNode.Parse("{ \"Value\": \"BatchTagOnly\" }")!,
+                ["WorldPositionCm"] = JsonNode.Parse("{ \"Value\": { \"X\": 0, \"Y\": 0 } }")!,
+                ["FacingDirection"] = JsonNode.Parse("{ \"AngleRad\": 0 }")!,
+                ["GameplayTagContainer"] = JsonNode.Parse("{}")!,
+            },
+        };
+        Entity scalar = new EntityBuilder(
+                world,
+                new Dictionary<string, EntityTemplate> { [template.Id] = template })
+            .UseTemplate(template.Id)
+            .Build();
+        var spawner = new TemplateEntityBatchSpawner(
+            world,
+            new EntityTemplateKeyRegistry(),
+            scratchCapacity: 1);
+
+        bool created = spawner.TryCreateBatch(
+            template.Id,
+            template,
+            new[] { new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(default, hasWorldPosition: false) },
+            TemplateBatchSpawnFeatures.None,
+            out ReadOnlySpan<Entity> entities);
+
+        Assert.That(created, Is.True);
+        Assert.That(entities.Length, Is.EqualTo(1));
+        Entity batched = entities[0];
+        Assert.That(world.Has<GameplayTagContainer>(batched), Is.EqualTo(world.Has<GameplayTagContainer>(scalar)));
+        Assert.That(world.Has<TagCountContainer>(batched), Is.EqualTo(world.Has<TagCountContainer>(scalar)));
+        Assert.That(world.Has<DirtyFlags>(batched), Is.EqualTo(world.Has<DirtyFlags>(scalar)));
+        Assert.That(world.Has<TimedTagBuffer>(batched), Is.EqualTo(world.Has<TimedTagBuffer>(scalar)));
+        Assert.That(world.Has<BlackboardIntBuffer>(batched), Is.EqualTo(world.Has<BlackboardIntBuffer>(scalar)));
+        Assert.That(world.Has<BlackboardSpatialBuffer>(batched), Is.EqualTo(world.Has<BlackboardSpatialBuffer>(scalar)));
+        Assert.That(world.Has<BlackboardEntityBuffer>(batched), Is.EqualTo(world.Has<BlackboardEntityBuffer>(scalar)));
+    }
+
+    [Test]
     public void EntityBuilder_FormOverrideWithPositiveDurationTagAbility_PreinstallsTimedTagState()
     {
         using var world = World.Create();

@@ -330,6 +330,20 @@ namespace GasTests
         }
 
         [Test]
+        public void EntityRequiredStateAssembly_MustHaveOnePlanner()
+        {
+            string repoRoot = FindRepoRoot();
+            string config = Path.Combine(repoRoot, "src", "Core", "Config");
+            string batch = File.ReadAllText(Path.Combine(config, "TemplateEntityBatchSpawner.cs"));
+            string scalar = File.ReadAllText(Path.Combine(config, "EntityBuilder.cs"));
+
+            Assert.That(batch, Does.Contain("EntityRuntimeStatePlan.FromAuthoredComponents"));
+            Assert.That(scalar, Does.Contain("EntityRuntimeStatePlan.FromEntity"));
+            Assert.That(batch, Does.Not.Contain("bool hasTagCountContainer = hasGameplayTagContainer"));
+            Assert.That(batch, Does.Not.Contain("bool hasDirtyFlags = hasAttributeBuffer || hasGameplayTagContainer"));
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();
