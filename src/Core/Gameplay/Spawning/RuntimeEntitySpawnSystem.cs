@@ -183,7 +183,7 @@ namespace Ludots.Core.Gameplay.Spawning
             ApplyComponentPatches(in request, entity);
             if (World.Has<AbilityTagGrantReceiver>(entity))
             {
-                AbilityTagGrantReceiverInstaller.EnsureInstalled(World, entity);
+                AbilityRuntimeStateInstaller.EnsureForTagGrantReceiver(World, entity);
             }
             else if (World.Has<GameplayTagContainer>(entity))
             {

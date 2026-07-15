@@ -82,6 +82,12 @@ namespace Ludots.Core.Gameplay.GAS
             EnsureRequiredState(world, entity, in requirements);
         }
 
+        public static void EnsureForTagGrantReceiver(World world, Entity entity)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            EnsureTagState(world, entity, requiresTimedTagState: true);
+        }
+
         private static AbilityStateRequirements ResolveRequirements(
             AbilityDefinitionRegistry definitions,
             int abilityId,
@@ -114,8 +120,13 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
+            EnsureTagState(world, entity, requirements.RequiresTimedTagState);
+        }
+
+        private static void EnsureTagState(World world, Entity entity, bool requiresTimedTagState)
+        {
             TagStateInstaller.EnsureInstalled(world, entity);
-            if (requirements.RequiresTimedTagState && !world.Has<TimedTagBuffer>(entity))
+            if (requiresTimedTagState && !world.Has<TimedTagBuffer>(entity))
             {
                 world.Add(entity, new TimedTagBuffer());
             }

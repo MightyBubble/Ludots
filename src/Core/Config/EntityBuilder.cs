@@ -124,7 +124,7 @@ namespace Ludots.Core.Config
 
             if (_world.Has<AbilityTagGrantReceiver>(entity))
             {
-                AbilityTagGrantReceiverInstaller.EnsureInstalled(_world, entity);
+                AbilityRuntimeStateInstaller.EnsureForTagGrantReceiver(_world, entity);
             }
             else if (_world.Has<GameplayTagContainer>(entity))
             {
