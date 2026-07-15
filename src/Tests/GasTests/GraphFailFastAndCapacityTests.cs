@@ -7,6 +7,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
+using Ludots.Core.Registry;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -100,6 +101,35 @@ namespace Ludots.Tests.GAS
             That(q.Count, Is.EqualTo(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 32 + 9));
             That(q.OverflowCount, Is.EqualTo(0));
             That(q.DroppedCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GraphOutputValueStore_WhenConfiguredCapacityIsExceeded_FailsWithoutResizingOrMutation()
+        {
+            using var world = World.Create();
+            var keys = new StringIntRegistry(
+                capacity: 8,
+                startId: 1,
+                invalidId: 0,
+                comparer: StringComparer.Ordinal);
+            int keyId = keys.Register("graph.output.test");
+            var values = new GraphOutputValueStore(keys, initialCapacity: 2);
+            Entity first = world.Create();
+            Entity second = world.Create();
+            Entity rejected = world.Create();
+
+            GraphOutputValueHandle firstHandle = values.SetInt(first, keyId, 10);
+            GraphOutputValueHandle secondHandle = values.SetInt(second, keyId, 20);
+
+            var error = Assert.Throws<InvalidOperationException>(() => values.SetInt(rejected, keyId, 30));
+
+            Assert.That(error!.Message, Does.StartWith("GAS.GRAPH_OUTPUT.ERR.CapacityExceeded"));
+            Assert.That(values.ActiveCount, Is.EqualTo(2));
+            Assert.That(values.TryGetView(firstHandle, out GraphOutputValueView firstView), Is.True);
+            Assert.That(firstView.IntValue, Is.EqualTo(10));
+            Assert.That(values.TryGetView(secondHandle, out GraphOutputValueView secondView), Is.True);
+            Assert.That(secondView.IntValue, Is.EqualTo(20));
+            Assert.That(values.TryGet(rejected, "graph.output.test", out _), Is.False);
         }
 
         private sealed class RecordingSpatialQueries : ISpatialQueryService

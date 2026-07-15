@@ -863,7 +863,9 @@ namespace Ludots.Core.Engine
                 inventoryRuntime,
                 effectRequestQueue,
                 relationshipRuntime);
-            var graphOutputValueStore = new GraphOutputValueStore(graphOutputValueKeyRegistry, initialCapacity: 128);
+            var graphOutputValueStore = new GraphOutputValueStore(
+                graphOutputValueKeyRegistry,
+                gasRuntimeCapacity.GraphOutputValueCapacity);
             var gasGraphProductionServices = new GasGraphRuntimeProductionServices(
                 World,
                 SpatialQueries,

@@ -410,7 +410,9 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var schemas = new GraphOutputSchemaRegistry();
             var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            var outputValues = new GraphOutputValueStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var outputValues = new GraphOutputValueStore(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                initialCapacity: 16);
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
             programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } });
             var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);

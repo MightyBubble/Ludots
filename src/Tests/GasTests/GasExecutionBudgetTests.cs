@@ -103,6 +103,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveGraphOutputValueCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.GraphOutputValueCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("graphOutputValueCapacity"));
+        }
+
+        [Test]
         public void AbilityExec_AdvancesMoreThanTwoThousandEntitiesAcrossSlices()
         {
             using var world = World.Create();
@@ -717,6 +727,7 @@ namespace Ludots.Tests.GAS
                 DeferredTriggerActiveEntityCapacity = 64,
                 ProjectileCollisionCandidateCapacity = 64,
                 ProjectileRuntimeEntityCapacity = 64,
+                GraphOutputValueCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
             };

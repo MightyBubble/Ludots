@@ -245,7 +245,11 @@ namespace Ludots.Tests.GasTests
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeProductionServices), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeApi), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GraphProgramRegistry), Is.Not.Null);
-            Assert.That(engine.GetService(CoreServiceKeys.GraphOutputValueStore), Is.Not.Null);
+            GraphOutputValueStore graphOutputValues = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
+            Assert.That(graphOutputValues, Is.Not.Null);
+            Assert.That(
+                graphOutputValues.Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.GraphOutputValueCapacity));
             Assert.That(engine.GetService(CoreServiceKeys.GasDiagnosticEventBuffer), Is.Not.Null);
             OrderAdmissionResultBuffer admissionResults = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
             Assert.That(admissionResults, Is.Not.Null);

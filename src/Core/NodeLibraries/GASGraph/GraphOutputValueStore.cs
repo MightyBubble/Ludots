@@ -23,7 +23,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
     public sealed class GraphOutputValueStore
     {
-        private const float LoadFactor = 0.72f;
+        public const string CapacityExceededError = "GAS.GRAPH_OUTPUT.ERR.CapacityExceeded";
 
         private readonly StringIntRegistry _keyRegistry;
 
@@ -74,7 +74,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private int _ownerEntryCount;
         private int _activeOwnerEntryCount;
 
-        public GraphOutputValueStore(StringIntRegistry keyRegistry, int initialCapacity = 64)
+        public GraphOutputValueStore(StringIntRegistry keyRegistry, int initialCapacity)
         {
             _keyRegistry = keyRegistry ?? throw new ArgumentNullException(nameof(keyRegistry));
             if (initialCapacity <= 0)
@@ -128,6 +128,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public StringIntRegistry KeyRegistry => _keyRegistry;
+        public int Capacity => _active.Length;
         public int ActiveCount { get; private set; }
 
         public GraphOutputValueHandle SetBool(Entity owner, string key, bool value)
@@ -350,15 +351,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return existing;
             }
 
-            EnsureSlotCapacity(_slotCount + 1);
-            if ((_activeEntryCount + 1) > (int)(_bucketHeads.Length * LoadFactor))
-            {
-                Rehash(_bucketHeads.Length * 2);
-            }
-            if ((_activeOwnerEntryCount + 1) > (int)(_ownerBucketHeads.Length * LoadFactor))
-            {
-                RehashOwners(_ownerBucketHeads.Length * 2);
-            }
+            ValidateCreateCapacity(owner);
 
             int slot;
             if (_freeSlotCount > 0)
@@ -431,7 +424,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
             else
             {
-                EnsureEntryCapacity(_entryCount + 1);
+                if (_entryCount >= _entryNext.Length)
+                {
+                    throw CapacityExceeded("keyEntries");
+                }
                 entry = _entryCount++;
             }
 
@@ -520,7 +516,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
             else
             {
-                EnsureOwnerEntryCapacity(_ownerEntryCount + 1);
+                if (_ownerEntryCount >= _ownerEntryNext.Length)
+                {
+                    throw CapacityExceeded("ownerEntries");
+                }
                 entry = _ownerEntryCount++;
             }
 
@@ -630,134 +629,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return (uint)slot < (uint)_slotCount && _active[slot];
         }
 
-        private void EnsureSlotCapacity(int required)
+        private void ValidateCreateCapacity(Entity owner)
         {
-            if (required <= _active.Length)
+            if (_freeSlotCount == 0 && _slotCount >= _active.Length)
             {
-                return;
+                throw CapacityExceeded("slots");
             }
-
-            int next = _active.Length;
-            while (next < required)
+            if (_freeEntryHead < 0 && _entryCount >= _entryNext.Length)
             {
-                next *= 2;
+                throw CapacityExceeded("keyEntries");
             }
-
-            Array.Resize(ref _active, next);
-            Array.Resize(ref _owners, next);
-            Array.Resize(ref _ownerIds, next);
-            Array.Resize(ref _ownerWorldIds, next);
-            Array.Resize(ref _ownerVersions, next);
-            Array.Resize(ref _keyIds, next);
-            Array.Resize(ref _kinds, next);
-            Array.Resize(ref _handleGenerations, next);
-            Array.Resize(ref _revisions, next);
-            Array.Resize(ref _boolValues, next);
-            Array.Resize(ref _intValues, next);
-            Array.Resize(ref _floatValues, next);
-            Array.Resize(ref _entityValues, next);
-            Array.Resize(ref _freeSlots, next);
-            int oldSlotEntryLength = _slotEntries.Length;
-            Array.Resize(ref _slotEntries, next);
-            Array.Fill(_slotEntries, -1, oldSlotEntryLength, next - oldSlotEntryLength);
-            int oldOwnerEntryLength = _slotOwnerEntries.Length;
-            Array.Resize(ref _slotOwnerEntries, next);
-            Array.Fill(_slotOwnerEntries, -1, oldOwnerEntryLength, next - oldOwnerEntryLength);
-            int oldOwnerNextLength = _slotOwnerNext.Length;
-            Array.Resize(ref _slotOwnerNext, next);
-            Array.Fill(_slotOwnerNext, -1, oldOwnerNextLength, next - oldOwnerNextLength);
-        }
-
-        private void EnsureEntryCapacity(int required)
-        {
-            if (required <= _entryNext.Length)
+            if (!TryFindOwnerEntry(owner, out _) &&
+                _freeOwnerEntryHead < 0 &&
+                _ownerEntryCount >= _ownerEntryNext.Length)
             {
-                return;
-            }
-
-            int next = _entryNext.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _entryNext, next);
-            Array.Resize(ref _entryOwnerIds, next);
-            Array.Resize(ref _entryOwnerWorldIds, next);
-            Array.Resize(ref _entryOwnerVersions, next);
-            Array.Resize(ref _entryKeyIds, next);
-            Array.Resize(ref _entrySlots, next);
-            Array.Resize(ref _entryActive, next);
-        }
-
-        private void EnsureOwnerEntryCapacity(int required)
-        {
-            if (required <= _ownerEntryNext.Length)
-            {
-                return;
-            }
-
-            int next = _ownerEntryNext.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _ownerEntryNext, next);
-            Array.Resize(ref _ownerEntryIds, next);
-            Array.Resize(ref _ownerEntryWorldIds, next);
-            Array.Resize(ref _ownerEntryVersions, next);
-            int oldHeadLength = _ownerEntryHeadSlots.Length;
-            Array.Resize(ref _ownerEntryHeadSlots, next);
-            Array.Fill(_ownerEntryHeadSlots, -1, oldHeadLength, next - oldHeadLength);
-            Array.Resize(ref _ownerEntryActive, next);
-            Array.Resize(ref _ownerRetirementPending, next);
-            Array.Resize(ref _pendingRetiredOwners, next);
-        }
-
-        private void Rehash(int bucketCount)
-        {
-            int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
-            Array.Resize(ref _bucketHeads, nextBucketCount);
-            Array.Fill(_bucketHeads, -1);
-            for (int entry = 0; entry < _entryCount; entry++)
-            {
-                if (!_entryActive[entry])
-                {
-                    continue;
-                }
-
-                int bucket = BucketIndex(
-                    _entryOwnerIds[entry],
-                    _entryOwnerWorldIds[entry],
-                    _entryOwnerVersions[entry],
-                    _entryKeyIds[entry],
-                    _bucketHeads.Length);
-                _entryNext[entry] = _bucketHeads[bucket];
-                _bucketHeads[bucket] = entry;
+                throw CapacityExceeded("ownerEntries");
             }
         }
 
-        private void RehashOwners(int bucketCount)
+        private InvalidOperationException CapacityExceeded(string resource)
         {
-            int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
-            Array.Resize(ref _ownerBucketHeads, nextBucketCount);
-            Array.Fill(_ownerBucketHeads, -1);
-            for (int entry = 0; entry < _ownerEntryCount; entry++)
-            {
-                if (!_ownerEntryActive[entry])
-                {
-                    continue;
-                }
-
-                int bucket = OwnerBucketIndex(
-                    _ownerEntryIds[entry],
-                    _ownerEntryWorldIds[entry],
-                    _ownerEntryVersions[entry],
-                    _ownerBucketHeads.Length);
-                _ownerEntryNext[entry] = _ownerBucketHeads[bucket];
-                _ownerBucketHeads[bucket] = entry;
-            }
+            return new InvalidOperationException(
+                $"{CapacityExceededError}: resource={resource}, active={ActiveCount}, capacity={_active.Length}.");
         }
 
         private static int BucketIndex(int ownerId, int ownerWorldId, int ownerVersion, int keyId, int bucketCount)

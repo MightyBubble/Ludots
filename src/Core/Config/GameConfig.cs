@@ -86,6 +86,7 @@ namespace Ludots.Core.Config
         public int DeferredTriggerActiveEntityCapacity { get; set; }
         public int ProjectileCollisionCandidateCapacity { get; set; }
         public int ProjectileRuntimeEntityCapacity { get; set; }
+        public int GraphOutputValueCapacity { get; set; }
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
 
@@ -149,6 +150,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.projectileRuntimeEntityCapacity must be positive.");
+            }
+
+            if (GraphOutputValueCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.graphOutputValueCapacity must be positive.");
             }
 
             ValidateFiniteWorkBudget(
