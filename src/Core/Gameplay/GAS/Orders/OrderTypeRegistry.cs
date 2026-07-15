@@ -24,7 +24,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public OrderTerminalResultBuffer TerminalResults => _terminalResults;
 
-        internal void EnsureTerminalResultCapacity() => _terminalResults.EnsureCanWrite();
+        internal void EnsureTerminalResultCapacity(int additionalCount = 1) => _terminalResults.EnsureCanWrite(additionalCount);
 
         internal void PublishTerminalResult(in OrderTerminalOutcome outcome) => _terminalResults.Write(in outcome);
 

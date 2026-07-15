@@ -167,9 +167,7 @@ namespace CoreInputMod.Systems
                 OrderSubmitResult result = _planner != null
                     ? _planner.Submit(in order)
                     : _orders.Submit(in order);
-                if (result == OrderSubmitResult.Activated ||
-                    result == OrderSubmitResult.Queued ||
-                    result == OrderSubmitResult.Pending)
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     AfterOrderAccepted?.Invoke(in order);
                 }

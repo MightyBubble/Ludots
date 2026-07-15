@@ -1,3 +1,7 @@
+using System;
+using System.Runtime.CompilerServices;
+using Ludots.Core.Gameplay.GAS.Components;
+
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
     public enum OrderAdmissionStage : byte
@@ -19,6 +23,47 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         RejectedBlackboardCapacity = 8,
         RejectedMissingBlackboard = 9,
         RejectedAdmissionCapacity = 10
+    }
+
+    public static class OrderSubmitResultSemantics
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsAccepted(OrderSubmitResult result)
+        {
+            return result switch
+            {
+                OrderSubmitResult.Activated => true,
+                OrderSubmitResult.Queued => true,
+                OrderSubmitResult.Pending => true,
+                OrderSubmitResult.RejectedQueueFull => false,
+                OrderSubmitResult.RejectedByRule => false,
+                OrderSubmitResult.RejectedValidation => false,
+                OrderSubmitResult.RejectedInvalidActor => false,
+                OrderSubmitResult.RejectedInvalidOrderType => false,
+                OrderSubmitResult.RejectedBlackboardCapacity => false,
+                OrderSubmitResult.RejectedMissingBlackboard => false,
+                OrderSubmitResult.RejectedAdmissionCapacity => false,
+                _ => throw new ArgumentOutOfRangeException(nameof(result), result, "Unknown order submit result."),
+            };
+        }
+
+        public static OrderFailureReason ToFailureReason(OrderSubmitResult result)
+        {
+            return result switch
+            {
+                OrderSubmitResult.RejectedQueueFull => OrderFailureReason.SubmissionQueueFull,
+                OrderSubmitResult.RejectedByRule => OrderFailureReason.SubmissionRuleRejected,
+                OrderSubmitResult.RejectedValidation => OrderFailureReason.SubmissionValidationRejected,
+                OrderSubmitResult.RejectedInvalidActor => OrderFailureReason.SubmissionInvalidActor,
+                OrderSubmitResult.RejectedInvalidOrderType => OrderFailureReason.SubmissionInvalidOrderType,
+                OrderSubmitResult.RejectedBlackboardCapacity => OrderFailureReason.SubmissionBlackboardCapacity,
+                OrderSubmitResult.RejectedMissingBlackboard => OrderFailureReason.SubmissionMissingBlackboard,
+                OrderSubmitResult.RejectedAdmissionCapacity => OrderFailureReason.SubmissionAdmissionCapacity,
+                OrderSubmitResult.Activated or OrderSubmitResult.Queued or OrderSubmitResult.Pending =>
+                    throw new ArgumentException($"Accepted order submit result {result} has no failure reason.", nameof(result)),
+                _ => throw new ArgumentOutOfRangeException(nameof(result), result, "Unknown order submit result."),
+            };
+        }
     }
 
     public readonly struct OrderAdmissionOutcome

@@ -56,25 +56,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             while (_processedCount < _terminalResults.Count)
             {
                 ref readonly OrderTerminalOutcome outcome = ref _terminalResults[_processedCount];
-                _processedCount++;
 
                 Entity entity = outcome.Actor;
                 if (!World.IsAlive(entity) ||
                     !World.Has<OrderBuffer>(entity) ||
                     !World.Has<OrderContinuationBuffer>(entity))
                 {
+                    _processedCount++;
                     continue;
                 }
 
                 ref OrderContinuationBuffer continuation = ref World.Get<OrderContinuationBuffer>(entity);
                 if (!continuation.HasEntries)
                 {
+                    _processedCount++;
                     continue;
                 }
 
                 int count;
                 if (outcome.State == OrderTerminalState.Completed)
                 {
+                    int matchingCount = continuation.CountByTrigger(outcome.OrderId);
+                    _orderTypeRegistry.EnsureTerminalResultCapacity(matchingCount);
                     count = continuation.Extract(outcome.OrderId, extracted);
                 }
                 else
@@ -82,6 +85,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continuation.RemoveByTrigger(outcome.OrderId);
                     count = 0;
                 }
+
+                _processedCount++;
 
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
 
@@ -99,19 +104,30 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         currentStep,
                         _stepRateHz);
 
-                    if (result != OrderSubmitResult.RejectedByRule)
+                    if (OrderSubmitResultSemantics.IsAccepted(result))
                     {
                         continue;
                     }
 
-                    var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                    if (config.PendingBufferWindowMs <= 0)
+                    if (result == OrderSubmitResult.RejectedByRule)
                     {
-                        continue;
+                        var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                        if (config.PendingBufferWindowMs > 0)
+                        {
+                            int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                            OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
+                            continue;
+                        }
                     }
 
-                    int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                    OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
+                    OrderSpatialPayloadOps.Release(World, in order);
+                    var rejected = new OrderTerminalOutcome(
+                        order.OrderId,
+                        order.OrderTypeId,
+                        OrderTerminalState.Failed,
+                        OrderSubmitResultSemantics.ToFailureReason(result),
+                        entity);
+                    _orderTypeRegistry.PublishTerminalResult(in rejected);
                 }
             }
         }

@@ -46,12 +46,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryEnqueue(in Order order)
         {
-            return IsAccepted(Submit(in order));
+            return OrderSubmitResultSemantics.IsAccepted(Submit(in order));
         }
 
         public bool TryEnqueueAssigned(ref Order order)
         {
-            return IsAccepted(SubmitAssigned(ref order));
+            return OrderSubmitResultSemantics.IsAccepted(SubmitAssigned(ref order));
         }
 
         public OrderSubmitResult Submit(in Order order)
@@ -101,11 +101,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
             }
         }
-
-        private static bool IsAccepted(OrderSubmitResult result) =>
-            result == OrderSubmitResult.Activated ||
-            result == OrderSubmitResult.Queued ||
-            result == OrderSubmitResult.Pending;
 
         public void EnsureOrderId(ref Order order)
         {

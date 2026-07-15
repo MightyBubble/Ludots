@@ -65,12 +65,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        internal void EnsureCanWrite()
+        internal void EnsureCanWrite(int additionalCount = 1)
         {
-            if (_count >= _items.Length)
+            if (additionalCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(additionalCount));
+            }
+
+            if (additionalCount > _items.Length - _count)
             {
                 throw new InvalidOperationException(
-                    $"ORDER.TERMINAL.ERR.ResultCapacityExceeded: capacity={_items.Length}.");
+                    $"ORDER.TERMINAL.ERR.ResultCapacityExceeded: capacity={_items.Length}, count={_count}, requested={additionalCount}.");
             }
         }
 

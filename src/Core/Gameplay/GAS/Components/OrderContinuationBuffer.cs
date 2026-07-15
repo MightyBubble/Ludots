@@ -20,7 +20,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
         AbilityDefinitionMissing = 5,
         ActivationBlocked = 6,
         PreconditionFailed = 7,
-        Interrupted = 8
+        Interrupted = 8,
+        SubmissionQueueFull = 9,
+        SubmissionRuleRejected = 10,
+        SubmissionValidationRejected = 11,
+        SubmissionInvalidActor = 12,
+        SubmissionInvalidOrderType = 13,
+        SubmissionBlackboardCapacity = 14,
+        SubmissionMissingBlackboard = 15,
+        SubmissionAdmissionCapacity = 16
     }
 
     public struct OrderContinuationEntry
@@ -108,6 +116,25 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
             Count = dst;
             return written;
+        }
+
+        public readonly int CountByTrigger(int triggerOrderId)
+        {
+            if (triggerOrderId <= 0 || Count <= 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                if (_entries[i].TriggerOrderId == triggerOrderId)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private void RemoveAt(int index)

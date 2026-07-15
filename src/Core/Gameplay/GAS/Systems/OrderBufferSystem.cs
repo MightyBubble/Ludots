@@ -197,18 +197,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, pendingExpireStep, currentStep);
                 result = OrderSubmitResult.Pending;
             }
-            else if (!IsAccepted(result))
+            else if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 OrderSpatialPayloadOps.Release(World, in order);
             }
 
             return result;
         }
-
-        private static bool IsAccepted(OrderSubmitResult result) =>
-            result == OrderSubmitResult.Activated ||
-            result == OrderSubmitResult.Queued ||
-            result == OrderSubmitResult.Pending;
 
         private void CommitAdmission(
             in OrderAdmissionReservation reservation,
@@ -266,7 +261,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private OrderSubmitResult SubmitOrderStateAndReleaseRejected(Entity entity, in Order order)
         {
             OrderSubmitResult result = SubmitOrderState(entity, in order);
-            if (!IsAccepted(result))
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 OrderSpatialPayloadOps.Release(World, in order);
             }
@@ -317,7 +312,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderRuleRegistry,
                 currentStep,
                 _stepRateHz);
-            if (!IsAccepted(result))
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 OrderSpatialPayloadOps.Release(World, in pendingOrder);
             }

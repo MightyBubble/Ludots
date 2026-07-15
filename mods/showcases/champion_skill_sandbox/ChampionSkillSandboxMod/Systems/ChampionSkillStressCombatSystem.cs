@@ -160,9 +160,7 @@ namespace ChampionSkillSandboxMod.Systems
                 };
 
                 OrderSubmitResult submitResult = _planner.Submit(in order);
-                if (submitResult == OrderSubmitResult.Queued ||
-                    submitResult == OrderSubmitResult.Activated ||
-                    submitResult == OrderSubmitResult.Pending)
+                if (OrderSubmitResultSemantics.IsAccepted(submitResult))
                 {
                     issued++;
                 }

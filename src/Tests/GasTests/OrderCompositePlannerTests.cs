@@ -204,6 +204,145 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderContinuationSystem_RejectedFollowUp_PublishesTerminalFailure()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 4);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 0,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+
+            var trigger = new Order
+            {
+                OrderId = 71,
+                OrderTypeId = MoveToOrderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            var buffer = OrderBuffer.CreateEmpty();
+            buffer.SetActiveDirect(in trigger, priority: 60);
+            Entity actor = world.Create(
+                buffer,
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            var followUp = new Order
+            {
+                OrderId = 72,
+                OrderTypeId = CastAbilityOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Queued,
+            };
+            Span<int> pointX = stackalloc int[OrderSpatial.MaxInlinePoints + 1];
+            Span<int> pointY = stackalloc int[OrderSpatial.MaxInlinePoints + 1];
+            for (int i = 0; i < pointX.Length; i++)
+            {
+                pointX[i] = i * 100;
+                pointY[i] = i * 50;
+            }
+            OrderSpatialPayloadOps.SetPath(world, actor, ref followUp, pointX, pointY, pointX.Length);
+            OrderSpatialPayloadHandle payloadHandle = followUp.Args.Spatial.Payload;
+            continuations.TryAdd(trigger.OrderId, in followUp);
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
+
+            var system = new OrderContinuationSystem(world, clock, orderTypes, new OrderRuleRegistry());
+            system.Update(0f);
+
+            Assert.That(continuations.HasEntries, Is.False);
+            Assert.That(world.Get<OrderBuffer>(actor).IsEmpty, Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(2));
+            Assert.That(terminalResults[1].OrderId, Is.EqualTo(72));
+            Assert.That(terminalResults[1].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(terminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
+            Assert.Throws<InvalidOperationException>(() =>
+                world.Get<OrderSpatialPayloadBuffer>(actor).GetPointCount(in payloadHandle));
+        }
+
+        [Test]
+        public void OrderContinuationSystem_TerminalCapacityFull_LeavesFollowUpAttachedForHardFailure()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 1);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 0,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+
+            var trigger = new Order { OrderId = 81, OrderTypeId = MoveToOrderTypeId };
+            var buffer = OrderBuffer.CreateEmpty();
+            buffer.SetActiveDirect(in trigger, priority: 60);
+            Entity actor = world.Create(buffer, new OrderContinuationBuffer());
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            continuations.TryAdd(trigger.OrderId, new Order
+            {
+                OrderId = 82,
+                OrderTypeId = CastAbilityOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Queued,
+            });
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
+
+            var system = new OrderContinuationSystem(world, clock, orderTypes, new OrderRuleRegistry());
+            var error = Assert.Throws<InvalidOperationException>(() => system.Update(0f));
+
+            Assert.That(error!.Message, Does.StartWith("ORDER.TERMINAL.ERR.ResultCapacityExceeded"));
+            Assert.That(continuations.CountByTrigger(trigger.OrderId), Is.EqualTo(1));
+            Assert.That(world.Get<OrderBuffer>(actor).IsEmpty, Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(1));
+        }
+
+        [TestCase(OrderSubmitResult.Activated, true)]
+        [TestCase(OrderSubmitResult.Queued, true)]
+        [TestCase(OrderSubmitResult.Pending, true)]
+        [TestCase(OrderSubmitResult.RejectedQueueFull, false)]
+        [TestCase(OrderSubmitResult.RejectedByRule, false)]
+        [TestCase(OrderSubmitResult.RejectedValidation, false)]
+        [TestCase(OrderSubmitResult.RejectedInvalidActor, false)]
+        [TestCase(OrderSubmitResult.RejectedInvalidOrderType, false)]
+        [TestCase(OrderSubmitResult.RejectedBlackboardCapacity, false)]
+        [TestCase(OrderSubmitResult.RejectedMissingBlackboard, false)]
+        [TestCase(OrderSubmitResult.RejectedAdmissionCapacity, false)]
+        public void OrderSubmitResultSemantics_ClassifiesEveryPublishedResult(
+            OrderSubmitResult result,
+            bool expectedAccepted)
+        {
+            Assert.That(OrderSubmitResultSemantics.IsAccepted(result), Is.EqualTo(expectedAccepted));
+        }
+
+        [Test]
         public void FinalizeCurrent_Failed_RemovesContinuationAndOnlyFinalizesOnce()
         {
             using var world = World.Create();

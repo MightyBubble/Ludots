@@ -1861,7 +1861,7 @@ namespace Ludots.Core.Input.Orders
                 cloned.Actor = actor;
                 ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
                 OrderSubmitResult result = SubmitToHandler(in cloned);
-                if (!IsAccepted(result))
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     aggregate = result;
                 }
@@ -1880,16 +1880,11 @@ namespace Ludots.Core.Input.Orders
 
             OrderSubmitResult result = _orderSubmitHandler!(in submitted);
             _lastSubmittedOrderId = submitted.OrderId;
-            LastActivationResult = IsAccepted(result)
+            LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
                 ? InputOrderActivationResult.Submitted(submitted.Actor, submitted.OrderId)
                 : InputOrderActivationResult.Rejected(submitted.Actor, submitted.OrderId, result);
             return result;
         }
-
-        private static bool IsAccepted(OrderSubmitResult result) =>
-            result == OrderSubmitResult.Activated ||
-            result == OrderSubmitResult.Queued ||
-            result == OrderSubmitResult.Pending;
 
         private void ApplyGroupMoveFormation(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
         {
@@ -2244,7 +2239,7 @@ namespace Ludots.Core.Input.Orders
             Entity actor,
             OrderSubmitResult result)
         {
-            LastActivationResult = IsAccepted(result)
+            LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
                 ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
                 : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
             return LastActivationResult;
