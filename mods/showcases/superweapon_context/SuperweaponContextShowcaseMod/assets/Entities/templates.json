@@ -1,0 +1,8 @@
+[
+  {
+    "id": "interaction_commander",
+    "components": {
+      "GrantedSlotBuffer": {}
+    }
+  }
+]
