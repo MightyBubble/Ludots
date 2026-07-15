@@ -241,11 +241,17 @@ namespace Ludots.Tests.Presentation
                 new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("light") },
                 new Team { Id = LocalTeamId },
                 new PlayerOwner { PlayerId = LocalPlayerId },
-                OrderBuffer.CreateEmpty());
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
             Entity enemyAgent = world.Create(
                 new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.GetId("light") },
                 new Team { Id = EnemyTeamId },
-                OrderBuffer.CreateEmpty());
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
 
             var config = CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
