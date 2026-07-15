@@ -24,6 +24,7 @@ namespace GasTests
             Assert.That(config.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(400));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64));
+            Assert.That(config.LoadedChunkCapacity, Is.Zero);
             Assert.That(config.NavigationEnabled, Is.False);
             Assert.That(config.DataFile, Is.Null);
         }
@@ -40,6 +41,7 @@ namespace GasTests
                 GridCellSizeCm = 200,
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
+                LoadedChunkCapacity = 96,
                 NavigationEnabled = true,
                 DataFile = "Data/Maps/battle.vtxm",
                 VisualHeightmapAsset = "Data/Maps/battle.vhtm"
@@ -52,6 +54,7 @@ namespace GasTests
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
+            Assert.That(config.LoadedChunkCapacity, Is.EqualTo(96));
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.vtxm"));
             Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/battle.vhtm"));
@@ -65,6 +68,7 @@ namespace GasTests
                 Name = "world",
                 SpatialType = "Hex",
                 WidthInMacroTiles = 256,
+                LoadedChunkCapacity = 128,
                 DataFile = "terrain.vtxm",
                 VisualHeightmapAsset = "terrain.vhtm"
             };
@@ -73,6 +77,7 @@ namespace GasTests
             Assert.That(clone.Name, Is.EqualTo("world"));
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
             Assert.That(clone.WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(clone.LoadedChunkCapacity, Is.EqualTo(128));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.vtxm"));
             Assert.That(clone.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
 
@@ -109,6 +114,36 @@ namespace GasTests
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/strategic.vhtm"));
+        }
+
+        [Test]
+        public void NodeGraphBoard_UsesExplicitLoadedChunkCapacityFromBoardConfig()
+        {
+            string json = """
+            {
+                "name": "roads",
+                "spatialType": "NodeGraph",
+                "widthInMacroTiles": 2,
+                "heightInMacroTiles": 2,
+                "gridCellSizeCm": 100,
+                "chunkSizeCells": 64,
+                "loadedChunkCapacity": 37
+            }
+            """;
+
+            var config = JsonSerializer.Deserialize<BoardConfig>(json, _jsonOpts);
+            Assert.That(config, Is.Not.Null);
+            Assert.That(config!.LoadedChunkCapacity, Is.EqualTo(37));
+
+            var board = new NodeGraphBoard(new BoardId("roads"), "roads", config);
+            try
+            {
+                Assert.That(board.LoadedChunksSource.LoadedChunkCapacity, Is.EqualTo(37));
+            }
+            finally
+            {
+                board.Dispose();
+            }
         }
 
         [Test]

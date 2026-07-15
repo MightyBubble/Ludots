@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void GraphOps_SnapToNearestGraphEdge_UpdatesTargetPos()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 1);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             long chunkKey = GraphChunkKey.Pack(0, 0);

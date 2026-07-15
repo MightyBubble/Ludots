@@ -90,7 +90,7 @@ namespace Ludots.Tests.GAS
         {
             const int chunkSizeCm = 6400;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(chunkSizeCm);
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm, loadedChunkCapacity: 256);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             loadedChunks.ChunkLoaded += chunkKey =>
@@ -482,7 +482,7 @@ namespace Ludots.Tests.GAS
         {
             const int chunkSizeCm = 6400;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(chunkSizeCm);
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm, loadedChunkCapacity: 256);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             loadedChunks.ChunkLoaded += chunkKey =>
@@ -505,7 +505,7 @@ namespace Ludots.Tests.GAS
                 new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig()),
                 pathStore,
                 moveToOrderTypeId: 77);
-            globals[CoreServiceKeys.LoadedChunks.Name] = new WorldGridLoadedChunks(chunkSizeCm);
+            globals[CoreServiceKeys.LoadedChunks.Name] = new WorldGridLoadedChunks(chunkSizeCm, loadedChunkCapacity: 256);
             globals[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = loadedChunks;
 
             Entity actor = world.Create(
@@ -530,7 +530,7 @@ namespace Ludots.Tests.GAS
         {
             const int chunkSizeCm = 6400;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(chunkSizeCm);
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm, loadedChunkCapacity: 256);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             loadedChunks.ChunkLoaded += chunkKey =>
@@ -586,7 +586,7 @@ namespace Ludots.Tests.GAS
         {
             const int chunkSizeCm = 6400;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(chunkSizeCm);
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm, loadedChunkCapacity: 256);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             loadedChunks.ChunkLoaded += chunkKey =>
