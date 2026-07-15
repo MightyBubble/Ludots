@@ -90,6 +90,16 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
 
         public ReadOnlySpan<GasPresentationEvent> Events => new(_events, 0, _count);
 
+        internal void RollbackWrites(int checkpoint)
+        {
+            if ((uint)checkpoint > (uint)_count)
+            {
+                throw new InvalidOperationException("GAS.PRESENTATION_EVENT.ERR.InvalidWriteRollback");
+            }
+
+            _count = checkpoint;
+        }
+
         public void Clear()
         {
             _count = 0;

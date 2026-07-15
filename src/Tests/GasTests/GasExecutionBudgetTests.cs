@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 
@@ -438,7 +439,110 @@ namespace Ludots.Tests.GAS
 
             Assert.That(aliveBeforeReset, Is.EqualTo(2));
             Assert.That(world.CountEntities(in EffectQuery), Is.EqualTo(aliveBeforeReset));
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(2));
             Assert.That(system.MaxWorkUnitsPerSlice, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EffectLifetime_ResetSlice_RestoresScannedEffectStateAndExternalBuffers()
+        {
+            const int grantedTagId = 41;
+            const int templateId = 73;
+
+            using var world = World.Create();
+            var dirtyEntities = new DirtyEntityQueue(capacity: 4);
+            var tagOps = new TagOps(dirtyEntities);
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 4);
+            Entity source = world.Create();
+            Entity target = world.Create(
+                new ActiveEffectContainer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+            Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);
+            Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);
+            dirtyEntities.TryDequeue(out _);
+            world.Get<DirtyFlags>(target).ClearTagDirty(grantedTagId);
+            world.Get<DirtyFlags>(target).DeferredTriggerQueued = 0;
+
+            var grantedTags = new EffectGrantedTags();
+            Assert.That(grantedTags.Add(new TagContribution
+            {
+                TagId = grantedTagId,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 1,
+            }), Is.True);
+
+            ref ActiveEffectContainer container = ref world.Get<ActiveEffectContainer>(target);
+            for (int i = 0; i < 2; i++)
+            {
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: i + 1,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.After);
+                world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+                world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+                world.Add(effect, grantedTags);
+                Assert.That(container.Add(effect), Is.True);
+            }
+
+            var system = new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 4,
+                tagOps: tagOps,
+                presentationEvents: presentationEvents)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            system.ResetSlice();
+
+            Assert.That(world.CountEntities(in EffectQuery), Is.EqualTo(2));
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(2));
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(grantedTagId), Is.True);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(grantedTagId), Is.EqualTo(2));
+            Assert.That(world.Get<DirtyFlags>(target).IsAnyTagDirty(), Is.False);
+            Assert.That(dirtyEntities.Count, Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectLifetime_ResetSlice_AfterExternalCommitFailsExplicitly()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create(new ActiveEffectContainer());
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.After);
+            ref GameplayEffect gameplayEffect = ref world.Get<GameplayEffect>(effect);
+            gameplayEffect.State = EffectState.Committed;
+            gameplayEffect.AggregatesModifiers = true;
+            Assert.That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+
+            var system = new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 4)
+            {
+                MaxWorkUnitsPerSlice = 2,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(system.ResetSlice)!;
+
+            Assert.That(error.Message, Is.EqualTo(EffectLifetimeSystem.ResetAfterExternalCommitError));
         }
 
         [Test]

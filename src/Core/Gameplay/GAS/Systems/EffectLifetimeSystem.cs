@@ -23,6 +23,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public sealed class EffectLifetimeSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
+        public const string ResetAfterExternalCommitError =
+            "GAS.EFFECT_LIFETIME.ERR.ResetAfterExternalCommit";
+
         private static readonly QueryDescription _activeEffectsQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
         private readonly EffectRequestQueue _effectRequests;
@@ -83,6 +86,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<Entity> _dirtyTargets;
         private readonly List<Entity> _effectsToDestroy;
         private readonly Entity[] _effectSnapshot;
+        private readonly Entity[] _rollbackEffectEntities;
+        private readonly GameplayEffect[] _rollbackEffectValues;
+        private readonly TargetRollbackEntry[] _rollbackTargets;
+
+        private struct TargetRollbackEntry
+        {
+            public Entity Target;
+            public byte HasActiveEffects;
+            public byte HasTagState;
+            public ActiveEffectContainer ActiveEffects;
+            public GameplayTagContainer Tags;
+            public TagCountContainer TagCounts;
+            public DirtyFlags DirtyFlags;
+        }
 
         private enum LifetimeStage : byte
         {
@@ -103,6 +120,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private LifetimeStage _stage;
         private int _snapshotCount;
         private int _cursor;
+        private int _rollbackEffectCount;
+        private int _rollbackTargetCount;
+        private int _presentationWriteCheckpoint;
+        private DirtyEntityQueue.WriteCheckpoint _dirtyEntityWriteCheckpoint;
+        private bool _hasDirtyEntityWriteCheckpoint;
+        private bool _externalWorkCommitted;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int SnapshotCapacity => _effectSnapshot.Length;
@@ -126,6 +149,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _removePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
             _dirtyTargets = new List<Entity>(snapshotCapacity);
             _effectsToDestroy = new List<Entity>(snapshotCapacity);
+            _rollbackEffectEntities = new Entity[snapshotCapacity];
+            _rollbackEffectValues = new GameplayEffect[snapshotCapacity];
+            _rollbackTargets = new TargetRollbackEntry[snapshotCapacity];
             _effectRequests = effectRequests;
             _budget = budget;
             _clock = clock;
@@ -198,12 +224,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     ref GameplayEffect effect = ref World.Get<GameplayEffect>(entity);
                     ref EffectContext context = ref World.Get<EffectContext>(entity);
+                    CaptureEffectRollback(entity, in effect);
                     if (World.Has<EffectPeriodicTick>(entity))
                     {
                         ProcessPeriod(entity, ref effect, ref context);
                     }
                     if (World.Has<EffectExpirationCheck>(entity))
                     {
+                        CaptureTargetRollback(context.Target);
                         ProcessExpiration(entity, ref effect, ref context);
                     }
                     continue;
@@ -228,6 +256,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (_cursor < _fanOutCommands.Count)
                     {
                         FanOutCommand command = _fanOutCommands[_cursor++];
+                        _externalWorkCommitted |= _effectRequests != null;
                         TargetResolverFanOutHelper.PublishCommand(in command, _effectRequests);
                         CountWork(ref workUnits);
                         continue;
@@ -243,6 +272,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         Entity target = _dirtyTargets[_cursor++];
                         if (World.IsAlive(target) && !World.Has<AttributeAggregateDirty>(target))
                         {
+                            _externalWorkCommitted = true;
                             World.Add(target, new AttributeAggregateDirty());
                         }
                         CountWork(ref workUnits);
@@ -257,7 +287,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (_cursor < _effectsToDestroy.Count)
                     {
                         Entity effect = _effectsToDestroy[_cursor++];
-                        if (World.IsAlive(effect)) World.Destroy(effect);
+                        if (World.IsAlive(effect))
+                        {
+                            _externalWorkCommitted = true;
+                            World.Destroy(effect);
+                        }
                         CountWork(ref workUnits);
                         continue;
                     }
@@ -274,11 +308,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public void ResetSlice()
         {
+            if (_sliceActive)
+            {
+                if (_externalWorkCommitted)
+                {
+                    throw new InvalidOperationException(ResetAfterExternalCommitError);
+                }
+
+                RollbackScannedWork();
+            }
+
             _sliceActive = false;
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
             _cursor = 0;
             ClearPendingWork();
+            ClearRollbackState();
         }
 
         private void BeginSlice()
@@ -288,6 +333,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _callbackDropped = 0;
             _fanOutDropped = 0;
             ClearPendingWork();
+            ClearRollbackState();
+            _presentationWriteCheckpoint = _presentationEvents?.Count ?? 0;
+            if (_tagOps != null)
+            {
+                _dirtyEntityWriteCheckpoint = _tagOps.DirtyEntities.CaptureWriteCheckpoint();
+                _hasDirtyEntityWriteCheckpoint = true;
+            }
 
             _snapshotCount = World.CountEntities(in _activeEffectsQuery);
             if (_snapshotCount > _effectSnapshot.Length)
@@ -313,6 +365,95 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _removePhaseGraphs.Clear();
             _dirtyTargets.Clear();
             _effectsToDestroy.Clear();
+        }
+
+        private void CaptureEffectRollback(Entity entity, in GameplayEffect effect)
+        {
+            _rollbackEffectEntities[_rollbackEffectCount] = entity;
+            _rollbackEffectValues[_rollbackEffectCount] = effect;
+            _rollbackEffectCount++;
+        }
+
+        private void CaptureTargetRollback(Entity target)
+        {
+            if (!World.IsAlive(target))
+            {
+                return;
+            }
+
+            ref TargetRollbackEntry entry = ref _rollbackTargets[_rollbackTargetCount++];
+            entry = default;
+            entry.Target = target;
+            if (World.Has<ActiveEffectContainer>(target))
+            {
+                entry.HasActiveEffects = 1;
+                entry.ActiveEffects = World.Get<ActiveEffectContainer>(target);
+            }
+            if (World.Has<GameplayTagContainer>(target) &&
+                World.Has<TagCountContainer>(target) &&
+                World.Has<DirtyFlags>(target))
+            {
+                entry.HasTagState = 1;
+                entry.Tags = World.Get<GameplayTagContainer>(target);
+                entry.TagCounts = World.Get<TagCountContainer>(target);
+                entry.DirtyFlags = World.Get<DirtyFlags>(target);
+            }
+        }
+
+        private void RollbackScannedWork()
+        {
+            _presentationEvents?.RollbackWrites(_presentationWriteCheckpoint);
+            if (_hasDirtyEntityWriteCheckpoint)
+            {
+                _tagOps!.DirtyEntities.RollbackWrites(in _dirtyEntityWriteCheckpoint);
+            }
+
+            for (int i = _rollbackTargetCount - 1; i >= 0; i--)
+            {
+                ref readonly TargetRollbackEntry entry = ref _rollbackTargets[i];
+                if (!World.IsAlive(entry.Target))
+                {
+                    throw new InvalidOperationException(
+                        $"{ResetAfterExternalCommitError}: target={entry.Target.Id} destroyed during scan.");
+                }
+                if (entry.HasActiveEffects != 0)
+                {
+                    if (!World.Has<ActiveEffectContainer>(entry.Target))
+                    {
+                        throw new InvalidOperationException(
+                            $"{ResetAfterExternalCommitError}: target={entry.Target.Id} lost ActiveEffectContainer.");
+                    }
+                    World.Get<ActiveEffectContainer>(entry.Target) = entry.ActiveEffects;
+                }
+                if (entry.HasTagState != 0)
+                {
+                    TagOps.RequireTagState(World, entry.Target);
+                    World.Get<GameplayTagContainer>(entry.Target) = entry.Tags;
+                    World.Get<TagCountContainer>(entry.Target) = entry.TagCounts;
+                    World.Get<DirtyFlags>(entry.Target) = entry.DirtyFlags;
+                }
+            }
+
+            for (int i = _rollbackEffectCount - 1; i >= 0; i--)
+            {
+                Entity effect = _rollbackEffectEntities[i];
+                if (!World.IsAlive(effect) || !World.Has<GameplayEffect>(effect))
+                {
+                    throw new InvalidOperationException(
+                        $"{ResetAfterExternalCommitError}: effect={effect.Id} destroyed during scan.");
+                }
+                World.Get<GameplayEffect>(effect) = _rollbackEffectValues[i];
+            }
+        }
+
+        private void ClearRollbackState()
+        {
+            _rollbackEffectCount = 0;
+            _rollbackTargetCount = 0;
+            _presentationWriteCheckpoint = 0;
+            _dirtyEntityWriteCheckpoint = default;
+            _hasDirtyEntityWriteCheckpoint = false;
+            _externalWorkCommitted = false;
         }
 
         private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
@@ -363,7 +504,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_cursor < entries.Count)
             {
                 PhaseGraphEntry entry = entries[_cursor++];
-                ExecutePhaseGraphEntry(in entry, phase, _builtinRuntime);
+                _externalWorkCommitted |= ExecutePhaseGraphEntry(in entry, phase, _builtinRuntime);
                 CountWork(ref workUnits);
                 return true;
             }
@@ -381,7 +522,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_cursor < callbacks.Count)
             {
                 CallbackCommand callback = callbacks[_cursor++];
-                PublishCallback(in callback);
+                _externalWorkCommitted |= PublishCallback(in callback);
                 CountWork(ref workUnits);
                 return true;
             }
@@ -389,9 +530,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private void PublishCallback(in CallbackCommand command)
+        private bool PublishCallback(in CallbackCommand command)
         {
-            if (_effectRequests == null) return;
+            if (_effectRequests == null) return false;
             _effectRequests.Publish(new EffectRequest
             {
                 RootId = command.RootId,
@@ -400,6 +541,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TargetContext = command.TargetContext,
                 TemplateId = command.EffectTemplateId,
             });
+            return true;
         }
 
         private void CompleteSlice()
@@ -596,16 +738,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
 
-        private void ExecutePhaseGraphEntry(
+        private bool ExecutePhaseGraphEntry(
             in PhaseGraphEntry entry,
             EffectPhaseId phase,
             BuiltinHandlerExecutionContext? builtinRuntime)
         {
-            if (_phaseExecutor == null || _graphApi == null || _templates == null) return;
+            if (_phaseExecutor == null || _graphApi == null || _templates == null) return false;
 
             builtinRuntime?.ResetPerEffect();
-            if (entry.TemplateId <= 0) return;
-            if (!_templates.TryGetRef(entry.TemplateId, out int tplIdx)) return;
+            if (entry.TemplateId <= 0) return false;
+            if (!_templates.TryGetRef(entry.TemplateId, out int tplIdx)) return false;
             ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, entry.EffectEntity, in tpl.ConfigParams);
@@ -632,6 +774,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 UnregisterListeners(entry.Context, entry.EffectEntityId);
             }
+            return true;
         }
 
         /// <summary>
