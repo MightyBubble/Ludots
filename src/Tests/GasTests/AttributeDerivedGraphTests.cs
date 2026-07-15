@@ -13,6 +13,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [NonParallelizable]
     public class AttributeDerivedGraphTests
     {
         [Test]
@@ -444,8 +445,8 @@ namespace Ludots.Tests.GAS
             // Arrange: entity with AbilityHaste=50 → CDMultiplier = 1/(1+50/100) = 0.6667
             using var world = World.Create();
 
-            int abilityHasteAttrId = 1;
-            int cdMultiplierAttrId = 2;
+            int abilityHasteAttrId = AttributeRegistry.Register("tests.derived-graph.non-linear.ability-haste");
+            int cdMultiplierAttrId = AttributeRegistry.Register("tests.derived-graph.non-linear.cooldown-multiplier");
 
             var entity = world.Create(
                 new AttributeBuffer(),
@@ -505,9 +506,9 @@ namespace Ludots.Tests.GAS
             // Arrange: HP=1000, Armor=100 → PhysicalEHP = 1000 * (1 + 100/100) = 2000
             using var world = World.Create();
 
-            int hpAttrId = 1;
-            int armorAttrId = 2;
-            int physEhpAttrId = 3;
+            int hpAttrId = AttributeRegistry.Register("tests.derived-graph.armor.health");
+            int armorAttrId = AttributeRegistry.Register("tests.derived-graph.armor.armor");
+            int physEhpAttrId = AttributeRegistry.Register("tests.derived-graph.armor.physical-ehp");
 
             var entity = world.Create(
                 new AttributeBuffer(),
@@ -575,7 +576,8 @@ namespace Ludots.Tests.GAS
                 new DirtyFlags()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetBase(1, 42f);
+            int attributeId = AttributeRegistry.Register("tests.derived-graph.no-binding.base");
+            buf.SetBase(attributeId, 42f);
 
             var registry = new GraphProgramRegistry();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
@@ -587,7 +589,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             ref var result = ref world.Get<AttributeBuffer>(entity);
-            That(result.GetCurrent(1), Is.EqualTo(42f),
+            That(result.GetCurrent(attributeId), Is.EqualTo(42f),
                 "Without binding, base value should pass through unchanged");
         }
 
@@ -597,8 +599,8 @@ namespace Ludots.Tests.GAS
             // Derived graph writes should be reflected in dirty flags
             using var world = World.Create();
 
-            int sourceAttr = 1;
-            int derivedAttr = 2;
+            int sourceAttr = AttributeRegistry.Register("tests.derived-graph.dirty.source");
+            int derivedAttr = AttributeRegistry.Register("tests.derived-graph.dirty.result");
 
             var entity = world.Create(
                 new AttributeBuffer(),
