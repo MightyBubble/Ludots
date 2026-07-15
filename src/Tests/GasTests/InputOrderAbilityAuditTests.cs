@@ -1399,6 +1399,94 @@ namespace Ludots.Tests.GAS
             That(events[1].AbilityId, Is.EqualTo(abilityId));
         }
 
+        [TestCase(true, OrderFailureReason.AbilitySlotOutOfRange, AbilityCastFailReason.InvalidSlot)]
+        [TestCase(false, OrderFailureReason.AbilityDefinitionMissing, AbilityCastFailReason.InvalidSlot)]
+        public void AbilityExecSystem_Phase2StateDrift_FailsOrderAndPublishesOneCastFailed(
+            bool removeSlot,
+            OrderFailureReason expectedOrderReason,
+            AbilityCastFailReason expectedPresentationReason)
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9004;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer());
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            var order = new Order { OrderId = 12, Actor = actor, OrderTypeId = castAbilityOrderTypeId };
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(in order, priority: 100);
+            ref var blackboard = ref world.Get<BlackboardIntBuffer>(actor);
+            blackboard.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition());
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
+                maxWorkUnitsPerSlice: 1);
+
+            That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            That(world.Has<AbilityExecInstance>(actor), Is.True);
+            if (removeSlot)
+            {
+                world.Get<AbilityStateBuffer>(actor).Count = 0;
+            }
+            else
+            {
+                definitions.Clear();
+            }
+
+            system.MaxWorkUnitsPerSlice = int.MaxValue;
+            That(system.UpdateSlice(0f, int.MaxValue), Is.True);
+
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(12));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(expectedOrderReason));
+            int failedCount = 0;
+            int finishedCount = 0;
+            foreach (ref readonly var evt in presentationEvents.Events)
+            {
+                if (evt.Kind == GasPresentationEventKind.CastFailed)
+                {
+                    failedCount++;
+                    That(evt.FailReason, Is.EqualTo(expectedPresentationReason));
+                }
+                else if (evt.Kind == GasPresentationEventKind.CastFinished)
+                {
+                    finishedCount++;
+                }
+            }
+            That(failedCount, Is.EqualTo(1));
+            That(finishedCount, Is.Zero);
+        }
+
         [Test]
         public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyCooldown_AndClearsTagCount()
         {
@@ -1457,6 +1545,15 @@ namespace Ludots.Tests.GAS
             };
             defs.Register(abilityId, in def);
 
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -1466,6 +1563,7 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes,
                 tagOps: tagOps);
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
@@ -1475,6 +1573,83 @@ namespace Ludots.Tests.GAS
             That(world.Get<TagCountContainer>(actor).GetCount(toggleTagId), Is.EqualTo(0), "Toggle removal must clear TagCountContainer as well as the bitset.");
             That(world.Get<GameplayTagContainer>(actor).HasTag(cooldownTagId), Is.True, "Turning off a toggle should not remove the reactivation cooldown tag.");
             That(world.Get<TagCountContainer>(actor).GetCount(cooldownTagId), Is.EqualTo(1));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(8));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
+        }
+
+        [Test]
+        public void AbilityExecSystem_ToggleDeactivateTimeline_PreservesOrderIdentityUntilCompletion()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9005;
+            const int toggleTagId = 43;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new TimedTagBuffer(),
+                new DirtyFlags());
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+            var order = new Order { OrderId = 13, Actor = actor, OrderTypeId = castAbilityOrderTypeId };
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(in order, priority: 100);
+            ref var blackboard = ref world.Get<BlackboardIntBuffer>(actor);
+            blackboard.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            ref var tags = ref world.Get<GameplayTagContainer>(actor);
+            ref var counts = ref world.Get<TagCountContainer>(actor);
+            ref var dirty = ref world.Get<DirtyFlags>(actor);
+            tagOps.AddTag(ref tags, ref counts, toggleTagId, ref dirty);
+
+            var deactivateSpec = default(AbilityExecSpec);
+            deactivateSpec.ClockId = GasClockId.Step;
+            deactivateSpec.SetItem(0, ExecItemKind.End, tick: 0);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition
+            {
+                HasToggleSpec = true,
+                ToggleSpec = new AbilityToggleSpec
+                {
+                    ToggleTagId = toggleTagId,
+                    DeactivateExecSpec = deactivateSpec,
+                }
+            });
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes,
+                tagOps: tagOps);
+
+            system.Update(0f);
+
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(13));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [TestCase(true)]

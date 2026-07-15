@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
@@ -120,9 +121,95 @@ namespace Ludots.Tests.GAS
             tags.AddTag(TagRegistry.GetId(StunTagName));
             harness.ExecSystem.Update(0f);
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False, "Interrupt must tear the exec down.");
+            Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1));
+            ref readonly var terminal = ref harness.OrderTypes.TerminalResults[0];
+            Assert.That(terminal.OrderId, Is.EqualTo(7));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Cancelled));
+            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.Interrupted));
 
             harness.ContextSystem.Update(0f);
             Assert.That(harness.Stack.Count, Is.EqualTo(1), "Interrupted exec must reclaim its frame.");
+        }
+
+        [Test]
+        public void ExecOrderReplaced_DiscardsOldExecWithoutFinalizingReplacement()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+
+            harness.ExecSystem.Update(0f);
+            Assert.That(world.Get<AbilityExecInstance>(actor).OrderId, Is.EqualTo(7));
+
+            var replacement = new Order
+            {
+                OrderId = 8,
+                Actor = actor,
+                OrderTypeId = CastOrderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            OrderSubmitResult submitResult = OrderSubmitter.Submit(
+                world,
+                actor,
+                in replacement,
+                harness.OrderTypes,
+                orderRuleRegistry: null,
+                currentStep: 1,
+                stepRateHz: 30);
+
+            Assert.That(submitResult, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(harness.OrderTypes.TerminalResults[0].OrderId, Is.EqualTo(7));
+            Assert.That(harness.OrderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
+
+            harness.ExecSystem.Update(0f);
+
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True, "The replacement cast may start during the same update rescan.");
+            Assert.That(world.Get<AbilityExecInstance>(actor).OrderId, Is.EqualTo(8), "The cancelled execution must not keep running after its order is replaced.");
+            Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(8));
+            Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1), "Discarding the old execution must not finalize the replacement order.");
+        }
+
+        [Test]
+        public void ExecFinish_WhenTerminalResultCapacityIsFull_LeavesOrderAndExecUntouchedForRetry()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, terminalResultCapacity: 1);
+            Entity actor = harness.CreateCastingActor(AbilityWithContextId);
+
+            var occupiedOrder = new Order { OrderId = 99, Actor = default, OrderTypeId = CastOrderTypeId };
+            var occupiedBuffer = OrderBuffer.CreateEmpty();
+            Entity occupiedActor = world.Create(
+                occupiedBuffer,
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new BlackboardSpatialBuffer());
+            occupiedOrder.Actor = occupiedActor;
+            ref var occupiedOrders = ref world.Get<OrderBuffer>(occupiedActor);
+            occupiedOrders.SetActiveDirect(in occupiedOrder, priority: 100);
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, occupiedActor, harness.OrderTypes), Is.True);
+
+            harness.ExecSystem.Update(0f);
+            harness.EventBus.Publish(new GameplayEvent { TagId = WaitEventTagId, Source = actor });
+            harness.EventBus.Update();
+            harness.ExecSystem.Update(0f);
+
+            Assert.Throws<InvalidOperationException>(() => harness.ExecSystem.Update(0f));
+
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True, "A result-capacity fault must not tear down the execution before its terminal outcome is recorded.");
+            Assert.That(world.Get<AbilityExecInstance>(actor).State, Is.EqualTo(AbilityExecRunState.Finished));
+            Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
+            Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
+
+            harness.OrderTypes.TerminalResults.Clear();
+            harness.ExecSystem.ResetSlice();
+            harness.ExecSystem.Update(0f);
+
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(harness.OrderTypes.TerminalResults[0].OrderId, Is.EqualTo(7));
+            Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.EqualTo(1));
         }
 
         [Test]
@@ -195,6 +282,20 @@ namespace Ludots.Tests.GAS
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
+        private static int CountPresentationEvents(GasPresentationEventBuffer events, GasPresentationEventKind kind)
+        {
+            int count = 0;
+            foreach (ref readonly var evt in events.Events)
+            {
+                if (evt.Kind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         private sealed class Harness
         {
             public World World = null!;
@@ -203,12 +304,14 @@ namespace Ludots.Tests.GAS
             public InteractionContextStack Stack = null!;
             public ContextBoundCollectionWriter Writer = null!;
             public GameplayEventBus EventBus = null!;
+            public OrderTypeRegistry OrderTypes = null!;
+            public GasPresentationEventBuffer PresentationEvents = null!;
             public AbilityExecSystem ExecSystem = null!;
             public AbilityExecInteractionContextSystem ContextSystem = null!;
             public int CommandSourceKeyId;
             public int AbilityTargetsKeyId;
 
-            public static Harness Create(World world)
+            public static Harness Create(World world, int terminalResultCapacity = OrderTerminalResultBuffer.DefaultCapacity)
             {
                 var types = new RelationshipTypeRegistry();
                 var relationships = new RelationshipRuntime(
@@ -273,17 +376,19 @@ namespace Ludots.Tests.GAS
                 });
 
                 var eventBus = new GameplayEventBus();
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(terminalResultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     OrderTypeId = CastOrderTypeId,
                     AllowQueuedMode = false,
                     ClearQueueOnActivate = true,
+                    CanInterruptSelf = true,
                     IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
                     EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                     SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition,
                 });
 
+                var presentationEvents = new GasPresentationEventBuffer(32);
                 var execSystem = new AbilityExecSystem(
                     world,
                     new DiscreteClock(),
@@ -294,6 +399,7 @@ namespace Ludots.Tests.GAS
                     definitions,
                     eventBus,
                     castAbilityOrderTypeId: CastOrderTypeId,
+                    presentationEvents: presentationEvents,
                     orderTypeRegistry: orderTypes,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
@@ -305,6 +411,8 @@ namespace Ludots.Tests.GAS
                     Stack = stack,
                     Writer = writer,
                     EventBus = eventBus,
+                    OrderTypes = orderTypes,
+                    PresentationEvents = presentationEvents,
                     ExecSystem = execSystem,
                     ContextSystem = new AbilityExecInteractionContextSystem(world, stack, contextProfiles, definitions),
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
@@ -317,6 +425,8 @@ namespace Ludots.Tests.GAS
                 Entity actor = World.Create(
                     OrderBuffer.CreateEmpty(),
                     new BlackboardIntBuffer(),
+                    new BlackboardEntityBuffer(),
+                    new BlackboardSpatialBuffer(),
                     new AbilityStateBuffer(),
                     new GameplayTagContainer(),
                     new TagCountContainer());

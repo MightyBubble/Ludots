@@ -199,6 +199,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public byte HasTargetOriginPos;
 
         public AbilityExecRunState State;
+        /// <summary>
+        /// Explicit order-terminal reason for Interrupted and Failed states.
+        /// None is valid only while running or after a successful finish.
+        /// </summary>
+        public OrderFailureReason TerminalFailureReason;
         /// <summary>Elapsed ticks since execution start (relative to spec ticks).</summary>
         public int CurrentTick;
         /// <summary>The tick value at execution start (absolute clock value).</summary>

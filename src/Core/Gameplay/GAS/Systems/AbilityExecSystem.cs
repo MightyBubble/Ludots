@@ -122,8 +122,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             while (!UpdateSlice(dt, int.MaxValue)) { }
             
-            // After Phase 2 finishes abilities (which calls NotifyOrderComplete and
-            // promotes next queued order / activates tags), re-run Phase 1 to pick up
+            // After Phase 2 finalizes abilities (which promotes next queued orders and
+            // activates tags), re-run Phase 1 to pick up
             // newly promoted orders in the same frame. Without this, there would be 
             // a one-frame delay between ability completion and the next queued ability starting.
             for (int rescan = 0; rescan < MaxRescanIterations; rescan++)
@@ -228,7 +228,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         hasActorTags &&
                         actorTags.HasTag(abilityDef.ToggleSpec.ToggleTagId))
                     {
-                        DeactivateToggle(actor, in abilityDef.ToggleSpec, slotIndex, slot.AbilityId, targetEntity);
+                        DeactivateToggle(
+                            actor,
+                            in abilityDef.ToggleSpec,
+                            orderBuffer.ActiveOrder.Order.OrderId,
+                            slotIndex,
+                            slot.AbilityId,
+                            targetEntity);
                         continue;
                     }
 
@@ -381,6 +387,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.TargetOriginPosCm = targetOriginPosCm;
                     exec.HasTargetOriginPos = (byte)(hasTargetOriginPos ? 1 : 0);
                     exec.State = AbilityExecRunState.Running;
+                    exec.TerminalFailureReason = OrderFailureReason.None;
                     exec.CurrentTick = 0;
                     exec.StartAbsoluteTick = ClockNow(defaultClockId, actor);
                     exec.NextItemIndex = 0;
@@ -426,16 +433,32 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 ref var instance = ref World.Get<AbilityExecInstance>(actor);
+
+                // An interrupting order finalizes the old order before replacing it. The old
+                // execution snapshot may still exist until this phase; it must be discarded
+                // without touching the replacement order or continuing timeline side effects.
+                if (instance.OrderId > 0 && !IsExecutionOrderCurrent(actor, instance.OrderId))
+                {
+                    AbilityExecInstance cancelledInstance = instance;
+                    World.Remove<AbilityExecInstance>(actor);
+                    PublishCastTerminalEvent(actor, in cancelledInstance, GasPresentationEventKind.CastInterrupted);
+                    workUnits++;
+                    LastSliceProcessed++;
+                    continue;
+                }
+
                 ref var abilities = ref World.Get<AbilityStateBuffer>(actor);
 
                 if (instance.AbilitySlot < 0 || instance.AbilitySlot >= abilities.Count)
                 {
-                    if (_orderTypeRegistry != null)
-                    {
-                        OrderSubmitter.FinalizeCurrent(World, actor, _orderTypeRegistry, OrderTerminalState.Failed, OrderFailureReason.AbilitySlotOutOfRange);
-                    }
-                    World.Remove<AbilityExecInstance>(actor);
+                    AbilityExecInstance failedInstance = instance;
+                    FailActiveExecution(
+                        actor,
+                        in failedInstance,
+                        AbilityCastFailReason.InvalidSlot,
+                        OrderFailureReason.AbilitySlotOutOfRange);
                     workUnits++;
+                    LastSliceProcessed++;
                     continue;
                 }
 
@@ -468,12 +491,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (!hasDefinition && (!hasTemplateEntity || !World.Has<AbilityExecSpec>(templateEntity)))
                 {
-                    if (_orderTypeRegistry != null)
-                    {
-                        OrderSubmitter.FinalizeCurrent(World, actor, _orderTypeRegistry, OrderTerminalState.Failed, OrderFailureReason.AbilityDefinitionMissing);
-                    }
-                    World.Remove<AbilityExecInstance>(actor);
+                    AbilityExecInstance failedInstance = instance;
+                    FailActiveExecution(
+                        actor,
+                        in failedInstance,
+                        AbilityCastFailReason.InvalidSlot,
+                        OrderFailureReason.AbilityDefinitionMissing);
                     workUnits++;
+                    LastSliceProcessed++;
                     continue;
                 }
 
@@ -517,6 +542,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (hasActorTags && !spec.InterruptAny.IsEmpty && actorTags.Intersects(in spec.InterruptAny))
                 {
                     instance.State = AbilityExecRunState.Interrupted;
+                    instance.TerminalFailureReason = OrderFailureReason.Interrupted;
                 }
 
                 // Tick advancement
@@ -536,39 +562,48 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     instance.State == AbilityExecRunState.Interrupted ||
                     instance.State == AbilityExecRunState.Failed)
                 {
-                    if (instance.State != AbilityExecRunState.Failed)
+                    AbilityExecInstance terminalInstance = instance;
+                    ResolveOrderTerminalOutcome(
+                        in terminalInstance,
+                        out OrderTerminalState terminalState,
+                        out OrderFailureReason terminalReason);
+
+                    // Finalize first. Capacity or queued-order preparation failures must leave
+                    // both the active order and terminal execution component available to retry.
+                    if (_orderTypeRegistry != null && terminalInstance.OrderId > 0)
                     {
-                        var finishKind = instance.State == AbilityExecRunState.Interrupted
+                        if (!OrderSubmitter.FinalizeCurrent(
+                                World,
+                                actor,
+                                _orderTypeRegistry,
+                                terminalState,
+                                terminalReason))
+                        {
+                            throw new InvalidOperationException(
+                                $"GAS.ABILITY_EXEC.ERR.TerminalOrderMissing: actor={actor.Id}, orderId={terminalInstance.OrderId}, state={terminalInstance.State}.");
+                        }
+                    }
+
+                    World.Remove<AbilityExecInstance>(actor);
+
+                    if (terminalInstance.State != AbilityExecRunState.Failed)
+                    {
+                        var finishKind = terminalInstance.State == AbilityExecRunState.Interrupted
                             ? GasPresentationEventKind.CastInterrupted
                             : GasPresentationEventKind.CastFinished;
-                        _presentationEvents?.Publish(new GasPresentationEvent
-                        {
-                            Kind = finishKind,
-                            Actor = actor,
-                            Target = instance.Target,
-                            AbilitySlot = instance.AbilitySlot,
-                            AbilityId = instance.AbilityId
-                        });
+                        PublishCastTerminalEvent(actor, in terminalInstance, finishKind);
                     }
-                    
+
                     // Toggle activation: when the activate timeline (not deactivate) finishes successfully,
                     // add the toggle tag and apply infinite effects.
-                    if (instance.State == AbilityExecRunState.Finished &&
-                        !instance.IsToggleDeactivating &&
-                        instance.AbilityId > 0 &&
+                    if (terminalInstance.State == AbilityExecRunState.Finished &&
+                        !terminalInstance.IsToggleDeactivating &&
+                        terminalInstance.AbilityId > 0 &&
                         _abilityDefinitions != null &&
-                        _abilityDefinitions.TryGet(instance.AbilityId, out var toggleFinishDef) &&
+                        _abilityDefinitions.TryGet(terminalInstance.AbilityId, out var toggleFinishDef) &&
                         toggleFinishDef.HasToggleSpec && toggleFinishDef.ToggleSpec.ToggleTagId > 0)
                     {
                         ActivateToggle(actor, in toggleFinishDef.ToggleSpec);
-                    }
-                    
-                    World.Remove<AbilityExecInstance>(actor);
-                    
-                    // Notify OrderBuffer pipeline that this order completed (promotes next queued order)
-                    if (_orderTypeRegistry != null)
-                    {
-                        OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypeRegistry);
                     }
                 }
                 else
@@ -704,6 +739,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void FailPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
         {
             inst.State = AbilityExecRunState.Failed;
+            inst.TerminalFailureReason = OrderFailureReason.PreconditionFailed;
             inst.PendingProgressionUseRequirement = 0;
             inst.PendingProgressionRequirementId = 0;
             _presentationEvents?.Publish(new GasPresentationEvent
@@ -760,6 +796,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Actor = actor,
                 AbilitySlot = slotIndex,
                 AbilityId = abilityId,
+                FailReason = presentationReason
+            });
+        }
+
+        private void FailActiveExecution(
+            Entity actor,
+            in AbilityExecInstance instance,
+            AbilityCastFailReason presentationReason,
+            OrderFailureReason orderReason)
+        {
+            if (_orderTypeRegistry != null && instance.OrderId > 0)
+            {
+                if (!OrderSubmitter.FinalizeCurrent(
+                        World,
+                        actor,
+                        _orderTypeRegistry,
+                        OrderTerminalState.Failed,
+                        orderReason))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.ABILITY_EXEC.ERR.FailedOrderMissing: actor={actor.Id}, orderId={instance.OrderId}, reason={orderReason}.");
+                }
+            }
+
+            World.Remove<AbilityExecInstance>(actor);
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.CastFailed,
+                Actor = actor,
+                Target = instance.Target,
+                AbilitySlot = instance.AbilitySlot,
+                AbilityId = instance.AbilityId,
                 FailReason = presentationReason
             });
         }
@@ -1223,8 +1291,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// Deactivate toggle: remove toggle tag and active effects, then optionally
         /// run the deactivate timeline. If no deactivate timeline, completes instantly.
         /// </summary>
-        private void DeactivateToggle(Entity actor,
-            in AbilityToggleSpec toggleSpec, int slotIndex, int abilityId, Entity targetEntity)
+        private void DeactivateToggle(
+            Entity actor,
+            in AbilityToggleSpec toggleSpec,
+            int orderId,
+            int slotIndex,
+            int abilityId,
+            Entity targetEntity)
         {
             _tagOps.RemoveTag(World, actor, toggleSpec.ToggleTagId);
             
@@ -1240,12 +1313,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 
                 ref var exec = ref World.Get<AbilityExecInstance>(actor);
-                exec.OrderId = 0;
+                exec.OrderId = orderId;
                 exec.AbilitySlot = slotIndex;
                 exec.AbilityId = abilityId;
                 exec.Target = targetEntity;
                 exec.TargetContext = default;
                 exec.State = AbilityExecRunState.Running;
+                exec.TerminalFailureReason = OrderFailureReason.None;
                 exec.CurrentTick = 0;
                 exec.StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor);
                 exec.NextItemIndex = 0;
@@ -1279,6 +1353,63 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         // Helpers
+
+        private bool IsExecutionOrderCurrent(Entity actor, int orderId)
+        {
+            if (!World.Has<OrderBuffer>(actor))
+            {
+                return false;
+            }
+
+            ref var orders = ref World.Get<OrderBuffer>(actor);
+            return orders.HasActive && orders.ActiveOrder.Order.OrderId == orderId;
+        }
+
+        private static void ResolveOrderTerminalOutcome(
+            in AbilityExecInstance instance,
+            out OrderTerminalState state,
+            out OrderFailureReason failureReason)
+        {
+            switch (instance.State)
+            {
+                case AbilityExecRunState.Finished:
+                    state = OrderTerminalState.Completed;
+                    failureReason = OrderFailureReason.None;
+                    return;
+                case AbilityExecRunState.Interrupted:
+                    state = OrderTerminalState.Cancelled;
+                    failureReason = instance.TerminalFailureReason;
+                    break;
+                case AbilityExecRunState.Failed:
+                    state = OrderTerminalState.Failed;
+                    failureReason = instance.TerminalFailureReason;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"GAS.ABILITY_EXEC.ERR.NonTerminalStateFinalized: state={instance.State}, orderId={instance.OrderId}.");
+            }
+
+            if (failureReason == OrderFailureReason.None)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.ABILITY_EXEC.ERR.TerminalReasonMissing: state={instance.State}, orderId={instance.OrderId}.");
+            }
+        }
+
+        private void PublishCastTerminalEvent(
+            Entity actor,
+            in AbilityExecInstance instance,
+            GasPresentationEventKind kind)
+        {
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = kind,
+                Actor = actor,
+                Target = instance.Target,
+                AbilitySlot = instance.AbilitySlot,
+                AbilityId = instance.AbilityId
+            });
+        }
 
         private int ClockNow(GasClockId clockId, Entity actor)
         {

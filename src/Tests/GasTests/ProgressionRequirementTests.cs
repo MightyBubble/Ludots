@@ -781,6 +781,11 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.True);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastCommitted), Is.True);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            ref readonly var terminal = ref orderTypes.TerminalResults[0];
+            Assert.That(terminal.OrderId, Is.EqualTo(22));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
         }
 
         [Test]
