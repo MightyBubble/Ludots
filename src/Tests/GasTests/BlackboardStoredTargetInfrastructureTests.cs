@@ -100,6 +100,41 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InstantCompleteOrderSystem_DefaultEntityValueDoesNotOverridePointTarget()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 107;
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTargetDefaultEntity",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 2,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Args = OrderArgs.CreateSingleWorldCm(new Vector3(400f, 0f, 600f)),
+            }, priority: 40);
+
+            new InstantCompleteOrderSystem(world, orderTypes).Update(default);
+
+            Assert.That(buffer.HasActive, Is.False);
+            Assert.That(BlackboardStoredTargetOps.TryRead(world, host, in keys, out BlackboardStoredTargetSnapshot target), Is.True);
+            Assert.That(target.Kind, Is.EqualTo(BlackboardStoredTargetKind.Point));
+            Assert.That(target.WorldPositionCm, Is.EqualTo(new Vector3(400f, 0f, 600f)));
+        }
+
+        [Test]
         public void InstantCompleteOrderSystem_WhenStoredTargetCapacityIsFull_PreservesOldTargetAndActiveOrder()
         {
             using World world = World.Create();

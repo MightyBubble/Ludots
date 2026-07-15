@@ -120,7 +120,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
             ClearPrepared(ref ints, ref spatial, ref entities, in keys);
 
-            if (order.Target != Entity.Null)
+            bool hasEntityTarget = order.Target != Entity.Null && order.Target != default(Entity);
+            bool hasSpatialTarget = order.Args.Spatial.Kind == OrderSpatialKind.Hex ||
+                                    order.Args.Spatial.Mode == OrderCollectionMode.Single;
+            if (hasEntityTarget && hasSpatialTarget)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.STORED_TARGET.ERR.AmbiguousOrderTarget: host={host.Id}, target={order.Target.Id}, spatialKind={order.Args.Spatial.Kind}, spatialMode={order.Args.Spatial.Mode}.");
+            }
+
+            if (hasEntityTarget)
             {
                 if (!world.IsAlive(order.Target))
                 {
