@@ -270,6 +270,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             : base(world)
         {
             _queue = queue;
+            _queue?.TrackResponseChainListenerLifecycle(world);
             _budget = budget;
             _templates = templates;
             _inputRequests = inputRequests;

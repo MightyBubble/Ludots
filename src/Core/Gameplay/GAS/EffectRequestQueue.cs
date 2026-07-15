@@ -32,6 +32,7 @@ namespace Ludots.Core.Gameplay.GAS
         private int _dropped;
         private bool _budgetFused;
         private int _responseChainListenerRevision;
+        private World? _responseChainListenerWorld;
 
         public EffectRequestQueue(int initialCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
         {
@@ -151,6 +152,37 @@ namespace Ludots.Core.Gameplay.GAS
             unchecked
             {
                 _responseChainListenerRevision++;
+            }
+        }
+
+        internal void TrackResponseChainListenerLifecycle(World world)
+        {
+            if (world == null)
+            {
+                throw new System.ArgumentNullException(nameof(world));
+            }
+
+            if (ReferenceEquals(_responseChainListenerWorld, world))
+            {
+                return;
+            }
+
+            if (_responseChainListenerWorld != null)
+            {
+                throw new System.InvalidOperationException(
+                    "GAS.RESPONSE_CHAIN.ERR.ListenerWorldAlreadyBound");
+            }
+
+            _responseChainListenerWorld = world;
+            world.SubscribeEntityDestroyed(OnResponseChainEntityDestroyed);
+        }
+
+        private void OnResponseChainEntityDestroyed(in Entity entity)
+        {
+            World world = _responseChainListenerWorld!;
+            if (world.Has<ResponseChainListener>(entity))
+            {
+                NotifyResponseChainListenersChanged();
             }
         }
     }

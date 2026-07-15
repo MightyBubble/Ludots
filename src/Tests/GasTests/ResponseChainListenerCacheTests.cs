@@ -56,6 +56,18 @@ namespace Ludots.Tests.GAS
 
             Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(healthAttributeId), Is.EqualTo(90f));
             Assert.That(system.ListenerCacheRebuildCount, Is.EqualTo(2));
+
+            int revisionBeforeDestroy = queue.ResponseChainListenerRevision;
+            world.Destroy(listenerEntity);
+
+            Assert.That(queue.ResponseChainListenerRevision, Is.EqualTo(revisionBeforeDestroy + 1),
+                "Direct listener-entity destruction must invalidate the listener cache without requiring canonical component removal first.");
+
+            Publish(queue, target, effectTemplateId);
+            system.Update(0f);
+
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(healthAttributeId), Is.EqualTo(80f));
+            Assert.That(system.ListenerCacheRebuildCount, Is.EqualTo(3));
         }
 
         [Test]
