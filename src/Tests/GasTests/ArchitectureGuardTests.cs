@@ -344,6 +344,18 @@ namespace GasTests
         }
 
         [Test]
+        public void GameEngine_MustOwnOneProductionGasGraphApi()
+        {
+            string repoRoot = FindRepoRoot();
+            string source = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
+
+            Assert.That(
+                Regex.Matches(source, @"GasGraphRuntimeApi\.CreateProduction\(gasGraphProductionServices\)").Count,
+                Is.EqualTo(1));
+            Assert.That(source, Does.Not.Contain("performerGraphApi"));
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();

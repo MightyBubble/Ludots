@@ -1005,7 +1005,6 @@ namespace Ludots.Core.Engine
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
-            var performerGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
             {
                 return eventKind == PresentationEventKind.EffectApplied
@@ -1063,7 +1062,7 @@ namespace Ludots.Core.Engine
             {
                 AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
             }
-            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
+            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, gasGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
                 presentationEventStream,
