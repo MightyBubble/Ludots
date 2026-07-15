@@ -23,14 +23,12 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly GasBudget _budget;
         private readonly DirtyEntityQueue _dirtyEntities;
 
-        public TagOps() : this(new TagRuleRegistry(), budget: null, dirtyEntities: null) { }
-
-        public TagOps(TagRuleRegistry rules, GasBudget budget = null, DirtyEntityQueue dirtyEntities = null)
+        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules = null, GasBudget budget = null)
         {
-            _rules = rules;
+            _rules = rules ?? new TagRuleRegistry();
             _transaction = new TagRuleTransaction();
             _budget = budget;
-            _dirtyEntities = dirtyEntities ?? new DirtyEntityQueue(4096);
+            _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
         }
 
         /// <summary>
@@ -159,19 +157,19 @@ namespace Ludots.Core.Gameplay.GAS
 
         // ── Public API: without DirtyFlags ──
 
-        public unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
+        internal unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return AddTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
 
-        public unsafe bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
+        internal unsafe bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return RemoveTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
 
         // ── Public API: with DirtyFlags ──
 
-        public bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
+        internal bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
             unsafe
             {
@@ -182,7 +180,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        public bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
+        internal bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
             unsafe
             {

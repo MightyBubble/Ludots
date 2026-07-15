@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
@@ -232,7 +232,7 @@ namespace Ludots.Tests.GAS
                     EntityCollectionKeys.CommandSource,
                     "view.test.default"));
 
-                var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
                 var filters = new FilterProfileRegistry(stack.FilterProfileIdRegistry, world, tagOps);
                 var writer = new ContextBoundCollectionWriter(stack, filters, new DomainRoutedCollectionWriter(store, domains), store);
 
@@ -295,7 +295,7 @@ namespace Ludots.Tests.GAS
                     eventBus,
                     castAbilityOrderTypeId: CastOrderTypeId,
                     orderTypeRegistry: orderTypes,
-                    tagOps: new TagOps());
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
                 return new Harness
                 {

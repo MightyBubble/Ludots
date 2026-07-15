@@ -91,7 +91,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 3_000,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps())
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)))
             {
                 MaxWorkUnitsPerSlice = 127,
             };
@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 5,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -226,7 +226,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             system.UpdateSlice(0f, int.MaxValue);
 
@@ -287,7 +287,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;

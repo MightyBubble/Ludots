@@ -106,7 +106,7 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -272,7 +272,7 @@ namespace Ludots.Tests.GAS
         public void RelationshipCallbackProcessor_FiltersCallbacksByRelationshipType()
         {
             using var world = World.Create();
-            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
             var teamLookup = new TeamEntityLookup();
             var processor = new RelationshipCallbackProcessor(world, tagOps, teamLookup);
             var runtime = new RelationshipCatalogRuntime();

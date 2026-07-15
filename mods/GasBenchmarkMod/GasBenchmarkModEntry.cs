@@ -58,6 +58,7 @@ namespace GasBenchmarkMod
     {
         public static void Run(IModContext context)
         {
+            const int entityCount = 100_000;
             context.Log("[GasBenchmarkMod] Initializing GAS Benchmark (Abilities & Hooks)...");
 
             int healthId = AttributeRegistry.Register("Health");
@@ -73,7 +74,7 @@ namespace GasBenchmarkMod
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(entityCount));
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -107,7 +108,6 @@ namespace GasBenchmarkMod
                 onActivate.Add(1);
             }
 
-            int entityCount = 100_000;
             context.Log($"[GasBenchmarkMod] Creating {entityCount} entities with Abilities...");
             var entities = new Entity[entityCount];
 

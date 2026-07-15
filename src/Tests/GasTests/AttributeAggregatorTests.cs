@@ -135,7 +135,7 @@ namespace Ludots.Tests.GAS
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps());
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             aggregator.Update(0f);
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
@@ -166,7 +166,7 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps());
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             aggregator.Update(0f);
 
             ref var aggregatedAttr = ref world.Get<AttributeBuffer>(entity);
@@ -185,7 +185,7 @@ namespace Ludots.Tests.GAS
             attr.SetBase(durabilityId, 100f);
             attr.SetCurrent(durabilityId, 93f);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps());
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             aggregator.Update(0f);
 
             That(attr.GetCurrent(durabilityId), Is.EqualTo(93f));
@@ -213,7 +213,7 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps());
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             aggregator.Update(0f);
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
@@ -242,7 +242,7 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps());
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             aggregator.Update(0f);
             That(world.Get<AttributeBuffer>(entity).GetCurrent(moveSpeedId), Is.EqualTo(118f));
 
@@ -283,7 +283,7 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -342,7 +342,7 @@ namespace Ludots.Tests.GAS
 
             var requests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(8);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -401,7 +401,7 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -435,7 +435,7 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             var active = new DirtyEntityQueue(1);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+            var tagOps = new TagOps(active, new TagRuleRegistry());
             var blocker = world.Create(new DirtyFlags());
             active.Track(world, blocker);
 

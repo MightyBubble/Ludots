@@ -143,8 +143,8 @@ namespace GasTests
                 foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
                 {
                     string source = File.ReadAllText(file);
-                    if (source.Contains("?? new TagOps()", StringComparison.Ordinal) ||
-                        source.Contains("??= new TagOps()", StringComparison.Ordinal))
+                    if (source.Contains("?? new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME))", StringComparison.Ordinal) ||
+                        source.Contains("??= new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME))", StringComparison.Ordinal))
                     {
                         hits.Add(ToRepoRelativePath(repoRoot, file));
                     }

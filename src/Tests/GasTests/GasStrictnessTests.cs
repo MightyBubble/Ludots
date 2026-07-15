@@ -21,7 +21,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class GasStrictnessTests
     {
-        private readonly TagOps _tagOps = new();
+        private readonly TagOps _tagOps = new(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
 
         [Test]
         public void RelationshipFilter_Parse_RejectsAliasesCasingWhitespaceAndNumericValues()
@@ -274,7 +274,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(), relationshipRuntime: relationships);
+            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)), relationshipRuntime: relationships);
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];

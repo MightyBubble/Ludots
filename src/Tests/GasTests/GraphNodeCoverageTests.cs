@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS
 
                 var effectRequests = new EffectRequestQueue();
                 var eventBus = new GameplayEventBus();
-                var api = new GasGraphRuntimeApi(world, spatialQueries: null, eventBus: eventBus, effectRequests: effectRequests, tagOps: new TagOps());
+                var api = new GasGraphRuntimeApi(world, spatialQueries: null, eventBus: eventBus, effectRequests: effectRequests, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
                 const int evtId = 123;
                 const int tplId = 42;
@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
 
                 var coords = new SpatialCoordinateConverter();
                 var spatial = new SpatialQueryService(new PhysicsWorldSpatialBackend(physics, coords));
-                var api = new GasGraphRuntimeApi(world, spatial, coords, eventBus: null, effectRequests: null, tagOps: new TagOps());
+                var api = new GasGraphRuntimeApi(world, spatial, coords, eventBus: null, effectRequests: null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
                 var program = new[]
                 {

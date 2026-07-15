@@ -766,7 +766,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var runtime = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
 
             int socialBondTypeId = typeRegistry.Register("SocialBond");
             int hostilityTypeId = typeRegistry.Register("Hostility");

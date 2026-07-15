@@ -16,7 +16,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class SystemIntegrationTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
         private World _world;
         private GameplayEventBus _eventBus;
         private PhysicsWorld _physicsWorld;

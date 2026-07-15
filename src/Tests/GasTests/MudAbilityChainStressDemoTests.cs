@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinA).SetCurrent(attrHealth, 100f);
                 world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
 
-                var tagOps = new TagOps();
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS
                 abilityDefs.RegisterFromEntity(world, abilityVolley, 7001);
                 abilities.AddAbility(7001);
 
-                var tagOps = new TagOps();
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,

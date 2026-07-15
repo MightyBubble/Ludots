@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS
                     inputRequests: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps())
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)))
                 {
                     MaxWorkUnitsPerSlice = 2
                 };
@@ -157,7 +157,7 @@ namespace Ludots.Tests.GAS
                     inputRequests: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps())
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)))
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

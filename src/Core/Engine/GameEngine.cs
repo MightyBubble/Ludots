@@ -677,7 +677,7 @@ namespace Ludots.Core.Engine
             var orderTypeRegistry = new OrderTypeRegistry(orderTerminalResults);
             var orderRuleRegistry = new OrderRuleRegistry();
             var dirtyEntities = new DirtyEntityQueue(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
-            var tagOps = new TagOps(new TagRuleRegistry(), gasBudget, dirtyEntities);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), gasBudget);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);

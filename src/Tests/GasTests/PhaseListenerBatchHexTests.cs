@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class PhaseListenerBatchHexTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
 
         // ════════════════════════════════════════════════════════════════════
         //  Module C: HexCoordinates Utility Tests

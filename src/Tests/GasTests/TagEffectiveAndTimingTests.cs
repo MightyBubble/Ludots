@@ -10,7 +10,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class TagEffectiveAndTimingTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
 
         [Test]
         public void HasTag_UsesEffectiveSense_ForGraphRuntime()
@@ -69,7 +69,7 @@ namespace Ludots.Tests.GAS
 
                 var queue = new DeferredTriggerQueue();
                 var active = new DirtyEntityQueue(4);
-                var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+                var tagOps = new TagOps(active, new TagRuleRegistry());
                 active.Track(world, entity);
                 var sys = new DeferredTriggerCollectionSystem(world, queue, tagOps, active);
                 sys.Update(dt: 0f);

@@ -909,7 +909,7 @@ namespace Ludots.Tests.GAS
                 types.Register("MemberOf");
                 int allyTypeId = types.Register("Ally", isSymmetric: true);
                 int grantedFlagId = flags.Register(AssociationControlProfileRuntime.GrantedFlagName);
-                var tagOps = new TagOps();
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
                 var runtime = AssociationControlProfileRuntime.Create(world, relationships, tagOps, types, catalog, grantedFlagId);
 
                 Entity p1Rep = world.Create(

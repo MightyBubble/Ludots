@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json.Nodes;
@@ -1249,7 +1249,7 @@ namespace Ludots.Tests.GAS
                 defs,
                 castAbilityOrderTypeId: 100,
                 orderTypeRegistry: new OrderTypeRegistry(),
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             system.MaxWorkUnitsPerSlice = 1;
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
@@ -1329,7 +1329,7 @@ namespace Ludots.Tests.GAS
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 orderTypeRegistry: orderTypes,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             system.Update(0f);
 
@@ -1384,7 +1384,7 @@ namespace Ludots.Tests.GAS
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: new OrderTypeRegistry(),
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             system.MaxWorkUnitsPerSlice = 1;
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
@@ -1434,7 +1434,7 @@ namespace Ludots.Tests.GAS
             ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
             bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
 
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
             ref var counts = ref world.Get<TagCountContainer>(actor);
             ref var dirty = ref world.Get<DirtyFlags>(actor);
@@ -1543,7 +1543,7 @@ namespace Ludots.Tests.GAS
                 4096,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
-                tagOps: new TagOps(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes);
 
@@ -1635,7 +1635,7 @@ namespace Ludots.Tests.GAS
                 graphPrograms: graphPrograms,
                 graphApi: graphApi,
                 orderTypeRegistry: orderTypes,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             bool completed = system.UpdateSlice(0f, int.MaxValue);
 
@@ -1696,7 +1696,7 @@ namespace Ludots.Tests.GAS
                 world,
                 effectRequests,
                 defs,
-                tagOps: new TagOps(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
                 graphPrograms: graphPrograms,
                 graphApi: graphApi);
 
@@ -1740,7 +1740,7 @@ namespace Ludots.Tests.GAS
             var system = new AbilitySystem(
                 world,
                 effectRequests,
-                tagOps: new TagOps(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
                 graphPrograms: graphPrograms,
                 graphApi: graphApi);
 

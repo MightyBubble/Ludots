@@ -689,7 +689,7 @@ namespace Ludots.Tests.GAS
         public void TryMatch_EmptyMatch_AlwaysMatchesAliveActor()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             Entity actor = world.Create(new AbilityStateBuffer());
             Assert.That(world.IsAlive(actor), Is.True);
             Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, actor, new ActorOrderRoutingMatch()), Is.True);
@@ -699,7 +699,7 @@ namespace Ludots.Tests.GAS
         public void TryResolveOrderTypeKey_SelectsHighestPriorityMatchingCandidate()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             Entity producer = world.Create(new AbilityStateBuffer());
             ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
             int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.War3.TrainFootman");
@@ -737,7 +737,7 @@ namespace Ludots.Tests.GAS
         public void TryMatch_UsesAbilityFormSlotOverride()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             Entity producer = world.Create(new AbilityStateBuffer(), new AbilityFormSlotBuffer());
             ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
             int holdAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Shared.Hold");
@@ -762,7 +762,7 @@ namespace Ludots.Tests.GAS
         public void TryResolveCandidate_WarpGateTag_SkipsTrainSpawnTargetCandidate()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             int warpGateTagId = TagRegistry.Register("Progression.Rts.WarpGate");
 
             Entity gateway = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer());

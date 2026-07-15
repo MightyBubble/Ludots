@@ -257,7 +257,7 @@ public sealed class Issue669TagStateTests
                 Target = target,
             });
         var dirtyEntities = new DirtyEntityQueue(capacity: 8);
-        var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget(), dirtyEntities);
+        var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), new GasBudget());
         var system = new AbilityExecSystem(
             world,
             new DiscreteClock(),

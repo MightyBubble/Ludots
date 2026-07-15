@@ -86,7 +86,7 @@ namespace Ludots.Tests.GasTests
                 templates,
                 new EntityTemplateKeyRegistry(),
                 new PresentationStableIdAllocator(),
-                new TagOps());
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             var state = new LifecycleTransactionState
             {
@@ -179,7 +179,7 @@ namespace Ludots.Tests.GasTests
                 templates,
                 templateKeys,
                 new PresentationStableIdAllocator(),
-                new TagOps());
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
 
             executor.ExecutePhase(
@@ -282,7 +282,7 @@ namespace Ludots.Tests.GasTests
                 templates,
                 templateKeys,
                 new PresentationStableIdAllocator(),
-                new TagOps());
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
 
             executor.ExecutePhase(
@@ -586,7 +586,7 @@ namespace Ludots.Tests.GasTests
                 templates,
                 new EntityTemplateKeyRegistry(),
                 new PresentationStableIdAllocator(),
-                new TagOps());
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             var state = new LifecycleTransactionState
             {
                 Source = source,

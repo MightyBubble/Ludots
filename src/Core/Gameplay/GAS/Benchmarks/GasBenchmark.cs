@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
 
         public static void Run()
         {
+            const int entityCount = 100_000;
             Console.WriteLine("Initializing GAS Benchmark (Abilities & Hooks)...");
 
             // 1. Setup Registry
@@ -38,7 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(entityCount));
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -80,7 +81,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             }
 
             // 5. Create Entities
-            int entityCount = 100_000;
             Console.WriteLine($"Creating {entityCount} entities with Abilities...");
             var entities = new Entity[entityCount];
             

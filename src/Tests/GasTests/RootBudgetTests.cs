@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var application = new EffectApplicationSystem(
                 world,
                 effectRequests: null,
@@ -176,7 +176,7 @@ namespace Ludots.Tests.GAS
                 templates: templates,
                 presentationEvents: presentationEvents,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -237,7 +237,7 @@ namespace Ludots.Tests.GAS
                 orderRequests: new OrderRequestQueue(),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS
 
             var phaseExecutor = CreateBuffOnApplyModifierExecutor(templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var application = new EffectApplicationSystem(
                 world,
                 effectRequests: null,
@@ -611,7 +611,7 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var dirtyEntities = new DirtyEntityQueue(capacity: 8);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: dirtyEntities);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry());
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var application = new EffectApplicationSystem(
                 world,

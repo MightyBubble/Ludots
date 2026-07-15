@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS
                 queue,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps());
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             Publish(queue, target, effectTemplateId);
             system.Update(0f);

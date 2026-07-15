@@ -32,7 +32,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps());
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             var e = world.Create();
             var attrs = new AttributeBuffer();
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps());
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             var e = world.Create();
             var tags = new GameplayTagContainer();
@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps());
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             var e = world.Create();
             var counts = new TagCountContainer();
@@ -126,7 +126,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var triggers = new DeferredTriggerQueue();
             var active = new DirtyEntityQueue(32);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+            var tagOps = new TagOps(active, new TagRuleRegistry());
             var system = new DeferredTriggerCollectionSystem(world, triggers, tagOps, active);
             var dirtyEntities = new Entity[10];
 
@@ -179,7 +179,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var active = new DirtyEntityQueue(1);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+            var tagOps = new TagOps(active, new TagRuleRegistry());
             Entity queued = world.Create(new DirtyFlags());
             var attributes = new AttributeBuffer();
             attributes.SetBase(0, 100f);
@@ -201,7 +201,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var active = new DirtyEntityQueue(1);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+            var tagOps = new TagOps(active, new TagRuleRegistry());
             Entity queued = world.Create(new DirtyFlags());
             var attributes = new AttributeBuffer();
             attributes.SetBase(0, 100f);
@@ -230,7 +230,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var triggers = new DeferredTriggerQueue();
             var active = new DirtyEntityQueue(4);
-            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: active);
+            var tagOps = new TagOps(active, new TagRuleRegistry());
             var system = new DeferredTriggerCollectionSystem(world, triggers, tagOps, active);
             var attributes = new AttributeBuffer();
             attributes.SetCurrent(0, 1f);

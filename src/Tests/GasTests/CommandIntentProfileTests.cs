@@ -465,7 +465,7 @@ namespace Ludots.Tests.GAS
                 var intents = new CommandIntentProfileRegistry(
                     profileIds,
                     world,
-                    new TagOps(new TagRuleRegistry(), new GasBudget()),
+                    new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()),
                     abilities,
                     controlDomains,
                     stances,

@@ -16,7 +16,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class GasFeatureGapTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
 
         // ════════════════════════════════════════════════════════════════════
         //  1. GasClock Manual / TurnBased mode
@@ -104,7 +104,7 @@ namespace Ludots.Tests.GAS
         public void ExpireCondition_TagPresent_EffectExpiresWhenTagRemoved()
         {
             using var world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             int tagA = 10;
 
             // Register condition: expires when TagPresent is no longer satisfied
@@ -135,7 +135,7 @@ namespace Ludots.Tests.GAS
         public void ExpireCondition_TagAbsent_EffectExpiresWhenTagAdded()
         {
             using var world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             int tagB = 20;
 
             var conditions = new GasConditionRegistry();
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps());
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             var e = world.Create();
             var attrs = new AttributeBuffer();
@@ -478,7 +478,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TagOps_AttachedTag_AutomaticallyAdded()
         {
-            var ops = new TagOps();
+            var ops = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             int stunTag = 50;
             int cannotMoveTag = 51;
 
@@ -499,7 +499,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void TagOps_RemovedTag_AutomaticallyRemoved()
         {
-            var ops = new TagOps();
+            var ops = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             int blockedTag = 60;
             int colonizingTag = 61;
 

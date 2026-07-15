@@ -36,7 +36,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
 
@@ -70,7 +70,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
@@ -110,7 +110,7 @@ namespace Ludots.Tests.GAS
                 new GameplayEffect(),
                 new EffectTemplateRef { TemplateId = effectTemplateId });
             Assert.That(world.Get<ActiveEffectContainer>(entity).Add(effect), Is.True);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
 
@@ -144,7 +144,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var eventBus = new GameplayEventBus();
             var graphApi = new GasGraphRuntimeApi(world, eventBus: eventBus, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
@@ -183,7 +183,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
@@ -296,7 +296,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
 
@@ -331,7 +331,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, effectRequests: effectRequests, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
@@ -370,7 +370,7 @@ namespace Ludots.Tests.GAS
                 new DirtyFlags(),
                 new BlackboardFloatBuffer(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             using var system = new AttributeAggregatorSystem(world, programs, graphApi, tagOps);
 
@@ -415,7 +415,7 @@ namespace Ludots.Tests.GAS
                 new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             using var system = new AttributeAggregatorSystem(
                 world,
                 programs,
@@ -484,7 +484,7 @@ namespace Ludots.Tests.GAS
             world.Add(entity, binding);
 
             // Act: run aggregator
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
@@ -549,7 +549,7 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
@@ -578,7 +578,7 @@ namespace Ludots.Tests.GAS
             buf.SetBase(1, 42f);
 
             var registry = new GraphProgramRegistry();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
@@ -627,7 +627,7 @@ namespace Ludots.Tests.GAS
             binding.Add(1);
             world.Add(entity, binding);
 
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             using var system = new AttributeAggregatorSystem(
                 world,
                 registry,
