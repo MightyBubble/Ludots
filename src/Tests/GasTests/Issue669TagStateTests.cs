@@ -8,6 +8,9 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Engine;
 using Ludots.Core.Association;
 using NUnit.Framework;
 
@@ -105,7 +108,7 @@ public sealed class Issue669TagStateTests
     }
 
     [Test]
-    public void EntityBuilder_PositiveDurationTargetTagAbility_PreinstallsCompleteTimedTagState()
+    public void EntityBuilder_PositiveDurationTargetTagAbility_DoesNotInstallTargetStateOnOwner()
     {
         using var world = World.Create();
         const int abilityId = 7007;
@@ -132,10 +135,10 @@ public sealed class Issue669TagStateTests
             .UseTemplate(template.Id)
             .Build();
 
-        Assert.That(world.Has<GameplayTagContainer>(entity), Is.True);
-        Assert.That(world.Has<TagCountContainer>(entity), Is.True);
-        Assert.That(world.Has<DirtyFlags>(entity), Is.True);
-        Assert.That(world.Has<TimedTagBuffer>(entity), Is.True);
+        Assert.That(world.Has<GameplayTagContainer>(entity), Is.False);
+        Assert.That(world.Has<TagCountContainer>(entity), Is.False);
+        Assert.That(world.Has<DirtyFlags>(entity), Is.False);
+        Assert.That(world.Has<TimedTagBuffer>(entity), Is.False);
     }
 
     [Test]
@@ -173,7 +176,7 @@ public sealed class Issue669TagStateTests
     }
 
     [Test]
-    public void EntityBuilder_TargetTagSignalAbility_PreinstallsTagStateWithoutTimedBuffer()
+    public void EntityBuilder_TargetTagSignalAbility_DoesNotInstallTargetStateOnOwner()
     {
         using var world = World.Create();
         const int abilityId = 7008;
@@ -200,10 +203,117 @@ public sealed class Issue669TagStateTests
             .UseTemplate(template.Id)
             .Build();
 
-        Assert.That(world.Has<GameplayTagContainer>(entity), Is.True);
-        Assert.That(world.Has<TagCountContainer>(entity), Is.True);
-        Assert.That(world.Has<DirtyFlags>(entity), Is.True);
+        Assert.That(world.Has<GameplayTagContainer>(entity), Is.False);
+        Assert.That(world.Has<TagCountContainer>(entity), Is.False);
+        Assert.That(world.Has<DirtyFlags>(entity), Is.False);
         Assert.That(world.Has<TimedTagBuffer>(entity), Is.False);
+    }
+
+    [TestCase(ExecItemKind.TagClipTarget, 30, 1)]
+    [TestCase(ExecItemKind.TagSignalTarget, 0, 0)]
+    public void AbilityExec_TargetTagInstruction_WritesToIndependentlyAuthoredGrantReceiver(
+        ExecItemKind kind,
+        int durationTicks,
+        int expectedTimedGrantCount)
+    {
+        using var world = World.Create();
+        const int abilityId = 7009;
+        const int grantedTagId = 48;
+        var definitions = new AbilityDefinitionRegistry();
+        var exec = new AbilityExecSpec { ClockId = GasClockId.Step };
+        exec.SetItem(
+            0,
+            kind,
+            tick: 0,
+            durationTicks: durationTicks,
+            clockId: GasClockId.Step,
+            tagId: grantedTagId);
+        exec.SetItem(1, ExecItemKind.End, tick: 0);
+        definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+
+        var targetTemplate = new EntityTemplate
+        {
+            Id = "ability_tag_grant_receiver",
+            Components =
+            {
+                ["AbilityTagGrantReceiver"] = JsonNode.Parse("{}")!,
+            },
+        };
+        Entity target = new EntityBuilder(
+                world,
+                new Dictionary<string, EntityTemplate> { [targetTemplate.Id] = targetTemplate })
+            .UseTemplate(targetTemplate.Id)
+            .Build();
+        AbilityStateBuffer abilities = default;
+        abilities.AddAbility(abilityId);
+        Entity actor = world.Create(
+            abilities,
+            new AbilityExecInstance
+            {
+                AbilitySlot = 0,
+                AbilityId = abilityId,
+                State = AbilityExecRunState.Running,
+                ActiveClockId = GasClockId.Step,
+                Target = target,
+            });
+        var dirtyEntities = new DirtyEntityQueue(capacity: 8);
+        var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget(), dirtyEntities);
+        var system = new AbilityExecSystem(
+            world,
+            new DiscreteClock(),
+            new InputRequestQueue(),
+            new InputResponseBuffer(),
+            new EffectRequestQueue(),
+            snapshotCapacity: 8,
+            abilityDefinitions: definitions,
+            tagOps: tagOps);
+
+        Assert.DoesNotThrow(() => system.Update(0f));
+
+        Assert.That(world.Get<GameplayTagContainer>(target).HasTag(grantedTagId), Is.True);
+        Assert.That(world.Get<TagCountContainer>(target).GetCount(grantedTagId), Is.EqualTo(1));
+        Assert.That(world.Get<TimedTagBuffer>(target).Count, Is.EqualTo(expectedTimedGrantCount));
+        Assert.That(world.Has<TimedTagBuffer>(actor), Is.False);
+    }
+
+    [Test]
+    public void TemplateBatchSpawner_AbilityTagGrantReceiver_InstallsCompleteReceiverStateInArchetype()
+    {
+        using var world = World.Create();
+        var template = new EntityTemplate
+        {
+            Id = "batch_ability_tag_grant_receiver",
+            Components =
+            {
+                ["Name"] = JsonNode.Parse("{ \"Value\": \"BatchAbilityTagGrantReceiver\" }")!,
+                ["WorldPositionCm"] = JsonNode.Parse("{ \"Value\": { \"X\": 0, \"Y\": 0 } }")!,
+                ["FacingDirection"] = JsonNode.Parse("{ \"AngleRad\": 0 }")!,
+                ["AbilityTagGrantReceiver"] = JsonNode.Parse("{}")!,
+            },
+        };
+        var spawner = new TemplateEntityBatchSpawner(
+            world,
+            new EntityTemplateKeyRegistry(),
+            scratchCapacity: 1);
+        var requests = new[]
+        {
+            new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(default, hasWorldPosition: false),
+        };
+
+        bool created = spawner.TryCreateBatch(
+            template.Id,
+            template,
+            requests,
+            TemplateBatchSpawnFeatures.None,
+            out ReadOnlySpan<Entity> entities);
+
+        Assert.That(created, Is.True);
+        Assert.That(entities.Length, Is.EqualTo(1));
+        Assert.That(world.Has<AbilityTagGrantReceiver>(entities[0]), Is.True);
+        Assert.That(world.Has<GameplayTagContainer>(entities[0]), Is.True);
+        Assert.That(world.Has<TagCountContainer>(entities[0]), Is.True);
+        Assert.That(world.Has<DirtyFlags>(entities[0]), Is.True);
+        Assert.That(world.Has<TimedTagBuffer>(entities[0]), Is.True);
     }
 
     [Test]

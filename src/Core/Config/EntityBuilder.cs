@@ -122,7 +122,11 @@ namespace Ludots.Core.Config
                     BuildEntityContext());
             }
 
-            if (_world.Has<GameplayTagContainer>(entity))
+            if (_world.Has<AbilityTagGrantReceiver>(entity))
+            {
+                AbilityTagGrantReceiverInstaller.EnsureInstalled(_world, entity);
+            }
+            else if (_world.Has<GameplayTagContainer>(entity))
             {
                 TagStateInstaller.EnsureInstalled(_world, entity);
             }

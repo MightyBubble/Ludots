@@ -181,7 +181,11 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
-            if (World.Has<GameplayTagContainer>(entity))
+            if (World.Has<AbilityTagGrantReceiver>(entity))
+            {
+                AbilityTagGrantReceiverInstaller.EnsureInstalled(World, entity);
+            }
+            else if (World.Has<GameplayTagContainer>(entity))
             {
                 TagStateInstaller.EnsureInstalled(World, entity);
             }

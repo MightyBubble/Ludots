@@ -1148,6 +1148,57 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_TemplateReceiverPatch_PreinstallsCompleteTargetTagState()
+        {
+            using var world = World.Create();
+            string templateJson = @"[
+              {
+                ""id"": ""runtime_tag_receiver_patch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Runtime Tag Receiver Patch"" }
+                }
+              }
+            ]";
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "runtime_tag_receiver_patch",
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(
+                        "AbilityTagGrantReceiver",
+                        JsonNode.Parse("{}")!),
+                },
+                ReceiptChannelId = 14,
+                ReceiptId = 670,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<AbilityTagGrantReceiver>(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnTemplate_CopiesOwnerAndParentWhenRequested()
         {
             string templateJson = @"[

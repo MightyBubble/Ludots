@@ -75,6 +75,7 @@ namespace Ludots.Core.Config
             Register<TagCountContainer>("TagCountContainer");
             Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
+            Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
             Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
