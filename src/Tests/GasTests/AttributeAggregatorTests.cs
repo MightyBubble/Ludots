@@ -322,6 +322,9 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(target);
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 60f);
+            var sibling = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(sibling).SetBase(healthId, 17f);
+            world.Get<AttributeBuffer>(sibling).SetCurrent(healthId, 17f);
 
             var templates = new EffectTemplateRegistry();
             var modifiers = default(EffectModifiers);
@@ -359,7 +362,8 @@ namespace Ludots.Tests.GAS
 
             proposal.Update(0f);
 
-            That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(50f));
+            That(world.Get<AttributeBuffer>(sibling).GetCurrent(healthId), Is.EqualTo(17f));
             That(presentationEvents.Count, Is.EqualTo(1));
             ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
             That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));

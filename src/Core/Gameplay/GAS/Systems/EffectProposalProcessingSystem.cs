@@ -1126,13 +1126,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.IsAlive(proposal.Target) || !World.Has<AttributeBuffer>(proposal.Target)) return;
 
-            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(proposal.Target);
             int primaryAttributeId = proposal.Modifiers.Count > 0
                 ? proposal.Modifiers.Get(0).AttributeId
                 : -1;
-            float before = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
+            float before = primaryAttributeId >= 0
+                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                : 0f;
             AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, _tagOps);
-            float after = primaryAttributeId >= 0 ? attributes.GetCurrent(primaryAttributeId) : 0f;
+            float after = primaryAttributeId >= 0
+                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
         }
 
