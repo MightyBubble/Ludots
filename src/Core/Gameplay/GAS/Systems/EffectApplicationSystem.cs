@@ -153,7 +153,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _orderClock = orderClock;
-            _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+            _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectApplicationSystem));
             _persistentPhaseTransaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps,

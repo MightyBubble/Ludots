@@ -2,11 +2,13 @@ using System;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
@@ -54,6 +56,27 @@ namespace Ludots.Tests.GAS
             var unsupported = new GasCondition((GasConditionKind)255, tagId: 1, TagSense.Present);
             Throws<ArgumentOutOfRangeException>(() =>
                 GasConditionEvaluator.ShouldExpire(world, target, in unsupported, _tagOps));
+        }
+
+        [Test]
+        public void EffectPipelineSystems_RejectNonPositiveStepRateAtConstruction()
+        {
+            using var world = World.Create();
+
+            Throws<ArgumentOutOfRangeException>(() => new EffectProposalProcessingSystem(
+                world,
+                new EffectRequestQueue(),
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                stepRateHz: 0));
+            Throws<ArgumentOutOfRangeException>(() => new EffectApplicationSystem(
+                world,
+                stepRateHz: 0));
+            Throws<ArgumentOutOfRangeException>(() => new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 1,
+                stepRateHz: 0));
         }
 
         [Test]

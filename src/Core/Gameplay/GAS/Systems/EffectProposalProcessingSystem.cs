@@ -298,7 +298,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
             _builtinClock = clock;
-            _builtinStepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+            _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));
         }
 
         public override void Update(in float dt)
