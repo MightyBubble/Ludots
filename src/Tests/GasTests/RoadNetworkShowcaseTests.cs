@@ -439,11 +439,30 @@ namespace Ludots.Tests.GAS
                 OrderSpatial.MaxPoints,
                 new Vector3(18000f, 0f, 0f));
 
-            Assert.That(OrderWorldSpatialResolver.TryResolveMoveDestination(world, in followOrder, out var sampledDestination), Is.True);
+            Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in followOrder, OrderSpatial.MaxPoints - 1, out var sampledDestination), Is.True);
             Assert.That(sampledDestination.X, Is.Not.EqualTo(18000f), "The sampled prefix intentionally ends before the player's true click target in this regression test.");
             Assert.That(RoadRouteFinalTargetResolver.TryResolve(world, in followOrder, out var preservedDestination), Is.True);
             Assert.That(preservedDestination.X, Is.EqualTo(18000f));
             Assert.That(preservedDestination.Z, Is.EqualTo(0f));
+            Assert.That(followOrder.Args.I0, Is.Zero, "Road final targets must not occupy generic integer argument slots.");
+            Assert.That(followOrder.Args.I1, Is.Zero, "Road final targets must not occupy generic integer argument slots.");
+            Assert.That(followOrder.Args.I2, Is.Zero, "Road final targets must not occupy generic integer argument slots.");
+        }
+
+        [Test]
+        public void MovePlanStore_RoadRouteWithoutExplicitFinalDestination_IsRejected()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(new OrderSpatialPayloadBuffer());
+            Order routeOrder = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (0, 0), (500, 0));
+            routeOrder.Args.Spatial.HasDestinationWorldCm = 0;
+            routeOrder.Args.Spatial.DestinationWorldCm = default;
+            routeOrder.OrderId = 91;
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
+
+            Assert.That(plans.TryBindFromOrder(actor, in routeOrder, out _, out _), Is.False,
+                "A road route without the player's authored final destination must fail instead of guessing its last sampled waypoint.");
+            Assert.That(plans.TryGetPlan(actor, routeOrder.OrderId, out _), Is.False);
         }
 
         [Test]
@@ -1449,7 +1468,8 @@ namespace Ludots.Tests.GAS
                 pointYcm[i] = points[i].ycm;
             }
 
-            OrderSpatialPayloadOps.SetPath(world, actor, ref order, pointXcm, pointYcm, points.Length);
+            Vector3 destinationWorldCm = new(points[^1].xcm, 0f, points[^1].ycm);
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, pointXcm, pointYcm, points.Length, destinationWorldCm);
 
             return order;
         }

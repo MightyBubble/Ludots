@@ -41,6 +41,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             spatial.Kind = OrderSpatialKind.WorldCm;
             spatial.Mode = OrderCollectionMode.List;
             spatial.PointCount = 0;
+            spatial.HasDestinationWorldCm = 0;
+            spatial.DestinationWorldCm = default;
             if (pointCount <= OrderSpatial.MaxInlinePoints)
             {
                 for (int i = 0; i < pointCount; i++)
@@ -66,6 +68,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             spatial.PointCount = pointCount;
             spatial.Payload = handle;
+        }
+
+        public static void SetPath(
+            World world,
+            Entity actor,
+            ref Order order,
+            ReadOnlySpan<int> pointXcm,
+            ReadOnlySpan<int> pointYcm,
+            int pointCount,
+            in System.Numerics.Vector3 destinationWorldCm)
+        {
+            SetPath(world, actor, ref order, pointXcm, pointYcm, pointCount);
+            order.Args.Spatial.DestinationWorldCm = destinationWorldCm;
+            order.Args.Spatial.HasDestinationWorldCm = 1;
         }
 
         public static void Release(World world, in Order order)

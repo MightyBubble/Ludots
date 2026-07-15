@@ -56,6 +56,25 @@ public sealed class MovePlanStore : IMovePlanStore
             return false;
         }
 
+        Vector2 resolvedFinalTargetWorldCm;
+        if (_finalTargetResolver != null)
+        {
+            if (!_finalTargetResolver.TryResolveFinalTarget(_world, in order, out resolvedFinalTargetWorldCm))
+            {
+                Clear(entity);
+                return false;
+            }
+        }
+        else if (OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out Vector3 destinationWorldCm))
+        {
+            resolvedFinalTargetWorldCm = new Vector2(destinationWorldCm.X, destinationWorldCm.Z);
+        }
+        else
+        {
+            Clear(entity);
+            return false;
+        }
+
         Slot slot = GetOrCreateSlot(entity);
         slot.EntityId = entity.Id;
         slot.OrderId = order.OrderId;
@@ -89,12 +108,7 @@ public sealed class MovePlanStore : IMovePlanStore
             TrimSlotPrefixToBindPosition(slot, bindPositionWorldCm);
         }
 
-        slot.FinalGoalWorldCm = _finalTargetResolver != null &&
-            _finalTargetResolver.TryResolveFinalTarget(_world, in order, out Vector2 resolvedFinalTargetWorldCm)
-            ? resolvedFinalTargetWorldCm
-            : OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out Vector3 destinationWorldCm)
-            ? new Vector2(destinationWorldCm.X, destinationWorldCm.Z)
-            : new Vector2(slot.PathXcm[slot.PointCount - 1], slot.PathYcm[slot.PointCount - 1]);
+        slot.FinalGoalWorldCm = resolvedFinalTargetWorldCm;
 
         planGeneration = slot.PlanGeneration;
         finalGoalWorldCm = slot.FinalGoalWorldCm;

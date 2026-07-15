@@ -69,7 +69,25 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static bool TryResolveMoveDestination(World world, in Order order, out Vector3 targetWorldCm)
         {
+            if (TryResolveExplicitMoveDestination(in order, out targetWorldCm))
+            {
+                return true;
+            }
+
             return TryResolveSpatialTarget(world, in order, out targetWorldCm);
+        }
+
+        public static bool TryResolveExplicitMoveDestination(in Order order, out Vector3 targetWorldCm)
+        {
+            ref readonly OrderSpatial spatial = ref order.Args.Spatial;
+            if (spatial.Kind == OrderSpatialKind.WorldCm && spatial.HasDestinationWorldCm != 0)
+            {
+                targetWorldCm = spatial.DestinationWorldCm;
+                return true;
+            }
+
+            targetWorldCm = default;
+            return false;
         }
 
         public static bool TryResolveMoveWaypoint(World world, in Order order, int pointIndex, out Vector3 targetWorldCm)

@@ -21,8 +21,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             route.OrderTypeId = _roadMoveFollowOrderTypeId;
             route.Target = Arch.Core.Entity.Null;
             route.Args = new OrderArgs();
-            RoadRouteFinalTargetResolver.Encode(ref route, finalGoalWorldCm);
-            OrderSpatialPayloadOps.SetPath(world, route.Actor, ref route, pathXcm, pathYcm, count);
+            OrderSpatialPayloadOps.SetPath(world, route.Actor, ref route, pathXcm, pathYcm, count, finalGoalWorldCm);
 
             return route;
         }

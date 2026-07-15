@@ -38,6 +38,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public Vector3 Point0WorldCm;
         public Vector3 Point1WorldCm;
         public OrderSpatialPayloadHandle Payload;
+
+        public byte HasDestinationWorldCm;
+        public Vector3 DestinationWorldCm;
  
         public void AddInlinePointWorldCm(int x, int y, int z)
         {
