@@ -302,6 +302,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderQueue_WhenRejectionCapacityIsExhausted_TerminatesAdmissionBeforeAssigningFurtherIds()
+        {
+            var results = new OrderAdmissionResultBuffer(1, 1);
+            var queue = new OrderQueue(64, results);
+            var first = new Order { OrderTypeId = 2 };
+            var second = new Order { OrderTypeId = 2 };
+            var terminalTrigger = new Order { OrderTypeId = 2 };
+            var afterFault = new Order { OrderTypeId = 2 };
+
+            That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
+            InvalidOperationException capacityError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref second))!;
+            InvalidOperationException terminalError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref terminalTrigger))!;
+            InvalidOperationException repeatedError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref afterFault))!;
+
+            That(capacityError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(terminalError.Message, Does.StartWith(OrderAdmissionResultBuffer.TerminalFaultedError));
+            That(repeatedError.Message, Is.EqualTo(terminalError.Message));
+            That(results.IsTerminalFaulted, Is.True);
+            That(terminalTrigger.OrderId, Is.Zero);
+            That(afterFault.OrderId, Is.Zero);
+            That(queue.Count, Is.EqualTo(1));
+            That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var rejection), Is.True);
+            That(rejection.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+
+            var explicitOrder = new Order { OrderId = 99, OrderTypeId = 2 };
+            InvalidOperationException explicitError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref explicitOrder))!;
+            That(explicitError.Message, Is.EqualTo(terminalError.Message));
+            That(queue.Count, Is.EqualTo(1));
+
+            results.BeginLogicStep();
+            results.EndEntityIntake();
+            results.EndLogicStep();
+            var nextGenerationOrder = new Order { OrderTypeId = 2 };
+            InvalidOperationException nextGenerationError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref nextGenerationOrder))!;
+            That(nextGenerationError.Message, Is.EqualTo(terminalError.Message));
+            That(nextGenerationOrder.OrderId, Is.Zero);
+        }
+
+        [Test]
         public void OrderBufferSystem_WhenEntityAdmissionCapacityIsExhausted_LeavesQueueAndActorStateUntouched()
         {
             using var world = World.Create();
@@ -641,6 +685,7 @@ namespace Ludots.Tests.GAS
 
             float dt = 0f;
             reset.Update(in dt);
+            intake.Update(in dt);
             end.Update(in dt);
 
             var presentationOrder = new Order
@@ -663,6 +708,91 @@ namespace Ludots.Tests.GAS
             That(results[1].Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
             That(results.HighWatermark, Is.EqualTo(2));
             That(results.OverflowCount, Is.Zero);
+        }
+
+        [Test]
+        public void OrderAdmissionResults_GlobalSubmittedAfterEntityIntake_RemainsReadableWithNextStepEntityOutcome()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(4, 4);
+            var reset = new GasBudgetResetSystem(new GasBudget(), orderAdmissionResults: results);
+            var end = new OrderAdmissionGenerationEndSystem(results);
+            var incoming = new OrderQueue(64, results);
+            var clock = new DiscreteClock();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            var intake = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                incoming,
+                admissionResults: results);
+            float dt = 0f;
+
+            reset.Update(in dt);
+            intake.Update(in dt);
+
+            var lateOrder = new Order
+            {
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            That(incoming.TryEnqueueAssigned(ref lateOrder), Is.True);
+            end.Update(in dt);
+
+            reset.Update(in dt);
+            intake.Update(in dt);
+
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.GlobalIntake, out var global), Is.True);
+            That(global.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.EntityIntake, out var entity), Is.True);
+            That(entity.Result, Is.EqualTo(OrderSubmitResult.Activated));
+        }
+
+        [Test]
+        public void OrderAdmissionResults_EntityIntakeAfterCutoff_FailsBeforeChangingActorState()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(4, 4);
+            results.BeginLogicStep();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults: results);
+            intake.Update(0f);
+            var order = new Order
+            {
+                OrderId = 91,
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                intake.SubmitOrder(actor, in order))!;
+
+            That(error.Message, Is.EqualTo(OrderAdmissionResultBuffer.EntityIntakeClosedError));
+            ref OrderBuffer actorOrders = ref world.Get<OrderBuffer>(actor);
+            That(actorOrders.HasActive, Is.False);
+            That(actorOrders.HasQueued, Is.False);
+            That(actorOrders.HasPending, Is.False);
+            That(results.TryGet(order.OrderId, OrderAdmissionStage.EntityIntake, out _), Is.False);
         }
 
         [Test]

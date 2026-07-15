@@ -59,6 +59,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     {
         public const string CapacityExceededError = "ORDER.ADMISSION.ERR.CapacityExceeded";
         public const string RejectionCapacityExceededError = "ORDER.ADMISSION.ERR.RejectionCapacityExceeded";
+        public const string TerminalFaultedError = "ORDER.ADMISSION.ERR.TerminalFaulted";
+        public const string EntityIntakeClosedError = "ORDER.ADMISSION.ERR.EntityIntakeClosed";
         public const int SubmitResultCount = (int)OrderSubmitResult.RejectedAdmissionCapacity + 1;
 
         private OrderAdmissionOutcome[] _currentItems;
@@ -74,6 +76,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _pendingReserved;
         private int _nextOrderId = 1;
         private bool _logicStepActive;
+        private bool _entityIntakeOpen;
+        private string? _terminalFaultMessage;
 
         public OrderAdmissionResultBuffer(int capacity, int rejectionCapacity)
         {
@@ -103,6 +107,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int PendingGenerationCount => _pendingCount + _pendingRejectionCount;
         public int ReservedCount => _currentReserved + _pendingReserved;
         public bool LogicStepActive => _logicStepActive;
+        public bool EntityIntakeOpen => _entityIntakeOpen;
+        public bool IsTerminalFaulted => _terminalFaultMessage != null;
         public int HighWatermark { get; private set; }
         public long OverflowCount { get; private set; }
         public uint Generation { get; private set; }
@@ -202,6 +208,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         internal void EnsureOrderId(ref Order order)
         {
+            EnsureWritableForNewOrder(OrderAdmissionStage.GlobalIntake);
+
             if (order.OrderId < 0)
             {
                 throw new System.InvalidOperationException(
@@ -296,8 +304,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 : _currentRejections;
             if (count >= rejections.Length)
             {
-                throw new System.InvalidOperationException(
-                    $"{RejectionCapacityExceededError}: stage={stage}, orderId={orderId}, generation={Generation}, capacity={RejectionCapacity}.");
+                EnterTerminalFault(stage);
             }
 
             rejections[count++] = new OrderAdmissionOutcome(
@@ -314,6 +321,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private bool TryReserve(OrderAdmissionStage stage, out OrderAdmissionReservation reservation)
         {
+            ThrowIfTerminalFaulted();
             bool writePending = ShouldWritePending(stage);
             int count = writePending ? _pendingCount : _currentCount;
             ref int reserved = ref (writePending ? ref _pendingReserved : ref _currentReserved);
@@ -330,8 +338,55 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return true;
         }
 
-        private bool ShouldWritePending(OrderAdmissionStage stage) =>
-            stage == OrderAdmissionStage.GlobalIntake && !_logicStepActive;
+        private void EnsureWritableForNewOrder(OrderAdmissionStage stage)
+        {
+            ThrowIfTerminalFaulted();
+            bool writePending = ShouldWritePending(stage);
+            int count = writePending ? _pendingCount : _currentCount;
+            int reserved = writePending ? _pendingReserved : _currentReserved;
+            int rejectionCount = writePending ? _pendingRejectionCount : _currentRejectionCount;
+            OrderAdmissionOutcome[] items = writePending ? _pendingItems : _currentItems;
+            OrderAdmissionOutcome[] rejections = writePending ? _pendingRejections : _currentRejections;
+            if (count + reserved >= items.Length && rejectionCount >= rejections.Length)
+            {
+                OverflowCount++;
+                EnterTerminalFault(stage);
+            }
+        }
+
+        private void ThrowIfTerminalFaulted()
+        {
+            if (_terminalFaultMessage != null)
+            {
+                throw new System.InvalidOperationException(_terminalFaultMessage);
+            }
+        }
+
+        private void EnterTerminalFault(OrderAdmissionStage stage)
+        {
+            _terminalFaultMessage ??=
+                $"{TerminalFaultedError}: cause={RejectionCapacityExceededError}, stage={stage}, generation={Generation}, capacity={Capacity}, rejectionCapacity={RejectionCapacity}.";
+            throw new System.InvalidOperationException(_terminalFaultMessage);
+        }
+
+        private bool ShouldWritePending(OrderAdmissionStage stage)
+        {
+            if (stage == OrderAdmissionStage.GlobalIntake)
+            {
+                return !_logicStepActive || !_entityIntakeOpen;
+            }
+
+            if (!_logicStepActive)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.EntityIntakeOutsideLogicStep");
+            }
+            if (!_entityIntakeOpen)
+            {
+                throw new System.InvalidOperationException(EntityIntakeClosedError);
+            }
+
+            return false;
+        }
 
         private int ValidateResult(OrderSubmitResult result)
         {
@@ -378,7 +433,26 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _currentRejectionCount = _pendingRejectionCount;
             _pendingRejectionCount = 0;
             _logicStepActive = true;
+            _entityIntakeOpen = true;
             Generation++;
+        }
+
+        public void EndEntityIntake()
+        {
+            if (!_logicStepActive)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.LogicStepNotActive");
+            }
+            if (!_entityIntakeOpen)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.EntityIntakeAlreadyClosed");
+            }
+            if (ReservedCount != 0)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.OutstandingReservation");
+            }
+
+            _entityIntakeOpen = false;
         }
 
         public void EndLogicStep()
@@ -390,6 +464,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (ReservedCount != 0)
             {
                 throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.OutstandingReservation");
+            }
+            if (_entityIntakeOpen)
+            {
+                throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.EntityIntakeStillOpen");
             }
 
             _logicStepActive = false;

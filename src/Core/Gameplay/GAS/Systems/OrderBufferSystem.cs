@@ -75,6 +75,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
             }
+
+            _admissionResults?.EndEntityIntake();
         }
 
         private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)
