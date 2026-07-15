@@ -276,11 +276,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public void ResetSlice()
         {
-            if (!_sliceActive) return;
-            int previous = MaxWorkUnitsPerSlice;
-            MaxWorkUnitsPerSlice = int.MaxValue;
-            while (!UpdateSlice(0f, int.MaxValue)) { }
-            MaxWorkUnitsPerSlice = previous;
+            _sliceActive = false;
+            _stage = LifetimeStage.Scan;
+            _snapshotCount = 0;
+            _cursor = 0;
+            ClearPendingWork();
         }
 
         private void BeginSlice()
@@ -289,15 +289,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _callbackCreateBudget.NextFrame();
             _callbackDropped = 0;
             _fanOutDropped = 0;
-            _onPeriodCallbacks.Clear();
-            _onExpireCallbacks.Clear();
-            _onRemoveCallbacks.Clear();
-            _fanOutCommands.Clear();
-            _periodPhaseGraphs.Clear();
-            _expirePhaseGraphs.Clear();
-            _removePhaseGraphs.Clear();
-            _dirtyTargets.Clear();
-            _effectsToDestroy.Clear();
+            ClearPendingWork();
 
             _snapshotCount = World.CountEntities(in _activeEffectsQuery);
             if (_snapshotCount > _effectSnapshot.Length)
@@ -310,6 +302,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _cursor = 0;
             _stage = LifetimeStage.Scan;
             _sliceActive = true;
+        }
+
+        private void ClearPendingWork()
+        {
+            _onPeriodCallbacks.Clear();
+            _onExpireCallbacks.Clear();
+            _onRemoveCallbacks.Clear();
+            _fanOutCommands.Clear();
+            _periodPhaseGraphs.Clear();
+            _expirePhaseGraphs.Clear();
+            _removePhaseGraphs.Clear();
+            _dirtyTargets.Clear();
+            _effectsToDestroy.Clear();
         }
 
         private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)

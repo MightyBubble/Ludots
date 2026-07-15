@@ -592,6 +592,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public void ResetSlice()
         {
+            if (_sliceActive)
+            {
+                RollbackUncommittedApplicationWork();
+            }
+
             _sliceActive = false;
             _sliceStage = ApplicationStage.ProcessPending;
             _cursor = 0;
@@ -607,6 +612,63 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _pendingListenerRegistrations.Clear();
             _activeEffectAttachDropped = 0;
             _listenerRegistrationDropped = 0;
+        }
+
+        private void RollbackUncommittedApplicationWork()
+        {
+            for (int i = 0; i < _effectsToActivate.Count; i++)
+            {
+                Entity effect = _effectsToActivate[i];
+                if (!World.IsAlive(effect) || !World.Has<GameplayEffect>(effect))
+                {
+                    continue;
+                }
+                if (World.Get<GameplayEffect>(effect).State == EffectState.Committed)
+                {
+                    continue;
+                }
+
+                if (World.Has<EffectContext>(effect))
+                {
+                    EffectContext context = World.Get<EffectContext>(effect);
+                    if (World.IsAlive(context.Target) && World.Has<ActiveEffectContainer>(context.Target))
+                    {
+                        ref ActiveEffectContainer container = ref World.Get<ActiveEffectContainer>(context.Target);
+                        container.Remove(effect);
+                    }
+                }
+                World.Destroy(effect);
+            }
+
+            for (int i = 0; i < _pendingAttach.Count; i++)
+            {
+                Entity effect = _pendingAttach[i].Effect;
+                if (World.IsAlive(effect) &&
+                    (!World.Has<GameplayEffect>(effect) || World.Get<GameplayEffect>(effect).State != EffectState.Committed))
+                {
+                    World.Destroy(effect);
+                }
+            }
+
+            for (int i = 0; i < _effectsToDestroy.Count; i++)
+            {
+                Entity effect = _effectsToDestroy[i];
+                if (World.IsAlive(effect))
+                {
+                    World.Destroy(effect);
+                }
+            }
+
+            for (int i = 0; i < _createdContainers.Count; i++)
+            {
+                Entity target = _createdContainers[i];
+                if (World.IsAlive(target) &&
+                    World.Has<ActiveEffectContainer>(target) &&
+                    World.Get<ActiveEffectContainer>(target).Count == 0)
+                {
+                    World.Remove<ActiveEffectContainer>(target);
+                }
+            }
         }
 
         private struct CollectPendingEffectsJob : IForEachWithEntity<GameplayEffect>

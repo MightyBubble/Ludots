@@ -352,6 +352,135 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectLifetime_ResetSlice_DoesNotDrainRemainingGameplayWork()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create(new ActiveEffectContainer());
+            ref ActiveEffectContainer container = ref world.Get<ActiveEffectContainer>(target);
+            for (int i = 0; i < 2; i++)
+            {
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: i + 1,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.After);
+                world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+                Assert.That(container.Add(effect), Is.True);
+            }
+
+            var system = new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 4)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            int aliveBeforeReset = world.CountEntities(in EffectQuery);
+
+            system.ResetSlice();
+
+            Assert.That(aliveBeforeReset, Is.EqualTo(2));
+            Assert.That(world.CountEntities(in EffectQuery), Is.EqualTo(aliveBeforeReset));
+            Assert.That(system.MaxWorkUnitsPerSlice, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EffectApplication_ResetSlice_FinalizesProcessedInstantWithoutApplyingNextEffect()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity first = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Instant);
+            Entity second = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 2,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Instant);
+            var system = new EffectApplicationSystem(world)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            Entity processed = world.Get<GameplayEffect>(first).State == EffectState.Committed ? first : second;
+            Entity pending = processed == first ? second : first;
+
+            system.ResetSlice();
+
+            Assert.That(world.IsAlive(processed), Is.False);
+            Assert.That(world.IsAlive(pending), Is.True);
+            Assert.That(world.Get<GameplayEffect>(pending).State, Is.EqualTo(EffectState.Pending));
+        }
+
+        [Test]
+        public void EffectApplication_ResetSlice_RollsBackPendingPersistentAttachment()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create(new ActiveEffectContainer());
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 30,
+                lifetimeKind: EffectLifetimeKind.After);
+            var system = new EffectApplicationSystem(world)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+
+            system.ResetSlice();
+
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectApplication_ResetSlice_DestroysPendingUnattachedPersistentEffect()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 30,
+                lifetimeKind: EffectLifetimeKind.After);
+            var system = new EffectApplicationSystem(world)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+            Assert.That(world.Has<ActiveEffectContainer>(target), Is.False);
+
+            system.ResetSlice();
+
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Has<ActiveEffectContainer>(target), Is.False);
+        }
+
+        [Test]
         public void EffectLifetime_RejectsSnapshotOverflowExplicitly()
         {
             using var world = World.Create();
