@@ -242,14 +242,17 @@ public sealed class WorldSnapshotOrchestrationTests
         var snapshotService = new WorldSnapshotService();
         var restoreService = new WorldRestoreService();
         OrderAdmissionResultBuffer admission = target.GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
+        OrderQueue orderQueue = target.GetService(CoreServiceKeys.OrderQueue);
 
         WorldSaveSnapshot snapshot = snapshotService.Capture(
             source,
             SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
 
         admission.BeginLogicStep();
+        var beforeRestore = new Order { OrderTypeId = 3 };
+        orderQueue.EnsureOrderId(ref beforeRestore);
         Assert.That(admission.TryWrite(new OrderAdmissionOutcome(
-            orderId: 77,
+            orderId: beforeRestore.OrderId,
             orderTypeId: 3,
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated)), Is.True);
@@ -259,7 +262,10 @@ public sealed class WorldSnapshotOrchestrationTests
         Assert.That(admission.LogicStepActive, Is.False);
         Assert.That(admission.EntityIntakeOpen, Is.False);
         Assert.That(admission.Count, Is.Zero);
-        Assert.That(admission.TryGet(77, OrderAdmissionStage.EntityIntake, out _), Is.False);
+        Assert.That(admission.TryGet(beforeRestore.OrderId, OrderAdmissionStage.EntityIntake, out _), Is.False);
+        var afterRestore = new Order { OrderTypeId = 3 };
+        orderQueue.EnsureOrderId(ref afterRestore);
+        Assert.That(afterRestore.OrderId, Is.GreaterThan(beforeRestore.OrderId));
         Assert.DoesNotThrow(admission.BeginLogicStep);
         admission.EndEntityIntake();
         admission.EndLogicStep();
