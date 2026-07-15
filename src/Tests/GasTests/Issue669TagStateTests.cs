@@ -105,6 +105,40 @@ public sealed class Issue669TagStateTests
     }
 
     [Test]
+    public void EntityBuilder_PositiveDurationTargetTagAbility_PreinstallsCompleteTimedTagState()
+    {
+        using var world = World.Create();
+        const int abilityId = 7007;
+        var definitions = new AbilityDefinitionRegistry();
+        var exec = new AbilityExecSpec();
+        exec.SetItem(0, ExecItemKind.TagClipTarget, tick: 0, durationTicks: 30, tagId: 46);
+        definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+
+        var authoring = new ComponentAuthoringContext();
+        authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+        var template = new EntityTemplate
+        {
+            Id = "timed_target_tag_ability_actor",
+            Components =
+            {
+                ["AbilityStateBuffer"] = JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!,
+            },
+        };
+
+        Entity entity = new EntityBuilder(
+                world,
+                new Dictionary<string, EntityTemplate> { [template.Id] = template },
+                authoring)
+            .UseTemplate(template.Id)
+            .Build();
+
+        Assert.That(world.Has<GameplayTagContainer>(entity), Is.True);
+        Assert.That(world.Has<TagCountContainer>(entity), Is.True);
+        Assert.That(world.Has<DirtyFlags>(entity), Is.True);
+        Assert.That(world.Has<TimedTagBuffer>(entity), Is.True);
+    }
+
+    [Test]
     public void EntityBuilder_InstantTagAbility_PreinstallsTagStateWithoutTimedBuffer()
     {
         using var world = World.Create();
@@ -119,6 +153,40 @@ public sealed class Issue669TagStateTests
         var template = new EntityTemplate
         {
             Id = "instant_tag_ability_actor",
+            Components =
+            {
+                ["AbilityStateBuffer"] = JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!,
+            },
+        };
+
+        Entity entity = new EntityBuilder(
+                world,
+                new Dictionary<string, EntityTemplate> { [template.Id] = template },
+                authoring)
+            .UseTemplate(template.Id)
+            .Build();
+
+        Assert.That(world.Has<GameplayTagContainer>(entity), Is.True);
+        Assert.That(world.Has<TagCountContainer>(entity), Is.True);
+        Assert.That(world.Has<DirtyFlags>(entity), Is.True);
+        Assert.That(world.Has<TimedTagBuffer>(entity), Is.False);
+    }
+
+    [Test]
+    public void EntityBuilder_TargetTagSignalAbility_PreinstallsTagStateWithoutTimedBuffer()
+    {
+        using var world = World.Create();
+        const int abilityId = 7008;
+        var definitions = new AbilityDefinitionRegistry();
+        var exec = new AbilityExecSpec();
+        exec.SetItem(0, ExecItemKind.TagSignalTarget, tick: 0, tagId: 47);
+        definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+
+        var authoring = new ComponentAuthoringContext();
+        authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+        var template = new EntityTemplate
+        {
+            Id = "target_tag_signal_ability_actor",
             Components =
             {
                 ["AbilityStateBuffer"] = JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!,

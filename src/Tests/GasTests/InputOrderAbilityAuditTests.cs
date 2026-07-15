@@ -252,8 +252,16 @@ namespace Ludots.Tests.GAS
             That(second.OrderId, Is.GreaterThan(0));
             That(results.Count, Is.EqualTo(1));
             That(results[0].OrderId, Is.EqualTo(first.OrderId));
+            That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var capacityOutcome), Is.True);
+            That(capacityOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             That(results.ReservedCount, Is.Zero);
             That(results.OverflowCount, Is.EqualTo(1));
+
+            results.BeginLogicStep();
+
+            That(results.TryGet(first.OrderId, OrderAdmissionStage.GlobalIntake, out _), Is.True);
+            That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out capacityOutcome), Is.True);
+            That(capacityOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         }
 
         [Test]
@@ -292,6 +300,8 @@ namespace Ludots.Tests.GAS
             That(results.Count, Is.EqualTo(1));
             That(results[0].OrderId, Is.EqualTo(order.OrderId));
             That(results[0].Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
+            That(results.TryGet(order.OrderId, OrderAdmissionStage.EntityIntake, out var capacityOutcome), Is.True);
+            That(capacityOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             That(results.ReservedCount, Is.Zero);
             That(results.OverflowCount, Is.EqualTo(1));
         }
@@ -352,6 +362,8 @@ namespace Ludots.Tests.GAS
             That(actorOrders.HasActive, Is.False);
             That(actorOrders.HasQueued, Is.False);
             That(actorOrders.HasPending, Is.False);
+            That(results.TryGet(order.OrderId, OrderAdmissionStage.EntityIntake, out var capacityOutcome), Is.True);
+            That(capacityOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             That(results.ReservedCount, Is.Zero);
             That(results.OverflowCount, Is.EqualTo(1));
         }

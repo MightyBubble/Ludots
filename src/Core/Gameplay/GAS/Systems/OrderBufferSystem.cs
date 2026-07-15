@@ -107,7 +107,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 OrderAdmissionReservation reservation = _admissionResults == null
                     ? default
-                    : _admissionResults.Reserve(OrderAdmissionStage.EntityIntake, order.OrderId);
+                    : _admissionResults.Reserve(
+                        OrderAdmissionStage.EntityIntake,
+                        order.OrderId,
+                        order.OrderTypeId);
                 bool committed = false;
                 try
                 {
@@ -232,7 +235,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 reservation = _admissionResults.Reserve(
                     OrderAdmissionStage.EntityIntake,
-                    order.OrderId);
+                    order.OrderId,
+                    order.OrderTypeId);
             }
             catch
             {

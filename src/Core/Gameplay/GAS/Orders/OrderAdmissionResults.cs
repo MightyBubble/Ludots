@@ -17,7 +17,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         RejectedInvalidActor = 6,
         RejectedInvalidOrderType = 7,
         RejectedBlackboardCapacity = 8,
-        RejectedMissingBlackboard = 9
+        RejectedMissingBlackboard = 9,
+        RejectedAdmissionCapacity = 10
     }
 
     public readonly struct OrderAdmissionOutcome
@@ -50,12 +51,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     /// <summary>
     /// Two fixed-capacity generations keep presentation/external intake outcomes until the
-    /// next logic step can append the matching entity-intake outcome.
+    /// next logic step can append the matching entity-intake outcome. Each generation also
+    /// retains the first capacity rejection that hard-stops admission before order state changes.
     /// </summary>
     public sealed class OrderAdmissionResultBuffer
     {
         public const string CapacityExceededError = "ORDER.ADMISSION.ERR.CapacityExceeded";
-        public const int SubmitResultCount = (int)OrderSubmitResult.RejectedMissingBlackboard + 1;
+        public const int SubmitResultCount = (int)OrderSubmitResult.RejectedAdmissionCapacity + 1;
 
         private OrderAdmissionOutcome[] _currentItems;
         private OrderAdmissionOutcome[] _pendingItems;
@@ -64,6 +66,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _pendingCount;
         private int _currentReserved;
         private int _pendingReserved;
+        private OrderAdmissionOutcome _currentCapacityFailure;
+        private OrderAdmissionOutcome _pendingCapacityFailure;
+        private bool _hasCurrentCapacityFailure;
+        private bool _hasPendingCapacityFailure;
         private int _nextOrderId = 1;
         private bool _logicStepActive;
 
@@ -147,6 +153,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
             }
 
+            if (_hasCurrentCapacityFailure &&
+                _currentCapacityFailure.OrderId == orderId &&
+                _currentCapacityFailure.Stage == stage)
+            {
+                outcome = _currentCapacityFailure;
+                return true;
+            }
+
+            if (_hasPendingCapacityFailure &&
+                _pendingCapacityFailure.OrderId == orderId &&
+                _pendingCapacityFailure.Stage == stage)
+            {
+                outcome = _pendingCapacityFailure;
+                return true;
+            }
+
             outcome = default;
             return false;
         }
@@ -175,13 +197,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        internal OrderAdmissionReservation Reserve(OrderAdmissionStage stage, int orderId)
+        internal OrderAdmissionReservation Reserve(OrderAdmissionStage stage, int orderId, int orderTypeId)
         {
             if (TryReserve(stage, out OrderAdmissionReservation reservation))
             {
                 return reservation;
             }
 
+            RecordCapacityFailure(orderId, orderTypeId, stage);
             throw new System.InvalidOperationException(
                 $"{CapacityExceededError}: stage={stage}, orderId={orderId}, generation={Generation}, capacity={Capacity}.");
         }
@@ -233,6 +256,31 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             reserved--;
+        }
+
+        private void RecordCapacityFailure(int orderId, int orderTypeId, OrderAdmissionStage stage)
+        {
+            bool writePending = ShouldWritePending(stage);
+            ref bool hasFailure = ref (writePending
+                ? ref _hasPendingCapacityFailure
+                : ref _hasCurrentCapacityFailure);
+            ref OrderAdmissionOutcome failure = ref (writePending
+                ? ref _pendingCapacityFailure
+                : ref _currentCapacityFailure);
+
+            if (hasFailure)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.ADMISSION.ERR.CapacityFailureSlotOccupied: stage={stage}, orderId={orderId}, generation={Generation}.");
+            }
+
+            failure = new OrderAdmissionOutcome(
+                orderId,
+                orderTypeId,
+                stage,
+                OrderSubmitResult.RejectedAdmissionCapacity);
+            hasFailure = true;
+            _observedByResult[(int)OrderSubmitResult.RejectedAdmissionCapacity]++;
         }
 
         private bool TryReserve(OrderAdmissionStage stage, out OrderAdmissionReservation reservation)
@@ -295,6 +343,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _pendingItems = retired;
             _currentCount = _pendingCount;
             _pendingCount = 0;
+            _currentCapacityFailure = _pendingCapacityFailure;
+            _hasCurrentCapacityFailure = _hasPendingCapacityFailure;
+            _pendingCapacityFailure = default;
+            _hasPendingCapacityFailure = false;
             _logicStepActive = true;
             Generation++;
         }

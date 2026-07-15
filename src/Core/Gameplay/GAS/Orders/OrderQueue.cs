@@ -62,7 +62,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             EnsureOrderId(ref order);
             OrderAdmissionReservation reservation = _admissionResults == null
                 ? default
-                : _admissionResults.Reserve(OrderAdmissionStage.GlobalIntake, order.OrderId);
+                : _admissionResults.Reserve(
+                    OrderAdmissionStage.GlobalIntake,
+                    order.OrderId,
+                    order.OrderTypeId);
             bool committed = false;
             try
             {

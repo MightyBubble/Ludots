@@ -137,12 +137,12 @@ namespace Ludots.Core.Gameplay.GAS
                 for (int i = 0; i < spec.ItemCount; i++)
                 {
                     ExecItemKind kind = spec.GetKind(i);
-                    if (kind == ExecItemKind.TagClip)
+                    if (kind == ExecItemKind.TagClip || kind == ExecItemKind.TagClipTarget)
                     {
                         RequiresTagState = true;
                         RequiresTimedTagState |= spec.GetDurationTicks(i) > 0;
                     }
-                    else if (kind == ExecItemKind.TagSignal)
+                    else if (kind == ExecItemKind.TagSignal || kind == ExecItemKind.TagSignalTarget)
                     {
                         RequiresTagState = true;
                     }
