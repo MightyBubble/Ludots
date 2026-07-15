@@ -149,10 +149,15 @@ namespace GasTests
                         hits.Add(ToRepoRelativePath(repoRoot, file));
                     }
 
-                    if (source.Contains("new TimedTagBuffer()", StringComparison.Ordinal) &&
-                        !file.EndsWith(
+                    bool isCentralizedTimedTagAssembly =
+                        file.EndsWith(
                             Path.Combine("Gameplay", "GAS", "AbilityRuntimeStateInstaller.cs"),
-                            StringComparison.OrdinalIgnoreCase))
+                            StringComparison.OrdinalIgnoreCase) ||
+                        file.EndsWith(
+                            Path.Combine("Config", "EntityRuntimeStatePlan.cs"),
+                            StringComparison.OrdinalIgnoreCase);
+                    if (source.Contains("new TimedTagBuffer()", StringComparison.Ordinal) &&
+                        !isCentralizedTimedTagAssembly)
                     {
                         hits.Add(ToRepoRelativePath(repoRoot, file));
                     }

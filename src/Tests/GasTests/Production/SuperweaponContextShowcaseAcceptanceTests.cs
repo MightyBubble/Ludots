@@ -42,6 +42,18 @@ namespace Ludots.Tests.GAS.Production
             "SuperweaponContextShowcaseMod"
         };
 
+        [SetUp]
+        public void SetUp()
+        {
+            TagRegistry.Clear();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            TagRegistry.Clear();
+        }
+
         [Test]
         public void SuperweaponContextShowcase_RoutesTargetsThroughAbilityOwnedInteractionFrame()
         {

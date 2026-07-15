@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -29,24 +30,14 @@ namespace Ludots.Tests.Gas
             string repoRoot = FindRepoRoot();
             CopyDirectory(Path.Combine(repoRoot, "assets", "Configs"), Path.Combine(_coreRoot, "Configs"));
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
-            {
-              "startupMapId": "outer_map",
-              "worldWidthInMacroTiles": 16,
-              "worldHeightInMacroTiles": 16,
-              "gridCellSizeCm": 100,
-              "gasRuntimeCapacity": {
-                "abilityExecSnapshotCapacity": 64,
-                "effectLifetimeSnapshotCapacity": 64,
-                "orderAdmissionResultCapacity": 64,
-                "orderAdmissionRejectionCapacity": 64,
-                "orderTerminalResultCapacity": 64,
-                "deferredTriggerActiveEntityCapacity": 64,
-                "abilityExecMaxWorkUnitsPerSlice": 64,
-                "effectProcessingMaxWorkUnitsPerSlice": 64
-              }
-            }
-            """);
+            string gameConfigPath = Path.Combine(_coreRoot, "Configs", "game.json");
+            JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
+                ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
+            gameConfig["startupMapId"] = "outer_map";
+            gameConfig["worldWidthInMacroTiles"] = 16;
+            gameConfig["worldHeightInMacroTiles"] = 16;
+            gameConfig["gridCellSizeCm"] = 100;
+            File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
             File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "agent_profiles.json"), """
             [
