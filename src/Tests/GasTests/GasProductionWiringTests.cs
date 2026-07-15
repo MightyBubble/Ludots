@@ -54,7 +54,7 @@ namespace Ludots.Tests.GasTests
         {
             using World world = World.Create();
             var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
-            var values = new GraphOutputValueStore(keys, initialCapacity: 2);
+            var values = new GraphOutputValueStore(keys, initialCapacity: 1_024);
             var cleanup = new GraphOutputValueCleanupSystem(world, values);
             var peakOwners = new Entity[512];
 
@@ -91,7 +91,7 @@ namespace Ludots.Tests.GasTests
         {
             using World world = World.Create();
             var keys = new StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
-            var values = new GraphOutputValueStore(keys, initialCapacity: 2);
+            var values = new GraphOutputValueStore(keys, initialCapacity: 128);
             var cleanup = new GraphOutputValueCleanupSystem(world, values);
             var owners = new Entity[32];
 
