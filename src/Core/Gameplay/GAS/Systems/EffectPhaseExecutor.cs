@@ -125,7 +125,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int rootId = 0)
         {
             byte validationResult = 0;
-            ExecutePhase(
+            ExecutePhaseInConfigScope(
                 world,
                 api,
                 caster,
@@ -145,7 +145,55 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref validationResult);
         }
 
-        private void ExecutePhase(
+        private void ExecutePhaseInConfigScope(
+            World world,
+            IGraphRuntimeApi api,
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            IntVector2 targetPos,
+            EffectPhaseId phase,
+            in EffectPhaseGraphBindings behavior,
+            EffectPresetType presetType,
+            int effectTagId,
+            int effectTemplateId,
+            in EffectConfigParams mergedParams,
+            BuiltinHandlerExecutionContext? builtinRuntime,
+            uint randomSeed,
+            int rootId,
+            bool trackValidationResult,
+            ref byte validationResult)
+        {
+            GasGraphRuntimeApi? graphHost = api as GasGraphRuntimeApi;
+            graphHost?.SetConfigContext(in mergedParams);
+            try
+            {
+                ExecutePhaseCore(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    targetContext,
+                    targetPos,
+                    phase,
+                    in behavior,
+                    presetType,
+                    effectTagId,
+                    effectTemplateId,
+                    in mergedParams,
+                    builtinRuntime,
+                    randomSeed,
+                    rootId,
+                    trackValidationResult,
+                    ref validationResult);
+            }
+            finally
+            {
+                graphHost?.ClearConfigContext();
+            }
+        }
+
+        private void ExecutePhaseCore(
             World world,
             IGraphRuntimeApi api,
             Entity caster,
@@ -212,7 +260,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int rootId = 0)
         {
             byte validationResult = 1;
-            ExecutePhase(
+            ExecutePhaseInConfigScope(
                 world,
                 api,
                 caster,

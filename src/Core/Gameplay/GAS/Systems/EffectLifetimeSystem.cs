@@ -36,7 +36,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly TagOps _tagOps;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly OrderRuleRegistry? _orderRuleRegistry;
@@ -135,7 +134,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _spatialQueries = spatialQueries;
             _presentationEvents = presentationEvents;
             _phaseExecutor = phaseExecutor;
-            _graphApiHost = graphApi;
             _graphApi = graphApi;
             _tagOps = tagOps;
             _builtinRuntime.SpatialQueries = spatialQueries;
@@ -611,35 +609,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, entry.EffectEntity, in tpl.ConfigParams);
-            try
-            {
-                if (_graphApiHost != null && mergedConfig.Count > 0)
-                {
-                    _graphApiHost.SetConfigContext(in mergedConfig);
-                }
+            _phaseExecutor.ExecutePhase(
+                World, _graphApi,
+                entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
+                default,
+                phase,
+                in tpl.PhaseGraphBindings,
+                tpl.PresetType,
+                tpl.TagId,
+                entry.TemplateId,
+                in mergedConfig,
+                builtinRuntime,
+                BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
+                entry.Context.RootId);
 
-                _phaseExecutor.ExecutePhase(
-                    World, _graphApi,
-                    entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
-                    default,
-                    phase,
-                    in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
-                    tpl.TagId,
-                    entry.TemplateId,
-                    in mergedConfig,
-                    builtinRuntime,
-                    BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
-                    entry.Context.RootId);
-
-                if (builtinRuntime != null)
-                {
-                    _fanOutDropped += builtinRuntime.DroppedCount;
-                }
-            }
-            finally
+            if (builtinRuntime != null)
             {
-                _graphApiHost?.ClearConfigContext();
+                _fanOutDropped += builtinRuntime.DroppedCount;
             }
 
             if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)

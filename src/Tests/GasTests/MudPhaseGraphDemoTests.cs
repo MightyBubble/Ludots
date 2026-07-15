@@ -154,11 +154,9 @@ namespace Ludots.Tests.GAS
                 // ═══════ Phase 2: OnApply (Pre → Main → Post) ═══════
                 sb.AppendLine("[MUD][PHASE] ② OnApply: Pre读取Config计算伤害, Main施加属性修改, Post累计记录。");
 
-                // Set config context for graph to read
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
                 float hpAfterApply = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
                 ref var bbFloat = ref world.Get<BlackboardFloatBuffer>(target);
@@ -175,10 +173,9 @@ namespace Ludots.Tests.GAS
 
                 // ═══════ Simulate second application (e.g. periodic tick reusing same behavior) ═══════
                 sb.AppendLine("[MUD][PHASE] ③ OnApply (第2次): 再次施加，累计伤害叠加。");
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
                 float hpAfterSecond = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
                 bbFloat = ref world.Get<BlackboardFloatBuffer>(target);
@@ -274,10 +271,9 @@ namespace Ludots.Tests.GAS
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
                 float hp = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
                 That(hp, Is.EqualTo(50f).Within(1e-6f), "HP = 100 - (25*2) = 50");
@@ -357,16 +353,14 @@ namespace Ludots.Tests.GAS
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
                 // Fire → targetA
-                api.SetConfigContext(in fireConfig);
                 executor.ExecutePhase(world, api, caster, targetA, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in fireConfig);
 
                 // Ice → targetB
-                api.SetConfigContext(in iceConfig);
                 executor.ExecutePhase(world, api, caster, targetB, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in iceConfig);
 
                 float hpA = world.Get<AttributeBuffer>(targetA).GetCurrent(AttrHealth);
                 float hpB = world.Get<AttributeBuffer>(targetB).GetCurrent(AttrHealth);

@@ -895,30 +895,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // Build merged config: template params + caller overrides
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, effectEntity, in tpl.ConfigParams);
 
-            try
-            {
-                if (_graphApiHost != null && mergedConfig.Count > 0)
-                    _graphApiHost.SetConfigContext(in mergedConfig);
-
-                IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-                _phaseExecutor.ExecutePhase(
-                    World, _graphApi,
-                    context.Source, context.Target, context.TargetContext,
-                    targetPos,
-                    phase,
-                    in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
-                    tpl.TagId,
-                    templateId,
-                    in mergedConfig,
-                    builtinRuntime,
-                    BuildExecutionSeed(effectEntity, phase, templateId, context),
-                    context.RootId);
-            }
-            finally
-            {
-                _graphApiHost?.ClearConfigContext();
-            }
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+            _phaseExecutor.ExecutePhase(
+                World, _graphApi,
+                context.Source, context.Target, context.TargetContext,
+                targetPos,
+                phase,
+                in tpl.PhaseGraphBindings,
+                tpl.PresetType,
+                tpl.TagId,
+                templateId,
+                in mergedConfig,
+                builtinRuntime,
+                BuildExecutionSeed(effectEntity, phase, templateId, context),
+                context.RootId);
 
             // Defer phase listener registration to Stage 6 (structural change safety)
             if (phase == EffectPhaseId.OnApply && tpl.ListenerSetup.Count > 0)

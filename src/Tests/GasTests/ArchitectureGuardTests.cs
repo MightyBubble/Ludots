@@ -307,6 +307,29 @@ namespace GasTests
         }
 
         [Test]
+        public void EffectPhaseConfigurationScope_MustHaveOneOwner()
+        {
+            string repoRoot = FindRepoRoot();
+            string systems = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Systems");
+            string executor = File.ReadAllText(Path.Combine(systems, "EffectPhaseExecutor.cs"));
+            string[] callers =
+            {
+                "EffectProposalProcessingSystem.cs",
+                "EffectApplicationSystem.cs",
+                "EffectLifetimeSystem.cs",
+            };
+
+            Assert.That(executor, Does.Contain("SetConfigContext(in mergedParams)"));
+            Assert.That(executor, Does.Contain("ClearConfigContext()"));
+            foreach (string caller in callers)
+            {
+                string source = File.ReadAllText(Path.Combine(systems, caller));
+                Assert.That(source, Does.Not.Contain("SetConfigContext("), caller);
+                Assert.That(source, Does.Not.Contain("ClearConfigContext("), caller);
+            }
+        }
+
+        [Test]
         public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
         {
             var repoRoot = FindRepoRoot();

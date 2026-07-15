@@ -69,7 +69,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
         private readonly RootBudgetTable _instantFanOutBudget = new(16384);
         private readonly List<FanOutCommand> _instantFanOutCommands = new(256);
@@ -283,7 +282,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _presentationEvents = presentationEvents;
             _tagOps = tagOps;
             _phaseExecutor = phaseExecutor;
-            _graphApiHost = graphApi;
             _graphApi = graphApi;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _instantFanOutBudget;
@@ -1077,11 +1075,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.ResetPerEffect();
             _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
 
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in mergedConfig);
-            }
-
             try
             {
                 _phaseExecutor!.ExecutePhase(
@@ -1116,7 +1109,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             finally
             {
                 _instantFanOutCommands.Clear();
-                ClearConfigContext();
             }
             if (_builtinRuntime.DroppedCount > 0 && _budget != null)
             {
@@ -1331,11 +1323,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_phaseExecutor == null || _graphApi == null) return true;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in mergedConfig);
-            }
-
             var context = new EffectContext
             {
                 RootId = proposal.RootId,
@@ -1344,24 +1331,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TargetContext = proposal.TargetContext,
             };
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            try
-            {
-                return _phaseExecutor.ExecutePhaseWithValidationResult(
-                    World, _graphApi,
-                    proposal.Source, proposal.Target, proposal.TargetContext,
-                    targetPos,
-                    EffectPhaseId.OnPropose,
-                    in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
-                    proposal.TagId,
-                    proposal.TemplateId,
-                    in mergedConfig,
-                    rootId: proposal.RootId);
-            }
-            finally
-            {
-                ClearConfigContext();
-            }
+            return _phaseExecutor.ExecutePhaseWithValidationResult(
+                World, _graphApi,
+                proposal.Source, proposal.Target, proposal.TargetContext,
+                targetPos,
+                EffectPhaseId.OnPropose,
+                in tpl.PhaseGraphBindings,
+                tpl.PresetType,
+                proposal.TagId,
+                proposal.TemplateId,
+                in mergedConfig,
+                rootId: proposal.RootId);
         }
 
         /// <summary>
@@ -1373,11 +1353,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_phaseExecutor == null || _graphApi == null) return;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in mergedConfig);
-            }
-
             var context = new EffectContext
             {
                 RootId = proposal.RootId,
@@ -1408,7 +1383,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             finally
             {
                 _instantFanOutCommands.Clear();
-                ClearConfigContext();
             }
         }
 
@@ -1422,28 +1396,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _instantFanOutCommands.Clear();
         }
 
-        private void SetConfigContext(in EffectTemplateData tpl)
-        {
-            if (_graphApiHost != null && tpl.ConfigParams.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in tpl.ConfigParams);
-            }
-        }
-
-        private void SetMergedConfigContext(in EffectTemplateData tpl, in EffectProposal proposal)
-        {
-            if (_graphApiHost == null)
-            {
-                return;
-            }
-
-            var merged = BuildMergedConfig(in tpl, in proposal);
-            if (merged.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in merged);
-            }
-        }
-
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)
         {
             if (proposal.HasCallerParams)
@@ -1454,11 +1406,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return tpl.ConfigParams;
-        }
-
-        private void ClearConfigContext()
-        {
-            _graphApiHost?.ClearConfigContext();
         }
 
         private static unsafe void ApplyModify(ref EffectModifiers modifiers, float modifyValue, ModifierOp op)
