@@ -18,10 +18,16 @@ namespace Ludots.Core.Engine
             {
                 throw new SaveContextException("Save participant registry is not available.");
             }
+            var admissionResults = GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
+            if (admissionResults == null)
+            {
+                throw new SaveContextException("Order admission result buffer is not available.");
+            }
 
             LudotsWorldStateImporter.ImportOwnedSnapshotInto(restoredWorld, World);
             SetService(CoreServiceKeys.World, World);
             registry.RestoreDomains(domains);
+            admissionResults.ResetForWorldRestore();
             _cooperativeSimulation?.Reset();
         }
     }

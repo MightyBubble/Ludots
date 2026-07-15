@@ -472,5 +472,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _logicStepActive = false;
         }
+
+        /// <summary>
+        /// Aborts all volatile admission work after the authoritative world is replaced.
+        /// Order ids remain monotonic so callers cannot confuse post-restore submissions with
+        /// outcomes observed before the restore boundary.
+        /// </summary>
+        public void ResetForWorldRestore()
+        {
+            _currentCount = 0;
+            _pendingCount = 0;
+            _currentRejectionCount = 0;
+            _pendingRejectionCount = 0;
+            _currentReserved = 0;
+            _pendingReserved = 0;
+            _logicStepActive = false;
+            _entityIntakeOpen = false;
+            _terminalFaultMessage = null;
+        }
     }
 }

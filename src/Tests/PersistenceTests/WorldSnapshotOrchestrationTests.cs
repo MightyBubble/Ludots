@@ -3,6 +3,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
@@ -231,6 +232,37 @@ public sealed class WorldSnapshotOrchestrationTests
         string[] restoredTrace = RunFixedSteps(restored, 3);
 
         Assert.That(restoredTrace, Is.EqualTo(continuousTrace));
+    }
+
+    [Test]
+    public void RestoreDuringAdmissionStepAbortsVolatileGenerationBeforeNextLogicStep()
+    {
+        using GameEngine source = CreateInitializedEngine();
+        using GameEngine target = CreateInitializedEngine();
+        var snapshotService = new WorldSnapshotService();
+        var restoreService = new WorldRestoreService();
+        OrderAdmissionResultBuffer admission = target.GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
+
+        WorldSaveSnapshot snapshot = snapshotService.Capture(
+            source,
+            SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+
+        admission.BeginLogicStep();
+        Assert.That(admission.TryWrite(new OrderAdmissionOutcome(
+            orderId: 77,
+            orderTypeId: 3,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated)), Is.True);
+
+        restoreService.Restore(target, snapshot);
+
+        Assert.That(admission.LogicStepActive, Is.False);
+        Assert.That(admission.EntityIntakeOpen, Is.False);
+        Assert.That(admission.Count, Is.Zero);
+        Assert.That(admission.TryGet(77, OrderAdmissionStage.EntityIntake, out _), Is.False);
+        Assert.DoesNotThrow(admission.BeginLogicStep);
+        admission.EndEntityIntake();
+        admission.EndLogicStep();
     }
 
     private static Entity FindSingleByName(World world, string name)
