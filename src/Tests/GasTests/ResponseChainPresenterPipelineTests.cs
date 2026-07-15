@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64);
                 var telemetry = new ResponseChainTelemetryBuffer();
                 var orderReq = new OrderRequestQueue();
  
@@ -276,7 +276,7 @@ namespace Ludots.Tests.GAS
                 }
             };
 
-            var chainOrders = new OrderQueue();
+            var chainOrders = new OrderQueue(64);
             var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
 
             PressButton(handler, backend, "<Keyboard>/f");
@@ -317,7 +317,7 @@ namespace Ludots.Tests.GAS
             };
 
             var ex = Throws<InvalidOperationException>(() =>
-                new ResponseChainHumanOrderSourceSystem(globals, new ResponseChainUiState(), new OrderQueue()));
+                new ResponseChainHumanOrderSourceSystem(globals, new ResponseChainUiState(), new OrderQueue(64)));
 
             That(ex!.Message, Does.Contain("GameConfig"));
             That(ex.Message, Does.Contain("chainPass"));

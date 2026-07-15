@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS
 
                 GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64);
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 

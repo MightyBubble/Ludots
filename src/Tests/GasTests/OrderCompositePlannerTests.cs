@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_ImmediateOutOfRangeCast_EnqueuesMoveAndContinuation()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue();
+            var orderQueue = new OrderQueue(64);
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_QueuedCast_UsesProjectedMoveEndpoint()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue();
+            var orderQueue = new OrderQueue(64);
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_AutoTargetAbility_BypassesMoveThenCastPlanning()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue();
+            var orderQueue = new OrderQueue(64);
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,

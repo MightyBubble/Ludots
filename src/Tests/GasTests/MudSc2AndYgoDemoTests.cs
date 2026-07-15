@@ -121,8 +121,8 @@ namespace Ludots.Tests.GAS
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
                 var inputResp = new InputResponseBuffer();
-                var incomingOrders = new OrderQueue();
-                var chainOrders = new OrderQueue();
+                var incomingOrders = new OrderQueue(64);
+                var chainOrders = new OrderQueue(64);
                 var eventBus = new GameplayEventBus();
                 var abilityDefs = new AbilityDefinitionRegistry();
 
@@ -342,8 +342,8 @@ namespace Ludots.Tests.GAS
                 var effectRequests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
                 var inputResp = new InputResponseBuffer();
-                var incomingOrders = new OrderQueue();
-                var chainOrders = new OrderQueue();
+                var incomingOrders = new OrderQueue(64);
+                var chainOrders = new OrderQueue(64);
                 var eventBus = new GameplayEventBus();
 
                 const int orderCastAbility = 100;
@@ -469,8 +469,8 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var effectRequests = new EffectRequestQueue();
-                var incomingOrders = new OrderQueue();
-                var chainOrders = new OrderQueue();
+                var incomingOrders = new OrderQueue(64);
+                var chainOrders = new OrderQueue(64);
                 var eventBus = new GameplayEventBus();
                 var inputResp = new InputResponseBuffer();
                 var abilityDefs = new AbilityDefinitionRegistry();

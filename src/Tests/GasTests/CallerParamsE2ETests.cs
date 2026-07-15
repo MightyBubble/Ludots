@@ -83,7 +83,7 @@ namespace Ludots.Tests.GAS
                 req.CallerParams.TryAddFloat(EffectParamKeys.ForceYAttribute, -50.0f);
                 requests.Publish(req);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64);
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
@@ -143,7 +143,7 @@ namespace Ludots.Tests.GAS
                 };
                 requests.Publish(req);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64);
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 

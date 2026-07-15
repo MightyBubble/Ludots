@@ -133,7 +133,7 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue();
+            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue(64);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,

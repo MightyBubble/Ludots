@@ -798,7 +798,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void PlanExecutor_UnregisteredOrderTypeId_Throws()
         {
-            var queue = new OrderQueue();
+            var queue = new OrderQueue(64);
             var orderTypes = new OrderTypeRegistry();
             var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
             var ints = new BlackboardIntBuffer();

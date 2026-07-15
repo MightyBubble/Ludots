@@ -254,6 +254,12 @@ namespace Ludots.Tests.GasTests
             Assert.That(
                 admissionResults.RejectionCapacity,
                 Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionRejectionCapacity));
+            Assert.That(
+                engine.GetService(CoreServiceKeys.OrderQueue).Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.OrderQueueCapacity));
+            Assert.That(
+                engine.GetService(CoreServiceKeys.ChainOrderQueue).Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.ResponseChainOrderQueueCapacity));
             Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);

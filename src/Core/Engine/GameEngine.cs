@@ -937,8 +937,12 @@ namespace Ludots.Core.Engine
             var orderAdmissionResults = new OrderAdmissionResultBuffer(
                 gasRuntimeCapacity.OrderAdmissionResultCapacity,
                 gasRuntimeCapacity.OrderAdmissionRejectionCapacity);
-            var orderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
-            var chainOrderQueue = new OrderQueue(admissionResults: orderAdmissionResults);
+            var orderQueue = new OrderQueue(
+                gasRuntimeCapacity.OrderQueueCapacity,
+                orderAdmissionResults);
+            var chainOrderQueue = new OrderQueue(
+                gasRuntimeCapacity.ResponseChainOrderQueueCapacity,
+                orderAdmissionResults);
             var orderRequestQueue = new OrderRequestQueue();
             var responseChainTelemetry = new ResponseChainTelemetryBuffer();
 

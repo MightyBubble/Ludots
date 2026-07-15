@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS
                 {
                     World = world,
                     Input = input,
-                    Orders = new OrderQueue(),
+                    Orders = new OrderQueue(64),
                     Schemes = schemes,
                     Avatar = avatar,
                     _schemeIds = schemeIds,

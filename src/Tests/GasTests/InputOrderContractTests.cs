@@ -326,7 +326,7 @@ namespace Ludots.Tests.GAS
                     new TriggerManager(),
                     new Ludots.Core.Engine.SystemFactoryRegistry(),
                     new TriggerDecoratorRegistry());
-                var orders = new OrderQueue();
+                var orders = new OrderQueue(64);
                 var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
 
                 system.Update(0f);

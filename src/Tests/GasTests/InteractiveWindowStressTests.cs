@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64);
 
                 var processing = new EffectProcessingLoopSystem(
                     world,

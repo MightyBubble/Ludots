@@ -63,6 +63,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveOrderQueueCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.OrderQueueCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("orderQueueCapacity"));
+        }
+
+        [Test]
+        public void GasRuntimeCapacity_RequiresPositiveResponseChainOrderQueueCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.ResponseChainOrderQueueCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("responseChainOrderQueueCapacity"));
+        }
+
+        [Test]
         public void AbilityExec_AdvancesMoreThanTwoThousandEntitiesAcrossSlices()
         {
             using var world = World.Create();
@@ -669,6 +689,8 @@ namespace Ludots.Tests.GAS
             {
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
+                OrderQueueCapacity = 64,
+                ResponseChainOrderQueueCapacity = 64,
                 OrderAdmissionResultCapacity = 64,
                 OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,

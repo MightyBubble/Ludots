@@ -31,9 +31,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _nextOrderId = 1;
         private readonly OrderAdmissionResultBuffer? _admissionResults;
 
-        public OrderQueue(int capacity = 4096, OrderAdmissionResultBuffer? admissionResults = null)
+        public OrderQueue(int capacity, OrderAdmissionResultBuffer? admissionResults = null)
         {
-            if (capacity < 64) capacity = 64;
+            if (capacity <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(capacity), capacity, "capacity must be positive.");
+            }
             _items = new Order[capacity];
             _admissionResults = admissionResults;
         }
