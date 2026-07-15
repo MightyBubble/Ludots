@@ -459,22 +459,42 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ? World.Get<EffectTemplateRef>(e).TemplateId
                                 : 0;
 
+                            bool hasGrantedTagSnapshot = false;
+                            GameplayTagContainer tagsBefore = default;
+                            TagCountContainer tagCountsBefore = default;
+                            DirtyFlags dirtyFlagsBefore = default;
                             try
                             {
                                 if (World.Has<EffectGrantedTags>(e))
                                 {
                                     EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(e);
                                     int stackCount = World.Has<EffectStack>(e) ? World.Get<EffectStack>(e).Count : 1;
-                                    EffectTagContributionHelper.GrantToEntity(World, context.Target, in grantedTags, stackCount, _tagOps, _budget);
+                                    TagOps.RequireTagState(World, context.Target);
+                                    tagsBefore = World.Get<GameplayTagContainer>(context.Target);
+                                    tagCountsBefore = World.Get<TagCountContainer>(context.Target);
+                                    dirtyFlagsBefore = World.Get<DirtyFlags>(context.Target);
+                                    hasGrantedTagSnapshot = true;
+                                    EffectTagContributionHelper.PrepareGrantToEntity(World, context.Target, in grantedTags, stackCount, _tagOps, _budget);
+                                }
+
+                                ExecutePersistentPhases(e, in context, templateId);
+                                if (hasGrantedTagSnapshot && World.Get<DirtyFlags>(context.Target).IsAnyTagDirty())
+                                {
+                                    _tagOps.MarkDirtyEntity(World, context.Target);
                                 }
                             }
                             catch
                             {
+                                if (hasGrantedTagSnapshot && World.IsAlive(context.Target))
+                                {
+                                    World.Get<GameplayTagContainer>(context.Target) = tagsBefore;
+                                    World.Get<TagCountContainer>(context.Target) = tagCountsBefore;
+                                    World.Get<DirtyFlags>(context.Target) = dirtyFlagsBefore;
+                                }
                                 RollbackPersistentAttachment(context.Target, e);
                                 throw;
                             }
 
-                            ExecutePersistentPhases(e, in context, templateId);
                             MarkAggregateDirtyIfNeeded(context.Target, e);
 
                             if (World.IsAlive(e) && World.Has<GameplayEffect>(e))
@@ -829,25 +849,30 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // Build merged config: template params + caller overrides
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, effectEntity, in tpl.ConfigParams);
 
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-                _graphApiHost.SetConfigContext(in mergedConfig);
+            try
+            {
+                if (_graphApiHost != null && mergedConfig.Count > 0)
+                    _graphApiHost.SetConfigContext(in mergedConfig);
 
-            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            _phaseExecutor.ExecutePhase(
-                World, _graphApi,
-                context.Source, context.Target, context.TargetContext,
-                targetPos,
-                phase,
-                in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                tpl.TagId,
-                templateId,
-                in mergedConfig,
-                builtinRuntime,
-                BuildExecutionSeed(effectEntity, phase, templateId, context),
-                context.RootId);
-
-            _graphApiHost?.ClearConfigContext();
+                IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi,
+                    context.Source, context.Target, context.TargetContext,
+                    targetPos,
+                    phase,
+                    in tpl.PhaseGraphBindings,
+                    tpl.PresetType,
+                    tpl.TagId,
+                    templateId,
+                    in mergedConfig,
+                    builtinRuntime,
+                    BuildExecutionSeed(effectEntity, phase, templateId, context),
+                    context.RootId);
+            }
+            finally
+            {
+                _graphApiHost?.ClearConfigContext();
+            }
 
             // Defer phase listener registration to Stage 6 (structural change safety)
             if (phase == EffectPhaseId.OnApply && tpl.ListenerSetup.Count > 0)

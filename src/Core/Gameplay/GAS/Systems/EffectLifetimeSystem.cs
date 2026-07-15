@@ -611,30 +611,36 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
             var mergedConfig = ConfigParamsMerger.BuildMergedConfig(World, entry.EffectEntity, in tpl.ConfigParams);
-            if (_graphApiHost != null && mergedConfig.Count > 0)
+            try
             {
-                _graphApiHost.SetConfigContext(in mergedConfig);
+                if (_graphApiHost != null && mergedConfig.Count > 0)
+                {
+                    _graphApiHost.SetConfigContext(in mergedConfig);
+                }
+
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi,
+                    entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
+                    default,
+                    phase,
+                    in tpl.PhaseGraphBindings,
+                    tpl.PresetType,
+                    tpl.TagId,
+                    entry.TemplateId,
+                    in mergedConfig,
+                    builtinRuntime,
+                    BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
+                    entry.Context.RootId);
+
+                if (builtinRuntime != null)
+                {
+                    _fanOutDropped += builtinRuntime.DroppedCount;
+                }
             }
-
-            _phaseExecutor.ExecutePhase(
-                World, _graphApi,
-                entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
-                default,
-                phase,
-                in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                tpl.TagId,
-                entry.TemplateId,
-                in mergedConfig,
-                builtinRuntime,
-                BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
-                entry.Context.RootId);
-
-            if (builtinRuntime != null)
+            finally
             {
-                _fanOutDropped += builtinRuntime.DroppedCount;
+                _graphApiHost?.ClearConfigContext();
             }
-            _graphApiHost?.ClearConfigContext();
 
             if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
             {

@@ -586,6 +586,72 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectApplicationSystem_WhenPersistentPhaseThrows_RestoresAttachmentTagsAndGraphContext()
+        {
+            using var world = World.Create();
+            var templates = new EffectTemplateRegistry();
+            var phaseBindings = new EffectPhaseGraphBindings();
+            Assert.That(phaseBindings.TryAddStep(EffectPhaseId.OnResolve, PhaseSlot.Pre, 9_999), Is.True);
+            var configParams = new EffectConfigParams();
+            Assert.That(configParams.TryAddInt(keyId: 77, value: 99), Is.True);
+            templates.Register(2007, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.None,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+                PhaseGraphBindings = phaseBindings,
+                ConfigParams = configParams,
+            });
+
+            var phaseExecutor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var dirtyEntities = new DirtyEntityQueue(capacity: 8);
+            var tagOps = new TagOps(new TagRuleRegistry(), dirtyEntities: dirtyEntities);
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            var application = new EffectApplicationSystem(
+                world,
+                templates: templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps);
+
+            Entity source = world.Create();
+            Entity target = world.Create();
+            TagStateInstaller.EnsureInstalled(world, target);
+            var grantedTags = default(EffectGrantedTags);
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 20,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 1,
+            });
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 60,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Add(effect, new EffectTemplateRef { TemplateId = 2007 });
+            world.Add(effect, grantedTags);
+
+            Assert.Throws<InvalidOperationException>(() => application.Update(0f));
+
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Has<ActiveEffectContainer>(target), Is.False);
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(20), Is.False);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(20), Is.Zero);
+            Assert.That(world.Get<DirtyFlags>(target).IsTagDirty(20), Is.False);
+            Assert.That(dirtyEntities.Count, Is.Zero);
+            Assert.That(graphApi.TryLoadConfigInt(77, out _), Is.False);
+        }
+
+        [Test]
         public void EffectApplicationSystem_DoT_UsesActiveEffectContainerForStackMerge_ButDoesNotAggregateModifiers()
         {
             using var world = World.Create();
