@@ -205,7 +205,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderQueue_InvalidOrderTypeId_PublishesTypedRejection()
         {
-            var results = new OrderAdmissionResultBuffer(4);
+            var results = new OrderAdmissionResultBuffer(4, 4);
             var queue = new OrderQueue(64, results);
             var order = new Order { OrderTypeId = 0 };
 
@@ -221,7 +221,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderAdmissionResultBuffer_WhenFull_CountsOverflowWithoutAllocatingOrGrowing()
         {
-            var results = new OrderAdmissionResultBuffer(1);
+            var results = new OrderAdmissionResultBuffer(1, 1);
             var first = new OrderAdmissionOutcome(1, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
             var second = new OrderAdmissionOutcome(2, 2, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedQueueFull);
 
@@ -237,7 +237,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderQueue_WhenAdmissionCapacityIsExhausted_DoesNotEnqueueAnUnobservableOrder()
         {
-            var results = new OrderAdmissionResultBuffer(1);
+            var results = new OrderAdmissionResultBuffer(1, 1);
             var queue = new OrderQueue(64, results);
             var first = new Order { OrderTypeId = 2 };
             var second = new Order { OrderTypeId = 2 };
@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
             That(queue.Count, Is.EqualTo(1));
             That(second.OrderId, Is.GreaterThan(0));
-            That(results.Count, Is.EqualTo(1));
+            That(results.Count, Is.EqualTo(2));
             That(results[0].OrderId, Is.EqualTo(first.OrderId));
             That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var capacityOutcome), Is.True);
             That(capacityOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
@@ -265,10 +265,47 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderQueue_WhenMultipleOrdersExceedAdmissionCapacity_PublishesEveryRejectedOrderId()
+        {
+            var results = new OrderAdmissionResultBuffer(1, 2);
+            var queue = new OrderQueue(64, results);
+            var first = new Order { OrderTypeId = 2 };
+            var second = new Order { OrderTypeId = 2 };
+            var third = new Order { OrderTypeId = 2 };
+
+            That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
+
+            InvalidOperationException secondError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref second))!;
+            InvalidOperationException thirdError = Throws<InvalidOperationException>(() =>
+                queue.SubmitAssigned(ref third))!;
+
+            That(secondError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(thirdError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(queue.Count, Is.EqualTo(1));
+            That(second.OrderId, Is.GreaterThan(0));
+            That(third.OrderId, Is.GreaterThan(second.OrderId));
+            That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out var secondOutcome), Is.True);
+            That(secondOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(results.TryGet(third.OrderId, OrderAdmissionStage.GlobalIntake, out var thirdOutcome), Is.True);
+            That(thirdOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
+            That(results.Count, Is.EqualTo(3));
+            That(results.OverflowCount, Is.EqualTo(2));
+
+            results.BeginLogicStep();
+
+            That(results.TryGet(second.OrderId, OrderAdmissionStage.GlobalIntake, out secondOutcome), Is.True);
+            That(secondOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(results.TryGet(third.OrderId, OrderAdmissionStage.GlobalIntake, out thirdOutcome), Is.True);
+            That(thirdOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+        }
+
+        [Test]
         public void OrderBufferSystem_WhenEntityAdmissionCapacityIsExhausted_LeavesQueueAndActorStateUntouched()
         {
             using var world = World.Create();
-            var results = new OrderAdmissionResultBuffer(1);
+            var results = new OrderAdmissionResultBuffer(1, 1);
             results.BeginLogicStep();
             var incoming = new OrderQueue(64, results);
             var orderTypes = new OrderTypeRegistry();
@@ -297,7 +334,7 @@ namespace Ludots.Tests.GAS
             That(actorOrders.HasActive, Is.False);
             That(actorOrders.HasQueued, Is.False);
             That(actorOrders.HasPending, Is.False);
-            That(results.Count, Is.EqualTo(1));
+            That(results.Count, Is.EqualTo(2));
             That(results[0].OrderId, Is.EqualTo(order.OrderId));
             That(results[0].Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
             That(results.TryGet(order.OrderId, OrderAdmissionStage.EntityIntake, out var capacityOutcome), Is.True);
@@ -309,7 +346,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
         {
-            var results = new OrderAdmissionResultBuffer(4);
+            var results = new OrderAdmissionResultBuffer(4, 4);
             var gameplayOrders = new OrderQueue(64, results);
             var responseOrders = new OrderQueue(64, results);
             var gameplayOrder = new Order { OrderTypeId = 2 };
@@ -329,7 +366,7 @@ namespace Ludots.Tests.GAS
         public void OrderBufferSystem_DirectSubmitReservesAdmissionBeforeChangingActorState()
         {
             using var world = World.Create();
-            var results = new OrderAdmissionResultBuffer(1);
+            var results = new OrderAdmissionResultBuffer(1, 1);
             results.BeginLogicStep();
             var occupied = new OrderAdmissionOutcome(
                 orderId: 1,
@@ -376,7 +413,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             const int orderTypeId = 20;
             const int spatialKey = 3;
-            var results = new OrderAdmissionResultBuffer(8);
+            var results = new OrderAdmissionResultBuffer(8, 8);
             results.BeginLogicStep();
             var orderTypes = new OrderTypeRegistry();
             orderTypes.Register(new OrderTypeConfig
@@ -450,7 +487,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             const int orderTypeId = 21;
-            var results = new OrderAdmissionResultBuffer(8);
+            var results = new OrderAdmissionResultBuffer(8, 8);
             results.BeginLogicStep();
             var config = new OrderTypeConfig
             {
@@ -512,7 +549,7 @@ namespace Ludots.Tests.GAS
             const int replacementOrderTypeId = 23;
             const int activeSpatialKey = 0;
             const int replacementSpatialKey = BlackboardSpatialBuffer.MAX_ENTRIES;
-            var results = new OrderAdmissionResultBuffer(4);
+            var results = new OrderAdmissionResultBuffer(4, 4);
             results.BeginLogicStep();
             var orderTypes = new OrderTypeRegistry();
             orderTypes.Register(new OrderTypeConfig
@@ -585,7 +622,7 @@ namespace Ludots.Tests.GAS
         public void OrderAdmissionResults_PresentationGlobalAndNextStepEntityRemainReadable()
         {
             using var world = World.Create();
-            var results = new OrderAdmissionResultBuffer(2);
+            var results = new OrderAdmissionResultBuffer(2, 2);
             var terminalResults = new OrderTerminalResultBuffer(2);
             var reset = new GasBudgetResetSystem(new GasBudget(), terminalResults, results);
             var end = new OrderAdmissionGenerationEndSystem(results);

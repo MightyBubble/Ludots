@@ -12,6 +12,7 @@
     "abilityExecSnapshotCapacity": 16384,
     "effectLifetimeSnapshotCapacity": 16384,
     "orderAdmissionResultCapacity": 4096,
+    "orderAdmissionRejectionCapacity": 4096,
     "orderTerminalResultCapacity": 4096,
     "deferredTriggerActiveEntityCapacity": 16384,
     "abilityExecMaxWorkUnitsPerSlice": 4096,

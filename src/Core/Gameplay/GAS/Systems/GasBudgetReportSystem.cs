@@ -46,12 +46,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Publish(
                     GasDiagnosticSystem.OrderAdmission,
                     GasDiagnosticMetric.OrderAdmissionResultBacklog,
-                    _admissionResults.Capacity,
+                    _admissionResults.GenerationCapacity,
                     _admissionResults.Count);
                 Publish(
                     GasDiagnosticSystem.OrderAdmission,
                     GasDiagnosticMetric.OrderAdmissionResultHighWatermark,
-                    _admissionResults.Capacity,
+                    _admissionResults.GenerationCapacity,
                     _admissionResults.HighWatermark);
 
                 long overflow = _admissionResults.OverflowCount;
@@ -85,6 +85,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             PublishAdmissionRejection(OrderSubmitResult.RejectedInvalidOrderType, GasDiagnosticMetric.OrderRejectedInvalidOrderType);
             PublishAdmissionRejection(OrderSubmitResult.RejectedBlackboardCapacity, GasDiagnosticMetric.OrderRejectedBlackboardCapacity);
             PublishAdmissionRejection(OrderSubmitResult.RejectedMissingBlackboard, GasDiagnosticMetric.OrderRejectedMissingBlackboard);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedAdmissionCapacity, GasDiagnosticMetric.OrderRejectedAdmissionCapacity);
         }
 
         private void PublishAdmissionRejection(OrderSubmitResult result, GasDiagnosticMetric metric)

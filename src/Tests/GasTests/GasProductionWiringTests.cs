@@ -162,7 +162,7 @@ namespace Ludots.Tests.GasTests
             budget.ResponseQueueOverflowDropped = 3;
             budget.ActiveEffectContainerAttachDropped = 2;
 
-            var admissions = new OrderAdmissionResultBuffer(capacity: 1);
+            var admissions = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
             var outcome = new OrderAdmissionOutcome(1, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
             var rejected = new OrderAdmissionOutcome(2, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedQueueFull);
             var blackboardCapacityRejected = new OrderAdmissionOutcome(3, 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.RejectedBlackboardCapacity);
@@ -188,10 +188,10 @@ namespace Ludots.Tests.GasTests
             Assert.That(admission.Capacity, Is.EqualTo(1));
             Assert.That(admission.Count, Is.EqualTo(3));
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultBacklog, out GasDiagnosticEvent backlog), Is.True);
-            Assert.That(backlog.Capacity, Is.EqualTo(1));
+            Assert.That(backlog.Capacity, Is.EqualTo(2));
             Assert.That(backlog.Count, Is.EqualTo(1));
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultHighWatermark, out GasDiagnosticEvent highWatermark), Is.True);
-            Assert.That(highWatermark.Capacity, Is.EqualTo(1));
+            Assert.That(highWatermark.Capacity, Is.EqualTo(2));
             Assert.That(highWatermark.Count, Is.EqualTo(1));
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedQueueFull, out GasDiagnosticEvent rejectedQueue), Is.True);
             Assert.That(rejectedQueue.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
@@ -202,6 +202,34 @@ namespace Ludots.Tests.GasTests
             Assert.That(Find(diagnostics, GasDiagnosticMetric.OrderRejectedMissingBlackboard, out GasDiagnosticEvent rejectedMissing), Is.True);
             Assert.That(rejectedMissing.System, Is.EqualTo(GasDiagnosticSystem.OrderAdmission));
             Assert.That(rejectedMissing.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GasBudgetReport_PublishesEveryAdmissionCapacityRejectionFromFormalResultStorage()
+        {
+            var admissions = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 2);
+            var queue = new OrderQueue(64, admissions);
+            var first = new Order { OrderTypeId = 2 };
+            var second = new Order { OrderTypeId = 2 };
+            var third = new Order { OrderTypeId = 2 };
+            Assert.That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.Throws<InvalidOperationException>(() => queue.SubmitAssigned(ref second));
+            Assert.Throws<InvalidOperationException>(() => queue.SubmitAssigned(ref third));
+            var diagnostics = new GasDiagnosticEventBuffer(capacity: 8);
+            var report = new GasBudgetReportSystem(new GasBudget(), diagnostics, admissions);
+            float dt = 0f;
+
+            report.Update(in dt);
+
+            Assert.That(
+                Find(diagnostics, GasDiagnosticMetric.OrderRejectedAdmissionCapacity, out GasDiagnosticEvent rejected),
+                Is.True);
+            Assert.That(rejected.Count, Is.EqualTo(2));
+            Assert.That(
+                Find(diagnostics, GasDiagnosticMetric.OrderAdmissionResultBacklog, out GasDiagnosticEvent backlog),
+                Is.True);
+            Assert.That(backlog.Capacity, Is.EqualTo(3));
+            Assert.That(backlog.Count, Is.EqualTo(3));
         }
 
         [Test]
@@ -223,6 +251,9 @@ namespace Ludots.Tests.GasTests
             Assert.That(
                 admissionResults.Capacity,
                 Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity));
+            Assert.That(
+                admissionResults.RejectionCapacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionRejectionCapacity));
             Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);

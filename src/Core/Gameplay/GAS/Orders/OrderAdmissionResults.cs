@@ -51,43 +51,56 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     /// <summary>
     /// Two fixed-capacity generations keep presentation/external intake outcomes until the
-    /// next logic step can append the matching entity-intake outcome. Each generation also
-    /// retains the first capacity rejection that hard-stops admission before order state changes.
+    /// next logic step can append the matching entity-intake outcome. Capacity rejections are
+    /// retained in a separate fixed-capacity result area so every rejected order remains part of
+    /// the same query, ordering, diagnostics, and generation lifecycle contract.
     /// </summary>
     public sealed class OrderAdmissionResultBuffer
     {
         public const string CapacityExceededError = "ORDER.ADMISSION.ERR.CapacityExceeded";
+        public const string RejectionCapacityExceededError = "ORDER.ADMISSION.ERR.RejectionCapacityExceeded";
         public const int SubmitResultCount = (int)OrderSubmitResult.RejectedAdmissionCapacity + 1;
 
         private OrderAdmissionOutcome[] _currentItems;
         private OrderAdmissionOutcome[] _pendingItems;
+        private OrderAdmissionOutcome[] _currentRejections;
+        private OrderAdmissionOutcome[] _pendingRejections;
         private readonly long[] _observedByResult = new long[SubmitResultCount];
         private int _currentCount;
         private int _pendingCount;
+        private int _currentRejectionCount;
+        private int _pendingRejectionCount;
         private int _currentReserved;
         private int _pendingReserved;
-        private OrderAdmissionOutcome _currentCapacityFailure;
-        private OrderAdmissionOutcome _pendingCapacityFailure;
-        private bool _hasCurrentCapacityFailure;
-        private bool _hasPendingCapacityFailure;
         private int _nextOrderId = 1;
         private bool _logicStepActive;
 
-        public OrderAdmissionResultBuffer(int capacity)
+        public OrderAdmissionResultBuffer(int capacity, int rejectionCapacity)
         {
             if (capacity <= 0)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(capacity), capacity, "capacity must be positive.");
             }
+            if (rejectionCapacity <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(rejectionCapacity),
+                    rejectionCapacity,
+                    "rejectionCapacity must be positive.");
+            }
 
             _currentItems = new OrderAdmissionOutcome[capacity];
             _pendingItems = new OrderAdmissionOutcome[capacity];
+            _currentRejections = new OrderAdmissionOutcome[rejectionCapacity];
+            _pendingRejections = new OrderAdmissionOutcome[rejectionCapacity];
         }
 
-        public int Count => _currentCount + _pendingCount;
+        public int Count => CurrentGenerationCount + PendingGenerationCount;
         public int Capacity => _currentItems.Length;
-        public int CurrentGenerationCount => _currentCount;
-        public int PendingGenerationCount => _pendingCount;
+        public int RejectionCapacity => _currentRejections.Length;
+        public int GenerationCapacity => checked(Capacity + RejectionCapacity);
+        public int CurrentGenerationCount => _currentCount + _currentRejectionCount;
+        public int PendingGenerationCount => _pendingCount + _pendingRejectionCount;
         public int ReservedCount => _currentReserved + _pendingReserved;
         public bool LogicStepActive => _logicStepActive;
         public int HighWatermark { get; private set; }
@@ -108,7 +121,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     return ref _currentItems[index];
                 }
 
-                return ref _pendingItems[index - _currentCount];
+                index -= _currentCount;
+                if (index < _currentRejectionCount)
+                {
+                    return ref _currentRejections[index];
+                }
+
+                index -= _currentRejectionCount;
+                if (index < _pendingCount)
+                {
+                    return ref _pendingItems[index];
+                }
+
+                return ref _pendingRejections[index - _pendingCount];
             }
         }
 
@@ -153,20 +178,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
             }
 
-            if (_hasCurrentCapacityFailure &&
-                _currentCapacityFailure.OrderId == orderId &&
-                _currentCapacityFailure.Stage == stage)
+            for (int i = _currentRejectionCount - 1; i >= 0; i--)
             {
-                outcome = _currentCapacityFailure;
-                return true;
+                if (_currentRejections[i].OrderId == orderId && _currentRejections[i].Stage == stage)
+                {
+                    outcome = _currentRejections[i];
+                    return true;
+                }
             }
 
-            if (_hasPendingCapacityFailure &&
-                _pendingCapacityFailure.OrderId == orderId &&
-                _pendingCapacityFailure.Stage == stage)
+            for (int i = _pendingRejectionCount - 1; i >= 0; i--)
             {
-                outcome = _pendingCapacityFailure;
-                return true;
+                if (_pendingRejections[i].OrderId == orderId && _pendingRejections[i].Stage == stage)
+                {
+                    outcome = _pendingRejections[i];
+                    return true;
+                }
             }
 
             outcome = default;
@@ -261,26 +288,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private void RecordCapacityFailure(int orderId, int orderTypeId, OrderAdmissionStage stage)
         {
             bool writePending = ShouldWritePending(stage);
-            ref bool hasFailure = ref (writePending
-                ? ref _hasPendingCapacityFailure
-                : ref _hasCurrentCapacityFailure);
-            ref OrderAdmissionOutcome failure = ref (writePending
-                ? ref _pendingCapacityFailure
-                : ref _currentCapacityFailure);
-
-            if (hasFailure)
+            ref int count = ref (writePending
+                ? ref _pendingRejectionCount
+                : ref _currentRejectionCount);
+            OrderAdmissionOutcome[] rejections = writePending
+                ? _pendingRejections
+                : _currentRejections;
+            if (count >= rejections.Length)
             {
                 throw new System.InvalidOperationException(
-                    $"ORDER.ADMISSION.ERR.CapacityFailureSlotOccupied: stage={stage}, orderId={orderId}, generation={Generation}.");
+                    $"{RejectionCapacityExceededError}: stage={stage}, orderId={orderId}, generation={Generation}, capacity={RejectionCapacity}.");
             }
 
-            failure = new OrderAdmissionOutcome(
+            rejections[count++] = new OrderAdmissionOutcome(
                 orderId,
                 orderTypeId,
                 stage,
                 OrderSubmitResult.RejectedAdmissionCapacity);
-            hasFailure = true;
             _observedByResult[(int)OrderSubmitResult.RejectedAdmissionCapacity]++;
+            if (Count > HighWatermark)
+            {
+                HighWatermark = Count;
+            }
         }
 
         private bool TryReserve(OrderAdmissionStage stage, out OrderAdmissionReservation reservation)
@@ -341,12 +370,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderAdmissionOutcome[] retired = _currentItems;
             _currentItems = _pendingItems;
             _pendingItems = retired;
+            OrderAdmissionOutcome[] retiredRejections = _currentRejections;
+            _currentRejections = _pendingRejections;
+            _pendingRejections = retiredRejections;
             _currentCount = _pendingCount;
             _pendingCount = 0;
-            _currentCapacityFailure = _pendingCapacityFailure;
-            _hasCurrentCapacityFailure = _hasPendingCapacityFailure;
-            _pendingCapacityFailure = default;
-            _hasPendingCapacityFailure = false;
+            _currentRejectionCount = _pendingRejectionCount;
+            _pendingRejectionCount = 0;
             _logicStepActive = true;
             Generation++;
         }

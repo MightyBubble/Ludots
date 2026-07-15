@@ -53,6 +53,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveOrderAdmissionRejectionCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.OrderAdmissionRejectionCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("orderAdmissionRejectionCapacity"));
+        }
+
+        [Test]
         public void AbilityExec_AdvancesMoreThanTwoThousandEntitiesAcrossSlices()
         {
             using var world = World.Create();
@@ -462,6 +472,7 @@ namespace Ludots.Tests.GAS
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
                 OrderAdmissionResultCapacity = 64,
+                OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,
                 DeferredTriggerActiveEntityCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
