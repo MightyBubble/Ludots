@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
-using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Scripting;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -15,6 +13,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
         private readonly Dictionary<string, object> _globals;
         private readonly string? _statusKey;
         private readonly RoadRouteQueryService _query;
+        private readonly RoadNetworkOrderTypeIds _orderTypeIds;
 
         public RoadRoutePlanningService(World world, Dictionary<string, object> globals, string agentTypeId, string? statusKey = RoadMoveOrderExpander.LastSubmitStatusKey)
         {
@@ -22,32 +21,20 @@ namespace RoadNetworkShowcaseMod.Gameplay
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _statusKey = statusKey;
             _query = new RoadRouteQueryService(world, globals, agentTypeId, MaxPathPoints);
+            _orderTypeIds = RoadNetworkOrderTypeIds.Require(globals);
         }
 
         public World World => _world;
 
         public bool ShouldPlanRoadMove(in Order order, out int moveToOrderTypeId)
         {
-            moveToOrderTypeId = 0;
             if (!_world.IsAlive(order.Actor))
             {
+                moveToOrderTypeId = 0;
                 return false;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config)
-            {
-                WriteStatus("Road command rejected: game config service is unavailable.");
-                return false;
-            }
-
-            if (!config.Constants.OrderTypeIds.TryGetValue("moveTo", out moveToOrderTypeId) ||
-                moveToOrderTypeId <= 0)
-            {
-                WriteStatus("Road command rejected: moveTo order type is not configured.");
-                return false;
-            }
-
+            moveToOrderTypeId = _orderTypeIds.MoveTo;
             return order.OrderTypeId == moveToOrderTypeId;
         }
 
@@ -60,36 +47,15 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return false;
             }
 
-            if (!TryResolveRoadMoveFollowOrderTypeId(out int roadMoveFollowOrderTypeId))
-            {
-                status = "Road command rejected: roadMoveFollow order type is not configured.";
-                return false;
-            }
-
             if (!_query.TryQuery(in order, moveToOrderTypeId, out var queryResult, out status))
             {
                 WriteStatus(status);
                 return false;
             }
 
-            var compute = new RoadRouteComputeService(roadMoveFollowOrderTypeId);
+            var compute = new RoadRouteComputeService(_orderTypeIds.RoadMoveFollow);
             routeOrder = compute.CreateFollowOrder(_world, in order, queryResult.PathXcm, queryResult.PathYcm, queryResult.Count, queryResult.FinalGoalWorldCm);
             WriteStatus(status);
-            return true;
-        }
-
-        private bool TryResolveRoadMoveFollowOrderTypeId(out int roadMoveFollowOrderTypeId)
-        {
-            roadMoveFollowOrderTypeId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config ||
-                !config.Constants.OrderTypeIds.TryGetValue(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out roadMoveFollowOrderTypeId) ||
-                roadMoveFollowOrderTypeId <= 0)
-            {
-                WriteStatus("Road command rejected: roadMoveFollow order type is not configured.");
-                return false;
-            }
-
             return true;
         }
 

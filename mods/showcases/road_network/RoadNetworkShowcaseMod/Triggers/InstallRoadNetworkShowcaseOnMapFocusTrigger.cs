@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.MassNavigation;
@@ -52,8 +51,12 @@ namespace RoadNetworkShowcaseMod.Triggers
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");
             MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires MassNavigation simulation runtime.");
+            OrderTypeRegistry orderTypeRegistry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderTypeRegistry.");
+            RoadNetworkOrderTypeIds orderTypeIds = RoadNetworkOrderTypeIds.Require(orderTypeRegistry);
             var plans = new MovePlanStore(engine.World, new RoadRouteFinalTargetMovePlanResolver());
             var moveRuntime = new MovePlanRuntimeService(engine.World, plans);
+            engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
             engine.RegisterSystem(
                 new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
                 SystemGroup.InputCollection);
@@ -66,44 +69,24 @@ namespace RoadNetworkShowcaseMod.Triggers
             engine.RegisterSystem(
                 new RoadNetworkCameraResetSystem(engine.GlobalContext, engine, _runtime),
                 SystemGroup.InputCollection);
-            if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is OrderTypeRegistry orderTypeRegistry &&
-                TryResolveRoadMoveFollowOrderTypeId(engine, out int roadMoveFollowOrderTypeId))
-            {
-                engine.RegisterSystem(
-                    new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMoveExecutionSystem(engine.World, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.RegisterSystem(
-                    new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime, simulation),
-                    SystemGroup.RuntimeEntityBinding);
-                engine.GlobalContext[typeof(MovePlanStore).FullName!] = plans;
-            }
+            engine.RegisterSystem(
+                new RoadMoveOrderBindingSystem(engine.World, orderTypeIds.RoadMoveFollow, plans, moveRuntime, simulation),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMovePlanSelectionSystem(engine.World, orderTypeIds.RoadMoveFollow, plans, moveRuntime, simulation),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMoveExecutionSystem(engine.World, simulation),
+                SystemGroup.RuntimeEntityBinding);
+            engine.RegisterSystem(
+                new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, orderTypeIds.RoadMoveFollow, plans, moveRuntime, simulation),
+                SystemGroup.RuntimeEntityBinding);
 
             engine.RegisterPresentationSystem(new RoadNetworkPresentationSystem(engine, _runtime));
-            MovePlanStore presentationPlans = engine.GlobalContext.TryGetValue(typeof(MovePlanStore).FullName!, out var planObj) && planObj is MovePlanStore resolvedPlans
-                ? resolvedPlans
-                : new MovePlanStore(engine.World, new RoadRouteFinalTargetMovePlanResolver());
-            engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, presentationPlans));
+            engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, plans));
             _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;
         }
 
-        private static bool TryResolveRoadMoveFollowOrderTypeId(GameEngine engine, out int orderTypeId)
-        {
-            orderTypeId = 0;
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config)
-            {
-                return false;
-            }
-
-            return config.Constants.OrderTypeIds.TryGetValue(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out orderTypeId) &&
-                   orderTypeId > 0;
-        }
     }
 }

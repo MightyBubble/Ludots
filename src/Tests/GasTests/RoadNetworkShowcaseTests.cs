@@ -497,6 +497,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadMoveOrderExpander_UsesRegisteredOrderTypes_WhenLegacyConfigDictionaryDisagrees()
+        {
+            using var world = World.Create();
+            const int moveToOrderTypeId = 77;
+            const int roadMoveFollowOrderTypeId = 171;
+            Entity actor = world.Create(WorldPositionCm.FromCm(0, 0), new OrderSpatialPayloadBuffer());
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore, new[] { (0, 0), (300, 0), (600, 0) });
+            Dictionary<string, object> globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
+            ((GameConfig)globals[CoreServiceKeys.GameConfig.Name]).Constants.OrderTypeIds["moveTo"] = 78;
+            ((GameConfig)globals[CoreServiceKeys.GameConfig.Name]).Constants.OrderTypeIds[RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey] = 172;
+            globals[CoreServiceKeys.OrderTypeRegistry.Name] = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
+            var expander = new RoadMoveOrderExpander(world, globals, new OrderQueue(capacity: 8), RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+            Order order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 600, ycm: 0, OrderSubmitMode.Immediate);
+
+            Assert.That(expander.TryBuildFollowOrder(in order, out Order routeOrder), Is.True);
+            Assert.That(routeOrder.OrderTypeId, Is.EqualTo(roadMoveFollowOrderTypeId));
+        }
+
+        [Test]
         public void RoadMoveOrderExpander_TrySubmit_PrimesLoadedChunks_ForFarRoadDestination()
         {
             const int chunkSizeCm = 6400;
@@ -1240,6 +1260,7 @@ namespace Ludots.Tests.GAS
             {
                 [Ludots.Core.Scripting.CoreServiceKeys.PathService.Name] = pathService,
                 [Ludots.Core.Scripting.CoreServiceKeys.PathStore.Name] = pathStore,
+                [Ludots.Core.Scripting.CoreServiceKeys.OrderTypeRegistry.Name] = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId),
                 [Ludots.Core.Scripting.CoreServiceKeys.GameConfig.Name] = new GameConfig
                 {
                     Constants = new GameConstants

@@ -1,0 +1,57 @@
+using System;
+using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Scripting;
+
+namespace RoadNetworkShowcaseMod.Gameplay
+{
+    internal readonly struct RoadNetworkOrderTypeIds
+    {
+        public RoadNetworkOrderTypeIds(int moveTo, int roadMoveFollow)
+        {
+            MoveTo = moveTo;
+            RoadMoveFollow = roadMoveFollow;
+        }
+
+        public int MoveTo { get; }
+        public int RoadMoveFollow { get; }
+
+        public static RoadNetworkOrderTypeIds Require(IReadOnlyDictionary<string, object> services)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (!services.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out object? registryValue) ||
+                registryValue is not OrderTypeRegistry registry)
+            {
+                throw new InvalidOperationException("RoadNetworkShowcaseMod requires the Core OrderTypeRegistry service.");
+            }
+
+            return Require(registry);
+        }
+
+        public static RoadNetworkOrderTypeIds Require(OrderTypeRegistry registry)
+        {
+            if (registry == null)
+            {
+                throw new ArgumentNullException(nameof(registry));
+            }
+
+            if (!registry.TryGetId(RoadNetworkShowcaseIds.MoveToOrderTypeKey, out int moveTo) || moveTo <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"RoadNetworkShowcaseMod requires registered order type '{RoadNetworkShowcaseIds.MoveToOrderTypeKey}'.");
+            }
+
+            if (!registry.TryGetId(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out int roadMoveFollow) || roadMoveFollow <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"RoadNetworkShowcaseMod requires registered order type '{RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey}'.");
+            }
+
+            return new RoadNetworkOrderTypeIds(moveTo, roadMoveFollow);
+        }
+    }
+}
