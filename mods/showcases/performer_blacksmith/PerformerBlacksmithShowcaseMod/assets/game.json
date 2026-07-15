@@ -1,6 +1,10 @@
 {
   "startupMapId": "performer_blacksmith_showcase",
   "targetFps": 0,
+  "gasRuntimeCapacity": {
+    "effectLifetimeSnapshotCapacity": 32768,
+    "deferredTriggerActiveEntityCapacity": 32768
+  },
   "presentation": {
     "performerInstanceCapacity": 1048576,
     "gasPresentationEventCapacity": 2097152,

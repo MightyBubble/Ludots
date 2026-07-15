@@ -1,6 +1,10 @@
 {
   "startupMapId": "capability_standard_static_performer_30k_showcase",
   "targetFps": 0,
+  "gasRuntimeCapacity": {
+    "effectLifetimeSnapshotCapacity": 32768,
+    "deferredTriggerActiveEntityCapacity": 32768
+  },
   "presentation": {
     "performerInstanceCapacity": 1048576,
     "gasPresentationEventCapacity": 2097152,
