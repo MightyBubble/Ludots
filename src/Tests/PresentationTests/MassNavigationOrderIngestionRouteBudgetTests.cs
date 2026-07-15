@@ -162,6 +162,48 @@ public sealed class MassNavigationOrderIngestionRouteBudgetTests
         Assert.That(routeSink.ActiveRouteCount, Is.Zero);
     }
 
+    [Test]
+    public void OrderIngestion_PrunesInactiveOrderGroupBeforeAllocatingReplacementAtCapacity()
+    {
+        MassNavigationProfileRegistry.Reset();
+        const string profileIdText = "test.massNavigation.replaceOrderAtCapacity";
+
+        using var engine = CreateEngine();
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        config.ScenarioRuntime.RuntimeCapacity.NavigationGroupCapacity = 1;
+
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+        PublishPreparedRuntime(engine, config.MapId, simulation);
+        RegisterMoveOrderServices(engine);
+
+        int profileId = MassNavigationProfileRegistry.Register(profileIdText);
+        Entity agent = engine.World.Create(
+            new MassNavigationAgent { ProfileId = profileId },
+            new FacingDirection { AngleRad = 0f },
+            OrderBuffer.CreateEmpty());
+        simulation.RebuildFromAuthoredAgents(
+            engine.World,
+            new[] { agent },
+            new[] { CreateSeed(simulation, teamId: 1, worldX: 1_000f, worldY: 1_000f) },
+            new[] { true });
+
+        var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
+        SetActiveMoveOrder(engine.World, agent, orderId: 101, new Vector2(2_500f, 2_500f));
+        UpdateSystem(ingestion);
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(101, out _), Is.True);
+
+        SetActiveMoveOrder(engine.World, agent, orderId: 202, new Vector2(3_500f, 2_500f));
+
+        Assert.DoesNotThrow(() => UpdateSystem(ingestion));
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(101, out _), Is.False);
+        Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(202, out _), Is.True);
+        Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+        Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out _, out _), Is.True);
+    }
+
     private static GameEngine CreateEngine()
     {
         var engine = new GameEngine();

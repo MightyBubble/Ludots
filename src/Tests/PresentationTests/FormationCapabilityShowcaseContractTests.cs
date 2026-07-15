@@ -1024,6 +1024,80 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityExecution_RuntimeSwitchResendsMemberTargets()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before runtime-switch validation.");
+
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
+                .Single();
+            UpdateSystem(system);
+            UpdateSystem(system);
+
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            int soldierAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
+            Assert.That(
+                simulation.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out _, out _),
+                Is.True,
+                "Warmup must establish the original runtime member target before the replacement runtime is installed.");
+
+            Entity[] agents = CaptureTrackedAgents(simulation);
+            var replacement = new MassNavigationSimulationRuntime(simulation.Config);
+            replacement.BindBoardWorld(
+                new WorldSizeSpec(simulation.WorldBounds, 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(replacement.WorldConfig.StreamingChunkSizeCm));
+            var seeds = new MassNavigationAgentSeed[agents.Length];
+            var controllable = new bool[agents.Length];
+            for (int i = 0; i < agents.Length; i++)
+            {
+                Vector2 position = simulation.GetAgentWorldPositionCm(i);
+                seeds[i] = CreateAgentSeed(replacement, position.X, position.Y);
+                controllable[i] = true;
+                if (engine.World.Has<MassNavigationAgentIndex>(agents[i]))
+                {
+                    engine.World.Remove<MassNavigationAgentIndex>(agents[i]);
+                }
+
+                if (engine.World.Has<MassNavigationAgentProfile>(agents[i]))
+                {
+                    engine.World.Remove<MassNavigationAgentProfile>(agents[i]);
+                }
+            }
+
+            replacement.RebuildFromAuthoredAgents(engine.World, agents, seeds, controllable);
+            MassNavigationRuntimeBinding binding = engine.GetService(MassNavigationKeys.RuntimeBinding)
+                ?? throw new InvalidOperationException("Formation Capability runtime binding is missing.");
+            MapId mapId = engine.CurrentMapSession?.MapId
+                ?? throw new InvalidOperationException("Formation Capability current map session is missing.");
+            binding.Clear(mapId, simulation);
+            binding.Activate(mapId, replacement);
+            binding.MarkPrepared(mapId, replacement);
+
+            Assert.That(
+                replacement.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out _, out _),
+                Is.False,
+                "Replacement runtime starts without the previous runtime's member target cache.");
+
+            UpdateSystem(system);
+
+            Assert.That(
+                replacement.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out _, out _),
+                Is.True,
+                "Switching MassNavigation runtime must invalidate Formation target snapshots and resend member targets.");
+        }
+
+        [Test]
         public void FormationCapabilityExecution_SoldierAgentIndexAtCapacityFailsBeforeAnyCommit()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
@@ -2192,6 +2266,77 @@ namespace Ludots.Tests.Presentation
             var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
             world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
             Assert.That(spawned, Is.Zero, "Invalid explicit relationship prerequisites must fail before batch entities are created.");
+        }
+
+        [Test]
+        public void RuntimeTemplateBatchSpawn_CrossWorldExplicitMembershipFailsBeforeCreation()
+        {
+            string templateJson = """
+[
+  {
+    "id": "relationship_batch_agent",
+    "components": {
+      "Name": { "Value": "Relationship Batch Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            using var otherWorld = World.Create();
+            _ = world.Create(new TeamIdentity { TeamId = 7 });
+            Entity externalMembershipTarget = otherWorld.Create(new TeamIdentity { TeamId = 7 });
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, out int memberOfTypeId);
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var presentationEvents = new PresentationEventStream(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                presentationEvents: presentationEvents,
+                relationships: relationships,
+                memberOfTypeId: memberOfTypeId);
+
+            const int receiptChannel = 204;
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "relationship_batch_agent",
+                    MapId = new MapId("relationship_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = externalMembershipTarget,
+                    HasMembershipTarget = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("MembershipTarget"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (ref EntityTemplateKeyRef _) => spawned++);
+            Assert.That(spawned, Is.Zero, "Cross-world explicit relationship targets must fail before batch entities are created.");
         }
 
         [Test]

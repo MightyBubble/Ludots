@@ -1,5 +1,60 @@
 ## GAS Composition Gate - Self Review
 
+- **Task / Issue**: PR #658 blocker closeout - TCG periodic effect timing must not change when relationship-domain projection entities are materialized.
+- **Date**: 2026-07-15
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 只修正现有 `EffectLifetimeSystem` 的周期效果首跳排布 seed，使其使用效果的业务语义身份；不新增 GAS handler、effect preset、profile 字段、graph op、JSON schema 或并行生命周期管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 周期效果首跳排布 | Existing lifecycle system behavior | `EffectLifetimeSystem` |
+| 关系投影隔离回归 | Test evidence | `LifetimeConditionTests` / `ProductionModDemoLogTests` |
+
+### 3. Reuse list
+
+- Handlers: N/A；未新增或修改 GAS BuiltinHandler。
+- Queues / Systems: 复用现有 `EffectLifetimeSystem`、`EffectRequestQueue`、phase graph 执行链路。
+- Resolvers / Registries: 复用现有 `EffectTemplateRef` / `EffectTemplateRegistry`。
+- Existing presets / graphs: 复用现有 TCG `Effect.Tcg.PoisonCounter` 配置；不修改 graph 或 preset。
+
+### 4. New Layer 0 ops (if any)
+
+N/A。没有新增 atomic op，只修现有生命周期系统内部的确定性 seed。
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A。本次不引入实体生命周期事务；只保证关系投影实体不影响已提交周期效果的首跳语义。
+
+### 6. Config SSOT
+
+行为配置落在: 现有 effect template / phase graph / TCG map data。
+
+是否新增 JSON schema: NO。恢复 `tcg_stack` 的 Team1 自关系数据，不新增配置字段。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 并行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加“说不清的”默认 fallback
+
+### 8. Next variant test
+
+下一个 Mod 变体应继续修改 effect template、phase graph 或地图关系数据；不能通过 Core enum 或 profile 开关表达。
+
+---
+
+## GAS Composition Gate - Self Review
+
 - **Task / Issue**: PR #658 merge blocker — issue #681 batch spawn relationship linking, Formation OrderId grouping, and MassNavigation UAT wording.
 - **Date**: 2026-07-14
 - **Agent / Author**: Codex

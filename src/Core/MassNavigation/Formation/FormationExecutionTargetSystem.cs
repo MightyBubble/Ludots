@@ -134,9 +134,19 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
             return _movePlanExecutionSink;
         }
 
+        InvalidateTargetSnapshots();
         _movePlanExecutionSink = new MassNavigationMovePlanExecutionSink(simulation);
         _movePlanExecutionSinkRuntime = simulation;
         return _movePlanExecutionSink;
+    }
+
+    private void InvalidateTargetSnapshots()
+    {
+        Array.Clear(_lastTargetCenterXByFormation);
+        Array.Clear(_lastTargetCenterYByFormation);
+        Array.Clear(_lastTargetFacingByFormation);
+        Array.Clear(_lastTargetIdentitySignatureByFormation);
+        Array.Clear(_targetSnapshotInitializedByFormation);
     }
 
     private void ThrowIfSuspendedFormationEntitiesExist()

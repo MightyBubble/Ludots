@@ -391,6 +391,99 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AppendAuthoredAgents_InvalidSecondEntityDoesNotMutateFlowOrFirstEntity()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer);
+            Entity validNewAgent = CreateAuthoredAgentEntity(world, localX: 1500f, localY: 1000f, layer);
+            Entity invalidNewAgent = world.Create(
+                WorldPositionCm.FromCmFloat(1700f, 1000f),
+                new EntityLayer(layer.CategoryMask, layer.InteractionMask),
+                new FacingDirection { AngleRad = 0f },
+                OrderBuffer.CreateEmpty());
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateSeed(localX: 1500f, localY: 1000f, layer),
+                CreateSeed(localX: 1700f, localY: 1000f, layer),
+            };
+            int totalAgentsBefore = simulation.AgentState.TotalAgents;
+            int flowUnitsBefore = simulation.MassNavigationFlow.UnitCount;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                simulation.AppendAuthoredAgents(
+                    world,
+                    new[] { validNewAgent, invalidNewAgent },
+                    seeds,
+                    new[] { true, true }))!;
+
+            Assert.That(ex.Message, Does.Contain("requires MassNavigationAgent"));
+            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(totalAgentsBefore));
+            Assert.That(simulation.MassNavigationFlow.UnitCount, Is.EqualTo(flowUnitsBefore));
+            Assert.That(world.Has<MassNavigationAgentIndex>(validNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentProfile>(validNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentIndex>(invalidNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentProfile>(invalidNewAgent), Is.False);
+        }
+
+        [Test]
+        public void RebuildFromAuthoredAgents_InvalidSecondEntityPreservesCommittedRuntime()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out MassNavigationAgentLayer layer);
+            int orderToken = 333;
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                simulation.MassNavigationFlow,
+                simulation.AgentState,
+                orderToken,
+                new[] { 0, 1 },
+                TeamId,
+                new Vector2(2600f, 2200f));
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0IndexBefore), Is.True);
+            Assert.That(world.TryGet(agent1, out MassNavigationAgentIndex agent1IndexBefore), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float navigationTargetX, out float navigationTargetY), Is.True);
+            int totalAgentsBefore = simulation.AgentState.TotalAgents;
+            int flowUnitsBefore = simulation.MassNavigationFlow.UnitCount;
+            Entity invalidAgent = CreateAuthoredAgentEntity(world, localX: 1600f, localY: 1000f, layer);
+            world.Destroy(invalidAgent);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                simulation.RebuildFromAuthoredAgents(
+                    world,
+                    new[] { agent0, invalidAgent },
+                    new[]
+                    {
+                        CreateSeed(localX: 1000f, localY: 1000f, layer),
+                        CreateSeed(localX: 1600f, localY: 1000f, layer),
+                    },
+                    new[] { true, true }))!;
+
+            Assert.That(ex.Message, Does.Contain("dead entity"));
+            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(totalAgentsBefore));
+            Assert.That(simulation.MassNavigationFlow.UnitCount, Is.EqualTo(flowUnitsBefore));
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0IndexAfter), Is.True);
+            Assert.That(world.TryGet(agent1, out MassNavigationAgentIndex agent1IndexAfter), Is.True);
+            Assert.That(agent0IndexAfter.Value, Is.EqualTo(agent0IndexBefore.Value));
+            Assert.That(agent1IndexAfter.Value, Is.EqualTo(agent1IndexBefore.Value));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float preservedOrderX, out float preservedOrderY), Is.True);
+            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float preservedTargetX, out float preservedTargetY), Is.True);
+            Assert.That(preservedTargetX, Is.EqualTo(navigationTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedTargetY, Is.EqualTo(navigationTargetY).Within(PositionToleranceCm));
+        }
+
+        [Test]
         public void RebuildFromAuthoredAgents_RestoresOrderGroupAcrossAgentIndexDrift()
         {
             using var world = World.Create();

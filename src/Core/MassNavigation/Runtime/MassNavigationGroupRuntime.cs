@@ -267,6 +267,36 @@ internal sealed class MassNavigationGroupRuntime
             $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
     }
 
+    internal void EnsureCanAllocateNewOrderGroupsAfterPrune(int newGroupCount, HashSet<int> activeTokens)
+    {
+        ArgumentNullException.ThrowIfNull(activeTokens);
+        if (newGroupCount <= 0)
+        {
+            return;
+        }
+
+        int activeGroupsAfterPrune = ActiveGroupCount;
+        foreach ((int token, int groupId) in _orderTokenToGroupId)
+        {
+            if (activeTokens.Contains(token) ||
+                (uint)groupId >= (uint)_groups.Count ||
+                _groups[groupId] == null)
+            {
+                continue;
+            }
+
+            activeGroupsAfterPrune--;
+        }
+
+        if (activeGroupsAfterPrune + newGroupCount <= _groups.Count)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+    }
+
     internal bool PreflightOrderMoveCommand(
         MassNavigationFlowSolverState simulation,
         MassNavigationAgentState agentState,

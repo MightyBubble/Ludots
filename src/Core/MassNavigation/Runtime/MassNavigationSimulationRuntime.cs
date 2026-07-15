@@ -593,6 +593,14 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
         }
 
+        PreflightAuthoredAgentBindings(
+            world,
+            entities,
+            controllableFlags,
+            startIndex: 0,
+            unitCountAfterCommit: agentSeeds.Length,
+            allowExistingRuntimeBinding: true);
+
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
         _domainStanceProjection?.ValidateResetDomains(agentSeeds);
         ClearAuthoredRuntimeBindings(world);
@@ -632,6 +640,14 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         int startIndex = MassNavigationFlow.UnitCount;
+        PreflightAuthoredAgentBindings(
+            world,
+            newEntities,
+            controllableFlags,
+            startIndex,
+            unitCountAfterCommit: checked(startIndex + newAgentSeeds.Length),
+            allowExistingRuntimeBinding: false);
+
         _domainStanceProjection?.ValidateAppendDomains(newAgentSeeds);
         _domainStanceProjection?.AppendDomains(newAgentSeeds);
         MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
@@ -990,18 +1006,82 @@ public sealed class MassNavigationSimulationRuntime
         bool controllable)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (!world.IsAlive(entity))
+        MassNavigationAgent agent = ValidateSpawnedAgentBinding(
+            world,
+            entity,
+            agentIndex,
+            controllable,
+            MassNavigationFlow.UnitCount,
+            allowExistingRuntimeBinding: false);
+        int profileId = agent.ProfileId;
+        world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
+        world.Add(entity, new MassNavigationAgentProfile
+        {
+            ProfileId = profileId,
+            Heavy = MassNavigationFlow.IsHeavyProfile(agentIndex),
+            VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
+            SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
+        });
+        AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
+    }
+
+    private void PreflightAuthoredAgentBindings(
+        World world,
+        ReadOnlySpan<Entity> entities,
+        ReadOnlySpan<bool> controllableFlags,
+        int startIndex,
+        int unitCountAfterCommit,
+        bool allowExistingRuntimeBinding)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (entities.Length != controllableFlags.Length)
+        {
+            throw new InvalidOperationException("MassNavigation authored binding preflight requires matching entity and controllable spans.");
+        }
+
+        var seen = new HashSet<Entity>();
+        for (int i = 0; i < entities.Length; i++)
+        {
+            Entity entity = entities[i];
+            if (!seen.Add(entity))
+            {
+                throw new InvalidOperationException($"MassNavigation authored binding contains duplicate entity {entity.Id}.");
+            }
+
+            ValidateSpawnedAgentBinding(
+                world,
+                entity,
+                checked(startIndex + i),
+                controllableFlags[i],
+                unitCountAfterCommit,
+                allowExistingRuntimeBinding);
+        }
+    }
+
+    private MassNavigationAgent ValidateSpawnedAgentBinding(
+        World world,
+        Entity entity,
+        int agentIndex,
+        bool controllable,
+        int unitCountAfterCommit,
+        bool allowExistingRuntimeBinding)
+    {
+        if (!IsAliveInWorld(world, entity))
         {
             throw new InvalidOperationException("MassNavigation cannot bind a spawned agent on a dead entity.");
         }
 
-        if ((uint)agentIndex >= (uint)MassNavigationFlow.UnitCount)
+        if ((uint)agentIndex >= (uint)unitCountAfterCommit)
         {
             throw new InvalidOperationException(
-                $"MassNavigation spawned agent index {agentIndex} exceeds current agent count {MassNavigationFlow.UnitCount}.");
+                $"MassNavigation spawned agent index {agentIndex} exceeds current agent count {unitCountAfterCommit}.");
         }
 
-        if (world.Has<MassNavigationAgentIndex>(entity) || world.Has<MassNavigationAgentProfile>(entity))
+        bool hasRuntimeBinding =
+            world.Has<MassNavigationAgentIndex>(entity) ||
+            world.Has<MassNavigationAgentProfile>(entity);
+        if (hasRuntimeBinding &&
+            (!allowExistingRuntimeBinding || !IsCommittedRuntimeBindingEntity(entity)))
         {
             throw new InvalidOperationException($"MassNavigation entity {entity.Id} was already bound as an agent.");
         }
@@ -1018,17 +1098,32 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
         }
 
-        AgentState.ValidateAgentRegistration(agentIndex, controllable);
-        int profileId = agent.ProfileId;
-        world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
-        world.Add(entity, new MassNavigationAgentProfile
+        if (!allowExistingRuntimeBinding)
         {
-            ProfileId = profileId,
-            Heavy = MassNavigationFlow.IsHeavyProfile(agentIndex),
-            VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
-            SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
-        });
-        AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
+            AgentState.ValidateAgentRegistration(agentIndex, controllable);
+        }
+
+        return agent;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsAliveInWorld(World world, Entity entity)
+    {
+        return entity != Entity.Null && entity.WorldId == world.Id && world.IsAlive(entity);
+    }
+
+    private bool IsCommittedRuntimeBindingEntity(Entity entity)
+    {
+        IReadOnlyList<Entity> agents = AgentState.AllAgents;
+        for (int i = 0; i < agents.Count; i++)
+        {
+            if (agents[i].Equals(entity))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static int ResolveAgentLocomotionSpeedParamKey()

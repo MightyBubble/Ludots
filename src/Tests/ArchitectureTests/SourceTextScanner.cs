@@ -119,6 +119,16 @@ namespace Ludots.Tests.Architecture
                         continue;
                     }
 
+                    if (IsInterpolatedStringStart(line, index))
+                    {
+                        output.Append(' ');
+                        int interpolatedEnd = IsVerbatimStringStart(line, index)
+                            ? StripInterpolatedVerbatimString(line, index + 1, output)
+                            : StripInterpolatedRegularString(line, index + 1, output);
+                        index = interpolatedEnd;
+                        continue;
+                    }
+
                     if (IsVerbatimStringStart(line, index))
                     {
                         int end = FindVerbatimStringEnd(line, index + 1);
@@ -155,11 +165,205 @@ namespace Ludots.Tests.Architecture
             return output.ToString();
         }
 
+        private static bool IsInterpolatedStringStart(string line, int quoteIndex)
+        {
+            return quoteIndex > 0 &&
+                   (line[quoteIndex - 1] == '$' ||
+                    (quoteIndex > 1 && line[quoteIndex - 2] == '$' && line[quoteIndex - 1] == '@') ||
+                    (quoteIndex > 1 && line[quoteIndex - 2] == '@' && line[quoteIndex - 1] == '$'));
+        }
+
         private static bool IsVerbatimStringStart(string line, int quoteIndex)
         {
             return quoteIndex > 0 &&
                    (line[quoteIndex - 1] == '@' ||
                     (quoteIndex > 1 && line[quoteIndex - 2] == '@' && line[quoteIndex - 1] == '$'));
+        }
+
+        private static int StripInterpolatedRegularString(string line, int start, StringBuilder output)
+        {
+            int index = start;
+            bool escaped = false;
+            while (index < line.Length)
+            {
+                if (escaped)
+                {
+                    output.Append(' ');
+                    escaped = false;
+                    index++;
+                    continue;
+                }
+
+                char ch = line[index];
+                if (ch == '\\')
+                {
+                    output.Append(' ');
+                    escaped = true;
+                    index++;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    output.Append(' ');
+                    return index + 1;
+                }
+
+                if (ch == '{')
+                {
+                    if (index + 1 < line.Length && line[index + 1] == '{')
+                    {
+                        AppendSpaces(output, 2);
+                        index += 2;
+                        continue;
+                    }
+
+                    output.Append(' ');
+                    index = AppendInterpolatedExpressionCode(line, index + 1, output);
+                    continue;
+                }
+
+                if (ch == '}' && index + 1 < line.Length && line[index + 1] == '}')
+                {
+                    AppendSpaces(output, 2);
+                    index += 2;
+                    continue;
+                }
+
+                output.Append(' ');
+                index++;
+            }
+
+            return line.Length;
+        }
+
+        private static int StripInterpolatedVerbatimString(string line, int start, StringBuilder output)
+        {
+            int index = start;
+            while (index < line.Length)
+            {
+                char ch = line[index];
+                if (ch == '"')
+                {
+                    if (index + 1 < line.Length && line[index + 1] == '"')
+                    {
+                        AppendSpaces(output, 2);
+                        index += 2;
+                        continue;
+                    }
+
+                    output.Append(' ');
+                    return index + 1;
+                }
+
+                if (ch == '{')
+                {
+                    if (index + 1 < line.Length && line[index + 1] == '{')
+                    {
+                        AppendSpaces(output, 2);
+                        index += 2;
+                        continue;
+                    }
+
+                    output.Append(' ');
+                    index = AppendInterpolatedExpressionCode(line, index + 1, output);
+                    continue;
+                }
+
+                if (ch == '}' && index + 1 < line.Length && line[index + 1] == '}')
+                {
+                    AppendSpaces(output, 2);
+                    index += 2;
+                    continue;
+                }
+
+                output.Append(' ');
+                index++;
+            }
+
+            return line.Length;
+        }
+
+        private static int AppendInterpolatedExpressionCode(string line, int start, StringBuilder output)
+        {
+            int depth = 0;
+            int index = start;
+            while (index < line.Length)
+            {
+                if (index + 1 < line.Length && line[index] == '/' && line[index + 1] == '/')
+                {
+                    AppendSpaces(output, line.Length - index);
+                    return line.Length;
+                }
+
+                if (index + 1 < line.Length && line[index] == '/' && line[index + 1] == '*')
+                {
+                    int end = line.IndexOf("*/", index + 2, StringComparison.Ordinal);
+                    if (end < 0)
+                    {
+                        AppendSpaces(output, line.Length - index);
+                        return line.Length;
+                    }
+
+                    AppendSpaces(output, end + 2 - index);
+                    index = end + 2;
+                    continue;
+                }
+
+                if (line[index] == '"')
+                {
+                    int quoteCount = CountQuoteRun(line, index);
+                    if (quoteCount >= 3)
+                    {
+                        int sameLineEnd = FindQuoteRun(line, index + quoteCount, quoteCount);
+                        AppendSpaces(output, (sameLineEnd < 0 ? line.Length : sameLineEnd + quoteCount) - index);
+                        index = sameLineEnd < 0 ? line.Length : sameLineEnd + quoteCount;
+                        continue;
+                    }
+
+                    int end = IsVerbatimStringStart(line, index)
+                        ? FindVerbatimStringEnd(line, index + 1)
+                        : FindRegularStringEnd(line, index + 1);
+                    AppendSpaces(output, (end < 0 ? line.Length : end + 1) - index);
+                    index = end < 0 ? line.Length : end + 1;
+                    continue;
+                }
+
+                if (line[index] == '\'')
+                {
+                    int charEnd = FindCharLiteralEnd(line, index + 1);
+                    AppendSpaces(output, (charEnd < 0 ? line.Length : charEnd + 1) - index);
+                    index = charEnd < 0 ? line.Length : charEnd + 1;
+                    continue;
+                }
+
+                if (line[index] == '{')
+                {
+                    depth++;
+                    output.Append(line[index]);
+                    index++;
+                    continue;
+                }
+
+                if (line[index] == '}')
+                {
+                    if (depth == 0)
+                    {
+                        output.Append(' ');
+                        return index + 1;
+                    }
+
+                    depth--;
+                    output.Append(line[index]);
+                    index++;
+                    continue;
+                }
+
+                output.Append(line[index]);
+                index++;
+            }
+
+            return line.Length;
         }
 
         private static int FindVerbatimStringEnd(string line, int start)

@@ -219,7 +219,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (effect.NextTickAtTick == 0)
                     {
-                        effect.NextTickAtTick = now + ResolveInitialPeriodOffset(entity, effect.PeriodTicks);
+                        int templateId = World.Has<EffectTemplateRef>(entity)
+                            ? World.Get<EffectTemplateRef>(entity).TemplateId
+                            : 0;
+                        effect.NextTickAtTick = now + ResolveInitialPeriodOffset(in context, templateId, effect.PeriodTicks);
                     }
 
                     if (now >= effect.NextTickAtTick)
@@ -246,17 +249,35 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static int ResolveInitialPeriodOffset(Entity entity, int periodTicks)
+            private static int ResolveInitialPeriodOffset(in EffectContext context, int templateId, int periodTicks)
             {
                 if (periodTicks <= 1)
                 {
                     return 1;
                 }
 
-                uint hash = (uint)entity.Id;
-                hash ^= (uint)entity.Version * 0x9E3779B9u;
+                uint hash = 2166136261u;
+                hash = Mix(hash, context.RootId);
+                hash = Mix(hash, templateId);
+                hash = Mix(hash, periodTicks);
+                hash = Mix(hash, context.Source.Id);
+                hash = Mix(hash, context.Source.Version);
+                hash = Mix(hash, context.Target.Id);
+                hash = Mix(hash, context.Target.Version);
+                hash = Mix(hash, context.TargetContext.Id);
+                hash = Mix(hash, context.TargetContext.Version);
                 hash ^= hash >> 16;
                 return 1 + (int)(hash % (uint)periodTicks);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static uint Mix(uint hash, int value)
+            {
+                unchecked
+                {
+                    hash ^= (uint)value;
+                    return hash * 16777619u;
+                }
             }
         }
 

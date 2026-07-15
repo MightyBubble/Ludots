@@ -146,6 +146,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         PreflightOrderBuckets(simulation, routeSink);
         try
         {
+            simulation.NavGroupRuntime.PruneInactiveOrderGroups(simulation.MassNavigationFlow, _activeTokens);
             routeSink?.BeginSync();
             for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
             {
@@ -257,7 +258,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             _bucketCommandChanged[bucketIndex] = commandChanged ? (byte)1 : (byte)0;
         }
 
-        simulation.NavGroupRuntime.EnsureCanAllocateNewOrderGroups(newOrderGroupCount);
+        simulation.NavGroupRuntime.EnsureCanAllocateNewOrderGroupsAfterPrune(newOrderGroupCount, _activeTokens);
 
         for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {

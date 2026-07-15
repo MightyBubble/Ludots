@@ -665,7 +665,7 @@ namespace Ludots.Core.Gameplay.Spawning
         {
             if (request.HasOwnershipSource != 0)
             {
-                if (_ownership == null || !World.IsAlive(request.OwnershipSource))
+                if (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource))
                 {
                     throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
                 }
@@ -675,7 +675,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (request.HasMembershipTarget != 0)
             {
-                if (_relationships == null || _memberOfTypeId < 0 || !World.IsAlive(request.MembershipTarget))
+                if (_relationships == null || _memberOfTypeId < 0 || !IsAliveInCurrentWorld(request.MembershipTarget))
                 {
                     throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
                 }
@@ -692,7 +692,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 !World.Has<PlayerIdentity>(entity) &&
                 !World.Has<TeamIdentity>(entity))
             {
-                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !World.IsAlive(teamRep))
+                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !IsAliveInCurrentWorld(teamRep))
                 {
                     throw new InvalidOperationException(
                         $"Runtime spawned entity {entity.Id} authors Team {team.Id}, but no live team relationship representative exists.");
@@ -731,7 +731,7 @@ namespace Ludots.Core.Gameplay.Spawning
                         $"Runtime template batch '{templateId}' authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
                 }
 
-                if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !World.IsAlive(teamRepresentative))
+                if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !IsAliveInCurrentWorld(teamRepresentative))
                 {
                     throw new InvalidOperationException(
                         $"Runtime template batch '{templateId}' authors Team {teamId}, but no live team relationship representative exists.");
@@ -742,16 +742,21 @@ namespace Ludots.Core.Gameplay.Spawning
         private void PreflightExplicitRelationship(in RuntimeEntitySpawnRequest request)
         {
             if (request.HasOwnershipSource != 0 &&
-                (_ownership == null || !World.IsAlive(request.OwnershipSource)))
+                (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource)))
             {
                 throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
             }
 
             if (request.HasMembershipTarget != 0 &&
-                (_relationships == null || _memberOfTypeId < 0 || !World.IsAlive(request.MembershipTarget)))
+                (_relationships == null || _memberOfTypeId < 0 || !IsAliveInCurrentWorld(request.MembershipTarget)))
             {
                 throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
             }
+        }
+
+        private bool IsAliveInCurrentWorld(Entity entity)
+        {
+            return entity != Entity.Null && entity.WorldId == World.Id && World.IsAlive(entity);
         }
 
         private void PreflightMembershipTargetMatchesTeam(
