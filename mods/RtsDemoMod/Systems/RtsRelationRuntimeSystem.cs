@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -40,12 +40,16 @@ namespace RtsDemoMod.Systems
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly TagOps _tagOps;
-        private readonly List<Entity> _constructingHosts = new(64);
-        private readonly List<Entity> _pendingAttachEntities = new(256);
-        private readonly List<Entity> _ungarrisonHosts = new(64);
-        private readonly List<Entity> _completedHosts = new(64);
-        private readonly List<Entity> _attachedChildren = new(256);
-        private readonly List<Entity> _missingSelectableStates = new(64);
+        private readonly EntityScratchBuffer _constructingHosts;
+        private readonly EntityScratchBuffer _pendingAttachEntities;
+        private readonly EntityScratchBuffer _ungarrisonHosts;
+        private readonly EntityScratchBuffer _completedHosts;
+        private readonly EntityScratchBuffer _attachedChildren;
+        private readonly EntityScratchBuffer _missingSelectableStates;
+        private readonly CommandBuffer _structuralCommands;
+        private readonly Entity[] _pendingParentEntities;
+        private readonly ChildrenBuffer[] _pendingParentBuffers;
+        private int _pendingParentCount;
 
         private int _constructingTagId;
         private int _builderAttachedTagId;
@@ -53,12 +57,27 @@ namespace RtsDemoMod.Systems
         private int _warpingTagId;
         private int _ungarrisonAllTagId;
 
-        public RtsRelationRuntimeSystem(GameEngine engine)
+        public RtsRelationRuntimeSystem(GameEngine engine, int entityScratchCapacity)
         {
+            if (entityScratchCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(entityScratchCapacity));
+            }
+            int structuralCommandCapacity = checked(entityScratchCapacity * 2);
+
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("RtsRelationRuntimeSystem requires engine TagOps.");
+            _constructingHosts = new EntityScratchBuffer(entityScratchCapacity);
+            _pendingAttachEntities = new EntityScratchBuffer(entityScratchCapacity);
+            _ungarrisonHosts = new EntityScratchBuffer(entityScratchCapacity);
+            _completedHosts = new EntityScratchBuffer(entityScratchCapacity);
+            _attachedChildren = new EntityScratchBuffer(entityScratchCapacity);
+            _missingSelectableStates = new EntityScratchBuffer(entityScratchCapacity);
+            _structuralCommands = new CommandBuffer(structuralCommandCapacity);
+            _pendingParentEntities = new Entity[entityScratchCapacity];
+            _pendingParentBuffers = new ChildrenBuffer[entityScratchCapacity];
         }
 
         public void Initialize()
@@ -90,6 +109,7 @@ namespace RtsDemoMod.Systems
 
         public void Dispose()
         {
+            _structuralCommands.Dispose();
         }
 
         private void EnsureTagIds()
@@ -128,7 +148,7 @@ namespace RtsDemoMod.Systems
             _world.InlineEntityQuery<CollectConstructingHostsJob, GameplayTagContainer, WorldPositionCm>(
                 in TaggedPositionQuery,
                 ref hostJob);
-            SortEntities(_constructingHosts);
+            _constructingHosts.Sort();
 
             _pendingAttachEntities.Clear();
             var pendingJob = new CollectPendingAttachEntitiesJob
@@ -140,7 +160,7 @@ namespace RtsDemoMod.Systems
             _world.InlineEntityQuery<CollectPendingAttachEntitiesJob, GameplayTagContainer, WorldPositionCm>(
                 in TaggedPositionQuery,
                 ref pendingJob);
-            SortEntities(_pendingAttachEntities);
+            _pendingAttachEntities.Sort();
 
             for (int i = 0; i < _pendingAttachEntities.Count; i++)
             {
@@ -156,15 +176,11 @@ namespace RtsDemoMod.Systems
                     continue;
                 }
 
-                RelationOps.SetParent(_world, entity, host);
-                if (!_world.Has<ChildOf>(entity) || _world.Get<ChildOf>(entity).Parent != host)
-                {
-                    throw new InvalidOperationException(
-                        $"RTS.RELATION.ERR.AttachFailed: child={entity.Id}, host={host.Id}.");
-                }
-
+                QueueSetParent(entity, host);
                 SnapEntityToHost(entity, host);
             }
+
+            FlushStructuralCommands();
         }
 
         private bool TryFindNearestConstructingHost(Entity child, in Fix64Vec2 childPosition, out Entity host)
@@ -193,7 +209,7 @@ namespace RtsDemoMod.Systems
                 Fix64 distanceSq = delta.LengthSquared();
                 if (!found ||
                     distanceSq < bestDistanceSq ||
-                    (distanceSq == bestDistanceSq && EntityStableComparer.Instance.Compare(candidate, resolvedHost) < 0))
+                    (distanceSq == bestDistanceSq && CompareStable(candidate, resolvedHost) < 0))
                 {
                     resolvedHost = candidate;
                     bestDistanceSq = distanceSq;
@@ -216,7 +232,7 @@ namespace RtsDemoMod.Systems
             _world.InlineEntityQuery<CollectUngarrisonHostsJob, GameplayTagContainer, ChildrenBuffer, WorldPositionCm>(
                 in UngarrisonHostQuery,
                 ref job);
-            SortEntities(_ungarrisonHosts);
+            _ungarrisonHosts.Sort();
 
             Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
             for (int hostIndex = 0; hostIndex < _ungarrisonHosts.Count; hostIndex++)
@@ -243,6 +259,8 @@ namespace RtsDemoMod.Systems
 
                 RemovePersistentTag(host, _ungarrisonAllTagId);
             }
+
+            FlushStructuralCommands();
         }
 
         private void ProcessCompletedConstructionHosts()
@@ -252,7 +270,7 @@ namespace RtsDemoMod.Systems
             _world.InlineEntityQuery<CollectConstructionHostsJob, ChildrenBuffer, WorldPositionCm>(
                 in ConstructionHostQuery,
                 ref job);
-            SortEntities(_completedHosts);
+            _completedHosts.Sort();
 
             Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
             for (int hostIndex = 0; hostIndex < _completedHosts.Count; hostIndex++)
@@ -286,7 +304,7 @@ namespace RtsDemoMod.Systems
                     {
                         RemovePersistentTag(child, _morphConsumedTagId);
                         RemoveRequiredParent(child, host);
-                        _world.Destroy(child);
+                        _structuralCommands.Destroy(child);
                         continue;
                     }
 
@@ -300,6 +318,8 @@ namespace RtsDemoMod.Systems
                     detachIndex++;
                 }
             }
+
+            FlushStructuralCommands();
         }
 
         private void SyncAttachedChildrenToParents()
@@ -307,7 +327,7 @@ namespace RtsDemoMod.Systems
             _attachedChildren.Clear();
             var job = new CollectAttachedChildrenJob { Entities = _attachedChildren };
             _world.InlineEntityQuery<CollectAttachedChildrenJob, ChildOf>(in AttachedChildQuery, ref job);
-            SortEntities(_attachedChildren);
+            _attachedChildren.Sort();
 
             for (int i = 0; i < _attachedChildren.Count; i++)
             {
@@ -320,12 +340,14 @@ namespace RtsDemoMod.Systems
                 Entity parent = _world.Get<ChildOf>(child).Parent;
                 if (!_world.IsAlive(parent))
                 {
-                    RelationOps.RemoveParent(_world, child);
+                    QueueRemoveParent(child, parent, requireLiveParent: false);
                     continue;
                 }
 
                 SnapEntityToHost(child, parent);
             }
+
+            FlushStructuralCommands();
         }
 
         private void SyncCommandSourceAvailability()
@@ -349,7 +371,7 @@ namespace RtsDemoMod.Systems
                 ref missingJob);
             if (_missingSelectableStates.Count > 0)
             {
-                SortEntities(_missingSelectableStates);
+                _missingSelectableStates.Sort();
                 throw new InvalidOperationException(
                     $"RTS.COMMAND_SOURCE.ERR.MissingSelectableState: entity={_missingSelectableStates[0].Id}, count={_missingSelectableStates.Count}.");
             }
@@ -368,7 +390,36 @@ namespace RtsDemoMod.Systems
 
         private void RemoveRequiredParent(Entity child, Entity expectedParent)
         {
-            if (!_world.Has<ChildOf>(child))
+            QueueRemoveParent(child, expectedParent, requireLiveParent: true);
+        }
+
+        private void QueueSetParent(Entity child, Entity parent)
+        {
+            if (!_world.IsAlive(child) || !_world.IsAlive(parent))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.AttachEntityInvalid: child={child.Id}, parent={parent.Id}.");
+            }
+            if (_world.Has<ChildOf>(child))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.ChildAlreadyAttached: child={child.Id}, parent={parent.Id}.");
+            }
+
+            int parentIndex = GetOrCreatePendingParent(parent, allowMissingBuffer: true);
+
+            if (!_pendingParentBuffers[parentIndex].Add(in child))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.ParentChildrenCapacityExceeded: parent={parent.Id}, child={child.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+            }
+
+            _structuralCommands.Add(child, new ChildOf { Parent = parent });
+        }
+
+        private void QueueRemoveParent(Entity child, Entity expectedParent, bool requireLiveParent)
+        {
+            if (!_world.IsAlive(child) || !_world.Has<ChildOf>(child))
             {
                 throw new InvalidOperationException(
                     $"RTS.RELATION.ERR.MissingChildOf: child={child.Id}, expectedParent={expectedParent.Id}.");
@@ -381,14 +432,86 @@ namespace RtsDemoMod.Systems
                     $"RTS.RELATION.ERR.ParentMismatch: child={child.Id}, expectedParent={expectedParent.Id}, actualParent={actualParent.Id}.");
             }
 
-            RelationOps.RemoveParent(_world, child);
-            if (_world.Has<ChildOf>(child) ||
-                (_world.IsAlive(expectedParent) &&
-                 _world.Has<ChildrenBuffer>(expectedParent) &&
-                 _world.Get<ChildrenBuffer>(expectedParent).Contains(in child)))
+            if (_world.IsAlive(expectedParent))
+            {
+                int parentIndex = GetOrCreatePendingParent(expectedParent, allowMissingBuffer: false);
+                if (!_pendingParentBuffers[parentIndex].Remove(in child))
+                {
+                    throw new InvalidOperationException(
+                        $"RTS.RELATION.ERR.ParentMissingChild: child={child.Id}, parent={expectedParent.Id}.");
+                }
+            }
+            else if (requireLiveParent)
             {
                 throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.DetachFailed: child={child.Id}, parent={expectedParent.Id}.");
+                    $"RTS.RELATION.ERR.ParentNotAlive: child={child.Id}, parent={expectedParent.Id}.");
+            }
+
+            _structuralCommands.Remove<ChildOf>(child);
+        }
+
+        private int GetOrCreatePendingParent(Entity parent, bool allowMissingBuffer)
+        {
+            int parentIndex = FindPendingParent(parent);
+            if (parentIndex >= 0)
+            {
+                return parentIndex;
+            }
+            if (_pendingParentCount >= _pendingParentEntities.Length)
+            {
+                throw ScratchCapacityExceeded("pendingParentBuffers", _pendingParentCount + 1, _pendingParentEntities.Length);
+            }
+            if (!allowMissingBuffer && !_world.Has<ChildrenBuffer>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"RTS.RELATION.ERR.MissingChildrenBuffer: parent={parent.Id}.");
+            }
+
+            parentIndex = _pendingParentCount++;
+            _pendingParentEntities[parentIndex] = parent;
+            _pendingParentBuffers[parentIndex] = _world.Has<ChildrenBuffer>(parent)
+                ? _world.Get<ChildrenBuffer>(parent)
+                : default;
+            return parentIndex;
+        }
+
+        private int FindPendingParent(Entity parent)
+        {
+            for (int i = 0; i < _pendingParentCount; i++)
+            {
+                if (_pendingParentEntities[i] == parent) return i;
+            }
+            return -1;
+        }
+
+        private void FlushStructuralCommands()
+        {
+            for (int i = 0; i < _pendingParentCount; i++)
+            {
+                Entity parent = _pendingParentEntities[i];
+                if (!_world.IsAlive(parent))
+                {
+                    throw new InvalidOperationException(
+                        $"RTS.RELATION.ERR.ParentDiedBeforeCommit: parent={parent.Id}.");
+                }
+
+                ChildrenBuffer children = _pendingParentBuffers[i];
+                if (_world.Has<ChildrenBuffer>(parent))
+                {
+                    _world.Get<ChildrenBuffer>(parent) = children;
+                }
+                else
+                {
+                    _structuralCommands.Add(parent, children);
+                }
+                _pendingParentEntities[i] = Entity.Null;
+                _pendingParentBuffers[i] = default;
+            }
+            _pendingParentCount = 0;
+
+            if (_structuralCommands.Size > 0)
+            {
+                _structuralCommands.Playback(_world);
             }
         }
 
@@ -496,31 +619,9 @@ namespace RtsDemoMod.Systems
             return false;
         }
 
-        private static void SortEntities(List<Entity> entities)
-        {
-            if (entities.Count > 1)
-            {
-                entities.Sort(EntityStableComparer.Instance);
-            }
-        }
-
-        private sealed class EntityStableComparer : IComparer<Entity>
-        {
-            public static readonly EntityStableComparer Instance = new EntityStableComparer();
-
-            public int Compare(Entity x, Entity y)
-            {
-                int compare = x.WorldId.CompareTo(y.WorldId);
-                if (compare != 0) return compare;
-                compare = x.Id.CompareTo(y.Id);
-                if (compare != 0) return compare;
-                return x.Version.CompareTo(y.Version);
-            }
-        }
-
         private struct CollectConstructingHostsJob : IForEachWithEntity<GameplayTagContainer, WorldPositionCm>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
             public int ConstructingTagId;
 
             public void Update(Entity entity, ref GameplayTagContainer tags, ref WorldPositionCm _)
@@ -534,7 +635,7 @@ namespace RtsDemoMod.Systems
 
         private struct CollectPendingAttachEntitiesJob : IForEachWithEntity<GameplayTagContainer, WorldPositionCm>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
             public int BuilderAttachedTagId;
             public int MorphConsumedTagId;
 
@@ -549,7 +650,7 @@ namespace RtsDemoMod.Systems
 
         private struct CollectUngarrisonHostsJob : IForEachWithEntity<GameplayTagContainer, ChildrenBuffer, WorldPositionCm>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
             public int UngarrisonAllTagId;
 
             public void Update(
@@ -567,7 +668,7 @@ namespace RtsDemoMod.Systems
 
         private struct CollectConstructionHostsJob : IForEachWithEntity<ChildrenBuffer, WorldPositionCm>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
 
             public void Update(Entity entity, ref ChildrenBuffer children, ref WorldPositionCm _)
             {
@@ -580,7 +681,7 @@ namespace RtsDemoMod.Systems
 
         private struct CollectAttachedChildrenJob : IForEachWithEntity<ChildOf>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
 
             public void Update(Entity entity, ref ChildOf _)
             {
@@ -616,12 +717,95 @@ namespace RtsDemoMod.Systems
 
         private struct CollectMissingSelectableStatesJob : IForEachWithEntity<CommandSourceSelectableTag>
         {
-            public List<Entity> Entities;
+            public EntityScratchBuffer Entities;
 
             public void Update(Entity entity, ref CommandSourceSelectableTag _)
             {
                 Entities.Add(entity);
             }
+        }
+
+        private sealed class EntityScratchBuffer
+        {
+            private readonly Entity[] _items;
+
+            public EntityScratchBuffer(int capacity)
+            {
+                _items = new Entity[capacity];
+            }
+
+            public int Count { get; private set; }
+            public Entity this[int index] => _items[index];
+
+            public void Clear()
+            {
+                Count = 0;
+            }
+
+            public void Add(Entity entity)
+            {
+                if (Count >= _items.Length)
+                {
+                    throw ScratchCapacityExceeded("entityScratch", Count + 1, _items.Length);
+                }
+                _items[Count++] = entity;
+            }
+
+            public void Sort()
+            {
+                HeapSort();
+            }
+
+            private void HeapSort()
+            {
+                for (int root = (Count >> 1) - 1; root >= 0; root--)
+                {
+                    SiftDown(root, Count);
+                }
+                for (int end = Count - 1; end > 0; end--)
+                {
+                    Swap(0, end);
+                    SiftDown(0, end);
+                }
+            }
+
+            private void SiftDown(int root, int length)
+            {
+                while (true)
+                {
+                    int child = (root << 1) + 1;
+                    if (child >= length) return;
+                    if (child + 1 < length && CompareStable(_items[child], _items[child + 1]) < 0)
+                    {
+                        child++;
+                    }
+                    if (CompareStable(_items[root], _items[child]) >= 0) return;
+                    Swap(root, child);
+                    root = child;
+                }
+            }
+
+            private void Swap(int first, int second)
+            {
+                Entity value = _items[first];
+                _items[first] = _items[second];
+                _items[second] = value;
+            }
+        }
+
+        private static int CompareStable(Entity first, Entity second)
+        {
+            int compare = first.WorldId.CompareTo(second.WorldId);
+            if (compare != 0) return compare;
+            compare = first.Id.CompareTo(second.Id);
+            if (compare != 0) return compare;
+            return first.Version.CompareTo(second.Version);
+        }
+
+        private static InvalidOperationException ScratchCapacityExceeded(string resource, int required, int capacity)
+        {
+            return new InvalidOperationException(
+                $"RTS.RELATION.ERR.ScratchCapacityExceeded: resource={resource}, required={required}, capacity={capacity}.");
         }
     }
 }

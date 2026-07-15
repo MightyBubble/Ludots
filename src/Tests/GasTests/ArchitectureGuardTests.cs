@@ -290,7 +290,16 @@ namespace GasTests
 
             Assert.That(source, Does.Not.Contain("_world.Query("));
             Assert.That(source, Does.Not.Contain("new List<Entity>"));
+            Assert.That(source, Does.Not.Contain("List<Entity>"));
             Assert.That(source, Does.Not.Contain("_world.Add(entity"));
+            Assert.That(source, Does.Not.Contain("RelationOps.SetParent(_world"));
+            Assert.That(source, Does.Not.Contain("RelationOps.RemoveParent(_world"));
+            Assert.That(source, Does.Not.Contain("_world.Destroy("));
+            Assert.That(source, Does.Contain("CommandBuffer"));
+            Assert.That(source, Does.Contain("RTS.RELATION.ERR.ScratchCapacityExceeded"));
+            Assert.That(source, Does.Contain("new CommandBuffer(structuralCommandCapacity)"));
+            Assert.That(source, Does.Contain("HeapSort"));
+            Assert.That(source, Does.Not.Contain("ref ChildrenBuffer children = ref _world.Get<ChildrenBuffer>(expectedParent)"));
             Assert.That(source, Does.Not.Contain("if (_world.Has<WorldPositionCm>(entity))"));
             Assert.That(
                 Regex.Matches(source, @"private static readonly QueryDescription\s+\w+Query").Count,
