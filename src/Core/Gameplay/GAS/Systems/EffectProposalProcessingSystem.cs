@@ -903,6 +903,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         ConsumeWork(ref workUnits);
                     }
 
+                    if (workUnits >= MaxWorkUnitsPerSlice) return false;
+
                     if (_telemetry != null && _emitTelemetry)
                     {
                         _telemetry.TryAdd(new ResponseChainTelemetryEvent

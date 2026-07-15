@@ -584,6 +584,75 @@ namespace Ludots.Tests.GAS
             Assert.That(sawLifetime, Is.True);
         }
 
+        [Test]
+        public void EffectProcessingLoop_ExactProposalBudgetBoundary_DoesNotOverrunWhenClosingWindow()
+        {
+            const int workBudget = 4096;
+            const int ordinaryRequestCount = 1364;
+            const int ordinaryTemplateId = 1;
+            const int respondingTemplateId = 2;
+            const int respondingTagId = 20;
+
+            using var world = World.Create();
+            var requests = new EffectRequestQueue(initialCapacity: workBudget);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(ordinaryTemplateId, new EffectTemplateData
+            {
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ParticipatesInResponse = false,
+            });
+            templates.Register(respondingTemplateId, new EffectTemplateData
+            {
+                TagId = respondingTagId,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ParticipatesInResponse = true,
+            });
+
+            var listener = default(ResponseChainListener);
+            Assert.That(listener.Add(respondingTagId, ResponseType.Modify, priority: 2, modifyValue: 1f), Is.True);
+            Assert.That(listener.Add(respondingTagId, ResponseType.Modify, priority: 1, modifyValue: 1f), Is.True);
+            world.Create(listener);
+
+            Entity source = world.Create();
+            Entity target = world.Create();
+            for (int i = 0; i < ordinaryRequestCount; i++)
+            {
+                requests.Publish(new EffectRequest
+                {
+                    RootId = i + 1,
+                    Source = source,
+                    Target = target,
+                    TemplateId = ordinaryTemplateId,
+                });
+            }
+            requests.Publish(new EffectRequest
+            {
+                RootId = ordinaryRequestCount + 1,
+                Source = source,
+                Target = target,
+                TemplateId = respondingTemplateId,
+            });
+
+            var loop = new EffectProcessingLoopSystem(
+                world,
+                requests,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                lifetimeSnapshotCapacity: 16,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                maxWorkUnitsPerSlice: workBudget);
+
+            Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.False);
+            Assert.That(loop.ProposalProcessedLastSlice, Is.EqualTo(workBudget));
+            Assert.That(loop.ProcessedLastSlice, Is.EqualTo(workBudget));
+            Assert.That(requests.Count, Is.EqualTo(ordinaryRequestCount + 1));
+
+            Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.True);
+            Assert.That(loop.ProcessedLastSlice, Is.LessThanOrEqualTo(workBudget));
+            Assert.That(requests.Count, Is.Zero);
+        }
+
         private static AbilityDefinitionRegistry CreateImmediateAbilityDefinitions()
         {
             AbilityExecSpec spec = default;
