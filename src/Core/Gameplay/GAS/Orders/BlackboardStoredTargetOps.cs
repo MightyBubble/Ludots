@@ -32,6 +32,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     public static class BlackboardStoredTargetOps
     {
+        public const string CapacityExceededError = "GAS.STORED_TARGET.ERR.BlackboardCapacityExceeded";
+
         public static bool TryRead(
             World world,
             Entity host,
@@ -104,27 +106,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static void Clear(World world, Entity host, in BlackboardStoredTargetKeys keys)
         {
-            if (!world.IsAlive(host) || !keys.IsConfigured)
-            {
-                return;
-            }
-
-            if (world.TryGet(host, out BlackboardIntBuffer ints))
-            {
-                ints.Remove(keys.TargetKindKey);
-                ints.Remove(keys.HexQKey);
-                ints.Remove(keys.HexRKey);
-            }
-
-            if (world.TryGet(host, out BlackboardSpatialBuffer spatial))
-            {
-                spatial.ClearPoints(keys.TargetPositionKey);
-            }
-
-            if (world.TryGet(host, out BlackboardEntityBuffer entities))
-            {
-                entities.Remove(keys.TargetEntityKey);
-            }
+            PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
+            ClearPrepared(ref ints, ref spatial, ref entities, in keys);
+            CommitPrepared(world, host, in ints, in spatial, in entities);
         }
 
         public static void CommitFromOrder(
@@ -133,30 +117,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             in Order order,
             in BlackboardStoredTargetKeys keys)
         {
-            if (!world.IsAlive(host) || !keys.IsConfigured)
+            PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
+            ClearPrepared(ref ints, ref spatial, ref entities, in keys);
+
+            if (order.Target != Entity.Null)
             {
-                return;
+                if (!world.IsAlive(order.Target))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.STORED_TARGET.ERR.InvalidTargetEntity: host={host.Id}, target={order.Target.Id}.");
+                }
+                SetEntityPrepared(host, ref ints, ref spatial, ref entities, order.Target, in keys);
+            }
+            else if (order.Args.Spatial.Kind == OrderSpatialKind.Hex)
+            {
+                SetHexPrepared(host, ref ints, ref spatial, ref entities, order.Args.Spatial.A0, order.Args.Spatial.A1, in keys);
+            }
+            else if (order.Args.Spatial.Mode == OrderCollectionMode.Single)
+            {
+                SetPointPrepared(host, ref ints, ref spatial, ref entities, order.Args.Spatial.WorldCm, in keys);
             }
 
-            OrderBlackboardStateInstaller.RequireInstalled(world, host);
-            Clear(world, host, in keys);
-
-            if (order.Target != Entity.Null && world.IsAlive(order.Target))
-            {
-                SetEntityPrepared(world, host, order.Target, in keys);
-                return;
-            }
-
-            if (order.Args.Spatial.Kind == OrderSpatialKind.Hex)
-            {
-                SetHexPrepared(world, host, order.Args.Spatial.A0, order.Args.Spatial.A1, in keys);
-                return;
-            }
-
-            if (order.Args.Spatial.Mode == OrderCollectionMode.Single)
-            {
-                SetPointPrepared(world, host, order.Args.Spatial.WorldCm, in keys);
-            }
+            CommitPrepared(world, host, in ints, in spatial, in entities);
         }
 
         public static void SetPoint(
@@ -165,25 +147,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             Vector3 worldPositionCm,
             in BlackboardStoredTargetKeys keys)
         {
-            OrderBlackboardStateInstaller.RequireInstalled(world, host);
-            SetPointPrepared(world, host, worldPositionCm, in keys);
+            PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
+            ClearPrepared(ref ints, ref spatial, ref entities, in keys);
+            SetPointPrepared(host, ref ints, ref spatial, ref entities, worldPositionCm, in keys);
+            CommitPrepared(world, host, in ints, in spatial, in entities);
         }
 
         private static void SetPointPrepared(
-            World world,
             Entity host,
+            ref BlackboardIntBuffer ints,
+            ref BlackboardSpatialBuffer spatial,
+            ref BlackboardEntityBuffer entities,
             Vector3 worldPositionCm,
             in BlackboardStoredTargetKeys keys)
         {
-            ref var ints = ref world.Get<BlackboardIntBuffer>(host);
-            ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
-            ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
-
+            RequireIntCapacity(host, ref ints, keys.TargetKindKey);
+            RequireSpatialCapacity(host, ref spatial, keys.TargetPositionKey);
             ints.Set(keys.TargetKindKey, (int)BlackboardStoredTargetKind.Point);
-            ints.Remove(keys.HexQKey);
-            ints.Remove(keys.HexRKey);
-            entities.Remove(keys.TargetEntityKey);
-            spatial.ClearPoints(keys.TargetPositionKey);
             spatial.SetPoint(keys.TargetPositionKey, worldPositionCm);
         }
 
@@ -194,28 +174,30 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int hexR,
             in BlackboardStoredTargetKeys keys)
         {
-            OrderBlackboardStateInstaller.RequireInstalled(world, host);
-            SetHexPrepared(world, host, hexQ, hexR, in keys);
+            PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
+            ClearPrepared(ref ints, ref spatial, ref entities, in keys);
+            SetHexPrepared(host, ref ints, ref spatial, ref entities, hexQ, hexR, in keys);
+            CommitPrepared(world, host, in ints, in spatial, in entities);
         }
 
         private static void SetHexPrepared(
-            World world,
             Entity host,
+            ref BlackboardIntBuffer ints,
+            ref BlackboardSpatialBuffer spatial,
+            ref BlackboardEntityBuffer entities,
             int hexQ,
             int hexR,
             in BlackboardStoredTargetKeys keys)
         {
-            ref var ints = ref world.Get<BlackboardIntBuffer>(host);
-            ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
-            ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
-
             Vector3 worldPositionCm = new HexCoordinates(hexQ, hexR).ToWorldPositionCm();
 
+            RequireIntCapacity(host, ref ints, keys.TargetKindKey);
             ints.Set(keys.TargetKindKey, (int)BlackboardStoredTargetKind.HexCell);
+            RequireIntCapacity(host, ref ints, keys.HexQKey);
             ints.Set(keys.HexQKey, hexQ);
+            RequireIntCapacity(host, ref ints, keys.HexRKey);
             ints.Set(keys.HexRKey, hexR);
-            entities.Remove(keys.TargetEntityKey);
-            spatial.ClearPoints(keys.TargetPositionKey);
+            RequireSpatialCapacity(host, ref spatial, keys.TargetPositionKey);
             spatial.SetPoint(keys.TargetPositionKey, worldPositionCm);
         }
 
@@ -225,25 +207,108 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             Entity targetEntity,
             in BlackboardStoredTargetKeys keys)
         {
-            OrderBlackboardStateInstaller.RequireInstalled(world, host);
-            SetEntityPrepared(world, host, targetEntity, in keys);
+            if (targetEntity == Entity.Null || !world.IsAlive(targetEntity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.STORED_TARGET.ERR.InvalidTargetEntity: host={host.Id}, target={targetEntity.Id}.");
+            }
+
+            PrepareBuffers(world, host, in keys, out BlackboardIntBuffer ints, out BlackboardSpatialBuffer spatial, out BlackboardEntityBuffer entities);
+            ClearPrepared(ref ints, ref spatial, ref entities, in keys);
+            SetEntityPrepared(host, ref ints, ref spatial, ref entities, targetEntity, in keys);
+            CommitPrepared(world, host, in ints, in spatial, in entities);
         }
 
         private static void SetEntityPrepared(
-            World world,
             Entity host,
+            ref BlackboardIntBuffer ints,
+            ref BlackboardSpatialBuffer spatial,
+            ref BlackboardEntityBuffer entities,
             Entity targetEntity,
             in BlackboardStoredTargetKeys keys)
         {
-            ref var ints = ref world.Get<BlackboardIntBuffer>(host);
-            ref var spatial = ref world.Get<BlackboardSpatialBuffer>(host);
-            ref var entities = ref world.Get<BlackboardEntityBuffer>(host);
-
+            RequireIntCapacity(host, ref ints, keys.TargetKindKey);
+            RequireEntityCapacity(host, ref entities, keys.TargetEntityKey);
             ints.Set(keys.TargetKindKey, (int)BlackboardStoredTargetKind.Entity);
+            entities.Set(keys.TargetEntityKey, targetEntity);
+        }
+
+        private static void PrepareBuffers(
+            World world,
+            Entity host,
+            in BlackboardStoredTargetKeys keys,
+            out BlackboardIntBuffer ints,
+            out BlackboardSpatialBuffer spatial,
+            out BlackboardEntityBuffer entities)
+        {
+            if (!world.IsAlive(host))
+            {
+                throw new InvalidOperationException($"GAS.STORED_TARGET.ERR.InvalidHost: host={host.Id}.");
+            }
+            if (!keys.IsConfigured)
+            {
+                throw new InvalidOperationException($"GAS.STORED_TARGET.ERR.KeysNotConfigured: host={host.Id}.");
+            }
+
+            OrderBlackboardStateInstaller.RequireInstalled(world, host);
+            ints = world.Get<BlackboardIntBuffer>(host);
+            spatial = world.Get<BlackboardSpatialBuffer>(host);
+            entities = world.Get<BlackboardEntityBuffer>(host);
+        }
+
+        private static void ClearPrepared(
+            ref BlackboardIntBuffer ints,
+            ref BlackboardSpatialBuffer spatial,
+            ref BlackboardEntityBuffer entities,
+            in BlackboardStoredTargetKeys keys)
+        {
+            ints.Remove(keys.TargetKindKey);
             ints.Remove(keys.HexQKey);
             ints.Remove(keys.HexRKey);
-            entities.Set(keys.TargetEntityKey, targetEntity);
-            spatial.ClearPoints(keys.TargetPositionKey);
+            spatial.RemoveEntry(keys.TargetPositionKey);
+            entities.Remove(keys.TargetEntityKey);
+        }
+
+        private static void CommitPrepared(
+            World world,
+            Entity host,
+            in BlackboardIntBuffer ints,
+            in BlackboardSpatialBuffer spatial,
+            in BlackboardEntityBuffer entities)
+        {
+            world.Get<BlackboardIntBuffer>(host) = ints;
+            world.Get<BlackboardSpatialBuffer>(host) = spatial;
+            world.Get<BlackboardEntityBuffer>(host) = entities;
+        }
+
+        private static void RequireIntCapacity(Entity host, ref BlackboardIntBuffer buffer, int key)
+        {
+            if (!buffer.TryGet(key, out _) && buffer.Count >= GasConstants.MAX_BLACKBOARD_ENTRIES)
+            {
+                ThrowCapacityExceeded(host, nameof(BlackboardIntBuffer), key);
+            }
+        }
+
+        private static void RequireSpatialCapacity(Entity host, ref BlackboardSpatialBuffer buffer, int key)
+        {
+            if (!buffer.HasKey(key) && buffer.EntryCount >= BlackboardSpatialBuffer.MAX_ENTRIES)
+            {
+                ThrowCapacityExceeded(host, nameof(BlackboardSpatialBuffer), key);
+            }
+        }
+
+        private static void RequireEntityCapacity(Entity host, ref BlackboardEntityBuffer buffer, int key)
+        {
+            if (!buffer.HasKey(key) && buffer.Count >= BlackboardEntityBuffer.MAX_ENTRIES)
+            {
+                ThrowCapacityExceeded(host, nameof(BlackboardEntityBuffer), key);
+            }
+        }
+
+        private static void ThrowCapacityExceeded(Entity host, string buffer, int key)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: host={host.Id}, buffer={buffer}, key={key}.");
         }
 
         public static bool TryResolveWorldPositionCm(
