@@ -498,7 +498,9 @@ The owner releases the slot on intake rejection, queue expiration/removal, pendi
 - [x] No long-path ECS component is added or removed in the hot path
 - [x] Every path ownership exit has an explicit release or hard failure
 
-### 8. Verification
+### 8. Historical verification snapshot
+
+The figures below belong to the earlier #644-#680 delivery snapshot. They are retained as historical evidence and must not be used as the acceptance result for the current PR HEAD.
 
 - #680 focused acceptance, including direct payload lifecycle tests: 41 / 41
 - GAS architecture workflow guard: 45 / 45
@@ -507,7 +509,7 @@ The owner releases the slot on intake rejection, queue expiration/removal, pendi
 - Web UI Panel Kit tests: PASS
 - Maintained `src/Tests` project graphs: all build successfully
 - Production Mod smoke: 34 / 35; the only failure is the existing CameraAcceptance unbound local-player fixture
-- Full GasTests baseline remains red as documented by the workflow: 1729 passed, 82 existing failures, 1 skipped
+- Full GasTests at that snapshot: 1729 passed, 82 failures, 1 skipped
 - Full ArchitectureTests after the two Order fixture corrections: 136 passed, 2 unrelated repository-wide legacy-token scan failures
 - `git diff --check`: PASS
 
