@@ -84,6 +84,8 @@ namespace Ludots.Core.Config
         public int OrderAdmissionRejectionCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
         public int DeferredTriggerActiveEntityCapacity { get; set; }
+        public int ProjectileCollisionCandidateCapacity { get; set; }
+        public int ProjectileRuntimeEntityCapacity { get; set; }
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
 
@@ -135,6 +137,18 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
+            }
+
+            if (ProjectileCollisionCandidateCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.projectileCollisionCandidateCapacity must be positive.");
+            }
+
+            if (ProjectileRuntimeEntityCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.projectileRuntimeEntityCapacity must be positive.");
             }
 
             ValidateFiniteWorkBudget(

@@ -889,9 +889,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 relativePath);
 
             RejectOptionalFalse(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource");
-            if (cfg.MaxHitCount is < 0)
+            if (!cfg.MaxHitCount.HasValue ||
+                cfg.MaxHitCount.Value <= 0 ||
+                cfg.MaxHitCount.Value > ProjectileState.HitHistoryCapacity)
             {
-                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.maxHitCount must be non-negative.");
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.maxHitCount must be within " +
+                    $"1..{ProjectileState.HitHistoryCapacity}.");
             }
 
             return new ProjectileDescriptor
@@ -907,7 +911,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 CollisionHalfWidthCm = collisionHalfWidth,
                 CollisionRelationFilter = collisionRelationFilter,
                 CollisionExcludeSource = cfg.CollisionExcludeSource ?? false,
-                MaxHitCount = cfg.MaxHitCount ?? 0
+                MaxHitCount = cfg.MaxHitCount.Value
             };
         }
 

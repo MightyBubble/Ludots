@@ -83,6 +83,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveProjectileCollisionCandidateCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.ProjectileCollisionCandidateCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("projectileCollisionCandidateCapacity"));
+        }
+
+        [Test]
+        public void GasRuntimeCapacity_RequiresPositiveProjectileRuntimeEntityCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.ProjectileRuntimeEntityCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("projectileRuntimeEntityCapacity"));
+        }
+
+        [Test]
         public void AbilityExec_AdvancesMoreThanTwoThousandEntitiesAcrossSlices()
         {
             using var world = World.Create();
@@ -695,6 +715,8 @@ namespace Ludots.Tests.GAS
                 OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,
                 DeferredTriggerActiveEntityCapacity = 64,
+                ProjectileCollisionCandidateCapacity = 64,
+                ProjectileRuntimeEntityCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
             };

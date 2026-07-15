@@ -13,6 +13,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
+using Ludots.Tests.GAS.Production;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GasTests
@@ -264,6 +265,16 @@ namespace Ludots.Tests.GasTests
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);
             Assert.That(dirtyEntities.Capacity, Is.EqualTo(16_384));
+            ProjectileRuntimeSystem projectiles =
+                CapabilityStandardShowcaseTestHarness.FindSystem<ProjectileRuntimeSystem>(
+                    engine,
+                    SystemGroup.EffectProcessing);
+            Assert.That(
+                projectiles.CollisionCandidateCapacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.ProjectileCollisionCandidateCapacity));
+            Assert.That(
+                projectiles.RuntimeEntityCapacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.ProjectileRuntimeEntityCapacity));
         }
 
         [Test]

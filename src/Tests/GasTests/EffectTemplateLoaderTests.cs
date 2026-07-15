@@ -294,6 +294,52 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        [TestCase(0)]
+        [TestCase(ProjectileState.HitHistoryCapacity + 1)]
+        public void Load_ProjectileMaxHitCountOutsideFixedHistory_IsRejected(int invalidMaxHitCount)
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    $$"""
+                    [
+                      {
+                        "id": "Effect_Projectile",
+                        "tags": ["Event.Projectile"],
+                        "presetType": "LaunchProjectile",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "projectile": {
+                          "speed": 1000,
+                          "range": 1200,
+                          "arcHeight": 0,
+                          "hitEffect": "Effect_Projectile",
+                          "travelMode": "Direction",
+                          "impactPolicy": "ContinueOnHit",
+                          "collisionHalfWidth": 24,
+                          "collisionRelationFilter": "All",
+                          "collisionExcludeSource": true,
+                          "maxHitCount": {{invalidMaxHitCount}}
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
+                That(ex.Message, Does.Contain("projectile.maxHitCount"));
+                That(ex.Message, Does.Contain($"1..{ProjectileState.HitHistoryCapacity}"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
         [Test]
         public void Load_LegacyProjectileMode_IsRejectedWithMigrationGuidance()
         {

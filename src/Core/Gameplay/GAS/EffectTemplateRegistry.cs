@@ -185,7 +185,7 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipFilter CollisionRelationFilter;
         /// <summary>Whether to ignore the source entity in collision hits.</summary>
         public bool CollisionExcludeSource;
-        /// <summary>Maximum number of distinct collision hits before despawn. 0 = unlimited.</summary>
+        /// <summary>Maximum number of distinct collision hits before despawn. Must fit ProjectileState.HitHistoryCapacity.</summary>
         public int MaxHitCount;
     }
 

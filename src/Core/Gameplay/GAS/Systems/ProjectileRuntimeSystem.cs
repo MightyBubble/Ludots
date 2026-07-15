@@ -16,17 +16,52 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public sealed class ProjectileRuntimeSystem : BaseSystem<World, float>
     {
+        public const string CollisionCandidateCapacityExceededError =
+            "GAS.PROJECTILE.ERR.CollisionCandidateCapacityExceeded";
+        public const string RuntimeEntityCapacityExceededError =
+            "GAS.PROJECTILE.ERR.RuntimeEntityCapacityExceeded";
+        public const string InvalidMaxHitCountError =
+            "GAS.PROJECTILE.ERR.InvalidMaxHitCount";
+
         private static readonly QueryDescription Query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
         private readonly EffectRequestQueue _effectRequests;
         private readonly ISpatialQueryService _spatialQueries;
-        private readonly List<Entity> _toDestroy = new();
-        private readonly HashSet<Entity> _toDestroySet = new();
+        private readonly Entity[] _collisionCandidates;
+        private readonly Entity[] _toDestroy;
+        private readonly HashSet<Entity> _toDestroySet;
+        private int _toDestroyCount;
         private readonly CommandBuffer _commandBuffer = new();
 
-        public ProjectileRuntimeSystem(World world, EffectRequestQueue effectRequests, ISpatialQueryService spatialQueries) : base(world)
+        public int CollisionCandidateCapacity => _collisionCandidates.Length;
+        public int RuntimeEntityCapacity => _toDestroy.Length;
+
+        public ProjectileRuntimeSystem(
+            World world,
+            EffectRequestQueue effectRequests,
+            ISpatialQueryService spatialQueries,
+            int collisionCandidateCapacity,
+            int runtimeEntityCapacity) : base(world)
         {
+            if (collisionCandidateCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(collisionCandidateCapacity),
+                    collisionCandidateCapacity,
+                    "capacity must be positive.");
+            }
+            if (runtimeEntityCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(runtimeEntityCapacity),
+                    runtimeEntityCapacity,
+                    "capacity must be positive.");
+            }
+
             _effectRequests = effectRequests;
             _spatialQueries = spatialQueries;
+            _collisionCandidates = new Entity[collisionCandidateCapacity];
+            _toDestroy = new Entity[runtimeEntityCapacity];
+            _toDestroySet = new HashSet<Entity>(runtimeEntityCapacity);
         }
 
         public override void Update(in float dt)
@@ -36,7 +71,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            _toDestroy.Clear();
+            _toDestroyCount = 0;
             _toDestroySet.Clear();
             Fix64 deltaTime = Fix64.FromFloat(dt);
 
@@ -52,7 +87,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            for (int i = 0; i < _toDestroy.Count; i++)
+            for (int i = 0; i < _toDestroyCount; i++)
             {
                 if (World.IsAlive(_toDestroy[i]))
                 {
@@ -83,6 +118,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void UpdateProjectile(Entity entity, ref ProjectileState projectile, ref WorldPositionCm position, Fix64 deltaTime)
         {
+            if (projectile.HitEffectTemplateId > 0 &&
+                projectile.CollisionHalfWidthCm > 0 &&
+                (projectile.MaxHitCount <= 0 || projectile.MaxHitCount > ProjectileState.HitHistoryCapacity))
+            {
+                throw new InvalidOperationException(
+                    $"{InvalidMaxHitCountError}: value={projectile.MaxHitCount}, supported=1..{ProjectileState.HitHistoryCapacity}.");
+            }
+
             if (!World.IsAlive(projectile.Source))
             {
                 QueueDestroy(entity);
@@ -191,20 +234,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             int directionDeg = ComputeDirectionDeg(delta);
-            Span<Entity> rawHits = stackalloc Entity[128];
-            int hitCount = _spatialQueries.QueryLine(
+            Span<Entity> rawHits = _collisionCandidates;
+            SpatialQueryResult queryResult = _spatialQueries.QueryLine(
                 current.ToWorldCmInt2(),
                 directionDeg,
                 lengthCm,
                 projectile.CollisionHalfWidthCm,
-                rawHits).Count;
+                rawHits);
+            if (queryResult.Dropped > 0)
+            {
+                throw new InvalidOperationException(
+                    $"{CollisionCandidateCapacityExceededError}: capacity={rawHits.Length}, dropped={queryResult.Dropped}.");
+            }
+
+            int hitCount = queryResult.Count;
             if (hitCount <= 0)
             {
                 return false;
             }
 
-            Span<Entity> orderedHits = stackalloc Entity[32];
-            Span<int> projections = stackalloc int[32];
+            Span<Entity> orderedHits = stackalloc Entity[ProjectileState.HitHistoryCapacity];
+            Span<int> projections = stackalloc int[ProjectileState.HitHistoryCapacity];
             int orderedCount = 0;
             int sourceTeamId = TryGetTeamId(projectile.Source);
 
@@ -228,22 +278,31 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                if (orderedCount >= orderedHits.Length)
+                int insertAt = 0;
+                while (insertAt < orderedCount &&
+                       !ComesBefore(projection, candidate, projections[insertAt], orderedHits[insertAt]))
                 {
-                    break;
+                    insertAt++;
                 }
 
-                int insertAt = orderedCount;
-                while (insertAt > 0 && projection < projections[insertAt - 1])
+                if (insertAt >= orderedHits.Length)
                 {
-                    projections[insertAt] = projections[insertAt - 1];
-                    orderedHits[insertAt] = orderedHits[insertAt - 1];
-                    insertAt--;
+                    continue;
+                }
+
+                int lastIndex = Math.Min(orderedCount, orderedHits.Length - 1);
+                for (int move = lastIndex; move > insertAt; move--)
+                {
+                    projections[move] = projections[move - 1];
+                    orderedHits[move] = orderedHits[move - 1];
                 }
 
                 projections[insertAt] = projection;
                 orderedHits[insertAt] = candidate;
-                orderedCount++;
+                if (orderedCount < orderedHits.Length)
+                {
+                    orderedCount++;
+                }
             }
 
             if (orderedCount == 0)
@@ -286,10 +345,36 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void QueueDestroy(Entity entity)
         {
-            if (_toDestroySet.Add(entity))
+            if (_toDestroySet.Contains(entity))
             {
-                _toDestroy.Add(entity);
+                return;
             }
+
+            if (_toDestroyCount >= _toDestroy.Length)
+            {
+                throw new InvalidOperationException(
+                    $"{RuntimeEntityCapacityExceededError}: capacity={_toDestroy.Length}.");
+            }
+
+            _toDestroySet.Add(entity);
+            _toDestroy[_toDestroyCount++] = entity;
+        }
+
+        private static bool ComesBefore(int projection, Entity candidate, int otherProjection, Entity other)
+        {
+            if (projection != otherProjection)
+            {
+                return projection < otherProjection;
+            }
+            if (candidate.WorldId != other.WorldId)
+            {
+                return candidate.WorldId < other.WorldId;
+            }
+            if (candidate.Id != other.Id)
+            {
+                return candidate.Id < other.Id;
+            }
+            return candidate.Version < other.Version;
         }
 
         private bool IsValidCollisionTarget(Entity projectileEntity, in ProjectileState projectile, Entity candidate, int sourceTeamId)

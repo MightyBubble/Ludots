@@ -702,7 +702,8 @@ namespace Ludots.Tests.GAS
                 new WorldPositionCm { Value = launchOrigin },
                 new PreviousWorldPositionCm { Value = launchOrigin });
 
-            using var system = new ProjectileRuntimeSystem(world, requests, spatialQueries: null);
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, spatialQueries: null, collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
             system.Update(0.2f);
 
             That(world.IsAlive(projectile), Is.False, "Projectile should despawn after reaching the preserved target point.");
@@ -762,7 +763,9 @@ namespace Ludots.Tests.GAS
                     WorldPositionCm.FromCm(0, 0),
                     new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
 
-                using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
+                using var system = new ProjectileRuntimeSystem(
+                    world, requests, new TestLineQueryService(hostile, bystander),
+                    collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
                 system.Update(0.3f);
 
                 That(world.IsAlive(projectile), Is.False);
@@ -774,6 +777,121 @@ namespace Ludots.Tests.GAS
             {
                 TeamManager.Clear();
             }
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_MoreThanThirtyTwoCandidates_HitsNearestAlongSegment()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var hits = new Entity[33];
+            for (int i = 0; i < 32; i++)
+            {
+                hits[i] = world.Create(WorldPositionCm.FromCm(100 + (i * 10), 0));
+            }
+            Entity nearest = world.Create(WorldPositionCm.FromCm(50, 0));
+            hits[32] = nearest;
+
+            Entity projectile = world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(hits),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+            system.Update(1f);
+
+            Assert.That(world.IsAlive(projectile), Is.False);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests[0].Target, Is.EqualTo(nearest));
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_QueryOverflow_FailsExplicitlyBeforePublishingPartialHit()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(100, 0));
+            world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(dropped: 1, target),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
+            Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.CollisionCandidateCapacityExceeded"));
+            Assert.That(requests.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_UnrepresentableMaxHitCount_FailsBeforePublishingPartialHit()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var hits = new Entity[ProjectileState.HitHistoryCapacity + 1];
+            for (int i = 0; i < hits.Length; i++)
+            {
+                hits[i] = world.Create(WorldPositionCm.FromCm(100 + (i * 10), 0));
+            }
+
+            world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.ContinueOnHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = ProjectileState.HitHistoryCapacity + 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(hits),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
+            Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.InvalidMaxHitCount"));
+            Assert.That(requests.Count, Is.Zero);
         }
 
         [Test]
@@ -1882,10 +2000,17 @@ namespace Ludots.Tests.GAS
         private sealed class TestLineQueryService : ISpatialQueryService
         {
             private readonly Entity[] _hits;
+            private readonly int _dropped;
 
             public TestLineQueryService(params Entity[] hits)
             {
                 _hits = hits;
+            }
+
+            public TestLineQueryService(int dropped, params Entity[] hits)
+            {
+                _hits = hits;
+                _dropped = dropped;
             }
 
             public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer) => default;
@@ -1903,7 +2028,7 @@ namespace Ludots.Tests.GAS
                     buffer[i] = _hits[i];
                 }
 
-                return new SpatialQueryResult(count, 0);
+                return new SpatialQueryResult(count, _dropped);
             }
         }
 
