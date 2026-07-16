@@ -634,6 +634,10 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 throw new InvalidOperationException("SubmitOrderFromBlackboard requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
             }
+            if (runtime.OrderIntake == null)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires the formal OrderQueue intake in BuiltinHandlerExecutionContext.");
+            }
 
             if (runtime.StepRateHz <= 0)
             {
@@ -652,14 +656,12 @@ namespace Ludots.Core.Gameplay.GAS
                     $"SubmitOrderFromBlackboard requires OrderBuffer on order actor entity {orderActor.Id}.");
             }
 
-            OrderSubmitter.Submit(
-                world,
-                orderActor,
-                in order,
-                runtime.OrderTypeRegistry,
-                runtime.OrderRuleRegistry,
-                runtime.CurrentStep,
-                runtime.StepRateHz);
+            OrderSubmitResult result = runtime.OrderIntake.SubmitAssigned(ref order);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                throw new InvalidOperationException(
+                    $"SubmitOrderFromBlackboard intake rejected order {order.OrderId} with result '{result}'.");
+            }
         }
 
         private static Order BuildOrderFromStoredTarget(

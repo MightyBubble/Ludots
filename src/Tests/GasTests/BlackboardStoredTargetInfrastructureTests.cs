@@ -495,9 +495,13 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(
@@ -513,6 +517,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -548,10 +553,39 @@ namespace Ludots.Tests.GAS
                 in template,
                 runtime);
 
+            Assert.That(orderQueue.TryPeek(out Order queuedOrder), Is.True);
+            Assert.That(queuedOrder.OrderId, Is.GreaterThan(0));
+            Assert.That(admissionResults.TryGet(
+                queuedOrder.OrderId,
+                OrderAdmissionStage.GlobalIntake,
+                out OrderAdmissionOutcome globalOutcome), Is.True);
+            Assert.That(globalOutcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
+
+            var orderSystem = new OrderBufferSystem(
+                world,
+                new Ludots.Core.Engine.DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                orderQueue,
+                stepRateHz: 30,
+                admissionResults: admissionResults);
+            orderSystem.Update(0f);
+
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
             Assert.That(buffer.HasActive, Is.True);
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(101));
             Assert.That(buffer.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(900f).Within(0.01f));
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.GreaterThan(0));
+            Assert.That(admissionResults.TryGet(
+                buffer.ActiveOrder.Order.OrderId,
+                OrderAdmissionStage.EntityIntake,
+                out OrderAdmissionOutcome entityOutcome), Is.True);
+            Assert.That(entityOutcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, spawned, orderTypes), Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(1));
+            Assert.That(terminalResults[0].OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -594,8 +628,12 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(
@@ -612,6 +650,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -647,11 +686,30 @@ namespace Ludots.Tests.GAS
                 in template,
                 runtime);
 
+            Assert.That(orderQueue.TryPeek(out Order queuedOrder), Is.True);
+            Assert.That(queuedOrder.OrderId, Is.GreaterThan(0));
+
+            var orderSystem = new OrderBufferSystem(
+                world,
+                new Ludots.Core.Engine.DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                orderQueue,
+                stepRateHz: 30,
+                admissionResults: admissionResults);
+            orderSystem.Update(0f);
+
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
             Assert.That(buffer.HasActive, Is.True);
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(100));
             Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(garrison));
             Assert.That(buffer.ActiveOrder.Order.Args.I0, Is.EqualTo(1));
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(queuedOrder.OrderId));
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, spawned, orderTypes), Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(1));
+            Assert.That(terminalResults[0].OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -672,8 +730,11 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 8));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(OrderBuffer.CreateEmpty());
@@ -684,6 +745,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -706,14 +768,15 @@ namespace Ludots.Tests.GAS
             var context = new EffectContext { Source = source, Target = spawned };
             var mergedParams = new EffectConfigParams();
 
-            Assert.Throws<InvalidOperationException>(() => registry.Invoke(
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => registry.Invoke(
                 BuiltinHandlerId.SubmitOrderFromBlackboard,
                 world,
                 Entity.Null,
                 ref context,
                 in mergedParams,
                 in template,
-                runtime));
+                runtime))!;
+            Assert.That(error.Message, Does.Contain(nameof(PlayerOwner)));
         }
     }
 
