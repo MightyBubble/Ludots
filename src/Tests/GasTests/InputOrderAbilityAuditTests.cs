@@ -195,11 +195,65 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderTypeRegistry_GetUnknownType_Throws()
         {
-            var registry = new OrderTypeRegistry();
+            var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
 
             var ex = Throws<KeyNotFoundException>(() => registry.Get(999));
 
             That(ex!.Message, Does.Contain("999"));
+        }
+
+        [Test]
+        public void OrderQueue_RequiresExplicitAdmissionResultBuffer()
+        {
+            var constructor = typeof(OrderQueue).GetConstructor(new[]
+            {
+                typeof(int),
+                typeof(OrderAdmissionResultBuffer),
+            });
+
+            That(constructor, Is.Not.Null);
+            That(constructor!.GetParameters()[1].IsOptional, Is.False);
+        }
+
+        [Test]
+        public void OrderBufferSystem_RequiresExplicitAdmissionResultBuffer()
+        {
+            var constructor = typeof(OrderBufferSystem).GetConstructors()[0];
+            var parameters = constructor.GetParameters();
+            int dependencyIndex = Array.FindIndex(
+                parameters,
+                parameter => parameter.ParameterType == typeof(OrderAdmissionResultBuffer));
+
+            That(dependencyIndex, Is.GreaterThanOrEqualTo(0));
+            That(parameters[dependencyIndex].IsOptional, Is.False);
+        }
+
+        [Test]
+        public void OrderTypeRegistry_RequiresExplicitTerminalResultBuffer()
+        {
+            That(typeof(OrderTypeRegistry).GetConstructor(Type.EmptyTypes), Is.Null);
+            That(typeof(OrderTypeRegistry).GetConstructor(new[] { typeof(OrderTerminalResultBuffer) }), Is.Not.Null);
+        }
+
+        [Test]
+        public void OrderBufferSystem_RejectsAdmissionResultBufferDifferentFromIncomingQueue()
+        {
+            using var world = World.Create();
+            var queueResults = new OrderAdmissionResultBuffer(4, 4);
+            var systemResults = new OrderAdmissionResultBuffer(4, 4);
+            var incoming = new OrderQueue(4, queueResults);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(4));
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                new OrderBufferSystem(
+                    world,
+                    new DiscreteClock(),
+                    orderTypes,
+                    new OrderRuleRegistry(),
+                    systemResults,
+                    incoming))!;
+
+            That(error.Message, Does.Contain("AdmissionResultBufferMismatch"));
         }
 
         [Test]
@@ -352,7 +406,7 @@ namespace Ludots.Tests.GAS
             var results = new OrderAdmissionResultBuffer(1, 1);
             results.BeginLogicStep();
             var incoming = new OrderQueue(64, results);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             var order = new Order
@@ -367,8 +421,8 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
-                incoming,
-                admissionResults: results);
+                results,
+                incoming);
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => intake.Update(0f))!;
 
@@ -418,7 +472,7 @@ namespace Ludots.Tests.GAS
                 OrderAdmissionStage.EntityIntake,
                 OrderSubmitResult.Activated);
             That(results.TryWrite(in occupied), Is.True);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             var intake = new OrderBufferSystem(
@@ -426,7 +480,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
-                admissionResults: results);
+                results);
             var order = new Order
             {
                 OrderId = 2,
@@ -459,7 +513,7 @@ namespace Ludots.Tests.GAS
             const int spatialKey = 3;
             var results = new OrderAdmissionResultBuffer(8, 8);
             results.BeginLogicStep();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = orderTypeId,
@@ -503,7 +557,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
-                admissionResults: results);
+                results);
 
             OrderSubmitResult result = system.SubmitOrder(actor, in newOrder);
 
@@ -543,7 +597,7 @@ namespace Ludots.Tests.GAS
                 EntityBlackboardKey = missingComponent == 1 ? 4 : -1,
                 IntArg0BlackboardKey = missingComponent == 2 ? 5 : -1,
             };
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(config);
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             ref OrderBuffer orders = ref world.Get<OrderBuffer>(actor);
@@ -572,7 +626,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
-                admissionResults: results);
+                results);
 
             OrderSubmitResult result = system.SubmitOrder(actor, in newOrder);
 
@@ -595,7 +649,7 @@ namespace Ludots.Tests.GAS
             const int replacementSpatialKey = BlackboardSpatialBuffer.MAX_ENTRIES;
             var results = new OrderAdmissionResultBuffer(4, 4);
             results.BeginLogicStep();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = activeOrderTypeId,
@@ -647,7 +701,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 orderRules,
-                admissionResults: results);
+                results);
 
             OrderSubmitResult result = system.SubmitOrder(actor, in replacementOrder);
 
@@ -672,7 +726,7 @@ namespace Ludots.Tests.GAS
             var end = new OrderAdmissionGenerationEndSystem(results);
             var incoming = new OrderQueue(64, results);
             var clock = new DiscreteClock();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             var intake = new OrderBufferSystem(
@@ -680,8 +734,8 @@ namespace Ludots.Tests.GAS
                 clock,
                 orderTypes,
                 new OrderRuleRegistry(),
-                incoming,
-                admissionResults: results);
+                results,
+                incoming);
 
             float dt = 0f;
             reset.Update(in dt);
@@ -719,7 +773,7 @@ namespace Ludots.Tests.GAS
             var end = new OrderAdmissionGenerationEndSystem(results);
             var incoming = new OrderQueue(64, results);
             var clock = new DiscreteClock();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
             Entity actor = world.Create(
                 OrderBuffer.CreateEmpty(),
@@ -731,8 +785,8 @@ namespace Ludots.Tests.GAS
                 clock,
                 orderTypes,
                 new OrderRuleRegistry(),
-                incoming,
-                admissionResults: results);
+                results,
+                incoming);
             float dt = 0f;
 
             reset.Update(in dt);
@@ -762,7 +816,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var results = new OrderAdmissionResultBuffer(4, 4);
             results.BeginLogicStep();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
             Entity actor = world.Create(
                 OrderBuffer.CreateEmpty(),
@@ -774,7 +828,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
-                admissionResults: results);
+                results);
             intake.Update(0f);
             var order = new Order
             {
@@ -798,8 +852,8 @@ namespace Ludots.Tests.GAS
         [Test]
         public void PlanExecutor_UnregisteredOrderTypeId_Throws()
         {
-            var queue = new OrderQueue(64);
-            var orderTypes = new OrderTypeRegistry();
+            var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
@@ -1131,7 +1185,7 @@ namespace Ludots.Tests.GAS
                 new BlackboardEntityBuffer());
             var target = world.Create();
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 10,
@@ -1144,7 +1198,9 @@ namespace Ludots.Tests.GAS
 
             var orderRules = new OrderRuleRegistry();
             var clock = new DiscreteClock();
-            var system = new OrderBufferSystem(world, clock, orderTypes, orderRules);
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var system = new OrderBufferSystem(world, clock, orderTypes, orderRules, admissionResults);
 
             var order = new Order
             {
@@ -1181,7 +1237,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create(OrderBuffer.CreateEmpty(), new GameplayTagContainer());
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 11,
@@ -1248,7 +1304,7 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry(),
+                orderTypeRegistry: new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)),
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             system.MaxWorkUnitsPerSlice = 1;
 
@@ -1310,7 +1366,7 @@ namespace Ludots.Tests.GAS
             var def = new AbilityDefinition { ExecSpec = spec };
             defs.Register(abilityId, in def);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -1383,7 +1439,7 @@ namespace Ludots.Tests.GAS
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
-                orderTypeRegistry: new OrderTypeRegistry(),
+                orderTypeRegistry: new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)),
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
             system.MaxWorkUnitsPerSlice = 1;
 
@@ -1426,7 +1482,7 @@ namespace Ludots.Tests.GAS
 
             var definitions = new AbilityDefinitionRegistry();
             definitions.Register(abilityId, new AbilityDefinition());
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -1545,7 +1601,7 @@ namespace Ludots.Tests.GAS
             };
             defs.Register(abilityId, in def);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -1623,7 +1679,7 @@ namespace Ludots.Tests.GAS
                     DeactivateExecSpec = deactivateSpec,
                 }
             });
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -1700,7 +1756,7 @@ namespace Ludots.Tests.GAS
                 ActivationBlockTags = blockTags,
             });
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -1786,7 +1842,7 @@ namespace Ludots.Tests.GAS
                 }
             });
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
@@ -2047,7 +2103,7 @@ namespace Ludots.Tests.GAS
             var stopOrder = new Order { OrderId = 1, Actor = actor, OrderTypeId = 103 };
             buffer.SetActiveDirect(in stopOrder, priority: 200);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { OrderTypeId = 103, AllowQueuedMode = false, ClearQueueOnActivate = true });
 
             var system = new StopOrderSystem(world, orderTypes, 103);
@@ -2070,7 +2126,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2119,7 +2175,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2163,7 +2219,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2206,7 +2262,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2247,7 +2303,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2300,7 +2356,7 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(0, 0),
                 OrderBuffer.CreateEmpty());
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2345,7 +2401,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 0f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = 101,
@@ -2387,7 +2443,7 @@ namespace Ludots.Tests.GAS
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             attributes.SetBase(moveSpeedId, 300f);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "moveTo",

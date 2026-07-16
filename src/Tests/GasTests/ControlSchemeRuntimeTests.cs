@@ -448,7 +448,7 @@ namespace Ludots.Tests.GAS
                     harness.Handler = new PlayerInputHandler(harness.Backend, BuildInputConfig());
                 }
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
                 var dispatch = new CastDispatchProfileRegistry(
                     new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),

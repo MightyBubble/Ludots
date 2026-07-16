@@ -133,7 +133,10 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue(64);
+            var admissionResults = new Ludots.Core.Gameplay.GAS.Orders.OrderAdmissionResultBuffer(2, 2);
+            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue(
+                64,
+                admissionResults);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -159,11 +162,14 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 64; i++)
             {
+                admissionResults.BeginLogicStep();
                 chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
 
             GC.Collect();
@@ -174,11 +180,14 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
+                admissionResults.BeginLogicStep();
                 chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
             long after = GC.GetAllocatedBytesForCurrentThread();
 

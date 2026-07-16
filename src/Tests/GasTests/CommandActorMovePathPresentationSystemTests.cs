@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -293,7 +293,7 @@ namespace Ludots.Tests.GAS
 
             private static OrderTypeRegistry CreateOrderTypeRegistry()
             {
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = MoveToOrderKey,

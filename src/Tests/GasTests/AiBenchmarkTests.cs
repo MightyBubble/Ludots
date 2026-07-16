@@ -22,7 +22,8 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(capacity: 20000);
+            var admissionResults = new OrderAdmissionResultBuffer(10000, 10000);
+            var orders = new OrderQueue(capacity: 20000, admissionResults);
 
             var selector = UtilityGoalSelectorCompiled256.Compile(new[]
             {
@@ -82,9 +83,12 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 10; i++)
             {
+                admissionResults.BeginLogicStep();
                 goalSys.Update(1f / 60f);
                 goapSys.Update(1f / 60f);
                 execSys.Update(1f / 60f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
                 clock.Advance(ClockDomainId.Step, 1);
                 orders.Clear();
             }
@@ -100,9 +104,12 @@ namespace Ludots.Tests.GAS
             const int iterations = 120;
             for (int i = 0; i < iterations; i++)
             {
+                admissionResults.BeginLogicStep();
                 goalSys.Update(1f / 60f);
                 goapSys.Update(1f / 60f);
                 execSys.Update(1f / 60f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
                 clock.Advance(ClockDomainId.Step, 1);
                 orders.Clear();
             }
@@ -126,7 +133,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(capacity: 128);
+            var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -160,4 +167,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

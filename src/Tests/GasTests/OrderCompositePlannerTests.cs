@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_ImmediateOutOfRangeCast_EnqueuesMoveAndContinuation()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue(64);
+            var orderQueue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_QueuedCast_UsesProjectedMoveEndpoint()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue(64);
+            var orderQueue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         public void CompositeOrderPlanner_AutoTargetAbility_BypassesMoveThenCastPlanning()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue(64);
+            var orderQueue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
@@ -144,7 +144,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             clock.Advance(ClockDomainId.Step, 12);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = CastAbilityOrderTypeId,
@@ -346,7 +346,7 @@ namespace Ludots.Tests.GAS
         public void FinalizeCurrent_Failed_RemovesContinuationAndOnlyFinalizesOnce()
         {
             using var world = World.Create();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = CastAbilityOrderTypeId,
@@ -453,7 +453,7 @@ namespace Ludots.Tests.GAS
         public void Submit_InterruptsActiveOrder_PublishesCancelledInterruptedOutcome()
         {
             using var world = World.Create();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = CastAbilityOrderTypeId,
@@ -671,7 +671,7 @@ namespace Ludots.Tests.GAS
 
         private static OrderTypeRegistry CreateCastOrderTypes()
         {
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = CastAbilityOrderTypeId,

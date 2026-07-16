@@ -1133,7 +1133,7 @@ namespace Ludots.Tests.GAS
 
         private static OrderTypeRegistry CreateOrderTypes()
         {
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 });
             return orderTypes;

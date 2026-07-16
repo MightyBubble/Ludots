@@ -283,7 +283,7 @@ namespace Ludots.Tests.Architecture
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
@@ -338,7 +338,7 @@ namespace Ludots.Tests.Architecture
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -586,7 +586,7 @@ namespace Ludots.Tests.Architecture
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -673,7 +673,7 @@ namespace Ludots.Tests.Architecture
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
@@ -906,7 +906,7 @@ namespace Ludots.Tests.Architecture
                 vfs.Mount("Core", core);
                 var pipeline = new ConfigPipeline(vfs, modLoader: null!);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 var orderRules = new OrderRuleRegistry();
 
                 new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
@@ -1284,7 +1284,7 @@ namespace Ludots.Tests.Architecture
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             return Assert.Throws<InvalidOperationException>(

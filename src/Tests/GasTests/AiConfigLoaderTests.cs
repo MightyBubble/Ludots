@@ -310,7 +310,7 @@ namespace Ludots.Tests.GAS
                 modLoader.LoadedModIds.Add("ModA");
                 var pipeline = new ConfigPipeline(vfs, modLoader);
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "attackTarget",

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -275,7 +275,7 @@ public sealed class CombatStanceBehaviorTests
         {
             var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var events = new GameplayEventBus();
             var orderTypes = CreateOrderTypes();
             TagRegistry.Clear();
@@ -387,7 +387,7 @@ public sealed class CombatStanceBehaviorTests
 
         private static OrderTypeRegistry CreateOrderTypes()
         {
-            var registry = new OrderTypeRegistry();
+            var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             Register(registry, StanceOrderKeys.MoveTo, 101, 60);
             Register(registry, StanceOrderKeys.AttackTarget, 102, 75);
             Register(registry, StanceOrderKeys.AttackMove, 110, 80);

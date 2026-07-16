@@ -28,21 +28,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _head;
         private int _tail;
         private int _count;
-        private int _nextOrderId = 1;
-        private readonly OrderAdmissionResultBuffer? _admissionResults;
+        private readonly OrderAdmissionResultBuffer _admissionResults;
 
-        public OrderQueue(int capacity, OrderAdmissionResultBuffer? admissionResults = null)
+        public OrderQueue(int capacity, OrderAdmissionResultBuffer admissionResults)
         {
             if (capacity <= 0)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(capacity), capacity, "capacity must be positive.");
             }
+            _admissionResults = admissionResults
+                ?? throw new System.ArgumentNullException(nameof(admissionResults));
             _items = new Order[capacity];
-            _admissionResults = admissionResults;
         }
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public OrderAdmissionResultBuffer AdmissionResults => _admissionResults;
 
         public bool TryEnqueue(in Order order)
         {
@@ -63,12 +64,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public OrderSubmitResult SubmitAssigned(ref Order order)
         {
             EnsureOrderId(ref order);
-            OrderAdmissionReservation reservation = _admissionResults == null
-                ? default
-                : _admissionResults.Reserve(
-                    OrderAdmissionStage.GlobalIntake,
-                    order.OrderId,
-                    order.OrderTypeId);
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.GlobalIntake,
+                order.OrderId,
+                order.OrderTypeId);
             bool committed = false;
             try
             {
@@ -97,23 +96,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 if (!committed && reservation.IsValid)
                 {
-                    _admissionResults!.Cancel(in reservation);
+                    _admissionResults.Cancel(in reservation);
                 }
             }
         }
 
         public void EnsureOrderId(ref Order order)
         {
-            if (_admissionResults != null)
-            {
-                _admissionResults.EnsureOrderId(ref order);
-                return;
-            }
-
-            if (order.OrderId == 0)
-            {
-                order.OrderId = _nextOrderId++;
-            }
+            _admissionResults.EnsureOrderId(ref order);
         }
 
         private static bool IsValidOrderTypeId(int orderTypeId)
@@ -126,7 +116,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             in Order order,
             OrderSubmitResult result)
         {
-            if (_admissionResults == null) return;
             var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.GlobalIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
         }

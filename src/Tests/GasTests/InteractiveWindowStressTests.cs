@@ -68,7 +68,8 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var chainOrders = new OrderQueue(64);
+                var admissionResults = new OrderAdmissionResultBuffer(3, 3);
+                var chainOrders = new OrderQueue(64, admissionResults);
 
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -95,12 +96,15 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < 10; i++)
                 {
+                    admissionResults.BeginLogicStep();
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     processing.Update(1f);
                     chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
                     chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
                     chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
                     processing.Update(1f);
+                    admissionResults.EndEntityIntake();
+                    admissionResults.EndLogicStep();
                 }
 
                 GC.Collect();
@@ -121,6 +125,7 @@ namespace Ludots.Tests.GAS
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 for (int i = 0; i < windows; i++)
                 {
+                    admissionResults.BeginLogicStep();
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     byte phase0 = processing.DebugProposalWindowPhase;
@@ -149,6 +154,8 @@ namespace Ludots.Tests.GAS
                         case 3: ticksResolve += dt; break;
                         default: ticksOther += dt; break;
                     }
+                    admissionResults.EndEntityIntake();
+                    admissionResults.EndLogicStep();
                 }
                 sw.Stop();
 

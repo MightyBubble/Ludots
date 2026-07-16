@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
         public void RoadMoveOrderExpander_TrySubmit_EnqueuesSingleAuthoredRoute_AndReleasesPathHandle()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue(capacity: 16);
+            var orderQueue = new OrderQueue(capacity: 16, new OrderAdmissionResultBuffer(16, 16));
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
             var pathService = new RecordingPathService(pathStore, new[]
             {
@@ -469,7 +469,7 @@ namespace Ludots.Tests.GAS
         public void RoadMoveOrderExpander_TrySubmit_UsesProjectedQueuedOrigin_ForFollowUpRoadMove()
         {
             using var world = World.Create();
-            var orderQueue = new OrderQueue(capacity: 16);
+            var orderQueue = new OrderQueue(capacity: 16, new OrderAdmissionResultBuffer(16, 16));
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
             var pathService = new RecordingPathService(pathStore, new[]
             {
@@ -509,7 +509,11 @@ namespace Ludots.Tests.GAS
             ((GameConfig)globals[CoreServiceKeys.GameConfig.Name]).Constants.OrderTypeIds["moveTo"] = 78;
             ((GameConfig)globals[CoreServiceKeys.GameConfig.Name]).Constants.OrderTypeIds[RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey] = 172;
             globals[CoreServiceKeys.OrderTypeRegistry.Name] = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
-            var expander = new RoadMoveOrderExpander(world, globals, new OrderQueue(capacity: 8), RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+            var expander = new RoadMoveOrderExpander(
+                world,
+                globals,
+                new OrderQueue(capacity: 8, new OrderAdmissionResultBuffer(8, 8)),
+                RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             Order order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 600, ycm: 0, OrderSubmitMode.Immediate);
 
             Assert.That(expander.TryBuildFollowOrder(in order, out Order routeOrder), Is.True);
@@ -537,7 +541,7 @@ namespace Ludots.Tests.GAS
 
             using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: chunkSizeCm / 2);
             using var world = World.Create();
-            var orderQueue = new OrderQueue(capacity: 16);
+            var orderQueue = new OrderQueue(capacity: 16, new OrderAdmissionResultBuffer(16, 16));
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: OrderSpatial.MaxPoints);
             var agentProfiles = CreateAgentProfiles();
             var globals = CreateGlobals(
@@ -1430,7 +1434,7 @@ namespace Ludots.Tests.GAS
 
         private static OrderTypeRegistry CreateTimeoutOrderTypeRegistry(int moveToOrderTypeId, int roadMoveFollowOrderTypeId)
         {
-            var registry = new OrderTypeRegistry();
+            var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             registry.Register(new OrderTypeConfig
             {
                 Key = "moveTo",

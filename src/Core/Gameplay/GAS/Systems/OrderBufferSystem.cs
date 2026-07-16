@@ -19,7 +19,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry _orderRuleRegistry;
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
-        private readonly OrderAdmissionResultBuffer? _admissionResults;
+        private readonly OrderAdmissionResultBuffer _admissionResults;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -32,11 +32,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IClock clock,
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
+            OrderAdmissionResultBuffer admissionResults,
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null,
-            OrderAdmissionResultBuffer? admissionResults = null)
+            IGraphRuntimeApi? graphApi = null)
             : base(world)
         {
             _clock = clock;
@@ -52,7 +52,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _graphProgramRegistry = graphProgramRegistry;
             _graphApi = graphApi;
-            _admissionResults = admissionResults;
+            _admissionResults = admissionResults
+                ?? throw new ArgumentNullException(nameof(admissionResults));
+            if (_incomingOrders != null && !ReferenceEquals(_incomingOrders.AdmissionResults, _admissionResults))
+            {
+                throw new InvalidOperationException("ORDER.ADMISSION.ERR.AdmissionResultBufferMismatch");
+            }
         }
 
         public override void Update(in float dt)
@@ -76,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            _admissionResults?.EndEntityIntake();
+            _admissionResults.EndEntityIntake();
         }
 
         private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)
@@ -107,12 +112,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             while (_incomingOrders.TryPeek(out var order))
             {
-                OrderAdmissionReservation reservation = _admissionResults == null
-                    ? default
-                    : _admissionResults.Reserve(
-                        OrderAdmissionStage.EntityIntake,
-                        order.OrderId,
-                        order.OrderTypeId);
+                OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                    OrderAdmissionStage.EntityIntake,
+                    order.OrderId,
+                    order.OrderTypeId);
                 bool committed = false;
                 try
                 {
@@ -129,7 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (!committed && reservation.IsValid)
                     {
-                        _admissionResults!.Cancel(in reservation);
+                        _admissionResults.Cancel(in reservation);
                     }
                 }
             }
@@ -210,18 +213,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             in Order order,
             OrderSubmitResult result)
         {
-            if (_admissionResults == null) return;
             var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
         {
-            if (_admissionResults == null)
-            {
-                return SubmitOrderStateAndReleaseRejected(entity, in order);
-            }
-
             if (order.OrderId <= 0)
             {
                 throw new InvalidOperationException("ORDER.ADMISSION.ERR.DirectSubmitRequiresOrderId");

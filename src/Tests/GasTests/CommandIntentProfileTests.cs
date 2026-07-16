@@ -454,7 +454,7 @@ namespace Ludots.Tests.GAS
                 RegisterAbility(abilities, GarrisonAbilityId, GarrisonAbilityTag);
                 RegisterAbility(abilities, WeaponAbilityId, WeaponAbilityTag);
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 

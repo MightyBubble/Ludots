@@ -2574,18 +2574,20 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
             using (engine)
             {
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = MassNavigationOrderKeys.Move,
                     OrderTypeId = TestMassNavigationMoveOrderTypeId,
                     Priority = 100,
                 });
+                var admissionResults = new OrderAdmissionResultBuffer(8, 8);
                 var orderBufferSystem = new OrderBufferSystem(
                     engine.World,
                     new DiscreteClock(),
                     orderTypes,
-                    new OrderRuleRegistry());
+                    new OrderRuleRegistry(),
+                    admissionResults);
                 engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
                 engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
                     new MassNavigationFormationFollowerSystem(engine, simulation),
@@ -3139,7 +3141,7 @@ namespace Ludots.Tests.Presentation
 
         private static void RegisterMoveOrderType(GameEngine engine)
         {
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = MassNavigationOrderKeys.Move,

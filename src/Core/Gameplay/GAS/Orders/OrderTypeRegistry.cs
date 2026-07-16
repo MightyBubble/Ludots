@@ -12,11 +12,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private readonly Dictionary<string, int> _idsByKey = new(StringComparer.Ordinal);
         private readonly OrderTerminalResultBuffer _terminalResults;
 
-        public OrderTypeRegistry()
-            : this(new OrderTerminalResultBuffer())
-        {
-        }
-
         public OrderTypeRegistry(OrderTerminalResultBuffer terminalResults)
         {
             _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));

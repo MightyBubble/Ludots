@@ -288,7 +288,7 @@ namespace Ludots.Tests.Presentation
 
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             if (registerFormalMoveOrder)
             {
                 orderTypes.Register(new OrderTypeConfig
@@ -329,9 +329,17 @@ namespace Ludots.Tests.Presentation
             {
                 RegisterMoveBlockedByBlockingOrder(orderRules);
             }
-            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules);
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            admissionResults.BeginLogicStep();
+            var orderBuffer = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                orderRules,
+                admissionResults);
             engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
+            engine.SetService(CoreServiceKeys.OrderAdmissionResultBuffer, admissionResults);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
             return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, simulation, orderBuffer, orderTypes);

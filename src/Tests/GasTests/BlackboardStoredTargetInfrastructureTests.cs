@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -105,7 +105,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 107;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTargetDefaultEntity",
@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -206,7 +206,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -270,7 +270,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -325,7 +325,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -375,7 +375,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -566,9 +566,9 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
+                admissionResults,
                 orderQueue,
-                stepRateHz: 30,
-                admissionResults: admissionResults);
+                stepRateHz: 30);
             orderSystem.Update(0f);
 
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
@@ -594,7 +594,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -694,9 +694,9 @@ namespace Ludots.Tests.GAS
                 new Ludots.Core.Engine.DiscreteClock(),
                 orderTypes,
                 new OrderRuleRegistry(),
+                admissionResults,
                 orderQueue,
-                stepRateHz: 30,
-                admissionResults: admissionResults);
+                stepRateHz: 30);
             orderSystem.Update(0f);
 
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);

@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
                 4096,
                 defs,
                 castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry(),
+                orderTypeRegistry: new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)),
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
 
             system.Update(0f);
