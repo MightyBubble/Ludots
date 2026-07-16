@@ -185,7 +185,7 @@ namespace Ludots.Tests.GAS
             tags.AddTag(42);
             counts.AddCount(42, 1);
             timed.TryAdd(42, 2, GasClockId.EntityLocal);
-            var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             world.Get<EntityLocalClock>(entity).LocalStep = 1;
             system.Update(0.016f);

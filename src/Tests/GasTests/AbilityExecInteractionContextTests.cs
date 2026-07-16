@@ -401,7 +401,7 @@ namespace Ludots.Tests.GAS
                     castAbilityOrderTypeId: CastOrderTypeId,
                     presentationEvents: presentationEvents,
                     orderTypeRegistry: orderTypes,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 return new Harness
                 {

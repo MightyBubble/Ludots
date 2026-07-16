@@ -75,7 +75,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var modifiers = default(EffectModifiers);
             modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var application = new EffectApplicationSystem(world, tagOps: tagOps);
 
             Entity source = world.Create();
@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS
                 templates: templates,
                 presentationEvents: presentationEvents,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -186,7 +186,7 @@ namespace Ludots.Tests.GAS
                 orderRequests: new OrderRequestQueue(),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -306,7 +306,7 @@ namespace Ludots.Tests.GAS
 
             var phaseExecutor = CreateBuffOnApplyModifierExecutor(templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var application = new EffectApplicationSystem(
                 world,
                 effectRequests: null,

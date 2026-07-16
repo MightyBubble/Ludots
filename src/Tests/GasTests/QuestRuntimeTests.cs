@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,

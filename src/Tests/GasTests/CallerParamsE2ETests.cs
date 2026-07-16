@@ -91,7 +91,7 @@ namespace Ludots.Tests.GAS
                     world, requests, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -151,7 +151,7 @@ namespace Ludots.Tests.GAS
                     world, requests, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)

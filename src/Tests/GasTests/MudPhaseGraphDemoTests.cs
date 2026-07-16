@@ -139,7 +139,7 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(caster).SetCurrent(AttrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 // ═══════ Phase 1: OnPropose ═══════
                 sb.AppendLine("[MUD][PHASE] ① OnPropose: 法师提案【冲击】效果。");
@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS
                 var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
@@ -350,7 +350,7 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(targetA).SetCurrent(AttrHealth, 100f);
                 world.Get<AttributeBuffer>(targetB).SetCurrent(AttrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 // Fire → targetA
                 executor.ExecutePhase(world, api, caster, targetA, default, default,

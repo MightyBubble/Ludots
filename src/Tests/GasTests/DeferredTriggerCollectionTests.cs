@@ -32,7 +32,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
             var attrs = new AttributeBuffer();
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
             var tags = new GameplayTagContainer();
@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var queue = new DeferredTriggerQueue();
-            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
             var counts = new TagCountContainer();

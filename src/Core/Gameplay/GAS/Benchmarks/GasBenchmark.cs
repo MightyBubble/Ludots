@@ -39,7 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var tagOps = new TagOps(new DirtyEntityQueue(entityCount));
+            var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);

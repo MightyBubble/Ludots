@@ -13,7 +13,7 @@ namespace Ludots.Tests.GAS
 {
     public class LifetimeConditionTests
     {
-        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         [Test]
         public void TagSense_Effective_RespectsDisabledIf()
@@ -152,7 +152,7 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var executor = new EffectPhaseExecutor(
                 programs,

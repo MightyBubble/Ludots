@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                 effectTagId: 1, effectTemplateId: 1,
-                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)) });
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
             That(hp, Is.EqualTo(75f), "ApplyModifiers via Builtin handler path should reduce HP by 25");
@@ -374,7 +374,7 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
                 effectTagId: 1, effectTemplateId: 1,
-                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)) });
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);
             That(buf.GetCurrent(forceXAttrId), Is.EqualTo(100f), "ForceX should be applied");

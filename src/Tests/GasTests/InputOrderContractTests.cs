@@ -748,7 +748,7 @@ namespace Ludots.Tests.GAS
             system.SetLocalPlayer(producer, 1);
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
-                ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)), actor, routing.Candidates, out matchedCandidate));
+                ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
             system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
@@ -833,7 +833,7 @@ namespace Ludots.Tests.GAS
             Entity unitA = world.Create();
             Entity unitB = world.Create();
             var orders = new List<Order>();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var system = new InputOrderMappingSystem(input, config);
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
@@ -922,7 +922,7 @@ namespace Ludots.Tests.GAS
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
-                ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)), actor, routing.Candidates, out matchedCandidate));
+                ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
             system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));

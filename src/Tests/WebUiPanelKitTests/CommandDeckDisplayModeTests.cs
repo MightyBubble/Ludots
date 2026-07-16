@@ -347,7 +347,7 @@ public sealed class CommandDeckDisplayModeTests
 			};
 
 			const string filterId = "filter.command-deck.train-only";
-			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 			var filterIds = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 			var filters = new FilterProfileRegistry(filterIds, world, tagOps);
 			filters.Install(new FilterProfilesConfig
@@ -457,7 +457,7 @@ public sealed class CommandDeckDisplayModeTests
 			};
 
 			const string filterId = "filter.command-deck.train-only.preserve-source";
-			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 			var filterIds = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 			var filters = new FilterProfileRegistry(filterIds, world, tagOps);
 			filters.Install(new FilterProfilesConfig

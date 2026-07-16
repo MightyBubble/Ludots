@@ -10,7 +10,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class TagEffectiveAndTimingTests
     {
-        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         [Test]
         public void HasTag_UsesEffectiveSense_ForGraphRuntime()

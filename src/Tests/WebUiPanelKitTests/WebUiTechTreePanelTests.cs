@@ -69,7 +69,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -148,7 +148,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -211,7 +211,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -257,7 +257,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create();
 		Entity actor = world.Create();
@@ -299,7 +299,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = new ProgressionDefinitionRegistry();
 		RegisterSampleProgressionDefinition(progressions, WebUiTechTreeSampleCatalog.RootProgressionId);
 		// Branch progression id is registered, but its definition is intentionally omitted.
@@ -344,7 +344,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -406,7 +406,7 @@ public sealed class WebUiTechTreePanelTests
 			branchReqId,
 			CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
 
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());
 		Entity actor = world.Create();
@@ -694,7 +694,7 @@ public sealed class WebUiTechTreePanelTests
 		var requirements = new ProgressionRequirementRegistry();
 		requirements.Register(rootReqId, CreateAlwaysTrueRequirement(rootReqId));
 		requirements.Register(branchReqId, CreateProgressionCompletedRequirement(branchReqId, rootProgressionId));
-		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+		var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 		var progressions = CreateSampleProgressionDefinitions();
 
 		Entity scopeHost = world.Create(new ProgressionStateBuffer());

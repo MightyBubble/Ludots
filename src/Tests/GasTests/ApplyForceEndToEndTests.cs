@@ -154,7 +154,7 @@ namespace Ludots.Tests.GAS
                     inputRequests: null,
                     chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);

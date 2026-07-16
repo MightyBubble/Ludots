@@ -53,7 +53,7 @@ namespace Ludots.Tests.GAS
                 coords: null,
                 eventBus: null,
                 effectRequests: null,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             executor.ExecuteGraph(world, api, target, target, default, default, 1);
             executor.ExecuteGraph(world, api, target, target, default, default, 2);

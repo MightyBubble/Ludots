@@ -156,7 +156,7 @@ namespace Ludots.Tests.GAS
                 "AttributeDerivedGraphBinding",
                 JsonNode.Parse("""{ "graphs": [ "tests.graph.derived-attribute" ] }""")!);
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             using var system = new AttributeAggregatorSystem(
                 world,
                 programs,

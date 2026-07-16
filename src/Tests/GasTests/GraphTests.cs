@@ -95,7 +95,7 @@ namespace Ludots.Tests.GAS
 
             var coords = new SpatialCoordinateConverter();
             var spatial = new SpatialQueryService(new PhysicsWorldSpatialBackend(physics, coords));
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var relationshipRuntime = new RelationshipRuntime(
                 world,
                 new RelationshipTypeRegistry(),

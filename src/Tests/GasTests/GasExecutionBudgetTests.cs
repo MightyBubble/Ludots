@@ -143,7 +143,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 3_000,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)))
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
             {
                 MaxWorkUnitsPerSlice = 127,
             };
@@ -180,7 +180,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 5,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -219,7 +219,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -278,7 +278,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.UpdateSlice(0f, int.MaxValue);
 
@@ -339,7 +339,7 @@ namespace Ludots.Tests.GAS
                 new EffectRequestQueue(),
                 snapshotCapacity: 4,
                 abilityDefinitions: definitions,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -451,7 +451,7 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             var dirtyEntities = new DirtyEntityQueue(capacity: 4);
-            var tagOps = new TagOps(dirtyEntities);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry());
             var presentationEvents = new GasPresentationEventBuffer(capacity: 4);
             Entity source = world.Create();
             Entity target = world.Create(

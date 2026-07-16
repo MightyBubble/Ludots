@@ -143,8 +143,8 @@ namespace GasTests
                 foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
                 {
                     string source = File.ReadAllText(file);
-                    if (source.Contains("?? new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME))", StringComparison.Ordinal) ||
-                        source.Contains("??= new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME))", StringComparison.Ordinal))
+                    if (source.Contains("?? new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry())", StringComparison.Ordinal) ||
+                        source.Contains("??= new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry())", StringComparison.Ordinal))
                     {
                         hits.Add(ToRepoRelativePath(repoRoot, file));
                     }
@@ -179,6 +179,23 @@ namespace GasTests
 
             Assert.That(hits, Is.Empty,
                 "Production tag consumers must use injected TagOps, TimedTagBuffer assembly must stay centralized, and AbilityExec must not change archetypes while executing a timeline.");
+        }
+
+        [Test]
+        public void TagOps_MustRequireAnExplicitRuleRegistry()
+        {
+            string repoRoot = FindRepoRoot();
+            string source = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "TagOps.cs"));
+
+            Assert.That(source, Does.Contain("TagRuleRegistry rules"));
+            Assert.That(source, Does.Not.Contain("TagRuleRegistry rules = null"));
+            Assert.That(source, Does.Not.Contain("rules ?? new TagRuleRegistry()"));
         }
 
         [Test]

@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeMembers,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create(new ProgressionStateBuffer());
             Entity barracksA = world.Create();
@@ -102,7 +102,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in tags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create();
             Entity barracksA = world.Create();
@@ -154,7 +154,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, collections));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -210,7 +210,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, relationships: relationships));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -260,7 +260,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, collections));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -310,7 +310,7 @@ namespace Ludots.Tests.GAS
                 progressionId,
                 requiredCount: 2));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             var context = new RoleResolverContext(actor: city, subject: city);
 
@@ -342,7 +342,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
             var definition = new AbilityDefinition
@@ -377,7 +377,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 new ScopeKeyRegistry(),
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -423,7 +423,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 new ScopeKeyRegistry(),
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -467,7 +467,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 new ScopeKeyRegistry(),
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -511,7 +511,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 new ScopeKeyRegistry(),
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var presetTypes = new PresetTypeRegistry();
             var preset = new PresetTypeDefinition
@@ -590,7 +590,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
             var definition = new AbilityDefinition
@@ -631,7 +631,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 21);
             Entity target = world.Create();
@@ -667,7 +667,7 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
                 progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -722,7 +722,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityWithoutTech = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 22);
             Entity target = world.Create();
@@ -757,7 +757,7 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
                 progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -806,7 +806,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 23);
 
             var spec = default(AbilityExecSpec);
@@ -837,7 +837,7 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
                 progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -867,7 +867,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 24);
 
             var spec = default(AbilityExecSpec);
@@ -897,7 +897,7 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
                 progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -940,7 +940,7 @@ namespace Ludots.Tests.GAS
             };
             requirements.Register(graphReqId, new ProgressionRequirementDefinition(graphReqId, nodes, new[] { 1 }));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             Assert.That(evaluator.UsesGraphValidation(graphReqId), Is.True);
         }
@@ -967,7 +967,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
             Entity hero = world.Create(new GameplayTagContainer());
@@ -1011,7 +1011,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
             Entity hero = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
@@ -1028,7 +1028,7 @@ namespace Ludots.Tests.GAS
             ref var heroTags = ref world.Get<GameplayTagContainer>(hero);
             ref var heroCounts = ref world.Get<TagCountContainer>(hero);
             ref var dirty = ref world.Get<DirtyFlags>(hero);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref heroTags, ref heroCounts, heroTag, ref dirty), Is.True);
 
             var triggerQueue = new DeferredTriggerQueue();
@@ -1067,7 +1067,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create(new ProgressionStateBuffer());
             Entity barracksA = world.Create();
@@ -1120,7 +1120,7 @@ namespace Ludots.Tests.GAS
                 progressionId: 0,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
             Entity barracks = world.Create();
             PrepareScopeHost(world, city);
@@ -1135,7 +1135,7 @@ namespace Ludots.Tests.GAS
             ref var cityTags = ref world.Get<GameplayTagContainer>(city);
             ref var cityCounts = ref world.Get<TagCountContainer>(city);
             ref var dirty = ref world.Get<DirtyFlags>(city);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref cityTags, ref cityCounts, fortifiedTag, ref dirty), Is.True);
 
             var triggerQueue = new DeferredTriggerQueue();
@@ -1204,7 +1204,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(requirement.Nodes[0].EntitySource, Is.EqualTo(RoleSlot.ScopeHost));
 
                 using var world = World.Create();
-                var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 Entity actor = world.Create();
                 Entity province = world.Create();
                 PrepareScopeHost(world, province);
@@ -1506,7 +1506,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var bindingSystem = new ProgressionScopeBindingSystem(world, evaluator, scopeKeys);
 
             Entity cityA = world.Create();
@@ -1541,7 +1541,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 scopeKeys,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var bindingSystem = new ProgressionScopeBindingSystem(world, evaluator, scopeKeys);
 
             Entity barracks = world.Create();
@@ -1563,7 +1563,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new ProgressionRequirementRegistry(),
                 scopeKeys,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
 

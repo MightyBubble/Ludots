@@ -211,7 +211,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 
 			if (bindRuntime)
 			{
-				state.BindRuntime(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+				state.BindRuntime(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 			}
 
 			return new Harness

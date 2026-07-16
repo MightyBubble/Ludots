@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS
 
             int meleeTagId = TagRegistry.Register("State.Form.Melee");
             var formSets = CreateFormSets(meleeTagId);
-            var system = new AbilityFormRoutingSystem(world, formSets, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new AbilityFormRoutingSystem(world, formSets, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var actor = world.Create(
                 CreateAbilities(1000, 1001),
@@ -57,7 +57,7 @@ namespace Ludots.Tests.GAS
 
             int meleeTagId = TagRegistry.Register("State.Form.Melee");
             var formSets = CreateFormSets(meleeTagId);
-            var system = new AbilityFormRoutingSystem(world, formSets, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new AbilityFormRoutingSystem(world, formSets, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var actor = world.Create(
                 CreateAbilities(1000, 1001),
@@ -218,7 +218,7 @@ namespace Ludots.Tests.GAS
             defs.Register(2000, in formDefinition);
 
             var requests = new EffectRequestQueue();
-            var system = new AbilitySystem(world, requests, defs, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+            var system = new AbilitySystem(world, requests, defs, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             bool activated = system.TryActivateAbility(actor, 0);
 

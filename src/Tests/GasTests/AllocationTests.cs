@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
@@ -145,7 +145,7 @@ namespace Ludots.Tests.GAS
                 inputRequests: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);

@@ -14,7 +14,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class GasBenchmarkTests
     {
-        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
         private World _world;
         private const int ENTITY_COUNT = 10000;
         private const int ITERATIONS = 100;

@@ -23,9 +23,9 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly GasBudget _budget;
         private readonly DirtyEntityQueue _dirtyEntities;
 
-        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules = null, GasBudget budget = null)
+        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null)
         {
-            _rules = rules ?? new TagRuleRegistry();
+            _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _transaction = new TagRuleTransaction();
             _budget = budget;
             _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
