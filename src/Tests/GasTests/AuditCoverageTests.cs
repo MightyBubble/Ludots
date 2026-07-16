@@ -165,6 +165,7 @@ namespace Ludots.Tests.GAS
                     world,
                     queue,
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
                     inputRequests: null,

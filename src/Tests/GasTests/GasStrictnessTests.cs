@@ -69,11 +69,13 @@ namespace Ludots.Tests.GAS
                 world,
                 new EffectRequestQueue(),
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 stepRateHz: 0));
             Throws<ArgumentOutOfRangeException>(() => new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 stepRateHz: 0));
             Throws<ArgumentOutOfRangeException>(() => new EffectLifetimeSystem(
                 world,
@@ -82,6 +84,29 @@ namespace Ludots.Tests.GAS
                 snapshotCapacity: 1,
                 fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 stepRateHz: 0));
+        }
+
+        [Test]
+        public void EffectPipelineSystems_RequireGameplayClockAtConstruction()
+        {
+            using var world = World.Create();
+
+            Throws<ArgumentNullException>(() => new EffectProposalProcessingSystem(
+                world,
+                new EffectRequestQueue(),
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock: null!,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types));
+            Throws<ArgumentNullException>(() => new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock: null!));
+            Throws<ArgumentNullException>(() => new EffectLifetimeSystem(
+                world,
+                null!,
+                new GasConditionRegistry(),
+                snapshotCapacity: 1,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
         }
 
         [Test]

@@ -56,7 +56,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             });
             
             // 3. Create Systems
-            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, effectRequests, tagOps: tagOps);
+            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
             var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
             var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
@@ -64,6 +64,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 world,
                 effectRequests,
                 fanOutCommandCapacity: 65536,
+                clock,
                 templates: effectTemplates,
                 responseChainOrderTypes: BenchmarkResponseChainOrderTypes,
                 tagOps: tagOps);

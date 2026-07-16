@@ -74,12 +74,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 responseChainOrderTypes,
                 nameof(EffectProcessingLoopSystem));
             _proposal = new EffectProposalProcessingSystem(
-                world, effectRequests, fanOutCommandCapacity, budget, templates, inputRequests, chainOrders, telemetry, orderRequests,
+                world, effectRequests, fanOutCommandCapacity, clock, budget, templates, inputRequests, chainOrders, telemetry, orderRequests,
                 configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi, tagOps,
                 spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, exchangeRuntime,
-                progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz,
+                progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz,
                 relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake);
-            _application = new EffectApplicationSystem(world, fanOutCommandCapacity, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, clock, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake);
+            _application = new EffectApplicationSystem(world, fanOutCommandCapacity, clock, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake);
             _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, fanOutCommandCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime, orderIntake);
             MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
             _runtimeStateEntity = world.Create(new GasRuntimeState

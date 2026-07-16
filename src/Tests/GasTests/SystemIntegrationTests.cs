@@ -63,11 +63,12 @@ namespace Ludots.Tests.GAS
                 _world,
                 effectRequests,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock,
                 null,
                 effectTemplates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: _tagOps);
-            var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests, tagOps: _tagOps);
+            var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, clock, effectRequests, tagOps: _tagOps);
             var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
             var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
             

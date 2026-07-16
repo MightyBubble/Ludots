@@ -124,12 +124,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly OrderRuleRegistry? _orderRuleRegistry;
-        private readonly IClock? _orderClock;
+        private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, IClock orderClock = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _effectRequests = effectRequests;
             _budget = budget;
             _presentationEvents = presentationEvents;
@@ -154,7 +155,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.OrderIntake = orderIntake;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
-            _orderClock = orderClock;
             _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectApplicationSystem));
             _persistentPhaseTransaction = new EffectPhaseSideEffectTransaction(
                 world,
@@ -170,7 +170,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.OrderTypeRegistry = _orderTypeRegistry;
             _builtinRuntime.OrderRuleRegistry = _orderRuleRegistry;
             _builtinRuntime.StepRateHz = _stepRateHz;
-            _builtinRuntime.CurrentStep = _orderClock?.Now(ClockDomainId.Step) ?? 0;
+            _builtinRuntime.CurrentStep = _clock.Now(ClockDomainId.Step);
         }
 
         public override void Update(in float dt)

@@ -589,7 +589,7 @@ namespace Ludots.Tests.GAS
                 target,
                 durationTicks: 30,
                 lifetimeKind: EffectLifetimeKind.After);
-            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new DiscreteClock())
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -616,7 +616,7 @@ namespace Ludots.Tests.GAS
                 target,
                 durationTicks: 30,
                 lifetimeKind: EffectLifetimeKind.After);
-            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new DiscreteClock())
             {
                 MaxWorkUnitsPerSlice = 1,
             };

@@ -37,6 +37,7 @@ namespace Ludots.Tests.GAS
                 world,
                 queue,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));

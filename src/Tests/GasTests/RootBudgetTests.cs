@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
             var modifiers = default(EffectModifiers);
             modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new DiscreteClock(), tagOps: tagOps);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -123,6 +123,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requests,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 templates: templates,
                 presentationEvents: presentationEvents,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -258,7 +259,7 @@ namespace Ludots.Tests.GAS
             try
             {
                 var budget = new GasBudget();
-                var app = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: null, budget: budget);
+                var app = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new DiscreteClock(), effectRequests: null, budget: budget);
 
                 var source = world.Create();
                 var target = world.Create();
@@ -312,6 +313,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 effectRequests: null,
                 budget: new GasBudget(),
                 presentationEvents,
@@ -359,6 +361,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requests,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
@@ -452,6 +455,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 presentationEvents: presentationEvents,
                 templates: templates)
             {
@@ -499,6 +503,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 presentationEvents: presentationEvents,
                 templates: templates,
                 phaseExecutor: phaseExecutor,
@@ -571,6 +576,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 templates: templates,
                 phaseExecutor: phaseExecutor,
                 graphApi: graphApi,
@@ -668,6 +674,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 effectRequests: requests,
                 presentationEvents: presentationEvents,
                 templates: templates,
@@ -761,6 +768,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 effectRequests: requests,
                 presentationEvents: presentationEvents,
                 templates: templates,
@@ -865,6 +873,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 templates: templates,
                 phaseExecutor: phaseExecutor,
                 graphApi: graphApi,
@@ -998,6 +1007,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 effectRequests: requests,
                 presentationEvents: presentationEvents,
                 templates: templates,
@@ -1109,6 +1119,7 @@ namespace Ludots.Tests.GAS
             var application = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 effectRequests: requests,
                 presentationEvents: presentationEvents,
                 templates: templates,
@@ -1154,9 +1165,10 @@ namespace Ludots.Tests.GAS
                 world,
                 requests,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, requests, templates: templates);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new DiscreteClock(), requests, templates: templates);
 
             var source = world.Create();
             var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());

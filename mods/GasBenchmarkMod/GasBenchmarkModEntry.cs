@@ -90,11 +90,11 @@ namespace GasBenchmarkMod
                 Modifiers = mods
             });
 
-            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, effectRequests, tagOps: tagOps);
+            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
             var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
             var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
-            var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, fanOutCommandCapacity: 65536, templates: effectTemplates, tagOps: tagOps);
+            var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, fanOutCommandCapacity: 65536, clock, templates: effectTemplates, tagOps: tagOps);
             var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
             // Removed obsolete systems

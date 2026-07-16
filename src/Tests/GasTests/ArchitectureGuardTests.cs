@@ -369,6 +369,28 @@ namespace GasTests
         }
 
         [Test]
+        public void EffectPipeline_MustRequireGameplayClockWithoutStepZeroFallback()
+        {
+            string repoRoot = FindRepoRoot();
+            string systems = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Systems");
+            string[] files =
+            {
+                "EffectProposalProcessingSystem.cs",
+                "EffectApplicationSystem.cs",
+                "EffectLifetimeSystem.cs",
+            };
+
+            foreach (string file in files)
+            {
+                string source = File.ReadAllText(Path.Combine(systems, file));
+                Assert.That(source, Does.Contain("IClock"), file);
+                Assert.That(source, Does.Contain("throw new ArgumentNullException(nameof(clock))"), file);
+                Assert.That(source, Does.Not.Contain("?.Now("), file);
+                Assert.That(source, Does.Not.Match(@"CurrentStep\s*=.*\?\?\s*0"), file);
+            }
+        }
+
+        [Test]
         public void PersistentEffectSideEffectTransaction_MustDeferStructuralChanges()
         {
             string repoRoot = FindRepoRoot();

@@ -154,7 +154,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _rollbackTargets = new TargetRollbackEntry[snapshotCapacity];
             _effectRequests = effectRequests;
             _budget = budget;
-            _clock = clock;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _conditions = conditions;
             _templates = templates;
             _spatialQueries = spatialQueries;
@@ -185,7 +185,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.OrderTypeRegistry = _orderTypeRegistry;
             _builtinRuntime.OrderRuleRegistry = _orderRuleRegistry;
             _builtinRuntime.StepRateHz = _stepRateHz;
-            _builtinRuntime.CurrentStep = _clock?.Now(Ludots.Core.Engine.ClockDomainId.Step) ?? 0;
+            _builtinRuntime.CurrentStep = _clock.Now(Ludots.Core.Engine.ClockDomainId.Step);
         }
 
         public override void Update(in float dt)

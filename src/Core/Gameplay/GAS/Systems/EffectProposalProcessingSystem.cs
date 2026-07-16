@@ -75,7 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _instantResolverBuffer = new Entity[256];
         private readonly OrderTypeRegistry? _builtinOrderTypeRegistry;
         private readonly OrderRuleRegistry? _builtinOrderRuleRegistry;
-        private readonly Ludots.Core.Engine.IClock? _builtinClock;
+        private readonly Ludots.Core.Engine.IClock _clock;
         private readonly int _builtinStepRateHz;
 
         private static readonly QueryDescription _listenersQuery = new QueryDescription().WithAll<ResponseChainListener>();
@@ -266,11 +266,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, Ludots.Core.Engine.IClock clock = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null)
             : base(world)
         {
             _queue = queue;
             _instantFanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _queue?.TrackResponseChainListenerLifecycle(world);
             _budget = budget;
             _templates = templates;
@@ -300,7 +301,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.OrderIntake = orderIntake;
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
-            _builtinClock = clock;
             _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));
         }
 
@@ -329,7 +329,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _builtinRuntime.OrderTypeRegistry = _builtinOrderTypeRegistry;
                 _builtinRuntime.OrderRuleRegistry = _builtinOrderRuleRegistry;
                 _builtinRuntime.StepRateHz = _builtinStepRateHz;
-                _builtinRuntime.CurrentStep = _builtinClock?.Now(Ludots.Core.Engine.ClockDomainId.Step) ?? 0;
+                _builtinRuntime.CurrentStep = _clock.Now(Ludots.Core.Engine.ClockDomainId.Step);
                 _rootCursor = 0;
                 _rootCountSnapshot = _queue.Count;
                 _phase = WindowPhase.None;
