@@ -186,6 +186,38 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AppendAuthoredAgents_AfterWarmupAllocatesZeroBytesForIncrementalBinding()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer,
+                membershipCapacity: 8);
+
+            Entity warmupAgent = CreateAuthoredAgentEntity(world, localX: 1500f, localY: 1000f, layer);
+            MassNavigationAgentSeed warmupSeed = CreateSeed(localX: 1500f, localY: 1000f, layer);
+            simulation.AppendAuthoredAgents(world, new[] { warmupAgent }, new[] { warmupSeed }, new[] { true });
+
+            Entity measuredAgent = CreateAuthoredAgentEntity(world, localX: 1700f, localY: 1000f, layer);
+            MassNavigationAgentSeed measuredSeed = CreateSeed(localX: 1700f, localY: 1000f, layer);
+            Entity[] measuredEntities = { measuredAgent };
+            MassNavigationAgentSeed[] measuredSeeds = { measuredSeed };
+            bool[] controllableFlags = { true };
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            simulation.AppendAuthoredAgents(world, measuredEntities, measuredSeeds, controllableFlags);
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(
+                allocatedBytes,
+                Is.Zero,
+                $"Incremental MassNavigation authored binding must reuse preallocated runtime scratch after warmup; measured {allocatedBytes} B.");
+            Assert.That(world.Has<MassNavigationAgentIndex>(measuredAgent), Is.True);
+        }
+
+        [Test]
         public void AuthoredAgentBindingSystem_IncrementalInsert_DoesNotBumpAuthoredRuntimeBindingRevision()
         {
             using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);

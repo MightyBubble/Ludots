@@ -1347,6 +1347,58 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadMoveShowcaseSystems_SkipSuspendedRoadUnitsWhenRuntimeIsNoLongerPrepared()
+        {
+            using var world = World.Create();
+            const int moveToOrderTypeId = 77;
+            const int roadMoveFollowOrderTypeId = 171;
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            Dictionary<string, object> globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
+
+            Entity actor = CreateRoadMassAgent(world, "Suspended Road Column", xcm: 0, ycm: 0);
+            world.Add(actor, new SuspendedTag());
+            if (!world.Has<MovePlanOrderRuntime>(actor))
+            {
+                world.Add(actor, default(MovePlanOrderRuntime));
+            }
+
+            if (!world.Has<MovePlanRuntime>(actor))
+            {
+                world.Add(actor, default(MovePlanRuntime));
+            }
+
+            if (!world.Has<MovePlanExecutionIntent>(actor))
+            {
+                world.Add(actor, default(MovePlanExecutionIntent));
+            }
+
+            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId, (0, 0), (300, 0), (600, 0));
+            routeOrder.OrderId = 44;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in routeOrder, priority: 100);
+            world.Get<MovePlanOrderRuntime>(actor).ActiveOrderId = routeOrder.OrderId;
+            world.Get<MovePlanOrderRuntime>(actor).LifecycleState = MovePlanLifecycleState.Active;
+            world.Get<MovePlanRuntime>(actor).BoundOrderId = routeOrder.OrderId;
+            world.Get<MovePlanExecutionIntent>(actor).HasTarget = 1;
+
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var binding = new MassNavigationRuntimeBinding();
+            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var executionSystem = new RoadMoveExecutionSystem(world, binding);
+            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
+
+            Assert.DoesNotThrow(() =>
+            {
+                bindSystem.Update(0.1f);
+                selectionSystem.Update(0.1f);
+                executionSystem.Update(0.1f);
+                lifecycleSystem.Update(0.1f);
+            }, "Suspended road-map entities belong to an inactive map session and must not request the current road MassNavigation runtime.");
+        }
+
+        [Test]
         public void RoadMoveLifecycleSystem_TimeoutRefresh_ReplacesActiveOrderPayloadWithRebuiltRoute()
         {
             using var world = World.Create();

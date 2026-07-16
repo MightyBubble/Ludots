@@ -102,6 +102,7 @@ public sealed class MassNavigationSimulationRuntime
     private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
     private readonly List<long> _loadedChunksToEvict;
     private readonly List<long> _loadedChunksAddedDuringUpdate;
+    private readonly HashSet<Entity> _authoredBindingSeenEntities;
     private readonly int _loadedChunkCapacity;
     private float _streamingClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
@@ -187,7 +188,7 @@ public sealed class MassNavigationSimulationRuntime
     public int AuthoredRuntimeBindingRevision => Telemetry.AuthoredRuntimeBindingRevision;
     internal bool RuntimeBindingPreparationComplete => _authoredAgentBindingPassComplete && _environmentBindingPassComplete;
     public MassNavigationConfig Config { get; }
-    internal MassNavigationAgentState AgentState { get; } = new();
+    internal MassNavigationAgentState AgentState { get; }
     public MassNavigationFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
@@ -253,8 +254,17 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
+        int membershipCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (membershipCapacity <= 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigationSimulationRuntime requires scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity > 0.");
+        }
+
+        AgentState = new MassNavigationAgentState(membershipCapacity);
+        _authoredBindingSeenEntities = new HashSet<Entity>(membershipCapacity);
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
-        MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
+        MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
@@ -1039,22 +1049,29 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException("MassNavigation authored binding preflight requires matching entity and controllable spans.");
         }
 
-        var seen = new HashSet<Entity>();
-        for (int i = 0; i < entities.Length; i++)
+        _authoredBindingSeenEntities.Clear();
+        try
         {
-            Entity entity = entities[i];
-            if (!seen.Add(entity))
+            for (int i = 0; i < entities.Length; i++)
             {
-                throw new InvalidOperationException($"MassNavigation authored binding contains duplicate entity {entity.Id}.");
-            }
+                Entity entity = entities[i];
+                if (!_authoredBindingSeenEntities.Add(entity))
+                {
+                    throw new InvalidOperationException($"MassNavigation authored binding contains duplicate entity {entity.Id}.");
+                }
 
-            ValidateSpawnedAgentBinding(
-                world,
-                entity,
-                checked(startIndex + i),
-                controllableFlags[i],
-                unitCountAfterCommit,
-                allowExistingRuntimeBinding);
+                ValidateSpawnedAgentBinding(
+                    world,
+                    entity,
+                    checked(startIndex + i),
+                    controllableFlags[i],
+                    unitCountAfterCommit,
+                    allowExistingRuntimeBinding);
+            }
+        }
+        finally
+        {
+            _authoredBindingSeenEntities.Clear();
         }
     }
 

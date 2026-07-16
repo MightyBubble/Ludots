@@ -17,7 +17,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveLifecycleSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly Dictionary<string, object> _globals;
         private readonly OrderTypeRegistry _orderTypeRegistry;

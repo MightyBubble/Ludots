@@ -36,10 +36,19 @@
         "Team": { "Id": 3 },
         "WorldPositionCm": { "Value": { "X": 1740, "Y": 960 } }
       }
+    },
+    {
+      "Template": "interaction_stress_anchor_blue",
+      "InstanceId": "narrative_beast_clan_anchor",
+      "Overrides": {
+        "Name": { "Value": "BeastClanAnchor" },
+        "WorldPositionCm": { "Value": { "X": 2600, "Y": 960 } }
+      }
     }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "narrative_arcweaver" },
+    { "TeamId": 2, "RepresentativeInstanceId": "narrative_beast_clan_anchor" },
     { "TeamId": 3, "RepresentativeInstanceId": "narrative_warden_mirelle" }
   ],
   "Players": [
@@ -49,8 +58,11 @@
   "ParticipantRelationships": {
     "Teams": [
       { "TeamA": 1, "TeamB": 1, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
       { "TeamA": 3, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+      { "TeamA": 1, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
     ],
     "Players": [
       { "PlayerA": 1, "PlayerB": 3, "TypeId": "NarrativeShowcase.Participant", "Symmetric": true }

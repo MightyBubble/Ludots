@@ -13,7 +13,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveOrderBindingSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>()
+            .WithNone<SuspendedTag>();
 
         private readonly int _roadMoveFollowOrderTypeId;
         private readonly MovePlanStore _plans;

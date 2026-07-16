@@ -1,7 +1,6 @@
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using CameraAcceptanceMod.Systems;
-using CoreInputMod.ViewMode;
 using Ludots.Core.Input.Runtime;
 using CameraAcceptanceMod.Runtime;
 using System.Threading.Tasks;
@@ -23,7 +22,6 @@ namespace CameraAcceptanceMod
                 var engine = ctx.GetEngine();
                 if (engine != null)
                 {
-                    ViewModeRegistrar.RegisterFromVfs(context, engine.GlobalContext, sourceModId: context.ModId, activateWhenUnset: false);
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;

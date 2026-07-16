@@ -234,6 +234,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void DefaultCommandIntentProfile_RoutesGroundAndInspectableEntityHitsToMove()
+        {
+            string repoRoot = FindRepoRoot();
+            string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
+                    File.ReadAllText(profilePath),
+                    options)
+                ?? throw new InvalidOperationException("Default command intent profile config failed to parse.");
+
+            CommandIntentProfileDefinition profile = config.Profiles.Single(p =>
+                string.Equals(p.Id, "intent.command.default", StringComparison.Ordinal));
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    rule.Target?.HasEntity == false &&
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                Is.True,
+                "Default command must keep explicit ground movement.");
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    rule.Target?.HasEntity == true &&
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                Is.True,
+                "Default command must explicitly treat an inspectable entity under the pointer as a valid move destination, so right-clicking neutral showcase props is not silently dropped.");
+        }
+
+        [Test]
         public void MobaLocalOrderSource_ResolvesCallerSuppliedTargetCollectionKey()
         {
             const string customCollectionKey = "collection.test.explicit.targets";

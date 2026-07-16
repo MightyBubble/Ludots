@@ -330,8 +330,14 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
                 ref readonly FormationMemberState member = ref members[index];
                 int formationIndex = member.FormationIndex;
                 RequireFormationIndex(formationIndex);
-                if (_anchorSeenByFormation[formationIndex] == 0 ||
-                    _targetChangedByFormation[formationIndex] == 0)
+                if (_anchorSeenByFormation[formationIndex] == 0)
+                {
+                    sink.Clear(_engine.World, Unsafe.Add(ref entityFirst, index));
+                    ClearFormationTargetSnapshot(formationIndex);
+                    continue;
+                }
+
+                if (_targetChangedByFormation[formationIndex] == 0)
                 {
                     continue;
                 }
@@ -443,6 +449,15 @@ public sealed class FormationExecutionTargetSystem : ISystem<float>
         }
 
         _ = simulation;
+    }
+
+    private void ClearFormationTargetSnapshot(int formationIndex)
+    {
+        _lastTargetCenterXByFormation[formationIndex] = 0;
+        _lastTargetCenterYByFormation[formationIndex] = 0;
+        _lastTargetFacingByFormation[formationIndex] = 0;
+        _lastTargetIdentitySignatureByFormation[formationIndex] = 0;
+        _targetSnapshotInitializedByFormation[formationIndex] = 0;
     }
 
     private ulong BuildCurrentTargetIdentitySignature(int formationIndex)

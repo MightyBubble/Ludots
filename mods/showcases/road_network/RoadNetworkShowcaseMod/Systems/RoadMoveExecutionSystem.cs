@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Runtime;
@@ -10,7 +11,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveExecutionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, MovePlanOrderRuntime, MovePlanExecutionIntent>();
+            .WithAll<RoadColumnTag, MovePlanOrderRuntime, MovePlanExecutionIntent>()
+            .WithNone<SuspendedTag>();
 
         private readonly RoadNetworkMassNavigationRuntimeAccessor _navigation;
 

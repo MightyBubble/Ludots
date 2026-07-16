@@ -16,7 +16,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMovePlanSelectionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly float _defaultSpeedCmPerSec;
         private readonly int _moveSpeedAttributeId;

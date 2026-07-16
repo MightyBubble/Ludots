@@ -6,13 +6,27 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 internal sealed class MassNavigationAgentState
 {
-    private readonly System.Collections.Generic.List<Entity> _spawnedEntities = new();
-    private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds = new();
-    private readonly System.Collections.Generic.List<Entity> _allAgents = new();
-    private readonly System.Collections.Generic.List<Entity> _controllableAgents = new();
-    private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId = new();
+    private readonly System.Collections.Generic.List<Entity> _spawnedEntities;
+    private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds;
+    private readonly System.Collections.Generic.List<Entity> _allAgents;
+    private readonly System.Collections.Generic.List<Entity> _controllableAgents;
+    private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId;
     private int _boundAgentCount;
     private int _controllableAgentSlotCount;
+
+    public MassNavigationAgentState(int agentCapacity)
+    {
+        if (agentCapacity <= 0)
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(agentCapacity));
+        }
+
+        _spawnedEntities = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _spawnedEntityIds = new System.Collections.Generic.HashSet<int>(agentCapacity);
+        _allAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _controllableAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _controllableIndexByEntityId = new System.Collections.Generic.Dictionary<int, int>(agentCapacity);
+    }
 
     public IReadOnlyList<Entity> SpawnedEntities => _spawnedEntities;
     public IReadOnlyList<Entity> AllAgents => _allAgents;

@@ -916,6 +916,43 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityExecution_RemovedAnchorClearsMemberNavigationTarget()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability must finish binding before missing-anchor target clearing validation.");
+
+            FormationExecutionTargetSystem system = GetSystems(engine, SystemGroup.PostMovement)
+                .OfType<FormationExecutionTargetSystem>()
+                .Single();
+            UpdateSystem(system);
+
+            Entity anchor = CaptureFormationAgents(engine, expectedCount: 1)[0];
+            FormationAnchorState formation = engine.World.Get<FormationAnchorState>(anchor);
+            Entity soldier = FindFirstSoldierEntity(engine, formation.FormationIndex);
+            int soldierAgentIndex = engine.World.Get<MassNavigationAgentIndex>(soldier).Value;
+            Assert.That(
+                simulation.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out _, out _),
+                Is.True,
+                "Warmup must establish the member navigation target before the anchor disappears.");
+
+            engine.World.Destroy(anchor);
+            UpdateSystem(system);
+
+            Assert.That(
+                simulation.TryGetAgentNavigationTargetWorldCm(soldierAgentIndex, out _, out _),
+                Is.False,
+                "A Formation member whose anchor disappeared must not keep walking toward the stale anchor target.");
+        }
+
+        [Test]
         public void FormationCapabilityExecution_InvalidSoldierAgentIndexFailsBeforeAnyAnchorStateChanges()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
@@ -1589,7 +1626,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationAgentState_DestroyTrackedUsesPresentationLifecycleOnly()
         {
             var world = World.Create();
-            var state = new MassNavigationAgentState();
+            var state = new MassNavigationAgentState(agentCapacity: 8);
             Entity performerRoot = world.Create();
             Entity agent = world.Create(
                 new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("light") },
@@ -1617,7 +1654,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationAgentState_DestroyTrackedFailsWithoutPresentationStableId()
         {
             var world = World.Create();
-            var state = new MassNavigationAgentState();
+            var state = new MassNavigationAgentState(agentCapacity: 8);
             Entity agent = world.Create(new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("light") });
 
             state.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
@@ -1631,7 +1668,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationAgentState_RegisterAgentAtIndexHandlesSparseResizeAndRejectsDuplicates()
         {
             var world = World.Create();
-            var state = new MassNavigationAgentState();
+            var state = new MassNavigationAgentState(agentCapacity: 8);
             Entity first = world.Create();
             Entity second = world.Create();
 
@@ -1653,7 +1690,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationAgentState_RegisterAgentAtIndexRejectsInvalidInputWithoutStateMutation()
         {
             var world = World.Create();
-            var state = new MassNavigationAgentState();
+            var state = new MassNavigationAgentState(agentCapacity: 8);
             Entity agent = world.Create();
 
             Assert.Throws<InvalidOperationException>(() => state.RegisterAgentAtIndex(agent, agentIndex: -1, controllable: true));
@@ -3799,7 +3836,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationRuntimeBoundaries_UseExplicitAgentTermsAndCoreOwnedBinding()
         {
-            var agentState = new MassNavigationAgentState();
+            var agentState = new MassNavigationAgentState(agentCapacity: 8);
             var world = World.Create();
             try
             {
@@ -5660,7 +5697,7 @@ namespace Ludots.Tests.Presentation
             flow.ResetAuthoredAgents(seeds);
 
             var world = World.Create();
-            var agentState = new MassNavigationAgentState();
+            var agentState = new MassNavigationAgentState(agentCapacity: localPositions.Length);
             for (int i = 0; i < localPositions.Length; i++)
             {
                 Entity entity = world.Create(new FacingDirection { AngleRad = 0f });
