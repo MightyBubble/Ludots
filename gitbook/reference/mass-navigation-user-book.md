@@ -211,7 +211,7 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `MassNavigationAgent`
 - `EntityLayer`
 
-这表示方阵能被选中、能接业务订单、有血量，并且作为普通 MassNavigation agent 接收明确空间目标。方阵身份、槽位数量、目标朝向和同步阈值由 Showcase 在运行时绑定自己的 `FormationCapabilityShowcaseFormationAgent` 与 `FormationCapabilityShowcaseCommandState`，不写进 Core 模板合同。
+这表示方阵能被选中、能接业务订单、有血量，并且作为普通 MassNavigation agent 接收明确空间目标。方阵的展示绑定、输入状态和初始编排由 Showcase 在运行时挂接自己的 `FormationCapabilityShowcaseFormationAgent` 与 `FormationCapabilityShowcaseCommandState`；真正可复用的 formation 身份、成员/槽位关系、目标朝向和规划真相在可选 Core Formation 里。
 
 士兵模板当前包含：
 
@@ -221,16 +221,16 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `EntityLayer`
 - `MassNavigationAgent`
 
-这表示士兵也是普通 MassNavigation agent；士兵模板不配 `OrderBuffer` 和 `CommandSourceSelectableTag`，所以玩家不能直接选中或下令。所属方阵、槽位和局部偏移来自 Showcase 运行时绑定的 `FormationCapabilityShowcaseFormationSoldier`。
+这表示士兵也是普通 MassNavigation agent；士兵模板不配 `OrderBuffer` 和 `CommandSourceSelectableTag`，所以玩家不能直接选中或下令。所属方阵、槽位和局部偏移由 Showcase 运行时绑定的 `FormationCapabilityShowcaseFormationSoldier` 挂接，但成员真相和目标规划仍归可选 Core Formation。
 
 组件语义要按存在与否理解：
 
 - `MassNavigationAgent`：进入 core MassNavigation runtime。
 - `OrderBuffer`：可接玩家或 AI 订单。
 - `CommandSourceSelectableTag`：可进入 `collection.command.source` 的指挥来源集合。
-- `FormationCapabilityShowcaseFormationAgent` / `FormationCapabilityShowcaseFormationSoldier`：只属于当前 Showcase，由 Showcase 自己注册和绑定；其他 Mod 应使用自己的业务命名。
+- `FormationCapabilityShowcaseFormationAgent` / `FormationCapabilityShowcaseFormationSoldier`：是 Showcase 侧的展示绑定与 demo 编排类型，不是 formation 业务真相；可选 Core Formation 的稳定身份和成员/槽位状态在 `src/Core/MassNavigation/Formation`。
 
-只加载 MassNavigation 时没有 formation 组件、formation 订单或 follower system。Formation 是当前 Showcase 的业务能力，不是一个需要在 Core 中开关的可选模式。
+只加载 MassNavigation 时没有 formation 组件、formation 订单或 follower system。Formation 是可选的 MassNavigation Core capability；没有 Formation authoring 时，不会产生 Formation 状态、配置或稳态成本。
 
 ## Performer 怎么配
 

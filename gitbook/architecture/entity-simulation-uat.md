@@ -55,7 +55,7 @@
 
 ### 4.1 验收目标
 
-确认大量 crowd 已走正式 SoA / CrowdFlow 车道，并能执行明确空间目标和局部避让。Formation 业务只作为上层目标生产者，不进入 Core 验收口径。
+确认大量 crowd 已走正式 SoA / CrowdFlow 车道，并能执行明确空间目标和局部避让。当前仓库的 large-world headless 证据门只落地 10K；Optional Formation core capability 作为独立业务能力，用正式 OrderQueue / OrderBuffer 和 MovePlanning execution-target 交付明确成员目标，Showcase 只负责输入、镜头和表现。
 
 ### 4.2 玩家验收场景
 
@@ -72,8 +72,6 @@ Feature: 大规模单位移动
 
     Examples:
       | 规模 |
-      | 2000 |
-      | 5000 |
       | 10000 |
 
   Scenario: Formation Showcase 通过明确成员目标驱动士兵
@@ -88,15 +86,15 @@ Feature: 大规模单位移动
 ### 4.3 期望结果
 
 - crowd 不依赖 `FullPhysics2D` 也能稳定运行
-- Formation Showcase 的成员目标来自 Showcase 自己的业务状态，并通过 MovePlanning execution sink 进入 MassNavigation
+- Optional Formation core capability 通过正式 `OrderQueue` / `OrderBuffer` 和 `MovePlanning` execution-target 交付明确成员目标；Showcase 只管 Q/E、旋转步长、镜头、HUD 和题材
 - 成员之间存在可感知的分离或避让
 - 可见规模提升时仍保持可玩
+- 当前 headless evidence 不宣称 live render FPS；真实 FPS 走 Raylib HUD 或 renderer benchmark
 - 通用 `massNavigationMove` 不包含 formation mode、slot 或 rotation payload
 
 ### 4.4 必记指标
 
-- 2k、5k、10k 三档的：
-  - `fps`
+- 10K 门的：
   - `frame ms`
   - crowd step 耗时
   - prepare / steer / resolve / sync 耗时

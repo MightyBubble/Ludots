@@ -271,6 +271,28 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void FormationGovernanceDocs_StayAlignedWithOptionalCoreDecision()
+        {
+            string repoRoot = FindRepoRoot();
+            string entitySimulationUat = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "architecture", "entity-simulation-uat.md"));
+            string userBook = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "reference", "mass-navigation-user-book.md"));
+            string formalChain = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "reference", "mass-navigation-formal-chain.md"));
+            string layering = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "architecture", "entity-simulation-layering.md"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(layering, Does.Contain("Formation 是可选的 MassNavigation Core capability"));
+                Assert.That(formalChain, Does.Contain("Formation is an optional MassNavigation Core capability"));
+                Assert.That(userBook, Does.Contain("Formation 是可选的 MassNavigation Core capability"));
+                Assert.That(userBook, Does.Not.Contain("Formation 是当前 Showcase 的业务能力，不是一个需要在 Core 中开关的可选模式"));
+                Assert.That(entitySimulationUat, Does.Contain("Optional Formation core capability"));
+                Assert.That(entitySimulationUat, Does.Contain("当前 headless evidence 不宣称 live render FPS"));
+                Assert.That(entitySimulationUat, Does.Not.Contain("2k、5k、10k 三档"));
+                Assert.That(entitySimulationUat, Does.Not.Contain("Formation 业务只作为上层目标生产者，不进入 Core 验收口径"));
+            });
+        }
+
+        [Test]
         public void NonFormationConfigs_DoNotAuthorFormationStateOrOrders()
         {
             string repoRoot = FindRepoRoot();

@@ -2416,6 +2416,96 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void RuntimeTemplateBatchSpawn_UnregisteredMemberOfTypeFailsBeforeOwnershipOrEntityCreation()
+        {
+            string templateJson = """
+[
+  {
+    "id": "relationship_batch_agent",
+    "components": {
+      "Name": { "Value": "Relationship Batch Agent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            var relationshipTypes = new RelationshipTypeRegistry();
+            int ownsTypeId = relationshipTypes.Register("Owns");
+            const int unregisteredMemberOfTypeId = 1;
+            var relationships = new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
+            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            Entity owner = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity membershipTarget = world.Create(new TeamIdentity { TeamId = 7 });
+            int worldSizeBefore = world.Size;
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var presentationEvents = new PresentationEventStream(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                presentationEvents: presentationEvents,
+                ownership: ownership,
+                relationships: relationships,
+                memberOfTypeId: unregisteredMemberOfTypeId);
+
+            const int receiptChannel = 207;
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "relationship_batch_agent",
+                    MapId = new MapId("relationship_batch_map"),
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    OwnershipSource = owner,
+                    HasOwnershipSource = 1,
+                    MembershipTarget = membershipTarget,
+                    HasMembershipTarget = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("MemberOf"));
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+            Assert.That(world.Size, Is.EqualTo(worldSizeBefore), "Unregistered relationship type ids must fail before batch entities or ownership edges are created.");
+
+            int spawned = 0;
+            var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            world.Query(in query, (Entity entity, ref EntityTemplateKeyRef _) =>
+            {
+                Assert.That(relationships.HasLink(owner, entity, ownsTypeId), Is.False);
+                spawned++;
+            });
+            Assert.That(spawned, Is.Zero);
+        }
+
+        [Test]
         public void RuntimeTemplateBatchSpawn_TemplateTeamAndExplicitMembershipTargetMustNotConflict()
         {
             using TempTemplatePipeline temp = TempTemplatePipeline.Create(TeamAuthoredBatchTemplateJson);

@@ -699,9 +699,10 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (request.HasMembershipTarget != 0)
             {
-                if (_relationships == null || _memberOfTypeId < 0 || !IsAliveInCurrentWorld(request.MembershipTarget))
+                if (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget))
                 {
-                    throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
+                    throw new InvalidOperationException(
+                        "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
                 }
 
                 _relationships.EnsureLink(entity, request.MembershipTarget, _memberOfTypeId);
@@ -765,9 +766,10 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             if (request.HasMembershipTarget != 0 &&
-                (_relationships == null || _memberOfTypeId < 0 || !IsAliveInCurrentWorld(request.MembershipTarget)))
+                (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget)))
             {
-                throw new InvalidOperationException("Runtime spawn explicit MembershipTarget requires a live target and member-of relationship runtime.");
+                throw new InvalidOperationException(
+                    "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
             }
         }
 
@@ -804,7 +806,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PreflightImplicitMemberOfTarget(string context, int teamId)
         {
-            if (_relationships == null || _teamLookup == null || _memberOfTypeId < 0)
+            if (_relationships == null || _teamLookup == null || !HasRegisteredMemberOfRelationshipType())
             {
                 throw new InvalidOperationException(
                     $"{context} authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
@@ -820,6 +822,13 @@ namespace Ludots.Core.Gameplay.Spawning
         private bool IsAliveInCurrentWorld(Entity entity)
         {
             return entity != Entity.Null && entity.WorldId == World.Id && World.IsAlive(entity);
+        }
+
+        private bool HasRegisteredMemberOfRelationshipType()
+        {
+            return _relationships != null &&
+                _memberOfTypeId >= 0 &&
+                _memberOfTypeId < _relationships.TypeRegistry.Count;
         }
 
         private void PreflightMembershipTargetMatchesTeam(
