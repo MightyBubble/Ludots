@@ -51,7 +51,66 @@ namespace Ludots.Core.Gameplay.GAS
         public bool BudgetFused => _budgetFused;
         public int ResponseChainListenerRevision => _responseChainListenerRevision;
 
+        internal readonly struct WriteCheckpoint
+        {
+            internal readonly int Count;
+            internal readonly int NextRootId;
+            internal readonly int OverflowHead;
+            internal readonly int OverflowTail;
+            internal readonly int OverflowCount;
+            internal readonly int Dropped;
+            internal readonly bool BudgetFused;
+
+            internal WriteCheckpoint(
+                int count,
+                int nextRootId,
+                int overflowHead,
+                int overflowTail,
+                int overflowCount,
+                int dropped,
+                bool budgetFused)
+            {
+                Count = count;
+                NextRootId = nextRootId;
+                OverflowHead = overflowHead;
+                OverflowTail = overflowTail;
+                OverflowCount = overflowCount;
+                Dropped = dropped;
+                BudgetFused = budgetFused;
+            }
+        }
+
         public EffectRequest this[int index] => _items[index];
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            return new WriteCheckpoint(
+                _count,
+                _nextRootId,
+                _overflowHead,
+                _overflowTail,
+                _overflowCount,
+                _dropped,
+                _budgetFused);
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            if (_count < checkpoint.Count ||
+                _overflowHead != checkpoint.OverflowHead ||
+                _overflowCount < checkpoint.OverflowCount)
+            {
+                throw new InvalidOperationException("GAS.EFFECT_REQUEST.ERR.InvalidWriteRollback");
+            }
+
+            _count = checkpoint.Count;
+            _nextRootId = checkpoint.NextRootId;
+            _overflowHead = checkpoint.OverflowHead;
+            _overflowTail = checkpoint.OverflowTail;
+            _overflowCount = checkpoint.OverflowCount;
+            _dropped = checkpoint.Dropped;
+            _budgetFused = checkpoint.BudgetFused;
+        }
 
         public void Reserve(int capacity)
         {

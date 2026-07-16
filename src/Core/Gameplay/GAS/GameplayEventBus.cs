@@ -19,6 +19,37 @@ namespace Ludots.Core.Gameplay.GAS
         public int Capacity => _nextEvents.Length;
         public int AvailableNextCapacity => _nextEvents.Length - _nextCount;
 
+        internal readonly struct WriteCheckpoint
+        {
+            internal readonly int NextCount;
+            internal readonly int DroppedInNext;
+            internal readonly bool NextBudgetFused;
+
+            internal WriteCheckpoint(int nextCount, int droppedInNext, bool nextBudgetFused)
+            {
+                NextCount = nextCount;
+                DroppedInNext = droppedInNext;
+                NextBudgetFused = nextBudgetFused;
+            }
+        }
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            return new WriteCheckpoint(_nextCount, _droppedInNext, _nextBudgetFused);
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            if (_nextCount < checkpoint.NextCount)
+            {
+                throw new InvalidOperationException("GAS.GAMEPLAY_EVENT.ERR.InvalidWriteRollback");
+            }
+
+            _nextCount = checkpoint.NextCount;
+            _droppedInNext = checkpoint.DroppedInNext;
+            _nextBudgetFused = checkpoint.NextBudgetFused;
+        }
+
         public void Publish(GameplayEvent evt)
         {
             if (_nextCount >= _nextEvents.Length)

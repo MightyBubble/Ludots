@@ -288,5 +288,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             World.Set(_runtimeStateEntity, state);
         }
 
+        public override void Dispose()
+        {
+            _application.Dispose();
+            base.Dispose();
+        }
+
     }
 }

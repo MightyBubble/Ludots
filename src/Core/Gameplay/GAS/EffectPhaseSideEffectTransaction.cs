@@ -1,4 +1,5 @@
 using System;
+using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -11,7 +12,7 @@ namespace Ludots.Core.Gameplay.GAS;
 /// effect executes OnResolve, OnHit, and OnApply. Nothing reaches the world or
 /// externally visible queues until every phase has completed successfully.
 /// </summary>
-public sealed class EffectPhaseSideEffectTransaction
+public sealed class EffectPhaseSideEffectTransaction : IDisposable
 {
     public const string CapacityExceededError = "GAS.EFFECT_TRANSACTION.ERR.CapacityExceeded";
     public const string ScopeAlreadyActiveError = "GAS.EFFECT_TRANSACTION.ERR.ScopeAlreadyActive";
@@ -27,20 +28,36 @@ public sealed class EffectPhaseSideEffectTransaction
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
     private readonly ulong[] _attributeChangedMasks;
+    private readonly GameplayAttributeChangedBits[] _attributeChangedOriginalValues;
+    private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
+    private readonly bool[] _attributeChangedExisted;
     private readonly Entity[] _dirtyEntities;
+    private readonly DirtyFlags[] _dirtyOriginalValues;
     private readonly EffectRequest[] _stagedEffectRequests;
     private readonly RuntimeEntitySpawnRequest[] _stagedSpawnRequests;
     private readonly GasPresentationEvent[] _stagedPresentationEvents;
     private readonly GameplayEvent[] _stagedGameplayEvents;
     private readonly Entity[] _blackboardFloatEntities;
+    private readonly BlackboardFloatBuffer[] _blackboardFloatOriginalValues;
     private readonly BlackboardFloatBuffer[] _blackboardFloatValues;
     private readonly Entity[] _blackboardIntEntities;
+    private readonly BlackboardIntBuffer[] _blackboardIntOriginalValues;
     private readonly BlackboardIntBuffer[] _blackboardIntValues;
     private readonly Entity[] _blackboardEntityEntities;
+    private readonly BlackboardEntityBuffer[] _blackboardEntityOriginalValues;
     private readonly BlackboardEntityBuffer[] _blackboardEntityValues;
     private readonly Entity[] _cancelledEffects;
+    private readonly bool[] _cancelledEffectOriginalValues;
     private readonly Entity[] _aggregateDirtyEntities;
+    private readonly bool[] _aggregateDirtyExisted;
     private readonly ListenerRegistration[] _listenerRegistrations;
+    private readonly Entity[] _listenerEntities;
+    private readonly EffectPhaseListenerBuffer[] _listenerOriginalValues;
+    private readonly EffectPhaseListenerBuffer[] _listenerValues;
+    private readonly bool[] _listenerExisted;
+    private CommandBuffer _structuralCommands;
+    private readonly CommandBuffer _structuralRollbackCommands;
+    private readonly int _structuralCommandCapacity;
     private int _attributeCount;
     private int _dirtyEntityCount;
     private int _effectRequestCount;
@@ -53,7 +70,15 @@ public sealed class EffectPhaseSideEffectTransaction
     private int _cancelledEffectCount;
     private int _aggregateDirtyCount;
     private int _listenerRegistrationCount;
+    private int _listenerEntityCount;
     private GameplayEventBus? _gameplayEventBus;
+    private bool _worldCommitStarted;
+    private bool _externalCommitStarted;
+    private DirtyEntityQueue.WriteCheckpoint _dirtyEntityCheckpoint;
+    private EffectRequestQueue.WriteCheckpoint _effectRequestCheckpoint;
+    private RuntimeEntitySpawnQueue.WriteCheckpoint _spawnRequestCheckpoint;
+    private int _presentationEventCheckpoint;
+    private GameplayEventBus.WriteCheckpoint _gameplayEventCheckpoint;
 
     public EffectPhaseSideEffectTransaction(
         World world,
@@ -77,20 +102,37 @@ public sealed class EffectPhaseSideEffectTransaction
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeChangedMasks = new ulong[attributeEntityCapacity];
+        _attributeChangedOriginalValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
+        _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
+        _attributeChangedExisted = new bool[attributeEntityCapacity];
         _dirtyEntities = new Entity[attributeEntityCapacity + 1];
+        _dirtyOriginalValues = new DirtyFlags[attributeEntityCapacity + 1];
         _stagedEffectRequests = new EffectRequest[effectRequests?.TotalCapacity ?? 1];
         _stagedSpawnRequests = new RuntimeEntitySpawnRequest[spawnRequests?.Capacity ?? 1];
         _stagedPresentationEvents = new GasPresentationEvent[presentationEvents?.Capacity ?? 1];
         _stagedGameplayEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         _blackboardFloatEntities = new Entity[attributeEntityCapacity];
+        _blackboardFloatOriginalValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardFloatValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardIntEntities = new Entity[attributeEntityCapacity];
+        _blackboardIntOriginalValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardIntValues = new BlackboardIntBuffer[attributeEntityCapacity];
         _blackboardEntityEntities = new Entity[attributeEntityCapacity];
+        _blackboardEntityOriginalValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _blackboardEntityValues = new BlackboardEntityBuffer[attributeEntityCapacity];
         _cancelledEffects = new Entity[attributeEntityCapacity];
+        _cancelledEffectOriginalValues = new bool[attributeEntityCapacity];
         _aggregateDirtyEntities = new Entity[attributeEntityCapacity];
+        _aggregateDirtyExisted = new bool[attributeEntityCapacity];
         _listenerRegistrations = new ListenerRegistration[attributeEntityCapacity];
+        int listenerEntityCapacity = checked(attributeEntityCapacity * 2);
+        _listenerEntities = new Entity[listenerEntityCapacity];
+        _listenerOriginalValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
+        _listenerValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
+        _listenerExisted = new bool[listenerEntityCapacity];
+        _structuralCommandCapacity = checked(attributeEntityCapacity * 4);
+        _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
+        _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
     }
 
     public bool IsActive { get; private set; }
@@ -114,7 +156,10 @@ public sealed class EffectPhaseSideEffectTransaction
         _cancelledEffectCount = 0;
         _aggregateDirtyCount = 0;
         _listenerRegistrationCount = 0;
+        _listenerEntityCount = 0;
         _gameplayEventBus = null;
+        _worldCommitStarted = false;
+        _externalCommitStarted = false;
         IsActive = true;
     }
 
@@ -448,90 +493,90 @@ public sealed class EffectPhaseSideEffectTransaction
     {
         RequireActive();
         ValidateCommit();
+        PrepareCommitState();
 
-        for (int i = 0; i < _attributeCount; i++)
+        try
         {
-            ulong changedMask = _attributeChangedMasks[i];
-            if (changedMask == 0UL)
+            _worldCommitStarted = true;
+            if (_structuralCommands.Size > 0)
             {
-                continue;
+                _structuralCommands.Playback(_world);
             }
 
-            Entity entity = _attributeEntities[i];
-            _world.Get<AttributeBuffer>(entity) = _attributeValues[i];
-            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            for (int i = 0; i < _attributeCount; i++)
             {
-                if ((changedMask & (1UL << attributeId)) != 0UL)
+                if (_attributeChangedMasks[i] == 0UL)
                 {
-                    _world.Get<DirtyFlags>(entity).MarkAttributeDirty(attributeId);
+                    continue;
+                }
+
+                Entity entity = _attributeEntities[i];
+                _world.Get<AttributeBuffer>(entity) = _attributeValues[i];
+                _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedValues[i];
+                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                {
+                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) != 0UL)
+                    {
+                        _world.Get<DirtyFlags>(entity).MarkAttributeDirty(attributeId);
+                    }
                 }
             }
 
-            if (!_world.Has<GameplayAttributeChangedBits>(entity))
+            for (int i = 0; i < _blackboardFloatCount; i++)
             {
-                _world.Add(entity, new GameplayAttributeChangedBits());
+                _world.Get<BlackboardFloatBuffer>(_blackboardFloatEntities[i]) = _blackboardFloatValues[i];
             }
-            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            for (int i = 0; i < _blackboardIntCount; i++)
             {
-                if ((changedMask & (1UL << attributeId)) != 0UL)
+                _world.Get<BlackboardIntBuffer>(_blackboardIntEntities[i]) = _blackboardIntValues[i];
+            }
+            for (int i = 0; i < _blackboardEntityCount; i++)
+            {
+                _world.Get<BlackboardEntityBuffer>(_blackboardEntityEntities[i]) = _blackboardEntityValues[i];
+            }
+            for (int i = 0; i < _cancelledEffectCount; i++)
+            {
+                _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested = true;
+            }
+            for (int i = 0; i < _listenerEntityCount; i++)
+            {
+                _world.Get<EffectPhaseListenerBuffer>(_listenerEntities[i]) = _listenerValues[i];
+            }
+
+            CaptureExternalWriteCheckpoints();
+            _externalCommitStarted = true;
+            for (int i = 0; i < _dirtyEntityCount; i++)
+            {
+                _tagOps!.MarkDirtyEntity(_world, _dirtyEntities[i]);
+            }
+            for (int i = 0; i < _effectRequestCount; i++)
+            {
+                _effectRequests!.Publish(_stagedEffectRequests[i]);
+            }
+            for (int i = 0; i < _spawnRequestCount; i++)
+            {
+                if (!_spawnRequests!.TryEnqueue(_stagedSpawnRequests[i]))
                 {
-                    _world.Get<GameplayAttributeChangedBits>(entity).Mark(attributeId);
+                    throw new InvalidOperationException(
+                        "GAS.EFFECT_TRANSACTION.ERR.ValidatedSpawnCommitFailed");
                 }
             }
-        }
-
-        for (int i = 0; i < _blackboardFloatCount; i++)
-        {
-            _world.Get<BlackboardFloatBuffer>(_blackboardFloatEntities[i]) = _blackboardFloatValues[i];
-        }
-        for (int i = 0; i < _blackboardIntCount; i++)
-        {
-            _world.Get<BlackboardIntBuffer>(_blackboardIntEntities[i]) = _blackboardIntValues[i];
-        }
-        for (int i = 0; i < _blackboardEntityCount; i++)
-        {
-            _world.Get<BlackboardEntityBuffer>(_blackboardEntityEntities[i]) = _blackboardEntityValues[i];
-        }
-        for (int i = 0; i < _cancelledEffectCount; i++)
-        {
-            _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested = true;
-        }
-        for (int i = 0; i < _aggregateDirtyCount; i++)
-        {
-            Entity target = _aggregateDirtyEntities[i];
-            if (!_world.Has<AttributeAggregateDirty>(target))
+            for (int i = 0; i < _presentationEventCount; i++)
             {
-                _world.Add(target, new AttributeAggregateDirty());
+                _presentationEvents!.Publish(_stagedPresentationEvents[i]);
             }
-        }
-        CommitListenerRegistrations();
-
-        for (int i = 0; i < _dirtyEntityCount; i++)
-        {
-            _tagOps!.MarkDirtyEntity(_world, _dirtyEntities[i]);
-        }
-        for (int i = 0; i < _effectRequestCount; i++)
-        {
-            _effectRequests!.Publish(_stagedEffectRequests[i]);
-        }
-        for (int i = 0; i < _spawnRequestCount; i++)
-        {
-            if (!_spawnRequests!.TryEnqueue(_stagedSpawnRequests[i]))
+            for (int i = 0; i < _gameplayEventCount; i++)
             {
-                throw new InvalidOperationException(
-                    "GAS.EFFECT_TRANSACTION.ERR.ValidatedSpawnCommitFailed");
+                _gameplayEventBus!.Publish(_stagedGameplayEvents[i]);
             }
-        }
-        for (int i = 0; i < _presentationEventCount; i++)
-        {
-            _presentationEvents!.Publish(_stagedPresentationEvents[i]);
-        }
-        for (int i = 0; i < _gameplayEventCount; i++)
-        {
-            _gameplayEventBus!.Publish(_stagedGameplayEvents[i]);
-        }
 
-        End();
+            End();
+        }
+        catch
+        {
+            Rollback();
+            throw;
+        }
     }
 
     public void Rollback()
@@ -540,6 +585,16 @@ public sealed class EffectPhaseSideEffectTransaction
         {
             return;
         }
+
+        if (_externalCommitStarted)
+        {
+            RollbackExternalWrites();
+        }
+        if (_worldCommitStarted)
+        {
+            RollbackWorldWrites();
+        }
+        ResetAbortedStructuralCommands();
 
         End();
     }
@@ -588,7 +643,8 @@ public sealed class EffectPhaseSideEffectTransaction
         if (_blackboardFloatCount >= _blackboardFloatEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardFloatBuffer));
         index = _blackboardFloatCount++;
         _blackboardFloatEntities[index] = entity;
-        _blackboardFloatValues[index] = _world.Get<BlackboardFloatBuffer>(entity);
+        _blackboardFloatOriginalValues[index] = _world.Get<BlackboardFloatBuffer>(entity);
+        _blackboardFloatValues[index] = _blackboardFloatOriginalValues[index];
         return index;
     }
 
@@ -601,7 +657,8 @@ public sealed class EffectPhaseSideEffectTransaction
         if (_blackboardIntCount >= _blackboardIntEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardIntBuffer));
         index = _blackboardIntCount++;
         _blackboardIntEntities[index] = entity;
-        _blackboardIntValues[index] = _world.Get<BlackboardIntBuffer>(entity);
+        _blackboardIntOriginalValues[index] = _world.Get<BlackboardIntBuffer>(entity);
+        _blackboardIntValues[index] = _blackboardIntOriginalValues[index];
         return index;
     }
 
@@ -614,7 +671,8 @@ public sealed class EffectPhaseSideEffectTransaction
         if (_blackboardEntityCount >= _blackboardEntityEntities.Length) throw StagingCapacityExceeded(nameof(BlackboardEntityBuffer));
         index = _blackboardEntityCount++;
         _blackboardEntityEntities[index] = entity;
-        _blackboardEntityValues[index] = _world.Get<BlackboardEntityBuffer>(entity);
+        _blackboardEntityOriginalValues[index] = _world.Get<BlackboardEntityBuffer>(entity);
+        _blackboardEntityValues[index] = _blackboardEntityOriginalValues[index];
         return index;
     }
 
@@ -802,7 +860,60 @@ public sealed class EffectPhaseSideEffectTransaction
         }
     }
 
-    private unsafe void CommitListenerRegistrations()
+    private void PrepareCommitState()
+    {
+        for (int i = 0; i < _attributeCount; i++)
+        {
+            ulong changedMask = _attributeChangedMasks[i];
+            if (changedMask == 0UL)
+            {
+                continue;
+            }
+
+            Entity entity = _attributeEntities[i];
+            bool existed = _world.Has<GameplayAttributeChangedBits>(entity);
+            _attributeChangedExisted[i] = existed;
+            _attributeChangedOriginalValues[i] = existed
+                ? _world.Get<GameplayAttributeChangedBits>(entity)
+                : default;
+            _attributeChangedValues[i] = _attributeChangedOriginalValues[i];
+            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            {
+                if ((changedMask & (1UL << attributeId)) != 0UL)
+                {
+                    _attributeChangedValues[i].Mark(attributeId);
+                }
+            }
+
+            if (!existed)
+            {
+                _structuralCommands.Add(entity, _attributeChangedValues[i]);
+            }
+        }
+
+        for (int i = 0; i < _dirtyEntityCount; i++)
+        {
+            _dirtyOriginalValues[i] = _world.Get<DirtyFlags>(_dirtyEntities[i]);
+        }
+        for (int i = 0; i < _cancelledEffectCount; i++)
+        {
+            _cancelledEffectOriginalValues[i] = _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested;
+        }
+        for (int i = 0; i < _aggregateDirtyCount; i++)
+        {
+            Entity entity = _aggregateDirtyEntities[i];
+            bool existed = _world.Has<AttributeAggregateDirty>(entity);
+            _aggregateDirtyExisted[i] = existed;
+            if (!existed)
+            {
+                _structuralCommands.Add(entity, new AttributeAggregateDirty());
+            }
+        }
+
+        PrepareListenerValues();
+    }
+
+    private unsafe void PrepareListenerValues()
     {
         for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
         {
@@ -813,13 +924,26 @@ public sealed class EffectPhaseSideEffectTransaction
                 Entity entity = scope == PhaseListenerScope.Target
                     ? registration.Context.Target
                     : registration.Context.Source;
-                if (!_world.Has<EffectPhaseListenerBuffer>(entity))
+                int listenerEntityIndex = FindEntity(_listenerEntities, _listenerEntityCount, entity);
+                if (listenerEntityIndex < 0)
                 {
-                    _world.Add(entity, new EffectPhaseListenerBuffer());
+                    if (_listenerEntityCount >= _listenerEntities.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CapacityExceededError}: destination=ListenerEntities, staged={_listenerEntityCount + 1}, capacity={_listenerEntities.Length}.");
+                    }
+
+                    listenerEntityIndex = _listenerEntityCount++;
+                    _listenerEntities[listenerEntityIndex] = entity;
+                    bool existed = _world.Has<EffectPhaseListenerBuffer>(entity);
+                    _listenerExisted[listenerEntityIndex] = existed;
+                    _listenerOriginalValues[listenerEntityIndex] = existed
+                        ? _world.Get<EffectPhaseListenerBuffer>(entity)
+                        : default;
+                    _listenerValues[listenerEntityIndex] = _listenerOriginalValues[listenerEntityIndex];
                 }
 
-                ref EffectPhaseListenerBuffer buffer = ref _world.Get<EffectPhaseListenerBuffer>(entity);
-                if (!buffer.TryAdd(
+                if (!_listenerValues[listenerEntityIndex].TryAdd(
                     registration.Setup.ListenTagIds[setupIndex],
                     registration.Setup.ListenEffectIds[setupIndex],
                     (EffectPhaseId)registration.Setup.Phases[setupIndex],
@@ -833,6 +957,148 @@ public sealed class EffectPhaseSideEffectTransaction
                     throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ValidatedListenerCommitFailed");
                 }
             }
+        }
+
+        for (int i = 0; i < _listenerEntityCount; i++)
+        {
+            if (!_listenerExisted[i])
+            {
+                _structuralCommands.Add(_listenerEntities[i], _listenerValues[i]);
+            }
+        }
+    }
+
+    private void CaptureExternalWriteCheckpoints()
+    {
+        if (_dirtyEntityCount > 0)
+        {
+            _dirtyEntityCheckpoint = _tagOps!.DirtyEntities.CaptureWriteCheckpoint();
+        }
+        if (_effectRequestCount > 0)
+        {
+            _effectRequestCheckpoint = _effectRequests!.CaptureWriteCheckpoint();
+        }
+        if (_spawnRequestCount > 0)
+        {
+            _spawnRequestCheckpoint = _spawnRequests!.CaptureWriteCheckpoint();
+        }
+        if (_presentationEventCount > 0)
+        {
+            _presentationEventCheckpoint = _presentationEvents!.Count;
+        }
+        if (_gameplayEventCount > 0)
+        {
+            _gameplayEventCheckpoint = _gameplayEventBus!.CaptureWriteCheckpoint();
+        }
+    }
+
+    private void RollbackExternalWrites()
+    {
+        if (_gameplayEventCount > 0)
+        {
+            _gameplayEventBus!.RollbackWrites(in _gameplayEventCheckpoint);
+        }
+        if (_presentationEventCount > 0)
+        {
+            _presentationEvents!.RollbackWrites(_presentationEventCheckpoint);
+        }
+        if (_spawnRequestCount > 0)
+        {
+            _spawnRequests!.RollbackWrites(in _spawnRequestCheckpoint);
+        }
+        if (_effectRequestCount > 0)
+        {
+            _effectRequests!.RollbackWrites(in _effectRequestCheckpoint);
+        }
+        if (_dirtyEntityCount > 0)
+        {
+            _tagOps!.DirtyEntities.RollbackWrites(in _dirtyEntityCheckpoint);
+        }
+    }
+
+    private void RollbackWorldWrites()
+    {
+        for (int i = 0; i < _attributeCount; i++)
+        {
+            Entity entity = _attributeEntities[i];
+            if (!_world.IsAlive(entity))
+            {
+                continue;
+            }
+            if (_world.Has<AttributeBuffer>(entity))
+            {
+                _world.Get<AttributeBuffer>(entity) = _attributeOriginalValues[i];
+            }
+            if (_attributeChangedMasks[i] != 0UL &&
+                _attributeChangedExisted[i] &&
+                _world.Has<GameplayAttributeChangedBits>(entity))
+            {
+                _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedOriginalValues[i];
+            }
+        }
+        for (int i = 0; i < _dirtyEntityCount; i++)
+        {
+            Entity entity = _dirtyEntities[i];
+            if (_world.IsAlive(entity) && _world.Has<DirtyFlags>(entity))
+            {
+                _world.Get<DirtyFlags>(entity) = _dirtyOriginalValues[i];
+            }
+        }
+        for (int i = 0; i < _blackboardFloatCount; i++)
+        {
+            _world.Get<BlackboardFloatBuffer>(_blackboardFloatEntities[i]) = _blackboardFloatOriginalValues[i];
+        }
+        for (int i = 0; i < _blackboardIntCount; i++)
+        {
+            _world.Get<BlackboardIntBuffer>(_blackboardIntEntities[i]) = _blackboardIntOriginalValues[i];
+        }
+        for (int i = 0; i < _blackboardEntityCount; i++)
+        {
+            _world.Get<BlackboardEntityBuffer>(_blackboardEntityEntities[i]) = _blackboardEntityOriginalValues[i];
+        }
+        for (int i = 0; i < _cancelledEffectCount; i++)
+        {
+            _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested = _cancelledEffectOriginalValues[i];
+        }
+        for (int i = 0; i < _listenerEntityCount; i++)
+        {
+            if (_listenerExisted[i] && _world.Has<EffectPhaseListenerBuffer>(_listenerEntities[i]))
+            {
+                _world.Get<EffectPhaseListenerBuffer>(_listenerEntities[i]) = _listenerOriginalValues[i];
+            }
+        }
+
+        for (int i = 0; i < _attributeCount; i++)
+        {
+            if (_attributeChangedMasks[i] != 0UL &&
+                !_attributeChangedExisted[i] &&
+                _world.IsAlive(_attributeEntities[i]) &&
+                _world.Has<GameplayAttributeChangedBits>(_attributeEntities[i]))
+            {
+                _structuralRollbackCommands.Remove<GameplayAttributeChangedBits>(_attributeEntities[i]);
+            }
+        }
+        for (int i = 0; i < _aggregateDirtyCount; i++)
+        {
+            if (!_aggregateDirtyExisted[i] &&
+                _world.IsAlive(_aggregateDirtyEntities[i]) &&
+                _world.Has<AttributeAggregateDirty>(_aggregateDirtyEntities[i]))
+            {
+                _structuralRollbackCommands.Remove<AttributeAggregateDirty>(_aggregateDirtyEntities[i]);
+            }
+        }
+        for (int i = 0; i < _listenerEntityCount; i++)
+        {
+            if (!_listenerExisted[i] &&
+                _world.IsAlive(_listenerEntities[i]) &&
+                _world.Has<EffectPhaseListenerBuffer>(_listenerEntities[i]))
+            {
+                _structuralRollbackCommands.Remove<EffectPhaseListenerBuffer>(_listenerEntities[i]);
+            }
+        }
+        if (_structuralRollbackCommands.Size > 0)
+        {
+            _structuralRollbackCommands.Playback(_world);
         }
     }
 
@@ -892,8 +1158,28 @@ public sealed class EffectPhaseSideEffectTransaction
         _cancelledEffectCount = 0;
         _aggregateDirtyCount = 0;
         _listenerRegistrationCount = 0;
+        _listenerEntityCount = 0;
         _gameplayEventBus = null;
+        _worldCommitStarted = false;
+        _externalCommitStarted = false;
         IsActive = false;
+    }
+
+    private void ResetAbortedStructuralCommands()
+    {
+        if (_structuralCommands.Size == 0)
+        {
+            return;
+        }
+
+        _structuralCommands.Dispose();
+        _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
+    }
+
+    public void Dispose()
+    {
+        _structuralCommands.Dispose();
+        _structuralRollbackCommands.Dispose();
     }
 
     private static int FindEntity(Entity[] entities, int count, Entity entity)

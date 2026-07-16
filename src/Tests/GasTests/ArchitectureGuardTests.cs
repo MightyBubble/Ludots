@@ -335,6 +335,24 @@ namespace GasTests
         }
 
         [Test]
+        public void PersistentEffectSideEffectTransaction_MustDeferStructuralChanges()
+        {
+            string repoRoot = FindRepoRoot();
+            string source = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "GAS",
+                "EffectPhaseSideEffectTransaction.cs"));
+
+            Assert.That(source, Does.Not.Contain("_world.Add("));
+            Assert.That(source, Does.Not.Contain("_world.Remove"));
+            Assert.That(source, Does.Contain("CommandBuffer"));
+            Assert.That(source, Does.Contain("Playback(_world)"));
+        }
+
+        [Test]
         public void EntityRequiredStateAssembly_MustHaveOnePlanner()
         {
             string repoRoot = FindRepoRoot();

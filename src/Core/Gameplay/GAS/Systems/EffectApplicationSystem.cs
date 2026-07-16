@@ -624,6 +624,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _listenerRegistrationDropped = 0;
         }
 
+        public override void Dispose()
+        {
+            _persistentPhaseTransaction.Dispose();
+            base.Dispose();
+        }
+
         private void RollbackUncommittedApplicationWork()
         {
             for (int i = 0; i < _effectsToActivate.Count; i++)
