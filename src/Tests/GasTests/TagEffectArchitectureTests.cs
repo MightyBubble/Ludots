@@ -1205,6 +1205,116 @@ namespace Ludots.Tests.GAS
             That(count, Is.EqualTo(1));
         }
 
+        [TestCase(RuntimeEntitySpawnKind.UnitType)]
+        [TestCase(RuntimeEntitySpawnKind.Assembly)]
+        public void RuntimeEntitySpawnSystem_NonTemplateOrderPatch_InstallsRequiredBlackboardState(
+            RuntimeEntitySpawnKind kind)
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = kind == RuntimeEntitySpawnKind.UnitType
+                ? UnitTypeRegistry.Register("RuntimeOrderActor")
+                : 0;
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = kind,
+                UnitTypeId = unitTypeId,
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch("OrderBuffer", JsonNode.Parse("{}")!),
+                },
+                ReceiptChannelId = 21,
+                ReceiptId = (int)kind + 900,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<OrderBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardIntBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardSpatialBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardEntityBuffer>(receipt.Entity), Is.True);
+
+            UnitTypeRegistry.Clear();
+        }
+
+        [TestCase(RuntimeEntitySpawnKind.UnitType, "AbilityStateBuffer")]
+        [TestCase(RuntimeEntitySpawnKind.UnitType, "AbilityTagGrantReceiver")]
+        [TestCase(RuntimeEntitySpawnKind.Assembly, "AbilityStateBuffer")]
+        [TestCase(RuntimeEntitySpawnKind.Assembly, "AbilityTagGrantReceiver")]
+        public void RuntimeEntitySpawnSystem_NonTemplateAbilityPatch_UsesAuthoredStateContract(
+            RuntimeEntitySpawnKind kind,
+            string componentName)
+        {
+            const int abilityId = 7011;
+            var definitions = new AbilityDefinitionRegistry();
+            var exec = new AbilityExecSpec();
+            exec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 20, tagId: 49);
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+            var authoring = new ComponentAuthoringContext();
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, new AbilityFormSetRegistry());
+
+            UnitTypeRegistry.Clear();
+            int unitTypeId = kind == RuntimeEntitySpawnKind.UnitType
+                ? UnitTypeRegistry.Register("RuntimeAbilityActor")
+                : 0;
+            JsonNode componentData = string.Equals(componentName, "AbilityStateBuffer", StringComparison.Ordinal)
+                ? JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!
+                : JsonNode.Parse("{}")!;
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                authoringContext: authoring);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = kind,
+                UnitTypeId = unitTypeId,
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(componentName, componentData),
+                },
+                ReceiptChannelId = 22,
+                ReceiptId = (int)kind + 910,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
+
+            UnitTypeRegistry.Clear();
+        }
+
         [Test]
         public void RuntimeEntitySpawnSystem_TemplateAbilityPatch_PreinstallsTimedTagState()
         {

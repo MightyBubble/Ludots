@@ -103,21 +103,11 @@ namespace Ludots.Core.Config
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
-            EntityRuntimeStatePlan runtimeStatePlan = EntityRuntimeStatePlan.FromEntity(_world, entity);
-            runtimeStatePlan.EnsureInstalled(_world, entity);
-
-            if (_world.Has<AbilityStateBuffer>(entity))
-            {
-                AbilityFormSetRegistry? formSets = _world.Has<AbilityFormSetRef>(entity)
-                    ? _authoringContext.Require<AbilityFormSetRegistry>(ComponentAuthoringServiceKeys.AbilityFormSetRegistry)
-                    : null;
-                AbilityRuntimeStateInstaller.EnsureForAuthoredAbilities(
-                    _world,
-                    entity,
-                    _authoringContext.Require<AbilityDefinitionRegistry>(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry),
-                    formSets,
-                    BuildEntityContext());
-            }
+            EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity(
+                _world,
+                entity,
+                _authoringContext,
+                BuildEntityContext());
 
             // Reset for next use
             _activeTemplate = null;

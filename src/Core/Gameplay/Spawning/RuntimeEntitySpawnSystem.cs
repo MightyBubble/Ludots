@@ -181,14 +181,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
-            if (World.Has<AbilityTagGrantReceiver>(entity))
-            {
-                AbilityRuntimeStateInstaller.EnsureForTagGrantReceiver(World, entity);
-            }
-            else if (World.Has<GameplayTagContainer>(entity))
-            {
-                TagStateInstaller.EnsureInstalled(World, entity);
-            }
+            EnsureRuntimeState(entity, in request);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
@@ -470,6 +463,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
+            EnsureRuntimeState(entity, in request);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
@@ -696,6 +690,15 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 CoreComponentRegistry.Apply(entity, patch.ComponentName, patch.Data);
             }
+        }
+
+        private void EnsureRuntimeState(Entity entity, in RuntimeEntitySpawnRequest request)
+        {
+            EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity(
+                World,
+                entity,
+                _authoringContext,
+                $"RuntimeEntitySpawn kind '{request.Kind}' entity {entity.Id}");
         }
 
         private static bool HasComponentPatches(in RuntimeEntitySpawnRequest request)

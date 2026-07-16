@@ -343,9 +343,19 @@ namespace GasTests
             string scalar = File.ReadAllText(Path.Combine(config, "EntityBuilder.cs"));
 
             Assert.That(batch, Does.Contain("EntityRuntimeStatePlan.FromAuthoredComponents"));
-            Assert.That(scalar, Does.Contain("EntityRuntimeStatePlan.FromEntity"));
+            Assert.That(scalar, Does.Contain("EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity"));
             Assert.That(batch, Does.Not.Contain("bool hasTagCountContainer = hasGameplayTagContainer"));
             Assert.That(batch, Does.Not.Contain("bool hasDirtyFlags = hasAttributeBuffer || hasGameplayTagContainer"));
+
+            string runtimeSpawn = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Gameplay",
+                "Spawning",
+                "RuntimeEntitySpawnSystem.cs"));
+            Assert.That(runtimeSpawn, Does.Contain("EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity"));
+            Assert.That(runtimeSpawn, Does.Not.Contain("AbilityRuntimeStateInstaller.EnsureForTagGrantReceiver"));
         }
 
         [Test]

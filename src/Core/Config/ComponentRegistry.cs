@@ -64,7 +64,7 @@ namespace Ludots.Core.Config
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
-            Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityStateBuffer", SetAbilityStateBuffer, null, Component<AbilityStateBuffer>.ComponentType);
             Register<GrantedSlotBuffer>("GrantedSlotBuffer");
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);

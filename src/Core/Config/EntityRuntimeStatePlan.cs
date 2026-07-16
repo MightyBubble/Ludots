@@ -121,4 +121,30 @@ public readonly struct EntityRuntimeStatePlan
             world.Add(entity, new TimedTagBuffer());
         }
     }
+
+    public static void EnsureInstalledForAuthoredEntity(
+        World world,
+        Entity entity,
+        ComponentAuthoringContext authoringContext,
+        string entityContext)
+    {
+        ArgumentNullException.ThrowIfNull(authoringContext);
+        EntityRuntimeStatePlan runtimeStatePlan = FromEntity(world, entity);
+        runtimeStatePlan.EnsureInstalled(world, entity);
+
+        if (!world.Has<AbilityStateBuffer>(entity))
+        {
+            return;
+        }
+
+        AbilityFormSetRegistry? formSets = world.Has<AbilityFormSetRef>(entity)
+            ? authoringContext.Require<AbilityFormSetRegistry>(ComponentAuthoringServiceKeys.AbilityFormSetRegistry)
+            : null;
+        AbilityRuntimeStateInstaller.EnsureForAuthoredAbilities(
+            world,
+            entity,
+            authoringContext.Require<AbilityDefinitionRegistry>(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry),
+            formSets,
+            entityContext);
+    }
 }
