@@ -11,6 +11,7 @@
   "gasRuntimeCapacity": {
     "abilityExecSnapshotCapacity": 16384,
     "effectLifetimeSnapshotCapacity": 16384,
+    "effectFanOutCommandCapacity": 16384,
     "orderQueueCapacity": 4096,
     "responseChainOrderQueueCapacity": 4096,
     "orderAdmissionResultCapacity": 4096,

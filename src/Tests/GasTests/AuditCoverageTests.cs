@@ -164,6 +164,7 @@ namespace Ludots.Tests.GAS
                 var sys = new EffectProposalProcessingSystem(
                     world,
                     queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
                     inputRequests: null,

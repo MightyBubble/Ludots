@@ -88,7 +88,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, budget: null, templates: templates,
+                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
@@ -148,7 +148,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, budget: null, templates: templates,
+                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));

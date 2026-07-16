@@ -7,7 +7,6 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -25,6 +24,54 @@ namespace Ludots.Core.Gameplay.GAS
         public int PayloadEffectTemplateId;
         public TargetResolverContextMapping ContextMapping;
         public Entity ResolvedEntity;
+    }
+
+    public sealed class FanOutCommandBuffer
+    {
+        private readonly FanOutCommand[] _items;
+        private int _count;
+
+        public FanOutCommandBuffer(int capacity)
+        {
+            if (capacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            }
+
+            _items = new FanOutCommand[capacity];
+        }
+
+        public int Capacity => _items.Length;
+        public int Count => _count;
+        public bool IsFull => _count == _items.Length;
+        public FanOutCommand this[int index] => _items[index];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(in FanOutCommand command)
+        {
+            if (_count == _items.Length)
+            {
+                throw new InvalidOperationException(
+                    $"{TargetResolverFanOutHelper.CommandCapacityExceededError}: capacity={_items.Length}.");
+            }
+
+            _items[_count++] = command;
+        }
+
+        public void Clear()
+        {
+            _count = 0;
+        }
+
+        public void Truncate(int count)
+        {
+            if ((uint)count > (uint)_count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
+
+            _count = count;
+        }
     }
 
     /// <summary>
@@ -45,6 +92,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class TargetResolverFanOutHelper
     {
+        public const string CommandCapacityExceededError = "GAS.FAN_OUT.ERR.CommandCapacityExceeded";
 
         // ── OnResolve Phase: spatial query, returns raw candidates ──
 
@@ -146,7 +194,7 @@ namespace Ludots.Core.Gameplay.GAS
             Entity[] buffer,
             int candidateCount,
             RootBudgetTable budget,
-            List<FanOutCommand> commands,
+            FanOutCommandBuffer commands,
             ref int dropped)
         {
             EffectConfigParams mergedParams = default;
@@ -163,7 +211,7 @@ namespace Ludots.Core.Gameplay.GAS
             Entity[] buffer,
             int candidateCount,
             RootBudgetTable budget,
-            List<FanOutCommand> commands,
+            FanOutCommandBuffer commands,
             ref int dropped)
         {
             ref readonly var spatial = ref query.Spatial;
@@ -230,6 +278,12 @@ namespace Ludots.Core.Gameplay.GAS
                     if (!RelationshipFilterUtil.Passes(filter.RelationFilter, sourceTeamId, entityTeamId)) continue;
                 }
 
+                if (commands.IsFull)
+                {
+                    throw new InvalidOperationException(
+                        $"{CommandCapacityExceededError}: capacity={commands.Capacity}, rootId={ctx.RootId}.");
+                }
+
                 // Budget check
                 if (!budget.TryConsume(ctx.RootId, GasConstants.MAX_CREATES_PER_ROOT))
                 {
@@ -267,7 +321,7 @@ namespace Ludots.Core.Gameplay.GAS
             in TargetDispatchDescriptor dispatch,
             ISpatialQueryService spatialQueries,
             RootBudgetTable budget,
-            List<FanOutCommand> commands,
+            FanOutCommandBuffer commands,
             Entity[] buffer,
             ref int dropped)
         {
@@ -279,7 +333,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// Publish all collected fan-out commands as EffectRequests.
         /// </summary>
-        public static void PublishFanOutCommands(List<FanOutCommand> commands, EffectRequestQueue queue)
+        public static void PublishFanOutCommands(FanOutCommandBuffer commands, EffectRequestQueue queue)
         {
             if (queue == null || commands.Count == 0) return;
 

@@ -55,6 +55,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveEffectFanOutCommandCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectFanOutCommandCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectFanOutCommandCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveOrderAdmissionRejectionCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -383,7 +393,8 @@ namespace Ludots.Tests.GAS
                 world,
                 clock,
                 new GasConditionRegistry(),
-                snapshotCapacity: 32)
+                snapshotCapacity: 32,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
             {
                 MaxWorkUnitsPerSlice = 3,
             };
@@ -427,7 +438,8 @@ namespace Ludots.Tests.GAS
                 world,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
-                snapshotCapacity: 4)
+                snapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -494,6 +506,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 tagOps: tagOps,
                 presentationEvents: presentationEvents)
             {
@@ -534,7 +547,8 @@ namespace Ludots.Tests.GAS
                 world,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
-                snapshotCapacity: 4)
+                snapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
             {
                 MaxWorkUnitsPerSlice = 2,
             };
@@ -575,7 +589,7 @@ namespace Ludots.Tests.GAS
                 target,
                 durationTicks: 30,
                 lifetimeKind: EffectLifetimeKind.After);
-            var system = new EffectApplicationSystem(world)
+            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -602,7 +616,7 @@ namespace Ludots.Tests.GAS
                 target,
                 durationTicks: 30,
                 lifetimeKind: EffectLifetimeKind.After);
-            var system = new EffectApplicationSystem(world)
+            var system = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -637,7 +651,8 @@ namespace Ludots.Tests.GAS
                 world,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
-                snapshotCapacity: 5);
+                snapshotCapacity: 5,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -690,6 +705,7 @@ namespace Ludots.Tests.GAS
                 clock,
                 new GasConditionRegistry(),
                 lifetimeSnapshotCapacity: 16,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 maxWorkUnitsPerSlice: 4);
@@ -775,6 +791,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 lifetimeSnapshotCapacity: 16,
+                fanOutCommandCapacity: workBudget,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 maxWorkUnitsPerSlice: workBudget);
@@ -805,6 +822,7 @@ namespace Ludots.Tests.GAS
             {
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
+                EffectFanOutCommandCapacity = 64,
                 OrderQueueCapacity = 64,
                 ResponseChainOrderQueueCapacity = 64,
                 OrderAdmissionResultCapacity = 64,

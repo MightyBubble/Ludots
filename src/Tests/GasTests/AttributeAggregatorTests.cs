@@ -287,10 +287,11 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
-            var application = new EffectApplicationSystem(world, requests, templates: templates, tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, requests, templates: templates, tagOps: tagOps);
             var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             requests.Publish(new EffectRequest
@@ -346,6 +347,7 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
@@ -405,10 +407,11 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
-            var application = new EffectApplicationSystem(world, requests, templates: templates, tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, requests, templates: templates, tagOps: tagOps);
             var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             requests.Publish(new EffectRequest

@@ -61,6 +61,7 @@ namespace Ludots.Tests.GAS
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
                     requests,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget: null,
                     templates: templates,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -140,6 +141,7 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 budget: null,
                 templates: templates,
                 inputRequests: null,

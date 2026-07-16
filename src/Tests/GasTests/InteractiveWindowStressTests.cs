@@ -77,6 +77,7 @@ namespace Ludots.Tests.GAS
                     clock,
                     conditions,
                     16384,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
                     inputReq,

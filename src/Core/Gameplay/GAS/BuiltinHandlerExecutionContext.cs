@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public ISpatialQueryService? SpatialQueries { get; set; }
         public RootBudgetTable? FanOutBudget { get; set; }
-        public List<FanOutCommand>? FanOutCommands { get; set; }
+        public FanOutCommandBuffer? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
         public RuntimeEntityLifecycleQueue? LifecycleRequests { get; set; }

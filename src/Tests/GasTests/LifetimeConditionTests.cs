@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
                 var clocks = new GasClocks(clock);
                 var conditions = new GasConditionRegistry();
                 var requests = new EffectRequestQueue();
-                var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, effectRequests: requests, tagOps: _tagOps);
+                var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: requests, tagOps: _tagOps);
 
                 int keepAliveTag = 3;
                 var keepAlive = conditions.Register(new GasCondition(GasConditionKind.TagPresent, keepAliveTag, TagSense.Present));
@@ -109,7 +109,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var conditions = new GasConditionRegistry();
-            var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096);
+            var lifetime = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
 
             var source = world.Create();
             var target = world.Create(new ActiveEffectContainer());
@@ -165,6 +165,7 @@ namespace Ludots.Tests.GAS
                 clock,
                 conditions,
                 snapshotCapacity: 4096,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 phaseExecutor: executor,
                 graphApi: graphApi,

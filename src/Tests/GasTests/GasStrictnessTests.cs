@@ -68,16 +68,19 @@ namespace Ludots.Tests.GAS
             Throws<ArgumentOutOfRangeException>(() => new EffectProposalProcessingSystem(
                 world,
                 new EffectRequestQueue(),
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 stepRateHz: 0));
             Throws<ArgumentOutOfRangeException>(() => new EffectApplicationSystem(
                 world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 stepRateHz: 0));
             Throws<ArgumentOutOfRangeException>(() => new EffectLifetimeSystem(
                 world,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 1,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 stepRateHz: 0));
         }
 

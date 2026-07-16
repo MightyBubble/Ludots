@@ -78,6 +78,7 @@ namespace Ludots.Core.Config
     {
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
+        public int EffectFanOutCommandCapacity { get; set; }
         public int OrderQueueCapacity { get; set; }
         public int ResponseChainOrderQueueCapacity { get; set; }
         public int OrderAdmissionResultCapacity { get; set; }
@@ -102,6 +103,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.effectLifetimeSnapshotCapacity must be positive.");
+            }
+
+            if (EffectFanOutCommandCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectFanOutCommandCapacity must be positive.");
             }
 
             if (OrderQueueCapacity <= 0)

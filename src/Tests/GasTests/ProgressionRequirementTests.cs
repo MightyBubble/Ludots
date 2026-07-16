@@ -552,6 +552,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 lifetimeSnapshotCapacity: 16384,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 phaseExecutor: phaseExecutor,

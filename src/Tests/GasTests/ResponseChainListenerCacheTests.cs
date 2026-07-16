@@ -36,6 +36,7 @@ namespace Ludots.Tests.GAS
             var system = new EffectProposalProcessingSystem(
                 world,
                 queue,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));

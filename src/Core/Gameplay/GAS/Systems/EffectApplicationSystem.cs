@@ -80,7 +80,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private int _onApplyDropped;
 
         // ── TargetResolver fan-out (shared types from TargetResolverFanOutHelper) ──
-        private readonly List<FanOutCommand> _fanOutCommands = new(256);
+        private readonly FanOutCommandBuffer _fanOutCommands;
         private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
@@ -127,8 +127,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock? _orderClock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, IClock orderClock = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, IClock orderClock = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
         {
+            _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _effectRequests = effectRequests;
             _budget = budget;
             _presentationEvents = presentationEvents;
@@ -452,7 +453,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     FanOutCommand command = _fanOutCommands[commandIndex];
                                     _persistentPhaseTransaction.StageFanOutCommand(in command);
                                 }
-                                TrimTail(_fanOutCommands, fanOutCommandCountBefore);
+                                _fanOutCommands.Truncate(fanOutCommandCountBefore);
 
                                 MarkAggregateDirtyIfNeeded(context.Target, e);
 
@@ -472,7 +473,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             catch
                             {
                                 _persistentPhaseTransaction.Rollback();
-                                TrimTail(_fanOutCommands, fanOutCommandCountBefore);
+                                _fanOutCommands.Truncate(fanOutCommandCountBefore);
                                 _fanOutDropped = fanOutDroppedBefore;
                                 TrimTail(_pendingListenerRegistrations, listenerRegistrationCountBefore);
                                 if (hasGrantedTagSnapshot && World.IsAlive(context.Target))

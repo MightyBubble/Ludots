@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS.Production
                 steps.Add(new StepResult("Effect template E TargetQuery params", eTpl.TargetQuery.Spatial.RadiusCm > 0, $"Radius={eTpl.TargetQuery.Spatial.RadiusCm} HalfAngle={eTpl.TargetQuery.Spatial.HalfAngleDeg}"));
                 steps.Add(new StepResult("Effect template E has PayloadEffect", eTpl.TargetDispatch.PayloadEffectTemplateId > 0, $"PayloadTplId={eTpl.TargetDispatch.PayloadEffectTemplateId}"));
 
-                var cmds = new List<FanOutCommand>(8);
+                var cmds = new FanOutCommandBuffer(8);
                 var budget = new RootBudgetTable(64);
                 var ctx = new EffectContext { RootId = 123, Source = hero, Target = enemy1, TargetContext = default };
                 var tmpBuf = new Entity[64];

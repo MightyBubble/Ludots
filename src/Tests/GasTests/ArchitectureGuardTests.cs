@@ -352,6 +352,23 @@ namespace GasTests
         }
 
         [Test]
+        public void EffectFanOutHotPaths_MustUseFixedCapacityStorage()
+        {
+            string repoRoot = FindRepoRoot();
+            string gasRoot = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS");
+            foreach (string file in Directory.EnumerateFiles(gasRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                string source = File.ReadAllText(file);
+                Assert.That(source, Does.Not.Contain("List<FanOutCommand>"), ToRepoRelativePath(repoRoot, file));
+            }
+
+            string config = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Config", "GameConfig.cs"));
+            string engine = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
+            Assert.That(config, Does.Contain("EffectFanOutCommandCapacity"));
+            Assert.That(engine, Does.Contain("gasRuntimeCapacity.EffectFanOutCommandCapacity"));
+        }
+
+        [Test]
         public void PersistentEffectSideEffectTransaction_MustDeferStructuralChanges()
         {
             string repoRoot = FindRepoRoot();

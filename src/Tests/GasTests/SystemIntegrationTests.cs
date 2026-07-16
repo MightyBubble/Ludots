@@ -62,13 +62,14 @@ namespace Ludots.Tests.GAS
             var proposalSystem = new EffectProposalProcessingSystem(
                 _world,
                 effectRequests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 null,
                 effectTemplates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: _tagOps);
-            var appSystem = new EffectApplicationSystem(_world, effectRequests, tagOps: _tagOps);
+            var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests, tagOps: _tagOps);
             var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
-            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, effectRequests: effectRequests, tagOps: _tagOps);
+            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
             
             // Act: 按Phase顺序执行
             float dt = 0.016f;
