@@ -25,6 +25,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -3034,6 +3035,7 @@ public static class LauncherEvidenceRecorder
         int cullingFailureCount = 0;
         var samplePositions = new List<MassNavigationAnchorEvidenceSample>(MassNavigationPositionSampleCount);
         float positionToleranceSq = MassNavigationPositionToleranceCm * MassNavigationPositionToleranceCm;
+        Fix64 presentationAlpha = Fix64.FromFloat(runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
         engine.World.Query(in OrderableMassNavigationAgentQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref OrderBuffer orders, ref WorldPositionCm position, ref CommandSourceSelectableTag selectable) =>
         {
             ecsAgentCount++;
@@ -3075,7 +3077,8 @@ public static class LauncherEvidenceRecorder
 
             if (samplePositions.Count >= MassNavigationPositionSampleCount || !payloadValid ||
                 !engine.World.TryGet(entity, out VisualTransform visual) ||
-                !engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPlanePosition performerPlane))
+                !engine.World.TryGet(entity, out PreviousWorldPositionCm previousPosition) ||
+                !engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPosition performerWorldPosition))
             {
                 if (samplePositions.Count < MassNavigationPositionSampleCount && payloadValid)
                 {
@@ -3087,9 +3090,10 @@ public static class LauncherEvidenceRecorder
             Vector2 solverWorldCm = simulation.GetAgentWorldPositionCm(agentIndex.Value);
             Vector2 ecsWorldCm = position.Value.ToVector2();
             Vector2 visualWorldCm = WorldPlane2D.VisualMetersToLogicCm(in visual.Position);
-            Vector2 performerWorldCm = performerPlane.ValueCm;
+            Vector2 expectedVisualWorldCm = Fix64Vec2.Lerp(previousPosition.Value, position.Value, presentationAlpha).ToVector2();
+            Vector2 performerWorldCm = WorldPlane2D.VisualMetersToLogicCm(in performerWorldPosition.Value);
             if (Vector2.DistanceSquared(solverWorldCm, ecsWorldCm) > positionToleranceSq ||
-                Vector2.DistanceSquared(ecsWorldCm, visualWorldCm) > positionToleranceSq ||
+                Vector2.DistanceSquared(expectedVisualWorldCm, visualWorldCm) > positionToleranceSq ||
                 Vector2.DistanceSquared(visualWorldCm, performerWorldCm) > positionToleranceSq)
             {
                 transformFailureCount++;
@@ -3143,7 +3147,6 @@ public static class LauncherEvidenceRecorder
         int capacityFailureCount = (worldHud.DroppedTotal > 0 ? 1 : 0) +
             (screenHud.DroppedTotal > 0 ? 1 : 0) +
             (markerBuffer.DroppedTotal > 0 ? 1 : 0);
-
         return new MassNavigationSnapshot(
             Tick: tick,
             Step: step,
@@ -3209,6 +3212,11 @@ public static class LauncherEvidenceRecorder
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
             MassNavigationMs: simulation.GroupTargetUpdateMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationPrepareMs: simulation.GroupTargetUpdateMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs,
+            MassNavigationSteerMs: simulation.LocalSteeringMs,
+            MassNavigationResolveMs: simulation.HardResolveMs,
+            MassNavigationCrowdStepMs: simulation.SimStepMs,
+            MassNavigationSyncMs: simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
@@ -3286,6 +3294,8 @@ public static class LauncherEvidenceRecorder
         IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
     {
         var failures = new List<string>();
+        MassNavigationStageFailureSummary stageFailures = SummarizeMassNavigationStageFailures(timeline);
+        MassNavigationTimingSummary timing = SummarizeMassNavigationTiming(timeline);
         MassNavigationSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
         MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_command_order");
         MassNavigationSnapshot beforeCrossing = timeline.First(snapshot => snapshot.Step == "002_settled_before_crossing");
@@ -3334,12 +3344,15 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.ScreenHudDroppedTotal == 0, $"ScreenHud dropped {boot.ScreenHudDroppedTotal} items.", failures);
         AddAcceptanceCheck(boot.SamplePositions.Count == MassNavigationPositionSampleCount,
             $"Position diagnostics captured {boot.SamplePositions.Count}/{MassNavigationPositionSampleCount} fixed samples.", failures);
-        AddAcceptanceCheck(boot.PayloadFailureCount == 0, $"Payload-stage failures: {boot.PayloadFailureCount}.", failures);
-        AddAcceptanceCheck(boot.TransformFailureCount == 0, $"Transform-stage failures: {boot.TransformFailureCount}.", failures);
-        AddAcceptanceCheck(boot.EmissionFailureCount == 0, $"WorldHud emission-stage failures: {boot.EmissionFailureCount}.", failures);
-        AddAcceptanceCheck(boot.CullingFailureCount == 0, $"Culling-stage failures: {boot.CullingFailureCount}.", failures);
-        AddAcceptanceCheck(boot.ProjectionFailureCount == 0, $"ScreenHud projection-stage failures: {boot.ProjectionFailureCount}.", failures);
-        AddAcceptanceCheck(boot.CapacityFailureCount == 0, $"Capacity-stage failures: {boot.CapacityFailureCount}.", failures);
+        AddAcceptanceCheck(stageFailures.PayloadFailureCount == 0, $"Payload-stage failures across timeline: max={stageFailures.PayloadFailureCount} at {stageFailures.PayloadFailureStep}.", failures);
+        AddAcceptanceCheck(stageFailures.TransformFailureCount == 0, $"Transform-stage failures across timeline: max={stageFailures.TransformFailureCount} at {stageFailures.TransformFailureStep}.", failures);
+        AddAcceptanceCheck(stageFailures.EmissionFailureCount == 0, $"WorldHud emission-stage failures across timeline: max={stageFailures.EmissionFailureCount} at {stageFailures.EmissionFailureStep}.", failures);
+        AddAcceptanceCheck(stageFailures.CullingFailureCount == 0, $"Culling-stage failures across timeline: max={stageFailures.CullingFailureCount} at {stageFailures.CullingFailureStep}.", failures);
+        AddAcceptanceCheck(stageFailures.ProjectionFailureCount == 0, $"ScreenHud projection-stage failures across timeline: max={stageFailures.ProjectionFailureCount} at {stageFailures.ProjectionFailureStep}.", failures);
+        AddAcceptanceCheck(stageFailures.CapacityFailureCount == 0, $"Capacity-stage failures across timeline: max={stageFailures.CapacityFailureCount} at {stageFailures.CapacityFailureStep}.", failures);
+        AddAcceptanceCheck(timing.HasValidTimingFields,
+            $"MassNavigation timing summary must include finite non-negative frame/massNavigation/prepare/steer/resolve/crowd/sync fields across the full timeline; observed={timing.ObservedCount}, invalid={timing.InvalidTimingField} at {timing.InvalidTimingStep}.",
+            failures);
 
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         AddAcceptanceCheck(avoidance.FrameCount > 0, "MassNavigation avoidance evidence captured zero metric frames.", failures);
@@ -3371,7 +3384,8 @@ public static class LauncherEvidenceRecorder
             $"spawns:{boot.ScenarioSpawnCount}->{returned.ScenarioSpawnCount}",
             $"movement:{firstMoveSampleCount}/{firstMoveMaxDisplacement:F1}:{secondMoveSampleCount}/{secondMoveMaxDisplacement:F1}",
             $"hud:{boot.WorldHudBarCount}/{boot.WorldHudTextCount}/{boot.ScreenHudBarCount}/{boot.ScreenHudTextCount}",
-            $"chain:{boot.PayloadFailureCount}/{boot.TransformFailureCount}/{boot.EmissionFailureCount}/{boot.CullingFailureCount}/{boot.ProjectionFailureCount}/{boot.CapacityFailureCount}",
+            $"chain:{stageFailures.PayloadFailureCount}/{stageFailures.TransformFailureCount}/{stageFailures.EmissionFailureCount}/{stageFailures.CullingFailureCount}/{stageFailures.ProjectionFailureCount}/{stageFailures.CapacityFailureCount}",
+            $"perf:{timing.MaxFrameMs:F3}/{timing.MaxMassNavigationMs:F3}/{timing.MaxMassNavigationPrepareMs:F3}/{timing.MaxMassNavigationSteerMs:F3}/{timing.MaxMassNavigationResolveMs:F3}/{timing.MaxMassNavigationCrowdStepMs:F3}/{timing.MaxMassNavigationSyncMs:F3}",
             $"avoidance:{avoidance.FrameCount}/{avoidance.MaxVisibleAgentCount}/{avoidance.MaxHeavyAgentCount}/{avoidance.FinalDeepOverlapPairCount}/{avoidance.FinalMaxPenetrationRatio:0.0000}"
         });
 
@@ -3385,6 +3399,36 @@ public static class LauncherEvidenceRecorder
             FailureSummary: failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures),
             FailedChecks: failures,
             NormalizedSignature: normalizedSignature);
+    }
+
+    private static MassNavigationStageFailureSummary SummarizeMassNavigationStageFailures(IReadOnlyList<MassNavigationSnapshot> timeline)
+    {
+        var summary = new MassNavigationStageFailureSummary();
+        for (int i = 0; i < timeline.Count; i++)
+        {
+            MassNavigationSnapshot snapshot = timeline[i];
+            summary.Observe(
+                snapshot.PayloadFailureCount,
+                snapshot.TransformFailureCount,
+                snapshot.EmissionFailureCount,
+                snapshot.CullingFailureCount,
+                snapshot.ProjectionFailureCount,
+                snapshot.CapacityFailureCount,
+                snapshot.Step);
+        }
+
+        return summary;
+    }
+
+    private static MassNavigationTimingSummary SummarizeMassNavigationTiming(IReadOnlyList<MassNavigationSnapshot> timeline)
+    {
+        var summary = new MassNavigationTimingSummary();
+        for (int i = 0; i < timeline.Count; i++)
+        {
+            summary.Observe(timeline[i]);
+        }
+
+        return summary;
     }
 
     private static int CountMovedMassNavigationSamples(
@@ -3459,6 +3503,8 @@ public static class LauncherEvidenceRecorder
         int secondMoveSampleCount = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm);
         float firstMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(boot, afterOrder);
         float secondMoveMaxDisplacement = MaxMassNavigationSampleDisplacementCm(beforeCrossing, crossing);
+        MassNavigationStageFailureSummary stageFailures = SummarizeMassNavigationStageFailures(timeline);
+        MassNavigationTimingSummary timing = SummarizeMassNavigationTiming(timeline);
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         double medianTickMs = Median(frameTimesMs.ToArray());
         double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
@@ -3488,7 +3534,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (MassNavigationSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} commandSource={snapshot.CommandSourceCount} activeMoveOrders={snapshot.ActiveMoveOrderCount} performers={snapshot.PerformerActiveCount} worldHud={snapshot.WorldHudBarCount}/{snapshot.WorldHudTextCount}/{snapshot.WorldHudDroppedTotal} screenHud={snapshot.ScreenHudBarCount}/{snapshot.ScreenHudTextCount}/{snapshot.ScreenHudDroppedTotal} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount}/{snapshot.MinimapDroppedTotal} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
+            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} commandSource={snapshot.CommandSourceCount} activeMoveOrders={snapshot.ActiveMoveOrderCount} performers={snapshot.PerformerActiveCount} worldHud={snapshot.WorldHudBarCount}/{snapshot.WorldHudTextCount}/{snapshot.WorldHudDroppedTotal} screenHud={snapshot.ScreenHudBarCount}/{snapshot.ScreenHudTextCount}/{snapshot.ScreenHudDroppedTotal} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount}/{snapshot.MinimapDroppedTotal} loadedChunks={snapshot.LoadedChunkCount} chain={snapshot.PayloadFailureCount}/{snapshot.TransformFailureCount}/{snapshot.EmissionFailureCount}/{snapshot.CullingFailureCount}/{snapshot.ProjectionFailureCount}/{snapshot.CapacityFailureCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms prepare={snapshot.MassNavigationPrepareMs:F3}ms steer={snapshot.MassNavigationSteerMs:F3}ms resolve={snapshot.MassNavigationResolveMs:F3}ms crowd={snapshot.MassNavigationCrowdStepMs:F3}ms sync={snapshot.MassNavigationSyncMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -3510,7 +3556,9 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- minimap markers at boot: `{boot.MinimapBufferCount}` droppedTotal=`{boot.MinimapDroppedTotal}`");
         sb.AppendLine($"- WorldHud count/capacity/bar/text/drop: `{boot.WorldHudCount}` / `{boot.WorldHudCapacity}` / `{boot.WorldHudBarCount}` / `{boot.WorldHudTextCount}` / `{boot.WorldHudDroppedTotal}`");
         sb.AppendLine($"- ScreenHud count/capacity/bar/text/drop: `{boot.ScreenHudCount}` / `{boot.ScreenHudCapacity}` / `{boot.ScreenHudBarCount}` / `{boot.ScreenHudTextCount}` / `{boot.ScreenHudDroppedTotal}`");
-        sb.AppendLine($"- chain failures payload/transform/emission/culling/projection/capacity: `{boot.PayloadFailureCount}` / `{boot.TransformFailureCount}` / `{boot.EmissionFailureCount}` / `{boot.CullingFailureCount}` / `{boot.ProjectionFailureCount}` / `{boot.CapacityFailureCount}`");
+        sb.AppendLine($"- max chain failures payload/transform/emission/culling/projection/capacity: `{stageFailures.PayloadFailureCount}` / `{stageFailures.TransformFailureCount}` / `{stageFailures.EmissionFailureCount}` / `{stageFailures.CullingFailureCount}` / `{stageFailures.ProjectionFailureCount}` / `{stageFailures.CapacityFailureCount}`");
+        sb.AppendLine($"- max chain failure steps payload/transform/emission/culling/projection/capacity: `{stageFailures.PayloadFailureStep}` / `{stageFailures.TransformFailureStep}` / `{stageFailures.EmissionFailureStep}` / `{stageFailures.CullingFailureStep}` / `{stageFailures.ProjectionFailureStep}` / `{stageFailures.CapacityFailureStep}`");
+        sb.AppendLine($"- max MassNavigation timings frame/massNavigation/prepare/steer/resolve/crowd/sync: `{timing.MaxFrameMs:F3}` / `{timing.MaxMassNavigationMs:F3}` / `{timing.MaxMassNavigationPrepareMs:F3}` / `{timing.MaxMassNavigationSteerMs:F3}` / `{timing.MaxMassNavigationResolveMs:F3}` / `{timing.MaxMassNavigationCrowdStepMs:F3}` / `{timing.MaxMassNavigationSyncMs:F3}` ms");
         sb.AppendLine($"- fixed position samples: `{boot.SamplePositions.Count}` (tolerance `{MassNavigationPositionToleranceCm:F0}cm`)");
         sb.AppendLine($"- movement samples first/second command: `{firstMoveSampleCount}` / `{secondMoveSampleCount}` moved at least `{MassNavigationMovementSampleThresholdCm:F0}cm`; max displacement `{firstMoveMaxDisplacement:F1}` / `{secondMoveMaxDisplacement:F1}` cm");
         sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
@@ -3583,6 +3631,11 @@ public static class LauncherEvidenceRecorder
                 performer_ms = Math.Round(snapshot.PerformerMs, 4),
                 minimap_ms = Math.Round(snapshot.MinimapMs, 4),
                 mass_navigation_ms = Math.Round(snapshot.MassNavigationMs, 4),
+                mass_navigation_prepare_ms = Math.Round(snapshot.MassNavigationPrepareMs, 4),
+                mass_navigation_steer_ms = Math.Round(snapshot.MassNavigationSteerMs, 4),
+                mass_navigation_resolve_ms = Math.Round(snapshot.MassNavigationResolveMs, 4),
+                mass_navigation_crowd_step_ms = Math.Round(snapshot.MassNavigationCrowdStepMs, 4),
+                mass_navigation_sync_ms = Math.Round(snapshot.MassNavigationSyncMs, 4),
                 status = "done"
             }));
         }
@@ -3643,6 +3696,8 @@ public static class LauncherEvidenceRecorder
         MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_command_order");
         MassNavigationSnapshot beforeCrossing = timeline.First(snapshot => snapshot.Step == "002_settled_before_crossing");
         MassNavigationSnapshot crossing = timeline.First(snapshot => snapshot.Step == "003_crossing_order");
+        MassNavigationStageFailureSummary stageFailures = SummarizeMassNavigationStageFailures(timeline);
+        MassNavigationTimingSummary timing = SummarizeMassNavigationTiming(timeline);
         MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         return JsonSerializer.Serialize(new
         {
@@ -3672,12 +3727,25 @@ public static class LauncherEvidenceRecorder
             screen_hud_bar_count = boot.ScreenHudBarCount,
             screen_hud_text_count = boot.ScreenHudTextCount,
             screen_hud_dropped_total = boot.ScreenHudDroppedTotal,
-            payload_failure_count = boot.PayloadFailureCount,
-            transform_failure_count = boot.TransformFailureCount,
-            emission_failure_count = boot.EmissionFailureCount,
-            culling_failure_count = boot.CullingFailureCount,
-            projection_failure_count = boot.ProjectionFailureCount,
-            capacity_failure_count = boot.CapacityFailureCount,
+            payload_failure_count = stageFailures.PayloadFailureCount,
+            transform_failure_count = stageFailures.TransformFailureCount,
+            emission_failure_count = stageFailures.EmissionFailureCount,
+            culling_failure_count = stageFailures.CullingFailureCount,
+            projection_failure_count = stageFailures.ProjectionFailureCount,
+            capacity_failure_count = stageFailures.CapacityFailureCount,
+            payload_failure_step = stageFailures.PayloadFailureStep,
+            transform_failure_step = stageFailures.TransformFailureStep,
+            emission_failure_step = stageFailures.EmissionFailureStep,
+            culling_failure_step = stageFailures.CullingFailureStep,
+            projection_failure_step = stageFailures.ProjectionFailureStep,
+            capacity_failure_step = stageFailures.CapacityFailureStep,
+            max_frame_ms = timing.MaxFrameMs,
+            max_mass_navigation_ms = timing.MaxMassNavigationMs,
+            max_mass_navigation_prepare_ms = timing.MaxMassNavigationPrepareMs,
+            max_mass_navigation_steer_ms = timing.MaxMassNavigationSteerMs,
+            max_mass_navigation_resolve_ms = timing.MaxMassNavigationResolveMs,
+            max_mass_navigation_crowd_step_ms = timing.MaxMassNavigationCrowdStepMs,
+            max_mass_navigation_sync_ms = timing.MaxMassNavigationSyncMs,
             anchor_samples = boot.SamplePositions,
             first_command_moved_sample_count = CountMovedMassNavigationSamples(boot, afterOrder, MassNavigationMovementSampleThresholdCm),
             second_command_moved_sample_count = CountMovedMassNavigationSamples(beforeCrossing, crossing, MassNavigationMovementSampleThresholdCm),
@@ -4306,6 +4374,120 @@ public static class LauncherEvidenceRecorder
         float PeakMaxPenetrationRatio,
         float FinalMaxPenetrationRatio);
 
+    private sealed class MassNavigationStageFailureSummary
+    {
+        public int PayloadFailureCount { get; private set; }
+        public int TransformFailureCount { get; private set; }
+        public int EmissionFailureCount { get; private set; }
+        public int CullingFailureCount { get; private set; }
+        public int ProjectionFailureCount { get; private set; }
+        public int CapacityFailureCount { get; private set; }
+        public string PayloadFailureStep { get; private set; } = "none";
+        public string TransformFailureStep { get; private set; } = "none";
+        public string EmissionFailureStep { get; private set; } = "none";
+        public string CullingFailureStep { get; private set; } = "none";
+        public string ProjectionFailureStep { get; private set; } = "none";
+        public string CapacityFailureStep { get; private set; } = "none";
+
+        public void Observe(
+            int payloadFailures,
+            int transformFailures,
+            int emissionFailures,
+            int cullingFailures,
+            int projectionFailures,
+            int capacityFailures,
+            string step)
+        {
+            if (payloadFailures > PayloadFailureCount)
+            {
+                PayloadFailureCount = payloadFailures;
+                PayloadFailureStep = step;
+            }
+
+            if (transformFailures > TransformFailureCount)
+            {
+                TransformFailureCount = transformFailures;
+                TransformFailureStep = step;
+            }
+
+            if (emissionFailures > EmissionFailureCount)
+            {
+                EmissionFailureCount = emissionFailures;
+                EmissionFailureStep = step;
+            }
+
+            if (cullingFailures > CullingFailureCount)
+            {
+                CullingFailureCount = cullingFailures;
+                CullingFailureStep = step;
+            }
+
+            if (projectionFailures > ProjectionFailureCount)
+            {
+                ProjectionFailureCount = projectionFailures;
+                ProjectionFailureStep = step;
+            }
+
+            if (capacityFailures > CapacityFailureCount)
+            {
+                CapacityFailureCount = capacityFailures;
+                CapacityFailureStep = step;
+            }
+        }
+    }
+
+    private sealed class MassNavigationTimingSummary
+    {
+        public int ObservedCount { get; private set; }
+        public float MaxFrameMs { get; private set; }
+        public float MaxMassNavigationMs { get; private set; }
+        public float MaxMassNavigationPrepareMs { get; private set; }
+        public float MaxMassNavigationSteerMs { get; private set; }
+        public float MaxMassNavigationResolveMs { get; private set; }
+        public float MaxMassNavigationCrowdStepMs { get; private set; }
+        public float MaxMassNavigationSyncMs { get; private set; }
+        public string InvalidTimingField { get; private set; } = "none";
+        public string InvalidTimingStep { get; private set; } = "none";
+        public bool HasValidTimingFields =>
+            ObservedCount > 0 &&
+            InvalidTimingField == "none" &&
+            MaxFrameMs >= 0f &&
+            MaxMassNavigationMs >= 0f &&
+            MaxMassNavigationPrepareMs >= 0f &&
+            MaxMassNavigationSteerMs >= 0f &&
+            MaxMassNavigationResolveMs >= 0f &&
+            MaxMassNavigationCrowdStepMs >= 0f &&
+            MaxMassNavigationSyncMs >= 0f;
+
+        public void Observe(MassNavigationSnapshot snapshot)
+        {
+            ObservedCount++;
+            MaxFrameMs = ObserveTiming(MaxFrameMs, snapshot.FrameMs, "frame", snapshot.Step);
+            MaxMassNavigationMs = ObserveTiming(MaxMassNavigationMs, snapshot.MassNavigationMs, "massNavigation", snapshot.Step);
+            MaxMassNavigationPrepareMs = ObserveTiming(MaxMassNavigationPrepareMs, snapshot.MassNavigationPrepareMs, "prepare", snapshot.Step);
+            MaxMassNavigationSteerMs = ObserveTiming(MaxMassNavigationSteerMs, snapshot.MassNavigationSteerMs, "steer", snapshot.Step);
+            MaxMassNavigationResolveMs = ObserveTiming(MaxMassNavigationResolveMs, snapshot.MassNavigationResolveMs, "resolve", snapshot.Step);
+            MaxMassNavigationCrowdStepMs = ObserveTiming(MaxMassNavigationCrowdStepMs, snapshot.MassNavigationCrowdStepMs, "crowd", snapshot.Step);
+            MaxMassNavigationSyncMs = ObserveTiming(MaxMassNavigationSyncMs, snapshot.MassNavigationSyncMs, "sync", snapshot.Step);
+        }
+
+        private float ObserveTiming(float currentMax, float value, string field, string step)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+            {
+                if (InvalidTimingField == "none")
+                {
+                    InvalidTimingField = field;
+                    InvalidTimingStep = step;
+                }
+
+                return currentMax;
+            }
+
+            return MathF.Max(currentMax, value);
+        }
+    }
+
     private sealed class MassNavigationAvoidanceScratch
     {
         private readonly MassNavigationAvoidanceAgentSnapshot[] _agents;
@@ -4412,6 +4594,11 @@ public static class LauncherEvidenceRecorder
         float PerformerMs,
         float MinimapMs,
         float MassNavigationMs,
+        float MassNavigationPrepareMs,
+        float MassNavigationSteerMs,
+        float MassNavigationResolveMs,
+        float MassNavigationCrowdStepMs,
+        float MassNavigationSyncMs,
         IReadOnlyList<MassNavigationAnchorEvidenceSample> SamplePositions);
 
     private sealed record MassNavigationAcceptanceResult(

@@ -71,6 +71,83 @@ public sealed class MassNavigationEvidenceContractTests
         });
     }
 
+    [Test]
+    public void LargeWorldAcceptance_AggregatesStageFailuresAcrossFullTimeline()
+    {
+        string repoRoot = FindRepoRoot();
+        string recorder = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Tools",
+            "Ludots.Launcher.Evidence",
+            "LauncherEvidenceRecorder.cs"));
+
+        string script = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "scripts",
+            "acceptance",
+            "run-mass-navigation-large-world-uat.ps1"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorder, Does.Contain("SummarizeMassNavigationStageFailures(timeline)"));
+            Assert.That(recorder, Does.Contain("Transform-stage failures across timeline"));
+            Assert.That(recorder, Does.Contain("transform_failure_count = stageFailures.TransformFailureCount"));
+            Assert.That(recorder, Does.Not.Contain("AddAcceptanceCheck(boot.TransformFailureCount == 0"));
+            Assert.That(recorder, Does.Not.Contain("chain:{boot.PayloadFailureCount}/{boot.TransformFailureCount}"));
+            Assert.That(script, Does.Contain("stageFailureFields"));
+            Assert.That(script, Does.Contain("stage failure field must be zero across the full timeline"));
+        });
+    }
+
+    [Test]
+    public void LargeWorldSummary_RequiresFormalPerformanceFields()
+    {
+        string repoRoot = FindRepoRoot();
+        string recorder = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Tools",
+            "Ludots.Launcher.Evidence",
+            "LauncherEvidenceRecorder.cs"));
+
+        string script = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "scripts",
+            "acceptance",
+            "run-mass-navigation-large-world-uat.ps1"));
+
+        string[] fields =
+        [
+            "max_frame_ms",
+            "max_mass_navigation_ms",
+            "max_mass_navigation_prepare_ms",
+            "max_mass_navigation_steer_ms",
+            "max_mass_navigation_resolve_ms",
+            "max_mass_navigation_crowd_step_ms",
+            "max_mass_navigation_sync_ms",
+        ];
+
+        Assert.Multiple(() =>
+        {
+            foreach (string field in fields)
+            {
+                Assert.That(recorder, Does.Contain(field));
+                Assert.That(script, Does.Contain(field));
+            }
+
+            Assert.That(recorder, Does.Contain("mass_navigation_prepare_ms"));
+            Assert.That(recorder, Does.Contain("mass_navigation_steer_ms"));
+            Assert.That(recorder, Does.Contain("mass_navigation_resolve_ms"));
+            Assert.That(recorder, Does.Contain("mass_navigation_sync_ms"));
+            Assert.That(recorder, Does.Contain("HasValidTimingFields"));
+            Assert.That(recorder, Does.Contain("frame/massNavigation/prepare/steer/resolve/crowd/sync"));
+            Assert.That(recorder, Does.Contain("MaxMassNavigationCrowdStepMs:F3}/{timing.MaxMassNavigationSyncMs:F3"));
+            Assert.That(script, Does.Contain("performanceFields"));
+            Assert.That(script, Does.Contain("visible crowd count is missing or zero"));
+        });
+    }
+
     private static void AssertCoordinate(JsonElement sample, string propertyName, float expectedX, float expectedY)
     {
         JsonElement point = sample.GetProperty(propertyName);

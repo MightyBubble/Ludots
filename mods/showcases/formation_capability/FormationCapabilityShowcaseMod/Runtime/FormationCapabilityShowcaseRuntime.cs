@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Arch.Core;
+using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -55,6 +56,14 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
     private readonly List<PendingFormationBinding> _pendingFormationBindings = new();
     private readonly List<PendingSoldierBinding> _pendingSoldierBindings = new();
     private readonly List<PendingObstacleOverlayBinding> _pendingObstacleOverlayBindings = new();
+    private ISystem<float>? _scenarioBindingSystem;
+    private ISystem<float>? _executionTargetSystem;
+    private ISystem<float>? _showcaseStateSystem;
+    private ISystem<float>? _localOrderSourceSystem;
+    private ISystem<float>? _rotateCommandSourceSystem;
+    private ISystem<float>? _formationOrderSystem;
+    private ISystem<float>? _formationOutlinePresentationSystem;
+    private ISystem<float>? _obstacleOverlayPresentationSystem;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private bool _obstacleOverlaySpawnsQueued;
@@ -119,6 +128,7 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
         _initialCommandSourceApplied = false;
         RemovePendingScenarioSpawns(engine, config);
         ClearFormationCaches();
+        UninstallSystems(engine);
         return Task.CompletedTask;
     }
 
@@ -149,42 +159,123 @@ internal sealed class FormationCapabilityShowcaseRuntime : IFormationRuntimeGate
 
         MassNavigationSimulationRuntime simulation = RequireCurrentSimulation(engine);
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
-        engine.RegisterSystem(
-            new FormationCapabilityShowcaseScenarioBindingSystem(engine, this),
-            SystemGroup.RuntimeEntityBinding);
-        engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
-            new FormationExecutionTargetSystem(
-                engine,
-                this,
-                config.Formations.Length,
-                ResolveMaxSlotsPerFormation(config)),
-            SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
-            new FormationCapabilityShowcaseStateSystem(engine, this),
-            SystemGroup.PostMovement);
         OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires OrderQueue.");
         Ludots.Core.Modding.IModContext context = _context
             ?? throw new InvalidOperationException("Formation Capability showcase requires IModContext before installing local order source.");
-        engine.RegisterSystem(
-            new FormationCapabilityLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context),
-            SystemGroup.InputCollection);
-        engine.RegisterSystem(
-            new FormationCapabilityCommandSourceRotateSystem(
-                engine,
-                this,
-                orders,
-                config.OrderBatchCapacity),
-            SystemGroup.InputCollection);
-        engine.RegisterSystem(
-            new FormationOrderSystem(
-                engine,
-                this,
-                config.OrderBatchCapacity),
-            SystemGroup.AbilityActivation);
-        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
-        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
-        _systemsInstalled = true;
+
+        var scenarioBindingSystem = new FormationCapabilityShowcaseScenarioBindingSystem(engine, this);
+        var executionTargetSystem = new FormationExecutionTargetSystem(
+            engine,
+            this,
+            config.Formations.Length,
+            ResolveMaxSlotsPerFormation(config));
+        var showcaseStateSystem = new FormationCapabilityShowcaseStateSystem(engine, this);
+        var localOrderSourceSystem = new FormationCapabilityLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context);
+        var rotateCommandSourceSystem = new FormationCapabilityCommandSourceRotateSystem(
+            engine,
+            this,
+            orders,
+            config.OrderBatchCapacity);
+        var formationOrderSystem = new FormationOrderSystem(
+            engine,
+            this,
+            config.OrderBatchCapacity);
+        var formationOutlinePresentationSystem = new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config);
+        var obstacleOverlayPresentationSystem = new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount);
+
+        try
+        {
+            engine.RegisterSystem(scenarioBindingSystem, SystemGroup.RuntimeEntityBinding);
+            _scenarioBindingSystem = scenarioBindingSystem;
+            engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(executionTargetSystem, SystemGroup.PostMovement);
+            _executionTargetSystem = executionTargetSystem;
+            engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(showcaseStateSystem, SystemGroup.PostMovement);
+            _showcaseStateSystem = showcaseStateSystem;
+            engine.RegisterSystem(localOrderSourceSystem, SystemGroup.InputCollection);
+            _localOrderSourceSystem = localOrderSourceSystem;
+            engine.RegisterSystem(rotateCommandSourceSystem, SystemGroup.InputCollection);
+            _rotateCommandSourceSystem = rotateCommandSourceSystem;
+            engine.RegisterSystem(formationOrderSystem, SystemGroup.AbilityActivation);
+            _formationOrderSystem = formationOrderSystem;
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(formationOutlinePresentationSystem);
+            _formationOutlinePresentationSystem = formationOutlinePresentationSystem;
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(obstacleOverlayPresentationSystem);
+            _obstacleOverlayPresentationSystem = obstacleOverlayPresentationSystem;
+            _systemsInstalled = true;
+        }
+        catch
+        {
+            UninstallSystems(engine);
+            throw;
+        }
+    }
+
+    private void UninstallSystems(GameEngine engine)
+    {
+        bool hadSystems =
+            _scenarioBindingSystem != null ||
+            _executionTargetSystem != null ||
+            _showcaseStateSystem != null ||
+            _localOrderSourceSystem != null ||
+            _rotateCommandSourceSystem != null ||
+            _formationOrderSystem != null ||
+            _formationOutlinePresentationSystem != null ||
+            _obstacleOverlayPresentationSystem != null;
+        if (!hadSystems)
+        {
+            _systemsInstalled = false;
+            return;
+        }
+
+        UnregisterPresentationSystem(engine, ref _obstacleOverlayPresentationSystem, nameof(_obstacleOverlayPresentationSystem));
+        UnregisterPresentationSystem(engine, ref _formationOutlinePresentationSystem, nameof(_formationOutlinePresentationSystem));
+        UnregisterSystem(engine, ref _formationOrderSystem, SystemGroup.AbilityActivation, nameof(_formationOrderSystem));
+        UnregisterSystem(engine, ref _rotateCommandSourceSystem, SystemGroup.InputCollection, nameof(_rotateCommandSourceSystem));
+        UnregisterSystem(engine, ref _localOrderSourceSystem, SystemGroup.InputCollection, nameof(_localOrderSourceSystem));
+        UnregisterSystem(engine, ref _showcaseStateSystem, SystemGroup.PostMovement, nameof(_showcaseStateSystem));
+        UnregisterSystem(engine, ref _executionTargetSystem, SystemGroup.PostMovement, nameof(_executionTargetSystem));
+        UnregisterSystem(engine, ref _scenarioBindingSystem, SystemGroup.RuntimeEntityBinding, nameof(_scenarioBindingSystem));
+        _systemsInstalled = false;
+    }
+
+    private static void UnregisterSystem(
+        GameEngine engine,
+        ref ISystem<float>? system,
+        SystemGroup group,
+        string name)
+    {
+        if (system == null)
+        {
+            return;
+        }
+
+        ISystem<float> registered = system;
+        if (!engine.UnregisterSystem(registered, group))
+        {
+            throw new InvalidOperationException($"Formation Capability showcase could not unregister required system '{name}' from group '{group}'.");
+        }
+
+        system = null;
+    }
+
+    private static void UnregisterPresentationSystem(
+        GameEngine engine,
+        ref ISystem<float>? system,
+        string name)
+    {
+        if (system == null)
+        {
+            return;
+        }
+
+        ISystem<float> registered = system;
+        if (!engine.UnregisterPresentationSystem(registered))
+        {
+            throw new InvalidOperationException($"Formation Capability showcase could not unregister required presentation system '{name}'.");
+        }
+
+        system = null;
     }
 
     public bool IsCurrentShowcaseMap(GameEngine engine)

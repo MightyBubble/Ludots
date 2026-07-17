@@ -119,10 +119,10 @@ FormationCapabilityShowcaseRuntime
 ```
 
 Formation is an optional MassNavigation Core capability. Loading MassNavigation without authored
-Formation data must not require Formation config, author Formation entities, or allocate per-map
-Formation state. Engines may keep the reusable Formation systems registered after first use, but
-those systems must be gated by the active MassNavigation runtime and remain dormant on maps that do
-not author Formation data.
+Formation data must not require Formation config, register Formation systems, author Formation
+entities, or allocate per-map Formation state. A map or mod that authors Formation data installs the
+Formation systems for that active map lifecycle and unregisters them when that map unloads; a
+non-Formation map has no Formation systems and no steady-state Formation cost.
 
 ## Config Rules
 

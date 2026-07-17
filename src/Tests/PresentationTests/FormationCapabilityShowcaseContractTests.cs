@@ -62,6 +62,18 @@ namespace Ludots.Tests.Presentation
     {
         private const string MassNavigationAgentLayerName = "massNavigation.agent";
         private const int TestMassNavigationMoveOrderTypeId = 37;
+        private static readonly string[] FormationCapabilityInstalledSystemTypeNames = new[]
+        {
+            "FormationCapabilityShowcaseScenarioBindingSystem",
+            "FormationExecutionTargetSystem",
+            "FormationCapabilityShowcaseStateSystem",
+            "FormationCapabilityLocalOrderSourceSystem",
+            "FormationCapabilityCommandSourceRotateSystem",
+            "FormationOrderSystem",
+            "FormationCapabilityShowcaseFormationOutlinePresentationSystem",
+            "FormationCapabilityShowcaseObstacleOverlayPresentationSystem",
+        };
+
         private const string TeamAuthoredBatchTemplateJson = """
 [
   {
@@ -607,6 +619,28 @@ namespace Ludots.Tests.Presentation
             Entity[] agents = CaptureTrackedAgents(simulation);
             Assert.That(agents.Any(entity => engine.World.Has<FormationAnchorState>(entity)), Is.True);
             Assert.That(agents.Any(entity => engine.World.Has<FormationMemberState>(entity)), Is.True);
+        }
+
+        [Test]
+        public void FormationCapabilityMapUnload_UnregistersFormationSystemsUntilFormationMapReloads()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            Assert.That(CountFormationCapabilitySystems(engine), Is.Zero,
+                "Loading the Formation Capability mod alone must not register Formation systems before the Formation map is focused.");
+
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+            Assert.That(CountFormationCapabilitySystems(engine), Is.GreaterThan(0),
+                "Focusing the Formation map should install the optional Formation systems for that authored scenario.");
+
+            engine.UnloadMap("formation_capability_showcase");
+            Assert.That(CountFormationCapabilitySystems(engine), Is.Zero,
+                "After the Formation map unloads, non-Formation maps must not keep Formation systems or steady-state Formation work.");
+
+            LoadFormationCapabilityMap(engine);
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+            Assert.That(CountFormationCapabilitySystems(engine), Is.EqualTo(FormationCapabilityInstalledSystemTypeNames.Length),
+                "Reloading the Formation map should install one copy of each Formation system, not duplicate stale systems.");
         }
 
         [Test]
@@ -5340,6 +5374,33 @@ namespace Ludots.Tests.Presentation
                     yield return systems[i];
                 }
             }
+        }
+
+        private static IEnumerable<ISystem<float>> EnumerateRegisteredPresentationSystems(GameEngine engine)
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine presentation system field is missing.");
+            var systems = field.GetValue(engine) as List<ISystem<float>>
+                ?? throw new InvalidOperationException("GameEngine presentation systems are missing.");
+            for (int i = 0; i < systems.Count; i++)
+            {
+                yield return systems[i];
+            }
+        }
+
+        private static int CountFormationCapabilitySystems(GameEngine engine)
+        {
+            var names = new HashSet<string>(FormationCapabilityInstalledSystemTypeNames, StringComparer.Ordinal);
+            int count = 0;
+            foreach (ISystem<float> system in EnumerateRegisteredSystems(engine).Concat(EnumerateRegisteredPresentationSystems(engine)))
+            {
+                if (names.Contains(system.GetType().Name))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static QueryDescription BuildRuntimeComponentQuery(params Type[] componentTypes)

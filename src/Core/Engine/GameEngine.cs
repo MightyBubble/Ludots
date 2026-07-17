@@ -266,6 +266,33 @@ namespace Ludots.Core.Engine
             system.Initialize();
         }
 
+        public bool UnregisterSystem(ISystem<float> system, SystemGroup group)
+        {
+            if (system == null)
+            {
+                throw new ArgumentNullException(nameof(system));
+            }
+
+            if (!_systemGroups.TryGetValue(group, out var systems))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (!ReferenceEquals(systems[i], system))
+                {
+                    continue;
+                }
+
+                systems.RemoveAt(i);
+                system.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
         public void InsertSystemBeforeRequired<TAnchor>(ISystem<float> system, SystemGroup group)
             where TAnchor : class
         {
@@ -293,6 +320,28 @@ namespace Ludots.Core.Engine
         {
             _presentationSystems.Add(system);
             system.Initialize();
+        }
+
+        public bool UnregisterPresentationSystem(ISystem<float> system)
+        {
+            if (system == null)
+            {
+                throw new ArgumentNullException(nameof(system));
+            }
+
+            for (int i = 0; i < _presentationSystems.Count; i++)
+            {
+                if (!ReferenceEquals(_presentationSystems[i], system))
+                {
+                    continue;
+                }
+
+                _presentationSystems.RemoveAt(i);
+                system.Dispose();
+                return true;
+            }
+
+            return false;
         }
 
         public void InsertPresentationSystemBefore<TAnchor>(ISystem<float> system)

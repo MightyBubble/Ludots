@@ -123,6 +123,42 @@ function Test-MassNavigationSummaryContract {
         $failures.Add("second command max sample displacement is below threshold: $($Summary.second_command_max_sample_displacement_cm)")
     }
 
+    $stageFailureFields = @(
+        "payload_failure_count",
+        "transform_failure_count",
+        "emission_failure_count",
+        "culling_failure_count",
+        "projection_failure_count",
+        "capacity_failure_count"
+    )
+    foreach ($field in $stageFailureFields) {
+        if (-not (Test-FiniteJsonNumber $Summary.$field)) {
+            $failures.Add("stage failure field is missing or invalid: $field")
+        }
+        elseif ([int]$Summary.$field -ne 0) {
+            $failures.Add("stage failure field must be zero across the full timeline: $field=$($Summary.$field)")
+        }
+    }
+
+    $performanceFields = @(
+        "max_frame_ms",
+        "max_mass_navigation_ms",
+        "max_mass_navigation_prepare_ms",
+        "max_mass_navigation_steer_ms",
+        "max_mass_navigation_resolve_ms",
+        "max_mass_navigation_crowd_step_ms",
+        "max_mass_navigation_sync_ms"
+    )
+    foreach ($field in $performanceFields) {
+        if (-not (Test-FiniteJsonNumber $Summary.$field) -or [double]$Summary.$field -lt 0) {
+            $failures.Add("performance field is missing or invalid: $field")
+        }
+    }
+
+    if (-not (Test-FiniteJsonNumber $Summary.avoidance_max_visible_agent_count) -or [int]$Summary.avoidance_max_visible_agent_count -le 0) {
+        $failures.Add("visible crowd count is missing or zero")
+    }
+
     $pointNames = @("solver_world_cm", "ecs_world_cm", "visual_world_cm", "performer_world_cm")
     for ($sampleIndex = 0; $sampleIndex -lt $samples.Count; $sampleIndex++) {
         $sample = $samples[$sampleIndex]
@@ -250,8 +286,8 @@ function Write-SoakReport {
     $lines.Add("| Camera travel | Player can inspect a remote hot zone and return | camera displacement exceeds 5km and agent/spawn counts remain stable |")
     $lines.Add("")
     $lines.Add("## Runs")
-    $lines.Add("| # | Result | Source SHA | Signature | Movement samples | World HUD b/t/drop | Screen HUD b/t/drop | Stage failures | Timeline |")
-    $lines.Add("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    $lines.Add("| # | Result | Source SHA | Signature | Movement samples | World HUD b/t/drop | Screen HUD b/t/drop | Stage failures | Perf max frame/mass/prepare/steer/resolve/crowd/sync ms | Timeline |")
+    $lines.Add("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     foreach ($run in $RunRows) {
         $result = if ($run.success) { "PASS" } else { "FAIL" }
         $signature = if ($run.normalized_signature) { $run.normalized_signature } else { "n/a" }
@@ -260,7 +296,8 @@ function Write-SoakReport {
         $screenHud = "$($run.screen_hud_bar_count)/$($run.screen_hud_text_count)/$($run.screen_hud_dropped_total)"
         $movement = "$($run.first_command_moved_sample_count)/$($run.second_command_moved_sample_count)"
         $stageFailures = "$($run.payload_failure_count)/$($run.transform_failure_count)/$($run.emission_failure_count)/$($run.culling_failure_count)/$($run.projection_failure_count)/$($run.capacity_failure_count)"
-        $lines.Add("| $($run.run) | $result | ``$($run.source_sha)`` | ``$signature`` | $movement | $worldHud | $screenHud | $stageFailures | ``$timeline`` |")
+        $perf = "$($run.max_frame_ms)/$($run.max_mass_navigation_ms)/$($run.max_mass_navigation_prepare_ms)/$($run.max_mass_navigation_steer_ms)/$($run.max_mass_navigation_resolve_ms)/$($run.max_mass_navigation_crowd_step_ms)/$($run.max_mass_navigation_sync_ms)"
+        $lines.Add("| $($run.run) | $result | ``$($run.source_sha)`` | ``$signature`` | $movement | $worldHud | $screenHud | $stageFailures | $perf | ``$timeline`` |")
     }
 
     $lines.Add("")
@@ -377,6 +414,13 @@ while ($true) {
         culling_failure_count = if ($summary) { $summary.culling_failure_count } else { $null }
         projection_failure_count = if ($summary) { $summary.projection_failure_count } else { $null }
         capacity_failure_count = if ($summary) { $summary.capacity_failure_count } else { $null }
+        max_frame_ms = if ($summary) { $summary.max_frame_ms } else { $null }
+        max_mass_navigation_ms = if ($summary) { $summary.max_mass_navigation_ms } else { $null }
+        max_mass_navigation_prepare_ms = if ($summary) { $summary.max_mass_navigation_prepare_ms } else { $null }
+        max_mass_navigation_steer_ms = if ($summary) { $summary.max_mass_navigation_steer_ms } else { $null }
+        max_mass_navigation_resolve_ms = if ($summary) { $summary.max_mass_navigation_resolve_ms } else { $null }
+        max_mass_navigation_crowd_step_ms = if ($summary) { $summary.max_mass_navigation_crowd_step_ms } else { $null }
+        max_mass_navigation_sync_ms = if ($summary) { $summary.max_mass_navigation_sync_ms } else { $null }
         missing_evidence = $missingEvidence
         failed_checks = if ($summary) { @($summary.failed_checks) + @($summaryValidationFailures) + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) } else { @("missing summary.json or launcher failure") + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) }
         log = $logPath
