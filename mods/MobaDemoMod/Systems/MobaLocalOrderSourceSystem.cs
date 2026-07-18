@@ -7,6 +7,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -42,6 +44,8 @@ namespace MobaDemoMod.Systems
         private readonly int _moveToOrderTypeId;
         private readonly int _stopOrderTypeId;
         private readonly EntityCollectionStore _entityCollections;
+        private readonly PlayerEntityLookup _playerEntities;
+        private readonly ControlDomainQuery _controlDomains;
         private Entity[] _collectionScratch = new Entity[InitialCollectionScratchCapacity];
         
         // Configuration-driven input-order mapping
@@ -73,6 +77,16 @@ namespace MobaDemoMod.Systems
                     ? collections
                     : throw new InvalidOperationException(
                         $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
+            _playerEntities = _globals.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? playersObj) &&
+                playersObj is PlayerEntityLookup players
+                    ? players
+                    : throw new InvalidOperationException(
+                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.PlayerEntityLookup.Name} to be registered.");
+            _controlDomains = _globals.TryGetValue(CoreServiceKeys.ControlDomainQuery.Name, out object? domainsObj) &&
+                domainsObj is ControlDomainQuery controlDomains
+                    ? controlDomains
+                    : throw new InvalidOperationException(
+                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.ControlDomainQuery.Name} to be registered.");
         }
 
         public void Initialize() { }
@@ -125,6 +139,14 @@ namespace MobaDemoMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
+            _inputOrderMapping.SetActivationActorValidator((actor, playerId) =>
+                InputOrderActorAuthorization.IsAuthorized(
+                    _world,
+                    _playerEntities,
+                    _controlDomains,
+                    actor,
+                    playerId));
+            _inputOrderMapping.SetOrderIdentityAssigner((ref Order order) => _orders.EnsureOrderId(ref order));
             _inputOrderMapping.SetCollectionPrimaryEntityProvider((string collectionKey, out Entity entity) =>
             {
                 return TryGetCollectionPrimary(collectionKey, out entity);

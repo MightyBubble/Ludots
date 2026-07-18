@@ -44,28 +44,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry? _orderRuleRegistry;
         private readonly int _stepRateHz;
 
-        private struct CallbackCommand
-        {
-            public int RootId;
-            public Entity Source;
-            public Entity Target;
-            public Entity TargetContext;
-            public int EffectTemplateId;
-        }
-
         // ?? TargetResolver fan-out (period) ??
         private readonly FanOutCommandBuffer _fanOutCommands;
+        private readonly RootBudgetTable _fanOutBudget;
+        // An injected budget is advanced by the effect-loop owner once per processing transaction.
+        private readonly bool _ownsFanOutBudget;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private int _fanOutDropped;
 
-
-        private readonly List<CallbackCommand> _onPeriodCallbacks;
-        private readonly List<CallbackCommand> _onExpireCallbacks;
-        private readonly List<CallbackCommand> _onRemoveCallbacks;
-        private bool _callbackBudgetFused;
-        private readonly RootBudgetTable _callbackCreateBudget = new RootBudgetTable(16384);
-        private int _callbackDropped;
 
         /// <summary>
         /// Records effects whose phase graphs need execution.
@@ -107,13 +94,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             PeriodGraphs = 1,
             ExpireGraphs = 2,
             RemoveGraphs = 3,
-            PeriodCallbacks = 4,
-            ExpireCallbacks = 5,
-            RemoveCallbacks = 6,
-            FanOut = 7,
-            DirtyTargets = 8,
-            DestroyEffects = 9,
-            Done = 10,
+            FanOut = 4,
+            DirtyTargets = 5,
+            DestroyEffects = 6,
+            Done = 7,
         }
 
         private bool _sliceActive;
@@ -132,7 +116,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int LastSliceProcessed { get; private set; }
         public int DeferredEntityCount => _sliceActive && _stage == LifetimeStage.Scan ? _snapshotCount - _cursor : 0;
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, GasPresentationEventBuffer presentationEvents = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, GasPresentationEventBuffer presentationEvents = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null) : base(world)
         {
             if (snapshotCapacity <= 0)
             {
@@ -141,9 +125,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _effectSnapshot = new Entity[snapshotCapacity];
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
-            _onPeriodCallbacks = new List<CallbackCommand>(snapshotCapacity);
-            _onExpireCallbacks = new List<CallbackCommand>(snapshotCapacity);
-            _onRemoveCallbacks = new List<CallbackCommand>(snapshotCapacity);
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _ownsFanOutBudget = fanOutBudget == null;
             _periodPhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
             _expirePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
             _removePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
@@ -163,7 +146,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _graphApi = graphApi;
             _tagOps = tagOps;
             _builtinRuntime.SpatialQueries = spatialQueries;
-            _builtinRuntime.FanOutBudget = _callbackCreateBudget;
+            _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
@@ -240,14 +223,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (ProcessPhaseStage(LifetimeStage.PeriodGraphs, LifetimeStage.ExpireGraphs, _periodPhaseGraphs, EffectPhaseId.OnPeriod, ref workUnits) ||
                     ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
-                    ProcessPhaseStage(LifetimeStage.RemoveGraphs, LifetimeStage.PeriodCallbacks, _removePhaseGraphs, EffectPhaseId.OnRemove, ref workUnits))
-                {
-                    continue;
-                }
-
-                if (ProcessCallbackStage(LifetimeStage.PeriodCallbacks, LifetimeStage.ExpireCallbacks, _onPeriodCallbacks, ref workUnits) ||
-                    ProcessCallbackStage(LifetimeStage.ExpireCallbacks, LifetimeStage.RemoveCallbacks, _onExpireCallbacks, ref workUnits) ||
-                    ProcessCallbackStage(LifetimeStage.RemoveCallbacks, LifetimeStage.FanOut, _onRemoveCallbacks, ref workUnits))
+                    ProcessPhaseStage(LifetimeStage.RemoveGraphs, LifetimeStage.FanOut, _removePhaseGraphs, EffectPhaseId.OnRemove, ref workUnits))
                 {
                     continue;
                 }
@@ -330,8 +306,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void BeginSlice()
         {
             RefreshBuiltinOrderContext();
-            _callbackCreateBudget.NextFrame();
-            _callbackDropped = 0;
+            if (_ownsFanOutBudget)
+            {
+                _fanOutBudget.NextFrame();
+            }
             _fanOutDropped = 0;
             ClearPendingWork();
             ClearRollbackState();
@@ -357,9 +335,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void ClearPendingWork()
         {
-            _onPeriodCallbacks.Clear();
-            _onExpireCallbacks.Clear();
-            _onRemoveCallbacks.Clear();
             _fanOutCommands.Clear();
             _periodPhaseGraphs.Clear();
             _expirePhaseGraphs.Clear();
@@ -464,12 +439,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 World = World,
                 Clock = _clock,
                 Conditions = _conditions,
-                OnPeriodCallbacks = _onPeriodCallbacks,
                 PeriodPhaseGraphs = _periodPhaseGraphs,
-                Budget = _callbackCreateBudget,
             };
             job.Update(entity, ref effect, ref context);
-            _callbackDropped += job.Dropped;
         }
 
         private void ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
@@ -481,17 +453,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Conditions = _conditions,
                 DirtyTargets = _dirtyTargets,
                 EffectsToDestroy = _effectsToDestroy,
-                OnExpireCallbacks = _onExpireCallbacks,
-                OnRemoveCallbacks = _onRemoveCallbacks,
                 ExpirePhaseGraphs = _expirePhaseGraphs,
                 RemovePhaseGraphs = _removePhaseGraphs,
                 PresentationEvents = _presentationEvents,
-                Budget = _callbackCreateBudget,
                 TagOps = _tagOps,
                 GasBudget = _budget,
             };
             job.Update(entity, ref effect, ref context);
-            _callbackDropped += job.Dropped;
         }
 
         private bool ProcessPhaseStage(
@@ -513,47 +481,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private bool ProcessCallbackStage(
-            LifetimeStage current,
-            LifetimeStage next,
-            List<CallbackCommand> callbacks,
-            ref int workUnits)
-        {
-            if (_stage != current) return false;
-            if (_cursor < callbacks.Count)
-            {
-                CallbackCommand callback = callbacks[_cursor++];
-                _externalWorkCommitted |= PublishCallback(in callback);
-                CountWork(ref workUnits);
-                return true;
-            }
-            AdvanceTo(next);
-            return true;
-        }
-
-        private bool PublishCallback(in CallbackCommand command)
-        {
-            if (_effectRequests == null) return false;
-            _effectRequests.Publish(new EffectRequest
-            {
-                RootId = command.RootId,
-                Source = command.Source,
-                Target = command.Target,
-                TargetContext = command.TargetContext,
-                TemplateId = command.EffectTemplateId,
-            });
-            return true;
-        }
-
         private void CompleteSlice()
         {
-            if (_callbackDropped > 0 && !_callbackBudgetFused)
+            if (_fanOutDropped > 0 && _budget != null)
             {
-                _callbackBudgetFused = true;
-            }
-            if (_callbackDropped > 0 && _budget != null)
-            {
-                _budget.DurationCallbackCreatesDropped += _callbackDropped;
+                _budget.EffectLifetimeFanOutDropped += _fanOutDropped;
             }
 
             _sliceActive = false;
@@ -579,10 +511,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public World World;
             public Ludots.Core.Engine.IClock Clock;
             public GasConditionRegistry Conditions;
-            public List<CallbackCommand> OnPeriodCallbacks;
             public List<PhaseGraphEntry> PeriodPhaseGraphs;
-            public RootBudgetTable Budget;
-            public int Dropped;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(Entity entity, ref GameplayEffect effect, ref EffectContext context)
@@ -642,15 +571,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public GasConditionRegistry Conditions;
             public List<Entity> DirtyTargets;
             public List<Entity> EffectsToDestroy;
-            public List<CallbackCommand> OnExpireCallbacks;
-            public List<CallbackCommand> OnRemoveCallbacks;
             public List<PhaseGraphEntry> ExpirePhaseGraphs;
             public List<PhaseGraphEntry> RemovePhaseGraphs;
             public GasPresentationEventBuffer PresentationEvents;
-            public RootBudgetTable Budget;
             public TagOps TagOps;
             public GasBudget GasBudget;
-            public int Dropped;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(Entity entity, ref GameplayEffect effect, ref EffectContext context)

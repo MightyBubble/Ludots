@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -7,10 +8,14 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map.Hex;
+using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -1327,6 +1332,290 @@ namespace Ludots.Tests.GAS
             dispatch.Update(0.016f);
 
             That(budget.GameplayEventBusDropped, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void EffectApplicationSystem_WhenPersistentFanOutExhaustsRootBudget_PublishesDroppedDiagnostic()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var candidates = CreateCandidates(world, GasConstants.MAX_CREATES_PER_ROOT);
+            var spatialQueries = new FixedSpatialQueryService(candidates);
+            var phaseExecutor = CreateFanOutExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var application = new EffectApplicationSystem(
+                world,
+                fanOutCommandCapacity: GasConstants.MAX_CREATES_PER_ROOT * 2,
+                new DiscreteClock(),
+                effectRequests: requests,
+                budget: budget,
+                templates: templates,
+                spatialQueries: spatialQueries,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            const int templateId = 2_020;
+            RegisterFanOutTemplate(templates, templateId, EffectLifetimeKind.After, periodTicks: 0);
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(0, 0));
+            for (int i = 0; i < 2; i++)
+            {
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: 77,
+                    source,
+                    target,
+                    durationTicks: 60,
+                    lifetimeKind: EffectLifetimeKind.After);
+                world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+            }
+
+            application.Update(0f);
+
+            That(requests.Count, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            That(budget.EffectApplicationFanOutDropped, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            AssertFanOutDiagnostic(budget, GasDiagnosticSystem.EffectApplication, GasConstants.MAX_CREATES_PER_ROOT);
+        }
+
+        [Test]
+        public void EffectLifetimeSystem_WhenPersistentFanOutExhaustsRootBudget_PublishesDroppedDiagnostic()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var candidates = CreateCandidates(world, GasConstants.MAX_CREATES_PER_ROOT);
+            var spatialQueries = new FixedSpatialQueryService(candidates);
+            var phaseExecutor = CreateFanOutExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var clock = new DiscreteClock();
+            var lifetime = new EffectLifetimeSystem(
+                world,
+                clock,
+                new GasConditionRegistry(),
+                snapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_CREATES_PER_ROOT * 2,
+                effectRequests: requests,
+                budget: budget,
+                templates: templates,
+                spatialQueries: spatialQueries,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            const int templateId = 2_021;
+            RegisterFanOutTemplate(templates, templateId, EffectLifetimeKind.Infinite, periodTicks: 1);
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(0, 0));
+            for (int i = 0; i < 2; i++)
+            {
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: 78,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.Infinite,
+                    periodTicks: 1);
+                world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+                ref GameplayEffect state = ref world.Get<GameplayEffect>(effect);
+                state.State = EffectState.Committed;
+                state.NextTickAtTick = -1;
+            }
+
+            lifetime.Update(0f);
+
+            That(requests.Count, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            That(budget.EffectLifetimeFanOutDropped, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            AssertFanOutDiagnostic(budget, GasDiagnosticSystem.EffectLifetime, GasConstants.MAX_CREATES_PER_ROOT);
+        }
+
+        [Test]
+        public void EffectProcessingLoopSystem_FollowUpPassesShareOneRootFanOutBudget()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var candidates = CreateCandidates(world, GasConstants.MAX_CREATES_PER_ROOT);
+            var spatialQueries = new FixedSpatialQueryService(candidates);
+            var phaseExecutor = CreateFanOutExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var loop = new EffectProcessingLoopSystem(
+                world,
+                requests,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                lifetimeSnapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_CREATES_PER_ROOT * 2,
+                budget: budget,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                spatialQueries: spatialQueries,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            const int parentTemplateId = 2_022;
+            const int childTemplateId = 2_023;
+            RegisterFanOutTemplate(
+                templates,
+                parentTemplateId,
+                EffectLifetimeKind.After,
+                periodTicks: 0,
+                payloadEffectTemplateId: childTemplateId);
+            RegisterFanOutTemplate(
+                templates,
+                childTemplateId,
+                EffectLifetimeKind.Instant,
+                periodTicks: 0);
+
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(0, 0));
+            requests.Publish(new EffectRequest
+            {
+                RootId = 79,
+                Source = source,
+                Target = target,
+                TemplateId = parentTemplateId,
+            });
+
+            loop.Update(0f);
+
+            That(requests.Count, Is.Zero);
+            That(budget.EffectApplicationFanOutDropped, Is.Zero);
+            That(
+                budget.EffectProposalFanOutDropped,
+                Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT * GasConstants.MAX_CREATES_PER_ROOT));
+            AssertFanOutDiagnostic(
+                budget,
+                GasDiagnosticSystem.EffectProposal,
+                GasConstants.MAX_CREATES_PER_ROOT * GasConstants.MAX_CREATES_PER_ROOT);
+        }
+
+        [Test]
+        public void GasBudget_ResetClearsEveryFanOutDiagnosticCounter()
+        {
+            var budget = new GasBudget
+            {
+                EffectProposalFanOutDropped = 1,
+                EffectApplicationFanOutDropped = 2,
+                EffectLifetimeFanOutDropped = 3,
+            };
+
+            That(budget.HasWarnings, Is.True);
+
+            budget.Reset();
+
+            That(budget.EffectProposalFanOutDropped, Is.Zero);
+            That(budget.EffectApplicationFanOutDropped, Is.Zero);
+            That(budget.EffectLifetimeFanOutDropped, Is.Zero);
+            That(budget.HasWarnings, Is.False);
+        }
+
+        private static Entity[] CreateCandidates(World world, int count)
+        {
+            var candidates = new Entity[count];
+            for (int i = 0; i < count; i++)
+            {
+                candidates[i] = world.Create();
+            }
+            return candidates;
+        }
+
+        private static void RegisterFanOutTemplate(
+            EffectTemplateRegistry templates,
+            int templateId,
+            EffectLifetimeKind lifetimeKind,
+            int periodTicks,
+            int payloadEffectTemplateId = 9_999)
+        {
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = lifetimeKind,
+                DurationTicks = lifetimeKind == EffectLifetimeKind.After ? 60 : 0,
+                PeriodTicks = periodTicks,
+                TargetQuery = new TargetQueryDescriptor
+                {
+                    Kind = TargetResolverKind.BuiltinSpatial,
+                    Spatial = new BuiltinSpatialDescriptor
+                    {
+                        Shape = SpatialShape.Circle,
+                        RadiusCm = 100,
+                    },
+                },
+                TargetFilter = new TargetFilterDescriptor
+                {
+                    RelationFilter = RelationshipFilter.All,
+                },
+                TargetDispatch = new TargetDispatchDescriptor
+                {
+                    PayloadEffectTemplateId = payloadEffectTemplateId,
+                    ContextMapping = TargetResolverContextMapping.Default,
+                },
+            });
+        }
+
+        private static EffectPhaseExecutor CreateFanOutExecutor(EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Buff,
+                ActivePhases = PhaseFlags.OnResolve | PhaseFlags.OnHit | PhaseFlags.OnPeriod,
+                AllowedLifetimes = LifetimeFlags.All,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnHit] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            return new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+        }
+
+        private static void AssertFanOutDiagnostic(GasBudget budget, GasDiagnosticSystem system, int count)
+        {
+            var diagnostics = new GasDiagnosticEventBuffer(capacity: 4);
+            var report = new GasBudgetReportSystem(budget, diagnostics);
+            report.Update(0f);
+
+            That(diagnostics.Count, Is.EqualTo(1));
+            That(diagnostics[0].System, Is.EqualTo(system));
+            That(diagnostics[0].Metric, Is.EqualTo(GasDiagnosticMetric.FanOutCreatesDropped));
+            That(diagnostics[0].Count, Is.EqualTo(count));
+        }
+
+        private sealed class FixedSpatialQueryService : ISpatialQueryService
+        {
+            private readonly Entity[] _hits;
+
+            public FixedSpatialQueryService(Entity[] hits)
+            {
+                _hits = hits;
+            }
+
+            public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryRadius(WorldCmInt2 center, int radiusCm, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryCone(WorldCmInt2 origin, int directionDeg, int halfAngleDeg, int rangeCm, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryRectangle(WorldCmInt2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer) => Write(buffer);
+            public SpatialQueryResult QueryHexRing(HexCoordinates center, int hexRadius, Span<Entity> buffer) => Write(buffer);
+
+            private SpatialQueryResult Write(Span<Entity> buffer)
+            {
+                int count = Math.Min(buffer.Length, _hits.Length);
+                _hits.AsSpan(0, count).CopyTo(buffer);
+                return new SpatialQueryResult(count, _hits.Length - count);
+            }
         }
 
         private static EffectPhaseExecutor CreateBuffOnApplyModifierExecutor(EffectTemplateRegistry templates)

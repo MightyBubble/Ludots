@@ -46,6 +46,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectProposalProcessingSystem _proposal;
         private readonly EffectApplicationSystem _application;
         private readonly EffectLifetimeSystem _lifetime;
+        private readonly RootBudgetTable _fanOutBudget = new(16384);
 
         private EffectLoopStage _stage;
         private EffectLoopSubstage _substage;
@@ -78,9 +79,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi, tagOps,
                 spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, exchangeRuntime,
                 progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz,
-                relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake);
-            _application = new EffectApplicationSystem(world, fanOutCommandCapacity, clock, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake);
-            _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, fanOutCommandCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime, orderIntake);
+                 relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget);
+            _application = new EffectApplicationSystem(world, fanOutCommandCapacity, clock, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget);
+            _lifetime = new EffectLifetimeSystem(world, clock, conditions, lifetimeSnapshotCapacity, fanOutCommandCapacity, effectRequests, budget, templates, spatialQueries, spawnRequests, lifecycleRequests, lifecycleServices, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator, orderTypeRegistry, orderRuleRegistry, stepRateHz, relationshipRuntime, presentationEvents, knowledgeAreaRevealRuntime, orderIntake, _fanOutBudget);
             MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
             _runtimeStateEntity = world.Create(new GasRuntimeState
             {
@@ -109,6 +110,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (!_inSlice)
             {
+                _fanOutBudget.NextFrame();
                 _inSlice = true;
                 _stage = EffectLoopStage.ProposalAndApply;
                 _substage = EffectLoopSubstage.Proposal;

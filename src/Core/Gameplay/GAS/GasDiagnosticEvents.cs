@@ -12,6 +12,7 @@ namespace Ludots.Core.Gameplay.GAS
         PhaseListener = 6,
         GameplayEventBus = 7,
         OrderAdmission = 8,
+        EffectApplication = 9,
     }
 
     public enum GasDiagnosticMetric : byte
@@ -20,8 +21,7 @@ namespace Ludots.Core.Gameplay.GAS
         ResponseDepthDropped = 2,
         ResponseStepBudgetFused = 3,
         ResponseQueueOverflow = 4,
-        OnApplyCreatesDropped = 5,
-        DurationCallbackCreatesDropped = 6,
+        FanOutCreatesDropped = 5,
         TagCountOverflowDropped = 7,
         ActiveEffectContainerAttachDropped = 8,
         PhaseListenerRegistrationDropped = 9,

@@ -33,8 +33,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseDepthDropped, _budget.ResponseDepthDropped);
             PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseStepBudgetFused, _budget.ResponseStepBudgetFused);
             PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseQueueOverflow, _budget.ResponseQueueOverflowDropped);
-            PublishIfNonZero(GasDiagnosticSystem.EffectProposal, GasDiagnosticMetric.OnApplyCreatesDropped, _budget.OnApplyCreatesDropped);
-            PublishIfNonZero(GasDiagnosticSystem.EffectLifetime, GasDiagnosticMetric.DurationCallbackCreatesDropped, _budget.DurationCallbackCreatesDropped);
+            PublishIfNonZero(GasDiagnosticSystem.EffectProposal, GasDiagnosticMetric.FanOutCreatesDropped, _budget.EffectProposalFanOutDropped);
+            PublishIfNonZero(GasDiagnosticSystem.EffectApplication, GasDiagnosticMetric.FanOutCreatesDropped, _budget.EffectApplicationFanOutDropped);
+            PublishIfNonZero(GasDiagnosticSystem.EffectLifetime, GasDiagnosticMetric.FanOutCreatesDropped, _budget.EffectLifetimeFanOutDropped);
             PublishIfNonZero(GasDiagnosticSystem.TagContainer, GasDiagnosticMetric.TagCountOverflowDropped, _budget.TagCountOverflowDropped);
             PublishIfNonZero(GasDiagnosticSystem.ActiveEffectContainer, GasDiagnosticMetric.ActiveEffectContainerAttachDropped, _budget.ActiveEffectContainerAttachDropped);
             PublishIfNonZero(GasDiagnosticSystem.PhaseListener, GasDiagnosticMetric.PhaseListenerRegistrationDropped, _budget.PhaseListenerRegistrationDropped);

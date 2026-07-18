@@ -63,24 +63,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly List<PendingEffectEntry> _pendingEffects = new(1024);
 
-        // OnApply回调命令结构
-        private struct OnApplyCallbackCommand
-        {
-            public int RootId;
-            public Entity Source;
-            public Entity Target;
-            public Entity TargetContext;
-            public int EffectTemplateId;
-        }
-        
-        // 收集OnApply回调命令的列表
-        private readonly List<OnApplyCallbackCommand> _onApplyCallbacks = new List<OnApplyCallbackCommand>(64);
-        private bool _onApplyBudgetFused;
-        private readonly RootBudgetTable _onApplyCreateBudget = new RootBudgetTable(16384);
-        private int _onApplyDropped;
-
         // ── TargetResolver fan-out (shared types from TargetResolverFanOutHelper) ──
         private readonly FanOutCommandBuffer _fanOutCommands;
+        private readonly RootBudgetTable _fanOutBudget;
+        // An injected budget is advanced by the effect-loop owner once per processing transaction.
+        private readonly bool _ownsFanOutBudget;
         private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
@@ -127,9 +114,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _ownsFanOutBudget = fanOutBudget == null;
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _effectRequests = effectRequests;
             _budget = budget;
@@ -141,7 +130,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _graphApiHost = graphApi;
             _graphApi = graphApi;
             _builtinRuntime.SpatialQueries = spatialQueries;
-            _builtinRuntime.FanOutBudget = _onApplyCreateBudget;
+            _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
@@ -198,12 +187,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _pendingAttach.Clear();
                 _pendingCreateContainer.Clear();
                 _createdContainers.Clear();
-                _onApplyCallbacks.Clear();
                 _fanOutCommands.Clear();
                 _pendingEffects.Clear();
                 _pendingListenerRegistrations.Clear();
-                _onApplyCreateBudget.NextFrame();
-                _onApplyDropped = 0;
+                if (_ownsFanOutBudget)
+                {
+                    _fanOutBudget.NextFrame();
+                }
                 _fanOutDropped = 0;
                 _activeEffectAttachDropped = 0;
                 _listenerRegistrationDropped = 0;
@@ -524,10 +514,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         ConsumeWork(ref workUnits);
                     }
-                    if (_fanOutDropped > 0)
-                    {
-                        // Budget fused — telemetry exposed via _fanOutDropped
-                    }
                     _sliceStage = ApplicationStage.RegisterListeners;
                     _playbackCursor = 0;
                     continue;
@@ -555,9 +541,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                ApplyOnApplyCallbacks();
                 if (_budget != null)
                 {
+                    if (_fanOutDropped > 0)
+                    {
+                        _budget.EffectApplicationFanOutDropped += _fanOutDropped;
+                    }
                     if (_activeEffectAttachDropped > 0)
                     {
                         _budget.ActiveEffectContainerAttachDropped += _activeEffectAttachDropped;
@@ -618,7 +607,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _pendingAttach.Clear();
             _pendingCreateContainer.Clear();
             _createdContainers.Clear();
-            _onApplyCallbacks.Clear();
             _fanOutCommands.Clear();
             _pendingListenerRegistrations.Clear();
             _activeEffectAttachDropped = 0;
@@ -705,38 +693,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
         
-        /// <summary>
-        /// 批量应用OnApply回调（Query外执行，避免结构变更）
-        /// </summary>
-        private void ApplyOnApplyCallbacks()
-        {
-            if (_effectRequests == null || _onApplyCallbacks.Count == 0) return;
-
-            for (int i = 0; i < _onApplyCallbacks.Count; i++)
-            {
-                var cmd = _onApplyCallbacks[i];
-                _effectRequests.Publish(new EffectRequest
-                {
-                    RootId = cmd.RootId,
-                    Source = cmd.Source,
-                    Target = cmd.Target,
-                    TargetContext = cmd.TargetContext,
-                    TemplateId = cmd.EffectTemplateId
-                });
-            }
-
-            if (_onApplyDropped > 0 && !_onApplyBudgetFused)
-            {
-                _onApplyBudgetFused = true;
-                // Budget fused — telemetry exposed via _onApplyBudgetFused + _onApplyDropped
-            }
-
-            if (_onApplyDropped > 0 && _budget != null)
-            {
-                _budget.OnApplyCreatesDropped += _onApplyDropped;
-            }
-        }
-
         private struct PendingAttach
         {
             public Entity Target;

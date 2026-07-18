@@ -516,3 +516,60 @@ The figures below belong to the earlier #644-#680 delivery snapshot. They are re
 ### 9. Next variant test
 
 A new Order variant must reuse `OrderSpatialPayloadOps` and the existing Order finalizer. A new GAS variant must change graph wiring or effect steps. Neither may add a Core gameplay enum, fallback field name, Mod-local path pool, or alternate movement/order runtime.
+
+---
+
+## GAS Composition Gate - PR #660 Fan-Out Budget Diagnostics Repair
+
+- **Task / Issue**: PR #660 audit repair for persistent fan-out budget diagnostics and retired callback state
+- **Date**: 2026-07-18
+- **Agent / Author**: Codex gas-diagnostics agent
+
+### 1. Core judgment
+
+Primary delivery: A. Repair the existing builtin fan-out accounting path and make one root budget span the complete effect-processing transaction.
+
+Result: PASS
+
+Reason: The change reuses `BuiltinHandlerExecutionContext.DroppedCount`, `RootBudgetTable`, `GasBudget`, `GasBudgetReportSystem`, and `EffectProcessingLoopSystem`. It adds no gameplay variant, graph op, preset switch, profile field, registry, loader, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Root fan-out admission | N/A | Existing `RootBudgetTable` shared by the effect loop |
+| Per-phase dropped accounting | N/A | Existing `BuiltinHandlerExecutionContext.DroppedCount` and `GasBudget` |
+| Structured reporting | N/A | Existing `GasBudgetReportSystem` and `GasDiagnosticEventBuffer` |
+| Retired callback cleanup | N/A | Existing application/lifetime systems |
+
+### 3. Reuse list
+
+- Handlers: existing `SpatialQuery`, `DispatchPayload`, and `ReResolveAndDispatch` builtin handlers
+- Queues / Systems: `EffectProcessingLoopSystem`, proposal/application/lifetime systems, `EffectRequestQueue`, `GasBudgetReportSystem`
+- Resolvers / Registries: `TargetResolverFanOutHelper`, existing `RootBudgetTable`, existing handler/template registries
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A. No atomic operation, graph operation, preset, registry, or schema was added.
+
+### 5. Transaction boundary
+
+One `EffectProcessingLoopSystem` transaction advances one shared `RootBudgetTable` generation before its first proposal pass. Proposal, application, lifetime, and all follow-up passes consume that same generation. Independently constructed systems retain a private table and advance it only when beginning their own slice.
+
+### 6. Config SSOT
+
+Behavior remains in the existing effect template and graph configuration. No JSON schema or config field was added.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn, effect, or diagnostics pipeline added
+- [x] No placement validation moved into lifecycle operations
+- [x] No fallback or compatibility alias added
+- [x] No new handler, graph op, preset, registry, or schema added
+- [x] Retired callback command/list/stage/budget state was deleted rather than preserved
+
+### 8. Next variant test
+
+A new Mod fan-out variant changes an effect step or graph connection and continues through the same builtin handler, root budget, and structured diagnostics path. It does not add a Core enum or alternate budget pipeline.

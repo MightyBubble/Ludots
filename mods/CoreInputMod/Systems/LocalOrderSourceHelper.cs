@@ -102,6 +102,9 @@ namespace CoreInputMod.Systems
             using var stream = File.OpenRead(fullPath);
             var config = InputOrderMappingLoader.LoadFromStream(stream);
             var mapping = new InputOrderMappingSystem(input, config);
+            PlayerEntityLookup players = RequireService<PlayerEntityLookup>(CoreServiceKeys.PlayerEntityLookup.Name);
+            var controlDomains = RequireService<Ludots.Core.Gameplay.Relationships.ControlDomainQuery>(
+                CoreServiceKeys.ControlDomainQuery.Name);
 
             mapping.SetOrderTypeKeyResolver(key =>
             {
@@ -138,7 +141,13 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
-            mapping.SetActivationActorValidator(_world.IsAlive);
+            mapping.SetActivationActorValidator((actor, playerId) =>
+                InputOrderActorAuthorization.IsAuthorized(
+                    _world,
+                    players,
+                    controlDomains,
+                    actor,
+                    playerId));
             mapping.SetCollectionPrimaryEntityProvider(TryResolveCollectionPrimary);
             mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
@@ -255,6 +264,17 @@ namespace CoreInputMod.Systems
             return TryGetLocalPlayerId(out int playerId)
                 ? _context.GetControlledActor(playerId)
                 : default;
+        }
+
+        private T RequireService<T>(string key) where T : class
+        {
+            if (!_globals.TryGetValue(key, out object? serviceObj) || serviceObj is not T service)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {key} before input-order mappings install.");
+            }
+
+            return service;
         }
 
         private bool TryGetCommandSourceOwner(out Entity owner)

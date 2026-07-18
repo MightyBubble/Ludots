@@ -294,7 +294,7 @@ namespace Ludots.Tests.GAS
                 }
             });
             mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetActivationActorValidator(actor => actor != Entity.Null);
+            mapping.SetActivationActorValidator((actor, _) => actor != Entity.Null);
             int nextOrderId = 1;
             mapping.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
             mapping.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });

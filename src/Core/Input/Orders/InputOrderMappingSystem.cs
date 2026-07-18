@@ -24,7 +24,7 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate bool ActorProvider(out Entity entity);
 
-    public delegate bool ActivationActorValidator(Entity entity);
+    public delegate bool ActivationActorValidator(Entity actor, int playerId);
 
     /// <summary>
     /// Delegate for resolving the owner of the active actor collection.
@@ -820,7 +820,7 @@ namespace Ludots.Core.Input.Orders
             if (_aimingMapping == null) { ExitAimingState(); return; }
             if (_aimingContext.Actor != Entity.Null &&
                 _activationActorValidator != null &&
-                !_activationActorValidator(_aimingContext.Actor))
+                !_activationActorValidator(_aimingContext.Actor, _aimingContext.PlayerId))
             {
                 LastActivationResult = InputOrderActivationResult.Rejected(
                     _aimingContext.Actor,
@@ -1873,6 +1873,16 @@ namespace Ludots.Core.Input.Orders
         private OrderSubmitResult SubmitToHandler(in Order order)
         {
             var submitted = order;
+            if (_activationActorValidator != null &&
+                !_activationActorValidator(submitted.Actor, submitted.PlayerId))
+            {
+                LastActivationResult = InputOrderActivationResult.Rejected(
+                    submitted.Actor,
+                    submitted.OrderId,
+                    OrderSubmitResult.RejectedInvalidActor);
+                return OrderSubmitResult.RejectedInvalidActor;
+            }
+
             if (submitted.OrderId <= 0)
             {
                 _orderIdentityAssigner?.Invoke(ref submitted);
@@ -2200,7 +2210,7 @@ namespace Ludots.Core.Input.Orders
                     "Programmatic mapped-action activation requires an explicit actor validator.");
             }
 
-            if (!_activationActorValidator(context.Actor))
+            if (!_activationActorValidator(context.Actor, context.PlayerId))
             {
                 return InputOrderActivationResult.Rejected(
                     context.Actor,

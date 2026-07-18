@@ -70,7 +70,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
-        private readonly RootBudgetTable _instantFanOutBudget = new(16384);
+        private readonly RootBudgetTable _fanOutBudget;
+        // An injected budget is advanced by the effect-loop owner once per processing transaction.
+        private readonly bool _ownsFanOutBudget;
         private readonly FanOutCommandBuffer _instantFanOutCommands;
         private readonly Entity[] _instantResolverBuffer = new Entity[256];
         private readonly OrderTypeRegistry? _builtinOrderTypeRegistry;
@@ -266,10 +268,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null)
             : base(world)
         {
             _queue = queue;
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _ownsFanOutBudget = fanOutBudget == null;
             _instantFanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _queue?.TrackResponseChainListenerLifecycle(world);
@@ -287,7 +291,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
             _builtinRuntime.SpatialQueries = spatialQueries;
-            _builtinRuntime.FanOutBudget = _instantFanOutBudget;
+            _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
             _builtinRuntime.ResolverBuffer = _instantResolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
@@ -324,7 +328,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!_sliceActive)
             {
                 _sliceActive = true;
-                _instantFanOutBudget.NextFrame();
+                if (_ownsFanOutBudget)
+                {
+                    _fanOutBudget.NextFrame();
+                }
                 _instantFanOutCommands.Clear();
                 _builtinRuntime.OrderTypeRegistry = _builtinOrderTypeRegistry;
                 _builtinRuntime.OrderRuleRegistry = _builtinOrderRuleRegistry;
@@ -1115,7 +1122,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             if (_builtinRuntime.DroppedCount > 0 && _budget != null)
             {
-                _budget.DurationCallbackCreatesDropped += _builtinRuntime.DroppedCount;
+                _budget.EffectProposalFanOutDropped += _builtinRuntime.DroppedCount;
             }
         }
 
