@@ -31,7 +31,6 @@ jobs:
           - raylib
           - web
     env:
-      EVIDENCE_ROOT: ${{ runner.temp }}\mass-navigation-${{ matrix.adapter }}-${{ github.event.pull_request.head.sha || github.sha }}
       EVIDENCE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       EVIDENCE_ADAPTER: ${{ matrix.adapter }}
       EVIDENCE_RUN_ID: ${{ github.run_id }}
@@ -51,6 +50,17 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+
+      - name: Configure evidence root
+        shell: pwsh
+        run: |
+          $evidenceRoot = Join-Path `
+            $env:RUNNER_TEMP `
+            "mass-navigation-$env:EVIDENCE_ADAPTER-$env:EVIDENCE_SOURCE_SHA"
+          "EVIDENCE_ROOT=$evidenceRoot" | Out-File `
+            -FilePath $env:GITHUB_ENV `
+            -Encoding utf8 `
+            -Append
 
       - name: Record adapter UAT
         id: uat

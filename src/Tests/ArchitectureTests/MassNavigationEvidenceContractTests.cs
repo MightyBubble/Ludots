@@ -183,6 +183,9 @@ public sealed class MassNavigationEvidenceContractTests
         {
             Assert.That(workflow, Does.Contain("pull_request:"));
             Assert.That(workflow, Does.Contain("github.event.pull_request.head.sha || github.sha"));
+            Assert.That(workflow, Does.Contain("$env:RUNNER_TEMP"));
+            Assert.That(workflow, Does.Contain("$env:GITHUB_ENV"));
+            Assert.That(workflow, Does.Not.Contain("${{ runner.temp }}"));
             Assert.That(workflow, Does.Contain("actions/upload-artifact@v4"));
             Assert.That(workflow, Does.Contain("mass-navigation-10k-${{ matrix.adapter }}-${{ env.EVIDENCE_SOURCE_SHA }}"));
             Assert.That(workflow, Does.Contain("workflow_run_url"));
