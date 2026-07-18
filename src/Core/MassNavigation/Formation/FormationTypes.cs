@@ -18,53 +18,87 @@ public static class FormationNumericEncoding
 {
     public const int RadiansScale = 1_000_000;
 
+    private const float Int32InclusiveLowerBound = -2_147_483_648f;
+    private const float Int32ExclusiveUpperBound = 2_147_483_648f;
+
+    public static bool TryRoundCm(float value, out int encoded)
+    {
+        return TryRoundToInt32(value, out encoded);
+    }
+
     public static int RoundCm(float value, string context)
     {
-        if (!float.IsFinite(value) || value < int.MinValue || value > int.MaxValue)
+        if (!TryRoundCm(value, out int encoded))
         {
             throw new InvalidOperationException($"{context} requires a finite centimeter value within Int32 range.");
         }
 
-        return checked((int)MathF.Round(value));
+        return encoded;
     }
 
     public static int RoundCm(float value)
     {
-        if (!float.IsFinite(value) || value < int.MinValue || value > int.MaxValue)
+        if (!TryRoundCm(value, out int encoded))
         {
             throw new InvalidOperationException("Formation centimeter value must be finite and within Int32 range.");
         }
 
-        return checked((int)MathF.Round(value));
+        return encoded;
+    }
+
+    public static bool TryEncodeRadians(float value, out int encoded)
+    {
+        if (!float.IsFinite(value))
+        {
+            encoded = default;
+            return false;
+        }
+
+        return TryRoundToInt32(value * RadiansScale, out encoded);
     }
 
     public static int EncodeRadians(float value, string context)
     {
-        if (!float.IsFinite(value) ||
-            value < int.MinValue / (float)RadiansScale ||
-            value > int.MaxValue / (float)RadiansScale)
+        if (!TryEncodeRadians(value, out int encoded))
         {
             throw new InvalidOperationException($"{context} requires finite radians within encoded Int32 range.");
         }
 
-        return checked((int)MathF.Round(value * RadiansScale));
+        return encoded;
     }
 
     public static int EncodeRadians(float value)
     {
-        if (!float.IsFinite(value) ||
-            value < int.MinValue / (float)RadiansScale ||
-            value > int.MaxValue / (float)RadiansScale)
+        if (!TryEncodeRadians(value, out int encoded))
         {
             throw new InvalidOperationException("Formation radians value must be finite and within encoded Int32 range.");
         }
 
-        return checked((int)MathF.Round(value * RadiansScale));
+        return encoded;
     }
 
     public static float DecodeRadians(int encodedRadians)
     {
         return encodedRadians / (float)RadiansScale;
+    }
+
+    private static bool TryRoundToInt32(float value, out int encoded)
+    {
+        if (!float.IsFinite(value))
+        {
+            encoded = default;
+            return false;
+        }
+
+        float rounded = MathF.Round(value);
+        if (rounded < Int32InclusiveLowerBound || rounded >= Int32ExclusiveUpperBound)
+        {
+            encoded = default;
+            return false;
+        }
+
+        encoded = (int)rounded;
+        return true;
     }
 }
 

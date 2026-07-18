@@ -61,7 +61,13 @@ MassNavigation 私有 float Arrived
 
 跨边界的只有“完成或未完成”这一离散结果，不包含原始距离、速度或目标 float。到达阈值必须来自已校验配置；不得在订单系统中再做第二套到达计算，也不得因浮点误差添加静默 fallback。
 
-### 3.4 确定性边界
+### 3.4 Formation 订单编码与提交边界
+
+Optional Core Formation 在写入 `FormationCommandState` 前，必须对同次更新的全部语义订单完成最终编码预检。共享 `OrderId` 的相对布局偏移先加入目标中心，再校验最终 X/Y 整数厘米；rotate 先校验并归一化 facing，再编码为整数微弧度。prepare/preflight 只写预分配 SoA scratch，全部成功后才按稳定顺序 commit 并完成 `OrderBuffer`。
+
+任一编码失败必须报告 `OrderId`、Formation entity、字段和值，且本次更新内所有 Formation command state 与 active order 保持原值。禁止边编码边写 ECS、静默钳制、fallback、异常后的全量 ECS 快照回滚，以及热路径 `ToArray`、`Array.Resize` 或集合增长。
+
+### 3.5 确定性边界
 
 MassNavigation 的确定性承诺是：相同可执行版本、相同配置、相同 fixed tick 输入和相同初始 `WorldPositionCm` 下，worker 分片数量不得改变结果。求解器采用只读快照、互不重叠的输出区和 worker-local scratch，专项测试锁定串行与并行结果一致。
 

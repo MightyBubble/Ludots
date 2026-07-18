@@ -96,10 +96,21 @@ public static class FormationTargetPlanner
 
     public static float NormalizeFacingRadians(float angle)
     {
-        if (!float.IsFinite(angle) || MathF.Abs(angle) > MaxNormalizableFacingMagnitudeRadians)
+        if (!TryNormalizeFacingRadians(angle, out float normalized))
         {
             throw new InvalidOperationException(
                 $"Formation facing radians must be finite and within ±{MaxNormalizableFacingMagnitudeRadians} before normalization.");
+        }
+
+        return normalized;
+    }
+
+    public static bool TryNormalizeFacingRadians(float angle, out float normalized)
+    {
+        if (!float.IsFinite(angle) || MathF.Abs(angle) > MaxNormalizableFacingMagnitudeRadians)
+        {
+            normalized = default;
+            return false;
         }
 
         angle %= MathF.Tau;
@@ -112,6 +123,7 @@ public static class FormationTargetPlanner
             angle += MathF.Tau;
         }
 
-        return angle;
+        normalized = angle;
+        return true;
     }
 }

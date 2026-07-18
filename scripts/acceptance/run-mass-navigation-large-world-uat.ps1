@@ -11,6 +11,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+Import-Module (Join-Path $PSScriptRoot "MassNavigationEvidencePortability.psm1") -Force
 
 function Get-SourceSha {
     $sha = (& git -C $repoRoot rev-parse HEAD).Trim()
@@ -247,7 +248,7 @@ function Write-SoakReport {
     param(
         [System.Collections.Generic.List[object]]$RunRows,
         [string]$Path,
-        [string]$Root,
+        [string]$EvidenceAdapter,
         [object]$DeadlineValue
     )
 
@@ -258,12 +259,12 @@ function Write-SoakReport {
     $lines.Add("")
     $lines.Add("## Scope")
     $lines.Add("- Target: ``MassNavigationMod``, the high-performance MassNavigation foundation acceptance surface.")
-    $lines.Add("- Launcher path: ``scripts/run-mod-launcher.cmd cli launch mass_navigation --adapter raylib --record ...``.")
+    $lines.Add("- Launcher path: ``scripts/run-mod-launcher.cmd cli launch capability_standard_mass_navigation_large_world_10k --adapter $EvidenceAdapter --record ...``.")
     $lines.Add("- Evidence per run: ``battle-report.md``, ``trace.jsonl``, ``path.mmd``, ``summary.json``, ``visible-checklist.md``, and ``screens/timeline.png``.")
     $lines.Add("- No fallback contract: missing payload, transform, emission, culling, projection, capacity, or source-SHA evidence fails the run.")
     $lines.Add("")
     $lines.Add("## Result")
-    $lines.Add("- Output root: ``$Root``")
+    $lines.Add("- Artifact root: ``.``")
     $lines.Add("- Source HEAD: ``$sourceSha``")
     $lines.Add("- Deadline: ``$DeadlineValue``")
     $lines.Add("- Runs: ``$($RunRows.Count)``")
@@ -319,7 +320,8 @@ while ($true) {
     }
 
     $runIndex++
-    $runDir = Join-Path $OutputRoot ("run-{0:0000}" -f $runIndex)
+    $runName = "run-{0:0000}" -f $runIndex
+    $runDir = Join-Path $OutputRoot $runName
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
     $logPath = Join-Path $runDir "run.log"
     $startedAt = Get-Date
@@ -344,7 +346,13 @@ while ($true) {
     }
 
     $endedAt = Get-Date
-    $output | Set-Content -Path $logPath -Encoding UTF8
+    ConvertTo-PortableEvidenceLog `
+        -Lines @($output) `
+        -RunDirectory $runDir `
+        -OutputRoot $OutputRoot `
+        -RepoRoot $repoRoot `
+        -RunName $runName |
+        Set-Content -Path $logPath -Encoding UTF8
     $summaryFile = Join-Path $runDir "summary.json"
     $summary = $null
     $success = $false
@@ -385,6 +393,10 @@ while ($true) {
     if ($missingEvidence.Count -gt 0) {
         $success = $false
     }
+    $portabilityFailures = @(Get-EvidenceAbsolutePathViolations -Root $runDir)
+    if ($portabilityFailures.Count -gt 0) {
+        $success = $false
+    }
 
     $row = [pscustomobject]@{
         run = $runIndex
@@ -393,11 +405,11 @@ while ($true) {
         started_at = $startedAt.ToString("o")
         ended_at = $endedAt.ToString("o")
         duration_seconds = [math]::Round(($endedAt - $startedAt).TotalSeconds, 3)
-        output_dir = $runDir
-        battle_report = (Join-Path $runDir "battle-report.md")
-        trace = (Join-Path $runDir "trace.jsonl")
-        summary = $summaryFile
-        timeline = (Join-Path $runDir "screens\timeline.png")
+        output_dir = $runName
+        battle_report = "$runName/battle-report.md"
+        trace = "$runName/trace.jsonl"
+        summary = "$runName/summary.json"
+        timeline = "$runName/screens/timeline.png"
         normalized_signature = if ($summary) { $summary.normalized_signature } else { $null }
         source_sha = if ($summary) { $summary.source_sha } else { $null }
         world_hud_bar_count = if ($summary) { $summary.world_hud_bar_count } else { $null }
@@ -422,20 +434,25 @@ while ($true) {
         max_mass_navigation_crowd_step_ms = if ($summary) { $summary.max_mass_navigation_crowd_step_ms } else { $null }
         max_mass_navigation_sync_ms = if ($summary) { $summary.max_mass_navigation_sync_ms } else { $null }
         missing_evidence = $missingEvidence
-        failed_checks = if ($summary) { @($summary.failed_checks) + @($summaryValidationFailures) + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) } else { @("missing summary.json or launcher failure") + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) }
-        log = $logPath
+        failed_checks = if ($summary) { @($summary.failed_checks) + @($summaryValidationFailures) + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) + @($portabilityFailures) } else { @("missing summary.json or launcher failure") + @($sourceStateFailures) + @($missingEvidence | ForEach-Object { "missing evidence: $_" }) + @($portabilityFailures) }
+        log = "$runName/run.log"
     }
 
     $runs.Add($row)
     Add-Content -Path $summaryPath -Value (ConvertTo-SafeJsonLine $row) -Encoding UTF8
-    Write-SoakReport -RunRows $runs -Path $reportPath -Root $OutputRoot -DeadlineValue $deadline
+    Write-SoakReport -RunRows $runs -Path $reportPath -EvidenceAdapter $Adapter -DeadlineValue $deadline
 
     if (-not $success -and $StopOnFailure) {
         throw "MassNavigation UAT soak failed at run $runIndex. See $runDir"
     }
 }
 
-Write-SoakReport -RunRows $runs -Path $reportPath -Root $OutputRoot -DeadlineValue $deadline
+Write-SoakReport -RunRows $runs -Path $reportPath -EvidenceAdapter $Adapter -DeadlineValue $deadline
+$bundlePortabilityFailures = @(Get-EvidenceAbsolutePathViolations -Root $OutputRoot)
+if ($bundlePortabilityFailures.Count -gt 0) {
+    $bundlePortabilityFailures | ForEach-Object { Write-Error $_ }
+    exit 1
+}
 Write-Host "MassNavigation UAT soak complete."
 Write-Host "output=$OutputRoot"
 Write-Host "report=$reportPath"

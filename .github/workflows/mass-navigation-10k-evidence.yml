@@ -1,0 +1,102 @@
+name: MassNavigation 10K final evidence
+run-name: MassNavigation 10K evidence for ${{ github.event.pull_request.head.sha || github.sha }}
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/mass-navigation-10k-evidence.yml'
+      - 'mods/capabilities/navigation/**'
+      - 'mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/**'
+      - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
+      - 'scripts/acceptance/assert-portable-evidence.ps1'
+      - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
+      - 'src/Core/MassNavigation/**'
+      - 'src/Tools/Ludots.Launcher.Evidence/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record-final-evidence:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 658 }}
+    name: Record ${{ matrix.adapter }} evidence
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter:
+          - raylib
+          - web
+    env:
+      EVIDENCE_ROOT: ${{ runner.temp }}\mass-navigation-${{ matrix.adapter }}-${{ github.event.pull_request.head.sha || github.sha }}
+      EVIDENCE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EVIDENCE_ADAPTER: ${{ matrix.adapter }}
+      EVIDENCE_RUN_ID: ${{ github.run_id }}
+      EVIDENCE_RUN_ATTEMPT: ${{ github.run_attempt }}
+      EVIDENCE_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Checkout evidence source SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EVIDENCE_SOURCE_SHA }}
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Record adapter UAT
+        id: uat
+        shell: pwsh
+        run: |
+          & .\scripts\acceptance\run-mass-navigation-large-world-uat.ps1 `
+            -OutputRoot $env:EVIDENCE_ROOT `
+            -Iterations 1 `
+            -Adapter $env:EVIDENCE_ADAPTER `
+            -Build Release `
+            -StopOnFailure
+
+      - name: Validate portable evidence bundle
+        id: portability
+        shell: pwsh
+        run: |
+          & .\scripts\acceptance\assert-portable-evidence.ps1 `
+            -Root $env:EVIDENCE_ROOT
+
+      - name: Write evidence manifest
+        if: ${{ always() }}
+        shell: pwsh
+        env:
+          EVIDENCE_UAT_OUTCOME: ${{ steps.uat.outcome }}
+          EVIDENCE_PORTABILITY_OUTCOME: ${{ steps.portability.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:EVIDENCE_ROOT | Out-Null
+          $manifest = [ordered]@{
+            source_sha = $env:EVIDENCE_SOURCE_SHA
+            adapter = $env:EVIDENCE_ADAPTER
+            uat_outcome = $env:EVIDENCE_UAT_OUTCOME
+            portability_outcome = $env:EVIDENCE_PORTABILITY_OUTCOME
+            workflow_run_id = $env:EVIDENCE_RUN_ID
+            workflow_run_attempt = $env:EVIDENCE_RUN_ATTEMPT
+            workflow_run_url = $env:EVIDENCE_RUN_URL
+            generated_at_utc = [DateTime]::UtcNow.ToString('o')
+          }
+          $manifest | ConvertTo-Json | Set-Content `
+            -Path (Join-Path $env:EVIDENCE_ROOT 'evidence-manifest.json') `
+            -Encoding UTF8
+
+      - name: Upload SHA-bound evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mass-navigation-10k-${{ matrix.adapter }}-${{ env.EVIDENCE_SOURCE_SHA }}
+          path: ${{ env.EVIDENCE_ROOT }}
+          if-no-files-found: error
+          retention-days: 30

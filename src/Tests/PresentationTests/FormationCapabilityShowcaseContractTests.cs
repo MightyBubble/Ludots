@@ -3432,6 +3432,163 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityOrderBatch_FinalEncodingFailurePreservesAllCommandStatesAcrossChunks()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            if (formations[0].Id > formations[1].Id)
+            {
+                (formations[0], formations[1]) = (formations[1], formations[0]);
+            }
+
+            engine.World.Add(formations[1], new FormationOrderChunkSplitMarker { Value = 1 });
+            var firstBefore = new FormationCommandState
+            {
+                TargetCenterXCm = 111,
+                TargetCenterYCm = 222,
+                TargetFacingMicroRad = 333,
+                HasMoveTarget = 1,
+            };
+            var secondBefore = new FormationCommandState
+            {
+                TargetCenterXCm = 444,
+                TargetCenterYCm = 555,
+                TargetFacingMicroRad = 666,
+                HasMoveTarget = 1,
+            };
+            engine.World.Get<FormationCommandState>(formations[0]) = firstBefore;
+            engine.World.Get<FormationCommandState>(formations[1]) = secondBefore;
+
+            SetActiveFormationMoveOrder(
+                engine,
+                formations[0],
+                moveOrderTypeId,
+                orderId: 701,
+                new Vector2(9_000f, 7_000f));
+            SetActiveFormationMoveOrder(
+                engine,
+                formations[1],
+                moveOrderTypeId,
+                orderId: 702,
+                new Vector2(float.MaxValue, 7_000f));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ex.Message, Does.Contain("Formation order 702"));
+                Assert.That(ex.Message, Does.Contain($"entity {formations[1].Id}:"));
+                Assert.That(ex.Message, Does.Contain("TargetCenterXCm"));
+                Assert.That(ex.Message, Does.Contain(float.MaxValue.ToString("R")));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[0]), Is.EqualTo(firstBefore));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[1]), Is.EqualTo(secondBefore));
+                Assert.That(engine.World.Get<OrderBuffer>(formations[0]).HasActive, Is.True);
+                Assert.That(engine.World.Get<OrderBuffer>(formations[1]).HasActive, Is.True);
+            });
+        }
+
+        [Test]
+        public void FormationCapabilityOrderBatch_SharedLayoutOffsetOverflowFailsBeforeCommit()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            engine.World.Get<WorldPositionCm>(formations[0]).Value = Fix64Vec2.FromInt(0, 0);
+            engine.World.Get<WorldPositionCm>(formations[1]).Value = Fix64Vec2.FromInt(10_000, 0);
+            var firstBefore = engine.World.Get<FormationCommandState>(formations[0]);
+            var secondBefore = engine.World.Get<FormationCommandState>(formations[1]);
+            const float encodableCenterXCm = 2_147_483_000f;
+            Assert.That(FormationNumericEncoding.TryRoundCm(encodableCenterXCm, out _), Is.True);
+
+            var target = new Vector2(encodableCenterXCm, 7_000f);
+            SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, orderId: 801, target);
+            SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, orderId: 801, target);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ex.Message, Does.Contain("Formation order 801"));
+                Assert.That(ex.Message, Does.Contain("TargetCenterXCm"));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[0]), Is.EqualTo(firstBefore));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[1]), Is.EqualTo(secondBefore));
+            });
+        }
+
+        [Test]
+        public void FormationCapabilityOrderBatch_InvalidFinalFacingPreservesEarlierMoveState()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("Formation Capability requires OrderTypeRegistry.");
+            int rotateOrderTypeId = orderTypes.GetId(FormationOrderKeys.Rotate);
+            var firstBefore = engine.World.Get<FormationCommandState>(formations[0]);
+            var secondBefore = engine.World.Get<FormationCommandState>(formations[1]);
+
+            SetActiveFormationMoveOrder(
+                engine,
+                formations[0],
+                moveOrderTypeId,
+                orderId: 901,
+                new Vector2(9_000f, 7_000f));
+            SetActiveFormationRotateOrder(
+                engine,
+                formations[1],
+                rotateOrderTypeId,
+                orderId: 902,
+                facingRadians: 1_000_001f);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ex.Message, Does.Contain("Formation order 902"));
+                Assert.That(ex.Message, Does.Contain("TargetFacingRadians"));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[0]), Is.EqualTo(firstBefore));
+                Assert.That(engine.World.Get<FormationCommandState>(formations[1]), Is.EqualTo(secondBefore));
+            });
+        }
+
+        [Test]
+        public void FormationCapabilityOrderBatch_AfterWarmupAllocatesZeroBytes()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            (Entity[] formations, FormationOrderSystem system, int moveOrderTypeId) =
+                PrepareFormationMoveBatchTest(engine, formationCount: 2);
+            var target = new Vector2(9_000f, 7_000f);
+
+            for (int i = 0; i < 4; i++)
+            {
+                SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, 1_000 + i, target);
+                SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, 2_000 + i, target);
+                UpdateSystem(system);
+            }
+
+            SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, 3_001, target);
+            SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, 3_002, target);
+            long firstStart = GC.GetAllocatedBytesForCurrentThread();
+            UpdateSystem(system);
+            long firstBytes = GC.GetAllocatedBytesForCurrentThread() - firstStart;
+
+            SetActiveFormationMoveOrder(engine, formations[0], moveOrderTypeId, 4_001, target);
+            SetActiveFormationMoveOrder(engine, formations[1], moveOrderTypeId, 4_002, target);
+            long secondStart = GC.GetAllocatedBytesForCurrentThread();
+            UpdateSystem(system);
+            long secondBytes = GC.GetAllocatedBytesForCurrentThread() - secondStart;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstBytes, Is.Zero,
+                    $"Formation order prepare/preflight/commit must allocate 0 B after warmup; first sample was {firstBytes} B.");
+                Assert.That(secondBytes, Is.Zero,
+                    $"Formation order prepare/preflight/commit must allocate 0 B after warmup; second sample was {secondBytes} B.");
+            });
+        }
+
+        [Test]
         public void CommandMarkerRules_CreateAndDestroyScopedPerformersThroughEntityCollectionEvents()
         {
             var world = World.Create();
@@ -4024,10 +4181,36 @@ namespace Ludots.Tests.Presentation
             engine.World.Get<OrderBuffer>(formation).SetActiveDirect(in order, priority: 100);
         }
 
+        private static void SetActiveFormationRotateOrder(
+            GameEngine engine,
+            Entity formation,
+            int rotateOrderTypeId,
+            int orderId,
+            float facingRadians)
+        {
+            var args = new OrderArgs { F0 = facingRadians };
+            var order = new Order
+            {
+                OrderId = orderId,
+                OrderTypeId = rotateOrderTypeId,
+                PlayerId = 1,
+                Actor = formation,
+                SubmitStep = 42,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = args,
+            };
+            engine.World.Get<OrderBuffer>(formation).SetActiveDirect(in order, priority: 100);
+        }
+
         private static Vector2 GetWorldPositionCm(GameEngine engine, Entity entity)
         {
             Fix64Vec2 position = engine.World.Get<WorldPositionCm>(entity).Value;
             return new Vector2(position.X.ToFloat(), position.Y.ToFloat());
+        }
+
+        private struct FormationOrderChunkSplitMarker
+        {
+            public byte Value;
         }
 
         private static List<string> FormationCapabilityDependencyPaths()

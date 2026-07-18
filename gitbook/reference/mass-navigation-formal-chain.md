@@ -124,6 +124,24 @@ entities, or allocate per-map Formation state. A map or mod that authors Formati
 Formation systems for that active map lifecycle and unregisters them when that map unloads; a
 non-Formation map has no Formation systems and no steady-state Formation cost.
 
+Formation semantic orders use a strict prepare/preflight/commit transaction. The prepare and
+preflight phases may only write map-capacity-derived SoA scratch. Every final center centimeter and
+normalized facing microradian value for the pending update is encoded before the first
+`FormationCommandState` changes. If any order fails, the exception identifies its `OrderId`,
+Formation entity, field and rejected value, all command states and active order buffers remain
+unchanged, and no fallback, clamping or snapshot rollback is permitted.
+
+When `PathService`, `PathStore` and `PathingConfig` enable route execution, every participating
+MassNavigation profile must resolve an explicit configured agent type. `NoConfiguredAgentType` is a
+failed preflight, not permission to keep the direct group target. Route preparation must succeed for
+the complete order batch before any route waypoint is committed.
+
+Final 10K evidence is produced by `.github/workflows/mass-navigation-10k-evidence.yml`. Each Raylib
+and Web artifact is bound to the PR head SHA, includes a manifest with the Actions run URL, and uses
+portable paths relative to the artifact root; developer-machine absolute paths are not closure
+evidence. The recorder normalizes command/log roots, and the UAT plus workflow scan every text
+artifact, including `battle-report.md` and `run.log`, rejecting Windows, UNC, and runner Unix paths.
+
 ## Config Rules
 
 - Use semantic order keys in assets; runtime ids are implementation details.

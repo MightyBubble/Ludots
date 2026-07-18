@@ -14,13 +14,20 @@ namespace Ludots.Core.MassNavigation.Formation;
 
 public sealed class FormationOrderSystem : ISystem<float>
 {
+    private const byte PreparedMove = 1;
+    private const byte PreparedRotate = 2;
+
     private static readonly QueryDescription Query = new QueryDescription()
         .WithAll<FormationAnchorState, FormationCommandState, OrderBuffer, WorldPositionCm>()
         .WithNone<SuspendedTag>();
 
     private readonly GameEngine _engine;
     private readonly IFormationRuntimeGate _runtimeGate;
-    private readonly Entity[] _completedEntities;
+    private readonly Entity[] _preparedEntities;
+    private readonly int[] _preparedTargetCenterXCm;
+    private readonly int[] _preparedTargetCenterYCm;
+    private readonly int[] _preparedTargetFacingMicroRad;
+    private readonly byte[] _preparedKinds;
     private readonly int[] _moveBatchOrderIds;
     private readonly int[] _moveBatchPlayerIds;
     private readonly int[] _moveBatchSubmitSteps;
@@ -48,7 +55,11 @@ public sealed class FormationOrderSystem : ISystem<float>
             throw new ArgumentOutOfRangeException(nameof(capacity));
         }
 
-        _completedEntities = new Entity[capacity];
+        _preparedEntities = new Entity[capacity];
+        _preparedTargetCenterXCm = new int[capacity];
+        _preparedTargetCenterYCm = new int[capacity];
+        _preparedTargetFacingMicroRad = new int[capacity];
+        _preparedKinds = new byte[capacity];
         _moveBatchOrderIds = new int[capacity];
         _moveBatchPlayerIds = new int[capacity];
         _moveBatchSubmitSteps = new int[capacity];
@@ -82,18 +93,29 @@ public sealed class FormationOrderSystem : ISystem<float>
             return;
         }
 
-        if (pendingCount > _completedEntities.Length)
+        if (pendingCount > _preparedEntities.Length)
         {
             throw new InvalidOperationException(
-                $"Formation order processing requires {pendingCount} entries, exceeding configured capacity {_completedEntities.Length}.");
+                $"Formation order processing requires {pendingCount} entries, exceeding configured capacity {_preparedEntities.Length}.");
         }
 
+        OrderBufferSystem buffersSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("Formation orders require OrderBufferSystem.");
         ValidatePendingOrders();
         BuildMoveBatches();
-        int completedCount = 0;
+        int preparedCount = PreparePendingOrders();
+        CommitPreparedOrders(preparedCount);
+        for (int i = 0; i < preparedCount; i++)
+        {
+            buffersSystem.NotifyOrderComplete(_preparedEntities[i]);
+        }
+    }
+
+    private int PreparePendingOrders()
+    {
+        int preparedCount = 0;
         foreach (ref var chunk in _engine.World.Query(in Query))
         {
-            Span<FormationCommandState> commands = chunk.GetSpan<FormationCommandState>();
             Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
             Span<WorldPositionCm> worldPositions = chunk.GetSpan<WorldPositionCm>();
             ref Entity entityFirst = ref chunk.Entity(0);
@@ -106,6 +128,7 @@ public sealed class FormationOrderSystem : ISystem<float>
                 }
 
                 ref readonly Order order = ref buffer.ActiveOrder.Order;
+                Entity entity = Unsafe.Add(ref entityFirst, index);
                 if (order.OrderTypeId == _moveOrderTypeId)
                 {
                     int batchIndex = FindMoveBatch(in order);
@@ -120,30 +143,93 @@ public sealed class FormationOrderSystem : ISystem<float>
                         targetYCm += worldPositions[index].Value.Y.ToFloat() - centerYCm;
                     }
 
-                    commands[index].TargetCenterXCm = FormationNumericEncoding.RoundCm(targetXCm);
-                    commands[index].TargetCenterYCm = FormationNumericEncoding.RoundCm(targetYCm);
-                    commands[index].HasMoveTarget = 1;
+                    if (!FormationNumericEncoding.TryRoundCm(targetXCm, out _preparedTargetCenterXCm[preparedCount]))
+                    {
+                        throw CreateNumericEncodingFailure(
+                            in order,
+                            entity,
+                            "TargetCenterXCm",
+                            targetXCm,
+                            "finite centimeters within Int32 range");
+                    }
+
+                    if (!FormationNumericEncoding.TryRoundCm(targetYCm, out _preparedTargetCenterYCm[preparedCount]))
+                    {
+                        throw CreateNumericEncodingFailure(
+                            in order,
+                            entity,
+                            "TargetCenterYCm",
+                            targetYCm,
+                            "finite centimeters within Int32 range");
+                    }
+
+                    _preparedKinds[preparedCount] = PreparedMove;
                 }
                 else if (order.OrderTypeId == _rotateOrderTypeId)
                 {
-                    commands[index].TargetFacingMicroRad = FormationNumericEncoding.EncodeRadians(
-                        FormationTargetPlanner.NormalizeFacingRadians(order.Args.F0));
+                    if (!FormationTargetPlanner.TryNormalizeFacingRadians(order.Args.F0, out float normalizedFacing))
+                    {
+                        throw CreateNumericEncodingFailure(
+                            in order,
+                            entity,
+                            "TargetFacingRadians",
+                            order.Args.F0,
+                            "finite normalizable radians");
+                    }
+
+                    if (!FormationNumericEncoding.TryEncodeRadians(
+                            normalizedFacing,
+                            out _preparedTargetFacingMicroRad[preparedCount]))
+                    {
+                        throw CreateNumericEncodingFailure(
+                            in order,
+                            entity,
+                            "TargetFacingMicroRad",
+                            normalizedFacing,
+                            "radians encodable within Int32 microradians");
+                    }
+
+                    _preparedKinds[preparedCount] = PreparedRotate;
                 }
                 else
                 {
                     continue;
                 }
 
-                _completedEntities[completedCount++] = Unsafe.Add(ref entityFirst, index);
+                _preparedEntities[preparedCount++] = entity;
             }
         }
 
-        OrderBufferSystem buffersSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
-            ?? throw new InvalidOperationException("Formation orders require OrderBufferSystem.");
-        for (int i = 0; i < completedCount; i++)
+        return preparedCount;
+    }
+
+    private void CommitPreparedOrders(int preparedCount)
+    {
+        for (int i = 0; i < preparedCount; i++)
         {
-            buffersSystem.NotifyOrderComplete(_completedEntities[i]);
+            ref FormationCommandState command = ref _engine.World.Get<FormationCommandState>(_preparedEntities[i]);
+            if (_preparedKinds[i] == PreparedMove)
+            {
+                command.TargetCenterXCm = _preparedTargetCenterXCm[i];
+                command.TargetCenterYCm = _preparedTargetCenterYCm[i];
+                command.HasMoveTarget = 1;
+            }
+            else
+            {
+                command.TargetFacingMicroRad = _preparedTargetFacingMicroRad[i];
+            }
         }
+    }
+
+    private static InvalidOperationException CreateNumericEncodingFailure(
+        in Order order,
+        Entity formation,
+        string field,
+        float value,
+        string expectedDomain)
+    {
+        return new InvalidOperationException(
+            $"Formation order {order.OrderId} for entity {formation.Id}:{formation.WorldId} failed numeric encoding for {field}={value:R}; expected {expectedDomain}.");
     }
 
     private void BuildMoveBatches()

@@ -3,6 +3,7 @@ name: solution-verify
 on:
   pull_request:
     paths:
+      - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
       - '.gitattributes'
       - 'assets/**'
@@ -11,11 +12,15 @@ on:
       - 'launcher.presets.json'
       - 'mods/**'
       - 'NuGet.config'
+      - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
+      - 'scripts/acceptance/assert-portable-evidence.ps1'
+      - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
       - 'src/**'
   push:
     branches:
       - main
     paths:
+      - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
       - '.gitattributes'
       - 'assets/**'
@@ -24,6 +29,9 @@ on:
       - 'launcher.presets.json'
       - 'mods/**'
       - 'NuGet.config'
+      - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
+      - 'scripts/acceptance/assert-portable-evidence.ps1'
+      - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
       - 'src/**'
   workflow_dispatch:
 
@@ -106,6 +114,8 @@ jobs:
             'FullyQualifiedName~RuntimeTemplateBatchSpawn_AppliesExplicitMembershipRelationshipsForEveryEntity',
             'FullyQualifiedName~FormationCapabilityMoveBatch_DifferentOrderIdsAtSameTargetRemainIndependent',
             'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
+            'FullyQualifiedName~FormationCapabilityOrderBatch_',
+            'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
             'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields'
           ) -join '|'
 

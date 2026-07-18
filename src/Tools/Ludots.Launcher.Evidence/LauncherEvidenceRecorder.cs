@@ -536,7 +536,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Seed: none");
         sb.AppendLine($"- Map/config hint: `{profile.MapHint}`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
-        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Launch command: `{BuildPortableCommandText(request)}`");
         sb.AppendLine($"- Root mods: `{string.Join(", ", request.Plan.RootModIds)}`");
         sb.AppendLine($"- Ordered mods: `{string.Join(", ", request.Plan.OrderedModIds)}`");
         sb.AppendLine($"- Evidence images: {evidenceImages}");
@@ -1073,7 +1073,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Seed: none");
         sb.AppendLine("- Map: `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_projection.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
-        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Launch command: `{BuildPortableCommandText(request)}`");
         sb.AppendLine($"- Click target: `{FormatPoint(CameraProjectionClickWorldCm)}`");
         sb.AppendLine("- Clock profile: fixed `1/60s`");
         sb.AppendLine($"- Evidence images: {evidenceImages}");
@@ -1598,7 +1598,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Seed: none");
         sb.AppendLine("- Map: `mods/showcases/road_network/RoadNetworkShowcaseMod/assets/Maps/road_network_showcase_chunked.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
-        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Launch command: `{BuildPortableCommandText(request)}`");
         sb.AppendLine($"- Command-source click point: `{FormatPoint(RoadSelectionWorldCm)}`");
         sb.AppendLine($"- Command target: `{FormatPoint(RoadCommandWorldCm)}`");
         sb.AppendLine($"- Chunk probe camera target: `{FormatPoint(RoadChunkShiftTargetCm)}`");
@@ -3485,6 +3485,26 @@ public static class LauncherEvidenceRecorder
         return MathF.Sqrt(maxDistanceSq);
     }
 
+    private static string BuildPortableCommandText(LauncherRecordingRequest request)
+    {
+        string commandText = ReplaceCommandPath(
+            request.CommandText,
+            request.OutputDirectory,
+            "<artifact-root>");
+        return ReplaceCommandPath(commandText, request.RepoRoot, "<repo-root>");
+    }
+
+    private static string ReplaceCommandPath(string commandText, string path, string replacement)
+    {
+        string normalizedPath = Path.GetFullPath(path)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        commandText = commandText.Replace(normalizedPath, replacement, StringComparison.OrdinalIgnoreCase);
+        return commandText.Replace(
+            normalizedPath.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            replacement,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string BuildMassNavigationBattleReport(
         LauncherRecordingRequest request,
         string sourceSha,
@@ -3521,7 +3541,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
         sb.AppendLine($"- Source HEAD: `{sourceSha}`");
-        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Launch command: `{BuildPortableCommandText(request)}`");
         sb.AppendLine($"- Evidence images: {evidenceImages}");
         sb.AppendLine();
         sb.AppendLine("## Action Script");

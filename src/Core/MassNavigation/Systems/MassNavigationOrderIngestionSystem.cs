@@ -417,11 +417,6 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         int orderToken,
         int memberIndex)
     {
-        if (result.Status == MassNavigationRouteSinkStatus.NoConfiguredAgentType)
-        {
-            return;
-        }
-
         if (!result.Tracked)
         {
             throw new InvalidOperationException(

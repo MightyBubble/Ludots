@@ -163,6 +163,60 @@ public sealed class MassNavigationOrderIngestionRouteBudgetTests
     }
 
     [Test]
+    public void OrderIngestion_RouteEnabledWithoutConfiguredAgentTypeFailsBeforeDirectTargetCommit()
+    {
+        MassNavigationProfileRegistry.Reset();
+        const string authoredProfileId = "test.massNavigation.unconfiguredRoute";
+        const string configuredProfileId = "test.massNavigation.otherRoute";
+
+        using var engine = CreateEngine();
+        MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+        var simulation = new MassNavigationSimulationRuntime(config);
+        simulation.BindBoardWorld(
+            new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
+            new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+        PublishPreparedRuntime(engine, config.MapId, simulation);
+        RegisterMoveOrderServices(engine);
+
+        int profileId = MassNavigationProfileRegistry.Register(authoredProfileId);
+        Entity agent = engine.World.Create(
+            new MassNavigationAgent { ProfileId = profileId },
+            new FacingDirection { AngleRad = 0f },
+            OrderBuffer.CreateEmpty());
+        SetActiveMoveOrder(engine.World, agent, orderId: 685, new Vector2(2_500f, 2_500f));
+        simulation.RebuildFromAuthoredAgents(
+            engine.World,
+            new[] { agent },
+            new[] { CreateSeed(simulation, teamId: 1, worldX: 1_000f, worldY: 1_000f) },
+            new[] { true });
+
+        var store = new PathStore(maxPaths: 4, maxPointsPerPath: config.ScenarioRuntime.RuntimeCapacity.RouteWaypointCapacityPerAgent);
+        engine.SetService(CoreServiceKeys.PathStore, store);
+        engine.SetService(CoreServiceKeys.PathService, new CapturingPathService(store));
+        engine.SetService(CoreServiceKeys.PathingConfig, CreatePathingConfig(configuredProfileId));
+        float focusX = simulation.FlowWorkAreaCenterXCm;
+        float focusY = simulation.FlowWorkAreaCenterYCm;
+        var ingestion = new MassNavigationOrderIngestionSystem(engine, simulation.Config);
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(ingestion))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ex.Message, Does.Contain("order 685"));
+            Assert.That(ex.Message, Does.Contain("agent 0"));
+            Assert.That(ex.Message, Does.Contain(nameof(MassNavigationRouteSinkStatus.NoConfiguredAgentType)));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(685, out _), Is.False);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out _, out _), Is.False);
+            Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(focusX));
+            Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(focusY));
+            Assert.That(engine.World.Get<OrderBuffer>(agent).HasActive, Is.True);
+        });
+        MassNavigationRouteExecutionSink routeSink = engine.GetService(MassNavigationKeys.RouteExecutionSink)
+            ?? throw new InvalidOperationException("Expected route sink to be published before agent type preflight fails.");
+        Assert.That(routeSink.ActiveRouteCount, Is.Zero);
+    }
+
+    [Test]
     public void OrderIngestion_PrunesInactiveOrderGroupBeforeAllocatingReplacementAtCapacity()
     {
         MassNavigationProfileRegistry.Reset();
