@@ -533,7 +533,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (world.Has<OrderContinuationBuffer>(entity) && state != OrderTerminalState.Completed)
             {
                 ref var continuation = ref world.Get<OrderContinuationBuffer>(entity);
-                continuation.RemoveByTrigger(terminalOrder.OrderId);
+                ReleaseContinuationsByTrigger(world, ref continuation, terminalOrder.OrderId);
             }
 
             var outcome = new OrderTerminalOutcome(
@@ -550,6 +550,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             return true;
+        }
+
+        private static void ReleaseContinuationsByTrigger(
+            World world,
+            ref OrderContinuationBuffer continuation,
+            int triggerOrderId)
+        {
+            Span<Order> removed = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            int count = continuation.Extract(triggerOrderId, removed);
+            for (int i = 0; i < count; i++)
+            {
+                Order order = removed[i];
+                OrderSpatialPayloadOps.Release(world, in order);
+            }
         }
 
         public static void ReplacePending(

@@ -573,3 +573,60 @@ Behavior remains in the existing effect template and graph configuration. No JSO
 ### 8. Next variant test
 
 A new Mod fan-out variant changes an effect step or graph connection and continues through the same builtin handler, root budget, and structured diagnostics path. It does not add a Core enum or alternate budget pipeline.
+
+---
+
+## GAS Composition Gate - Issues #686, #687, #688
+
+- **Task / Issues**: #686 invalid transactional attribute target, #687 continuation-state preinstallation, #688 continuation payload ownership
+- **Date**: 2026-07-18
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（修复现有 effect transaction 与 Order continuation 管线的校验、预装和 rollback/ownership 合同；不新增玩法变体）
+
+结论: PASS
+
+一句话理由: 修改仅收紧现有 `EffectPhaseSideEffectTransaction`、`EntityRuntimeStatePlan`、`CompositeOrderPlanner`、`OrderSubmitter` 和 `OrderContinuationSystem`，不新增 graph op、preset、profile、registry、loader 或平行运行时。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| persistent effect side-effect rollback | 1 | 现有 `EffectPhaseSideEffectTransaction` + `EffectApplicationSystem` |
+| order runtime-state assembly | N/A | 现有 `EntityRuntimeStatePlan`、scalar/batch/runtime spawn |
+| continuation payload ownership | N/A | 现有 `OrderContinuationBuffer`、`OrderSubmitter`、`OrderContinuationSystem`、`CompositeOrderPlanner` |
+
+### 3. Reuse list
+
+- Handlers: 现有 Graph `ModifyAttributeAdd` / `ModifyAttributeSet` 入口
+- Queues / Systems: `EffectApplicationSystem`、`OrderQueue`、`OrderContinuationSystem`
+- Resolvers / Registries: `EntityRuntimeStatePlan`、`OrderTypeRegistry`
+- Existing presets / graphs: 不变
+
+### 4. New Layer 0 ops (if any)
+
+N/A。没有新增 handler、graph op 或生命周期原子操作。
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: persistent effect 的全部 staged 属性、标签、fan-out、listener、presentation/event side effects；任一无效属性目标必须在 commit 前失败并由现有 application rollback 撤销。Order continuation 在注册后持有 follow-up payload；Failed/Cancelled、registration failure 或 primary admission failure必须释放一次，Completed 仅把所有权转移到正式 Order submission 链。
+
+### 6. Config SSOT
+
+行为配置仍位于现有 effect template/graph 与 order type catalog。
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn/effect/order 平行的运行时管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback 或兼容旁路
+- [x] 未新增 registry、preset 或 schema
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤；Order 变体继续使用同一 runtime-state installer、continuation buffer 和 terminal-result 管线，不修改 Core gameplay enum。

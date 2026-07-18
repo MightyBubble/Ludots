@@ -82,11 +82,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 else
                 {
-                    continuation.RemoveByTrigger(outcome.OrderId);
-                    count = 0;
+                    count = continuation.Extract(outcome.OrderId, extracted);
                 }
 
                 _processedCount++;
+
+                if (outcome.State != OrderTerminalState.Completed)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        Order removed = extracted[i];
+                        OrderSpatialPayloadOps.Release(World, in removed);
+                    }
+                    continue;
+                }
 
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
 

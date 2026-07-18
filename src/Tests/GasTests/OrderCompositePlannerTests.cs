@@ -52,7 +52,8 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 abilities,
-                OrderBuffer.CreateEmpty());
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
 
             var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
 
@@ -74,6 +75,116 @@ namespace Ludots.Tests.GAS
             Assert.That(extracted[0].OrderId, Is.Not.EqualTo(moveOrder.OrderId));
             Assert.That(extracted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
             Assert.That(extracted[0].Args.I0, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_MissingContinuationState_FailsBeforeAssigningOrderIds()
+        {
+            using var world = World.Create();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orderQueue = new OrderQueue(64, admissionResults);
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+            var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+
+            var error = Assert.Throws<InvalidOperationException>(() => planner.Submit(in castOrder));
+
+            Assert.That(error!.Message, Does.StartWith(OrderContinuationStateInstaller.MissingStateError));
+            Assert.That(castOrder.OrderId, Is.Zero);
+            Assert.That(orderQueue.Count, Is.Zero);
+            Assert.That(admissionResults.Count, Is.Zero);
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+
+            world.Add(actor, new OrderContinuationBuffer());
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(orderQueue.TryDequeue(out Order moveOrder), Is.True);
+            Assert.That(moveOrder.OrderId, Is.EqualTo(2));
+            ref OrderContinuationBuffer continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            Assert.That(continuations.Extract(moveOrder.OrderId, extracted), Is.EqualTo(1));
+            Assert.That(extracted[0].OrderId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_ContinuationCapacityFull_ReleasesFollowUpPayload()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
+            ref OrderContinuationBuffer continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            for (int i = 0; i < OrderContinuationBuffer.MAX_CONTINUATIONS; i++)
+            {
+                Assert.That(
+                    continuations.TryAdd(100 + i, new Order { OrderId = 200 + i, OrderTypeId = CastAbilityOrderTypeId }),
+                    Is.True);
+            }
+            Order castOrder = CreatePayloadCastOrder(world, actor, targetXcm: 900);
+            OrderSpatialPayloadHandle payloadHandle = castOrder.Args.Spatial.Payload;
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+
+            Assert.That(orderQueue.Count, Is.Zero);
+            Assert.That(continuations.Count, Is.EqualTo(OrderContinuationBuffer.MAX_CONTINUATIONS));
+            Assert.Throws<InvalidOperationException>(() =>
+                world.Get<OrderSpatialPayloadBuffer>(actor).GetPointCount(in payloadHandle));
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_PrimaryAdmissionRejected_ReleasesRegisteredFollowUpPayload()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue(1, new OrderAdmissionResultBuffer(64, 64));
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
+            Assert.That(
+                orderQueue.Submit(new Order { OrderTypeId = MoveToOrderTypeId, Actor = actor }),
+                Is.EqualTo(OrderSubmitResult.Queued));
+            Order castOrder = CreatePayloadCastOrder(world, actor, targetXcm: 900);
+            OrderSpatialPayloadHandle payloadHandle = castOrder.Args.Spatial.Payload;
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
+            Assert.Throws<InvalidOperationException>(() =>
+                world.Get<OrderSpatialPayloadBuffer>(actor).GetPointCount(in payloadHandle));
         }
 
         [Test]
@@ -180,17 +291,16 @@ namespace Ludots.Tests.GAS
             };
             var orderBuffer = OrderBuffer.CreateEmpty();
             orderBuffer.SetActiveDirect(in active, priority: 60);
-            Entity actor = world.Create(orderBuffer, new OrderContinuationBuffer());
+            Entity actor = world.Create(
+                orderBuffer,
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
 
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            continuations.TryAdd(7, new Order
-            {
-                OrderId = 8,
-                OrderTypeId = CastAbilityOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            });
+            Order followUp = CreatePayloadOrder(world, actor, orderId: 8);
+            followUp.SubmitMode = OrderSubmitMode.Queued;
+            followUp.Args.I0 = 0;
+            continuations.TryAdd(7, in followUp);
 
             Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
 
@@ -200,6 +310,10 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             Assert.That(buffer.QueuedCount, Is.EqualTo(1));
             Assert.That(buffer.GetQueued(0).Order.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Order queuedFollowUp = buffer.GetQueued(0).Order;
+            Assert.That(
+                OrderWorldSpatialResolver.GetSpatialPointCount(world, in queuedFollowUp),
+                Is.EqualTo(3));
             Assert.That(continuations.HasEntries, Is.False);
         }
 
@@ -259,6 +373,9 @@ namespace Ludots.Tests.GAS
             OrderSpatialPayloadOps.SetPath(world, actor, ref followUp, pointX, pointY, pointX.Length);
             OrderSpatialPayloadHandle payloadHandle = followUp.Args.Spatial.Payload;
             continuations.TryAdd(trigger.OrderId, in followUp);
+            Order downstream = CreatePayloadOrder(world, actor, orderId: 73);
+            OrderSpatialPayloadHandle downstreamPayloadHandle = downstream.Args.Spatial.Payload;
+            continuations.TryAdd(followUp.OrderId, in downstream);
 
             Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
 
@@ -273,6 +390,8 @@ namespace Ludots.Tests.GAS
             Assert.That(terminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
             Assert.Throws<InvalidOperationException>(() =>
                 world.Get<OrderSpatialPayloadBuffer>(actor).GetPointCount(in payloadHandle));
+            Assert.Throws<InvalidOperationException>(() =>
+                world.Get<OrderSpatialPayloadBuffer>(actor).GetPointCount(in downstreamPayloadHandle));
         }
 
         [Test]
@@ -304,15 +423,14 @@ namespace Ludots.Tests.GAS
             var trigger = new Order { OrderId = 81, OrderTypeId = MoveToOrderTypeId };
             var buffer = OrderBuffer.CreateEmpty();
             buffer.SetActiveDirect(in trigger, priority: 60);
-            Entity actor = world.Create(buffer, new OrderContinuationBuffer());
+            Entity actor = world.Create(
+                buffer,
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            continuations.TryAdd(trigger.OrderId, new Order
-            {
-                OrderId = 82,
-                OrderTypeId = CastAbilityOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-            });
+            Order followUp = CreatePayloadOrder(world, actor, orderId: 82);
+            followUp.SubmitMode = OrderSubmitMode.Queued;
+            continuations.TryAdd(trigger.OrderId, in followUp);
             Assert.That(OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes), Is.True);
 
             var system = new OrderContinuationSystem(world, clock, orderTypes, new OrderRuleRegistry());
@@ -320,6 +438,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(error!.Message, Does.StartWith("ORDER.TERMINAL.ERR.ResultCapacityExceeded"));
             Assert.That(continuations.CountByTrigger(trigger.OrderId), Is.EqualTo(1));
+            Assert.That(OrderWorldSpatialResolver.GetSpatialPointCount(world, in followUp), Is.EqualTo(3));
             Assert.That(world.Get<OrderBuffer>(actor).IsEmpty, Is.True);
             Assert.That(terminalResults.Count, Is.EqualTo(1));
         }
@@ -503,9 +622,13 @@ namespace Ludots.Tests.GAS
             var active = new Order { OrderId = 41, OrderTypeId = CastAbilityOrderTypeId };
             var buffer = OrderBuffer.CreateEmpty();
             buffer.SetActiveDirect(in active, priority: 100);
-            Entity actor = world.Create(buffer, new OrderContinuationBuffer());
+            Entity actor = world.Create(
+                buffer,
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            continuations.TryAdd(41, new Order { OrderId = 42, OrderTypeId = CastAbilityOrderTypeId });
+            Order followUp = CreatePayloadOrder(world, actor, orderId: 42);
+            continuations.TryAdd(41, in followUp);
 
             OrderSubmitter.CancelAll(world, actor, orderTypes);
 
@@ -515,6 +638,7 @@ namespace Ludots.Tests.GAS
             Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(41));
             Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
             Assert.That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.None));
+            AssertPayloadIsStale(world, in followUp);
         }
 
         [Test]
@@ -527,9 +651,13 @@ namespace Ludots.Tests.GAS
             var active = new Order { OrderId = 51, OrderTypeId = CastAbilityOrderTypeId };
             var buffer = OrderBuffer.CreateEmpty();
             buffer.SetActiveDirect(in active, priority: 100);
-            Entity actor = world.Create(buffer, new OrderContinuationBuffer());
+            Entity actor = world.Create(
+                buffer,
+                new OrderContinuationBuffer(),
+                new OrderSpatialPayloadBuffer());
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            continuations.TryAdd(51, new Order { OrderId = 52, OrderTypeId = CastAbilityOrderTypeId });
+            Order followUp = CreatePayloadOrder(world, actor, orderId: 52);
+            continuations.TryAdd(51, in followUp);
 
             Assert.That(
                 OrderSubmitter.FinalizeCurrent(
@@ -545,6 +673,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(continuations.HasEntries, Is.False);
             Assert.That(world.Get<OrderBuffer>(actor).IsEmpty, Is.True);
+            AssertPayloadIsStale(world, in followUp);
         }
 
         [Test]
@@ -696,6 +825,15 @@ namespace Ludots.Tests.GAS
             };
             int[] x = { 0, 100, 200 };
             int[] y = { 0, 50, 100 };
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, x, y, x.Length);
+            return order;
+        }
+
+        private static Order CreatePayloadCastOrder(World world, Entity actor, int targetXcm)
+        {
+            Order order = CreateCastOrder(actor, targetXcm, OrderSubmitMode.Immediate);
+            int[] x = { 0, targetXcm / 2, targetXcm };
+            int[] y = { 0, 0, 0 };
             OrderSpatialPayloadOps.SetPath(world, actor, ref order, x, y, x.Length);
             return order;
         }

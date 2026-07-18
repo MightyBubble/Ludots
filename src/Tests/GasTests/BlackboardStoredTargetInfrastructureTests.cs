@@ -449,6 +449,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<BlackboardIntBuffer>(entity), Is.True);
             Assert.That(world.Has<BlackboardSpatialBuffer>(entity), Is.True);
             Assert.That(world.Has<BlackboardEntityBuffer>(entity), Is.True);
+            Assert.That(world.Has<OrderContinuationBuffer>(entity), Is.True);
         }
 
         [Test]
@@ -488,6 +489,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Has<BlackboardIntBuffer>(entities[0]), Is.True);
             Assert.That(world.Has<BlackboardSpatialBuffer>(entities[0]), Is.True);
             Assert.That(world.Has<BlackboardEntityBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<OrderContinuationBuffer>(entities[0]), Is.True);
         }
 
         [Test]

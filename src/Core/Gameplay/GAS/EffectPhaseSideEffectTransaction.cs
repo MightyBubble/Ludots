@@ -18,6 +18,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public const string ScopeAlreadyActiveError = "GAS.EFFECT_TRANSACTION.ERR.ScopeAlreadyActive";
     public const string ScopeNotActiveError = "GAS.EFFECT_TRANSACTION.ERR.ScopeNotActive";
     public const string UnsupportedSideEffectError = "GAS.EFFECT_TRANSACTION.ERR.UnsupportedSideEffect";
+    public const string AttributeTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.AttributeTargetInvalid";
 
     private readonly World _world;
     private readonly TagOps? _tagOps;
@@ -198,11 +199,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageAttributeAdd(Entity target, int attributeId, float delta)
     {
         int index = GetOrAddAttributeEntity(target);
-        if (index < 0)
-        {
-            return;
-        }
-
         float before = _attributeValues[index].GetCurrent(attributeId);
         _attributeValues[index].SetCurrent(attributeId, before + delta);
         RefreshAttributeChanged(index, attributeId);
@@ -211,11 +207,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageAttributeSet(Entity target, int attributeId, float value)
     {
         int index = GetOrAddAttributeEntity(target);
-        if (index < 0)
-        {
-            return;
-        }
-
         _attributeValues[index].SetCurrent(attributeId, value);
         RefreshAttributeChanged(index, attributeId);
     }
@@ -223,11 +214,6 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageModifiers(Entity target, in EffectModifiers modifiers)
     {
         int index = GetOrAddAttributeEntity(target);
-        if (index < 0)
-        {
-            return;
-        }
-
         EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         for (int i = 0; i < modifiers.Count; i++)
         {
@@ -609,7 +595,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         if (!_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
         {
-            return -1;
+            throw new InvalidOperationException(
+                $"{AttributeTargetInvalidError}: entity={entity.Id}.");
         }
         if (_tagOps == null)
         {
@@ -737,7 +724,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 !_world.Has<DirtyFlags>(entity))
             {
                 throw new InvalidOperationException(
-                    $"GAS.EFFECT_TRANSACTION.ERR.AttributeTargetInvalid: entity={entity.Id}.");
+                    $"{AttributeTargetInvalidError}: entity={entity.Id}.");
             }
         }
 

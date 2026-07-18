@@ -20,20 +20,20 @@ public readonly struct EntityRuntimeStatePlan
         bool hasTagCountContainer,
         bool hasDirtyFlags,
         bool hasTimedTagBuffer,
-        bool hasOrderBlackboardState)
+        bool hasOrderRuntimeState)
     {
         HasGameplayTagContainer = hasGameplayTagContainer;
         HasTagCountContainer = hasTagCountContainer;
         HasDirtyFlags = hasDirtyFlags;
         HasTimedTagBuffer = hasTimedTagBuffer;
-        HasOrderBlackboardState = hasOrderBlackboardState;
+        HasOrderRuntimeState = hasOrderRuntimeState;
     }
 
     public bool HasGameplayTagContainer { get; }
     public bool HasTagCountContainer { get; }
     public bool HasDirtyFlags { get; }
     public bool HasTimedTagBuffer { get; }
-    public bool HasOrderBlackboardState { get; }
+    public bool HasOrderRuntimeState { get; }
 
     public static EntityRuntimeStatePlan FromAuthoredComponents(
         IReadOnlyDictionary<string, JsonNode> components)
@@ -95,9 +95,10 @@ public readonly struct EntityRuntimeStatePlan
             throw new InvalidOperationException($"ENTITY.RUNTIME_STATE.ERR.DeadEntity: entity={entity.Id}.");
         }
 
-        if (HasOrderBlackboardState)
+        if (HasOrderRuntimeState)
         {
             OrderBlackboardStateInstaller.EnsureInstalled(world, entity);
+            OrderContinuationStateInstaller.EnsureInstalled(world, entity);
         }
 
         if (HasGameplayTagContainer)

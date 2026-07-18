@@ -670,7 +670,7 @@ namespace Ludots.Core.Config
                 bool hasTagCountContainer = runtimeStatePlan.HasTagCountContainer;
                 bool hasDirtyFlags = runtimeStatePlan.HasDirtyFlags;
                 bool hasTimedTagBuffer = runtimeStatePlan.HasTimedTagBuffer;
-                bool hasOrderBuffer = runtimeStatePlan.HasOrderBlackboardState;
+                bool hasOrderBuffer = runtimeStatePlan.HasOrderRuntimeState;
                 bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
                 bool hasTeam = template.Components.ContainsKey("Team");
@@ -802,6 +802,7 @@ namespace Ludots.Core.Config
                     signature += Component<BlackboardIntBuffer>.Signature;
                     signature += Component<BlackboardSpatialBuffer>.Signature;
                     signature += Component<BlackboardEntityBuffer>.Signature;
+                    signature += Component<OrderContinuationBuffer>.Signature;
                 }
 
                 if (hasCommandSourceSelectableState)

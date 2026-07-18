@@ -1248,6 +1248,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<BlackboardIntBuffer>(receipt.Entity), Is.True);
             That(world.Has<BlackboardSpatialBuffer>(receipt.Entity), Is.True);
             That(world.Has<BlackboardEntityBuffer>(receipt.Entity), Is.True);
+            That(world.Has<OrderContinuationBuffer>(receipt.Entity), Is.True);
 
             UnitTypeRegistry.Clear();
         }

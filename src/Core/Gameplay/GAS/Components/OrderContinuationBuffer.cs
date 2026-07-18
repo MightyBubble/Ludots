@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Gameplay.GAS.Orders;
 
@@ -40,6 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     public struct OrderContinuationBuffer
     {
         public const int MAX_CONTINUATIONS = 8;
+        public const string ExtractionCapacityError = "ORDER.CONTINUATION.ERR.ExtractionCapacity";
 
         [InlineArray(MAX_CONTINUATIONS)]
         private struct OrderContinuationArray
@@ -68,28 +70,22 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        public bool RemoveByTrigger(int triggerOrderId)
-        {
-            bool removed = false;
-            for (int i = Count - 1; i >= 0; i--)
-            {
-                if (_entries[i].TriggerOrderId != triggerOrderId)
-                {
-                    continue;
-                }
-
-                RemoveAt(i);
-                removed = true;
-            }
-
-            return removed;
-        }
-
         public int Extract(int triggerOrderId, Span<Order> destination)
         {
-            if (triggerOrderId <= 0 || destination.Length == 0 || Count <= 0)
+            if (triggerOrderId <= 0 || Count <= 0)
             {
                 return 0;
+            }
+
+            int matchingCount = CountByTrigger(triggerOrderId);
+            if (matchingCount == 0)
+            {
+                return 0;
+            }
+            if (destination.Length < matchingCount)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: triggerOrderId={triggerOrderId}, matching={matchingCount}, capacity={destination.Length}.");
             }
 
             int written = 0;
@@ -99,10 +95,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 OrderContinuationEntry entry = _entries[src];
                 if (entry.TriggerOrderId == triggerOrderId)
                 {
-                    if (written < destination.Length)
-                    {
-                        destination[written++] = entry.Order;
-                    }
+                    destination[written++] = entry.Order;
                     continue;
                 }
 
@@ -135,21 +128,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
 
             return count;
-        }
-
-        private void RemoveAt(int index)
-        {
-            if ((uint)index >= (uint)Count)
-            {
-                return;
-            }
-
-            for (int i = index; i < Count - 1; i++)
-            {
-                _entries[i] = _entries[i + 1];
-            }
-
-            Count--;
         }
     }
 }

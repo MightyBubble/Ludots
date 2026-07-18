@@ -1161,6 +1161,100 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectApplicationSystem_WhenTransactionalAttributeTargetIsInvalid_RollsBackEffectAndQueues()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 4);
+            var templates = new EffectTemplateRegistry();
+            var programs = new GraphProgramRegistry();
+            const int graphId = 7_008;
+            const int parentTemplateId = 2_018;
+            const int childTemplateId = 2_019;
+
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 0, Imm = childTemplateId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = 0 },
+            });
+            var phaseBindings = new EffectPhaseGraphBindings();
+            Assert.That(phaseBindings.TryAddStep(EffectPhaseId.OnResolve, PhaseSlot.Pre, graphId), Is.True);
+            templates.Register(parentTemplateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.None,
+                LifetimeKind = EffectLifetimeKind.After,
+                DurationTicks = 60,
+                PhaseGraphBindings = phaseBindings,
+            });
+
+            var phaseExecutor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var dirtyEntities = new DirtyEntityQueue(capacity: 8);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry());
+            var graphApi = new GasGraphRuntimeApi(world, effectRequests: requests, tagOps: tagOps);
+            var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
+                effectRequests: requests,
+                presentationEvents: presentationEvents,
+                templates: templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps);
+
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 60,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Add(effect, new EffectTemplateRef { TemplateId = parentTemplateId });
+
+            var error = Assert.Throws<InvalidOperationException>(() => application.Update(0f));
+
+            Assert.That(error!.Message, Does.StartWith(EffectPhaseSideEffectTransaction.AttributeTargetInvalidError));
+            Assert.That(requests.Count, Is.Zero);
+            Assert.That(presentationEvents.Count, Is.Zero);
+            Assert.That(dirtyEntities.Count, Is.Zero);
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Has<ActiveEffectContainer>(target), Is.False);
+        }
+
+        [Test]
+        public void EffectPhaseSideEffectTransaction_NoOpAttributeWritesRemainLegal()
+        {
+            using var world = World.Create();
+            var dirtyEntities = new DirtyEntityQueue(capacity: 4);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry());
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(0, 100f);
+
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 1);
+            transaction.Begin();
+            transaction.StageAttributeAdd(target, attributeId: 0, delta: 0f);
+            transaction.StageAttributeSet(target, attributeId: 0, value: 100f);
+
+            Assert.DoesNotThrow(transaction.Commit);
+            Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(100f));
+        }
+
+        [Test]
         public void EffectApplicationSystem_DoT_UsesActiveEffectContainerForStackMerge_ButDoesNotAggregateModifiers()
         {
             using var world = World.Create();

@@ -47,28 +47,56 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.RejectedInvalidActor;
             }
 
-            if (!_world.Has<OrderContinuationBuffer>(order.Actor))
-            {
-                _world.Add(order.Actor, new OrderContinuationBuffer());
-            }
+            OrderContinuationStateInstaller.RequireInstalled(_world, order.Actor);
 
-            _incomingOrders.EnsureOrderId(ref followUpCast);
-            _incomingOrders.EnsureOrderId(ref primaryMove);
+            try
+            {
+                _incomingOrders.EnsureOrderId(ref followUpCast);
+                _incomingOrders.EnsureOrderId(ref primaryMove);
+            }
+            catch
+            {
+                OrderSpatialPayloadOps.Release(_world, in followUpCast);
+                throw;
+            }
 
             ref var continuations = ref _world.Get<OrderContinuationBuffer>(order.Actor);
             if (!continuations.TryAdd(primaryMove.OrderId, in followUpCast))
             {
+                OrderSpatialPayloadOps.Release(_world, in followUpCast);
                 return OrderSubmitResult.RejectedQueueFull;
             }
 
-            OrderSubmitResult result = _incomingOrders.SubmitAssigned(ref primaryMove);
+            OrderSubmitResult result;
+            try
+            {
+                result = _incomingOrders.SubmitAssigned(ref primaryMove);
+            }
+            catch
+            {
+                ReleaseRegisteredContinuations(ref continuations, primaryMove.OrderId);
+                throw;
+            }
             if (result == OrderSubmitResult.Queued)
             {
                 return result;
             }
 
-            continuations.RemoveByTrigger(primaryMove.OrderId);
+            ReleaseRegisteredContinuations(ref continuations, primaryMove.OrderId);
             return result;
+        }
+
+        private void ReleaseRegisteredContinuations(
+            ref OrderContinuationBuffer continuations,
+            int triggerOrderId)
+        {
+            Span<Order> removed = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            int count = continuations.Extract(triggerOrderId, removed);
+            for (int i = 0; i < count; i++)
+            {
+                Order order = removed[i];
+                OrderSpatialPayloadOps.Release(_world, in order);
+            }
         }
 
         private bool TryBuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)
