@@ -51,6 +51,16 @@ jobs:
             8.0.x
             9.0.x
 
+      - name: Pin evidence SDK outside the worktree
+        shell: pwsh
+        run: |
+          $sdkSelectionRoot = Split-Path $env:GITHUB_WORKSPACE -Parent
+          dotnet new globaljson `
+            --sdk-version 9.0.100 `
+            --roll-forward latestFeature `
+            --force `
+            --output $sdkSelectionRoot
+
       - name: Configure evidence root
         shell: pwsh
         run: |

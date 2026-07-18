@@ -186,6 +186,10 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(workflow, Does.Contain("$env:RUNNER_TEMP"));
             Assert.That(workflow, Does.Contain("$env:GITHUB_ENV"));
             Assert.That(workflow, Does.Not.Contain("${{ runner.temp }}"));
+            Assert.That(workflow, Does.Contain("Pin evidence SDK outside the worktree"));
+            Assert.That(workflow, Does.Contain("Split-Path $env:GITHUB_WORKSPACE -Parent"));
+            Assert.That(workflow, Does.Contain("--sdk-version 9.0.100"));
+            Assert.That(workflow, Does.Contain("--output $sdkSelectionRoot"));
             Assert.That(workflow, Does.Contain("actions/upload-artifact@v4"));
             Assert.That(workflow, Does.Contain("mass-navigation-10k-${{ matrix.adapter }}-${{ env.EVIDENCE_SOURCE_SHA }}"));
             Assert.That(workflow, Does.Contain("workflow_run_url"));
