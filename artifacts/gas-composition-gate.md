@@ -555,7 +555,7 @@ N/A. No atomic operation, graph operation, preset, registry, or schema was added
 
 ### 5. Transaction boundary
 
-One `EffectProcessingLoopSystem` transaction advances one shared `RootBudgetTable` generation before its first proposal pass. Proposal, application, lifetime, and all follow-up passes consume that same generation. Independently constructed systems retain a private table and advance it only when beginning their own slice.
+One `EffectProcessingLoopSystem` transaction advances one shared `RootBudgetTable` generation before its first proposal pass. Proposal, application, lifetime, and all follow-up passes consume that same generation. Every proposal-phase builtin flush, including the instant phase chain and `OnCalculate`, drains `BuiltinHandlerExecutionContext.DroppedCount` into `GasBudget` before the runtime is reset. Independently constructed systems retain a private table and advance it only when beginning their own slice.
 
 ### 6. Config SSOT
 

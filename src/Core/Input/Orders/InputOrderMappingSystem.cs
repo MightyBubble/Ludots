@@ -822,7 +822,7 @@ namespace Ludots.Core.Input.Orders
                 _activationActorValidator != null &&
                 !_activationActorValidator(_aimingContext.Actor, _aimingContext.PlayerId))
             {
-                LastActivationResult = InputOrderActivationResult.Rejected(
+                RecordRejectedActivation(
                     _aimingContext.Actor,
                     OrderSubmitResult.RejectedInvalidActor);
                 ExitAimingState();
@@ -1443,6 +1443,15 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
+            for (int i = 0; i < _routedOrdersScratch.Count; i++)
+            {
+                Order order = _routedOrdersScratch[i].Order;
+                if (!TryAuthorizeActor(order.Actor, order.PlayerId))
+                {
+                    return;
+                }
+            }
+
             int formationEligibleCount = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
@@ -1467,7 +1476,7 @@ namespace Ludots.Core.Input.Orders
                     formationIndex++;
                 }
 
-                SubmitToHandler(in order);
+                SubmitAuthorizedToHandler(in order);
             }
         }
 
@@ -1593,6 +1602,15 @@ namespace Ludots.Core.Input.Orders
                     "Command intent dispatch profile returned multiple actors for a sequential router; sequential dispatch must select exactly one actor per trigger.");
             }
 
+            int activationPlayerId = CurrentActivationPlayerId;
+            for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
+            {
+                if (!TryAuthorizeActor(_commandIntentDispatchActorsScratch[dispatchIndex], activationPlayerId))
+                {
+                    return false;
+                }
+            }
+
             int sharedOrderId = 0;
             for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
             {
@@ -1615,7 +1633,7 @@ namespace Ludots.Core.Input.Orders
                 var order = new Order
                 {
                     OrderTypeId = route.OrderTypeId,
-                    PlayerId = CurrentActivationPlayerId,
+                    PlayerId = activationPlayerId,
                     Actor = dispatchActor,
                     Args = args,
                     SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
@@ -1638,7 +1656,7 @@ namespace Ludots.Core.Input.Orders
                     order.OrderId = sharedOrderId;
                 }
 
-                SubmitToHandler(in order);
+                SubmitAuthorizedToHandler(in order);
             }
             return true;
         }
@@ -1848,6 +1866,15 @@ namespace Ludots.Core.Input.Orders
                 return SubmitToHandler(in order);
             }
 
+            for (int i = 0; i < _collectionActorsScratch.Count; i++)
+            {
+                Entity actor = _collectionActorsScratch[i];
+                if (actor != default && !TryAuthorizeActor(actor, order.PlayerId))
+                {
+                    return OrderSubmitResult.RejectedInvalidActor;
+                }
+            }
+
             OrderSubmitResult aggregate = OrderSubmitResult.Queued;
             for (int i = 0; i < _collectionActorsScratch.Count; i++)
             {
@@ -1860,7 +1887,7 @@ namespace Ludots.Core.Input.Orders
                 var cloned = order;
                 cloned.Actor = actor;
                 ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
-                OrderSubmitResult result = SubmitToHandler(in cloned);
+                OrderSubmitResult result = SubmitAuthorizedToHandler(in cloned);
                 if (!OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     aggregate = result;
@@ -1872,17 +1899,17 @@ namespace Ludots.Core.Input.Orders
 
         private OrderSubmitResult SubmitToHandler(in Order order)
         {
-            var submitted = order;
-            if (_activationActorValidator != null &&
-                !_activationActorValidator(submitted.Actor, submitted.PlayerId))
+            if (!TryAuthorizeActor(order.Actor, order.PlayerId))
             {
-                LastActivationResult = InputOrderActivationResult.Rejected(
-                    submitted.Actor,
-                    submitted.OrderId,
-                    OrderSubmitResult.RejectedInvalidActor);
                 return OrderSubmitResult.RejectedInvalidActor;
             }
 
+            return SubmitAuthorizedToHandler(in order);
+        }
+
+        private OrderSubmitResult SubmitAuthorizedToHandler(in Order order)
+        {
+            var submitted = order;
             if (submitted.OrderId <= 0)
             {
                 _orderIdentityAssigner?.Invoke(ref submitted);
@@ -1894,6 +1921,17 @@ namespace Ludots.Core.Input.Orders
                 ? InputOrderActivationResult.Submitted(submitted.Actor, submitted.OrderId)
                 : InputOrderActivationResult.Rejected(submitted.Actor, submitted.OrderId, result);
             return result;
+        }
+
+        private bool TryAuthorizeActor(Entity actor, int playerId)
+        {
+            if (_activationActorValidator == null || _activationActorValidator(actor, playerId))
+            {
+                return true;
+            }
+
+            RecordRejectedActivation(actor, OrderSubmitResult.RejectedInvalidActor);
+            return false;
         }
 
         private void ApplyGroupMoveFormation(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
@@ -2115,14 +2153,14 @@ namespace Ludots.Core.Input.Orders
                 _orderSubmitHandler == null ||
                 _orderTypeKeyResolver == null)
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordRejectedActivation(
                     _explicitActivationActor,
                     OrderSubmitResult.RejectedInvalidOrderType);
             }
 
             if (!_mappingsByActionId.TryGetValue(actionId, out var mapping))
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordRejectedActivation(
                     _explicitActivationActor,
                     OrderSubmitResult.RejectedInvalidOrderType);
             }
@@ -2134,7 +2172,7 @@ namespace Ludots.Core.Input.Orders
                 Entity heldActor = resolvedActor != default ? resolvedActor : ResolvePrimaryActor(effectiveMapping);
                 if (!TryBuildOrderWithOrderTypeSuffix(effectiveMapping, heldActor, ".Start", out var startOrder))
                 {
-                    return InputOrderActivationResult.Rejected(
+                    return RecordRejectedActivation(
                         _explicitActivationActor,
                         OrderSubmitResult.RejectedValidation);
                 }
@@ -2145,12 +2183,8 @@ namespace Ludots.Core.Input.Orders
 
             if (IsCommandAction(actionId))
             {
-                bool submitted = SubmitCommandIntentOrder(effectiveMapping);
-                return submitted
-                    ? LastActivationResult
-                    : InputOrderActivationResult.Rejected(
-                        _explicitActivationActor,
-                        OrderSubmitResult.RejectedByRule);
+                SubmitCommandIntentOrder(effectiveMapping);
+                return LastActivationResult;
             }
 
             if (effectiveMapping.IsSkillMapping)
@@ -2175,7 +2209,7 @@ namespace Ludots.Core.Input.Orders
                     return LastActivationResult.State == InputOrderActivationState.Submitted ||
                            LastActivationResult.State == InputOrderActivationState.Rejected
                         ? LastActivationResult
-                        : InputOrderActivationResult.Rejected(
+                        : RecordRejectedActivation(
                             _explicitActivationActor,
                             OrderSubmitResult.RejectedByRule);
                 }
@@ -2183,7 +2217,7 @@ namespace Ludots.Core.Input.Orders
 
             if (!TryBuildOrder(effectiveMapping, out var order))
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordRejectedActivation(
                     _explicitActivationActor,
                     OrderSubmitResult.RejectedValidation);
             }
@@ -2199,7 +2233,7 @@ namespace Ludots.Core.Input.Orders
         {
             if (context.Actor == Entity.Null || context.PlayerId <= 0)
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordRejectedActivation(
                     context.Actor,
                     OrderSubmitResult.RejectedInvalidActor);
             }
@@ -2212,7 +2246,7 @@ namespace Ludots.Core.Input.Orders
 
             if (!_activationActorValidator(context.Actor, context.PlayerId))
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordRejectedActivation(
                     context.Actor,
                     OrderSubmitResult.RejectedInvalidActor);
             }
@@ -2229,8 +2263,7 @@ namespace Ludots.Core.Input.Orders
             _explicitActivationActor = context.Actor;
             _explicitActivationPlayerId = context.PlayerId;
             _hasExplicitActivationContext = true;
-            _lastSubmittedOrderId = 0;
-            LastActivationResult = InputOrderActivationResult.Rejected(
+            RecordRejectedActivation(
                 context.Actor,
                 OrderSubmitResult.RejectedByRule);
             try
@@ -2252,6 +2285,16 @@ namespace Ludots.Core.Input.Orders
             LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
                 ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
                 : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
+            return LastActivationResult;
+        }
+
+        private InputOrderActivationResult RecordRejectedActivation(
+            Entity actor,
+            OrderSubmitResult result,
+            int orderId = 0)
+        {
+            _lastSubmittedOrderId = orderId;
+            LastActivationResult = InputOrderActivationResult.Rejected(actor, orderId, result);
             return LastActivationResult;
         }
 

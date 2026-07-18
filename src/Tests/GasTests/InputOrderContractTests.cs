@@ -899,6 +899,87 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ActorOrderRouting_UnauthorizedActorRejectsEntireDispatchBeforeOrderIdAssignment()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "moveTo",
+                                    Match = new ActorOrderRoutingMatch(),
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity authorizedActor = world.Create();
+            Entity foreignActor = world.Create();
+            int identityAssignments = 0;
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config)
+            {
+                CommandActionId = "PointerCommand",
+            };
+            system.SetLocalPlayer(authorizedActor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetActorOrderRoutingResolver((Entity _, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matched) =>
+            {
+                matched = routing.Candidates[0];
+                return true;
+            });
+            system.SetCollectionEntityListProvider((_, list) =>
+            {
+                list.Add(authorizedActor);
+                list.Add(foreignActor);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && actor == authorizedActor);
+            system.SetOrderIdentityAssigner((ref Order order) =>
+            {
+                identityAssignments++;
+                order.OrderId = identityAssignments;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            system.Update(0f);
+
+            Assert.That(orders, Is.Empty);
+            Assert.That(identityAssignments, Is.Zero);
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(foreignActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
+        [Test]
         public void ActorOrderRouting_RoutedMoveTo_AppliesGroupFormationToMoveSubsetOnly()
         {
             var input = new FrozenInputActionReader();
@@ -1601,6 +1682,139 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommandIntentRouting_UnauthorizedActorRejectsSharedIdDispatchAtomically()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity authorizedActor = world.Create();
+            Entity foreignActor = world.Create();
+            int identityAssignments = 0;
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config)
+            {
+                CommandActionId = "Command",
+            };
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(50f, 0f, 75f);
+                return true;
+            });
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && actor == authorizedActor);
+            system.SetOrderIdentityAssigner((ref Order order) =>
+            {
+                identityAssignments++;
+                order.OrderId = 7000 + identityAssignments;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, authorizedActor);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, foreignActor);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.atomic_authorization",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.atomic_authorization",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.atomic_authorization",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.atomic_authorization",
+                            CastDispatchProfileId = "dispatch.atomic_authorization",
+                        },
+                    },
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { authorizedActor, foreignActor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            system.Update(0f);
+
+            Assert.That(orders, Is.Empty);
+            Assert.That(identityAssignments, Is.Zero);
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(foreignActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
+        [Test]
         public void CommandIntentRouting_EntityTargetFactsDriveEntityRouteBeforeGroundRule()
         {
             var input = new FrozenInputActionReader();
@@ -1942,11 +2156,18 @@ namespace Ludots.Tests.GAS
             Entity foreignActor = world.Create();
             int submitted = 0;
             var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(controlledActor, 1);
             system.SetOrderTypeKeyResolver(_ => 7);
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 91);
             system.SetOrderSubmitHandler((in Order _) => { submitted++; return OrderSubmitResult.Queued; });
             system.SetActivationActorValidator((actor, playerId) =>
                 playerId == 1 && actor == controlledActor && world.IsAlive(actor));
+
+            InputOrderActivationResult accepted = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(controlledActor, 1));
+            Assert.That(accepted.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(accepted.OrderId, Is.EqualTo(91));
 
             InputOrderActivationResult result = system.ActivateMappedAction(
                 "Skill1",
@@ -1954,12 +2175,20 @@ namespace Ludots.Tests.GAS
 
             Assert.That(result.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(result.Actor, Is.EqualTo(foreignActor));
+            Assert.That(result.OrderId, Is.Zero);
             Assert.That(result.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
-            Assert.That(submitted, Is.Zero);
+            Assert.That(system.LastActivationResult, Is.EqualTo(result));
+            Assert.That(submitted, Is.EqualTo(1));
+
+            InputOrderActivationResult missing = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(Entity.Null, 1));
+            Assert.That(missing.OrderId, Is.Zero);
+            Assert.That(system.LastActivationResult, Is.EqualTo(missing));
         }
 
         [Test]
-        public void Update_CollectionFanOutRejectsUnauthorizedFinalActors()
+        public void Update_CollectionFanOutRejectsEntireDispatchBeforeOrderIdAssignment()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -1982,6 +2211,7 @@ namespace Ludots.Tests.GAS
             Entity controlledActor = world.Create();
             Entity foreignActor = world.Create();
             var submitted = new List<Order>();
+            int identityAssignments = 0;
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(controlledActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = controlledActor; return true; });
@@ -1999,7 +2229,11 @@ namespace Ludots.Tests.GAS
             system.SetOrderTypeKeyResolver(_ => 8);
             system.SetActivationActorValidator((actor, playerId) =>
                 actor == controlledActor && playerId == 1 && world.IsAlive(actor));
-            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 93 + submitted.Count);
+            system.SetOrderIdentityAssigner((ref Order order) =>
+            {
+                identityAssignments++;
+                order.OrderId = 93 + identityAssignments;
+            });
             system.SetOrderSubmitHandler((in Order order) =>
             {
                 submitted.Add(order);
@@ -2008,11 +2242,76 @@ namespace Ludots.Tests.GAS
 
             system.Update(0f);
 
-            Assert.That(submitted, Has.Count.EqualTo(1));
-            Assert.That(submitted[0].Actor, Is.EqualTo(controlledActor));
+            Assert.That(submitted, Is.Empty);
+            Assert.That(identityAssignments, Is.Zero);
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.Actor, Is.EqualTo(foreignActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.Zero);
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
+        [Test]
+        public void Update_CollectionFanOutUsesOneAuthorizationSnapshotBeforeSubmission()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var submitted = new List<Order>();
+            int identityAssignments = 0;
+            bool authorizationOpen = true;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(firstActor, 1);
+            system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
+            system.SetCollectionEntityListProvider((_, list) =>
+            {
+                list.Add(firstActor);
+                list.Add(secondActor);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(10f, 0f, 20f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 8);
+            system.SetActivationActorValidator((actor, playerId) =>
+                authorizationOpen && playerId == 1 && (actor == firstActor || actor == secondActor));
+            system.SetOrderIdentityAssigner((ref Order order) =>
+            {
+                identityAssignments++;
+                order.OrderId = identityAssignments;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                authorizationOpen = false;
+                return OrderSubmitResult.Queued;
+            });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.That(identityAssignments, Is.EqualTo(2));
+            Assert.That(submitted[0].Actor, Is.EqualTo(firstActor));
+            Assert.That(submitted[1].Actor, Is.EqualTo(secondActor));
         }
 
         [Test]

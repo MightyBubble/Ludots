@@ -1335,6 +1335,52 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectProposalProcessingSystem_WhenOnCalculateFanOutExhaustsRootBudget_PublishesDroppedDiagnostic()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var candidates = CreateCandidates(world, GasConstants.MAX_CREATES_PER_ROOT);
+            var spatialQueries = new FixedSpatialQueryService(candidates);
+            var phaseExecutor = CreateOnCalculateFanOutExecutor(templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                fanOutCommandCapacity: GasConstants.MAX_CREATES_PER_ROOT * 2,
+                new DiscreteClock(),
+                budget: budget,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                spatialQueries: spatialQueries);
+
+            const int templateId = 2_019;
+            RegisterFanOutTemplate(templates, templateId, EffectLifetimeKind.After, periodTicks: 0);
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(0, 0));
+            for (int i = 0; i < 2; i++)
+            {
+                requests.Publish(new EffectRequest
+                {
+                    RootId = 76,
+                    Source = source,
+                    Target = target,
+                    TemplateId = templateId,
+                });
+            }
+
+            proposal.Update(0f);
+
+            That(requests.Count, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            That(budget.EffectProposalFanOutDropped, Is.EqualTo(GasConstants.MAX_CREATES_PER_ROOT));
+            That(budget.HasWarnings, Is.True);
+            AssertFanOutDiagnostic(budget, GasDiagnosticSystem.EffectProposal, GasConstants.MAX_CREATES_PER_ROOT);
+        }
+
+        [Test]
         public void EffectApplicationSystem_WhenPersistentFanOutExhaustsRootBudget_PublishesDroppedDiagnostic()
         {
             using var world = World.Create();
@@ -1569,6 +1615,28 @@ namespace Ludots.Tests.GAS
             preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
             preset.DefaultPhaseHandlers[EffectPhaseId.OnHit] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
             preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            return new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+        }
+
+        private static EffectPhaseExecutor CreateOnCalculateFanOutExecutor(EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Buff,
+                ActivePhases = PhaseFlags.OnCalculate,
+                AllowedLifetimes = LifetimeFlags.All,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnCalculate] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
             presetTypes.Register(in preset);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
