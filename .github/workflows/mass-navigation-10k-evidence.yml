@@ -80,7 +80,7 @@ jobs:
             -OutputRoot $env:EVIDENCE_ROOT `
             -Iterations 1 `
             -Adapter $env:EVIDENCE_ADAPTER `
-            -Build Release `
+            -Build always `
             -StopOnFailure
 
       - name: Validate portable evidence bundle

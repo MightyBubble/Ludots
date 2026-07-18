@@ -4,7 +4,8 @@ param(
     [string]$UntilLocalTime = "",
     [ValidateSet("raylib", "web")]
     [string]$Adapter = "raylib",
-    [string]$Build = "",
+    [ValidateSet("auto", "always", "never")]
+    [string]$Build = "auto",
     [switch]$StopOnFailure
 )
 

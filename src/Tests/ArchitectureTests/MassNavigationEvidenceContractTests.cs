@@ -190,6 +190,7 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(workflow, Does.Contain("Split-Path $env:GITHUB_WORKSPACE -Parent"));
             Assert.That(workflow, Does.Contain("--sdk-version 9.0.100"));
             Assert.That(workflow, Does.Contain("--output $sdkSelectionRoot"));
+            Assert.That(workflow, Does.Contain("-Build always"));
             Assert.That(workflow, Does.Contain("actions/upload-artifact@v4"));
             Assert.That(workflow, Does.Contain("mass-navigation-10k-${{ matrix.adapter }}-${{ env.EVIDENCE_SOURCE_SHA }}"));
             Assert.That(workflow, Does.Contain("workflow_run_url"));
@@ -201,6 +202,7 @@ public sealed class MassNavigationEvidenceContractTests
             Assert.That(script, Does.Contain("summary = \"$runName/summary.json\""));
             Assert.That(script, Does.Contain("ConvertTo-PortableEvidenceLog"));
             Assert.That(script, Does.Contain("Get-EvidenceAbsolutePathViolations"));
+            Assert.That(script, Does.Contain("ValidateSet(\"auto\", \"always\", \"never\")"));
             Assert.That(massNavigationReport, Does.Contain("BuildPortableCommandText(request)"));
             Assert.That(massNavigationReport, Does.Not.Contain("request.CommandText"));
             Assert.That(script, Does.Not.Contain("output_dir = $runDir"));
