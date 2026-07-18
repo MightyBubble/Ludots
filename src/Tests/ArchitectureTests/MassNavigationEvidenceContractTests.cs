@@ -241,12 +241,13 @@ public sealed class MassNavigationEvidenceContractTests
                 "windows=C:\\Users\\runneradmin\\AppData\\Local\\Temp\\evidence\n" +
                 "unix=/home/runner/work/Ludots/evidence\n");
             (int invalidExitCode, string invalidOutput) = RunPowerShellScript(validator, artifactRoot);
+            string compactInvalidOutput = invalidOutput.Replace("\r", "").Replace("\n", "");
 
             Assert.Multiple(() =>
             {
                 Assert.That(invalidExitCode, Is.Not.Zero);
-                Assert.That(invalidOutput, Does.Contain("battle-report.md"));
-                Assert.That(invalidOutput, Does.Contain("machine-absolute path"));
+                Assert.That(compactInvalidOutput, Does.Contain("battle-report.md"));
+                Assert.That(compactInvalidOutput, Does.Contain("machine-absolute path"));
             });
         }
         finally
