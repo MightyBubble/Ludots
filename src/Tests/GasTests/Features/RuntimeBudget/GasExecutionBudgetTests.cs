@@ -1,7 +1,10 @@
 using Arch.Buffer;
 using Arch.Core;
+using Arch.System;
+using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -526,7 +529,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
-        public void EffectLifetime_ResetSlice_AfterExternalCommitFailsExplicitly()
+        public void EffectLifetime_ResetSlice_AfterExternalCommit_CompletesCommittedCleanup()
         {
             using var world = World.Create();
             Entity source = world.Create();
@@ -554,9 +557,68 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             };
 
             Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(system.ResetSlice)!;
+            Assert.DoesNotThrow(system.ResetSlice);
 
-            Assert.That(error.Message, Is.EqualTo(EffectLifetimeSystem.ResetAfterExternalCommitError));
+            Assert.That(world.IsAlive(effect), Is.False);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+            Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+        }
+
+        [Test]
+        public void RealtimePacemaker_BudgetFuse_AfterLifetimeCommit_ResetsWithoutPartialCleanup()
+        {
+            float fixedDeltaBefore = Time.FixedDeltaTime;
+            try
+            {
+                Time.FixedDeltaTime = 0.02f;
+                using var world = World.Create();
+                var requests = new EffectRequestQueue();
+                Entity source = world.Create();
+                Entity target = world.Create(new ActiveEffectContainer());
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: 1,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.After);
+                ref GameplayEffect gameplayEffect = ref world.Get<GameplayEffect>(effect);
+                gameplayEffect.State = EffectState.Committed;
+                gameplayEffect.AggregatesModifiers = true;
+                Assert.That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+
+                using var loop = new EffectProcessingLoopSystem(
+                    world,
+                    requests,
+                    new DiscreteClock(),
+                    new GasConditionRegistry(),
+                    lifetimeSnapshotCapacity: 4,
+                    fanOutCommandCapacity: 4,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    maxWorkUnitsPerSlice: 2);
+                var systems = new Dictionary<SystemGroup, List<ISystem<float>>>
+                {
+                    [SystemGroup.EffectProcessing] = new List<ISystem<float>> { loop },
+                };
+                var simulation = new PhaseOrderedCooperativeSimulation(systems);
+                var pacemaker = new RealtimePacemaker();
+                pacemaker.Reset();
+
+                Assert.DoesNotThrow(() => pacemaker.Update(
+                    Time.FixedDeltaTime,
+                    simulation,
+                    timeBudgetMs: 1_000,
+                    maxSlicesPerLogicFrame: 1));
+
+                Assert.That(pacemaker.IsBudgetFused, Is.True);
+                Assert.That(world.IsAlive(effect), Is.False);
+                Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+                Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+            }
+            finally
+            {
+                Time.FixedDeltaTime = fixedDeltaBefore;
+            }
         }
 
         [Test]

@@ -630,3 +630,66 @@ N/A。没有新增 handler、graph op 或生命周期原子操作。
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: graph 连线 / effect 步骤；Order 变体继续使用同一 runtime-state installer、continuation buffer 和 terminal-result 管线，不修改 Core gameplay enum。
+
+---
+
+## GAS Composition Gate - PR #660 Lifetime Phase Atomicity
+
+- **Task / Issue**: PR #660 audit repair for `OnPeriod`, `OnExpire`, and `OnRemove` transaction coverage and pacemaker reset safety
+- **Date**: 2026-07-19
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Extend the existing effect side-effect transaction to the existing lifetime phase execution path.
+
+Result: PASS
+
+Reason: The repair reuses `EffectPhaseSideEffectTransaction`, `GasGraphRuntimeApi`, `EffectLifetimeSystem`, and the existing effect/event/spawn/presentation queues. It adds no gameplay variant, graph op, preset switch, profile field, registry, loader, fallback, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Lifetime graph side-effect staging | 1 | Existing `EffectPhaseSideEffectTransaction` bound by `EffectLifetimeSystem` |
+| Lifetime scan rollback | 1 | Existing effect, target, presentation, and dirty-queue checkpoints |
+| Listener owner removal | 1 | Fixed-capacity listener staging in `EffectPhaseSideEffectTransaction` |
+| Pacemaker reset after commit | 1 | Existing `EffectProcessingLoopSystem.ResetSlice` and lifetime committed-cleanup tail |
+| Mod behavior | 2 | Existing effect templates and phase graph bindings |
+
+### 3. Reuse list
+
+- Handlers: existing GAS graph and builtin handlers, including attribute, event, effect-request, and fan-out operations
+- Queues / Systems: existing effect request, spawn, gameplay event, presentation, dirty-entity, lifetime, effect-loop, and pacemaker paths
+- Resolvers / Registries: existing template, graph, preset, builtin-handler, condition, tag-rule, and root-budget registries
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A. No graph operation, effect operation, handler, preset, registry, schema, or materialization path was added.
+
+### 5. Transaction boundary
+
+One lifetime slice opens one existing `EffectPhaseSideEffectTransaction` after the bounded ECS snapshot scan. `OnPeriod`, `OnExpire`, and `OnRemove` graph/builtin side effects, fan-out effect requests, and listener owner removals remain staged until all lifetime phase entries succeed. Any failure rolls back staged attributes, gameplay events, effect requests, listener changes, presentation writes, dirty-queue writes, effect timers, granted tags, and active-effect container mutations.
+
+Reset before commit rolls back the slice. Aggregate-dirty changes commit inside the transaction; reset after commit completes only the bounded effect-destruction tail, so the pacemaker budget fuse cannot convert a diagnostic halt into an exception or abandon partial cleanup.
+
+All staging is fixed-capacity. Listener removals are deduplicated by `(entity, ownerEffectId)` so `OnExpire` plus `OnRemove` does not consume the same ownership slot twice. Capacity exhaustion remains an explicit error.
+
+### 6. Config SSOT
+
+Behavior remains in the existing effect template and phase graph assets. No JSON schema or configuration field was added.
+
+### 7. Red flag scan
+
+- [x] No profile inherit, placement, or preset enum added
+- [x] No parallel effect, lifecycle, transaction, or reset pipeline added
+- [x] No lifecycle behavior was moved into a new graph op
+- [x] No fallback, compatibility bypass, silent drop, or dynamic hot-path growth added
+- [x] No new registry, loader, or configuration SSOT added
+- [x] Failure coverage distinguishes the pre-fix direct writes from transactional rollback for all three lifetime phases
+- [x] Production pacemaker reset coverage exercises the real effect-processing loop
+
+### 8. Next variant test
+
+A new Mod lifetime variant changes an effect template or phase graph connection and automatically uses the same lifetime transaction. It does not add a Core enum, preset switch, alternate transaction, or compatibility path.

@@ -9,8 +9,8 @@ namespace Ludots.Core.Gameplay.GAS;
 
 /// <summary>
 /// Fixed-capacity staging boundary for side effects produced while a persistent
-/// effect executes OnResolve, OnHit, and OnApply. Nothing reaches the world or
-/// externally visible queues until every phase has completed successfully.
+/// effect executes application or lifetime phases. Nothing reaches the world
+/// or externally visible queues until every phase has completed successfully.
 /// </summary>
 public sealed class EffectPhaseSideEffectTransaction : IDisposable
 {
@@ -52,6 +52,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly Entity[] _aggregateDirtyEntities;
     private readonly bool[] _aggregateDirtyExisted;
     private readonly ListenerRegistration[] _listenerRegistrations;
+    private readonly ListenerRemoval[] _listenerRemovals;
     private readonly Entity[] _listenerEntities;
     private readonly EffectPhaseListenerBuffer[] _listenerOriginalValues;
     private readonly EffectPhaseListenerBuffer[] _listenerValues;
@@ -71,6 +72,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int _cancelledEffectCount;
     private int _aggregateDirtyCount;
     private int _listenerRegistrationCount;
+    private int _listenerRemovalCount;
     private int _listenerEntityCount;
     private GameplayEventBus? _gameplayEventBus;
     private bool _worldCommitStarted;
@@ -127,6 +129,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _aggregateDirtyExisted = new bool[attributeEntityCapacity];
         _listenerRegistrations = new ListenerRegistration[attributeEntityCapacity];
         int listenerEntityCapacity = checked(attributeEntityCapacity * 2);
+        _listenerRemovals = new ListenerRemoval[listenerEntityCapacity];
         _listenerEntities = new Entity[listenerEntityCapacity];
         _listenerOriginalValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
@@ -157,6 +160,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _cancelledEffectCount = 0;
         _aggregateDirtyCount = 0;
         _listenerRegistrationCount = 0;
+        _listenerRemovalCount = 0;
         _listenerEntityCount = 0;
         _gameplayEventBus = null;
         _worldCommitStarted = false;
@@ -446,6 +450,43 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             Context = context,
             Setup = setup,
+            OwnerEffectId = ownerEffectId,
+        };
+    }
+
+    public void StageListenerRemoval(in EffectContext context, int ownerEffectId)
+    {
+        RequireActive();
+        StageListenerRemoval(context.Target, ownerEffectId);
+        if (context.Source != context.Target)
+        {
+            StageListenerRemoval(context.Source, ownerEffectId);
+        }
+    }
+
+    private void StageListenerRemoval(Entity entity, int ownerEffectId)
+    {
+        if (!_world.IsAlive(entity) || !_world.Has<EffectPhaseListenerBuffer>(entity))
+        {
+            return;
+        }
+        for (int i = 0; i < _listenerRemovalCount; i++)
+        {
+            if (_listenerRemovals[i].Entity == entity &&
+                _listenerRemovals[i].OwnerEffectId == ownerEffectId)
+            {
+                return;
+            }
+        }
+        if (_listenerRemovalCount >= _listenerRemovals.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=ListenerRemovals, staged={_listenerRemovalCount + 1}, capacity={_listenerRemovals.Length}.");
+        }
+
+        _listenerRemovals[_listenerRemovalCount++] = new ListenerRemoval
+        {
+            Entity = entity,
             OwnerEffectId = ownerEffectId,
         };
     }
@@ -800,6 +841,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             }
         }
         ValidateListenerRegistrations();
+        ValidateListenerRemovals();
+    }
+
+    private void ValidateListenerRemovals()
+    {
+        for (int i = 0; i < _listenerRemovalCount; i++)
+        {
+            Entity entity = _listenerRemovals[i].Entity;
+            if (!_world.IsAlive(entity) || !_world.Has<EffectPhaseListenerBuffer>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_TRANSACTION.ERR.ListenerTargetInvalid: entity={entity.Id}.");
+            }
+        }
     }
 
     private void ValidateEntities<T>(Entity[] entities, int count)
@@ -902,6 +957,13 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private unsafe void PrepareListenerValues()
     {
+        for (int removalIndex = 0; removalIndex < _listenerRemovalCount; removalIndex++)
+        {
+            ref ListenerRemoval removal = ref _listenerRemovals[removalIndex];
+            int listenerEntityIndex = GetOrAddExistingListenerEntity(removal.Entity);
+            _listenerValues[listenerEntityIndex].RemoveByOwner(removal.OwnerEffectId);
+        }
+
         for (int registrationIndex = 0; registrationIndex < _listenerRegistrationCount; registrationIndex++)
         {
             ref ListenerRegistration registration = ref _listenerRegistrations[registrationIndex];
@@ -953,6 +1015,27 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _structuralCommands.Add(_listenerEntities[i], _listenerValues[i]);
             }
         }
+    }
+
+    private int GetOrAddExistingListenerEntity(Entity entity)
+    {
+        int index = FindEntity(_listenerEntities, _listenerEntityCount, entity);
+        if (index >= 0)
+        {
+            return index;
+        }
+        if (_listenerEntityCount >= _listenerEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=ListenerEntities, staged={_listenerEntityCount + 1}, capacity={_listenerEntities.Length}.");
+        }
+
+        index = _listenerEntityCount++;
+        _listenerEntities[index] = entity;
+        _listenerExisted[index] = true;
+        _listenerOriginalValues[index] = _world.Get<EffectPhaseListenerBuffer>(entity);
+        _listenerValues[index] = _listenerOriginalValues[index];
+        return index;
     }
 
     private void CaptureExternalWriteCheckpoints()
@@ -1145,6 +1228,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _cancelledEffectCount = 0;
         _aggregateDirtyCount = 0;
         _listenerRegistrationCount = 0;
+        _listenerRemovalCount = 0;
         _listenerEntityCount = 0;
         _gameplayEventBus = null;
         _worldCommitStarted = false;
@@ -1187,6 +1271,12 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     {
         public EffectContext Context;
         public EffectPhaseListenerBuffer Setup;
+        public int OwnerEffectId;
+    }
+
+    private struct ListenerRemoval
+    {
+        public Entity Entity;
         public int OwnerEffectId;
     }
 }

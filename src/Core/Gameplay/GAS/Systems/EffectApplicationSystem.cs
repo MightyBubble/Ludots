@@ -692,7 +692,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PendingEffects.Add(new PendingEffectEntry { Effect = effectEntity, ResolveOrder = order });
             }
         }
-        
+
         private struct PendingAttach
         {
             public Entity Target;

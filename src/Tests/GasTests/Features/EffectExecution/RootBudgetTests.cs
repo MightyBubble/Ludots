@@ -1255,6 +1255,41 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public unsafe void EffectPhaseSideEffectTransaction_ListenerRemoval_CommitsOncePerOwner()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            var listeners = new EffectPhaseListenerBuffer();
+            Assert.That(listeners.TryAdd(
+                0,
+                1,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphProgramId: 1,
+                eventTagId: 0,
+                priority: 1,
+                ownerEffectId: 42), Is.True);
+            world.Add(target, listeners);
+
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 1);
+            var context = new EffectContext { Source = source, Target = target };
+            transaction.Begin();
+            transaction.StageListenerRemoval(in context, ownerEffectId: 42);
+            transaction.StageListenerRemoval(in context, ownerEffectId: 42);
+
+            Assert.DoesNotThrow(transaction.Commit);
+            Assert.That(world.Get<EffectPhaseListenerBuffer>(target).Count, Is.Zero);
+        }
+
+        [Test]
         public void EffectApplicationSystem_DoT_UsesActiveEffectContainerForStackMerge_ButDoesNotAggregateModifiers()
         {
             using var world = World.Create();

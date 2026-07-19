@@ -39,6 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly TagOps _tagOps;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly OrderRuleRegistry? _orderRuleRegistry;
@@ -51,6 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly bool _ownsFanOutBudget;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
+        private readonly EffectPhaseSideEffectTransaction _phaseTransaction;
         private int _fanOutDropped;
 
 
@@ -110,6 +112,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private DirtyEntityQueue.WriteCheckpoint _dirtyEntityWriteCheckpoint;
         private bool _hasDirtyEntityWriteCheckpoint;
         private bool _externalWorkCommitted;
+        private bool _graphTransactionBound;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int SnapshotCapacity => _effectSnapshot.Length;
@@ -144,6 +147,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _presentationEvents = presentationEvents;
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
+            _graphApiHost = graphApi;
             _tagOps = tagOps;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
@@ -161,6 +165,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectLifetimeSystem));
+            _phaseTransaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps,
+                effectRequests,
+                spawnRequests,
+                presentationEvents,
+                snapshotCapacity);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -181,6 +192,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            try
+            {
+                return UpdateSliceCore(dt, timeBudgetMs);
+            }
+            catch
+            {
+                if (_sliceActive && !_externalWorkCommitted)
+                {
+                    AbortUncommittedSlice();
+                }
+                throw;
+            }
+        }
+
+        private bool UpdateSliceCore(float dt, int timeBudgetMs)
+        {
             LastSliceProcessed = 0;
             if (!_sliceActive)
             {
@@ -194,6 +221,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (_cursor >= _snapshotCount)
                     {
+                        BeginPhaseTransaction();
                         _stage = LifetimeStage.PeriodGraphs;
                         _cursor = 0;
                         continue;
@@ -233,8 +261,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (_cursor < _fanOutCommands.Count)
                     {
                         FanOutCommand command = _fanOutCommands[_cursor++];
-                        _externalWorkCommitted |= _effectRequests != null;
-                        TargetResolverFanOutHelper.PublishCommand(in command, _effectRequests);
+                        _phaseTransaction.StageFanOutCommand(in command);
                         CountWork(ref workUnits);
                         continue;
                     }
@@ -247,14 +274,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (_cursor < _dirtyTargets.Count)
                     {
                         Entity target = _dirtyTargets[_cursor++];
-                        if (World.IsAlive(target) && !World.Has<AttributeAggregateDirty>(target))
+                        if (World.IsAlive(target))
                         {
-                            _externalWorkCommitted = true;
-                            World.Add(target, new AttributeAggregateDirty());
+                            _phaseTransaction.StageAggregateDirty(target);
                         }
                         CountWork(ref workUnits);
+                        if (_cursor >= _dirtyTargets.Count)
+                        {
+                            CommitPhaseTransaction();
+                            _externalWorkCommitted = true;
+                            AdvanceTo(LifetimeStage.DestroyEffects);
+                        }
                         continue;
                     }
+                    CommitPhaseTransaction();
+                    _externalWorkCommitted = true;
                     AdvanceTo(LifetimeStage.DestroyEffects);
                     continue;
                 }
@@ -289,12 +323,43 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 if (_externalWorkCommitted)
                 {
-                    throw new InvalidOperationException(ResetAfterExternalCommitError);
+                    CompleteCommittedCleanup();
                 }
-
-                RollbackScannedWork();
+                else
+                {
+                    RollbackPhaseTransaction();
+                    RollbackScannedWork();
+                }
             }
 
+            _sliceActive = false;
+            _stage = LifetimeStage.Scan;
+            _snapshotCount = 0;
+            _cursor = 0;
+            ClearPendingWork();
+            ClearRollbackState();
+        }
+
+        private void CompleteCommittedCleanup()
+        {
+            if (_stage == LifetimeStage.DestroyEffects)
+            {
+                while (_cursor < _effectsToDestroy.Count)
+                {
+                    Entity effect = _effectsToDestroy[_cursor++];
+                    if (World.IsAlive(effect))
+                    {
+                        World.Destroy(effect);
+                    }
+                }
+                _stage = LifetimeStage.Done;
+            }
+        }
+
+        private void AbortUncommittedSlice()
+        {
+            RollbackPhaseTransaction();
+            RollbackScannedWork();
             _sliceActive = false;
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
@@ -432,6 +497,51 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _externalWorkCommitted = false;
         }
 
+        private void BeginPhaseTransaction()
+        {
+            _phaseTransaction.Begin();
+            _builtinRuntime.EffectSideEffects = _phaseTransaction;
+            if (_graphApiHost != null)
+            {
+                _graphApiHost.BeginEffectSideEffectTransaction(_phaseTransaction);
+                _graphTransactionBound = true;
+            }
+        }
+
+        private void CommitPhaseTransaction()
+        {
+            try
+            {
+                _phaseTransaction.Commit();
+            }
+            finally
+            {
+                UnbindPhaseTransaction();
+            }
+        }
+
+        private void RollbackPhaseTransaction()
+        {
+            try
+            {
+                _phaseTransaction.Rollback();
+            }
+            finally
+            {
+                UnbindPhaseTransaction();
+            }
+        }
+
+        private void UnbindPhaseTransaction()
+        {
+            if (_graphTransactionBound)
+            {
+                _graphApiHost!.EndEffectSideEffectTransaction(_phaseTransaction);
+                _graphTransactionBound = false;
+            }
+            _builtinRuntime.EffectSideEffects = null;
+        }
+
         private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
         {
             var job = new LifetimeTickJob
@@ -473,7 +583,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_cursor < entries.Count)
             {
                 PhaseGraphEntry entry = entries[_cursor++];
-                _externalWorkCommitted |= ExecutePhaseGraphEntry(in entry, phase, _builtinRuntime);
+                ExecutePhaseGraphEntry(in entry, phase, _builtinRuntime);
                 CountWork(ref workUnits);
                 return true;
             }
@@ -698,26 +808,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
             {
-                UnregisterListeners(entry.Context, entry.EffectEntityId);
+                _phaseTransaction.StageListenerRemoval(entry.Context, entry.EffectEntityId);
             }
             return true;
         }
 
-        /// <summary>
-        /// Remove all phase listeners owned by the given effect template from target and caster entities.
-        /// </summary>
-        private void UnregisterListeners(in Components.EffectContext context, int ownerEffectId)
+        public override void Dispose()
         {
-            if (World.IsAlive(context.Target) && World.Has<EffectPhaseListenerBuffer>(context.Target))
-            {
-                ref var buf = ref World.Get<EffectPhaseListenerBuffer>(context.Target);
-                buf.RemoveByOwner(ownerEffectId);
-            }
-            if (World.IsAlive(context.Source) && World.Has<EffectPhaseListenerBuffer>(context.Source))
-            {
-                ref var buf = ref World.Get<EffectPhaseListenerBuffer>(context.Source);
-                buf.RemoveByOwner(ownerEffectId);
-            }
+            ResetSlice();
+            _phaseTransaction.Dispose();
+            base.Dispose();
         }
 
         private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, int clockTick, in Components.EffectContext context)
