@@ -93,3 +93,6 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 *.lnk
+
+# 站点组装产物
+_site/

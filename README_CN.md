@@ -6,6 +6,10 @@
 
 [English Documentation](README.md)
 
+## 📖 门户站点
+
+**正式入口统一为：[https://mightybubble.github.io/Ludots/](https://mightybubble.github.io/Ludots/)** —— 文档、Showcase 画廊、测试验收、架构图库一站聚合。新人请从门户开始。
+
 ## 🌟 简介
 
 Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计。它利用 ECS（实体组件系统）架构、确定性模拟和模块化设计，支持 MOBA、RTS 和模拟游戏等复杂游戏类型。
@@ -20,6 +24,8 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 *   **可视化编辑器**: 基于 React 的可视化编辑器，用于地图编辑和调试。
 
 ## 🚀 快速开始
+
+> 下列命令是构建运行的 canonical 方式；完整新人指引（环境配置、Showcase 导览、验收证据）见[门户站点](https://mightybubble.github.io/Ludots/)。
 
 ### 前置要求
 *   .NET 8.0 SDK
@@ -64,18 +70,16 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `mods`: 内置 Mod 和示例 (MobaDemo, RtsDemo)。
 *   `src/Tools`: 开发者工具 (Editor, ModLauncher, NavBake)。
 *   `assets`: 游戏资源和配置。
-*   `docs`: 详细文档。
+*   `docs`: 门户站点源码与仓库深度材料（规范、架构、参考、ADR、审计、RFC）。
 
 ## 📚 文档
 
-正式文档源位于 `gitbook/` 目录中，仓库内 `docs/` 保留为深度材料与证据目录。
+唯一正式入口是 **[Ludots 门户站点](https://mightybubble.github.io/Ludots/)** —— 文档、Showcase 画廊、测试验收证据与架构图库均在此发布。
 
-*   [GitBook 首页](gitbook/README.md)
-*   [贡献与开发](gitbook/contributing/README.md)
-*   [架构](gitbook/architecture/README.md)
-*   [参考资料](gitbook/reference/README.md)
-*   [发布与访问](gitbook/reference/publishing-and-access.md)
-*   [仓库深度材料](docs/README.md)
+*   写作源（markdown）：[`gitbook/`](gitbook/README.md) —— 导航见 `gitbook/SUMMARY.md`，由 CI 组装进门户
+*   [贡献与开发](gitbook/contributing/README.md) —— 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置
+*   Showcase 与验收注册表：仓库根 `showcase.registry.json`
+*   [仓库深度材料](docs/README.md) —— 门户站点源码、ADR、审计、RFC 与长篇设计说明
 
 ## 🤝 贡献
 

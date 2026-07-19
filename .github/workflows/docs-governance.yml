@@ -39,3 +39,11 @@ jobs:
       - name: Validate docs
         shell: pwsh
         run: ./scripts/validate-docs.ps1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Validate showcase registry
+        run: python scripts/validate-registry.py
