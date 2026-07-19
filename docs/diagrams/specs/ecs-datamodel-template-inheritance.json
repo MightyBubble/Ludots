@@ -1,0 +1,99 @@
+{
+  "name": "ecs-datamodel-template-inheritance",
+  "title": "EntityTemplate Inheritance & Batch Spawn",
+  "subtitle": "Template Definition → Inheritance → Batch Instantiation",
+  "canvas": { "width": 1900, "height": 1120 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 180,
+    "items": [
+      { "label": "Base", "tint": "clay" },
+      { "label": "Category", "tint": "sage" },
+      { "label": "Concrete", "tint": "steel" },
+      { "label": "Batch", "tint": "slate" }
+    ]
+  },
+
+  "groups": [
+    { "id": "runtime", "title": "Runtime World: Chunked SoA Storage",
+      "x": 20, "y": 810, "w": 1840, "h": 260,
+      "border_style": "dashed", "title_anchor": "top-left" }
+  ],
+
+  "nodes": [
+    { "id": "base", "title": "Base Template", "tint": "clay", "border_w": 1.6,
+      "x": 800, "y": 150, "w": 300, "h": 100,
+      "items": ["EntityTemplateDefinition (root)"] },
+
+    { "id": "unit", "title": "Unit Template", "tint": "sage",
+      "x": 240, "y": 380, "w": 340, "h": 110,
+      "items": ["+ Health, Position, Team"] },
+    { "id": "building", "title": "Building Template", "tint": "sage",
+      "x": 780, "y": 380, "w": 340, "h": 110,
+      "items": ["+ Durability, GridPos, Owner"] },
+    { "id": "item", "title": "Item Template", "tint": "sage",
+      "x": 1320, "y": 380, "w": 340, "h": 110,
+      "items": ["+ StackSize, Inventory, Rarity"] },
+
+    { "id": "soldier", "title": "Soldier", "tint": "steel",
+      "x": 40, "y": 610, "w": 270, "h": 100,
+      "items": ["Unit + Weapon + Armor"] },
+    { "id": "archer", "title": "Archer", "tint": "steel",
+      "x": 350, "y": 610, "w": 270, "h": 100,
+      "items": ["Unit + Bow + Arrow"] },
+    { "id": "tower", "title": "Tower", "tint": "steel",
+      "x": 660, "y": 610, "w": 270, "h": 100,
+      "items": ["Building + Attack"] },
+    { "id": "wall", "title": "Wall", "tint": "steel",
+      "x": 970, "y": 610, "w": 270, "h": 100,
+      "items": ["Building + Defense"] },
+    { "id": "potion", "title": "Potion", "tint": "steel",
+      "x": 1280, "y": 610, "w": 270, "h": 100,
+      "items": ["Item + Consumable"] },
+    { "id": "sword", "title": "Sword", "tint": "steel",
+      "x": 1590, "y": 610, "w": 270, "h": 100,
+      "items": ["Item"] },
+
+    { "id": "batch_soldier", "title": "Batch Spawn", "tint": "slate",
+      "x": 40, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] },
+    { "id": "batch_archer", "title": "Batch Spawn", "tint": "slate",
+      "x": 350, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] },
+    { "id": "batch_tower", "title": "Batch Spawn", "tint": "slate",
+      "x": 660, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] },
+    { "id": "batch_wall", "title": "Batch Spawn", "tint": "slate",
+      "x": 970, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] },
+    { "id": "batch_potion", "title": "Batch Spawn", "tint": "slate",
+      "x": 1280, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] },
+    { "id": "batch_sword", "title": "Batch Spawn", "tint": "slate",
+      "x": 1590, "y": 880, "w": 270, "h": 110,
+      "items": ["EntityManager.InstantiateBatch", "(template, count)"] }
+  ],
+
+  "edges": [
+    { "from": "base", "to": "unit", "arrow": false },
+    { "from": "base", "to": "building", "arrow": false },
+    { "from": "base", "to": "item", "arrow": false },
+
+    { "from": "unit", "to": "soldier" },
+    { "from": "unit", "to": "archer" },
+    { "from": "building", "to": "tower" },
+    { "from": "building", "to": "wall" },
+    { "from": "item", "to": "potion" },
+    { "from": "item", "to": "sword" },
+
+    { "from": "soldier", "to": "batch_soldier" },
+    { "from": "archer", "to": "batch_archer" },
+    { "from": "tower", "to": "batch_tower" },
+    { "from": "wall", "to": "batch_wall" },
+    { "from": "potion", "to": "batch_potion" },
+    { "from": "sword", "to": "batch_sword" }
+  ]
+}

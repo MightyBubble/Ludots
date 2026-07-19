@@ -1,0 +1,83 @@
+{
+  "name": "registry-extension",
+  "title": "Registry Extension Point Registration Sequence",
+  "subtitle": "ModLoader -> ALC -> IMod.OnLoad(IModContext) -> Registry -> GameEngine",
+  "canvas": { "width": 1720, "height": 2080 },
+
+  "legend": {
+    "title": "Notation",
+    "x": 1180, "y": 1870, "width": 300,
+    "items": [
+      { "label": "Solid arrow = Direct call", "style": "line", "line": "solid", "color": "#8a94a3" },
+      { "label": "Dashed line = Lifeline (original)", "style": "line", "line": "dashed", "color": "#8a94a3" }
+    ]
+  },
+
+  "groups": [
+    { "id": "ph1", "title": "Phase 1: Mod Loading", "x": 60, "y": 250, "w": 1600, "h": 340, "border_style": "dashed" },
+    { "id": "ph2", "title": "Phase 2: IMod.OnLoad Registration", "x": 60, "y": 620, "w": 1600, "h": 570, "border_style": "dashed" },
+    { "id": "ph3", "title": "Phase 3: Freeze & Activate", "x": 60, "y": 1220, "w": 1600, "h": 270, "border_style": "dashed" },
+    { "id": "ph4", "title": "Phase 4: Runtime Lookup", "x": 60, "y": 1520, "w": 1600, "h": 270, "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "p1", "title": "ModLoader", "tint": "clay", "x": 60, "y": 130, "w": 220, "h": 60 },
+    { "id": "p2", "title": "ALC / Assembly", "tint": "sand", "x": 340, "y": 130, "w": 220, "h": 60 },
+    { "id": "p3", "title": "IMod / Mod", "tint": "sage", "x": 620, "y": 130, "w": 220, "h": 60 },
+    { "id": "p4", "title": "IModContext", "tint": "steel", "x": 900, "y": 130, "w": 220, "h": 60 },
+    { "id": "p5", "title": "Registry", "tint": "stone", "x": 1180, "y": 130, "w": 220, "h": 60 },
+    { "id": "p6", "title": "GameEngine", "tint": "mauve", "x": 1440, "y": 130, "w": 220, "h": 60 },
+
+    { "id": "m11", "title": "LoadFromStream()", "x": 120, "y": 300, "w": 520, "h": 76,
+      "items": ["ModLoader -> ALC / Assembly"] },
+    { "id": "m12", "title": "IMod instance", "x": 120, "y": 396, "w": 520, "h": 76,
+      "items": ["ALC / Assembly -> ModLoader"] },
+    { "id": "m13", "title": "OnLoad(context)", "x": 120, "y": 492, "w": 520, "h": 76,
+      "items": ["ModLoader -> IMod / Mod"] },
+
+    { "id": "m21", "title": "RegisterSystemFactory()", "x": 120, "y": 672, "w": 720, "h": 84,
+      "items": ["IMod -> IModContext", "IModContext -> Registry: SystemFactoryRegistry.Register"] },
+    { "id": "m22", "title": "RegisterFunction()", "x": 120, "y": 772, "w": 720, "h": 84,
+      "items": ["IMod -> IModContext", "IModContext -> Registry: FunctionRegistry.Register"] },
+    { "id": "m23", "title": "RegisterTriggerDecorator()", "x": 120, "y": 872, "w": 720, "h": 84,
+      "items": ["IMod -> IModContext", "IModContext -> Registry: TriggerDecoratorRegistry.Register"] },
+    { "id": "m24", "title": "Register Component (IModContext)", "x": 120, "y": 972, "w": 720, "h": 84,
+      "items": ["IMod -> IModContext", "IModContext -> Registry: ComponentRegistry.Register"] },
+    { "id": "m25", "title": "OnEvent(eventKey, handler)", "x": 120, "y": 1072, "w": 720, "h": 84,
+      "items": ["IMod -> IModContext", "IModContext -> TriggerManager.OnEvent"] },
+
+    { "id": "m31", "title": "Freeze() - static registries", "x": 120, "y": 1272, "w": 720, "h": 84,
+      "items": ["ModLoader -> Registry"] },
+    { "id": "m32", "title": "TryActivate(name, context, engine)", "x": 120, "y": 1372, "w": 720, "h": 84,
+      "items": ["ModLoader -> Registry", "Registry -> GameEngine: ISystem instance"] },
+
+    { "id": "m41", "title": "Runtime Lookup", "x": 120, "y": 1572, "w": 720, "h": 84,
+      "items": ["GameEngine -> Registry"] },
+    { "id": "m42", "title": "O(1) array index / dict", "x": 120, "y": 1672, "w": 720, "h": 84,
+      "items": ["Registry -> GameEngine"] },
+
+    { "id": "constraints", "title": "Constraints", "valign": "top",
+      "x": 60, "y": 1840, "w": 1060, "h": 200,
+      "items": [
+        "* SystemFactory: name globally unique, SystemGroup must be valid enum",
+        "* FunctionRegistry: last-wins override; DEBUG records conflicts",
+        "* TriggerDecorator: can only modify existing Trigger, cannot create new Trigger",
+        "* ComponentRegistry: supports UnregisterSource(modId), but core components cannot be unregistered",
+        "* Static Registry: Freeze() makes it read-only; unsafe code can index directly"
+      ] }
+  ],
+
+  "edges": [
+    { "from": "m11", "to": "m12", "route": "straight" },
+    { "from": "m12", "to": "m13", "route": "straight" },
+    { "from": "m13", "to": "m21", "route": "straight", "color": "#b6bdc8" },
+    { "from": "m21", "to": "m22", "route": "straight" },
+    { "from": "m22", "to": "m23", "route": "straight" },
+    { "from": "m23", "to": "m24", "route": "straight" },
+    { "from": "m24", "to": "m25", "route": "straight" },
+    { "from": "m25", "to": "m31", "route": "straight", "color": "#b6bdc8" },
+    { "from": "m31", "to": "m32", "route": "straight" },
+    { "from": "m32", "to": "m41", "route": "straight", "color": "#b6bdc8" },
+    { "from": "m41", "to": "m42", "route": "straight" }
+  ]
+}

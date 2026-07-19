@@ -1,0 +1,354 @@
+{
+  "name": "ability-activation-flow",
+  "title": "Ability 激活完整流程图",
+  "subtitle": "从 Input 到 Cue 触发的完整管线",
+  "canvas": {
+    "width": 1720,
+    "height": 1400
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 170,
+    "items": [
+      {
+        "label": "Input",
+        "tint": "mauve"
+      },
+      {
+        "label": "Ability",
+        "tint": "clay"
+      },
+      {
+        "label": "Effect",
+        "tint": "steel"
+      },
+      {
+        "label": "Cue / Event",
+        "tint": "sand"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "timeline",
+      "title": "AbilityExecSpec 时间线 (16 SoA 条目)",
+      "x": 90,
+      "y": 610,
+      "w": 1540,
+      "h": 250,
+      "tint": "clay",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "input",
+      "title": "Input / Order",
+      "tint": "mauve",
+      "x": 90,
+      "y": 340,
+      "w": 200,
+      "h": 90,
+      "items": [
+        "Attribute"
+      ]
+    },
+    {
+      "id": "orderbuffer",
+      "title": "1 · OrderBufferSystem",
+      "tint": "mauve",
+      "x": 360,
+      "y": 340,
+      "w": 270,
+      "h": 90
+    },
+    {
+      "id": "abilitysys",
+      "title": "2 · AbilitySystem",
+      "tint": "clay",
+      "x": 700,
+      "y": 340,
+      "w": 280,
+      "h": 90,
+      "items": [
+        "校验 Tag / Cost / CD"
+      ]
+    },
+    {
+      "id": "check",
+      "title": "通过?",
+      "tint": "sand",
+      "x": 1050,
+      "y": 350,
+      "w": 110,
+      "h": 70,
+      "border_w": 1.6
+    },
+    {
+      "id": "exec",
+      "title": "3 · AbilityExecSystem",
+      "tint": "clay",
+      "x": 1240,
+      "y": 340,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "按时间线执行"
+      ]
+    },
+    {
+      "id": "failed",
+      "title": "AbilityFailedEvent",
+      "tint": "graphite",
+      "x": 1000,
+      "y": 520,
+      "w": 240,
+      "h": 70,
+      "items": [
+        "→ Cue (失败表现)"
+      ]
+    },
+    {
+      "id": "clip-effect",
+      "title": "EffectClip",
+      "tint": "clay",
+      "x": 130,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "发射 EffectRequest"
+      ]
+    },
+    {
+      "id": "clip-tag",
+      "title": "TagClip",
+      "tint": "clay",
+      "x": 380,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "动态 Grant/Remove Tag"
+      ]
+    },
+    {
+      "id": "clip-effectsig",
+      "title": "EffectSignal",
+      "tint": "clay",
+      "x": 630,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "向现有 Effect 发信号"
+      ]
+    },
+    {
+      "id": "clip-eventsig",
+      "title": "EventSignal",
+      "tint": "clay",
+      "x": 880,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "触发 GameplayEvent"
+      ]
+    },
+    {
+      "id": "clip-graph",
+      "title": "GraphSignal",
+      "tint": "clay",
+      "x": 1130,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "调用 GraphProgram"
+      ]
+    },
+    {
+      "id": "clip-inputgate",
+      "title": "InputGate",
+      "tint": "clay",
+      "x": 1380,
+      "y": 685,
+      "w": 220,
+      "h": 110,
+      "items": [
+        "等待输入放行"
+      ]
+    },
+    {
+      "id": "effectsys",
+      "title": "4 · EffectSystem",
+      "tint": "steel",
+      "x": 660,
+      "y": 940,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "处理 EffectRequest"
+      ]
+    },
+    {
+      "id": "attrsys",
+      "title": "5 · AttributeSystem",
+      "tint": "stone",
+      "x": 660,
+      "y": 1100,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "计算 → Sink 落地"
+      ]
+    },
+    {
+      "id": "deferred",
+      "title": "6 · DeferredTriggerQueue",
+      "tint": "sand",
+      "x": 660,
+      "y": 1240,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "GameplayEventBus"
+      ]
+    },
+    {
+      "id": "cue",
+      "title": "7 · GameplayCueSystem",
+      "tint": "sand",
+      "x": 1230,
+      "y": 1240,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "CueDescriptor"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "input",
+      "to": "orderbuffer",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "orderbuffer",
+      "to": "abilitysys",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "abilitysys",
+      "to": "check",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "check",
+      "to": "exec",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Y"
+    },
+    {
+      "from": "check",
+      "to": "failed",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "label": "No"
+    },
+    {
+      "from": "exec",
+      "to": "timeline",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "clip-effect",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "clip-tag",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "clip-effectsig",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "clip-eventsig",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "clip-graph",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "clip-inputgate",
+      "to": "effectsys",
+      "style": "dashed",
+      "arrow": true
+    },
+    {
+      "from": "effectsys",
+      "to": "attrsys",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "attrsys",
+      "to": "deferred",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "attrsys",
+      "to": "cue",
+      "route": "curve",
+      "style": "dashed",
+      "rad": 0.25
+    },
+    {
+      "from": "failed",
+      "to": "cue",
+      "route": "elbow",
+      "style": "dashed",
+      "from_side": "bottom",
+      "to_side": "right",
+      "stub": 30
+    }
+  ],
+  "notes": [
+    {
+      "text": "VFX / SFX / 屏幕震动",
+      "x": 1560,
+      "y": 1210,
+      "ha": "right"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "name": "input-systemgroup",
+  "title": "Input 与 SystemGroup 集成架构",
+  "subtitle": "Ludots SystemGroup Phase 执行顺序 / Input 子系统位置",
+  "canvas": { "width": 1920, "height": 1620 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40, "y": 1240,
+    "items": [
+      { "label": "Core Engine", "tint": "clay" },
+      { "label": "System", "tint": "mauve" },
+      { "label": "GAS", "tint": "sage" },
+      { "label": "Navigation", "tint": "steel" },
+      { "label": "Presentation", "tint": "stone" },
+      { "label": "Platform Adapter", "tint": "teal" },
+      { "label": "Physics", "tint": "slate" }
+    ]
+  },
+
+  "groups": [
+    { "id": "input-phase", "title": "Input Phase（PreFrame 阶段 · NetworkRx 之后执行）",
+      "x": 390, "y": 110, "w": 1180, "h": 1010, "tint": "graphite", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "l0", "title": "PreFrame", "tint": "clay", "x": 40, "y": 120, "w": 270, "h": 88, "items": ["帧前处理"] },
+    { "id": "l1", "title": "Input", "tint": "mauve", "border_w": 1.6, "x": 40, "y": 228, "w": 270, "h": 88, "items": ["输入收集"] },
+    { "id": "l2", "title": "NetworkRx", "tint": "teal", "x": 40, "y": 336, "w": 270, "h": 88, "items": ["网络接收"] },
+    { "id": "l3", "title": "Tick", "tint": "clay", "x": 40, "y": 444, "w": 270, "h": 88, "items": ["逻辑 Tick"] },
+    { "id": "l4", "title": "GAS", "tint": "sage", "x": 40, "y": 552, "w": 270, "h": 88, "items": ["GAS 管线"] },
+    { "id": "l5", "title": "Navigation", "tint": "steel", "x": 40, "y": 660, "w": 270, "h": 88, "items": ["导航更新"] },
+    { "id": "l6", "title": "Physics", "tint": "slate", "x": 40, "y": 768, "w": 270, "h": 88, "items": ["物理模拟"] },
+    { "id": "l7", "title": "Presentation", "tint": "stone", "x": 40, "y": 876, "w": 270, "h": 88, "items": ["表现层更新"] },
+    { "id": "l8", "title": "NetworkTx", "tint": "teal", "x": 40, "y": 984, "w": 270, "h": 88, "items": ["网络发送"] },
+    { "id": "l9", "title": "PostFrame", "tint": "clay", "x": 40, "y": 1092, "w": 270, "h": 88, "items": ["帧后处理"] },
+
+    { "id": "s1", "title": "1 · Adapter Poll", "tint": "teal", "x": 430, "y": 150, "w": 460, "h": 88, "items": ["从适配器轮询输入"] },
+    { "id": "s2", "title": "2 · Event Buffer", "tint": "mauve", "x": 430, "y": 268, "w": 460, "h": 88, "items": ["输入事件缓冲"] },
+    { "id": "s3", "title": "3 · Context Resolve", "tint": "mauve", "x": 430, "y": 386, "w": 460, "h": 88, "items": ["解析输入上下文"] },
+    { "id": "s4", "title": "4 · Target Detection", "tint": "mauve", "x": 430, "y": 504, "w": 460, "h": 88, "items": ["目标检测与拾取"] },
+    { "id": "s5", "title": "5 · Order Generation", "tint": "mauve", "x": 430, "y": 622, "w": 460, "h": 88, "items": ["生成 Order"] },
+    { "id": "s6", "title": "6 · Order Validation", "tint": "clay", "x": 430, "y": 740, "w": 460, "h": 88, "items": ["校验 Order 合法性"] },
+    { "id": "s7", "title": "7 · Command Dispatch", "tint": "clay", "x": 430, "y": 858, "w": 460, "h": 88, "items": ["分发 Command"] },
+    { "id": "s8", "title": "8 · Selection Update", "tint": "stone", "x": 430, "y": 976, "w": 460, "h": 88, "items": ["更新选择集"] },
+
+    { "id": "r1", "title": "GAS Pipeline", "tint": "sage", "x": 1200, "y": 330, "w": 320, "h": 88 },
+    { "id": "r2", "title": "Entity System", "tint": "clay", "x": 1200, "y": 455, "w": 320, "h": 88 },
+    { "id": "r3", "title": "Camera Ctrl", "tint": "stone", "x": 1200, "y": 580, "w": 320, "h": 88 },
+    { "id": "r4", "title": "Selection Mgr", "tint": "stone", "x": 1200, "y": 705, "w": 320, "h": 88 },
+    { "id": "r5", "title": "UI Update", "tint": "stone", "x": 1200, "y": 830, "w": 320, "h": 88 }
+  ],
+
+  "edges": [
+    { "from": "l1", "to": "s1", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 40, "style": "dashed", "label": "Input Phase" },
+    { "from": "s1", "to": "s2" },
+    { "from": "s2", "to": "s3" },
+    { "from": "s3", "to": "s4" },
+    { "from": "s4", "to": "s5" },
+    { "from": "s5", "to": "s6" },
+    { "from": "s6", "to": "s7" },
+    { "from": "s7", "to": "s8" },
+    { "from": "s7", "to": "r1", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 40, "label": "Orders & Commands" },
+    { "from": "s7", "to": "r2", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 60 },
+    { "from": "s7", "to": "r3", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 80 },
+    { "from": "s8", "to": "r4", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 40 },
+    { "from": "s8", "to": "r5", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 60 }
+  ],
+
+  "notes": [
+    { "text": "Input Phase 在 PreFrame 阶段的 NetworkRx 之后执行，负责收集输入并生成指令", "x": 430, "y": 1160, "ha": "left" }
+  ]
+}

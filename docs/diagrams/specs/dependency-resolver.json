@@ -1,0 +1,56 @@
+{
+  "name": "dependency-resolver",
+  "title": "SemVer Dependency Resolver Topology",
+  "subtitle": "DependencyResolver -> Topological Sort -> orderedModIds",
+  "canvas": { "width": 1720, "height": 1120 },
+
+  "groups": [
+    { "id": "decl", "title": "mod.json declarations", "x": 60, "y": 130, "w": 460, "h": 640, "border_style": "dashed" },
+    { "id": "result", "title": "Topological Sort Result", "x": 1200, "y": 130, "w": 460, "h": 640, "tint": "sage", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "m1", "title": "CoreMod", "tint": "clay", "x": 100, "y": 180, "w": 380, "h": 110,
+      "items": ["v1.0.0 | None"] },
+    { "id": "m2", "title": "PhysicsMod", "tint": "mauve", "x": 100, "y": 320, "w": 380, "h": 110,
+      "items": ["v2.1.0 | CoreMod ^1.0.0"] },
+    { "id": "m3", "title": "GasMod", "tint": "sage", "x": 100, "y": 460, "w": 380, "h": 110,
+      "items": ["v3.0.0 | CoreMod ^1.0.0"] },
+    { "id": "m4", "title": "MyGame", "tint": "steel", "x": 100, "y": 600, "w": 380, "h": 110,
+      "items": ["v0.5.0 | PhysicsMod ~2.1.0, GasMod ^3.0.0"] },
+
+    { "id": "resolver", "title": "DependencyResolver", "tint": "clay", "border_w": 1.6,
+      "x": 680, "y": 380, "w": 360, "h": 150,
+      "items": ["SemVer + Topological Sort"] },
+
+    { "id": "r1", "title": "CoreMod", "tint": "sage", "x": 1240, "y": 180, "w": 380, "h": 110,
+      "items": ["Load order: 1"] },
+    { "id": "r2", "title": "PhysicsMod", "tint": "sage", "x": 1240, "y": 320, "w": 380, "h": 110,
+      "items": ["Load order: 2"] },
+    { "id": "r3", "title": "GasMod", "tint": "sage", "x": 1240, "y": 460, "w": 380, "h": 110,
+      "items": ["Load order: 3"] },
+    { "id": "r4", "title": "MyGame", "tint": "sage", "x": 1240, "y": 600, "w": 380, "h": 110,
+      "items": ["Load order: 4"] },
+
+    { "id": "rules", "title": "SemVer Range Matching Rules", "valign": "top",
+      "x": 60, "y": 830, "w": 720, "h": 210,
+      "items": [
+        "1.  ^1.0.0: Compatible with 1.x.x (>=1.0.0, <2.0.0)",
+        "2.  ~2.1.0: Compatible with 2.1.x (>=2.1.0, <2.2.0)",
+        "3.  >=1.0.0: Greater than or equal to 1.0.0",
+        "4.  >1.0.0 <2.0.0: Range intersection"
+      ] }
+  ],
+
+  "edges": [
+    { "from": "m1", "to": "resolver", "route": "straight", "arrow": false, "color": "#c9cfd8", "width": 1.0 },
+    { "from": "m2", "to": "resolver", "route": "straight", "arrow": false, "color": "#c9cfd8", "width": 1.0 },
+    { "from": "m3", "to": "resolver", "route": "straight", "arrow": false, "color": "#c9cfd8", "width": 1.0 },
+    { "from": "m4", "to": "resolver", "route": "straight", "arrow": false, "color": "#c9cfd8", "width": 1.0 },
+
+    { "from": "resolver", "to": "r1", "route": "straight", "color": "#b0876f", "width": 2.0 },
+    { "from": "r1", "to": "r2", "route": "straight", "color": "#8fa393", "width": 1.4 },
+    { "from": "r2", "to": "r3", "route": "straight", "color": "#8fa393", "width": 1.4 },
+    { "from": "r3", "to": "r4", "route": "straight", "color": "#8fa393", "width": 1.4 }
+  ]
+}

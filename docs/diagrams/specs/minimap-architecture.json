@@ -1,0 +1,66 @@
+{
+  "name": "minimap-architecture",
+  "title": "Minimap Architecture",
+  "subtitle": "Data -> Projection -> Rendering -> UI",
+  "canvas": { "width": 1760, "height": 1280 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 760,
+    "width": 220,
+    "items": [
+      { "label": "Navigation Data", "tint": "steel" },
+      { "label": "Presentation System", "tint": "stone" },
+      { "label": "Input Consumer", "tint": "mauve" }
+    ]
+  },
+
+  "groups": [
+    { "id": "g_src", "title": "Data Sources",
+      "x": 40, "y": 120, "w": 400, "h": 580, "border_style": "dashed", "title_anchor": "top-left" }
+  ],
+
+  "nodes": [
+    { "id": "worldpos", "title": "WorldPositionCm", "tint": "steel",
+      "x": 90, "y": 220, "w": 300, "h": 110,
+      "items": ["ECS Entity Position"] },
+    { "id": "terrain", "title": "Terrain / Board", "tint": "steel",
+      "x": 90, "y": 380, "w": 300, "h": 110,
+      "items": ["Map Terrain Data"] },
+    { "id": "performer", "title": "Performer MinimapMarker", "tint": "steel",
+      "x": 90, "y": 540, "w": 300, "h": 110,
+      "items": ["BehaviorSlot"] },
+
+    { "id": "markerbuf", "title": "MinimapMarkerBuffer", "tint": "stone",
+      "x": 580, "y": 330, "w": 320, "h": 120,
+      "items": ["SoA Buffer"] },
+    { "id": "present", "title": "MinimapPresentationSystem", "tint": "stone",
+      "x": 1040, "y": 330, "w": 380, "h": 120,
+      "items": ["Refresh + Projection + Render"] },
+    { "id": "runtime", "title": "MinimapRuntime", "tint": "stone",
+      "x": 1440, "y": 150, "w": 280, "h": 100,
+      "items": ["Zoom/Pan/Rotate"] },
+    { "id": "screenmarker", "title": "MinimapScreenMarkerBuffer", "tint": "stone",
+      "x": 1040, "y": 570, "w": 380, "h": 120,
+      "items": ["Screen Marker Buffer"] },
+    { "id": "overlay", "title": "ScreenOverlayBuffer", "tint": "stone",
+      "x": 940, "y": 800, "w": 460, "h": 120,
+      "items": ["UI Render Output"] },
+    { "id": "input", "title": "MinimapInputConsumer", "tint": "mauve",
+      "x": 1040, "y": 1030, "w": 380, "h": 120,
+      "items": ["toggle/zoom/pan/click"] }
+  ],
+
+  "edges": [
+    { "from": "worldpos", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "terrain", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "performer", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "markerbuf", "to": "present", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "runtime", "to": "present", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "present", "to": "screenmarker", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "screenmarker", "to": "overlay", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "overlay", "to": "input", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "input", "to": "g_src", "route": "curve", "style": "dashed", "label": "Click to Jump World Coords", "rad": 0.25, "arrow": true }
+  ]
+}

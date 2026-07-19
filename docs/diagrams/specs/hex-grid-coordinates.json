@@ -1,0 +1,98 @@
+{
+  "name": "hex-grid-coordinates",
+  "title": "Hex Grid Coordinate System",
+  "subtitle": "HexCoordinates -> Axial -> Cube -> Pixel 4-Level Conversion",
+  "canvas": { "width": 1980, "height": 1480 },
+
+  "groups": [
+    { "id": "g_coord", "title": "Coordinate Systems",
+      "x": 40, "y": 120, "w": 560, "h": 700, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_formula", "title": "Conversion Formulas",
+      "x": 640, "y": 120, "w": 560, "h": 700, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_util", "title": "Hex Utilities",
+      "x": 1240, "y": 120, "w": 700, "h": 700, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_ring", "title": "Ring(radius)",
+      "x": 40, "y": 860, "w": 560, "h": 480, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_disk", "title": "Disk(radius)",
+      "x": 680, "y": 860, "w": 560, "h": 480, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_spiral", "title": "Spiral(maxRadius)",
+      "x": 1320, "y": 860, "w": 560, "h": 480, "border_style": "dashed", "title_anchor": "top-left" }
+  ],
+
+  "nodes": [
+    { "id": "hex_00", "title": "0,0", "tint": "steel", "border_w": 1.6, "x": 265, "y": 385, "w": 110, "h": 70 },
+    { "id": "hex_10", "title": "1,0", "x": 445, "y": 385, "w": 110, "h": 70 },
+    { "id": "hex_m10", "title": "-1,0", "x": 85, "y": 385, "w": 110, "h": 70 },
+    { "id": "hex_01", "title": "0,1", "x": 355, "y": 235, "w": 110, "h": 70 },
+    { "id": "hex_m11", "title": "-1,1", "x": 175, "y": 235, "w": 110, "h": 70 },
+    { "id": "hex_0m1", "title": "0,-1", "x": 175, "y": 535, "w": 110, "h": 70 },
+    { "id": "hex_1m1", "title": "1,-1", "x": 355, "y": 535, "w": 110, "h": 70 },
+
+    { "id": "formulas", "title": "Conversion Formulas", "tint": "slate", "valign": "top",
+      "x": 690, "y": 190, "w": 460, "h": 560,
+      "items": [
+        "Axial -> Cube",
+        "x = q    y = -q - r    z = r",
+        "Cube -> Axial",
+        "q = x    r = z",
+        "Axial -> Pixel",
+        "px = size * (q + r/2)    py = size * r * 3/2",
+        "Pixel -> Axial",
+        "q = (px * 2/3) / size    r = (-px/3 + py/2) / size",
+        "Cube -> Pixel",
+        "px = size * (x + z/2)    py = size * z * 3/2"
+      ] },
+
+    { "id": "neighbors", "title": "6 Neighbors (Axial)", "tint": "slate", "valign": "top",
+      "x": 1290, "y": 190, "w": 420, "h": 280,
+      "items": [
+        "(+1, 0)  East",
+        "(+1, -1)  North-East",
+        "(0, -1)  North-West",
+        "(-1, 0)  West",
+        "(-1, +1)  South-West",
+        "(0, +1)  South-East"
+      ] },
+    { "id": "distance", "title": "Distance Formulas", "tint": "slate",
+      "x": 1290, "y": 520, "w": 560, "h": 120,
+      "items": [
+        "Cube: dist = (|dx| + |dy| + |dz|) / 2",
+        "Axial: dist = (|dq| + |dr| + |dq+dr|) / 2"
+      ] },
+
+    { "id": "ring1", "title": "◇", "tint": "steel", "x": 420, "y": 1062, "w": 80, "h": 56 },
+    { "id": "ring2", "title": "◇", "tint": "steel", "x": 350, "y": 942, "w": 80, "h": 56 },
+    { "id": "ring3", "title": "◇", "tint": "steel", "x": 210, "y": 942, "w": 80, "h": 56 },
+    { "id": "ring4", "title": "◇", "tint": "steel", "x": 140, "y": 1062, "w": 80, "h": 56 },
+    { "id": "ring5", "title": "◇", "tint": "steel", "x": 210, "y": 1182, "w": 80, "h": 56 },
+    { "id": "ring6", "title": "◇", "tint": "steel", "x": 350, "y": 1182, "w": 80, "h": 56 },
+
+    { "id": "disk0", "title": "◇", "tint": "steel", "border_w": 1.6, "x": 920, "y": 1062, "w": 80, "h": 56 },
+    { "id": "disk1", "title": "◇", "tint": "steel", "x": 1050, "y": 1062, "w": 80, "h": 56 },
+    { "id": "disk2", "title": "◇", "tint": "steel", "x": 985, "y": 940, "w": 80, "h": 56 },
+    { "id": "disk3", "title": "◇", "tint": "steel", "x": 855, "y": 940, "w": 80, "h": 56 },
+    { "id": "disk4", "title": "◇", "tint": "steel", "x": 790, "y": 1062, "w": 80, "h": 56 },
+    { "id": "disk5", "title": "◇", "tint": "steel", "x": 855, "y": 1184, "w": 80, "h": 56 },
+    { "id": "disk6", "title": "◇", "tint": "steel", "x": 985, "y": 1184, "w": 80, "h": 56 },
+
+    { "id": "sp0", "title": "0", "tint": "steel", "border_w": 1.6, "x": 1560, "y": 1062, "w": 80, "h": 56 },
+    { "id": "sp1", "title": "1", "tint": "steel", "x": 1690, "y": 1062, "w": 80, "h": 56 },
+    { "id": "sp2", "title": "2", "tint": "steel", "x": 1625, "y": 940, "w": 80, "h": 56 },
+    { "id": "sp3", "title": "3", "tint": "steel", "x": 1495, "y": 940, "w": 80, "h": 56 },
+    { "id": "sp4", "title": "4", "tint": "steel", "x": 1430, "y": 1062, "w": 80, "h": 56 },
+    { "id": "sp5", "title": "5", "tint": "steel", "x": 1495, "y": 1184, "w": 80, "h": 56 },
+    { "id": "sp6", "title": "6", "tint": "steel", "x": 1625, "y": 1184, "w": 80, "h": 56 }
+  ],
+
+  "notes": [
+    { "text": "Cube (x, y, z)  where x+y+z=0", "x": 150, "y": 650, "ha": "left" },
+    { "text": "Axial (0, 0) = Cube (0, 0, 0)", "x": 150, "y": 700, "ha": "left" },
+    { "text": "Axial (2, -1) = Cube (2, -1, -1)", "x": 150, "y": 726, "ha": "left" },
+
+    { "text": "HexRing(center, radius)", "x": 215, "y": 1290, "ha": "left" },
+    { "text": "HexDisk(center, radius)", "x": 855, "y": 1290, "ha": "left" },
+    { "text": "HexSpiral(center, maxR)", "x": 1495, "y": 1290, "ha": "left" },
+
+    { "text": "HexGridBoard implements ISpatialCoordinateConverter for Hex <-> Pixel <-> World coordinate conversions", "x": 990, "y": 1400, "ha": "center" }
+  ]
+}

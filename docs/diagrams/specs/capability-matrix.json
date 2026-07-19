@@ -1,0 +1,801 @@
+{
+  "name": "capability-matrix",
+  "title": "Ludots Capability Matrix Heatmap",
+  "subtitle": "Module x Maturity (based on Stage 1 full scan)",
+  "canvas": {
+    "width": 1560,
+    "height": 1000
+  },
+  "nodes": [
+    {
+      "id": "hdr0",
+      "title": " ",
+      "x": 80,
+      "y": 150,
+      "w": 220,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr1",
+      "title": "1*",
+      "x": 306,
+      "y": 150,
+      "w": 150,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr2",
+      "title": "2*",
+      "x": 462,
+      "y": 150,
+      "w": 150,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr3",
+      "title": "3*",
+      "x": 618,
+      "y": 150,
+      "w": 150,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr4",
+      "title": "4*",
+      "x": 774,
+      "y": 150,
+      "w": 150,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr5",
+      "title": "Avg",
+      "x": 930,
+      "y": 150,
+      "w": 150,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "hdr6",
+      "title": "Total",
+      "x": 1086,
+      "y": 150,
+      "w": 110,
+      "h": 60,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r0c0",
+      "title": "Engine_Core",
+      "x": 80,
+      "y": 216,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r0c1",
+      "title": "1",
+      "x": 306,
+      "y": 216,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r0c2",
+      "title": "4",
+      "x": 462,
+      "y": 216,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r0c3",
+      "title": "14",
+      "x": 618,
+      "y": 216,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r0c4",
+      "title": "5",
+      "x": 774,
+      "y": 216,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r0c5",
+      "title": "2.8",
+      "x": 930,
+      "y": 216,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r0c6",
+      "title": "24",
+      "x": 1086,
+      "y": 216,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r1c0",
+      "title": "Gameplay_GAS",
+      "x": 80,
+      "y": 292,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r1c1",
+      "title": " ",
+      "x": 306,
+      "y": 292,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r1c2",
+      "title": "2",
+      "x": 462,
+      "y": 292,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r1c3",
+      "title": "11",
+      "x": 618,
+      "y": 292,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r1c4",
+      "title": "8",
+      "x": 774,
+      "y": 292,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r1c5",
+      "title": "3.3",
+      "x": 930,
+      "y": 292,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r1c6",
+      "title": "21",
+      "x": 1086,
+      "y": 292,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r2c0",
+      "title": "Input_Nav",
+      "x": 80,
+      "y": 368,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r2c1",
+      "title": " ",
+      "x": 306,
+      "y": 368,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r2c2",
+      "title": "2",
+      "x": 462,
+      "y": 368,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r2c3",
+      "title": "15",
+      "x": 618,
+      "y": 368,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r2c4",
+      "title": "2",
+      "x": 774,
+      "y": 368,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r2c5",
+      "title": "3.0",
+      "x": 930,
+      "y": 368,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r2c6",
+      "title": "19",
+      "x": 1086,
+      "y": 368,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r3c0",
+      "title": "Presentation_UI",
+      "x": 80,
+      "y": 444,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r3c1",
+      "title": "2",
+      "x": 306,
+      "y": 444,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r3c2",
+      "title": "6",
+      "x": 462,
+      "y": 444,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r3c3",
+      "title": "9",
+      "x": 618,
+      "y": 444,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r3c4",
+      "title": "3",
+      "x": 774,
+      "y": 444,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r3c5",
+      "title": "2.7",
+      "x": 930,
+      "y": 444,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r3c6",
+      "title": "20",
+      "x": 1086,
+      "y": 444,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r4c0",
+      "title": "Map_Spatial",
+      "x": 80,
+      "y": 520,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r4c1",
+      "title": " ",
+      "x": 306,
+      "y": 520,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r4c2",
+      "title": "1",
+      "x": 462,
+      "y": 520,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r4c3",
+      "title": "11",
+      "x": 618,
+      "y": 520,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r4c4",
+      "title": " ",
+      "x": 774,
+      "y": 520,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r4c5",
+      "title": "3.0",
+      "x": 930,
+      "y": 520,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r4c6",
+      "title": "12",
+      "x": 1086,
+      "y": 520,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r5c0",
+      "title": "Config_Script",
+      "x": 80,
+      "y": 596,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r5c1",
+      "title": " ",
+      "x": 306,
+      "y": 596,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r5c2",
+      "title": "2",
+      "x": 462,
+      "y": 596,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r5c3",
+      "title": "15",
+      "x": 618,
+      "y": 596,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r5c4",
+      "title": "2",
+      "x": 774,
+      "y": 596,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r5c5",
+      "title": "3.0",
+      "x": 930,
+      "y": 596,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r5c6",
+      "title": "19",
+      "x": 1086,
+      "y": 596,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r6c0",
+      "title": "Adapters_Apps",
+      "x": 80,
+      "y": 672,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r6c1",
+      "title": "2",
+      "x": 306,
+      "y": 672,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r6c2",
+      "title": "3",
+      "x": 462,
+      "y": 672,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r6c3",
+      "title": "7",
+      "x": 618,
+      "y": 672,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r6c4",
+      "title": "2",
+      "x": 774,
+      "y": 672,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r6c5",
+      "title": "2.7",
+      "x": 930,
+      "y": 672,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r6c6",
+      "title": "14",
+      "x": 1086,
+      "y": 672,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r7c0",
+      "title": "Mods",
+      "x": 80,
+      "y": 748,
+      "w": 220,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r7c1",
+      "title": "2",
+      "x": 306,
+      "y": 748,
+      "w": 150,
+      "h": 70,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "r7c2",
+      "title": "4",
+      "x": 462,
+      "y": 748,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "r7c3",
+      "title": "6",
+      "x": 618,
+      "y": 748,
+      "w": 150,
+      "h": 70,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "r7c4",
+      "title": "3",
+      "x": 774,
+      "y": 748,
+      "w": 150,
+      "h": 70,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    },
+    {
+      "id": "r7c5",
+      "title": "2.6",
+      "x": 930,
+      "y": 748,
+      "w": 150,
+      "h": 70,
+      "fill": "#f1e5db",
+      "border": "#dec9b7"
+    },
+    {
+      "id": "r7c6",
+      "title": "15",
+      "x": 1086,
+      "y": 748,
+      "w": 110,
+      "h": 70,
+      "fill": "#fafafa",
+      "border": "#dfe3e9"
+    },
+    {
+      "id": "r8c0",
+      "title": "TOTAL",
+      "x": 80,
+      "y": 824,
+      "w": 220,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c1",
+      "title": "7",
+      "x": 306,
+      "y": 824,
+      "w": 150,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c2",
+      "title": "24",
+      "x": 462,
+      "y": 824,
+      "w": 150,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c3",
+      "title": "88",
+      "x": 618,
+      "y": 824,
+      "w": 150,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c4",
+      "title": "30",
+      "x": 774,
+      "y": 824,
+      "w": 150,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c5",
+      "title": "2.9",
+      "x": 930,
+      "y": 824,
+      "w": 150,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "r8c6",
+      "title": "149",
+      "x": 1086,
+      "y": 824,
+      "w": 110,
+      "h": 70,
+      "fill": "#f5f3ee",
+      "border": "#d8d4c8"
+    },
+    {
+      "id": "stats",
+      "title": "Statistics",
+      "valign": "top",
+      "x": 1330,
+      "y": 210,
+      "w": 200,
+      "h": 240,
+      "tint": "slate",
+      "items": [
+        "Total: 149",
+        "Highest: GAS 3.3*",
+        "Lowest: Mods 2.6*",
+        "No 5* ready",
+        "4* in GAS/Core"
+      ]
+    },
+    {
+      "id": "sw0",
+      "title": " ",
+      "x": 80,
+      "y": 924,
+      "w": 36,
+      "h": 36,
+      "fill": "#f3e3e3",
+      "border": "#ddb9b9"
+    },
+    {
+      "id": "sw1",
+      "title": " ",
+      "x": 210,
+      "y": 924,
+      "w": 36,
+      "h": 36,
+      "fill": "#f1e9dd",
+      "border": "#decbb2"
+    },
+    {
+      "id": "sw2",
+      "title": " ",
+      "x": 340,
+      "y": 924,
+      "w": 36,
+      "h": 36,
+      "fill": "#e3ecdb",
+      "border": "#bdd0b2"
+    },
+    {
+      "id": "sw3",
+      "title": " ",
+      "x": 470,
+      "y": 924,
+      "w": 36,
+      "h": 36,
+      "fill": "#d2e1c9",
+      "border": "#a7c29b"
+    }
+  ],
+  "edges": [],
+  "notes": [
+    {
+      "text": "Maturity Level",
+      "x": 80,
+      "y": 900,
+      "ha": "left"
+    },
+    {
+      "text": "1*",
+      "x": 128,
+      "y": 934,
+      "ha": "left"
+    },
+    {
+      "text": "2*",
+      "x": 258,
+      "y": 934,
+      "ha": "left"
+    },
+    {
+      "text": "3*",
+      "x": 388,
+      "y": 934,
+      "ha": "left"
+    },
+    {
+      "text": "4*",
+      "x": 518,
+      "y": 934,
+      "ha": "left"
+    }
+  ]
+}

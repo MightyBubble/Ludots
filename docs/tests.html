@@ -27,7 +27,7 @@
 
   /* 证据卡 */
   .ev-card { margin-bottom: 34px; overflow: hidden; }
-  .ev-head { padding: 20px 26px; border-bottom: 1px solid var(--border);
+  .ev-head { padding: 20px 26px; border-bottom: 1px solid var(--bg-hairline);
     display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
     background: var(--bg-soft); }
   .ev-head h3 { margin: 0; font-size: 17px; font-family: var(--mono); }
@@ -51,7 +51,7 @@
     align-items: center; justify-content: center; cursor: zoom-in; }
   .carousel .stage img { max-width: 100%; max-height: 100%; display: block; }
   .carousel .bar { display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; border-top: 1px solid var(--border); background: var(--card);
+    padding: 8px 12px; border-top: 1px solid var(--bg-hairline); background: var(--card);
     font-size: 12.5px; color: var(--muted); }
   .carousel .bar button {
     border: 1px solid var(--border-strong); background: var(--card);
@@ -148,25 +148,25 @@
         <code>TimeFlowCoreTests · GasTests（纯逻辑部分）</code>
       </div>
       <div class="card layer-card">
-        <span class="lv" style="background: var(--olive-light); color: var(--olive);">L2</span>
+        <span class="lv" style="background: var(--green-light); color: var(--green);">L2</span>
         <h3>子系统集成</h3>
         <p>单 World 内的子系统级集成：GAS 战斗、3C、存档、Mod 加载。</p>
         <code>GasTests · ThreeCTests · PersistenceTests</code>
       </div>
       <div class="card layer-card">
-        <span class="lv" style="background: var(--olive-light); color: var(--olive);">L3</span>
+        <span class="lv" style="background: var(--green-light); color: var(--green);">L3</span>
         <h3>表现与适配器契约</h3>
         <p>表现层与平台适配器契约：Performer 管线、Raylib/Web/CEF 适配、Web UI 数据面。</p>
         <code>PresentationTests · RaylibAdapterTests · WebUi*Tests · Ui*Tests · BrowserCefTests</code>
       </div>
       <div class="card layer-card">
-        <span class="lv" style="background: var(--sand-light); color: var(--sand);">L4</span>
+        <span class="lv" style="background: var(--amber-light); color: var(--amber);">L4</span>
         <h3>Showcase 验收</h3>
         <p>与注册表 <code>acceptanceTest</code> 字段一一配对的场景验收测试，验证 showcase 行为契约。</p>
         <code>*AcceptanceTests（GasTests/Production 等）</code>
       </div>
       <div class="card layer-card">
-        <span class="lv" style="background: var(--sand-light); color: var(--sand);">L5</span>
+        <span class="lv" style="background: var(--amber-light); color: var(--amber);">L5</span>
         <h3>端到端证据</h3>
         <p>真实 launcher 启动 + 确定性回放录制，产出六件套证据归档到仓库。</p>
         <code>cli launch &lt;binding&gt; --record artifacts/acceptance/&lt;dir&gt;</code>

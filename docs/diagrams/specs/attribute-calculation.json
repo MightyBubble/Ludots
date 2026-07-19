@@ -1,0 +1,309 @@
+{
+  "name": "attribute-calculation",
+  "title": "Attribute 计算链路图",
+  "subtitle": "Mod → Calc → Sink → UI 的完整数据流",
+  "canvas": {
+    "width": 1720,
+    "height": 1330
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 210,
+    "items": [
+      {
+        "label": "Attribute Pipeline",
+        "tint": "stone"
+      },
+      {
+        "label": "Mod 阶段",
+        "tint": "clay"
+      },
+      {
+        "label": "Calc 阶段",
+        "tint": "steel"
+      },
+      {
+        "label": "Sink 阶段",
+        "tint": "sage"
+      },
+      {
+        "label": "UI 链路",
+        "tint": "sand"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "sources",
+      "title": "Mod 来源",
+      "x": 70,
+      "y": 360,
+      "w": 280,
+      "h": 500,
+      "tint": "stone",
+      "border_style": "dashed"
+    },
+    {
+      "id": "consumers",
+      "title": "消费方",
+      "x": 1420,
+      "y": 130,
+      "w": 230,
+      "h": 640,
+      "tint": "stone",
+      "border_style": "dashed"
+    },
+    {
+      "id": "uipath",
+      "title": "UI 专项链路 (UI AttributePipeline)",
+      "x": 430,
+      "y": 830,
+      "w": 940,
+      "h": 430,
+      "tint": "sand",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "basevalue",
+      "title": "BaseValue",
+      "tint": "stone",
+      "x": 100,
+      "y": 410,
+      "w": 220,
+      "h": 70
+    },
+    {
+      "id": "effectmod",
+      "title": "EffectModifier",
+      "tint": "stone",
+      "x": 100,
+      "y": 520,
+      "w": 220,
+      "h": 70
+    },
+    {
+      "id": "itembonus",
+      "title": "ItemBonus",
+      "tint": "stone",
+      "x": 100,
+      "y": 630,
+      "w": 220,
+      "h": 70
+    },
+    {
+      "id": "progression",
+      "title": "Progression",
+      "tint": "stone",
+      "x": 100,
+      "y": 740,
+      "w": 220,
+      "h": 70
+    },
+    {
+      "id": "modifier",
+      "title": "1 · AttributeModifier",
+      "tint": "clay",
+      "x": 430,
+      "y": 520,
+      "w": 280,
+      "h": 100,
+      "items": [
+        "聚合阶段"
+      ]
+    },
+    {
+      "id": "calc",
+      "title": "2 · AttributeCalculation",
+      "tint": "steel",
+      "x": 790,
+      "y": 520,
+      "w": 290,
+      "h": 100,
+      "items": [
+        "派生属性计算",
+        "AttributeDerivedGraphBinding"
+      ]
+    },
+    {
+      "id": "sink",
+      "title": "3 · AttributeSink",
+      "tint": "sage",
+      "x": 1160,
+      "y": 520,
+      "w": 240,
+      "h": 100,
+      "items": [
+        "落地分发"
+      ]
+    },
+    {
+      "id": "physics",
+      "title": "Physics2D",
+      "tint": "stone",
+      "x": 1450,
+      "y": 170,
+      "w": 170,
+      "h": 64
+    },
+    {
+      "id": "nav",
+      "title": "Navigation",
+      "tint": "stone",
+      "x": 1450,
+      "y": 270,
+      "w": 170,
+      "h": 64
+    },
+    {
+      "id": "present",
+      "title": "Presentation",
+      "tint": "stone",
+      "x": 1450,
+      "y": 370,
+      "w": 170,
+      "h": 64
+    },
+    {
+      "id": "ui",
+      "title": "UI",
+      "tint": "stone",
+      "x": 1450,
+      "y": 470,
+      "w": 170,
+      "h": 64
+    },
+    {
+      "id": "ai",
+      "title": "AI",
+      "tint": "stone",
+      "x": 1450,
+      "y": 570,
+      "w": 170,
+      "h": 64
+    },
+    {
+      "id": "uibuffer",
+      "title": "4 · UIAttributeBuffer",
+      "tint": "sand",
+      "x": 830,
+      "y": 900,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "前端同步数据"
+      ]
+    },
+    {
+      "id": "uirenderer",
+      "title": "5 · UI Renderer",
+      "tint": "sand",
+      "x": 830,
+      "y": 1090,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "血条 / 数值面板"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "basevalue",
+      "to": "modifier",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "effectmod",
+      "to": "modifier",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "itembonus",
+      "to": "modifier",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "progression",
+      "to": "modifier",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "modifier",
+      "to": "calc",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "calc",
+      "to": "sink",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "sink",
+      "to": "physics"
+    },
+    {
+      "from": "sink",
+      "to": "nav"
+    },
+    {
+      "from": "sink",
+      "to": "present"
+    },
+    {
+      "from": "sink",
+      "to": "ui"
+    },
+    {
+      "from": "sink",
+      "to": "ai"
+    },
+    {
+      "from": "sink",
+      "to": "uibuffer",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "uibuffer",
+      "to": "uirenderer",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "uirenderer",
+      "to": "modifier",
+      "route": "elbow",
+      "style": "dashed",
+      "from_side": "left",
+      "to_side": "bottom",
+      "stub": 30,
+      "label": "UI 交互反馈 (如手动加点)"
+    }
+  ],
+  "notes": [
+    {
+      "text": "AttributeBuffer (SoA) 存储所有基础属性 · AttributeAggregationSystem 负责聚合 · AttributeDerivedGraphBinding 负责图绑定计算",
+      "x": 860,
+      "y": 130,
+      "ha": "center"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "nav-navmesh-baking",
+  "title": "NavMesh Baking Pipeline",
+  "subtitle": "From Terrain Geometry to usable Navigation Mesh",
+  "canvas": { "width": 1700, "height": 1060 },
+
+  "nodes": [
+    { "id": "root", "title": "Geometry Input", "tint": "steel", "border_w": 1.6,
+      "x": 700, "y": 140, "w": 300, "h": 80 },
+
+    { "id": "r1a", "title": "NavBakeTerrainLoader", "tint": "steel", "x": 60, "y": 300, "w": 340, "h": 90, "items": ["(Load Terrain)"] },
+    { "id": "r1b", "title": "NavBakeEstimator", "tint": "steel", "x": 430, "y": 300, "w": 340, "h": 90, "items": ["(Budget Est)"] },
+    { "id": "r1c", "title": "WalkMaskBuilder", "tint": "steel", "x": 800, "y": 300, "w": 340, "h": 90, "items": ["(Walk Mask)"] },
+    { "id": "r1d", "title": "NavBakeContext", "tint": "steel", "x": 1170, "y": 300, "w": 340, "h": 90, "items": ["(Bake Context)"] },
+
+    { "id": "r2a", "title": "ContourExtractor", "tint": "steel", "x": 60, "y": 470, "w": 340, "h": 90, "items": ["(Contour Extract)"] },
+    { "id": "r2b", "title": "CdtTriangulator", "tint": "steel", "x": 430, "y": 470, "w": 340, "h": 90, "items": ["(CDT Triangulate)"] },
+    { "id": "r2c", "title": "PolygonProcessor", "tint": "steel", "x": 800, "y": 470, "w": 340, "h": 90, "items": ["(Polygon Process)"] },
+    { "id": "r2d", "title": "GridMeshBuilder", "tint": "steel", "x": 1170, "y": 470, "w": 340, "h": 90, "items": ["(Grid Build)"] },
+
+    { "id": "r3a", "title": "FunnelAlgorithm", "tint": "steel", "x": 245, "y": 640, "w": 340, "h": 90, "items": ["(Funnel Optimize)"] },
+    { "id": "r3b", "title": "BakeArtifactBuilder", "tint": "steel", "x": 680, "y": 640, "w": 340, "h": 90, "items": ["(Artifact Build)"] },
+    { "id": "r3c", "title": "NavTileBuilder", "tint": "steel", "x": 1170, "y": 640, "w": 340, "h": 90, "items": ["(Tile Build)"] },
+
+    { "id": "queue", "title": "RuntimeIncremental", "tint": "stone", "x": 60, "y": 830, "w": 340, "h": 90, "items": ["NavMeshRebuildQueue"] },
+    { "id": "store", "title": "NavTileStore / Runtime Query", "tint": "clay", "border_w": 1.6, "x": 680, "y": 830, "w": 340, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "root", "to": "r1a" },
+    { "from": "root", "to": "r1b" },
+    { "from": "root", "to": "r1c" },
+    { "from": "root", "to": "r1d" },
+
+    { "from": "r1a", "to": "r2a" },
+    { "from": "r1b", "to": "r2b" },
+    { "from": "r1c", "to": "r2c" },
+    { "from": "r1d", "to": "r2d" },
+
+    { "from": "r2a", "to": "r3a" },
+    { "from": "r2b", "to": "r3b" },
+    { "from": "r2c", "to": "r3b" },
+    { "from": "r2d", "to": "r3c" },
+
+    { "from": "r3a", "to": "store" },
+    { "from": "r3b", "to": "store" },
+    { "from": "r3c", "to": "store" },
+
+    { "from": "r2a", "to": "queue", "style": "dashed" },
+    { "from": "queue", "to": "store", "style": "dashed", "route": "curve", "rad": 0.25 }
+  ],
+
+  "notes": [
+    { "text": "CDT = Constrained Delaunay Triangulation", "x": 1080, "y": 990, "ha": "left" },
+    { "text": "Incremental: dirty tile -> queue -> rebuild -> cache update", "x": 1080, "y": 1016, "ha": "left" }
+  ]
+}

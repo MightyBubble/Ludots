@@ -1,0 +1,83 @@
+{
+  "name": "mod-loading-flow",
+  "title": "Mod Loading Flow",
+  "subtitle": "Discover -> Resolve -> Sort -> Load -> OnLoad",
+  "canvas": { "width": 1720, "height": 1300 },
+
+  "legend": {
+    "title": "Phases",
+    "x": 60, "y": 1070, "width": 200,
+    "items": [
+      { "label": "Discover", "tint": "sand" },
+      { "label": "Resolve", "tint": "clay" },
+      { "label": "Sort & Load", "tint": "steel" },
+      { "label": "OnLoad & Init", "tint": "sage" }
+    ]
+  },
+
+  "groups": [
+    { "id": "g1", "title": "1 Discover", "x": 60, "y": 150, "w": 360, "h": 504, "tint": "sand", "title_anchor": "top-center" },
+    { "id": "g2", "title": "2 Resolve", "x": 465, "y": 150, "w": 360, "h": 504, "tint": "clay", "title_anchor": "top-center" },
+    { "id": "g3", "title": "3 Sort & Load", "x": 870, "y": 150, "w": 360, "h": 504, "tint": "steel", "title_anchor": "top-center" },
+    { "id": "g4", "title": "4 OnLoad & Init", "x": 1275, "y": 150, "w": 360, "h": 504, "tint": "sage", "title_anchor": "top-center" }
+  ],
+
+  "nodes": [
+    { "id": "a1", "title": "App Entry", "tint": "sand", "x": 85, "y": 210, "w": 310, "h": 84, "items": ["Program.cs"] },
+    { "id": "a2", "title": "GameBootstrapper", "tint": "sand", "x": 85, "y": 320, "w": 310, "h": 84, "items": ["InitializeFromBaseDirectory"] },
+    { "id": "a3", "title": "Read launcher.runtime.json", "tint": "sand", "x": 85, "y": 430, "w": 310, "h": 84, "items": ["Parse startup config"] },
+    { "id": "a4", "title": "LauncherGraphDocument", "tint": "sand", "x": 85, "y": 540, "w": 310, "h": 84, "items": ["Parse launcher graph"] },
+
+    { "id": "b1", "title": "DependencyResolver", "tint": "clay", "x": 490, "y": 210, "w": 310, "h": 84, "items": ["Parse mod.json"] },
+    { "id": "b2", "title": "SemVer Matching", "tint": "clay", "x": 490, "y": 320, "w": 310, "h": 84, "items": ["^ / ~ / >= / <= / > / < / ="] },
+    { "id": "b3", "title": "Conflict Detection", "tint": "clay", "x": 490, "y": 430, "w": 310, "h": 84, "items": ["Incompatibility report"] },
+    { "id": "b4", "title": "ResolvedModLoadPlan", "tint": "clay", "x": 490, "y": 540, "w": 310, "h": 84, "items": ["orderedModIds + rootPaths"] },
+
+    { "id": "c1", "title": "WorldRuntime.Create", "tint": "steel", "x": 895, "y": 210, "w": 310, "h": 84, "items": ["config + assetsRoot"] },
+    { "id": "c2", "title": "GameEngine.Initialize", "tint": "steel", "x": 895, "y": 320, "w": 310, "h": 84, "items": ["WithConfigPipeline"] },
+    { "id": "c3", "title": "ModLoader.LoadResolvedPlan", "tint": "steel", "x": 895, "y": 430, "w": 310, "h": 84, "items": ["ALC load + Assembly"] },
+    { "id": "c4", "title": "ConfigPipeline.Merge", "tint": "steel", "x": 895, "y": 540, "w": 310, "h": 84, "items": ["Core + Mods game.json"] },
+
+    { "id": "d1", "title": "IMod.OnLoad", "tint": "sage", "x": 1300, "y": 210, "w": 310, "h": 84, "items": ["Each Mod executes"] },
+    { "id": "d2", "title": "InitializeWorld", "tint": "sage", "x": 1300, "y": 320, "w": 310, "h": 84, "items": ["Arch + Physics + Job"] },
+    { "id": "d3", "title": "InitializeCoreSystems", "tint": "sage", "x": 1300, "y": 430, "w": 310, "h": 84, "items": ["GAS / Pres / Spatial"] },
+    { "id": "d4", "title": "RegisterSystem", "tint": "sage", "x": 1300, "y": 540, "w": 310, "h": 84, "items": ["By SystemGroup"] },
+
+    { "id": "substeps", "title": "InitializeWithConfigPipeline Sub-steps", "valign": "top",
+      "x": 60, "y": 730, "w": 1080, "h": 300,
+      "items": [
+        "1.  VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, ModLoader",
+        "2.  ModLoader.LoadResolvedPlan(orderedMods) -> ALC load -> IMod.OnLoad",
+        "3.  ConfigPipeline.MergeGameConfig() -> Merge Core + Mods game.json",
+        "4.  InitializeWorld() -> Arch World + PhysicsWorld + JobScheduler",
+        "5.  InitializeCoreSystems(MergedConfig) -> GAS / Presentation / Spatial",
+        "6.  RegisterSystem() / RegisterPresentationSystem() -> SystemGroup grouping",
+        "7.  Print ConflictReport summary"
+      ] },
+
+    { "id": "start", "title": "GameEngine.Start()", "tint": "stone", "border_w": 1.6,
+      "x": 1275, "y": 1080, "w": 360, "h": 90,
+      "items": ["FireEvent(GameStart)"] }
+  ],
+
+  "edges": [
+    { "from": "a1", "to": "a2", "route": "straight" },
+    { "from": "a2", "to": "a3", "route": "straight" },
+    { "from": "a3", "to": "a4", "route": "straight" },
+    { "from": "b1", "to": "b2", "route": "straight" },
+    { "from": "b2", "to": "b3", "route": "straight" },
+    { "from": "b3", "to": "b4", "route": "straight" },
+    { "from": "c1", "to": "c2", "route": "straight" },
+    { "from": "c2", "to": "c3", "route": "straight" },
+    { "from": "c3", "to": "c4", "route": "straight" },
+    { "from": "d1", "to": "d2", "route": "straight" },
+    { "from": "d2", "to": "d3", "route": "straight" },
+    { "from": "d3", "to": "d4", "route": "straight" },
+
+    { "from": "a4", "to": "b1", "route": "elbow", "from_side": "right", "to_side": "left", "style": "dashed", "color": "#b6bdc8", "width": 1.0 },
+    { "from": "b4", "to": "c1", "route": "elbow", "from_side": "right", "to_side": "left", "style": "dashed", "color": "#b6bdc8", "width": 1.0 },
+    { "from": "c4", "to": "d1", "route": "elbow", "from_side": "right", "to_side": "left", "style": "dashed", "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "d4", "to": "start", "route": "straight", "color": "#9fb4a4", "width": 1.4 }
+  ]
+}

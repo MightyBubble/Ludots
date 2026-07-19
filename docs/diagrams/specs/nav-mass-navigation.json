@@ -1,0 +1,77 @@
+{
+  "name": "nav-mass-navigation",
+  "title": "MassNavigation System Architecture",
+  "subtitle": "MassNavigation Engine - Fixed-Step Simulation Pipeline",
+  "canvas": { "width": 1800, "height": 1540 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 230,
+    "items": [
+      { "label": "Navigation", "tint": "steel" },
+      { "label": "Avoidance / Flow", "tint": "sage" },
+      { "label": "Mass Execution", "tint": "clay" },
+      { "label": "Arrival / Input", "tint": "mauve" },
+      { "label": "Presentation", "tint": "stone" },
+      { "label": "Telemetry", "tint": "sand" }
+    ]
+  },
+
+  "groups": [
+    { "id": "ic", "title": "Input & Control", "x": 320, "y": 130, "w": 380, "h": 330, "tint": "mauve", "border_style": "dashed" },
+    { "id": "rt", "title": "MassNavigation Runtime", "x": 740, "y": 130, "w": 400, "h": 330, "tint": "clay", "border_style": "dashed" },
+    { "id": "core", "title": "Core Systems", "x": 1180, "y": 130, "w": 560, "h": 430, "tint": "sage", "border_style": "dashed" },
+    { "id": "pipe", "title": "Fixed-Step Pipeline (13 Steps)", "x": 320, "y": 620, "w": 1420, "h": 660, "tint": "steel", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "ic1", "title": "PlayerInputHandler", "tint": "mauve", "x": 350, "y": 185, "w": 320, "h": 80 },
+    { "id": "ic2", "title": "InputOrderMappingSystem", "tint": "mauve", "x": 350, "y": 285, "w": 320, "h": 80 },
+    { "id": "ic3", "title": "SelectionRuntime", "tint": "mauve", "x": 350, "y": 372, "w": 320, "h": 80 },
+
+    { "id": "rt1", "title": "MassNavigationRuntime", "tint": "clay", "x": 770, "y": 175, "w": 340, "h": 80, "items": ["Lifecycle + System Install"] },
+    { "id": "rt2", "title": "MassNavigation", "tint": "clay", "x": 770, "y": 275, "w": 340, "h": 80, "items": ["SimulationRuntime", "Facade: Selection Sync / Command Focus"] },
+    { "id": "rt3", "title": "MassNavigationCadenceScheduler", "tint": "clay", "x": 770, "y": 365, "w": 340, "h": 80, "items": ["Fixed-Step Scheduler"] },
+
+    { "id": "cs1", "title": "OrderIngestionSystem", "tint": "sage", "x": 1210, "y": 185, "w": 240, "h": 80 },
+    { "id": "cs2", "title": "SelectionSyncSystem", "tint": "sage", "x": 1470, "y": 185, "w": 240, "h": 80 },
+    { "id": "cs3", "title": "FormationSystem", "tint": "sage", "x": 1210, "y": 285, "w": 240, "h": 80 },
+    { "id": "cs4", "title": "LocalCommandInputSystem", "tint": "sage", "x": 1470, "y": 285, "w": 240, "h": 80 },
+    { "id": "mnfs", "title": "MassNavigationFormationSystem", "tint": "sage", "x": 1210, "y": 395, "w": 500, "h": 90, "items": ["13-Step Fixed-Step Pipeline"] },
+
+    { "id": "s1", "title": "1. Group Target Update", "tint": "steel", "x": 360, "y": 680, "w": 420, "h": 80 },
+    { "id": "s2", "title": "2. Formation Slot Update", "tint": "steel", "x": 360, "y": 780, "w": 420, "h": 80 },
+    { "id": "s3", "title": "3. Flow Field Rebuild", "tint": "steel", "x": 360, "y": 880, "w": 420, "h": 80 },
+    { "id": "s4", "title": "4. Local Steering", "tint": "steel", "x": 360, "y": 980, "w": 420, "h": 80 },
+    { "id": "s5", "title": "5. Separation", "tint": "sage", "x": 360, "y": 1080, "w": 420, "h": 80 },
+
+    { "id": "s6", "title": "6. ORCA Avoidance", "tint": "sage", "x": 830, "y": 680, "w": 420, "h": 80 },
+    { "id": "s7", "title": "7. Sonar Avoidance", "tint": "sage", "x": 830, "y": 780, "w": 420, "h": 80 },
+    { "id": "s8", "title": "8. Dominant Mass Resolution", "tint": "clay", "x": 830, "y": 880, "w": 420, "h": 80 },
+    { "id": "s9", "title": "9. Hard Resolve", "tint": "clay", "x": 830, "y": 980, "w": 420, "h": 80 },
+    { "id": "s10", "title": "10. Arrival Check", "tint": "mauve", "x": 830, "y": 1080, "w": 420, "h": 80 },
+
+    { "id": "s11", "title": "11. Arrival Recovery", "tint": "mauve", "x": 1300, "y": 680, "w": 420, "h": 80 },
+    { "id": "s12", "title": "12. Entity Sync", "tint": "stone", "x": 1300, "y": 780, "w": 420, "h": 80 },
+    { "id": "s13", "title": "13. Telemetry Capture", "tint": "sand", "x": 1300, "y": 880, "w": 420, "h": 80 },
+
+    { "id": "out", "title": "WorldPositionCm / FacingDirection / VisualTransform", "tint": "stone", "border_w": 1.6, "x": 1130, "y": 1360, "w": 540, "h": 80 }
+  ],
+
+  "edges": [
+    { "from": "ic", "to": "rt" },
+    { "from": "rt", "to": "core" },
+    { "from": "mnfs", "to": "pipe" },
+    { "from": "s5", "to": "s10" },
+    { "from": "s10", "to": "s11", "route": "elbow", "from_side": "right", "to_side": "bottom", "stub": 25 },
+    { "from": "s12", "to": "out" }
+  ],
+
+  "notes": [
+    { "text": "MassNavigationFlowSolverState ~ 2700 lines partial class", "x": 60, "y": 1450, "ha": "left" },
+    { "text": "0-GC hot path: unsafe fixed arrays, no heap allocation", "x": 60, "y": 1476, "ha": "left" },
+    { "text": "Formations: Grid / Wedge / Line / Square / Circle", "x": 60, "y": 1502, "ha": "left" }
+  ]
+}

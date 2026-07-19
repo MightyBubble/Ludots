@@ -1,0 +1,65 @@
+{
+  "name": "vfs-hierarchy",
+  "title": "VFS Virtual File System Hierarchy",
+  "subtitle": "ModId:Path -> Physical File",
+  "canvas": { "width": 1720, "height": 1300 },
+
+  "groups": [
+    { "id": "overlay", "title": "Overlay Example: Mods can override resources from lower-priority mods",
+      "x": 100, "y": 940, "w": 1520, "h": 280, "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "vfs", "title": "VirtualFileSystem", "tint": "steel", "border_w": 1.6,
+      "x": 660, "y": 130, "w": 400, "h": 110,
+      "items": ["IVirtualFileSystem"] },
+
+    { "id": "mod1", "title": "LudotsCoreMod", "tint": "clay", "x": 140, "y": 330, "w": 380, "h": 100,
+      "items": ["priority: -1000"] },
+    { "id": "mod2", "title": "ExampleMod", "tint": "sand", "x": 670, "y": 330, "w": 380, "h": 100,
+      "items": ["priority: 0"] },
+    { "id": "mod3", "title": "MyGameMod", "tint": "sage", "x": 1200, "y": 330, "w": 380, "h": 100,
+      "items": ["priority: 100"] },
+
+    { "id": "f11", "title": "Configs/game.json", "tint": "graphite", "x": 140, "y": 500, "w": 380, "h": 70 },
+    { "id": "f12", "title": "Assets/Textures/", "tint": "graphite", "x": 140, "y": 650, "w": 380, "h": 70 },
+    { "id": "f13", "title": "Scripts/*.cs", "tint": "graphite", "x": 140, "y": 800, "w": 380, "h": 70 },
+
+    { "id": "f21", "title": "Configs/game.json", "tint": "graphite", "x": 670, "y": 500, "w": 380, "h": 70 },
+    { "id": "f22", "title": "Assets/Models/", "tint": "graphite", "x": 670, "y": 650, "w": 380, "h": 70 },
+    { "id": "f23", "title": "Scripts/*.cs", "tint": "graphite", "x": 670, "y": 800, "w": 380, "h": 70 },
+
+    { "id": "f31", "title": "Configs/game.json", "tint": "graphite", "x": 1200, "y": 500, "w": 380, "h": 70 },
+    { "id": "f32", "title": "Assets/Sounds/", "tint": "graphite", "x": 1200, "y": 650, "w": 380, "h": 70 },
+    { "id": "f33", "title": "Scripts/*.cs", "tint": "graphite", "x": 1200, "y": 800, "w": 380, "h": 70 },
+
+    { "id": "ov1", "title": "CoreMod:Assets/Textures/hero.png", "tint": "clay",
+      "x": 180, "y": 1020, "w": 560, "h": 90 },
+    { "id": "ov2", "title": "MyGameMod:Assets/Textures/hero.png", "tint": "sage",
+      "x": 980, "y": 1020, "w": 560, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "vfs", "to": "mod1", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "vfs", "to": "mod2", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "vfs", "to": "mod3", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "mod1", "to": "f11", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f11", "to": "f12", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f12", "to": "f13", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "mod2", "to": "f21", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f21", "to": "f22", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f22", "to": "f23", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "mod3", "to": "f31", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f31", "to": "f32", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "f32", "to": "f33", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "ov1", "to": "ov2", "route": "straight", "color": "#8fa393", "width": 1.6 }
+  ],
+
+  "notes": [
+    { "text": "Higher priority wins", "x": 1260, "y": 1140, "ha": "center" }
+  ]
+}

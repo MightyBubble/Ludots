@@ -1,0 +1,941 @@
+{
+  "name": "feature-mind-map",
+  "title": "Ludots Feature Mind Map",
+  "subtitle": "Full Feature Topology — Engine-centric radial expansion",
+  "canvas": {
+    "width": 2600,
+    "height": 2640
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 230,
+    "items": [
+      {
+        "label": "Core Layer",
+        "tint": "clay"
+      },
+      {
+        "label": "Config/Script",
+        "tint": "mauve"
+      },
+      {
+        "label": "Gameplay Layer",
+        "tint": "sage"
+      },
+      {
+        "label": "Input/Nav",
+        "tint": "steel"
+      },
+      {
+        "label": "Presentation",
+        "tint": "stone"
+      },
+      {
+        "label": "Adapter Layer",
+        "tint": "teal"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "center",
+      "title": "Ludots Engine",
+      "tint": "core",
+      "border_w": 1.8,
+      "x": 1140,
+      "y": 1250,
+      "w": 320,
+      "h": 140
+    },
+    {
+      "id": "d0",
+      "title": "ECS Core",
+      "tint": "clay",
+      "border_w": 1.4,
+      "x": 1175,
+      "y": 800,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d0l0",
+      "title": "Clock",
+      "tint": "clay",
+      "x": 1200,
+      "y": 167,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d0l1",
+      "title": "Time",
+      "tint": "clay",
+      "x": 1200,
+      "y": 239,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d0l2",
+      "title": "SystemGroup",
+      "tint": "clay",
+      "x": 1200,
+      "y": 311,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d0l3",
+      "title": "WorldRuntime",
+      "tint": "clay",
+      "x": 1200,
+      "y": 383,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d0l4",
+      "title": "GameEngine",
+      "tint": "clay",
+      "x": 1200,
+      "y": 455,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d1",
+      "title": "Config & Script",
+      "tint": "mauve",
+      "border_w": 1.4,
+      "x": 1451,
+      "y": 890,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d1l0",
+      "title": "GraphVM",
+      "tint": "mauve",
+      "x": 1776,
+      "y": 354,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d1l1",
+      "title": "Function",
+      "tint": "mauve",
+      "x": 1776,
+      "y": 426,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d1l2",
+      "title": "Trigger",
+      "tint": "mauve",
+      "x": 1776,
+      "y": 498,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d1l3",
+      "title": "ConfigMerger",
+      "tint": "mauve",
+      "x": 1776,
+      "y": 570,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d1l4",
+      "title": "ConfigPipeline",
+      "tint": "mauve",
+      "x": 1776,
+      "y": 642,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d2",
+      "title": "Modding",
+      "tint": "stone",
+      "border_w": 1.4,
+      "x": 1622,
+      "y": 1125,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d2l0",
+      "title": "ALC",
+      "tint": "stone",
+      "x": 2132,
+      "y": 844,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d2l1",
+      "title": "VFS",
+      "tint": "stone",
+      "x": 2132,
+      "y": 916,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d2l2",
+      "title": "DepResolver",
+      "tint": "stone",
+      "x": 2132,
+      "y": 988,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d2l3",
+      "title": "ModLoadContext",
+      "tint": "stone",
+      "x": 2132,
+      "y": 1060,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d2l4",
+      "title": "ModLoader",
+      "tint": "stone",
+      "x": 2132,
+      "y": 1132,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d3",
+      "title": "Persistence",
+      "tint": "steel",
+      "border_w": 1.4,
+      "x": 1622,
+      "y": 1415,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d3l0",
+      "title": "SaveParticipant",
+      "tint": "steel",
+      "x": 2132,
+      "y": 1486,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d3l1",
+      "title": "SaveContainer",
+      "tint": "steel",
+      "x": 2132,
+      "y": 1558,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d3l2",
+      "title": "BinarySerializer",
+      "tint": "steel",
+      "x": 2132,
+      "y": 1630,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d3l3",
+      "title": "WorldSnapshot",
+      "tint": "steel",
+      "x": 2132,
+      "y": 1702,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4",
+      "title": "GAS",
+      "tint": "sage",
+      "border_w": 1.4,
+      "x": 1451,
+      "y": 1650,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d4l0",
+      "title": "Handler",
+      "tint": "sage",
+      "x": 1776,
+      "y": 1904,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4l1",
+      "title": "Cue",
+      "tint": "sage",
+      "x": 1776,
+      "y": 1976,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4l2",
+      "title": "Tag",
+      "tint": "sage",
+      "x": 1776,
+      "y": 2048,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4l3",
+      "title": "Attribute",
+      "tint": "sage",
+      "x": 1776,
+      "y": 2120,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4l4",
+      "title": "Effect",
+      "tint": "sage",
+      "x": 1776,
+      "y": 2192,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d4l5",
+      "title": "Ability",
+      "tint": "sage",
+      "x": 1776,
+      "y": 2264,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d5",
+      "title": "Spawning & Spatial",
+      "tint": "sage",
+      "border_w": 1.4,
+      "x": 1175,
+      "y": 1740,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d5l0",
+      "title": "EntitySpawn",
+      "tint": "sage",
+      "x": 1200,
+      "y": 2127,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d5l1",
+      "title": "TemplateBatch",
+      "tint": "sage",
+      "x": 1200,
+      "y": 2199,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d5l2",
+      "title": "SpatialQuery",
+      "tint": "sage",
+      "x": 1200,
+      "y": 2271,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d5l3",
+      "title": "Chunk",
+      "tint": "sage",
+      "x": 1200,
+      "y": 2343,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d5l4",
+      "title": "HexGrid",
+      "tint": "sage",
+      "x": 1200,
+      "y": 2415,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6",
+      "title": "Input & Navigation",
+      "tint": "steel",
+      "border_w": 1.4,
+      "x": 899,
+      "y": 1650,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d6l0",
+      "title": "InputQueue",
+      "tint": "steel",
+      "x": 624,
+      "y": 1904,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6l1",
+      "title": "Selection",
+      "tint": "steel",
+      "x": 624,
+      "y": 1976,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6l2",
+      "title": "MassNav",
+      "tint": "steel",
+      "x": 624,
+      "y": 2048,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6l3",
+      "title": "PathStore",
+      "tint": "steel",
+      "x": 624,
+      "y": 2120,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6l4",
+      "title": "AutoPath",
+      "tint": "steel",
+      "x": 624,
+      "y": 2192,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d6l5",
+      "title": "FlowSolver",
+      "tint": "steel",
+      "x": 624,
+      "y": 2264,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d7",
+      "title": "Items & Exchange",
+      "tint": "stone",
+      "border_w": 1.4,
+      "x": 728,
+      "y": 1415,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d7l0",
+      "title": "Inventory",
+      "tint": "stone",
+      "x": 268,
+      "y": 1450,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d7l1",
+      "title": "ItemModel",
+      "tint": "stone",
+      "x": 268,
+      "y": 1522,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d7l2",
+      "title": "Equipment",
+      "tint": "stone",
+      "x": 268,
+      "y": 1594,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d7l3",
+      "title": "Exchange",
+      "tint": "stone",
+      "x": 268,
+      "y": 1666,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d7l4",
+      "title": "Transaction",
+      "tint": "stone",
+      "x": 268,
+      "y": 1738,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d8",
+      "title": "Relations & Narrative",
+      "tint": "mauve",
+      "border_w": 1.4,
+      "x": 728,
+      "y": 1125,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d8l0",
+      "title": "Relationship",
+      "tint": "mauve",
+      "x": 268,
+      "y": 844,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d8l1",
+      "title": "TeamManager",
+      "tint": "mauve",
+      "x": 268,
+      "y": 916,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d8l2",
+      "title": "Narrative",
+      "tint": "mauve",
+      "x": 268,
+      "y": 988,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d8l3",
+      "title": "Progression",
+      "tint": "mauve",
+      "x": 268,
+      "y": 1060,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d8l4",
+      "title": "Quest",
+      "tint": "mauve",
+      "x": 268,
+      "y": 1132,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9",
+      "title": "Presentation & Adapter",
+      "tint": "teal",
+      "border_w": 1.4,
+      "x": 899,
+      "y": 890,
+      "w": 250,
+      "h": 100
+    },
+    {
+      "id": "d9l0",
+      "title": "Performer",
+      "tint": "teal",
+      "x": 624,
+      "y": 318,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9l1",
+      "title": "UI",
+      "tint": "teal",
+      "x": 624,
+      "y": 390,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9l2",
+      "title": "Camera",
+      "tint": "teal",
+      "x": 624,
+      "y": 462,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9l3",
+      "title": "Raylib",
+      "tint": "teal",
+      "x": 624,
+      "y": 534,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9l4",
+      "title": "Web",
+      "tint": "teal",
+      "x": 624,
+      "y": 606,
+      "w": 200,
+      "h": 58
+    },
+    {
+      "id": "d9l5",
+      "title": "FrameProtocol",
+      "tint": "teal",
+      "x": 624,
+      "y": 678,
+      "w": 200,
+      "h": 58
+    }
+  ],
+  "edges": [
+    {
+      "from": "center",
+      "to": "d0",
+      "arrow": false
+    },
+    {
+      "from": "d0",
+      "to": "d0l0",
+      "arrow": false
+    },
+    {
+      "from": "d0",
+      "to": "d0l1",
+      "arrow": false
+    },
+    {
+      "from": "d0",
+      "to": "d0l2",
+      "arrow": false
+    },
+    {
+      "from": "d0",
+      "to": "d0l3",
+      "arrow": false
+    },
+    {
+      "from": "d0",
+      "to": "d0l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d1",
+      "arrow": false
+    },
+    {
+      "from": "d1",
+      "to": "d1l0",
+      "arrow": false
+    },
+    {
+      "from": "d1",
+      "to": "d1l1",
+      "arrow": false
+    },
+    {
+      "from": "d1",
+      "to": "d1l2",
+      "arrow": false
+    },
+    {
+      "from": "d1",
+      "to": "d1l3",
+      "arrow": false
+    },
+    {
+      "from": "d1",
+      "to": "d1l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d2",
+      "arrow": false
+    },
+    {
+      "from": "d2",
+      "to": "d2l0",
+      "arrow": false
+    },
+    {
+      "from": "d2",
+      "to": "d2l1",
+      "arrow": false
+    },
+    {
+      "from": "d2",
+      "to": "d2l2",
+      "arrow": false
+    },
+    {
+      "from": "d2",
+      "to": "d2l3",
+      "arrow": false
+    },
+    {
+      "from": "d2",
+      "to": "d2l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d3",
+      "arrow": false
+    },
+    {
+      "from": "d3",
+      "to": "d3l0",
+      "arrow": false
+    },
+    {
+      "from": "d3",
+      "to": "d3l1",
+      "arrow": false
+    },
+    {
+      "from": "d3",
+      "to": "d3l2",
+      "arrow": false
+    },
+    {
+      "from": "d3",
+      "to": "d3l3",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d4",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l0",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l1",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l2",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l3",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l4",
+      "arrow": false
+    },
+    {
+      "from": "d4",
+      "to": "d4l5",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d5",
+      "arrow": false
+    },
+    {
+      "from": "d5",
+      "to": "d5l0",
+      "arrow": false
+    },
+    {
+      "from": "d5",
+      "to": "d5l1",
+      "arrow": false
+    },
+    {
+      "from": "d5",
+      "to": "d5l2",
+      "arrow": false
+    },
+    {
+      "from": "d5",
+      "to": "d5l3",
+      "arrow": false
+    },
+    {
+      "from": "d5",
+      "to": "d5l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d6",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l0",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l1",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l2",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l3",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l4",
+      "arrow": false
+    },
+    {
+      "from": "d6",
+      "to": "d6l5",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d7",
+      "arrow": false
+    },
+    {
+      "from": "d7",
+      "to": "d7l0",
+      "arrow": false
+    },
+    {
+      "from": "d7",
+      "to": "d7l1",
+      "arrow": false
+    },
+    {
+      "from": "d7",
+      "to": "d7l2",
+      "arrow": false
+    },
+    {
+      "from": "d7",
+      "to": "d7l3",
+      "arrow": false
+    },
+    {
+      "from": "d7",
+      "to": "d7l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d8",
+      "arrow": false
+    },
+    {
+      "from": "d8",
+      "to": "d8l0",
+      "arrow": false
+    },
+    {
+      "from": "d8",
+      "to": "d8l1",
+      "arrow": false
+    },
+    {
+      "from": "d8",
+      "to": "d8l2",
+      "arrow": false
+    },
+    {
+      "from": "d8",
+      "to": "d8l3",
+      "arrow": false
+    },
+    {
+      "from": "d8",
+      "to": "d8l4",
+      "arrow": false
+    },
+    {
+      "from": "center",
+      "to": "d9",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l0",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l1",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l2",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l3",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l4",
+      "arrow": false
+    },
+    {
+      "from": "d9",
+      "to": "d9l5",
+      "arrow": false
+    }
+  ],
+  "notes": [
+    {
+      "text": "10 Domains | 4 Layers | Everything is Mod",
+      "x": 1980,
+      "y": 100,
+      "ha": "left"
+    }
+  ]
+}

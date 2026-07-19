@@ -1,0 +1,201 @@
+{
+  "name": "graph-execution-loop",
+  "title": "GraphExecutor 38 行执行循环展开",
+  "subtitle": "GraphExecutor.Execute loop — PC-driven loop with 4096 instruction limit",
+  "canvas": {
+    "width": 1560,
+    "height": 1420
+  },
+  "nodes": [
+    {
+      "id": "info",
+      "title": "GraphExecutor.cs",
+      "tint": "graphite",
+      "x": 70,
+      "y": 400,
+      "w": 330,
+      "h": 430,
+      "valign": "top",
+      "items": [
+        "Key Constraints:",
+        "· Max Instructions: 4096",
+        "· Handler Table: 512 slots",
+        "· Register: F/I/B/E x 32",
+        "· Max Targets: 256",
+        "",
+        "Execution Model:",
+        "· PC-driven interpreter loop",
+        "· O(1) handler dispatch",
+        "· No recursion in VM",
+        "· State passed by ref"
+      ]
+    },
+    {
+      "id": "entry",
+      "title": "Execute(ref state, program, handlerTable)",
+      "tint": "clay",
+      "x": 660,
+      "y": 130,
+      "w": 480,
+      "h": 70
+    },
+    {
+      "id": "init",
+      "title": "1 · PC = 0; instructionCount = 0",
+      "tint": "clay",
+      "x": 660,
+      "y": 270,
+      "w": 480,
+      "h": 70
+    },
+    {
+      "id": "pccheck",
+      "title": "PC < program.Length ?",
+      "tint": "steel",
+      "border_w": 1.6,
+      "x": 770,
+      "y": 410,
+      "w": 260,
+      "h": 64
+    },
+    {
+      "id": "ret",
+      "title": "Return",
+      "tint": "clay",
+      "x": 480,
+      "y": 560,
+      "w": 220,
+      "h": 64
+    },
+    {
+      "id": "fetch",
+      "title": "2 · ins = program[PC]",
+      "tint": "steel",
+      "x": 1080,
+      "y": 410,
+      "w": 360,
+      "h": 64
+    },
+    {
+      "id": "limit",
+      "title": "instructionCount > 4096 ?",
+      "tint": "sage",
+      "border_w": 1.6,
+      "x": 1080,
+      "y": 560,
+      "w": 300,
+      "h": 64
+    },
+    {
+      "id": "gethandler",
+      "title": "3 · handler = handlerTable[ins.Op]",
+      "tint": "clay",
+      "x": 1020,
+      "y": 710,
+      "w": 420,
+      "h": 70
+    },
+    {
+      "id": "invoke",
+      "title": "4 · handler(ref state, ins)",
+      "tint": "teal",
+      "x": 1020,
+      "y": 860,
+      "w": 420,
+      "h": 70
+    },
+    {
+      "id": "advance",
+      "title": "5 · PC += ins.Size; instructionCount++",
+      "tint": "steel",
+      "x": 1020,
+      "y": 1010,
+      "w": 420,
+      "h": 70
+    }
+  ],
+  "edges": [
+    {
+      "from": "entry",
+      "to": "init",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "init",
+      "to": "pccheck",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "pccheck",
+      "to": "ret",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "label": "No"
+    },
+    {
+      "from": "pccheck",
+      "to": "fetch",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Yes"
+    },
+    {
+      "from": "fetch",
+      "to": "limit",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "limit",
+      "to": "gethandler",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "label": "No"
+    },
+    {
+      "from": "gethandler",
+      "to": "invoke",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "invoke",
+      "to": "advance",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "advance",
+      "to": "pccheck",
+      "route": "elbow",
+      "from_side": "left",
+      "to_side": "left",
+      "stub": 40,
+      "label": "loop"
+    }
+  ],
+  "notes": [
+    {
+      "text": "Yes → Abort",
+      "x": 1240,
+      "y": 660,
+      "ha": "center"
+    },
+    {
+      "text": "⚠ GraphExecutor 是解释型执行器（非 JIT）。未来可能引入编译式执行优化（performer-compiled-lanes）。",
+      "x": 90,
+      "y": 1330,
+      "ha": "left"
+    }
+  ]
+}

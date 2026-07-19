@@ -24,8 +24,8 @@
   .diagram-card .title { font-weight: 600; font-size: 14.5px; margin-bottom: 6px; }
   .diagram-card .desc { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; line-height: 1.55; }
   .diagram-card .preview {
-    width: 100%; height: 180px; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); overflow: hidden; background: var(--bg);
+    width: 100%; height: 180px; border: 1px solid var(--bg-hairline);
+    border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-soft);
     display: flex; align-items: center; justify-content: center;
   }
   .diagram-card .preview img { max-width: 100%; max-height: 100%; }
@@ -80,7 +80,7 @@
   /* ============ 图纸数据（迁移自旧版 diagrams.html，13 大分类 / 57 组 SVG） ============ */
   var categories = [
     {
-      name: "Engine & Architecture", icon: "⚙️", color: "#c45c3e",
+      name: "Engine & Architecture", icon: "⚙️", color: "#2f3542",
       diagrams: [
         { file: "engine-architecture.svg", title: "整体引擎架构", desc: "以 GameEngine 为核心，放射状展示 8 大子系统与平台适配器" },
         { file: "systemgroup-pipeline.svg", title: "SystemGroup 流水线", desc: "10 个 Phase 的完整执行顺序，每个 Phase 展开注册的实际系统" },
@@ -91,7 +91,7 @@
       ]
     },
     {
-      name: "GAS & Combat", icon: "⚔️", color: "#6b8e6b",
+      name: "GAS & Combat", icon: "⚔️", color: "#6f9379",
       diagrams: [
         { file: "gas-component-relation.svg", title: "GAS 组件关系", desc: "Ability / Effect / Attribute / Tag / Cue 围绕 GasRuntimeState 的协调关系" },
         { file: "ability-activation-flow.svg", title: "Ability 激活流程", desc: "Input → Order → 校验 → 时间线执行 → Effect → Attribute → Cue" },
@@ -101,7 +101,7 @@
       ]
     },
     {
-      name: "ECS & Data Model", icon: "📦", color: "#5c7a8e",
+      name: "ECS & Data Model", icon: "📦", color: "#6b7a8d",
       diagrams: [
         { file: "ecs-datamodel-ecs-hierarchy.svg", title: "ECS 层级结构", desc: "World → Entity → Component → System → Archetype 的完整层级" },
         { file: "ecs-datamodel-chunk-storage.svg", title: "Chunk SoA 存储", desc: "Chunk Header + ComponentArray 的内存布局细节" },
@@ -111,7 +111,7 @@
       ]
     },
     {
-      name: "Navigation & Movement", icon: "🧭", color: "#5c7a8e",
+      name: "Navigation & Movement", icon: "🧭", color: "#6b7a8d",
       diagrams: [
         { file: "nav-navigation-stack.svg", title: "导航技术栈", desc: "CDT → NavMesh → HPA → MassNav → ORCA/Sonar 五层架构" },
         { file: "nav-navmesh-baking.svg", title: "NavMesh 烘焙", desc: "Geometry → CDT → Polygon → Graph 的完整烘焙管线" },
@@ -124,7 +124,7 @@
       ]
     },
     {
-      name: "Presentation & Rendering", icon: "🎨", color: "#8e6b5c",
+      name: "Presentation & Rendering", icon: "🎨", color: "#6b7a8d",
       diagrams: [
         { file: "performer-lifecycle.svg", title: "Performer 生命周期", desc: "Definition → Compile → Bootstrap → Create → Update → Destroy" },
         { file: "performer-command-flow.svg", title: "PerformerCommand 流", desc: "Event → CommandBuffer → EmitSystem → EntityRuntime 的完整流" },
@@ -135,7 +135,7 @@
       ]
     },
     {
-      name: "Modding & Configuration", icon: "🔧", color: "#8e7a5c",
+      name: "Modding & Configuration", icon: "🔧", color: "#a08b62",
       diagrams: [
         { file: "mod-loading-flow.svg", title: "Mod 加载流程", desc: "Discover → Resolve → Sort → Load → OnLoad 四阶段" },
         { file: "alc-isolation.svg", title: "ALC 隔离", desc: "Host App → ALC → 三层解析 → Mod Assembly Types" },
@@ -145,7 +145,7 @@
       ]
     },
     {
-      name: "GraphRuntime & Scripting", icon: "📜", color: "#8e6b8e",
+      name: "GraphRuntime & Scripting", icon: "📜", color: "#6b87a3",
       diagrams: [
         { file: "graph-vm-structure.svg", title: "GraphVM 结构", desc: "Instruction → Executor → Handler Table → Register 的 VM 架构" },
         { file: "graph-compiler-flow.svg", title: "GraphCompiler 编译", desc: "JSON → Validator → Compiler → Bytecode → Program 的完整流程" },
@@ -154,7 +154,7 @@
       ]
     },
     {
-      name: "Input & Interaction", icon: "🎮", color: "#7a6b8e",
+      name: "Input & Interaction", icon: "🎮", color: "#6b7a8d",
       diagrams: [
         { file: "input-order-flow.svg", title: "Input → Order → Command", desc: "Raw Input → Adapter → Order → Command → GAS 的完整链路" },
         { file: "selection-state-machine.svg", title: "Selection 状态机", desc: "Empty/Single/Multi/Group/View/Formation 六状态与 13 条转换边" },
@@ -163,7 +163,7 @@
       ]
     },
     {
-      name: "Adapter & Platform", icon: "🔌", color: "#6b8e8e",
+      name: "Adapter & Platform", icon: "🔌", color: "#6f9379",
       diagrams: [
         { file: "adapter-comparison.svg", title: "三平台对比", desc: "Raylib / Web / UE5 的架构对比与 IAdapter 接口层" },
         { file: "web-streaming.svg", title: "Web 串流", desc: "Server → FrameProtocol → DeltaCompressor → WebSocket → Client" },
@@ -171,7 +171,7 @@
       ]
     },
     {
-      name: "Business Process", icon: "📋", color: "#5c6b8e",
+      name: "Business Process", icon: "📋", color: "#6b87a3",
       diagrams: [
         { file: "business-map-load-flow.svg", title: "地图加载", desc: "Launcher → Bootstrap → Mod → Map → Entity 的加载流程" },
         { file: "business-save-restore-flow.svg", title: "存档/读档", desc: "Save 与 Restore 的双流程对比与 .ldsave 格式" },
@@ -179,7 +179,7 @@
       ]
     },
     {
-      name: "Registry & Dependencies", icon: "🔗", color: "#5c6b8e",
+      name: "Registry & Dependencies", icon: "🔗", color: "#6b87a3",
       diagrams: [
         { file: "registry-dependency.svg", title: "Registry 依赖网络", desc: "30+ 个注册表按 8 大子系统分类的依赖关系图" },
         { file: "registry-extension.svg", title: "Registry 扩展时序", desc: "ModLoader → ALC → IMod → Registry → GameEngine 的时序" },
@@ -189,13 +189,13 @@
       ]
     },
     {
-      name: "Spatial & Vision", icon: "👁️", color: "#5c7a8e",
+      name: "Spatial & Vision", icon: "👁️", color: "#6b7a8d",
       diagrams: [
         { file: "vision-fog-flow.svg", title: "视野与迷雾", desc: "VisionEmitter → ChunkedField → FogLayer → Visual 的 6 阶段计算" }
       ]
     },
     {
-      name: "Capability & Showcase", icon: "🏆", color: "#c45c3e",
+      name: "Capability & Showcase", icon: "🏆", color: "#2f3542",
       diagrams: [
         { file: "capability-matrix.svg", title: "Capability 矩阵", desc: "8 模块 × 4 成熟度等级的热力图" },
         { file: "showcase-topology.svg", title: "Showcase 拓扑", desc: "5 个演示套件与底层引擎能力的映射关系" }

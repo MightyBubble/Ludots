@@ -1,0 +1,87 @@
+{
+  "name": "input-order-flow",
+  "title": "Input → Order → Command 数据流",
+  "subtitle": "Ludots Input Flow / 从原始输入到实体指令的完整链路",
+  "canvas": { "width": 2000, "height": 1420 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40, "y": 800,
+    "items": [
+      { "label": "Input System", "tint": "mauve" },
+      { "label": "Platform Adapter", "tint": "teal" },
+      { "label": "Core Engine", "tint": "clay" },
+      { "label": "Presentation", "tint": "stone" }
+    ]
+  },
+
+  "groups": [
+    { "id": "raw", "title": "Raw Input Sources", "x": 40, "y": 140, "w": 380, "h": 580, "tint": "mauve" },
+    { "id": "adapter", "title": "Input Adapter", "x": 460, "y": 140, "w": 300, "h": 770, "tint": "teal" },
+    { "id": "order", "title": "Order System", "x": 800, "y": 140, "w": 300, "h": 930, "tint": "mauve" },
+    { "id": "command", "title": "Command System", "x": 1140, "y": 140, "w": 300, "h": 930, "tint": "clay" },
+    { "id": "selview", "title": "Selection & View", "x": 1480, "y": 140, "w": 480, "h": 580, "tint": "stone" },
+    { "id": "feedback", "title": "Feedback & State", "x": 460, "y": 1140, "w": 1500, "h": 220, "tint": "graphite" }
+  ],
+
+  "nodes": [
+    { "id": "kb", "title": "Keyboard", "tint": "mauve", "x": 70, "y": 200, "w": 150, "h": 110, "items": ["WASD/方向键"] },
+    { "id": "mouse", "title": "Mouse", "tint": "mauve", "x": 250, "y": 200, "w": 150, "h": 110, "items": ["Click/Drag/右键"] },
+    { "id": "touch", "title": "Touch", "tint": "mauve", "x": 70, "y": 340, "w": 150, "h": 110, "items": ["触摸手势"] },
+    { "id": "pad", "title": "Gamepad", "tint": "mauve", "x": 250, "y": 340, "w": 150, "h": 110, "items": ["按键/摇杆"] },
+    { "id": "hotkey", "title": "Hotkey", "tint": "mauve", "x": 70, "y": 480, "w": 150, "h": 110, "items": ["快捷键绑定"] },
+    { "id": "uiev", "title": "UI Event", "tint": "mauve", "x": 250, "y": 480, "w": 150, "h": 110, "items": ["按钮/面板"] },
+
+    { "id": "a1", "title": "Adapter Capture", "tint": "teal", "x": 490, "y": 200, "w": 240, "h": 110, "items": ["采集原始输入"] },
+    { "id": "a2", "title": "RawInputBuffer", "tint": "teal", "x": 490, "y": 350, "w": 240, "h": 110, "items": ["原始输入缓冲"] },
+    { "id": "a3", "title": "Input Normalizer", "tint": "teal", "x": 490, "y": 500, "w": 240, "h": 110, "items": ["输入归一化"] },
+    { "id": "a4", "title": "Context Filter", "tint": "teal", "x": 490, "y": 650, "w": 240, "h": 110, "items": ["上下文过滤"] },
+
+    { "id": "o1", "title": "OrderFactory", "tint": "mauve", "x": 830, "y": 200, "w": 240, "h": 110, "items": ["生成游戏 Order"] },
+    { "id": "o2", "title": "TargetResolver", "tint": "mauve", "x": 830, "y": 350, "w": 240, "h": 110, "items": ["目标解析"] },
+    { "id": "o3", "title": "InteractionMode", "tint": "mauve", "x": 830, "y": 500, "w": 240, "h": 110, "items": ["交互模式选择"] },
+    { "id": "o4", "title": "OrderValidator", "tint": "mauve", "x": 830, "y": 650, "w": 240, "h": 110, "items": ["指令校验"] },
+    { "id": "o5", "title": "OrderQueue", "tint": "mauve", "x": 830, "y": 800, "w": 240, "h": 110, "items": ["Order 队列"] },
+
+    { "id": "c1", "title": "CommandBuilder", "tint": "clay", "x": 1170, "y": 200, "w": 240, "h": 110, "items": ["构建 Command"] },
+    { "id": "c2", "title": "CommandDispatcher", "tint": "clay", "x": 1170, "y": 350, "w": 240, "h": 110, "items": ["Command 分发"] },
+    { "id": "c3", "title": "AbilityActivator", "tint": "clay", "x": 1170, "y": 500, "w": 240, "h": 110, "items": ["Ability 激活"] },
+    { "id": "c4", "title": "GAS Pipeline", "tint": "clay", "x": 1170, "y": 650, "w": 240, "h": 110, "items": ["GAS 管线处理"] },
+    { "id": "c5", "title": "EntityMutation", "tint": "clay", "x": 1170, "y": 800, "w": 240, "h": 110, "items": ["实体变更"] },
+
+    { "id": "sm", "title": "SelectMgr", "tint": "stone", "x": 1510, "y": 200, "w": 200, "h": 90, "items": ["选择管理"] },
+    { "id": "cam", "title": "CameraCtrl", "tint": "stone", "x": 1730, "y": 200, "w": 200, "h": 90, "items": ["相机控制"] },
+    { "id": "form", "title": "FormationCmd", "tint": "stone", "x": 1510, "y": 330, "w": 420, "h": 90, "items": ["编队指令"] },
+    { "id": "mmap", "title": "MinimapInput", "tint": "stone", "x": 1510, "y": 460, "w": 420, "h": 90, "items": ["小地图输入"] },
+
+    { "id": "f1", "title": "Effect Feedback", "tint": "sage", "x": 490, "y": 1200, "w": 330, "h": 110, "items": ["特效反馈"] },
+    { "id": "f2", "title": "Navigation", "tint": "steel", "x": 865, "y": 1200, "w": 330, "h": 110, "items": ["导航反馈"] },
+    { "id": "f3", "title": "UI Update", "tint": "stone", "x": 1240, "y": 1200, "w": 330, "h": 110, "items": ["UI 状态更新"] },
+    { "id": "f4", "title": "Input State", "tint": "mauve", "x": 1615, "y": 1200, "w": 330, "h": 110, "items": ["输入状态回写"] }
+  ],
+
+  "edges": [
+    { "from": "mouse", "to": "a1", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 30 },
+    { "from": "pad", "to": "a2", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 30 },
+    { "from": "uiev", "to": "a3", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 30 },
+    { "from": "a1", "to": "a2" },
+    { "from": "a2", "to": "a3" },
+    { "from": "a3", "to": "a4" },
+    { "from": "a4", "to": "o3", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 30 },
+    { "from": "o1", "to": "o2" },
+    { "from": "o2", "to": "o3" },
+    { "from": "o3", "to": "o4" },
+    { "from": "o4", "to": "o5" },
+    { "from": "o5", "to": "c1", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 30 },
+    { "from": "c1", "to": "c2" },
+    { "from": "c2", "to": "c3" },
+    { "from": "c3", "to": "c4" },
+    { "from": "c4", "to": "c5" },
+    { "from": "c2", "to": "sm", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 40 },
+    { "from": "c2", "to": "cam", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 60 },
+    { "from": "a4", "to": "f1", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40, "style": "dashed", "label": "Input Handled" },
+    { "from": "o5", "to": "f2", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40, "style": "dashed", "label": "Order Executed" },
+    { "from": "c5", "to": "f3", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40, "style": "dashed", "label": "Entity Mutated" },
+    { "from": "mmap", "to": "f4", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40, "style": "dashed" }
+  ]
+}
