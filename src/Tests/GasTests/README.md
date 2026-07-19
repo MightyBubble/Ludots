@@ -2,8 +2,8 @@
 
 ## 入口（先读这两份）
 
-- MUD 验收需求（文档→测试唯一入口）：[35_用例_00_MUD_DeferredTrigger与GameplayEvent.md](file:///c:/AIProjects/Ludots/docs/08_能力系统/02_统一规范/35_用例_00_MUD_DeferredTrigger与GameplayEvent.md)
-- GasTests 测试风格规范（唯一真源）：[TESTING_STYLE.md](file:///c:/AIProjects/Ludots/src/Tests/GasTests/TESTING_STYLE.md)
+- MUD 验收需求（文档→测试唯一入口）：[GAS 分层架构（gitbook）](../../../gitbook/architecture/gas-layered-architecture.md)（原 `docs/08_能力系统/` 用例文档已下线，DeferredTrigger 与 GameplayEvent 主题以此为准）
+- GasTests 测试风格规范（唯一真源）：[TESTING_STYLE.md](TESTING_STYLE.md)
 
 ## 测试覆盖范围
 
@@ -122,4 +122,4 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~GasB
 
 ## 日志输出
 
-日志策略以 [TESTING_STYLE.md](file:///c:/AIProjects/Ludots/src/Tests/GasTests/TESTING_STYLE.md) 为准：新增/维护测试默认不使用 `Console.WriteLine` 作为常规输出；仅在必要的失败诊断场景使用 `TestContext.WriteLine` 输出最小信息。
+日志策略以 [TESTING_STYLE.md](TESTING_STYLE.md) 为准：新增/维护测试默认不使用 `Console.WriteLine` 作为常规输出；仅在必要的失败诊断场景使用 `TestContext.WriteLine` 输出最小信息。

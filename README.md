@@ -6,6 +6,10 @@
 
 [中文文档 (Chinese)](README_CN.md)
 
+## 📖 Documentation Portal
+
+**Official entry: [https://mightybubble.github.io/Ludots/](https://mightybubble.github.io/Ludots/)** — documentation, Showcase gallery, test acceptance evidence, and the architecture diagram library, all aggregated in one place. New here? Start from the portal.
+
 ## 🌟 Introduction
 
 Ludots is a modern C# game framework designed for high-performance gameplay logic. It leverages ECS (Entity Component System) architecture, deterministic simulation, and a modular design to support complex game genres like MOBA, RTS, and Simulation games.
@@ -21,9 +25,15 @@ Ludots is a modern C# game framework designed for high-performance gameplay logi
 
 ## 🚀 Quick Start
 
+> The commands below are the canonical way to build and run. For the full newcomer guide (environment, showcase tour, acceptance evidence), see the [Documentation Portal](https://mightybubble.github.io/Ludots/).
+
 ### Prerequisites
-*   .NET 8.0 SDK or later
+*   .NET 8.0 SDK
+*   .NET 9.0 SDK
+*   .NET 10.0 preview SDK
 *   Node.js & npm (for Editor)
+
+All three .NET SDKs are required — a missing SDK can cause `dotnet restore` or launcher build failures. See the [Quick Start](gitbook/quick-start.md) for the full contract.
 
 ### Build & Run
 
@@ -42,11 +52,15 @@ Scripts are located in the `scripts/` directory:
 **Manual Build (CLI)**
 
 ```bash
-# Build the main Raylib App
-dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
+# Run the Mass Navigation showcase through the launcher (canonical product entry)
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
+```
 
-# Run the Mass Navigation showcase through the launcher
-.\scripts\run-mod-launcher.cmd preset mass_navigation
+Building the adapter app directly is for debugging only — it is not the product entry:
+
+```bash
+# Debug use only: build the Raylib adapter app
+dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
 ```
 
 ## 📂 Project Structure
@@ -56,16 +70,16 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `mods/`: 30+ built-in and demo mods (outside `src/` for UGC parity).
 *   `src/Tools/`: Developer tools (Editor, ModLauncher, NavBake).
 *   `src/Libraries/`: Source-integrated third-party (Arch, DotRecast, Raylib-cs).
-*   `docs/`: Documentation (formal SSOT: conventions, architecture, reference, ADR, audits, RFCs).
+*   `docs/`: Portal site source and in-repo deep materials (conventions, architecture, reference, ADR, audits, RFCs).
 
 ## 📚 Documentation
 
-*   **[GitBook 首页](gitbook/README.md)** — Ludots 正式文档真相与阅读入口
-*   **[贡献与开发](gitbook/contributing/README.md)** — 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置、文档治理
-*   [架构 (Architecture)](gitbook/architecture/README.md) — 当前正式架构总览
-*   [参考资料 (Reference)](gitbook/reference/README.md) — CLI 与项目地图等正式操作资料
-*   [Publishing & Access](gitbook/reference/publishing-and-access.md) — GitBook Git Sync 接入方式与 GitHub 访问入口
-*   [仓库深度材料](docs/README.md) — ADR、审计、RFC 与长篇设计说明
+The single official entry is the **[Ludots Documentation Portal](https://mightybubble.github.io/Ludots/)** — documentation, Showcase gallery, test acceptance evidence, and the architecture diagram library are all published there.
+
+*   Writing source (markdown): [`gitbook/`](gitbook/README.md) — navigation in `gitbook/SUMMARY.md`, assembled into the portal by CI
+*   [Contributing & Development](gitbook/contributing/README.md) — coding standards, feature development workflow, AI-assisted development rules, environment setup
+*   Showcase & acceptance registry: `showcase.registry.json` (repo root)
+*   [In-repo deep materials](docs/README.md) — portal site source, ADR, audits, RFCs, and long-form design docs
 
 ## 🤝 Contributing
 

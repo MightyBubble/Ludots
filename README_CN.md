@@ -6,6 +6,10 @@
 
 [English Documentation](README.md)
 
+## 📖 门户站点
+
+**正式入口统一为：[https://mightybubble.github.io/Ludots/](https://mightybubble.github.io/Ludots/)** —— 文档、Showcase 画廊、测试验收、架构图库一站聚合。新人请从门户开始。
+
 ## 🌟 简介
 
 Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计。它利用 ECS（实体组件系统）架构、确定性模拟和模块化设计，支持 MOBA、RTS 和模拟游戏等复杂游戏类型。
@@ -21,9 +25,15 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 
 ## 🚀 快速开始
 
+> 下列命令是构建运行的 canonical 方式；完整新人指引（环境配置、Showcase 导览、验收证据）见[门户站点](https://mightybubble.github.io/Ludots/)。
+
 ### 前置要求
-*   .NET 8.0 SDK 或更高版本
+*   .NET 8.0 SDK
+*   .NET 9.0 SDK
+*   .NET 10.0 preview SDK
 *   Node.js & npm (用于编辑器)
+
+三个 .NET SDK 缺一不可——缺少任一 SDK 都可能导致 `dotnet restore` 或 launcher 构建失败。完整契约见 [快速开始](gitbook/quick-start.md)。
 
 ### 构建与运行
 
@@ -42,11 +52,15 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 **手动构建 (CLI)**
 
 ```bash
-# 构建主 Raylib 应用程序
-dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
+# 通过启动器运行 Mass Navigation 示例（canonical 产品入口）
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
+```
 
-# 通过启动器运行 Mass Navigation 示例
-.\scripts\run-mod-launcher.cmd preset mass_navigation
+直接构建 adapter app 仅用于调试，不是产品入口：
+
+```bash
+# 仅调试用途：直接构建 Raylib adapter app
+dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
 ```
 
 ## 📂 项目结构
@@ -56,18 +70,16 @@ dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Rel
 *   `mods`: 内置 Mod 和示例 (MobaDemo, RtsDemo)。
 *   `src/Tools`: 开发者工具 (Editor, ModLauncher, NavBake)。
 *   `assets`: 游戏资源和配置。
-*   `docs`: 详细文档。
+*   `docs`: 门户站点源码与仓库深度材料（规范、架构、参考、ADR、审计、RFC）。
 
 ## 📚 文档
 
-正式文档源位于 `gitbook/` 目录中，仓库内 `docs/` 保留为深度材料与证据目录。
+唯一正式入口是 **[Ludots 门户站点](https://mightybubble.github.io/Ludots/)** —— 文档、Showcase 画廊、测试验收证据与架构图库均在此发布。
 
-*   [GitBook 首页](gitbook/README.md)
-*   [贡献与开发](gitbook/contributing/README.md)
-*   [架构](gitbook/architecture/README.md)
-*   [参考资料](gitbook/reference/README.md)
-*   [发布与访问](gitbook/reference/publishing-and-access.md)
-*   [仓库深度材料](docs/README.md)
+*   写作源（markdown）：[`gitbook/`](gitbook/README.md) —— 导航见 `gitbook/SUMMARY.md`，由 CI 组装进门户
+*   [贡献与开发](gitbook/contributing/README.md) —— 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置
+*   Showcase 与验收注册表：仓库根 `showcase.registry.json`
+*   [仓库深度材料](docs/README.md) —— 门户站点源码、ADR、审计、RFC 与长篇设计说明
 
 ## 🤝 贡献
 
