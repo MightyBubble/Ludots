@@ -34,6 +34,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+# CI Windows 运行器默认控制台编码（如 cp1252）无法输出中文，强制 UTF-8。
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
 TIERS = {"T1", "T2", "T3", "T4"}
 CATEGORIES = {
     "capability", "genre", "panel", "stress",
