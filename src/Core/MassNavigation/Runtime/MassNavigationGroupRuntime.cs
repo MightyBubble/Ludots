@@ -297,55 +297,173 @@ internal sealed class MassNavigationGroupRuntime
             $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
     }
 
-    internal bool PreflightOrderMoveCommand(
+    internal bool PrepareOrderMoveCommand(
         MassNavigationFlowSolverState simulation,
         MassNavigationAgentState agentState,
         int orderToken,
         ReadOnlySpan<int> memberIndices,
         int teamId,
-        Vector2 destinationWorldCm)
+        Vector2 destinationWorldCm,
+        Span<Vector2> preparedMemberTargetsWorldCm,
+        out Vector2 resolvedDestinationWorldCm)
     {
+        resolvedDestinationWorldCm = default;
         if (orderToken <= 0 || memberIndices.Length <= 0)
         {
             return false;
         }
 
+        if (preparedMemberTargetsWorldCm.Length < memberIndices.Length)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation command preparation requires {memberIndices.Length} target slots, but only {preparedMemberTargetsWorldCm.Length} were provided.");
+        }
+
         bool singleMemberOrder = memberIndices.Length == 1;
-        if (RequiresNewOrderGroup(orderToken))
+        NavGroupState? group = null;
+        bool rebuildOffsets = true;
+        bool retarget = true;
+        if (!RequiresNewOrderGroup(orderToken))
+        {
+            int groupId = _orderTokenToGroupId[orderToken];
+            group = _groups[groupId]!;
+            rebuildOffsets = !HaveSameMembers(group, memberIndices);
+            retarget =
+                group.TeamId != teamId ||
+                group.RequestedDestinationWorldX != destinationWorldCm.X ||
+                group.RequestedDestinationWorldY != destinationWorldCm.Y ||
+                rebuildOffsets;
+            if (!retarget)
+            {
+                resolvedDestinationWorldCm = new Vector2(
+                    group.DestinationWorldX,
+                    group.DestinationWorldY);
+                for (int i = 0; i < memberIndices.Length; i++)
+                {
+                    preparedMemberTargetsWorldCm[i] = new Vector2(
+                        group.MemberOrderTargetWorldX[i],
+                        group.MemberOrderTargetWorldY[i]);
+                }
+
+                return false;
+            }
+        }
+
+        if (group == null || rebuildOffsets)
         {
             EnsureMembershipCapacityForMembers(memberIndices);
             EnsureGroupMemberCapacity(memberIndices.Length);
             ValidateGroupMembersBound(agentState, memberIndices);
-            _ = singleMemberOrder
-                ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
-                : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
-            return true;
         }
 
-        int groupId = _orderTokenToGroupId[orderToken];
-        NavGroupState group = _groups[groupId]!;
-        bool rebuildOffsets = !HaveSameMembers(group, memberIndices);
-        bool retarget =
-            group.TeamId != teamId ||
-            group.RequestedDestinationWorldX != destinationWorldCm.X ||
-            group.RequestedDestinationWorldY != destinationWorldCm.Y ||
-            rebuildOffsets;
-        if (!retarget)
-        {
-            return false;
-        }
-
-        if (rebuildOffsets)
-        {
-            EnsureMembershipCapacityForMembers(memberIndices);
-            EnsureGroupMemberCapacity(memberIndices.Length);
-            ValidateGroupMembersBound(agentState, memberIndices);
-        }
-
-        _ = singleMemberOrder
+        resolvedDestinationWorldCm = singleMemberOrder
             ? ResolveSingleMemberWorldDestination(simulation, memberIndices[0], destinationWorldCm)
             : ResolveGroupWorldDestination(simulation, memberIndices, memberIndices.Length, destinationWorldCm);
+        Vector2 destinationLocalCm = simulation.WorldToLocalCm(resolvedDestinationWorldCm);
+        float centerX = 0f;
+        float centerY = 0f;
+        if (rebuildOffsets)
+        {
+            for (int i = 0; i < memberIndices.Length; i++)
+            {
+                centerX += simulation.GetPositionX(memberIndices[i]);
+                centerY += simulation.GetPositionY(memberIndices[i]);
+            }
+
+            float invCount = 1f / memberIndices.Length;
+            centerX *= invCount;
+            centerY *= invCount;
+        }
+
+        float configuredClearanceCm = singleMemberOrder
+            ? simulation.Semantics.TargetProjection.LooseTargetClearanceCm
+            : simulation.Semantics.TargetProjection.GroupSlotClearanceCm;
+        for (int i = 0; i < memberIndices.Length; i++)
+        {
+            int unitIndex = memberIndices[i];
+            float offsetX = rebuildOffsets
+                ? simulation.GetPositionX(unitIndex) - centerX
+                : group!.OffsetX[i];
+            float offsetY = rebuildOffsets
+                ? simulation.GetPositionY(unitIndex) - centerY
+                : group!.OffsetY[i];
+            Vector2 resolvedTarget = simulation.ResolveUnitNavigableTarget(
+                unitIndex,
+                destinationLocalCm.X + offsetX,
+                destinationLocalCm.Y + offsetY,
+                offsetX,
+                offsetY,
+                configuredClearanceCm);
+            preparedMemberTargetsWorldCm[i] = simulation.LocalToWorldCm(resolvedTarget);
+        }
+
         return true;
+    }
+
+    internal int CommitPreparedOrderMoveCommand(
+        MassNavigationFlowSolverState simulation,
+        MassNavigationAgentState agentState,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 requestedDestinationWorldCm,
+        Vector2 resolvedDestinationWorldCm,
+        ReadOnlySpan<Vector2> preparedMemberTargetsWorldCm)
+    {
+        if (orderToken <= 0 || memberIndices.Length <= 0 ||
+            preparedMemberTargetsWorldCm.Length < memberIndices.Length)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation prepared command commit requires a positive token and one prepared target per member.");
+        }
+
+        if (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
+            (uint)groupId >= (uint)_groups.Count ||
+            _groups[groupId] == null)
+        {
+            groupId = AllocateGroupId();
+            DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
+            NavGroupState created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId);
+            created.CommandToken = orderToken;
+            created.RequestedDestinationWorldX = requestedDestinationWorldCm.X;
+            created.RequestedDestinationWorldY = requestedDestinationWorldCm.Y;
+            created.DestinationWorldX = resolvedDestinationWorldCm.X;
+            created.DestinationWorldY = resolvedDestinationWorldCm.Y;
+            _groups[groupId] = created;
+            _orderTokenToGroupId[orderToken] = groupId;
+            AssignPreparedOrderTargets(
+                simulation,
+                groupId,
+                created,
+                preparedMemberTargetsWorldCm,
+                resetRecovery: true);
+            ActiveGroupCount = CountActiveGroups();
+            return memberIndices.Length;
+        }
+
+        NavGroupState group = _groups[groupId]!;
+        bool rebuildOffsets = !HaveSameMembers(group, memberIndices);
+        if (rebuildOffsets)
+        {
+            DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
+            ReplaceGroupMembers(simulation, agentState, groupId, group, memberIndices, teamId);
+        }
+
+        group.TeamId = teamId;
+        group.CommandToken = orderToken;
+        group.RequestedDestinationWorldX = requestedDestinationWorldCm.X;
+        group.RequestedDestinationWorldY = requestedDestinationWorldCm.Y;
+        group.DestinationWorldX = resolvedDestinationWorldCm.X;
+        group.DestinationWorldY = resolvedDestinationWorldCm.Y;
+        _groups[groupId] = group;
+        AssignPreparedOrderTargets(
+            simulation,
+            groupId,
+            group,
+            preparedMemberTargetsWorldCm,
+            resetRecovery: rebuildOffsets);
+        ActiveGroupCount = CountActiveGroups();
+        return group.MemberCount;
     }
 
     public int UpsertOrderMoveCommand(
@@ -909,6 +1027,25 @@ internal sealed class MassNavigationGroupRuntime
             Vector2 resolvedTargetWorld = simulation.LocalToWorldCm(resolvedTarget);
             group.MemberOrderTargetWorldX[i] = resolvedTargetWorld.X;
             group.MemberOrderTargetWorldY[i] = resolvedTargetWorld.Y;
+        }
+    }
+
+    private void AssignPreparedOrderTargets(
+        MassNavigationFlowSolverState simulation,
+        int groupId,
+        NavGroupState group,
+        ReadOnlySpan<Vector2> preparedMemberTargetsWorldCm,
+        bool resetRecovery)
+    {
+        for (int i = 0; i < group.MemberCount; i++)
+        {
+            int unitIndex = group.MemberIndices[i];
+            Vector2 targetWorldCm = preparedMemberTargetsWorldCm[i];
+            Vector2 targetLocalCm = simulation.WorldToLocalCm(targetWorldCm);
+            _groupIdsByAgentIndex[unitIndex] = groupId;
+            group.MemberOrderTargetWorldX[i] = targetWorldCm.X;
+            group.MemberOrderTargetWorldY[i] = targetWorldCm.Y;
+            simulation.SetUnitTarget(unitIndex, targetLocalCm.X, targetLocalCm.Y, resetRecovery);
         }
     }
 

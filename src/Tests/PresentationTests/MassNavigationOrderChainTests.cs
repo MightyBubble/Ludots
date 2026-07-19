@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Layers;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
@@ -19,82 +18,6 @@ public sealed class MassNavigationOrderChainTests
 {
     internal const int LocalTeamId = 1;
     internal const int EnemyTeamId = 2;
-
-    [Test]
-    public void MoveOrderArgs_EncodeDecodeCarriesOnlySingleWorldTarget()
-    {
-        var order = new Order
-        {
-            OrderId = 1,
-            Args = MassNavigationMoveOrderArgs.Encode(new Vector2(100f, 200f)),
-        };
-        MassNavigationMoveOrderArgs decoded = MassNavigationMoveOrderArgs.Decode(in order);
-
-        Assert.That(decoded.DestinationCm, Is.EqualTo(new Vector2(100f, 200f)));
-        Assert.That(order.Args.I0, Is.Zero);
-        Assert.That(order.Args.I1, Is.Zero);
-        Assert.That(order.Args.F0, Is.Zero);
-    }
-
-    [TestCase(float.NaN)]
-    [TestCase(float.PositiveInfinity)]
-    [TestCase(float.NegativeInfinity)]
-    public void MoveOrderArgs_EncodeRejectsNonFiniteWorldTarget(float invalidCoordinate)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => MassNavigationMoveOrderArgs.Encode(new Vector2(invalidCoordinate, 200f)));
-    }
-
-    [TestCase(float.NaN)]
-    [TestCase(float.PositiveInfinity)]
-    [TestCase(float.NegativeInfinity)]
-    public void MoveOrderArgs_DecodeRejectsNonFiniteWorldTarget(float invalidCoordinate)
-    {
-        OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(invalidCoordinate, 0f, 200f));
-        var order = new Order { OrderId = 3, Args = args };
-
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-            () => MassNavigationMoveOrderArgs.Decode(in order))!;
-
-        Assert.That(ex.Message, Does.Contain("finite WorldCm"));
-    }
-
-    [Test]
-    public void MoveOrderArgs_DecodeRejectsNonFiniteWorldHeight()
-    {
-        OrderArgs args = OrderArgs.CreateSingleWorldCm(new Vector3(100f, float.NaN, 200f));
-        var order = new Order { OrderId = 4, Args = args };
-
-        Assert.Throws<InvalidOperationException>(() => MassNavigationMoveOrderArgs.Decode(in order));
-    }
-
-    [TestCase("I0")]
-    [TestCase("I1")]
-    [TestCase("F0")]
-    [TestCase("I2")]
-    [TestCase("F1")]
-    public void MoveOrderArgs_DecodeRejectsRetiredNonSpatialPayloadFields(string field)
-    {
-        var order = new Order
-        {
-            OrderId = 2,
-            Args = MassNavigationMoveOrderArgs.Encode(new Vector2(100f, 200f)),
-        };
-        switch (field)
-        {
-            case "I0": order.Args.I0 = 1; break;
-            case "I1": order.Args.I1 = 1; break;
-            case "F0": order.Args.F0 = 1f; break;
-            case "I2": order.Args.I2 = 1; break;
-            case "F1": order.Args.F1 = 1f; break;
-            default: throw new ArgumentOutOfRangeException(nameof(field), field, null);
-        }
-
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-            () => MassNavigationMoveOrderArgs.Decode(in order))!;
-
-        Assert.That(ex.Message, Does.Contain("retired non-spatial payload"));
-    }
 
     [Test]
     public void BindBoardWorld_RejectsActiveHotZoneOutsideBoardCenterRange()
@@ -239,8 +162,8 @@ public sealed class MassNavigationOrderChainTests
                     NavigationGroupCapacity = 8,
                     GroupMembershipAgentCapacity = 16,
                     GroupMemberCapacity = 8,
-                    OrderIngestionTokenCapacity = 8,
-                    OrderIngestionMemberCapacity = 8,
+                    MovePlanExecutionGroupCapacity = 8,
+                    MovePlanExecutionMemberCapacity = 8,
                     RouteStateCapacity = 16,
                     RouteMaxExpandedPerRequest = 128,
                     RouteWaypointCapacityPerAgent = 64,

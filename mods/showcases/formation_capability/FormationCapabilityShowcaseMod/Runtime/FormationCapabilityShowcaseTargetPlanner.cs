@@ -1,12 +1,11 @@
 using System;
 using System.Numerics;
 
-namespace Ludots.Core.MassNavigation.Formation;
+namespace FormationCapabilityShowcaseMod.Runtime;
 
-public static class FormationTargetPlanner
+internal static class FormationTargetPlanner
 {
     public static readonly float DiscSlotGoldenAngleRadians = MathF.PI * (3f - MathF.Sqrt(5f));
-    private const float MaxNormalizableFacingMagnitudeRadians = 1_000_000f;
 
     public static Vector2 ResolveSlotOffset(in FormationSlotPlan plan, int slotIndex)
     {
@@ -53,30 +52,6 @@ public static class FormationTargetPlanner
         throw new InvalidOperationException($"Unsupported Formation slot layout '{plan.Layout}'.");
     }
 
-    public static bool HasTargetChanged(
-        in FormationPose currentPose,
-        in FormationPose previousPose,
-        float targetChangeEpsilonCm,
-        float facingChangeEpsilonRadians,
-        bool previousInitialized)
-    {
-        if (!previousInitialized)
-        {
-            return true;
-        }
-
-        if (!(targetChangeEpsilonCm > 0f) ||
-            !(facingChangeEpsilonRadians > 0f))
-        {
-            throw new InvalidOperationException("Formation target change detection requires positive epsilons.");
-        }
-
-        Vector2 delta = currentPose.CenterWorldCm - previousPose.CenterWorldCm;
-        float facingDelta = MathF.Abs(NormalizeFacingRadians(currentPose.FacingRadians - previousPose.FacingRadians));
-        return delta.LengthSquared() >= targetChangeEpsilonCm * targetChangeEpsilonCm ||
-               facingDelta >= facingChangeEpsilonRadians;
-    }
-
     public static FormationTargetPlan PlanMemberTarget(in FormationPose pose, in FormationMember member)
     {
         Vector2 offsetWorld = RotateLocalOffset(member.LocalOffsetCm, pose.FacingRadians);
@@ -94,36 +69,4 @@ public static class FormationTargetPlanner
             (lateralY * localOffsetCm.X) + (forwardY * localOffsetCm.Y));
     }
 
-    public static float NormalizeFacingRadians(float angle)
-    {
-        if (!TryNormalizeFacingRadians(angle, out float normalized))
-        {
-            throw new InvalidOperationException(
-                $"Formation facing radians must be finite and within ±{MaxNormalizableFacingMagnitudeRadians} before normalization.");
-        }
-
-        return normalized;
-    }
-
-    public static bool TryNormalizeFacingRadians(float angle, out float normalized)
-    {
-        if (!float.IsFinite(angle) || MathF.Abs(angle) > MaxNormalizableFacingMagnitudeRadians)
-        {
-            normalized = default;
-            return false;
-        }
-
-        angle %= MathF.Tau;
-        if (angle > MathF.PI)
-        {
-            angle -= MathF.Tau;
-        }
-        else if (angle < -MathF.PI)
-        {
-            angle += MathF.Tau;
-        }
-
-        normalized = angle;
-        return true;
-    }
 }

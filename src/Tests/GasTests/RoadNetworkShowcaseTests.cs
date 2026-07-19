@@ -347,6 +347,7 @@ namespace Ludots.Tests.GAS
             bool applied = sink.TryApply(world, actor, new MovePlanExecutionIntent
             {
                 HasTarget = 1,
+                Mode = MovePlanExecutionMode.Individual,
                 TargetWorldCm = new Vector2(400f, 0f),
                 SpeedCmPerSec = 1200f,
                 StopRadiusCm = 40f,
@@ -367,6 +368,7 @@ namespace Ludots.Tests.GAS
             var intent = new MovePlanExecutionIntent
             {
                 HasTarget = 1,
+                Mode = MovePlanExecutionMode.Individual,
                 TargetWorldCm = new Vector2(600f, 150f),
                 SpeedCmPerSec = 1200f,
                 StopRadiusCm = 45f,

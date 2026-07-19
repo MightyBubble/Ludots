@@ -1519,7 +1519,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CommandIntentRouting_SharedFanOutUsesAtomicOrderQueueBatch()
+        public void CommandIntentRouting_ExpandsAfterCastDispatchAndRejectsClusteredBatchAtomically()
         {
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
@@ -1540,8 +1540,10 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity firstActor = world.Create();
-            Entity secondActor = world.Create();
+            Entity firstSource = world.Create();
+            Entity secondSource = world.Create();
+            Entity firstMember = world.Create();
+            Entity secondMember = world.Create();
             var queue = new OrderQueue(capacity: 64);
             for (int i = 0; i < 63; i++)
             {
@@ -1558,13 +1560,25 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Shared multi-actor command intent must use the batch submit handler."));
-            system.SetOrderBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueSharedBatch(orders));
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Expanded command intent must use the clustered batch submit handler."));
+            system.SetOrderBatchSubmitHandler((Span<Order> _) =>
+            {
+                Assert.Fail("Expanded command intent must not use the shared batch handler.");
+                return false;
+            });
+            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueClusteredBatch(orders));
+            var expander = new TestCommandActorExpander(
+                new Dictionary<Entity, Entity>
+                {
+                    [firstSource] = firstMember,
+                    [secondSource] = secondMember,
+                });
+            system.SetCommandActorExpander(expander);
             SetGroundCommandTargetFactsProvider(system);
 
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, firstActor);
-            commandHarness.Ownership.EnsureOwnership(localPlayer, secondActor);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, firstSource);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, secondSource);
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
                 Id = "intent.command.atomic_batch",
@@ -1619,7 +1633,7 @@ namespace Ludots.Tests.GAS
                 EntityCollectionKeys.CommandSource,
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
-            collections.Replace(localPlayer, in descriptor, new[] { firstActor, secondActor }, localPlayer);
+            collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
                 stack,
@@ -1635,9 +1649,11 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() => system.TryActivateMappedAction("Command"));
 
-            Assert.That(ex!.Message, Does.Contain("atomic batch submit was rejected"));
+            Assert.That(ex!.Message, Does.Contain("clustered fan-out was rejected"));
             Assert.That(queue.Count, Is.EqualTo(63),
-                "The two-actor shared fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+                "The expanded fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+            Assert.That(expander.ExpandCallCount, Is.EqualTo(2),
+                "CastDispatch must select the two sources before the command router expands either source into members.");
         }
 
         [Test]
@@ -1941,6 +1957,27 @@ namespace Ludots.Tests.GAS
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private sealed class TestCommandActorExpander : ICommandActorExpander
+        {
+            private readonly IReadOnlyDictionary<Entity, Entity> _membersBySource;
+
+            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity> membersBySource)
+            {
+                _membersBySource = membersBySource;
+            }
+
+            public int MaxExpandedActorsPerSource => 1;
+            public int MaxExpandedActorCount => _membersBySource.Count;
+            public int ExpandCallCount { get; private set; }
+
+            public int Expand(Entity source, Span<Entity> destination)
+            {
+                ExpandCallCount++;
+                destination[0] = _membersBySource[source];
+                return 1;
+            }
         }
 
         private static Func<InputOrderMapping, bool> ReferencesOrderTypeKey(string orderTypeKey)

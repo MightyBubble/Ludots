@@ -6,7 +6,6 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Formation;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;

@@ -1,20 +1,14 @@
 using System.Numerics;
 
-namespace Ludots.Core.MassNavigation.Formation;
+namespace FormationCapabilityShowcaseMod.Runtime;
 
-public static class FormationOrderKeys
-{
-    public const string Move = "formationMove";
-    public const string Rotate = "formationRotate";
-}
-
-public enum FormationSlotLayout : byte
+internal enum FormationSlotLayout : byte
 {
     Grid = 1,
     Disc = 2,
 }
 
-public static class FormationNumericEncoding
+internal static class FormationNumericEncoding
 {
     public const int RadiansScale = 1_000_000;
 
@@ -102,16 +96,16 @@ public static class FormationNumericEncoding
     }
 }
 
-public readonly record struct FormationPose(
+internal readonly record struct FormationPose(
     Vector2 CenterWorldCm,
     float FacingRadians);
 
-public readonly record struct FormationMember(
+internal readonly record struct FormationMember(
     int FormationIndex,
     int SlotIndex,
     Vector2 LocalOffsetCm);
 
-public readonly record struct FormationSlotPlan(
+internal readonly record struct FormationSlotPlan(
     FormationSlotLayout Layout,
     int SlotCount,
     int Columns,
@@ -120,23 +114,13 @@ public readonly record struct FormationSlotPlan(
     float SpacingYCm,
     float RingSpacingCm);
 
-public struct FormationCommandState
-{
-    public int TargetCenterXCm;
-    public int TargetCenterYCm;
-    public int TargetFacingMicroRad;
-    public byte HasMoveTarget;
-}
-
-public struct FormationAnchorState
+internal struct FormationAnchorState
 {
     public int FormationIndex;
     public int SlotCount;
-    public int TargetChangeEpsilonCm;
-    public int FacingChangeEpsilonMicroRad;
 }
 
-public struct FormationMemberState
+internal struct FormationMemberState
 {
     public int FormationIndex;
     public int SlotIndex;
@@ -144,7 +128,7 @@ public struct FormationMemberState
     public int LocalOffsetYCm;
 }
 
-public struct FormationRuntimeState
+internal struct FormationRuntimeState
 {
     public int MemberCount;
     public int AliveMemberCount;
@@ -153,6 +137,6 @@ public struct FormationRuntimeState
     public int FacingMicroRad;
 }
 
-public readonly record struct FormationTargetPlan(
+internal readonly record struct FormationTargetPlan(
     Vector2 TargetWorldCm,
     Vector2 ProjectionHintWorldCm);

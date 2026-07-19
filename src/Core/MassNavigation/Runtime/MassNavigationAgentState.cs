@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 
@@ -198,6 +199,16 @@ internal sealed class MassNavigationAgentState
         if (world.Has<MassNavigationBlockerProfile>(entity))
         {
             world.Remove<MassNavigationBlockerProfile>(entity);
+        }
+
+        if (world.Has<MovePlanExecutionIntent>(entity))
+        {
+            world.Remove<MovePlanExecutionIntent>(entity);
+        }
+
+        if (world.Has<MovePlanExecutionResult>(entity))
+        {
+            world.Remove<MovePlanExecutionResult>(entity);
         }
     }
 

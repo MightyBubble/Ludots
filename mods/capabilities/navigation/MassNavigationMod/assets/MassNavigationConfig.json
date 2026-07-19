@@ -137,8 +137,8 @@
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
       "groupMemberCapacity": 10000,
-      "orderIngestionTokenCapacity": 256,
-      "orderIngestionMemberCapacity": 10000,
+      "movePlanExecutionGroupCapacity": 256,
+      "movePlanExecutionMemberCapacity": 10000,
       "routeStateCapacity": 10000,
       "routeMaxExpandedPerRequest": 2048,
       "routeWaypointCapacityPerAgent": 64,
@@ -155,8 +155,7 @@
     "hardResolveHz": 10,
     "entitySyncHz": 15,
     "maxStepsPerFixedTick": 1,
-    "hardResolveCandidateThresholdAgents": 1,
-    "orderIdleScanIntervalFrames": 6
+    "hardResolveCandidateThresholdAgents": 1
   },
   "agentProfiles": {
     "defaultProfileId": "light",

@@ -122,6 +122,7 @@ namespace RoadNetworkShowcaseMod.Systems
                     intent.TargetWorldCm = selection.Target;
                     intent.SpeedCmPerSec = ResolveMoveSpeed(entity) * Math.Max(0.1f, execution.SpeedMultiplier);
                     intent.StopRadiusCm = execution.WaypointRadiusCm;
+                    intent.Mode = MovePlanExecutionMode.Individual;
                     intent.HasTarget = 1;
                 }
             }

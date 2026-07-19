@@ -170,7 +170,7 @@ namespace Ludots.Tests.Presentation
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);

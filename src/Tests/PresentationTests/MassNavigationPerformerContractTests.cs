@@ -297,7 +297,7 @@ namespace Ludots.Tests.Presentation
                 runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
                 Is.EqualTo(authoredAgentCount));
             Assert.That(
-                runtimeCapacity["orderIngestionMemberCapacity"]?.GetValue<int>(),
+                runtimeCapacity["movePlanExecutionMemberCapacity"]?.GetValue<int>(),
                 Is.EqualTo(authoredAgentCount));
         }
 

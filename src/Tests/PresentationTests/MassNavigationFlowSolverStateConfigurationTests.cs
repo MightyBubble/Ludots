@@ -357,7 +357,7 @@ namespace Ludots.Tests.Presentation
             config.Solver.MaxObstacleCount = 8;
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
@@ -521,8 +521,8 @@ namespace Ludots.Tests.Presentation
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,
                 GroupMemberCapacity = groupMemberCapacity,
-                OrderIngestionTokenCapacity = 8,
-                OrderIngestionMemberCapacity = groupMemberCapacity,
+                MovePlanExecutionGroupCapacity = 8,
+                MovePlanExecutionMemberCapacity = groupMemberCapacity,
                 RouteStateCapacity = 8,
                 RouteMaxExpandedPerRequest = 128,
                 RouteWaypointCapacityPerAgent = 64,

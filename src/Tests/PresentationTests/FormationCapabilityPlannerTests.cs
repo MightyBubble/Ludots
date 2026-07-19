@@ -1,12 +1,12 @@
 using System;
 using System.Numerics;
-using Ludots.Core.MassNavigation.Formation;
+using FormationCapabilityShowcaseMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
-    public sealed class FormationCorePlannerContractTests
+    public sealed class FormationCapabilityPlannerTests
     {
         [Test]
         public void Planner_SharedPosePreservesMemberRelativeLayout()
@@ -31,29 +31,6 @@ namespace Ludots.Tests.Presentation
             AssertVectorNearlyEqual(expectedLeftToRear, rearTarget.TargetWorldCm - leftTarget.TargetWorldCm);
             Assert.That(leftTarget.TargetWorldCm, Is.Not.EqualTo(rightTarget.TargetWorldCm));
             Assert.That(leftTarget.TargetWorldCm, Is.Not.EqualTo(rearTarget.TargetWorldCm));
-        }
-
-        [Test]
-        public void Planner_TargetChangeRequiresExplicitFiniteEpsilons()
-        {
-            var current = new FormationPose(Vector2.Zero, 0f);
-            var previous = new FormationPose(Vector2.Zero, 0f);
-
-            Assert.Throws<InvalidOperationException>(
-                () => FormationTargetPlanner.HasTargetChanged(
-                    in current,
-                    in previous,
-                    targetChangeEpsilonCm: 0f,
-                    facingChangeEpsilonRadians: 0.01f,
-                    previousInitialized: true));
-        }
-
-        [Test]
-        public void Planner_RejectsNonNormalizableFacingInsteadOfSpinningForever()
-        {
-            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.MaxValue));
-            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.PositiveInfinity));
-            Assert.Throws<InvalidOperationException>(() => FormationTargetPlanner.NormalizeFacingRadians(float.NaN));
         }
 
         private static void AssertVectorNearlyEqual(Vector2 expected, Vector2 actual)

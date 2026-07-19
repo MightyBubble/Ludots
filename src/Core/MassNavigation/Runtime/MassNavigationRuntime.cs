@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
@@ -126,7 +127,7 @@ public sealed class MassNavigationRuntime
             new MassNavigationPreSimulationStepSystem(engine),
             SystemGroup.PostMovement);
         engine.RegisterSystem(
-            new MassNavigationOrderIngestionSystem(engine, config),
+            new MassNavigationMovePlanExecutionSystem(engine, config),
             SystemGroup.AbilityActivation);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine));

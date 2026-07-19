@@ -92,8 +92,8 @@ public sealed class MassNavigationConfig
             "navigationGroupCapacity",
             "groupMembershipAgentCapacity",
             "groupMemberCapacity",
-            "orderIngestionTokenCapacity",
-            "orderIngestionMemberCapacity",
+            "movePlanExecutionGroupCapacity",
+            "movePlanExecutionMemberCapacity",
             "routeStateCapacity",
             "routeMaxExpandedPerRequest",
             "routeWaypointCapacityPerAgent",
@@ -167,8 +167,7 @@ public sealed class MassNavigationConfig
             "hardResolveHz",
             "entitySyncHz",
             "maxStepsPerFixedTick",
-            "hardResolveCandidateThresholdAgents",
-            "orderIdleScanIntervalFrames");
+            "hardResolveCandidateThresholdAgents");
         JsonElement agentProfiles = RequireProperty(root, "agentProfiles");
         RequireProperties(agentProfiles, "defaultProfileId", "profiles");
         JsonElement profiles = RequireProperty(agentProfiles, "profiles");
@@ -460,8 +459,8 @@ public sealed class MassNavigationRuntimeCapacityConfig
     public int NavigationGroupCapacity { get; set; }
     public int GroupMembershipAgentCapacity { get; set; }
     public int GroupMemberCapacity { get; set; }
-    public int OrderIngestionTokenCapacity { get; set; }
-    public int OrderIngestionMemberCapacity { get; set; }
+    public int MovePlanExecutionGroupCapacity { get; set; }
+    public int MovePlanExecutionMemberCapacity { get; set; }
     public int RouteStateCapacity { get; set; }
     public int RouteMaxExpandedPerRequest { get; set; }
     public int RouteWaypointCapacityPerAgent { get; set; }
@@ -473,18 +472,18 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(NavigationGroupCapacity, "navigationGroupCapacity");
         RequirePositive(GroupMembershipAgentCapacity, "groupMembershipAgentCapacity");
         RequirePositive(GroupMemberCapacity, "groupMemberCapacity");
-        RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
-        RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
+        RequirePositive(MovePlanExecutionGroupCapacity, "movePlanExecutionGroupCapacity");
+        RequirePositive(MovePlanExecutionMemberCapacity, "movePlanExecutionMemberCapacity");
         RequirePositive(RouteStateCapacity, "routeStateCapacity");
         RequirePositive(RouteMaxExpandedPerRequest, "routeMaxExpandedPerRequest");
         RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");
 
-        if (OrderIngestionTokenCapacity < NavigationGroupCapacity)
+        if (MovePlanExecutionGroupCapacity < NavigationGroupCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
+                "MassNavigation scenarioRuntime.runtimeCapacity.movePlanExecutionGroupCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
         }
 
     }
@@ -509,10 +508,10 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 $"MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity {GroupMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
-        if (authoredAgentCount > OrderIngestionMemberCapacity)
+        if (authoredAgentCount > MovePlanExecutionMemberCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation scenarioRuntime.runtimeCapacity.movePlanExecutionMemberCapacity {MovePlanExecutionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         if (teamCount > RelationshipDomainCapacity)

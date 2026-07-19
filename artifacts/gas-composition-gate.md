@@ -1,450 +1,61 @@
-## GAS Composition Gate - Self Review
+# GAS Composition Gate - PR #658 / Issue #690
 
-- **Task / Issue**: PR #658 blocker closeout - TCG periodic effect timing must not change when relationship-domain projection entities are materialized.
-- **Date**: 2026-07-15
-- **Agent / Author**: Codex
+- Date: 2026-07-19
+- Agent: Codex
+- Result: PASS
 
-### 1. Core judgment
+## Core judgment
 
-新变体主要交付物是（A/B/C/D）: A
+主要交付物：A，复用现有 Command Router、OrderQueue、OrderBuffer、GAS system phase 和 typed MovePlan contract，删除 MassNavigation/Formation 的平行 Order consumer。
 
-结论: PASS
+本次没有新增 effect preset、profile enum、graph op、lifecycle DSL 或平行 loader。`MovePlanExecutionMode` 是中立执行端口的显式类型边界，不是 GAS 玩法变体开关。
 
-一句话理由: 只修正现有 `EffectLifetimeSystem` 的周期效果首跳排布 seed，使其使用效果的业务语义身份；不新增 GAS handler、effect preset、profile 字段、graph op、JSON schema 或并行生命周期管线。
+## Layer assignment
 
-### 2. Layer assignment
+| 能力 | Layer | 实现载体 |
+| --- | --- | --- |
+| cluster actor expansion | Input/Command Router extension | `ICommandActorExpander` / `FormationCommandActorExpander` |
+| atomic admission and activation | existing GAS order infrastructure | `OrderQueue` / `OrderBufferSystem` |
+| Order to typed movement | GAS adapter | `MovePlanOrderProjectionSystem` |
+| typed movement execution | MovePlanning port + Mass adapter | `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSystem` |
+| typed result to lifecycle | GAS adapter | `MovePlanOrderLifecycleSystem` |
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 周期效果首跳排布 | Existing lifecycle system behavior | `EffectLifetimeSystem` |
-| 关系投影隔离回归 | Test evidence | `LifetimeConditionTests` / `ProductionModDemoLogTests` |
+## Reuse list
 
-### 3. Reuse list
+- Handlers: existing order type registry and order rules; no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderSubmitter`, existing `SystemGroup.AbilityActivation`.
+- Resolvers / Registries: `CommandIntentProfileRegistry`, `CastDispatchProfileRegistry`, `OrderTypeRegistry`, `ControlDomainQuery`.
+- Existing contracts: `MovePlanExecutionIntent`, `IMovePlanExecutionSink`, `MassNavigationRuntimeBinding`.
 
-- Handlers: N/A；未新增或修改 GAS BuiltinHandler。
-- Queues / Systems: 复用现有 `EffectLifetimeSystem`、`EffectRequestQueue`、phase graph 执行链路。
-- Resolvers / Registries: 复用现有 `EffectTemplateRef` / `EffectTemplateRegistry`。
-- Existing presets / graphs: 复用现有 TCG `Effect.Tcg.PoisonCounter` 配置；不修改 graph 或 preset。
+## New Layer 0 ops
 
-### 4. New Layer 0 ops (if any)
+N/A. No entity lifecycle atomic op was added.
 
-N/A。没有新增 atomic op，只修现有生命周期系统内部的确定性 seed。
+## Transaction boundary
 
-### 5. Transaction boundary
+- Command Router fan-out validates expansion capacity and submits one clustered batch.
+- `OrderBufferSystem` previews every row before activating any row.
+- Mass command-group execution prepares final resolved destination and member targets once, validates binding/focus/route capacity against that exact data, then commits the same prepared targets without recomputation.
+- Route rejection emits typed failure; GAS cancels the matching order and removes its continuation.
 
-必须原子 rollback 的步骤: N/A。本次不引入实体生命周期事务；只保证关系投影实体不影响已提交周期效果的首跳语义。
+## Config SSOT
 
-### 6. Config SSOT
+- Order catalog: `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json`
+- Formation business data: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json`
+- Input routing: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/`
+- Mass capacities: each Mod's `MassNavigationConfig.json`
 
-行为配置落在: 现有 effect template / phase graph / TCG map data。
+新增 JSON schema: NO. Renamed dead ingestion capacity fields to typed MovePlan execution capacity fields and removed the unused `orderIdleScanIntervalFrames` property.
 
-是否新增 JSON schema: NO。恢复 `tcg_stack` 的 Team1 自关系数据，不新增配置字段。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 并行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加“说不清的”默认 fallback
-
-### 8. Next variant test
-
-下一个 Mod 变体应继续修改 effect template、phase graph 或地图关系数据；不能通过 Core enum 或 profile 开关表达。
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: PR #658 merge blocker — issue #681 batch spawn relationship linking, Formation OrderId grouping, and MassNavigation UAT wording.
-- **Date**: 2026-07-14
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次只修正现有 `MaterializeTemplate` 批量路径的关系后置条件、现有 Formation Showcase 订单组合的逻辑命令边界和验收文本；没有新增 profile 字段、preset 开关、Core enum、graph op、loader 或平行 spawn/order 管线。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 模板批量物化与 Team 元数据解析 | Layer 0 existing op | `RuntimeEntitySpawnSystem` / `TemplateEntityBatchSpawner` |
-| `Team -> MemberOf` 关系后置条件 | Layer 0 existing op | `RelationshipRuntime` / `TeamEntityLookup` / registered `MemberOf` type |
-| Formation move 逻辑命令分组 | Layer 2 existing Mod composition | `FormationCapabilityOrderSystem` over formal `OrderBuffer` state |
-| 10K 验收链路说明 | Evidence only | `LauncherEvidenceRecorder` |
-
-### 3. Reuse list
-
-- Handlers: N/A；不新增或修改 GAS BuiltinHandler。
-- Queues / Systems: `RuntimeEntitySpawnQueue`、`RuntimeEntitySpawnSystem`、`TemplateEntityBatchSpawner`、`OrderQueue.TryEnqueueSharedBatch`、`OrderBufferSystem`、`FormationCapabilityOrderSystem`。
-- Resolvers / Registries: `RelationshipRuntime`、`TeamEntityLookup`、`RelationshipTypeRegistry`、既有 template descriptor cache。
-- Existing presets / graphs: N/A；不修改 lifecycle preset 或 graph。
-
-### 4. New Layer 0 ops (if any)
-
-N/A。只补齐现有 batch `MaterializeTemplate` 与单体路径已经拥有的 relationship-domain 契约。
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: 模板自带 Team 的批量生成必须在 `TryCreateBatch` 前预检 relationship runtime、`MemberOf` 类型和 live team representative；缺失时在任何实体创建前失败。成功创建后继续复用既有 per-entity relationship link 入口，不新建 transaction executor。
-
-### 6. Config SSOT
-
-行为配置落在: 既有 `Entities/templates.json` Team 组件、既有 Order/OrderId 合同和 Formation Showcase 订单数据。
-
-是否新增 JSON schema: NO — 不新增配置字段或行为开关。
-
-### 7. Red flag scan
+## Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: 既有 effect/订单组合和模板数据；不会修改 Core enum。
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: Formation responsibility governance, issue #659.
-- **Date**: 2026-07-12
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-主要交付物：A（使用现有订单目录、OrderQueue / OrderBuffer 和 MovePlanning 出口，把 Formation 收口为可选 MassNavigation Core capability；Showcase 只提交展示层玩家意图）。
-
-结论：PASS
-
-一句话理由：`formationMove` 与 `formationRotate` 仍复用现有订单 schema，核心 Formation 复用正式 OrderBuffer 与 MovePlanning 执行端口；没有新增 handler、profile enum、preset 开关、graph op、loader 或平行执行管线。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer | 实现载体 |
-|---|---|---|
-| 玩家移动/旋转阵型意图 | 展示层输入策略 | Formation Showcase input/config |
-| 原子批量入队 | 现有基础设施 | `OrderQueue.TryEnqueueBatch` / `OrderQueue.TryEnqueueSharedBatch` |
-| 订单激活与完成 | 现有基础设施 | `OrderBufferSystem` |
-| 阵型身份、成员/槽位、朝向与目标编译 | Optional Core Formation capability | `src/Core/MassNavigation/Formation` |
-| 明确成员目标交付 | 现有中性端口 | `MovePlanExecutionIntent` / `IMovePlanExecutionSink` |
-
-### 3. Reuse list
-
-- Handlers: N/A；未新增或修改 GAS handler。
-- Queues / Systems: `OrderQueue`、`OrderBufferSystem`、`FormationOrderSystem`、`FormationExecutionTargetSystem`、现有 system groups。
-- Resolvers / Registries: `OrderTypeRegistry`、`ControlDomainQuery`、现有 ConfigPipeline order catalog。
-- Existing presets / graphs: N/A；未新增 preset 或 graph。
-
-### 4. New Layer 0 ops
-
-N/A。没有新增原子 op。
-
-### 5. Transaction boundary
-
-Q/E 属于 Showcase 输入策略，对当前 command source 的所有 rotate order 先完整预检 actor、control domain、容量和 payload，再通过 `TryEnqueueBatch` 一次提交。核心 Formation order consumer 先统计容量并完整验证所有待处理 payload，再修改任何 command state；失败时不产生半批状态。
-
-### 6. Config SSOT
-
-语义订单键位于现有 schema 的 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/GAS/order_types.json`；Q/E、旋转步长、镜头、HUD、轮廓、颜色和初始战场配置位于 Showcase input/config；稳定 Formation 身份、成员/槽位、朝向和目标编译位于 Optional Core Formation capability；没有新增 JSON schema。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum。
-- [x] 未新建与 spawn、order 或 MovePlanning 平行的管线。
-- [x] 未把位置或导航校验塞进 lifecycle op。
-- [x] 未添加默认 fallback；缺订单类型、容量、actor、anchor 或错误 payload 均明确失败。
-
-### 8. Next variant test
-
-下一个真实 Mod 变体应复用 Optional Core Formation 的语义订单和成员目标规划，只新增自己的展示层输入/题材/场景数据；不能通过 Core Formation enum 或 Showcase 私有组件扩展。
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: MassNavigation unified responsibility closeout — Epic #642, issues #505/#533/#567/#657, replacement for PR #654.
-- **Date**: 2026-07-12
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次复用现有 `RuntimeEntitySpawnQueue` 和 relationship ownership/membership resolver，只让场景生成请求显式携带已有关系端点；没有新增 lifecycle profile、preset 开关、Core enum、graph op 或平行物化管线。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 场景实体生成请求 | Layer 0 existing op | `RuntimeEntitySpawnQueue` / `RuntimeEntitySpawnSystem` |
-| ownership/membership 建边 | Layer 0 existing op | `RuntimeEntitySpawnSystem.TryLinkExplicitRelationships` |
-| MassNavigation 场景编排 | Layer 2 composition | `MassNavigationScenarioBootstrap` |
-
-### 3. Reuse list
-
-- Handlers: N/A，未新增或修改 GAS handler。
-- Queues / Systems: 既有 `RuntimeEntitySpawnQueue`、`RuntimeEntitySpawnSystem`、`OrderQueue`、`OrderBufferSystem`。
-- Resolvers / Registries: 既有 `PlayerEntityLookup`、`TeamEntityLookup`、`RelationshipRuntime`、`RelationshipTypeRegistry`。
-- Existing presets / graphs: N/A，未修改 lifecycle preset 或 graph。
-
-### 4. New Layer 0 ops (if any)
-
-N/A — 没有新增原子 op；只扩展既有 spawn request 的显式关系参数并修正 `Entity.Null` 的未配置语义。
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: 复用 `RuntimeEntitySpawnSystem` 既有的预检与失败清理边界；MassNavigation 不创建新的 lifecycle transaction。
-
-### 6. Config SSOT
-
-行为配置落在: 既有 MassNavigation 场景配置、地图 player/team binding 与 relationship 配置。
-
-是否新增 JSON schema: NO — 删除 MassNavigation 越权输入配置与可变调参字段，没有新增 lifecycle schema。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: 既有场景配置、订单 producer 或 graph/effect 步骤；不修改 Core lifecycle enum。
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: PR #581 RFC-0065 A4 axis-move follow-up and SHOW-6 WASD hot-switch evidence.
-- **Date**: 2026-07-07
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次复用既有 `ControlSchemeRuntime`、`InputConfigPipelineLoader`、`AxisMoveOrderSystem`、`OrderQueue` 与 `interaction_showcase`，只新增既有 `control_schemes.json` schema 下的数据实例和 fail-fast 引用校验；没有新增 profile enum、preset 开关、graph op、effect step 或平行 loader。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| axisMove action/order validation | N/A - existing input/control infrastructure | ControlSchemeRuntime + InputConfigRoot + OrderTypeRegistry |
-| SHOW-6 WASD scheme data | N/A - existing config schema instance | InteractionShowcaseMod/assets/Input/control_schemes.json |
-| production hot-switch evidence | N/A - test evidence | Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests |
-
-### 3. Reuse list
-
-- Handlers: N/A, no GAS handler changes.
-- Queues / Systems: existing AxisMoveOrderSystem and OrderQueue.
-- Resolvers / Registries: existing ControlSchemeRuntime, InputConfigPipelineLoader, OrderTypeRegistry, CommandIntentProfileRegistry.
-- Existing presets / graphs: N/A, no preset or graph changes.
-
-### 4. New Layer 0 ops (if any)
-
-N/A - no new atomic op.
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A. Control-scheme switching is runtime preference/context bookkeeping; no gameplay lifecycle transaction is introduced.
-
-### 6. Config SSOT
-
-行为配置落在: existing `Input/control_schemes.json` schema, mod-owned fragment `mods/showcases/interaction/InteractionShowcaseMod/assets/Input/control_schemes.json`.
-
-是否新增 JSON schema: NO - uses existing `axisMove` declaration fields.
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: existing control scheme data entries, not Core enum.
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: PR #581 RFC-0065 workflow closeout, benchmark hardening, and review-gap verification for relationship/control-plane hot paths.
-- **Date**: 2026-07-06
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次修复复用既有 RelationshipRuntime、AssociationControlProfileRuntime、KnowledgeCommandTargetGate、DomainRoutedCollectionWriter、ControlPlaneView 和测试预算护栏；没有新增 profile enum、preset 开关、graph op、effect step 或平行 schema。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| relationship typed edge churn 0Alloc | N/A - existing runtime infrastructure | RelationshipRuntime / Relationship<T> / RelationshipEdgeSet |
-| association profile physical grant/revoke budget | N/A - existing runtime infrastructure | AssociationControlProfileRuntime + GasTests budget |
-| command target knowledge gate fail-fast | N/A - input/control infrastructure | KnowledgeCommandTargetGate injection into CoreInput and registries |
-| partial-domain projection budget | N/A - collection/control infrastructure | ControlPlaneViewUnitGrantTests |
-| domain-routed write flatness budget | N/A - collection/control infrastructure | DomainRoutedCollectionTests |
-| workflow closeout audit | N/A - documentation evidence | docs/audits/rfc_0065_pr581_workflow_closeout.md |
-
-### 3. Reuse list
-
-- Handlers: N/A, no GAS handler changes.
-- Queues / Systems: existing AssociationControlProfileSystem path in SchemaUpdate; existing OrderQueue remains untouched.
-- Resolvers / Registries: RelationshipRuntime, RelationshipReverseIndex, ControlDomainQuery, KnowledgeProjectionResolver, CommandIntentProfileRegistry, ContextScoredOrderResolver.
-- Existing presets / graphs: N/A, no preset or graph changes.
-
-### 4. New Layer 0 ops (if any)
-
-N/A - no new atomic op.
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A. Relationship mutations remain through existing EnsureLink/RemoveLink/SetFlag paths; no new multi-step lifecycle transaction is introduced.
-
-### 6. Config SSOT
-
-行为配置落在: existing RFC-0065 catalog/profile assets and runtime registries.
-
-是否新增 JSON schema: NO - no new schema.
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / existing data profile entries, not Core enum.
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: PR #581 RFC-0065 A2 entity command panel showcase M6/P3 aggregation profile switching.
-- **Date**: 2026-07-06
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次只复用既有 entity command panel collection source、AbilityAggregationProfileRegistry、ConfigPipeline ArrayById 与 ability catalog tags；没有新增 handler、effect preset、graph op、profile field、schema、Core enum 或平行管线。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| M6 showcase command-owner collection | N/A - UI/showcase data projection | EntityCommandPanelShowcaseRuntime + EntityCollectionStore |
-| P3 runtime aggregation profile switching | N/A - existing UI runtime preference | CollectionGasEntityCommandPanelSource.SetAggregationProfile |
-| Family grouping metadata | N/A - existing ability catalog metadata | EntityCommandPanelShowcaseMod/assets/GAS/abilities.json catalogTags |
-| Production acceptance | N/A - test evidence | GasTests Production acceptance |
-
-### 3. Reuse list
-
-- Handlers: N/A, no GAS handler changes.
-- Queues / Systems: existing EntityCommandPanelPresentationSystem, EntityCollectionPresentationEventSystem, Mod Loading, ConfigPipeline.
-- Resolvers / Registries: AbilityAggregationProfileRegistry, AbilityDefinitionRegistry, EntityCommandPanelSourceRegistry, EntityCollectionStore.
-- Existing presets / graphs: N/A, no preset or graph changes.
-
-### 4. New Layer 0 ops (if any)
-
-N/A - no new atomic op.
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A. Profile switching is a UI source preference update; no gameplay lifecycle transaction is introduced.
-
-### 6. Config SSOT
-
-行为配置落在: existing `GAS/abilities.json` ArrayById catalog metadata and existing `UI/ability_aggregation_profiles.json` profile definitions.
-
-是否新增 JSON schema: NO - uses existing ability `catalogTags` and existing aggregation profile schema.
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: existing ability catalog tags or existing aggregation profile entries, not Core enum.
-
----
-
-## GAS Composition Gate - Self Review
-
-- **Task / Issue**: PR #581 RFC-0065 selection-retirement closeout: AbilityExecLoader fail-fast tightening.
-- **Date**: 2026-07-09
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A
-
-结论: PASS
-
-一句话理由: 本次只收紧既有 ability config loader 的校验边界，拒绝坏配置静默通过；没有新增 handler、effect preset、graph op、profile enum、JSON schema 或平行加载管线。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| Ability exec config validation | N/A - existing config boundary | `AbilityExecLoader` |
-| GraphSignal id resolution | N/A - existing registry lookup | `GraphIdRegistry.GetId` |
-| Presentation mode override validation | N/A - existing enum contract | `InteractionModeType` |
-| Regression coverage | N/A - tests | `AbilityExecLoaderFailFastTests` |
-
-### 3. Reuse list
-
-- Handlers: N/A, no GAS handler changes.
-- Queues / Systems: existing AbilityExec runtime only; no new runtime queue.
-- Resolvers / Registries: `EffectTemplateIdRegistry`, `GraphIdRegistry`, `TagRegistry`, `ConfigKeyRegistry`.
-- Existing presets / graphs: Existing graph ids must already be registered; loader no longer registers unknown graph names from ability items.
-
-### 4. New Layer 0 ops (if any)
-
-N/A - no new atomic op.
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A. This is config compilation fail-fast behavior, not a gameplay lifecycle transaction.
-
-### 6. Config SSOT
-
-行为配置落在: existing `GAS/abilities.json` schema and existing registries.
-
-是否新增 JSON schema: NO - existing fields are validated more strictly.
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: ability JSON entries / graph assets / effect templates, not Core enum.
+- [x] 未新建 spawn/order/MovePlan 平行管线
+- [x] 未添加 fallback 或兼容旁路
+- [x] MassNavigation 不读取或反写 Order
+- [x] Formation 不拥有专用 Order consumer
+- [x] 热路径容量显式，容量不足失败
+
+## Next variant test
+
+下一个 Formation Mod 变体应修改 Mod-owned anchor/member 数据和 `ICommandActorExpander` 实现，继续复用同一 Command Router、GAS Order 与 typed MovePlan 链；不得新增 Core Formation enum 或专用 order pipeline。

@@ -18,6 +18,50 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     public static class OrderSubmitter
     {
+        public static OrderSubmitResult Preview(
+            World world,
+            Entity entity,
+            in Order order,
+            OrderTypeRegistry registry,
+            OrderRuleRegistry? orderRuleRegistry,
+            int currentStep,
+            int stepRateHz)
+        {
+            if (stepRateHz <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
+            }
+
+            if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
+            {
+                return OrderSubmitResult.InvalidEntity;
+            }
+
+            OrderBuffer preview = world.Get<OrderBuffer>(entity);
+            OrderTypeConfig config = registry.Get(order.OrderTypeId);
+            if (order.SubmitMode == OrderSubmitMode.Queued)
+            {
+                return HandleQueuedMode(ref preview, in order, in config, currentStep, stepRateHz);
+            }
+
+            int activeOrderTypeId = preview.HasActive ? preview.ActiveOrder.Order.OrderTypeId : 0;
+            if (orderRuleRegistry != null && orderRuleRegistry.HasRule(order.OrderTypeId))
+            {
+                ref readonly var rules = ref orderRuleRegistry.Get(order.OrderTypeId);
+                if (rules.Blocks(activeOrderTypeId))
+                {
+                    return OrderSubmitResult.Blocked;
+                }
+            }
+
+            if (activeOrderTypeId == 0 || CanInterrupt(activeOrderTypeId, in order, in config, orderRuleRegistry))
+            {
+                return OrderSubmitResult.Activated;
+            }
+
+            return HandleSameTypePolicy(ref preview, in order, in config, currentStep, stepRateHz);
+        }
+
         public static OrderSubmitResult Submit(
             World world,
             Entity entity,
@@ -335,7 +379,33 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static void CancelCurrent(World world, Entity entity, OrderTypeRegistry registry)
         {
-            NotifyOrderComplete(world, entity, registry);
+            if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
+            {
+                return;
+            }
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(entity);
+            int cancelledOrderId = buffer.HasActive ? buffer.ActiveOrder.Order.OrderId : 0;
+            DeactivateCurrentOrder(world, entity, ref buffer, registry);
+            if (cancelledOrderId > 0 && world.Has<OrderContinuationBuffer>(entity))
+            {
+                ref OrderContinuationBuffer continuations = ref world.Get<OrderContinuationBuffer>(entity);
+                continuations.RemoveByTrigger(cancelledOrderId);
+            }
+
+            if (cancelledOrderId > 0 &&
+                world.TryGet(entity, out CompletedOrderSignal completed) &&
+                completed.OrderId == cancelledOrderId)
+            {
+                world.Set(entity, default(CompletedOrderSignal));
+            }
+
+            if (buffer.PromoteNext())
+            {
+                Order nextOrder = buffer.ActiveOrder.Order;
+                OrderTypeConfig nextConfig = registry.Get(nextOrder.OrderTypeId);
+                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
+            }
         }
 
         public static void CancelAll(World world, Entity entity, OrderTypeRegistry registry)

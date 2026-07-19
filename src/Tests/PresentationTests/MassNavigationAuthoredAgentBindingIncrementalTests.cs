@@ -722,7 +722,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = membershipCapacity;
+            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = membershipCapacity;
             if (relationshipDomainCapacity.HasValue)
             {
                 config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = relationshipDomainCapacity.Value;
@@ -775,19 +775,9 @@ namespace Ludots.Tests.Presentation
                 layer);
         }
 
-        private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer, bool controllable = true)
+        private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer)
         {
             int profileId = MassNavigationProfileRegistry.Register("light");
-            if (controllable)
-            {
-                return world.Create(
-                    new MassNavigationAgent { ProfileId = profileId },
-                    WorldPositionCm.FromCmFloat(localX, localY),
-                    new EntityLayer(layer.CategoryMask, layer.InteractionMask),
-                    new FacingDirection { AngleRad = 0f },
-                    OrderBuffer.CreateEmpty());
-            }
-
             return world.Create(
                 new MassNavigationAgent { ProfileId = profileId },
                 WorldPositionCm.FromCmFloat(localX, localY),

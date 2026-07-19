@@ -35,6 +35,7 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
     {
         ArgumentNullException.ThrowIfNull(world);
         if (intent.HasTarget == 0 ||
+            intent.Mode != MovePlanExecutionMode.Individual ||
             !world.IsAlive(entity) ||
             !world.Has<MassNavigationAgentIndex>(entity))
         {
@@ -55,6 +56,12 @@ public sealed class MassNavigationMovePlanExecutionSink : IMovePlanExecutionSink
         if (intent.HasTarget == 0)
         {
             throw new InvalidOperationException("MovePlanning execution preparation requires an explicit target.");
+        }
+
+        if (intent.Mode != MovePlanExecutionMode.Individual)
+        {
+            throw new InvalidOperationException(
+                $"MovePlanning individual execution sink cannot consume mode {intent.Mode}.");
         }
 
         int bindingRevision = _simulation.AuthoredRuntimeBindingRevision;

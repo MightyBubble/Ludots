@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
@@ -1032,6 +1033,23 @@ public sealed class MassNavigationSimulationRuntime
             VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
             SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
         });
+        if (world.Has<MovePlanExecutionIntent>(entity))
+        {
+            world.Set(entity, default(MovePlanExecutionIntent));
+        }
+        else
+        {
+            world.Add(entity, default(MovePlanExecutionIntent));
+        }
+
+        if (world.Has<MovePlanExecutionResult>(entity))
+        {
+            world.Set(entity, default(MovePlanExecutionResult));
+        }
+        else
+        {
+            world.Add(entity, default(MovePlanExecutionResult));
+        }
         AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
     }
 

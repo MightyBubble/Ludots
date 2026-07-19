@@ -1,55 +1,5 @@
 {
   "orderBlackboardKeys": {},
-  "orderTypes": {
-    "formationMove": {
-      "orderTypeId": "formationMove",
-      "label": "Formation Move",
-      "maxQueueSize": 1,
-      "sameTypePolicy": "Replace",
-      "queueFullPolicy": "DropOldest",
-      "priority": 70,
-      "bufferWindowMs": 0,
-      "pendingBufferWindowMs": 0,
-      "canInterruptSelf": true,
-      "queuedModeMaxSize": 1,
-      "allowQueuedMode": false,
-      "clearQueueOnActivate": true,
-      "spatialBlackboardKey": "none",
-      "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
-      "validationGraph": "none",
-      "instantComplete": false
-    },
-    "formationRotate": {
-      "orderTypeId": "formationRotate",
-      "label": "Formation Rotate",
-      "maxQueueSize": 1,
-      "sameTypePolicy": "Replace",
-      "queueFullPolicy": "DropOldest",
-      "priority": 80,
-      "bufferWindowMs": 0,
-      "pendingBufferWindowMs": 0,
-      "canInterruptSelf": true,
-      "queuedModeMaxSize": 1,
-      "allowQueuedMode": false,
-      "clearQueueOnActivate": true,
-      "spatialBlackboardKey": "none",
-      "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
-      "validationGraph": "none",
-      "instantComplete": false
-    }
-  },
-  "orderRules": {
-    "formationMove": {
-      "orderTypeKey": "formationMove",
-      "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": ["attackTarget"]
-    },
-    "formationRotate": {
-      "orderTypeKey": "formationRotate",
-      "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": []
-    }
-  }
+  "orderTypes": {},
+  "orderRules": {}
 }

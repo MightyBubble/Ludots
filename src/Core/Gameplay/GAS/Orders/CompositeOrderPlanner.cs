@@ -86,6 +86,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _incomingOrders.TryEnqueueSharedBatch(orders);
         }
 
+        public bool TrySubmitClusteredBatch(Span<Order> orders)
+        {
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (TryBuildMoveThenCastPlan(in orders[i], out _, out _))
+                {
+                    throw new InvalidOperationException(
+                        "CompositeOrderPlanner cannot split a clustered command batch into move-then-cast continuations.");
+                }
+            }
+
+            return _incomingOrders.TryEnqueueClusteredBatch(orders);
+        }
+
         private bool TryBuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)
         {
             moveOrder = default;

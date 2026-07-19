@@ -47,8 +47,8 @@
       "navigationGroupCapacity": 32,
       "groupMembershipAgentCapacity": 128,
       "groupMemberCapacity": 32,
-      "orderIngestionTokenCapacity": 32,
-      "orderIngestionMemberCapacity": 32,
+      "movePlanExecutionGroupCapacity": 32,
+      "movePlanExecutionMemberCapacity": 32,
       "relationshipDomainCapacity": 3
     }
   },

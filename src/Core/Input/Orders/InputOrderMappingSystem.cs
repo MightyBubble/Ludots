@@ -64,6 +64,8 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public delegate bool OrderBatchSubmitHandler(Span<Order> orders);
 
+    public delegate bool OrderClusterBatchSubmitHandler(Span<Order> orders);
+
     /// <summary>
     /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
     /// </summary>
@@ -199,6 +201,7 @@ namespace Ludots.Core.Input.Orders
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
         private OrderBatchSubmitHandler? _orderBatchSubmitHandler;
+        private OrderClusterBatchSubmitHandler? _orderClusterBatchSubmitHandler;
         private ModifierKeyProvider? _queueModifierProvider;
         private AimingStateChangedHandler? _aimingStateChangedHandler;
         private AimingUpdateHandler? _aimingUpdateHandler;
@@ -216,6 +219,7 @@ namespace Ludots.Core.Input.Orders
         private ControlSchemeRuntime? _controlSchemeRuntime;
         private CommandIntentProfileRegistry? _commandIntentProfiles;
         private CastDispatchProfileRegistry? _castDispatchProfiles;
+        private ICommandActorExpander? _commandActorExpander;
         private EntityCollectionStore? _entityCollections;
         private ActiveActorCollectionOwnerProvider? _activeActorCollectionOwnerProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
@@ -241,6 +245,9 @@ namespace Ludots.Core.Input.Orders
 
         private readonly List<RoutedOrderSubmission> _routedOrdersScratch = new(InitialScratchCapacity);
         private Entity[] _commandIntentActorsScratch = new Entity[InitialScratchCapacity];
+        private Entity[] _commandIntentExpandedActorsScratch = new Entity[InitialScratchCapacity];
+        private Entity[] _commandIntentExpansionSourcesScratch = new Entity[InitialScratchCapacity];
+        private CommandIntentRoute[] _commandIntentExpandedRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
         private Entity[] _commandIntentRoutedActorsScratch = new Entity[InitialScratchCapacity];
         private CommandIntentRoute[] _commandIntentRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
         private CommandIntentRoute[] _commandIntentRoutedRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
@@ -377,6 +384,8 @@ namespace Ludots.Core.Input.Orders
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
         public void SetOrderBatchSubmitHandler(OrderBatchSubmitHandler handler) => _orderBatchSubmitHandler = handler;
+        public void SetOrderClusterBatchSubmitHandler(OrderClusterBatchSubmitHandler handler) =>
+            _orderClusterBatchSubmitHandler = handler ?? throw new ArgumentNullException(nameof(handler));
         public void SetQueueModifierProvider(ModifierKeyProvider provider) => _queueModifierProvider = provider;
         public void SetAimingStateChangedHandler(AimingStateChangedHandler handler) => _aimingStateChangedHandler = handler;
         public void SetAimingUpdateHandler(AimingUpdateHandler handler) => _aimingUpdateHandler = handler;
@@ -411,6 +420,30 @@ namespace Ludots.Core.Input.Orders
 
         public void SetCommandIntentTargetFactsProvider(CommandIntentTargetFactsProvider provider) =>
             _commandIntentTargetFactsProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+
+        public void SetCommandActorExpander(ICommandActorExpander expander)
+        {
+            _commandActorExpander = expander ?? throw new ArgumentNullException(nameof(expander));
+            if (expander.MaxExpandedActorsPerSource <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Command actor expansion requires MaxExpandedActorsPerSource > 0.");
+            }
+
+            if (expander.MaxExpandedActorCount < expander.MaxExpandedActorsPerSource)
+            {
+                throw new InvalidOperationException(
+                    "Command actor expansion requires MaxExpandedActorCount >= MaxExpandedActorsPerSource.");
+            }
+
+            _commandIntentExpandedActorsScratch = new Entity[expander.MaxExpandedActorCount];
+            _commandIntentExpansionSourcesScratch = new Entity[expander.MaxExpandedActorCount];
+            _commandIntentExpandedRoutesScratch = new CommandIntentRoute[expander.MaxExpandedActorCount];
+            if (_commandIntentOrdersScratch.Length < expander.MaxExpandedActorCount)
+            {
+                _commandIntentOrdersScratch = new Order[expander.MaxExpandedActorCount];
+            }
+        }
 
         public void SetInteractionActionBindings(InteractionActionBindings bindings)
         {
@@ -1524,6 +1557,73 @@ namespace Ludots.Core.Input.Orders
                     "Command intent dispatch profile returned multiple actors for a sequential router; sequential dispatch must select exactly one actor per trigger.");
             }
 
+            int sourceDispatchCount = dispatchCount;
+            dispatchCount = ExpandDispatchedActors(
+                routedActors,
+                routedRoutes,
+                _commandIntentDispatchActorsScratch.AsSpan(0, dispatchCount));
+            if (dispatchCount <= 0)
+            {
+                return false;
+            }
+
+            Span<Entity> dispatchActors = _commandIntentExpandedActorsScratch.AsSpan(0, dispatchCount);
+            Span<Entity> dispatchSources = _commandIntentExpansionSourcesScratch.AsSpan(0, dispatchCount);
+            Span<CommandIntentRoute> dispatchRoutes = _commandIntentExpandedRoutesScratch.AsSpan(0, dispatchCount);
+
+            if (_commandActorExpander != null)
+            {
+                if (_orderClusterBatchSubmitHandler == null)
+                {
+                    throw new InvalidOperationException(
+                        "Command actor expansion requires an atomic clustered batch submit handler.");
+                }
+
+                EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
+                for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
+                {
+                    CommandIntentRoute route = dispatchRoutes[dispatchIndex];
+                    var args = new OrderArgs();
+                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+                    args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                    args.Spatial.Mode = OrderCollectionMode.Single;
+                    args.Spatial.WorldCm = groundWorldCm;
+                    _commandIntentOrdersScratch[dispatchIndex] = new Order
+                    {
+                        OrderTypeId = route.OrderTypeId,
+                        PlayerId = _playerId,
+                        Actor = dispatchActors[dispatchIndex],
+                        CommandSource = dispatchSources[dispatchIndex],
+                        Args = args,
+                        SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior),
+                    };
+                    int sourceIndex = IndexOfEntity(
+                        _commandIntentDispatchActorsScratch.AsSpan(0, sourceDispatchCount),
+                        dispatchSources[dispatchIndex]);
+                    if (sourceIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Command actor expansion source '{dispatchSources[dispatchIndex]}' was not present in the CastDispatch result.");
+                    }
+
+                    ApplyGroupMoveTargetLayout(
+                        mapping,
+                        mapping.OrderTypeKey,
+                        sourceDispatchCount,
+                        sourceIndex,
+                        ref _commandIntentOrdersScratch[dispatchIndex]);
+                }
+
+                if (_orderClusterBatchSubmitHandler(
+                        _commandIntentOrdersScratch.AsSpan(0, dispatchCount)))
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException(
+                    "Command intent clustered fan-out was rejected; no partial orders were accepted.");
+            }
+
             if (routing.SharedOrderId && dispatchCount > 1)
             {
                 if (_orderBatchSubmitHandler == null)
@@ -1535,15 +1635,8 @@ namespace Ludots.Core.Input.Orders
                 EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
                 for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
                 {
-                    Entity dispatchActor = _commandIntentDispatchActorsScratch[dispatchIndex];
-                    int actorIndex = IndexOfEntity(routedActors, dispatchActor);
-                    if (actorIndex < 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Cast dispatch returned actor '{dispatchActor}' that was not present in the routed actor group.");
-                    }
-
-                    CommandIntentRoute route = routedRoutes[actorIndex];
+                    Entity dispatchActor = dispatchActors[dispatchIndex];
+                    CommandIntentRoute route = dispatchRoutes[dispatchIndex];
 
                     var args = new OrderArgs();
                     ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -1570,15 +1663,8 @@ namespace Ludots.Core.Input.Orders
             int sharedOrderId = 0;
             for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
             {
-                Entity dispatchActor = _commandIntentDispatchActorsScratch[dispatchIndex];
-                int actorIndex = IndexOfEntity(routedActors, dispatchActor);
-                if (actorIndex < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Cast dispatch returned actor '{dispatchActor}' that was not present in the routed actor group.");
-                }
-
-                CommandIntentRoute route = routedRoutes[actorIndex];
+                Entity dispatchActor = dispatchActors[dispatchIndex];
+                CommandIntentRoute route = dispatchRoutes[dispatchIndex];
 
                 var args = new OrderArgs();
                 ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -1694,6 +1780,76 @@ namespace Ludots.Core.Input.Orders
             }
 
             return -1;
+        }
+
+        private int ExpandDispatchedActors(
+            ReadOnlySpan<Entity> routedActors,
+            ReadOnlySpan<CommandIntentRoute> routedRoutes,
+            ReadOnlySpan<Entity> dispatchedActors)
+        {
+            int perSourceCapacity = _commandActorExpander?.MaxExpandedActorsPerSource ?? 1;
+            int required = checked(dispatchedActors.Length * perSourceCapacity);
+            if (_commandActorExpander != null && required > _commandActorExpander.MaxExpandedActorCount)
+            {
+                throw new InvalidOperationException(
+                    $"Command actor expansion requires capacity {required}, exceeding declared batch capacity {_commandActorExpander.MaxExpandedActorCount}.");
+            }
+
+            EnsureEntityScratch(ref _commandIntentExpandedActorsScratch, required);
+            EnsureEntityScratch(ref _commandIntentExpansionSourcesScratch, required);
+            EnsureRouteScratch(ref _commandIntentExpandedRoutesScratch, required);
+            int written = 0;
+            for (int sourceIndex = 0; sourceIndex < dispatchedActors.Length; sourceIndex++)
+            {
+                Entity source = dispatchedActors[sourceIndex];
+                int routedIndex = IndexOfEntity(routedActors, source);
+                if (routedIndex < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Cast dispatch returned actor '{source}' that was not present in the routed actor group.");
+                }
+
+                int expanded;
+                if (_commandActorExpander == null)
+                {
+                    _commandIntentExpandedActorsScratch[written] = source;
+                    expanded = 1;
+                }
+                else
+                {
+                    expanded = _commandActorExpander.Expand(
+                        source,
+                        _commandIntentExpandedActorsScratch.AsSpan(written, perSourceCapacity));
+                }
+
+                if (expanded < 0 || expanded > perSourceCapacity)
+                {
+                    throw new InvalidOperationException(
+                        $"Command actor expander returned {expanded}, outside its declared per-source capacity {perSourceCapacity}.");
+                }
+
+                for (int i = 0; i < expanded; i++)
+                {
+                    Entity actor = _commandIntentExpandedActorsScratch[written + i];
+                    if (actor == Entity.Null)
+                    {
+                        throw new InvalidOperationException("Command actor expansion produced Entity.Null.");
+                    }
+
+                    if (IndexOfEntity(_commandIntentExpandedActorsScratch.AsSpan(0, written + i), actor) >= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Command actor expansion produced duplicate actor '{actor}'.");
+                    }
+
+                    _commandIntentExpansionSourcesScratch[written + i] = source;
+                    _commandIntentExpandedRoutesScratch[written + i] = routedRoutes[routedIndex];
+                }
+
+                written += expanded;
+            }
+
+            return written;
         }
 
         private static int CompactRoutedActors(

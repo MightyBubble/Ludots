@@ -1,4 +1,4 @@
-namespace Ludots.Core.MassNavigation.Runtime;
+namespace Ludots.Core.Gameplay.GAS.Orders;
 
 public static class MassNavigationOrderKeys
 {

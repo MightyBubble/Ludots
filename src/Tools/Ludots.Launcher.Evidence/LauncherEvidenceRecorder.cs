@@ -2597,7 +2597,7 @@ public static class LauncherEvidenceRecorder
                 PlayerId = 1,
                 Actor = entity,
                 SubmitMode = OrderSubmitMode.Immediate,
-                Args = MassNavigationMoveOrderArgs.Encode(targetCm)
+                Args = OrderArgs.CreateSingleWorldCm(new Vector3(targetCm.X, 0f, targetCm.Y))
             };
         }
 

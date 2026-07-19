@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.MassNavigation.Formation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using FormationCapabilityShowcaseMod.Runtime;
@@ -21,19 +21,26 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
     private readonly LocalOrderSourceHelper _helper;
     private InputOrderMappingSystem? _mapping;
     private ControlDomainQuery? _controlDomains;
-    private int _formationMoveOrderTypeId;
+    private readonly FormationCommandActorExpander _commandActorExpander;
+    private int _moveOrderTypeId;
     private bool _initialized;
 
     public FormationCapabilityLocalOrderSourceSystem(
         World world,
         Dictionary<string, object> globals,
         OrderQueue orders,
-        IModContext context)
+        IModContext context,
+        int maxMembersPerFormation,
+        int maxExpandedActorCount)
     {
         _world = world;
         _globals = globals;
         _context = context;
         _helper = new LocalOrderSourceHelper(world, globals, orders);
+        _commandActorExpander = new FormationCommandActorExpander(
+            world,
+            maxMembersPerFormation,
+            maxExpandedActorCount);
     }
 
     public void Initialize()
@@ -79,13 +86,13 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         if (_mapping != null)
         {
             _helper.BeforeOrderSubmit = CanLocalPlayerSubmitOrder;
-            _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "E" };
+            _mapping.SetCommandActorExpander(_commandActorExpander);
         }
     }
 
     private bool CanLocalPlayerSubmitOrder(in Order order)
     {
-        if (!IsFormationMoveOrder(in order))
+        if (!IsMoveOrder(in order))
         {
             return true;
         }
@@ -109,19 +116,19 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         return true;
     }
 
-    private bool IsFormationMoveOrder(in Order order)
+    private bool IsMoveOrder(in Order order)
     {
-        if (_formationMoveOrderTypeId == 0)
+        if (_moveOrderTypeId == 0)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out object? orderTypesObj) ||
                 orderTypesObj is not OrderTypeRegistry orderTypes ||
-                !orderTypes.TryGetId(FormationOrderKeys.Move, out _formationMoveOrderTypeId))
+                !orderTypes.TryGetId(MassNavigationOrderKeys.Move, out _moveOrderTypeId))
             {
                 return false;
             }
         }
 
-        return order.OrderTypeId == _formationMoveOrderTypeId;
+        return order.OrderTypeId == _moveOrderTypeId;
     }
 
     private bool TryResolveLocalPlayerEntity(out Entity localPlayer)
@@ -132,4 +139,5 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
                _world.IsAlive(local) &&
                (localPlayer = local) != Entity.Null;
     }
+
 }

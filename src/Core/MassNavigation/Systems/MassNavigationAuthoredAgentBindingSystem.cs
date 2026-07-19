@@ -7,7 +7,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -176,7 +175,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 MassNavigationAgent agent = agents[index];
                 _entities.Add(entity);
                 _seeds.Add(CreateSeed(simulation, entity, in agent));
-                _controllableFlags.Add(_engine.World.Has<OrderBuffer>(entity));
+                _controllableFlags.Add(true);
             }
         }
 
@@ -283,7 +282,6 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             entityHash = Mix(entityHash, 0);
         }
 
-        entityHash = Mix(entityHash, _engine.World.Has<OrderBuffer>(entity) ? 1 : 0);
         return entityHash;
     }
 
@@ -352,7 +350,7 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
                 MassNavigationAgent agent = agents[index];
                 _entities.Add(entity);
                 _seeds.Add(CreateSeed(simulation, entity, in agent));
-                _controllableFlags.Add(_engine.World.Has<OrderBuffer>(entity));
+                _controllableFlags.Add(true);
             }
         }
 

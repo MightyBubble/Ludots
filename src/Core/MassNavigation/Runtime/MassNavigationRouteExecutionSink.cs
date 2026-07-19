@@ -17,6 +17,7 @@ public enum MassNavigationRouteSinkStatus : byte
     EmptyPath = 5,
     AgentNotBound = 6,
     Tracked = 7,
+    InvalidRequest = 8,
 }
 
 public readonly struct MassNavigationRouteSinkResult
@@ -173,31 +174,22 @@ public sealed class MassNavigationRouteExecutionSink
         ArgumentNullException.ThrowIfNull(simulation);
         ArgumentNullException.ThrowIfNull(world);
 
-        if (!world.IsAlive(agent) || !world.TryGet(agent, out MassNavigationAgent authoredAgent))
+        MassNavigationRouteSinkResult validation = ValidateRouteTarget(
+            simulation,
+            world,
+            agent,
+            agentIndex,
+            destinationWorldCm,
+            requestId,
+            maxExpanded,
+            maxPoints);
+        if (!validation.Tracked)
         {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.AgentNotBound,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 1,
-                orderToken: requestId,
-                agentIndex: agentIndex);
+            return validation;
         }
 
-        if (!TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType))
-        {
-            return new MassNavigationRouteSinkResult(
-                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
-                PathStatus.InvalidRequest,
-                PathDomain.None,
-                default,
-                waypointCount: 0,
-                errorCode: 2,
-                orderToken: requestId,
-                agentIndex: agentIndex);
-        }
+        MassNavigationAgent authoredAgent = world.Get<MassNavigationAgent>(agent);
+        _ = TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType);
 
         if (!_syncInProgress)
         {
@@ -205,12 +197,6 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         long key = PackKey(requestId, agentIndex);
-        if (maxPoints <= 0 || maxPoints > _waypointCapacityPerAgent)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation route request maxPoints {maxPoints} exceeds configured routeWaypointCapacityPerAgent {_waypointCapacityPerAgent}.");
-        }
-
         bool knownActiveKey = _activeKeys.Contains(key);
         if (!knownActiveKey && _activeKeys.Count >= _routeStateCapacity)
         {
@@ -242,6 +228,84 @@ public sealed class MassNavigationRouteExecutionSink
         _activeKeys.Add(key);
         _syncPlans[_syncPlanCount++] = plan;
         return CreateTrackedResult(key, requestId, agentIndex);
+    }
+
+    public MassNavigationRouteSinkResult ValidateRouteTarget(
+        MassNavigationSimulationRuntime simulation,
+        World world,
+        Entity agent,
+        int agentIndex,
+        Vector2 destinationWorldCm,
+        int requestId,
+        int maxExpanded,
+        int maxPoints)
+    {
+        ArgumentNullException.ThrowIfNull(simulation);
+        ArgumentNullException.ThrowIfNull(world);
+        if (!world.IsAlive(agent) || !world.TryGet(agent, out MassNavigationAgent authoredAgent))
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.AgentNotBound,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 1,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
+
+        if (!TryResolveAgentType(authoredAgent.ProfileId, out PathingAgentTypeConfig agentType))
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.NoConfiguredAgentType,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 2,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
+
+        if (!float.IsFinite(destinationWorldCm.X) || !float.IsFinite(destinationWorldCm.Y))
+        {
+            return new MassNavigationRouteSinkResult(
+                MassNavigationRouteSinkStatus.InvalidRequest,
+                PathStatus.InvalidRequest,
+                PathDomain.None,
+                default,
+                waypointCount: 0,
+                errorCode: 3,
+                orderToken: requestId,
+                agentIndex: agentIndex);
+        }
+
+        if (maxPoints <= 0 || maxPoints > _waypointCapacityPerAgent)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation route request maxPoints {maxPoints} exceeds configured routeWaypointCapacityPerAgent {_waypointCapacityPerAgent}.");
+        }
+
+        return new MassNavigationRouteSinkResult(
+            MassNavigationRouteSinkStatus.Tracked,
+            PathStatus.Found,
+            PathDomain.None,
+            destinationWorldCm,
+            waypointCount: 0,
+            errorCode: 0,
+            orderToken: requestId,
+            agentIndex: agentIndex);
+    }
+
+    public void PreflightSync()
+    {
+        if (!_syncInProgress)
+        {
+            throw new InvalidOperationException("MassNavigation route sync preflight requires BeginSync.");
+        }
+
+        PreflightSyncRouteCapacity();
     }
 
     public void EndSync()

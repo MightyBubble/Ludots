@@ -48,8 +48,16 @@ public struct MovePlanRuntime
     public byte Initialized;
 }
 
+public enum MovePlanExecutionMode : byte
+{
+    None = 0,
+    Individual = 1,
+    CommandGroup = 2,
+}
+
 public struct MovePlanExecutionIntent
 {
+    public int CommandGroupToken;
     public Vector2 TargetWorldCm;
     public Vector2 ProjectionHintWorldCm;
     public float SpeedCmPerSec;
@@ -57,6 +65,26 @@ public struct MovePlanExecutionIntent
     public float MinimumClearanceCm;
     public byte HasTarget;
     public byte ResolveNavigableTarget;
+    public MovePlanExecutionMode Mode;
+}
+
+public enum MovePlanExecutionResultKind : byte
+{
+    None = 0,
+    Arrived = 1,
+    Failed = 2,
+}
+
+public struct MovePlanExecutionResult
+{
+    public int CommandGroupToken;
+    public MovePlanExecutionResultKind Kind;
+    public MovePlanFailureReason FailureReason;
+}
+
+/// <summary>Scheduling marker for a command-group MovePlan execution adapter.</summary>
+public interface IMovePlanCommandGroupExecutionSystem
+{
 }
 
 public readonly ref struct MovePlanView
