@@ -1,0 +1,113 @@
+{
+  "name": "vision-fog-flow",
+  "title": "Vision & Fog System - Calculation Flow",
+  "subtitle": "ChunkedField2D<CellVisibility> Multi-Layer War Fog",
+  "canvas": { "width": 1980, "height": 1640 },
+
+  "groups": [
+    { "id": "g_core", "title": "Vision & Fog Core Components",
+      "x": 40, "y": 120, "w": 1900, "h": 300, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_pipe", "title": "Fog Calculation Pipeline",
+      "x": 40, "y": 460, "w": 1900, "h": 560, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_layer", "title": "FogLayer Types & Visibility States",
+      "x": 40, "y": 1060, "w": 1900, "h": 540, "border_style": "dashed", "title_anchor": "top-left" }
+  ],
+
+  "nodes": [
+    { "id": "emitter", "title": "VisionEmitter", "tint": "steel",
+      "x": 100, "y": 210, "w": 380, "h": 140,
+      "items": ["Vision Emitter", "Unit/Building/Skill"] },
+    { "id": "occupant", "title": "VisionOccupant", "tint": "steel",
+      "x": 560, "y": 210, "w": 380, "h": 140,
+      "items": ["Occupant", "Discoverable entity"] },
+    { "id": "chunked", "title": "ChunkedField2D", "tint": "steel",
+      "x": 1020, "y": 210, "w": 380, "h": 140,
+      "items": ["Fog field data", "CellVisibility struct"] },
+    { "id": "fogmgr", "title": "FogLayerManager", "tint": "clay",
+      "x": 1480, "y": 210, "w": 380, "h": 140,
+      "items": ["Layer manager", "Team / Shared / Global"] },
+
+    { "id": "p1", "title": "1 · Entity Update", "tint": "steel",
+      "x": 60, "y": 550, "w": 250, "h": 120 },
+    { "id": "p2", "title": "2 · Vision Resolver", "tint": "steel",
+      "x": 367, "y": 550, "w": 250, "h": 120 },
+    { "id": "p3", "title": "3 · LOS Raycast", "tint": "steel",
+      "x": 674, "y": 550, "w": 250, "h": 120 },
+    { "id": "p4", "title": "4 · Height Check", "tint": "steel",
+      "x": 981, "y": 550, "w": 250, "h": 120 },
+    { "id": "p5", "title": "5 · Concealment Rule", "tint": "steel",
+      "x": 1288, "y": 550, "w": 250, "h": 120 },
+    { "id": "p6", "title": "6 · FogField Publish", "tint": "steel",
+      "x": 1595, "y": 550, "w": 250, "h": 120 },
+
+    { "id": "team", "title": "TeamFogLayer", "tint": "steel",
+      "x": 100, "y": 1150, "w": 380, "h": 130,
+      "items": ["Team-only fog", "Visible to this team"] },
+    { "id": "shared", "title": "SharedFogLayer", "tint": "steel",
+      "x": 550, "y": 1150, "w": 380, "h": 130,
+      "items": ["Shared vision", "Shared among allies"] },
+    { "id": "global", "title": "GlobalFogLayer", "tint": "steel",
+      "x": 1000, "y": 1150, "w": 380, "h": 130,
+      "items": ["Global fog", "All teams unified"] },
+    { "id": "editor", "title": "EditorFogLayer", "tint": "clay",
+      "x": 1450, "y": 1150, "w": 380, "h": 130,
+      "items": ["Editor layer", "Debug/observer mode"] },
+
+    { "id": "visible", "title": "Visible", "tint": "sage",
+      "x": 100, "y": 1360, "w": 380, "h": 110,
+      "items": ["Fully visible"] },
+    { "id": "revealed", "title": "Revealed", "tint": "stone",
+      "x": 550, "y": 1360, "w": 380, "h": 110,
+      "items": ["Revealed (historical)"] },
+    { "id": "shrouded", "title": "Shrouded", "tint": "steel",
+      "x": 1000, "y": 1360, "w": 380, "h": 110,
+      "items": ["Shrouded (known existence)"] },
+    { "id": "hidden", "title": "Hidden", "tint": "graphite",
+      "x": 1450, "y": 1360, "w": 380, "h": 110,
+      "items": ["Fully hidden"] }
+  ],
+
+  "edges": [
+    { "from": "emitter", "to": "occupant", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "occupant", "to": "chunked", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "chunked", "to": "fogmgr", "route": "elbow", "from_side": "right", "to_side": "left" },
+
+    { "from": "p1", "to": "p2", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "p2", "to": "p3", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "p3", "to": "p4", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "p4", "to": "p5", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "p5", "to": "p6", "route": "elbow", "from_side": "right", "to_side": "left" }
+  ],
+
+  "notes": [
+    { "text": "1. Entity Update", "x": 60, "y": 710, "ha": "left" },
+    { "text": "- PositionCm change", "x": 60, "y": 734, "ha": "left" },
+    { "text": "- VisionRange change", "x": 60, "y": 758, "ha": "left" },
+    { "text": "- TeamId change", "x": 60, "y": 782, "ha": "left" },
+
+    { "text": "2. Vision Resolve", "x": 367, "y": 710, "ha": "left" },
+    { "text": "- Collect all Emitters", "x": 367, "y": 734, "ha": "left" },
+    { "text": "- Group by Team", "x": 367, "y": 758, "ha": "left" },
+    { "text": "- Mark dirty regions", "x": 367, "y": 782, "ha": "left" },
+
+    { "text": "3. LOS Raycast", "x": 674, "y": 710, "ha": "left" },
+    { "text": "- Bresenham ray", "x": 674, "y": 734, "ha": "left" },
+    { "text": "- Terrain blocking", "x": 674, "y": 758, "ha": "left" },
+    { "text": "- Building occlusion", "x": 674, "y": 782, "ha": "left" },
+
+    { "text": "4. Vertical Height", "x": 981, "y": 710, "ha": "left" },
+    { "text": "- Z-axis height diff", "x": 981, "y": 734, "ha": "left" },
+    { "text": "- High-to-low bonus", "x": 981, "y": 758, "ha": "left" },
+    { "text": "- Low-to-high penalty", "x": 981, "y": 782, "ha": "left" },
+
+    { "text": "5. Concealment Rules", "x": 1288, "y": 710, "ha": "left" },
+    { "text": "- Forest/smoke cover", "x": 1288, "y": 734, "ha": "left" },
+    { "text": "- Night penalty", "x": 1288, "y": 758, "ha": "left" },
+    { "text": "- Unit size factor", "x": 1288, "y": 782, "ha": "left" },
+
+    { "text": "6. Field Publish", "x": 1595, "y": 710, "ha": "left" },
+    { "text": "- Write to ChunkedField2D", "x": 1595, "y": 734, "ha": "left" },
+    { "text": "- Multi-Team merge", "x": 1595, "y": 758, "ha": "left" },
+    { "text": "- Incremental sync", "x": 1595, "y": 782, "ha": "left" }
+  ]
+}

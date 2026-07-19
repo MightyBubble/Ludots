@@ -1,0 +1,66 @@
+{
+  "name": "nav-avoidance-orca",
+  "title": "ORCA Dynamic Avoidance Flow",
+  "subtitle": "Optimal Reciprocal Collision Avoidance 2D",
+  "canvas": { "width": 1440, "height": 1300 },
+
+  "groups": [
+    {
+      "id": "math",
+      "title": "ORCA Math Constraints",
+      "x": 980, "y": 780, "w": 420, "h": 300,
+      "border_style": "dashed"
+    }
+  ],
+
+  "nodes": [
+    { "id": "agent", "title": "Agent State", "tint": "steel",
+      "x": 520, "y": 150, "w": 400, "h": 90,
+      "items": ["(pos, vel, radius, prefVel)"] },
+
+    { "id": "n1", "title": "1. Neighbor Query", "tint": "sage",
+      "x": 520, "y": 300, "w": 400, "h": 80 },
+    { "id": "n2", "title": "2. HexGridAOI / SpatialHash", "tint": "sage",
+      "x": 520, "y": 430, "w": 400, "h": 80 },
+
+    { "id": "n3", "title": "3. Velocity Obstacle", "tint": "sage",
+      "x": 60, "y": 590, "w": 400, "h": 90,
+      "items": ["Construction"] },
+    { "id": "n4", "title": "4. ORCA Line Generation", "tint": "sage",
+      "x": 520, "y": 590, "w": 400, "h": 90 },
+    { "id": "n7", "title": "7. SonarSolver2D", "tint": "sage",
+      "x": 980, "y": 590, "w": 400, "h": 90 },
+
+    { "id": "n5", "title": "5. Linear Program Solve", "tint": "sage",
+      "x": 300, "y": 770, "w": 400, "h": 90 },
+    { "id": "n6", "title": "6. New Velocity", "tint": "sage",
+      "x": 300, "y": 920, "w": 400, "h": 90,
+      "items": ["(v_opt)"] },
+
+    { "id": "apply", "title": "Apply to Agent -> WorldPositionCm", "tint": "clay",
+      "border_w": 1.6,
+      "x": 240, "y": 1070, "w": 520, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "agent", "to": "n1" },
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "n3" },
+    { "from": "n2", "to": "n4" },
+    { "from": "n2", "to": "n7", "style": "dashed" },
+    { "from": "n3", "to": "n5" },
+    { "from": "n4", "to": "n5" },
+    { "from": "n7", "to": "n5", "style": "dashed" },
+    { "from": "n5", "to": "n6" },
+    { "from": "n6", "to": "apply" }
+  ],
+
+  "notes": [
+    { "text": "u = (v_rel · n) · n   (projected velocity)", "x": 1010, "y": 850, "ha": "left" },
+    { "text": "Half-plane: (v − (v_i + u/2)) · n ≥ 0", "x": 1010, "y": 920, "ha": "left" },
+    { "text": "3D LP: find optimal closest to prefVel", "x": 1010, "y": 990, "ha": "left" },
+    { "text": "Pure math, stateless, deterministic", "x": 1010, "y": 1050, "ha": "left" },
+    { "text": "ORCA vs Sonar configured via MassNavigationFlowAvoidanceTuning.Mode", "x": 60, "y": 1230, "ha": "left" },
+    { "text": "(ORCA only / Sonar only / Combined)", "x": 60, "y": 1256, "ha": "left" }
+  ]
+}

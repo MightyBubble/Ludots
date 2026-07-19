@@ -1,0 +1,110 @@
+{
+  "name": "raylib-render-loop",
+  "title": "Raylib Adapter - Render Pipeline",
+  "subtitle": "GameLoop -> Update -> Draw -> SwapBuffer",
+  "canvas": { "width": 2000, "height": 1660 },
+
+  "groups": [
+    { "id": "inphase", "title": "Input Phase",
+      "x": 60, "y": 150, "w": 330, "h": 540,
+      "tint": "mauve", "border_style": "dashed" },
+    { "id": "upphase", "title": "Update Phase",
+      "x": 1610, "y": 150, "w": 330, "h": 540,
+      "tint": "clay", "border_style": "dashed" },
+    { "id": "swapphase", "title": "Swap Phase",
+      "x": 60, "y": 1000, "w": 330, "h": 540,
+      "tint": "teal", "border_style": "dashed" },
+    { "id": "drawphase", "title": "Draw Phase",
+      "x": 1610, "y": 1000, "w": 330, "h": 540,
+      "tint": "sand", "border_style": "dashed" },
+    { "id": "gameloop", "title": "Game Loop (60 FPS)",
+      "x": 560, "y": 240, "w": 880, "h": 700,
+      "tint": "stone", "border_style": "dashed", "title_anchor": "top-center" }
+  ],
+
+  "nodes": [
+    { "id": "pollkbd", "title": "PollKeyboard", "tint": "mauve",
+      "x": 95, "y": 215, "w": 260, "h": 80 },
+    { "id": "pollmouse", "title": "PollMouse", "tint": "mauve",
+      "x": 95, "y": 330, "w": 260, "h": 80 },
+    { "id": "pollpad", "title": "PollGamepad", "tint": "mauve",
+      "x": 95, "y": 445, "w": 260, "h": 80 },
+    { "id": "translate", "title": "Translate to Order", "tint": "mauve",
+      "x": 95, "y": 560, "w": 260, "h": 80 },
+
+    { "id": "presim", "title": "PreSimulation", "tint": "clay",
+      "x": 1645, "y": 215, "w": 260, "h": 80 },
+    { "id": "sim", "title": "Simulation", "tint": "clay",
+      "x": 1645, "y": 330, "w": 260, "h": 80 },
+    { "id": "postsim", "title": "PostSimulation", "tint": "clay",
+      "x": 1645, "y": 445, "w": 260, "h": 80 },
+    { "id": "presentation", "title": "Presentation", "tint": "clay",
+      "x": 1645, "y": 560, "w": 260, "h": 80 },
+
+    { "id": "drawui", "title": "DrawUI Overlay", "tint": "teal",
+      "x": 95, "y": 1065, "w": 260, "h": 80 },
+    { "id": "enddraw", "title": "EndDrawing", "tint": "teal",
+      "x": 95, "y": 1180, "w": 260, "h": 80 },
+    { "id": "present", "title": "Present Frame", "tint": "teal",
+      "x": 95, "y": 1295, "w": 260, "h": 80 },
+    { "id": "vsync", "title": "VSync Wait", "tint": "teal",
+      "x": 95, "y": 1410, "w": 260, "h": 80 },
+
+    { "id": "clearbg", "title": "ClearBackground", "tint": "sand",
+      "x": 1645, "y": 1065, "w": 260, "h": 80 },
+    { "id": "beginmode", "title": "BeginMode2D/3D", "tint": "sand",
+      "x": 1645, "y": 1180, "w": 260, "h": 80 },
+    { "id": "drawperf", "title": "DrawPerformer", "tint": "sand",
+      "x": 1645, "y": 1295, "w": 260, "h": 80 },
+    { "id": "endmode", "title": "EndMode2D/3D", "tint": "sand",
+      "x": 1645, "y": 1410, "w": 260, "h": 80 },
+
+    { "id": "update", "title": "Update", "tint": "clay", "border_w": 1.6,
+      "x": 850, "y": 300, "w": 300, "h": 120,
+      "items": ["SystemGroup.Tick"] },
+    { "id": "input", "title": "Input", "tint": "mauve", "border_w": 1.6,
+      "x": 1080, "y": 700, "w": 300, "h": 120,
+      "items": ["PollEvents"] },
+    { "id": "draw", "title": "Draw", "tint": "stone", "border_w": 1.6,
+      "x": 620, "y": 700, "w": 300, "h": 120,
+      "items": ["Performer.Render"] },
+
+    { "id": "api", "title": "Raylib Core API Calls", "tint": "teal",
+      "x": 700, "y": 1080, "w": 600, "h": 330,
+      "items": [
+        "BeginDrawing()      Start frame",
+        "ClearBackground()   Clear buffer",
+        "BeginMode2D/3D()    Set camera",
+        "Draw*()             Render primitives",
+        "EndMode2D/3D()      Restore camera",
+        "EndDrawing()        Swap buffers"
+      ] }
+  ],
+
+  "edges": [
+    { "from": "pollkbd", "to": "pollmouse" },
+    { "from": "pollmouse", "to": "pollpad" },
+    { "from": "pollpad", "to": "translate" },
+
+    { "from": "presim", "to": "sim" },
+    { "from": "sim", "to": "postsim" },
+    { "from": "postsim", "to": "presentation" },
+
+    { "from": "drawui", "to": "enddraw" },
+    { "from": "enddraw", "to": "present" },
+    { "from": "present", "to": "vsync" },
+
+    { "from": "clearbg", "to": "beginmode" },
+    { "from": "beginmode", "to": "drawperf" },
+    { "from": "drawperf", "to": "endmode" },
+
+    { "from": "inphase", "to": "update", "route": "curve", "rad": 0.2 },
+    { "from": "update", "to": "upphase", "route": "curve", "rad": 0.2 },
+    { "from": "input", "to": "update", "route": "curve", "rad": 0.25 },
+    { "from": "update", "to": "draw", "route": "curve", "rad": 0.25 },
+    { "from": "draw", "to": "api", "route": "curve", "rad": 0.15 },
+    { "from": "api", "to": "input", "route": "curve", "rad": 0.15 },
+    { "from": "swapphase", "to": "api" },
+    { "from": "api", "to": "drawphase" }
+  ]
+}

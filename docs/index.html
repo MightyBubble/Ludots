@@ -9,16 +9,16 @@
 <style>
   /* ===== 首页专属样式 ===== */
   .hero {
-    padding: 56px 0 12px;
+    padding: 64px 0 12px;
     max-width: 860px;
   }
   .hero .kicker {
-    font-size: 13px; font-weight: 600; letter-spacing: 3px;
-    color: var(--accent); text-transform: uppercase;
+    font-size: 12.5px; font-weight: 600; letter-spacing: 3px;
+    color: var(--steel); text-transform: uppercase;
   }
   .hero h1 {
-    font-size: 44px; line-height: 1.25; margin: 14px 0 18px;
-    font-weight: 800; letter-spacing: 0.5px;
+    font-size: 46px; line-height: 1.22; margin: 14px 0 18px;
+    font-weight: 700; letter-spacing: -0.5px;
   }
   .hero p.lead {
     font-size: 18px; color: var(--muted); margin: 0 0 30px; max-width: 720px;
@@ -38,7 +38,7 @@
   .steps { counter-reset: step; }
   .step-card { padding: 28px; position: relative; }
   .step-card .num {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 40px; height: 40px; border-radius: var(--radius);
     background: var(--accent-light); color: var(--accent);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; font-weight: 700; margin-bottom: 16px;
@@ -75,8 +75,8 @@
   .arch-feature .cap h3 { margin: 0; font-size: 17px; }
   .arch-feature .cap span { font-size: 13px; color: var(--faint); }
   .arch-feature .fig {
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    background: var(--bg); padding: 20px; text-align: center;
+    border: 1px solid var(--bg-hairline); border-radius: var(--radius-sm);
+    background: var(--bg-soft); padding: 24px; text-align: center;
   }
   .arch-feature .fig img { max-width: 100%; height: auto; }
 
@@ -120,7 +120,7 @@
   .md-body th { background: var(--bg-soft); font-weight: 600; }
   .md-body blockquote {
     border-left: 3px solid var(--accent); margin: 16px 0;
-    padding: 8px 16px; background: var(--accent-light); color: var(--muted);
+    padding: 8px 16px; background: var(--bg-soft); color: var(--muted);
   }
   .md-body img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 14px 0; }
   .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
@@ -200,19 +200,19 @@
         <span class="go">在下方阅读 ↓</span>
       </a>
       <a class="card nav-card" href="gallery.html">
-        <div class="icon" style="background: var(--olive-light); color: var(--olive);">🎮</div>
+        <div class="icon" style="background: var(--green-light); color: var(--green);">🎮</div>
         <h3>Showcase 画廊</h3>
         <p>可玩演示与能力验收场景的画廊：按分层与类别筛选，一键复制启动命令。</p>
         <span class="go">进入画廊 →</span>
       </a>
       <a class="card nav-card" href="tests.html">
-        <div class="icon" style="background: var(--warm-slate-light); color: var(--warm-slate);">✅</div>
+        <div class="icon" style="background: var(--steel-light); color: var(--steel);">✅</div>
         <h3>测试与验收</h3>
         <p>L0–L5 测试分层、门禁矩阵与 showcase 验收六件套证据的完整档案。</p>
         <span class="go">查看证据 →</span>
       </a>
       <a class="card nav-card" href="diagrams.html">
-        <div class="icon" style="background: var(--sand-light); color: var(--sand);">📐</div>
+        <div class="icon" style="background: var(--amber-light); color: var(--amber);">📐</div>
         <h3>架构图库</h3>
         <p>覆盖全部子系统的架构图、流程图与依赖图，支持全屏查看。</p>
         <span class="go">打开图库 →</span>

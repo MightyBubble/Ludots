@@ -1,0 +1,92 @@
+{
+  "name": "engine-architecture",
+  "title": "Ludots Engine Architecture",
+  "subtitle": "Hexagonal ECS + Everything-is-Mod",
+  "canvas": { "width": 1720, "height": 1330 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 250,
+    "items": [
+      { "label": "Core Engine", "tint": "core" },
+      { "label": "Gameplay Ability System", "tint": "sage" },
+      { "label": "Navigation & Pathfinding", "tint": "steel" },
+      { "label": "Spatial & Physics", "tint": "stone" },
+      { "label": "Presentation & Rendering", "tint": "sand" },
+      { "label": "Input & Orders", "tint": "mauve" },
+      { "label": "Modding & VFS", "tint": "clay" },
+      { "label": "ECS & Data Model", "tint": "slate" },
+      { "label": "Scripting & GraphRuntime", "tint": "teal" },
+      { "label": "Platform Adapters", "tint": "graphite" }
+    ]
+  },
+
+  "groups": [
+    {
+      "id": "platforms",
+      "title": "Platform Adapters",
+      "x": 700, "y": 1160, "w": 520, "h": 130,
+      "tint": "graphite",
+      "border_style": "dashed"
+    }
+  ],
+
+  "nodes": [
+    {
+      "id": "engine",
+      "title": "GameEngine",
+      "tint": "core",
+      "border_w": 1.6,
+      "x": 750, "y": 530, "w": 420, "h": 220,
+      "chips": ["Tick", "Pacemaker", "World", "TimeFlow", "Session", "Config"],
+      "chip_columns": 3,
+      "items": ["Deterministic tick loop · Everything-is-Mod"]
+    },
+
+    { "id": "gas", "title": "GAS", "tint": "sage",
+      "x": 120, "y": 545, "w": 300, "h": 150,
+      "items": ["Ability · Effect · Attribute", "Tag · Cue · Target"] },
+    { "id": "navigation", "title": "Navigation", "tint": "steel",
+      "x": 550, "y": 150, "w": 300, "h": 150,
+      "items": ["NavMesh · Pathfinding", "MassNav · Avoidance"] },
+    { "id": "spatial", "title": "Spatial / Physics", "tint": "stone",
+      "x": 1090, "y": 150, "w": 300, "h": 150,
+      "items": ["SpatialQuery · Physics2D", "Terrain · ChunkedGrid"] },
+    { "id": "presentation", "title": "Presentation", "tint": "sand",
+      "x": 1320, "y": 405, "w": 300, "h": 150,
+      "items": ["Performer · Visual · HUD", "Primitive · Animation"] },
+    { "id": "input", "title": "Input", "tint": "mauve",
+      "x": 120, "y": 725, "w": 300, "h": 150,
+      "items": ["InputRuntime · Order", "Selection · Interaction"] },
+    { "id": "modding", "title": "Modding", "tint": "clay",
+      "x": 1320, "y": 725, "w": 300, "h": 150,
+      "items": ["ModLoader · VFS · ALC", "ConfigPipeline · Registry"] },
+    { "id": "ecs", "title": "ECS / Data", "tint": "slate",
+      "x": 550, "y": 980, "w": 300, "h": 150,
+      "items": ["World · Entity · Component", "Chunk · Query · Template"] },
+    { "id": "scripting", "title": "Scripting / Graph", "tint": "teal",
+      "x": 1090, "y": 980, "w": 300, "h": 150,
+      "items": ["GraphRuntime · VM", "Compiler · OpCode"] },
+
+    { "id": "raylib", "title": "Raylib", "tint": "graphite",
+      "x": 730, "y": 1208, "w": 140, "h": 56 },
+    { "id": "web", "title": "Web", "tint": "graphite",
+      "x": 890, "y": 1208, "w": 140, "h": 56 },
+    { "id": "ue5", "title": "UE5", "tint": "graphite",
+      "x": 1050, "y": 1208, "w": 140, "h": 56 }
+  ],
+
+  "edges": [
+    { "from": "engine", "to": "gas", "arrow": false },
+    { "from": "engine", "to": "navigation", "arrow": false },
+    { "from": "engine", "to": "spatial", "arrow": false },
+    { "from": "engine", "to": "presentation", "arrow": false },
+    { "from": "engine", "to": "input", "arrow": false },
+    { "from": "engine", "to": "modding", "arrow": false },
+    { "from": "engine", "to": "ecs", "arrow": false },
+    { "from": "engine", "to": "scripting", "arrow": false },
+    { "from": "engine", "to": "platforms", "style": "dashed", "arrow": false }
+  ]
+}

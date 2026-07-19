@@ -1,0 +1,60 @@
+{
+  "name": "nav-pathfinding-flow",
+  "title": "Pathfinding Complete Flow",
+  "subtitle": "End-to-End: PathRequest -> Domain Routing -> Path -> Execution",
+  "canvas": { "width": 1500, "height": 1300 },
+
+  "groups": [
+    { "id": "hpagroup", "title": "HPA Hierarchical (optional)",
+      "x": 60, "y": 540, "w": 480, "h": 260, "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "req", "title": "PathRequest", "tint": "steel", "border_w": 1.6,
+      "x": 575, "y": 140, "w": 350, "h": 90,
+      "items": ["(Actor, Domain, Start, Goal)"] },
+    { "id": "router", "title": "1. PathServiceRouter", "tint": "steel",
+      "x": 525, "y": 290, "w": 450, "h": 80 },
+    { "id": "domain", "title": "PathDomain", "tint": "graphite",
+      "x": 600, "y": 430, "w": 300, "h": 70 },
+
+    { "id": "nodegraph", "title": "NodeGraph", "tint": "sage",
+      "x": 100, "y": 600, "w": 400, "h": 90,
+      "items": ["NodeGraphPathService", "A* + RouteTable"] },
+    { "id": "hpa", "title": "HierarchicalPathService", "tint": "steel",
+      "x": 100, "y": 710, "w": 400, "h": 70,
+      "items": ["ClusterGraph + MultiLayerGraph"] },
+
+    { "id": "navmesh", "title": "NavMesh", "tint": "steel",
+      "x": 600, "y": 600, "w": 300, "h": 130,
+      "items": ["NavQueryService", "DetourNavQueryEngine"] },
+    { "id": "direct", "title": "Direct", "tint": "mauve",
+      "x": 1060, "y": 600, "w": 300, "h": 130,
+      "items": ["DirectPathService", "StraightLine"] },
+
+    { "id": "auto", "title": "AutoPathService", "tint": "clay",
+      "x": 525, "y": 880, "w": 450, "h": 90,
+      "items": ["Select cheapest domain"] },
+    { "id": "result", "title": "2. PathResult -> PathHandle", "tint": "steel",
+      "x": 450, "y": 1030, "w": 600, "h": 80 },
+    { "id": "store", "title": "3. PathStore -> MovePlan -> MassNavigation", "tint": "clay",
+      "x": 450, "y": 1170, "w": 600, "h": 80 },
+
+    { "id": "status", "title": "PathResult Status", "tint": "slate", "valign": "top",
+      "x": 1150, "y": 1000, "w": 300, "h": 250,
+      "items": ["Found — Path Found", "NoPath — Unreachable", "BudgetExceeded — Budget Exhausted", "Partial — Partial Path"] }
+  ],
+
+  "edges": [
+    { "from": "req", "to": "router" },
+    { "from": "router", "to": "domain" },
+    { "from": "domain", "to": "nodegraph" },
+    { "from": "domain", "to": "navmesh" },
+    { "from": "domain", "to": "direct" },
+    { "from": "hpagroup", "to": "auto" },
+    { "from": "navmesh", "to": "auto", "style": "dashed" },
+    { "from": "direct", "to": "auto" },
+    { "from": "auto", "to": "result" },
+    { "from": "result", "to": "store" }
+  ]
+}

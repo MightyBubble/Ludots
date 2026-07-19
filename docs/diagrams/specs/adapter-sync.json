@@ -1,0 +1,105 @@
+{
+  "name": "adapter-sync",
+  "title": "AdapterSync - Synchronization",
+  "subtitle": "Simulation -> Presentation -> Adapter State Sync",
+  "canvas": { "width": 2050, "height": 1360 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 1690,
+    "y": 1000,
+    "width": 280,
+    "items": [
+      { "label": "Simulation Thread", "tint": "clay" },
+      { "label": "Presentation Thread", "tint": "sand" },
+      { "label": "Adapter Thread", "tint": "teal" },
+      { "label": "Sync Point", "tint": "sage" }
+    ]
+  },
+
+  "groups": [
+    { "id": "budget", "title": "Single Frame Budget (16.67ms @ 60FPS)",
+      "x": 80, "y": 1000, "w": 1290, "h": 220,
+      "tint": "graphite", "border_style": "solid", "title_anchor": "top-center" }
+  ],
+
+  "nodes": [
+    { "id": "sim-h", "title": "Simulation", "tint": "clay", "border_w": 1.6,
+      "x": 80, "y": 140, "w": 520, "h": 80 },
+    { "id": "pres-h", "title": "Presentation", "tint": "sand", "border_w": 1.6,
+      "x": 765, "y": 140, "w": 520, "h": 80 },
+    { "id": "ad-h", "title": "Adapter", "tint": "teal", "border_w": 1.6,
+      "x": 1450, "y": 140, "w": 520, "h": 80 },
+
+    { "id": "ecs", "title": "ECS World", "tint": "clay",
+      "x": 80, "y": 260, "w": 520, "h": 100, "items": ["ECS World Snapshot"] },
+    { "id": "sysgroup", "title": "SystemGroup", "tint": "clay",
+      "x": 80, "y": 400, "w": 520, "h": 100, "items": ["SystemGroup.Tick()"] },
+    { "id": "gas", "title": "GAS", "tint": "clay",
+      "x": 80, "y": 540, "w": 520, "h": 100, "items": ["Ability/Effect Update"] },
+    { "id": "nav", "title": "Navigation", "tint": "clay",
+      "x": 80, "y": 680, "w": 520, "h": 100, "items": ["Path/Steering Update"] },
+    { "id": "physics", "title": "Physics", "tint": "clay",
+      "x": 80, "y": 820, "w": 520, "h": 100, "items": ["Collision/Transform"] },
+
+    { "id": "pm", "title": "PerformerManager", "tint": "sand",
+      "x": 765, "y": 260, "w": 520, "h": 100, "items": ["Sync from World"] },
+    { "id": "pf", "title": "PerformerFactory", "tint": "sand",
+      "x": 765, "y": 400, "w": 520, "h": 100, "items": ["Create/Destroy"] },
+    { "id": "bs", "title": "BehaviorSlot", "tint": "sand",
+      "x": 765, "y": 540, "w": 520, "h": 100, "items": ["Update States"] },
+    { "id": "cb", "title": "CommandBuffer", "tint": "sand",
+      "x": 765, "y": 680, "w": 520, "h": 100, "items": ["Collect Commands"] },
+    { "id": "rq", "title": "RenderQueue", "tint": "sand",
+      "x": 765, "y": 820, "w": 520, "h": 100, "items": ["Sort by Z/Depth"] },
+
+    { "id": "iupdate", "title": "IAdapter.Update", "tint": "teal",
+      "x": 1450, "y": 260, "w": 520, "h": 100, "items": ["Receive Queue"] },
+    { "id": "drawlist", "title": "DrawList", "tint": "teal",
+      "x": 1450, "y": 400, "w": 520, "h": 100, "items": ["Batch by Material"] },
+    { "id": "papi", "title": "Platform API", "tint": "teal",
+      "x": 1450, "y": 540, "w": 520, "h": 100, "items": ["Raylib/UE5/Web"] },
+    { "id": "gpu", "title": "GPU Command", "tint": "teal",
+      "x": 1450, "y": 680, "w": 520, "h": 100, "items": ["Upload/Execute"] },
+    { "id": "screen", "title": "Screen Output", "tint": "teal",
+      "x": 1450, "y": 820, "w": 520, "h": 100, "items": ["Frame Present"] },
+
+    { "id": "t-sim", "title": "Sim", "tint": "clay", "x": 140, "y": 1080, "w": 200, "h": 70 },
+    { "id": "t-sync", "title": "Sync", "tint": "sage", "x": 380, "y": 1080, "w": 200, "h": 70 },
+    { "id": "t-pres", "title": "Pres", "tint": "sand", "x": 620, "y": 1080, "w": 200, "h": 70 },
+    { "id": "t-rnd", "title": "Rnd", "tint": "teal", "x": 860, "y": 1080, "w": 200, "h": 70 }
+  ],
+
+  "edges": [
+    { "from": "ecs", "to": "sysgroup" },
+    { "from": "sysgroup", "to": "gas" },
+    { "from": "gas", "to": "nav" },
+    { "from": "nav", "to": "physics" },
+
+    { "from": "pm", "to": "pf" },
+    { "from": "pf", "to": "bs" },
+    { "from": "bs", "to": "cb" },
+    { "from": "cb", "to": "rq" },
+
+    { "from": "iupdate", "to": "drawlist" },
+    { "from": "drawlist", "to": "papi" },
+    { "from": "papi", "to": "gpu" },
+    { "from": "gpu", "to": "screen" },
+
+    { "from": "sysgroup", "to": "pf", "label": "Sync", "color": "#b06a5a" },
+    { "from": "bs", "to": "papi", "label": "Render", "color": "#b06a5a" },
+    { "from": "physics", "to": "rq", "style": "dashed", "label": "Events" },
+    { "from": "cb", "to": "gpu", "style": "dashed", "label": "Viewport/Input" },
+
+    { "from": "t-sim", "to": "t-sync", "arrow": false },
+    { "from": "t-sync", "to": "t-pres", "arrow": false },
+    { "from": "t-pres", "to": "t-rnd", "arrow": false }
+  ],
+
+  "notes": [
+    { "text": "0.00ms", "x": 140, "y": 1180, "ha": "left" },
+    { "text": "8.33ms", "x": 620, "y": 1180, "ha": "left" },
+    { "text": "16.67ms", "x": 1100, "y": 1180, "ha": "left" },
+    { "text": "Double Buffering: Presentation maintains two Buffers (Front/Back). Adapter reads Front, Simulation writes Back. Swap every frame.", "x": 80, "y": 1270, "ha": "left" }
+  ]
+}

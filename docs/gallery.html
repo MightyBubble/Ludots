@@ -19,7 +19,7 @@
   .sc-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
   .sc-card.retired { opacity: 0.62; }
   .sc-shot { position: relative; height: 168px; background: var(--bg-soft);
-    border-bottom: 1px solid var(--border); overflow: hidden; }
+    border-bottom: 1px solid var(--bg-hairline); overflow: hidden; }
   .sc-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .sc-shot .placeholder {
     position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -36,6 +36,8 @@
   .sc-cmd .cmdline { font-size: 12px; padding: 8px 12px; }
   .sc-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px;
     border-top: 1px dashed var(--border); padding-top: 12px; }
+  .sc-links a { color: var(--steel); font-weight: 500; }
+  .sc-links a:hover { color: var(--accent); }
   .empty-state { text-align: center; color: var(--faint); padding: 80px 20px; }
   .empty-state .glyph { font-size: 40px; display: block; margin-bottom: 12px; opacity: 0.6; }
 
@@ -137,7 +139,7 @@
         ? '<span class="badge status-' + esc(sc.status) + '">' + esc(STATUS_LABEL[sc.status] || sc.status) + "</span>"
         : "");
     (sc.tags || []).forEach(function (t) {
-      html += '<span class="badge" style="background: var(--bg-soft); color: var(--muted);">' + esc(t) + "</span>";
+      html += '<span class="badge" style="background: var(--bg-soft); color: var(--muted); border: 1px solid var(--bg-hairline);">' + esc(t) + "</span>";
     });
     html += "</div>";
 

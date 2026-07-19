@@ -1,0 +1,69 @@
+{
+  "name": "nav-navigation-stack",
+  "title": "Ludots Navigation Stack",
+  "subtitle": "Navigation Technology Stack: CDT -> NavMesh -> HPA -> MassNav -> Avoidance",
+  "canvas": { "width": 1680, "height": 1380 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 230,
+    "items": [
+      { "label": "Navigation Core", "tint": "steel" },
+      { "label": "Mass Execution", "tint": "clay" },
+      { "label": "Avoidance / GAS", "tint": "sage" }
+    ]
+  },
+
+  "groups": [
+    { "id": "l1", "title": "Layer 1: CDT Geometry", "x": 290, "y": 130, "w": 1350, "h": 180, "tint": "steel", "border_style": "dashed" },
+    { "id": "l2", "title": "Layer 2: NavMesh Grid", "x": 290, "y": 360, "w": 1350, "h": 180, "tint": "steel", "border_style": "dashed" },
+    { "id": "l3", "title": "Layer 3: HPA Abstraction", "x": 290, "y": 590, "w": 1350, "h": 180, "tint": "steel", "border_style": "dashed" },
+    { "id": "l4", "title": "Layer 4: MassNav Execution", "x": 290, "y": 820, "w": 1350, "h": 180, "tint": "clay", "border_style": "dashed" },
+    { "id": "l5", "title": "Layer 5: Avoidance", "x": 290, "y": 1050, "w": 1350, "h": 180, "tint": "sage", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "a1", "title": "CdtTriangulator", "tint": "steel", "x": 330, "y": 185, "w": 300, "h": 90 },
+    { "id": "a2", "title": "ContourExtractor", "tint": "steel", "x": 650, "y": 185, "w": 300, "h": 90 },
+    { "id": "a3", "title": "Triangulator", "tint": "steel", "x": 970, "y": 185, "w": 300, "h": 90 },
+    { "id": "a4", "title": "NavObstacleGeometry", "tint": "steel", "x": 1290, "y": 185, "w": 300, "h": 90 },
+
+    { "id": "b1", "title": "BakePipeline", "tint": "steel", "x": 322, "y": 415, "w": 250, "h": 90 },
+    { "id": "b2", "title": "NavBakeService", "tint": "steel", "x": 586, "y": 415, "w": 250, "h": 90 },
+    { "id": "b3", "title": "NavTileStore", "tint": "steel", "x": 850, "y": 415, "w": 250, "h": 90 },
+    { "id": "b4", "title": "NavQueryService", "tint": "steel", "x": 1114, "y": 415, "w": 250, "h": 90 },
+    { "id": "b5", "title": "DetourEngine", "tint": "steel", "x": 1378, "y": 415, "w": 250, "h": 90 },
+
+    { "id": "c1", "title": "ClusterGraph", "tint": "steel", "x": 322, "y": 645, "w": 250, "h": 90 },
+    { "id": "c2", "title": "MultiLayerGraph", "tint": "steel", "x": 586, "y": 645, "w": 250, "h": 90 },
+    { "id": "c3", "title": "HierarchicalPathService", "tint": "steel", "x": 850, "y": 645, "w": 250, "h": 90 },
+    { "id": "c4", "title": "InterLayerMapping", "tint": "steel", "x": 1114, "y": 645, "w": 250, "h": 90 },
+    { "id": "c5", "title": "GraphRouteTable", "tint": "steel", "x": 1378, "y": 645, "w": 250, "h": 90 },
+
+    { "id": "d1", "title": "MassNavigation", "tint": "clay", "x": 322, "y": 875, "w": 250, "h": 90, "items": ["Runtime"] },
+    { "id": "d2", "title": "MassNavigation", "tint": "clay", "x": 586, "y": 875, "w": 250, "h": 90, "items": ["SimulationRuntime"] },
+    { "id": "d3", "title": "MassNavigation", "tint": "clay", "x": 850, "y": 875, "w": 250, "h": 90, "items": ["FlowSolverState"] },
+    { "id": "d4", "title": "MassNavigation", "tint": "clay", "x": 1114, "y": 875, "w": 250, "h": 90, "items": ["FormationSystem"] },
+    { "id": "d5", "title": "MassNavigation", "tint": "clay", "x": 1378, "y": 875, "w": 250, "h": 90, "items": ["OrderIngestionSystem"] },
+
+    { "id": "e1", "title": "OrcaSolver2D", "tint": "sage", "x": 330, "y": 1105, "w": 300, "h": 90 },
+    { "id": "e2", "title": "SonarSolver2D", "tint": "sage", "x": 650, "y": 1105, "w": 300, "h": 90 },
+    { "id": "e3", "title": "HexGridAOI", "tint": "sage", "x": 970, "y": 1105, "w": 300, "h": 90 },
+    { "id": "e4", "title": "FlowAvoidanceTuning", "tint": "sage", "x": 1290, "y": 1105, "w": 300, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "l1", "to": "l2" },
+    { "from": "l2", "to": "l3" },
+    { "from": "l3", "to": "l4" },
+    { "from": "l4", "to": "l5" }
+  ],
+
+  "notes": [
+    { "text": "Note: CDT = Constrained Delaunay Triangulation", "x": 60, "y": 1270, "ha": "left" },
+    { "text": "HPA = Hierarchical Pathfinding A*", "x": 60, "y": 1296, "ha": "left" },
+    { "text": "MassNav supports 1000+ units @ 60Hz fixed-step", "x": 60, "y": 1322, "ha": "left" }
+  ]
+}

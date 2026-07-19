@@ -1,0 +1,46 @@
+{
+  "name": "selection-state-machine",
+  "title": "Selection 状态机",
+  "subtitle": "Ludots Selection Manager / 选择状态流转",
+  "canvas": { "width": 1920, "height": 1380 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40, "y": 1080,
+    "items": [
+      { "label": "Input State", "tint": "mauve" },
+      { "label": "Presentation State", "tint": "stone" },
+      { "label": "Navigation State", "tint": "steel" }
+    ]
+  },
+
+  "nodes": [
+    { "id": "empty", "title": "Empty", "tint": "mauve", "border_w": 1.6, "x": 800, "y": 150, "w": 260, "h": 150 },
+    { "id": "single", "title": "Single", "tint": "mauve", "border_w": 1.6, "x": 180, "y": 580, "w": 260, "h": 150 },
+    { "id": "multi", "title": "Multi", "tint": "mauve", "border_w": 1.6, "x": 180, "y": 920, "w": 260, "h": 150 },
+    { "id": "group", "title": "Group", "tint": "mauve", "border_w": 1.6, "x": 800, "y": 1080, "w": 260, "h": 150 },
+    { "id": "view", "title": "View", "tint": "stone", "border_w": 1.6, "x": 1420, "y": 580, "w": 260, "h": 150 },
+    { "id": "formation", "title": "Formation", "tint": "steel", "border_w": 1.6, "x": 1420, "y": 920, "w": 260, "h": 150 }
+  ],
+
+  "edges": [
+    { "from": "empty", "to": "single", "route": "curve", "rad": 0.15, "label": "Left Click" },
+    { "from": "single", "to": "empty", "route": "curve", "rad": 0.15, "label": "Deselect" },
+    { "from": "single", "to": "multi", "route": "elbow", "from_side": "left", "to_side": "left", "stub": 40, "label": "Shift Click" },
+    { "from": "multi", "to": "single", "route": "curve", "rad": 0.15, "label": "Ctrl Click" },
+    { "from": "empty", "to": "multi", "route": "curve", "rad": -0.2, "label": "Box Select" },
+    { "from": "multi", "to": "empty", "route": "curve", "rad": -0.2, "label": "Esc" },
+    { "from": "empty", "to": "view", "route": "curve", "rad": 0.15, "label": "Spectate" },
+    { "from": "view", "to": "empty", "route": "curve", "rad": 0.15, "label": "Double Esc" },
+    { "from": "single", "to": "view", "route": "curve", "rad": 0.18, "label": "Follow" },
+    { "from": "view", "to": "single", "route": "curve", "rad": 0.18, "label": "Exit View" },
+    { "from": "multi", "to": "formation", "route": "curve", "rad": 0.15, "label": "Formation" },
+    { "from": "formation", "to": "multi", "route": "curve", "rad": 0.15, "label": "Break" },
+    { "from": "multi", "to": "group", "route": "curve", "rad": 0.15, "label": "Ctrl+G" },
+    { "from": "group", "to": "multi", "route": "curve", "rad": 0.15, "label": "Ungroup" }
+  ],
+
+  "notes": [
+    { "text": "SelectionManager 只维护选中状态；指令生成由 UI 层通过 Command 完成", "x": 560, "y": 880, "ha": "left" }
+  ]
+}

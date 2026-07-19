@@ -1,0 +1,64 @@
+{
+  "name": "ecs-datamodel-chunk-storage",
+  "title": "Chunk-Based SoA Storage",
+  "subtitle": "Structure of Arrays (SoA) Memory Layout per Chunk",
+  "canvas": { "width": 1720, "height": 1180 },
+
+  "nodes": [
+    { "id": "archetype", "title": "Archetype", "tint": "clay",
+      "x": 60, "y": 130, "w": 320, "h": 110,
+      "items": ["TypeIndex[] defining component set"] },
+    { "id": "chunk0", "title": "Chunk #0", "tint": "steel",
+      "x": 60, "y": 300, "w": 320, "h": 100,
+      "items": ["Full (16K entities)"] },
+    { "id": "chunk1", "title": "Chunk #1", "tint": "steel",
+      "x": 60, "y": 450, "w": 320, "h": 100,
+      "items": ["Full (16K entities)"] },
+    { "id": "chunk2", "title": "Chunk #2", "tint": "steel",
+      "x": 60, "y": 600, "w": 320, "h": 100,
+      "items": ["Partial (8.4K entities)"] },
+
+    { "id": "header", "title": "Chunk Header", "tint": "slate",
+      "x": 520, "y": 130, "w": 760, "h": 90,
+      "items": ["EntityCount | Capacity | ArchetypePtr | NextChunkPtr | Version"] },
+    { "id": "arr_position", "title": "ComponentArray<Position>", "tint": "sage",
+      "x": 520, "y": 260, "w": 760, "h": 90,
+      "items": ["float3 x 16,384 | float3 y 16,384 | float3 z 16,384"] },
+    { "id": "arr_rotation", "title": "ComponentArray<Rotation>", "tint": "sage",
+      "x": 520, "y": 380, "w": 760, "h": 90,
+      "items": ["quaternion x 16,384 | quaternion y 16,384 | quaternion z 16,384 | quaternion w 16,384"] },
+    { "id": "arr_health", "title": "ComponentArray<Health>", "tint": "sage",
+      "x": 520, "y": 500, "w": 760, "h": 90,
+      "items": ["float current 16,384 | float max 16,384"] },
+    { "id": "arr_team", "title": "ComponentArray<TeamId>", "tint": "sage",
+      "x": 520, "y": 620, "w": 760, "h": 90,
+      "items": ["int value 16,384"] },
+    { "id": "arr_velocity", "title": "ComponentArray<Velocity>", "tint": "sage",
+      "x": 520, "y": 740, "w": 760, "h": 90,
+      "items": ["float3 dx 16,384 | float3 dy 16,384 | float3 dz 16,384"] },
+
+    { "id": "soa_table", "title": "SoA Memory Layout", "tint": "slate", "valign": "top",
+      "x": 520, "y": 880, "w": 760, "h": 240,
+      "items": [
+        "Offset | Field | Size | Alignment",
+        "0x00  EntityCount  4  4",
+        "0x04  Capacity  4  4",
+        "0x08  ArchetypePtr  8  8",
+        "0x10  ComponentArray[0]  N x sizeof(T)  max_align",
+        "0x..  ComponentArray[1]  N x sizeof(T)  max_align",
+        "0x..  ...  ...  ..."
+      ] }
+  ],
+
+  "edges": [
+    { "from": "archetype", "to": "chunk0", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "chunk0", "to": "chunk1", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "chunk1", "to": "chunk2", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "chunk2", "to": "arr_position", "route": "elbow", "from_side": "right", "to_side": "left", "label": "maps to" }
+  ],
+
+  "notes": [
+    { "text": "Each Chunk = 16KB ~ 256KB of contiguous memory.", "x": 60, "y": 900, "ha": "left" },
+    { "text": "Entities are densely packed; components stored as SoA.", "x": 60, "y": 924, "ha": "left" }
+  ]
+}

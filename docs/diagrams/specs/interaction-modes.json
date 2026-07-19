@@ -1,0 +1,55 @@
+{
+  "name": "interaction-modes",
+  "title": "4 种技能施放交互模式",
+  "subtitle": "Interaction Mode 对比 / 施放方式设计",
+  "canvas": { "width": 2000, "height": 1560 },
+
+  "groups": [
+    { "id": "decision", "title": "技能施放模式决策流程", "x": 40, "y": 950, "w": 1920, "h": 520, "tint": "sand", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "smart", "title": "SmartCast", "tint": "mauve", "x": 40, "y": 130, "w": 460, "h": 720, "valign": "top",
+      "items": ["智能施法", "",
+        "1. 按下立即施放", "2. 无需目标确认", "3. 响应速度最快", "",
+        "Pros: 操作最简 · 响应极快", "Cons: 精度较低", "",
+        "Use Case: 位移技能 / 自我增益"] },
+    { "id": "aim", "title": "AimCast", "tint": "sage", "x": 540, "y": 130, "w": 460, "h": 720, "valign": "top",
+      "items": ["瞄准施法", "",
+        "1. 按下显示瞄准范围", "2. 点击确认施放", "3. 可随时取消瞄准", "",
+        "Pros: 精度最高 · 可控性强", "Cons: 操作稍慢", "",
+        "Use Case: 指向性技能 / AOE 技能"] },
+    { "id": "scored", "title": "ContextScored", "tint": "steel", "x": 1040, "y": 130, "w": 460, "h": 720, "valign": "top",
+      "items": ["上下文评分施法", "",
+        "1. 采集上下文信息", "2. 多目标评分排序", "3. 自动选择最优目标", "",
+        "Pros: 智能选择 · 适合复杂场景", "Cons: 结果不完全可预期", "",
+        "Use Case: 团战技能 / 智能辅助"] },
+    { "id": "press", "title": "PressReleaseAimCast", "tint": "stone", "x": 1540, "y": 130, "w": 420, "h": 720, "valign": "top",
+      "items": ["按住瞄准 · 松开施放", "",
+        "1. 按下开始瞄准", "2. 持续调整目标", "3. 松开确认施放", "",
+        "Pros: 精度高 · 手感好", "Cons: 操作较复杂", "",
+        "Use Case: 狙击技能 / 蓄力技能"] },
+
+    { "id": "ie", "title": "Input Event", "tint": "mauve", "x": 90, "y": 1130, "w": 220, "h": 90 },
+    { "id": "d1", "title": "有明确目标?", "tint": "sand", "x": 400, "y": 1130, "w": 260, "h": 90 },
+    { "id": "d2", "title": "需要快速施放?", "tint": "sand", "x": 770, "y": 1130, "w": 260, "h": 90 },
+    { "id": "d3", "title": "需要精确瞄准?", "tint": "sand", "x": 1140, "y": 1130, "w": 260, "h": 90 },
+    { "id": "d4", "title": "蓄力 / 按住?", "tint": "sand", "x": 1510, "y": 1130, "w": 240, "h": 90 },
+
+    { "id": "r1", "title": "ContextScored", "tint": "steel", "x": 400, "y": 1330, "w": 260, "h": 80 },
+    { "id": "r2", "title": "SmartCast", "tint": "mauve", "x": 770, "y": 1330, "w": 260, "h": 80 },
+    { "id": "r3", "title": "AimCast", "tint": "sage", "x": 1140, "y": 1330, "w": 260, "h": 80 },
+    { "id": "r4", "title": "PressReleaseAimCast", "tint": "stone", "x": 1510, "y": 1330, "w": 240, "h": 80 }
+  ],
+
+  "edges": [
+    { "from": "ie", "to": "d1" },
+    { "from": "d1", "to": "d2", "label": "是" },
+    { "from": "d2", "to": "d3", "label": "否" },
+    { "from": "d3", "to": "d4", "label": "否" },
+    { "from": "d1", "to": "r1", "label": "否" },
+    { "from": "d2", "to": "r2", "label": "是" },
+    { "from": "d3", "to": "r3", "label": "是" },
+    { "from": "d4", "to": "r4", "label": "是" }
+  ]
+}

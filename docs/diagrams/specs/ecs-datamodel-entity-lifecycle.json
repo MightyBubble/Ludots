@@ -1,0 +1,58 @@
+{
+  "name": "ecs-datamodel-entity-lifecycle",
+  "title": "Entity Lifecycle",
+  "subtitle": "Spawn → Active → Destroy → Cleanup",
+  "canvas": { "width": 1640, "height": 1500 },
+
+  "nodes": [
+    { "id": "start", "title": "Start", "tint": "clay",
+      "x": 720, "y": 120, "w": 200, "h": 60 },
+    { "id": "s1", "title": "1 · EntityManager.CreateEntity()", "tint": "clay",
+      "x": 640, "y": 240, "w": 360, "h": 80 },
+    { "id": "s2", "title": "2 · Chunk.AllocateEntity()", "tint": "steel",
+      "x": 640, "y": 380, "w": 360, "h": 80 },
+    { "id": "dec", "title": "Archetype Exists?", "tint": "stone",
+      "x": 700, "y": 520, "w": 240, "h": 70 },
+    { "id": "s3a", "title": "3 · Create New Archetype", "tint": "sage",
+      "x": 260, "y": 660, "w": 320, "h": 70 },
+    { "id": "s3b", "title": "3 · Reuse Existing Archetype", "tint": "sage",
+      "x": 1060, "y": 660, "w": 340, "h": 70 },
+    { "id": "s4", "title": "4 · Write Component Data", "tint": "stone",
+      "x": 640, "y": 800, "w": 360, "h": 100,
+      "items": ["ComponentData / Shared / Buffer"] },
+    { "id": "active", "title": "ACTIVE", "tint": "mauve", "border_w": 1.6,
+      "x": 640, "y": 960, "w": 360, "h": 120,
+      "items": ["Entity exists in World", "Systems can query & modify"] },
+    { "id": "s5", "title": "5 · EntityManager.DestroyEntity()", "tint": "stone",
+      "x": 1120, "y": 980, "w": 360, "h": 80 },
+    { "id": "dec2", "title": "Deferred?", "tint": "stone",
+      "x": 1180, "y": 1120, "w": 240, "h": 70 },
+    { "id": "s6a", "title": "6 · Immediate Cleanup", "tint": "steel",
+      "x": 1020, "y": 1260, "w": 280, "h": 70 },
+    { "id": "s6b", "title": "6 · Add to ECB Destroy Queue", "tint": "steel",
+      "x": 1330, "y": 1260, "w": 290, "h": 70 },
+    { "id": "end", "title": "End", "tint": "clay",
+      "x": 1200, "y": 1390, "w": 200, "h": 60 }
+  ],
+
+  "edges": [
+    { "from": "start", "to": "s1", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s1", "to": "s2", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s2", "to": "dec", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "dec", "to": "s3a", "route": "elbow", "from_side": "left", "to_side": "top", "label": "No" },
+    { "from": "dec", "to": "s3b", "route": "elbow", "from_side": "right", "to_side": "top", "label": "Yes" },
+    { "from": "s3a", "to": "s4", "route": "elbow", "from_side": "bottom", "to_side": "left" },
+    { "from": "s3b", "to": "s4", "route": "elbow", "from_side": "bottom", "to_side": "right" },
+    { "from": "s4", "to": "active", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "active", "to": "s5", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "s5", "to": "dec2", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "dec2", "to": "s6a", "route": "elbow", "from_side": "bottom", "to_side": "top", "label": "No" },
+    { "from": "dec2", "to": "s6b", "route": "elbow", "from_side": "right", "to_side": "top", "label": "Yes" },
+    { "from": "s6a", "to": "end", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s6b", "to": "end", "route": "elbow", "from_side": "bottom", "to_side": "right" }
+  ],
+
+  "notes": [
+    { "text": "↻ Systems Update (per-tick loop while ACTIVE)", "x": 560, "y": 1110, "ha": "left" }
+  ]
+}

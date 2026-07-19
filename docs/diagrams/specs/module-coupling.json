@@ -1,0 +1,71 @@
+{
+  "name": "module-coupling",
+  "title": "Ludots Module Coupling Network",
+  "subtitle": "Thick line = high coupling | Warm color = tight | Thin line = low | Cool color = loose",
+  "canvas": { "width": 1700, "height": 1300 },
+
+  "legend": {
+    "title": "Module Legend",
+    "x": 40,
+    "y": 130,
+    "width": 220,
+    "items": [
+      { "label": "Core", "tint": "clay" },
+      { "label": "GAS", "tint": "sage" },
+      { "label": "Navigation", "tint": "steel" },
+      { "label": "Presentation", "tint": "stone" },
+      { "label": "Input", "tint": "mauve" },
+      { "label": "Modding", "tint": "sand" },
+      { "label": "Adapter", "tint": "teal" },
+      { "label": "Data/ECS", "tint": "slate" },
+      { "label": "Script/Graph", "tint": "mauve" },
+      { "label": "Spatial/Vision", "tint": "steel" },
+      { "label": "Physics", "tint": "mauve" },
+      { "label": "Strong (5)", "style": "line", "line": "solid", "color": "#b8745f" },
+      { "label": "Medium (3-4)", "style": "line", "line": "solid", "color": "#c9a08e" },
+      { "label": "Weak (2)", "style": "line", "line": "solid", "color": "#8a94a3" }
+    ]
+  },
+
+  "nodes": [
+    { "id": "core", "title": "Engine Core", "tint": "core", "border_w": 1.8, "x": 700, "y": 160, "w": 260, "h": 110 },
+    { "id": "input", "title": "Input", "tint": "mauve", "x": 380, "y": 200, "w": 190, "h": 90 },
+    { "id": "adapter", "title": "Adapter", "tint": "teal", "x": 1150, "y": 80, "w": 220, "h": 90 },
+    { "id": "presentation", "title": "Presentation", "tint": "stone", "x": 1380, "y": 220, "w": 240, "h": 100 },
+    { "id": "ecs", "title": "ECS", "tint": "slate", "x": 420, "y": 430, "w": 220, "h": 100 },
+    { "id": "registry", "title": "Registry", "tint": "clay", "x": 700, "y": 560, "w": 220, "h": 100 },
+    { "id": "gas", "title": "GAS", "tint": "sage", "x": 1250, "y": 450, "w": 220, "h": 100 },
+    { "id": "datamodel", "title": "DataModel", "tint": "slate", "x": 480, "y": 700, "w": 200, "h": 90 },
+    { "id": "physics", "title": "Physics", "tint": "mauve", "x": 60, "y": 700, "w": 180, "h": 90 },
+    { "id": "spatial", "title": "Spatial", "tint": "steel", "x": 60, "y": 880, "w": 200, "h": 100 },
+    { "id": "navigation", "title": "Navigation", "tint": "steel", "x": 300, "y": 1060, "w": 220, "h": 100 },
+    { "id": "graphruntime", "title": "GraphRuntime", "tint": "mauve", "x": 1400, "y": 680, "w": 210, "h": 90 },
+    { "id": "modding", "title": "Modding", "tint": "sand", "x": 1010, "y": 800, "w": 200, "h": 90 },
+    { "id": "scripting", "title": "Scripting", "tint": "mauve", "x": 1430, "y": 900, "w": 190, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "core", "to": "input", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "core", "to": "adapter", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "core", "to": "presentation", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "core", "to": "ecs", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "core", "to": "gas", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "core", "to": "registry", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "core", "to": "datamodel", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "core", "to": "modding", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "adapter", "to": "presentation", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "ecs", "to": "gas", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "ecs", "to": "presentation", "label": "2", "arrow": false, "width": 0.9, "color": "#8a94a3" },
+    { "from": "ecs", "to": "datamodel", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "ecs", "to": "spatial", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "registry", "to": "gas", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "registry", "to": "datamodel", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "gas", "to": "graphruntime", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "graphruntime", "to": "scripting", "label": "4", "arrow": false, "width": 1.8, "color": "#c9a08e" },
+    { "from": "modding", "to": "scripting", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "navigation", "to": "datamodel", "label": "3", "arrow": false, "width": 1.2, "color": "#c9a08e" },
+    { "from": "spatial", "to": "navigation", "label": "5", "arrow": false, "width": 2.4, "color": "#b8745f" },
+    { "from": "physics", "to": "spatial", "label": "2", "arrow": false, "width": 0.9, "color": "#8a94a3" },
+    { "from": "physics", "to": "input", "arrow": false, "width": 0.9, "color": "#8a94a3" }
+  ]
+}

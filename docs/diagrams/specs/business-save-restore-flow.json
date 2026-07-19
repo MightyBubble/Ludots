@@ -1,0 +1,76 @@
+{
+  "name": "business-save-restore-flow",
+  "title": "Ludots Save / Restore Flow",
+  "subtitle": "GameState -> Snapshot -> Serialize -> .ldsave -> Deserialize -> Restore",
+  "canvas": { "width": 1760, "height": 1080 },
+
+  "groups": [
+    { "id": "savedata", "title": "Save Data Types", "x": 100, "y": 800, "w": 940, "h": 220, "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "l0", "title": "GameState", "tint": "clay", "border_w": 1.6,
+      "x": 240, "y": 170, "w": 400, "h": 84 },
+    { "id": "l1", "title": "1 · Snapshot", "tint": "steel",
+      "x": 240, "y": 290, "w": 400, "h": 84 },
+    { "id": "l2", "title": "2 · Serialize", "tint": "steel",
+      "x": 240, "y": 410, "w": 400, "h": 84 },
+    { "id": "l3", "title": "3 · Compress", "tint": "steel",
+      "x": 240, "y": 530, "w": 400, "h": 84 },
+    { "id": "l4", "title": "4 · .ldsave", "tint": "steel",
+      "x": 240, "y": 650, "w": 400, "h": 84 },
+
+    { "id": "mid", "title": "Cross-Platform Save .ldsave", "tint": "slate", "border_w": 1.6,
+      "x": 760, "y": 480, "w": 300, "h": 130,
+      "items": ["Binary Format"] },
+
+    { "id": "r1", "title": "1 · .ldsave", "tint": "steel",
+      "x": 1180, "y": 170, "w": 400, "h": 84 },
+    { "id": "r2", "title": "2 · Decompress", "tint": "steel",
+      "x": 1180, "y": 290, "w": 400, "h": 84 },
+    { "id": "r3", "title": "3 · Deserialize", "tint": "steel",
+      "x": 1180, "y": 410, "w": 400, "h": 84 },
+    { "id": "r4", "title": "4 · Restore", "tint": "clay",
+      "x": 1180, "y": 530, "w": 400, "h": 84 },
+    { "id": "r5", "title": "GameState", "tint": "clay", "border_w": 1.6,
+      "x": 1180, "y": 650, "w": 400, "h": 84 },
+
+    { "id": "sd1", "title": "EntitySnapshot", "tint": "slate", "x": 140, "y": 890, "w": 160, "h": 64 },
+    { "id": "sd2", "title": "ComponentData", "tint": "slate", "x": 320, "y": 890, "w": 160, "h": 64 },
+    { "id": "sd3", "title": "AttributeBase", "tint": "slate", "x": 500, "y": 890, "w": 160, "h": 64 },
+    { "id": "sd4", "title": "GameplayTags", "tint": "slate", "x": 680, "y": 890, "w": 160, "h": 64 },
+    { "id": "sd5", "title": "Inventory", "tint": "slate", "x": 860, "y": 890, "w": 160, "h": 64 }
+  ],
+
+  "edges": [
+    { "from": "l0", "to": "l1", "route": "straight" },
+    { "from": "l1", "to": "l2", "route": "straight" },
+    { "from": "l2", "to": "l3", "route": "straight" },
+    { "from": "l3", "to": "l4", "route": "straight" },
+
+    { "from": "l4", "to": "mid", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "mid", "to": "r5", "route": "straight", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+
+    { "from": "r1", "to": "r2", "route": "straight" },
+    { "from": "r2", "to": "r3", "route": "straight" },
+    { "from": "r3", "to": "r4", "route": "straight" },
+    { "from": "r4", "to": "r5", "route": "straight" }
+  ],
+
+  "notes": [
+    { "text": "SAVE", "x": 440, "y": 130, "ha": "center" },
+    { "text": "RESTORE", "x": 1380, "y": 130, "ha": "center" },
+
+    { "text": "Live State", "x": 60, "y": 203, "ha": "left" },
+    { "text": "Deep Copy", "x": 60, "y": 323, "ha": "left" },
+    { "text": "To Bytes", "x": 60, "y": 443, "ha": "left" },
+    { "text": "GZip", "x": 60, "y": 563, "ha": "left" },
+    { "text": "File", "x": 60, "y": 683, "ha": "left" },
+
+    { "text": "File", "x": 1620, "y": 203, "ha": "left" },
+    { "text": "GUnzip", "x": 1620, "y": 323, "ha": "left" },
+    { "text": "From Bytes", "x": 1620, "y": 443, "ha": "left" },
+    { "text": "Apply to ECS", "x": 1620, "y": 563, "ha": "left" },
+    { "text": "Restored", "x": 1620, "y": 683, "ha": "left" }
+  ]
+}

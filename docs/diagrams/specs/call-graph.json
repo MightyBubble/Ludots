@@ -1,0 +1,105 @@
+{
+  "name": "call-graph",
+  "title": "Ludots Core Call Graph (Game Tick Chain)",
+  "subtitle": "Arrow = call direction | Solid = sync | Dashed = async/event",
+  "canvas": { "width": 2450, "height": 1420 },
+  "theme": { "node_title_size": 10.5 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 1060,
+    "width": 240,
+    "items": [
+      { "label": "Sync call", "style": "line", "line": "solid", "color": "#b8745f" },
+      { "label": "Async/event/query", "style": "line", "line": "dashed", "color": "#8a94a3" },
+      { "label": "Internal subsystem", "tint": "slate" }
+    ]
+  },
+
+  "nodes": [
+    { "id": "tick", "title": "GameEngine.Tick()", "tint": "clay", "border_w": 1.6,
+      "x": 1075, "y": 130, "w": 300, "h": 80 },
+
+    { "id": "p1", "title": "Input", "tint": "mauve", "x": 390, "y": 270, "w": 200, "h": 80 },
+    { "id": "p2", "title": "Update", "tint": "clay", "x": 610, "y": 270, "w": 200, "h": 80 },
+    { "id": "p3", "title": "PreSim", "tint": "clay", "x": 830, "y": 270, "w": 200, "h": 80 },
+    { "id": "p4", "title": "Simulation", "tint": "clay", "x": 1050, "y": 270, "w": 200, "h": 80 },
+    { "id": "p5", "title": "PostSim", "tint": "clay", "x": 1270, "y": 270, "w": 200, "h": 80 },
+    { "id": "p6", "title": "Presentation", "tint": "stone", "x": 1490, "y": 270, "w": 200, "h": 80 },
+    { "id": "p7", "title": "Render", "tint": "teal", "x": 1710, "y": 270, "w": 200, "h": 80 },
+
+    { "id": "s01", "title": "InputSystem", "tint": "slate", "x": 62, "y": 460, "w": 155, "h": 85 },
+    { "id": "s02", "title": "SelectionSystem", "tint": "clay", "x": 229, "y": 460, "w": 155, "h": 85 },
+    { "id": "s03", "title": "GameFlowSystem", "tint": "clay", "x": 396, "y": 460, "w": 155, "h": 85 },
+    { "id": "s04", "title": "GameContextSystem", "tint": "clay", "x": 563, "y": 460, "w": 155, "h": 85 },
+    { "id": "s05", "title": "OrderSystem", "tint": "slate", "x": 730, "y": 460, "w": 155, "h": 85 },
+    { "id": "s06", "title": "MovePlanningSystem", "tint": "steel", "x": 897, "y": 460, "w": 155, "h": 85 },
+    { "id": "s07", "title": "EffectSystem", "tint": "sage", "x": 1064, "y": 460, "w": 155, "h": 85 },
+    { "id": "s08", "title": "PerformerSystem", "tint": "stone", "x": 1231, "y": 460, "w": 155, "h": 85 },
+    { "id": "s09", "title": "ActSystem", "tint": "stone", "x": 1398, "y": 460, "w": 155, "h": 85 },
+    { "id": "s10", "title": "DataSystem", "tint": "stone", "x": 1565, "y": 460, "w": 155, "h": 85 },
+    { "id": "s11", "title": "AdapterSystem", "tint": "teal", "x": 1732, "y": 460, "w": 155, "h": 85 },
+    { "id": "s12", "title": "RenderSystem", "tint": "teal", "x": 1899, "y": 460, "w": 155, "h": 85 },
+    { "id": "s13", "title": "UISystem", "tint": "mauve", "x": 2066, "y": 460, "w": 155, "h": 85 },
+    { "id": "s14", "title": "WebSystem", "tint": "mauve", "x": 2233, "y": 460, "w": 155, "h": 85 },
+
+    { "id": "d1", "title": "ECSSystem", "tint": "slate", "x": 80, "y": 700, "w": 260, "h": 80 },
+    { "id": "d2", "title": "GASSystem", "tint": "sage", "x": 370, "y": 700, "w": 260, "h": 80 },
+    { "id": "d3", "title": "NavSystem", "tint": "steel", "x": 660, "y": 700, "w": 260, "h": 80 },
+    { "id": "d4", "title": "PhysicsSystem", "tint": "mauve", "x": 950, "y": 700, "w": 260, "h": 80 },
+    { "id": "d5", "title": "SpatialSystem", "tint": "steel", "x": 1240, "y": 700, "w": 260, "h": 80 },
+    { "id": "d6", "title": "VisionSystem", "tint": "steel", "x": 1530, "y": 700, "w": 260, "h": 80 },
+    { "id": "d7", "title": "MassNavSystem", "tint": "steel", "x": 1820, "y": 700, "w": 260, "h": 80 },
+    { "id": "d8", "title": "ScriptSystem", "tint": "mauve", "x": 2110, "y": 700, "w": 260, "h": 80 },
+
+    { "id": "b1", "title": "EntityManager", "tint": "slate", "x": 114, "y": 900, "w": 220, "h": 80 },
+    { "id": "b2", "title": "ComponentStorage", "tint": "sage", "x": 358, "y": 900, "w": 220, "h": 80 },
+    { "id": "b3", "title": "AbilityStorage", "tint": "sage", "x": 602, "y": 900, "w": 220, "h": 80 },
+    { "id": "b4", "title": "SpatialQuery", "tint": "sage", "x": 846, "y": 900, "w": 220, "h": 80 },
+    { "id": "b5", "title": "Pathfinder", "tint": "steel", "x": 1090, "y": 900, "w": 220, "h": 80 },
+    { "id": "b6", "title": "HPAStar", "tint": "steel", "x": 1334, "y": 900, "w": 220, "h": 80 },
+    { "id": "b7", "title": "ORCA", "tint": "stone", "x": 1578, "y": 900, "w": 220, "h": 80 },
+    { "id": "b8", "title": "CommandBuffer", "tint": "stone", "x": 1822, "y": 900, "w": 220, "h": 80 },
+    { "id": "b9", "title": "BehaviorSlot", "tint": "stone", "x": 2066, "y": 900, "w": 220, "h": 80 },
+
+    { "id": "registry", "title": "Registry", "tint": "clay", "border_w": 1.6,
+      "x": 950, "y": 1180, "w": 500, "h": 100,
+      "items": ["StringIntRegistry -> Ability/Performer/..."] }
+  ],
+
+  "edges": [
+    { "from": "tick", "to": "p2" },
+    { "from": "tick", "to": "p4" },
+    { "from": "tick", "to": "p5" },
+
+    { "from": "s01", "to": "d1", "color": "#b8745f" },
+    { "from": "s01", "to": "d2", "style": "dashed" },
+    { "from": "s02", "to": "d2", "color": "#b8745f" },
+    { "from": "s04", "to": "d3", "color": "#b8745f" },
+    { "from": "s05", "to": "d4", "color": "#b8745f" },
+    { "from": "s06", "to": "d5", "color": "#b8745f" },
+    { "from": "s08", "to": "d6", "color": "#b8745f" },
+    { "from": "s11", "to": "d7", "color": "#b8745f" },
+    { "from": "s12", "to": "d8", "color": "#b8745f" },
+    { "from": "s13", "to": "d8", "style": "dashed" },
+
+    { "from": "d1", "to": "b1", "style": "dashed" },
+    { "from": "d1", "to": "b2", "style": "dashed" },
+    { "from": "d2", "to": "b3", "style": "dashed" },
+    { "from": "d5", "to": "b4", "style": "dashed" },
+    { "from": "d3", "to": "b5", "style": "dashed" },
+    { "from": "d3", "to": "b6", "style": "dashed" },
+    { "from": "d7", "to": "b7", "style": "dashed" },
+    { "from": "d7", "to": "b8", "style": "dashed" },
+    { "from": "d8", "to": "b9", "style": "dashed" },
+
+    { "from": "b3", "to": "registry", "style": "dashed" },
+    { "from": "b4", "to": "registry", "style": "dashed" },
+    { "from": "b6", "to": "registry", "style": "dashed" }
+  ],
+
+  "notes": [
+    { "text": "SystemGroup Phases (executed in order)", "x": 1225, "y": 392, "ha": "center" }
+  ]
+}

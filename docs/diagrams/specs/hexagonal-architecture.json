@@ -1,0 +1,107 @@
+{
+  "name": "hexagonal-architecture",
+  "title": "Hexagonal Architecture",
+  "subtitle": "Core / Ports / Adapters / Mods",
+  "canvas": { "width": 2340, "height": 1830 },
+
+  "groups": [
+    { "id": "core", "title": "Core Domain",
+      "x": 680, "y": 700, "w": 980, "h": 530,
+      "tint": "clay", "border_style": "dashed" },
+    { "id": "ports-top", "title": "Ports (Interfaces)",
+      "x": 680, "y": 150, "w": 980, "h": 240,
+      "tint": "steel", "border_style": "dashed" },
+    { "id": "ports-left", "title": "Ports",
+      "x": 60, "y": 620, "w": 500, "h": 640,
+      "tint": "steel", "border_style": "dashed" },
+    { "id": "ports-right", "title": "Ports",
+      "x": 1780, "y": 620, "w": 500, "h": 640,
+      "tint": "steel", "border_style": "dashed" },
+    { "id": "ports-bottom", "title": "Ports (Event/Trigger)",
+      "x": 680, "y": 1420, "w": 980, "h": 240,
+      "tint": "steel", "border_style": "dashed" },
+    { "id": "ad-tl", "title": "Adapters",
+      "x": 60, "y": 150, "w": 500, "h": 320,
+      "tint": "stone", "border_style": "dashed" },
+    { "id": "ad-tr", "title": "Adapters",
+      "x": 1780, "y": 150, "w": 500, "h": 320,
+      "tint": "stone", "border_style": "dashed" },
+    { "id": "ad-bl", "title": "Adapters",
+      "x": 60, "y": 1420, "w": 500, "h": 290,
+      "tint": "stone", "border_style": "dashed" },
+    { "id": "ad-br", "title": "Adapters",
+      "x": 1780, "y": 1420, "w": 500, "h": 290,
+      "tint": "stone", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "c-ecs", "title": "ECS", "tint": "clay", "x": 710, "y": 770, "w": 215, "h": 90 },
+    { "id": "c-gas", "title": "GAS", "tint": "clay", "x": 945, "y": 770, "w": 215, "h": 90 },
+    { "id": "c-nav", "title": "Nav", "tint": "clay", "x": 1180, "y": 770, "w": 215, "h": 90 },
+    { "id": "c-pres", "title": "Pres", "tint": "clay", "x": 1415, "y": 770, "w": 215, "h": 90 },
+    { "id": "c-spatial", "title": "Spatial", "tint": "clay", "x": 710, "y": 880, "w": 215, "h": 90 },
+    { "id": "c-physics", "title": "Physics", "tint": "clay", "x": 945, "y": 880, "w": 215, "h": 90 },
+    { "id": "c-timeflow", "title": "TimeFlow", "tint": "clay", "x": 1180, "y": 880, "w": 215, "h": 90 },
+    { "id": "c-session", "title": "Session", "tint": "clay", "x": 1415, "y": 880, "w": 215, "h": 90 },
+    { "id": "c-engine", "title": "GameEngine", "tint": "clay", "x": 827, "y": 990, "w": 215, "h": 90 },
+    { "id": "c-world", "title": "World", "tint": "clay", "x": 1062, "y": 990, "w": 215, "h": 90 },
+    { "id": "c-config", "title": "Config", "tint": "clay", "x": 1297, "y": 990, "w": 215, "h": 90 },
+    { "id": "c-services", "title": "Domain Services", "tint": "clay", "x": 945, "y": 1100, "w": 450, "h": 90 },
+
+    { "id": "pt-vfs", "title": "IVirtualFileSystem", "tint": "teal", "x": 710, "y": 225, "w": 215, "h": 90 },
+    { "id": "pt-map", "title": "IMapManager", "tint": "teal", "x": 945, "y": 225, "w": 215, "h": 90 },
+    { "id": "pt-pace", "title": "IPacemaker", "tint": "teal", "x": 1180, "y": 225, "w": 215, "h": 90 },
+    { "id": "pt-spatial", "title": "ISpatialQuery", "tint": "teal", "x": 1415, "y": 225, "w": 215, "h": 90 },
+
+    { "id": "pl-input", "title": "IInputHandler", "tint": "teal", "x": 100, "y": 690, "w": 420, "h": 110 },
+    { "id": "pl-view", "title": "IViewport", "tint": "teal", "x": 100, "y": 830, "w": 420, "h": 110 },
+    { "id": "pl-camera", "title": "ICameraDriver", "tint": "teal", "x": 100, "y": 970, "w": 420, "h": 110 },
+    { "id": "pl-asset", "title": "IAssetLoader", "tint": "teal", "x": 100, "y": 1110, "w": 420, "h": 110 },
+
+    { "id": "pr-graph", "title": "IGraphRuntime", "tint": "teal", "x": 1820, "y": 690, "w": 420, "h": 110 },
+    { "id": "pr-script", "title": "IScriptContext", "tint": "teal", "x": 1820, "y": 830, "w": 420, "h": 110 },
+    { "id": "pr-registry", "title": "IRegistry", "tint": "teal", "x": 1820, "y": 970, "w": 420, "h": 110 },
+    { "id": "pr-config", "title": "IConfigPipeline", "tint": "teal", "x": 1820, "y": 1110, "w": 420, "h": 110 },
+
+    { "id": "pb-trigger", "title": "ITriggerManager", "tint": "teal", "x": 710, "y": 1495, "w": 215, "h": 90 },
+    { "id": "pb-event", "title": "IEventBus", "tint": "teal", "x": 945, "y": 1495, "w": 215, "h": 90 },
+    { "id": "pb-life", "title": "ILifecycle", "tint": "teal", "x": 1180, "y": 1495, "w": 215, "h": 90 },
+    { "id": "pb-disp", "title": "IDisposable", "tint": "teal", "x": 1415, "y": 1495, "w": 215, "h": 90 },
+
+    { "id": "atl-raylib", "title": "Raylib", "tint": "sand", "x": 100, "y": 225, "w": 215, "h": 90 },
+    { "id": "atl-web", "title": "Web", "tint": "sand", "x": 345, "y": 225, "w": 215, "h": 90 },
+    { "id": "atl-ue5", "title": "UE5", "tint": "sand", "x": 100, "y": 335, "w": 215, "h": 90 },
+    { "id": "atl-headless", "title": "Headless", "tint": "sand", "x": 345, "y": 335, "w": 215, "h": 90 },
+
+    { "id": "atr-mod", "title": "ModLoader", "tint": "sand", "x": 1820, "y": 225, "w": 215, "h": 90 },
+    { "id": "atr-vfs", "title": "VFS", "tint": "sand", "x": 2065, "y": 225, "w": 215, "h": 90 },
+    { "id": "atr-alc", "title": "ALC", "tint": "sand", "x": 1820, "y": 335, "w": 215, "h": 90 },
+    { "id": "atr-config", "title": "Config", "tint": "sand", "x": 2065, "y": 335, "w": 215, "h": 90 },
+
+    { "id": "abl-input", "title": "Platform Input", "tint": "sand", "x": 100, "y": 1495, "w": 420, "h": 80 },
+    { "id": "abl-net", "title": "Network Sync", "tint": "sand", "x": 100, "y": 1595, "w": 420, "h": 80 },
+
+    { "id": "abr-save", "title": "Save/Load", "tint": "sand", "x": 1820, "y": 1495, "w": 420, "h": 80 },
+    { "id": "abr-tele", "title": "Telemetry", "tint": "sand", "x": 1820, "y": 1595, "w": 420, "h": 80 }
+  ],
+
+  "edges": [
+    { "from": "ports-top", "to": "core" },
+    { "from": "core", "to": "ports-top" },
+    { "from": "ports-bottom", "to": "core" },
+    { "from": "core", "to": "ports-bottom" },
+    { "from": "ports-left", "to": "core" },
+    { "from": "core", "to": "ports-left" },
+    { "from": "ports-right", "to": "core" },
+    { "from": "core", "to": "ports-right" },
+
+    { "from": "ad-tl", "to": "ports-left", "style": "dashed", "arrow": false },
+    { "from": "ad-bl", "to": "ports-left", "style": "dashed", "arrow": false },
+    { "from": "ad-tr", "to": "ports-right", "style": "dashed", "arrow": false },
+    { "from": "ad-br", "to": "ports-right", "style": "dashed", "arrow": false }
+  ],
+
+  "notes": [
+    { "text": "Solid = Core<->Ports dependency | Dashed = Port<->Adapter plugin", "x": 1170, "y": 1770, "ha": "center" }
+  ]
+}

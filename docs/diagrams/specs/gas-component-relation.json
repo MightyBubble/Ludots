@@ -1,0 +1,277 @@
+{
+  "name": "gas-component-relation",
+  "title": "GAS 核心组件关系图",
+  "subtitle": "Gameplay Ability System — Component Architecture",
+  "canvas": {
+    "width": 1720,
+    "height": 1330
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 170,
+    "items": [
+      {
+        "label": "Gas Core",
+        "tint": "sage"
+      },
+      {
+        "label": "Ability",
+        "tint": "clay"
+      },
+      {
+        "label": "Effect",
+        "tint": "steel"
+      },
+      {
+        "label": "Attribute",
+        "tint": "stone"
+      },
+      {
+        "label": "Tag",
+        "tint": "mauve"
+      },
+      {
+        "label": "Cue",
+        "tint": "sand"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "gas",
+      "title": "GasRuntimeState",
+      "tint": "sage",
+      "border_w": 1.6,
+      "x": 720,
+      "y": 560,
+      "w": 300,
+      "h": 120,
+      "items": [
+        "单例协调器"
+      ]
+    },
+    {
+      "id": "ability",
+      "title": "AbilitySystem",
+      "tint": "clay",
+      "x": 280,
+      "y": 330,
+      "w": 300,
+      "h": 110,
+      "items": [
+        "能力定义 / 激活 / 执行"
+      ]
+    },
+    {
+      "id": "execspec",
+      "title": "AbilityExecSpec",
+      "tint": "clay",
+      "x": 280,
+      "y": 130,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "16 SoA 时间线"
+      ]
+    },
+    {
+      "id": "statebuffer",
+      "title": "AbilityStateBuffer",
+      "tint": "clay",
+      "x": 280,
+      "y": 220,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "8 槽 + GrantedSlot"
+      ]
+    },
+    {
+      "id": "effect",
+      "title": "EffectSystem",
+      "tint": "steel",
+      "x": 1290,
+      "y": 330,
+      "w": 300,
+      "h": 110,
+      "items": [
+        "EffectRequest / Processing"
+      ]
+    },
+    {
+      "id": "phaseexec",
+      "title": "EffectPhaseExecutor",
+      "tint": "steel",
+      "x": 1290,
+      "y": 130,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "6 阶段驱动"
+      ]
+    },
+    {
+      "id": "effectbuffer",
+      "title": "EffectBuffer",
+      "tint": "steel",
+      "x": 1290,
+      "y": 220,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "unsafe struct 存储"
+      ]
+    },
+    {
+      "id": "attr",
+      "title": "AttributeSystem",
+      "tint": "stone",
+      "x": 280,
+      "y": 900,
+      "w": 300,
+      "h": 110,
+      "items": [
+        "聚合 / 派生 / 计算"
+      ]
+    },
+    {
+      "id": "attrbuffer",
+      "title": "AttributeBuffer",
+      "tint": "stone",
+      "x": 280,
+      "y": 1050,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "SoA 基础属性"
+      ]
+    },
+    {
+      "id": "attrsink",
+      "title": "AttributeSink",
+      "tint": "stone",
+      "x": 280,
+      "y": 1140,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "Physics / Nav / UI"
+      ]
+    },
+    {
+      "id": "tag",
+      "title": "TagSystem",
+      "tint": "mauve",
+      "x": 1290,
+      "y": 900,
+      "w": 300,
+      "h": 110,
+      "items": [
+        "Granted / Requested / 条件"
+      ]
+    },
+    {
+      "id": "tagcontainer",
+      "title": "TagContainer",
+      "tint": "mauve",
+      "x": 1290,
+      "y": 1050,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "bitset 存储"
+      ]
+    },
+    {
+      "id": "tagrule",
+      "title": "TagRule",
+      "tint": "mauve",
+      "x": 1290,
+      "y": 1140,
+      "w": 300,
+      "h": 70,
+      "items": [
+        "条件规则"
+      ]
+    },
+    {
+      "id": "cue",
+      "title": "GameplayCueSystem",
+      "tint": "sand",
+      "x": 720,
+      "y": 1080,
+      "w": 300,
+      "h": 110,
+      "items": [
+        "CueDescriptor / VFX / SFX"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "ability",
+      "to": "gas",
+      "label": "激活 / 执行"
+    },
+    {
+      "from": "ability",
+      "to": "effect",
+      "label": "EffectRequest",
+      "route": "curve",
+      "rad": -0.15
+    },
+    {
+      "from": "effect",
+      "to": "gas"
+    },
+    {
+      "from": "gas",
+      "to": "attr",
+      "label": "聚合 / 派生"
+    },
+    {
+      "from": "gas",
+      "to": "tag",
+      "label": "条件 / Granted"
+    },
+    {
+      "from": "gas",
+      "to": "cue",
+      "label": "GameplayEvent"
+    },
+    {
+      "from": "attr",
+      "to": "cue",
+      "style": "dashed"
+    },
+    {
+      "from": "tag",
+      "to": "cue",
+      "style": "dashed"
+    },
+    {
+      "from": "ability",
+      "to": "cue",
+      "style": "dashed",
+      "route": "curve",
+      "rad": 0.35
+    },
+    {
+      "from": "effect",
+      "to": "cue",
+      "style": "dashed",
+      "route": "curve",
+      "rad": -0.35
+    }
+  ],
+  "notes": [
+    {
+      "text": "所有组件通过 GasRuntimeState 单例协调，禁止跨层直接写状态",
+      "x": 860,
+      "y": 1280,
+      "ha": "center"
+    }
+  ]
+}

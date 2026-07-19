@@ -1,0 +1,59 @@
+{
+  "name": "business-map-load-flow",
+  "title": "Ludots Map Load Flow",
+  "subtitle": "Launcher -> Bootstrap -> ModLoad -> MapLoad -> EntitySpawn",
+  "canvas": { "width": 1500, "height": 1060 },
+
+  "nodes": [
+    { "id": "launcher", "title": "Launcher", "tint": "clay", "border_w": 1.6,
+      "x": 560, "y": 120, "w": 380, "h": 84 },
+    { "id": "s1", "title": "1 · Bootstrap", "tint": "stone",
+      "x": 560, "y": 244, "w": 380, "h": 84 },
+    { "id": "s2", "title": "2 · Mod Discovery", "tint": "stone",
+      "x": 560, "y": 368, "w": 380, "h": 84 },
+    { "id": "s3", "title": "3 · Mod Resolve", "tint": "stone",
+      "x": 560, "y": 492, "w": 380, "h": 84 },
+    { "id": "s4", "title": "4 · Mod Load", "tint": "stone",
+      "x": 560, "y": 616, "w": 380, "h": 84 },
+    { "id": "s5", "title": "5 · Map Load", "tint": "sage",
+      "x": 560, "y": 740, "w": 380, "h": 84 },
+    { "id": "spawn", "title": "Entity Spawn", "tint": "clay", "border_w": 1.6,
+      "x": 560, "y": 864, "w": 380, "h": 84 },
+
+    { "id": "dep", "title": "Dependency Resolver", "tint": "sand",
+      "x": 80, "y": 492, "w": 320, "h": 76 },
+    { "id": "semver", "title": "SemVer Check", "tint": "sand",
+      "x": 80, "y": 592, "w": 320, "h": 76 },
+    { "id": "alc", "title": "ALC Isolation", "tint": "sand",
+      "x": 80, "y": 692, "w": 320, "h": 76 },
+
+    { "id": "terrain", "title": "Terrain Bake", "tint": "sage",
+      "x": 1100, "y": 640, "w": 320, "h": 76 },
+    { "id": "navmesh", "title": "NavMesh Build", "tint": "sage",
+      "x": 1100, "y": 740, "w": 320, "h": 76 },
+    { "id": "spatial", "title": "Spatial Partition", "tint": "sage",
+      "x": 1100, "y": 840, "w": 320, "h": 76 },
+
+    { "id": "cfg", "title": "Config Files", "tint": "graphite",
+      "x": 1100, "y": 130, "w": 220, "h": 64 }
+  ],
+
+  "edges": [
+    { "from": "launcher", "to": "s1", "route": "straight" },
+    { "from": "s1", "to": "s2", "route": "straight" },
+    { "from": "s2", "to": "s3", "route": "straight" },
+    { "from": "s3", "to": "s4", "route": "straight" },
+    { "from": "s4", "to": "s5", "route": "straight" },
+    { "from": "s5", "to": "spawn", "route": "straight" },
+
+    { "from": "dep", "to": "s3", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+    { "from": "semver", "to": "s3", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+    { "from": "alc", "to": "s4", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+
+    { "from": "s5", "to": "terrain", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+    { "from": "s5", "to": "navmesh", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+    { "from": "s5", "to": "spatial", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 },
+
+    { "from": "launcher", "to": "cfg", "route": "straight", "style": "dashed", "color": "#9aa2ae", "width": 1.0 }
+  ]
+}

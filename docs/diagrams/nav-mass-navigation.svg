@@ -1,9 +1,750 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
-  <title id="title">MassNavigation Diagram Retired</title>
-  <desc id="desc">This generated diagram was retired after formal Selection APIs were removed.</desc>
-  <rect width="960" height="240" fill="#f8fafc"/>
-  <rect x="32" y="32" width="896" height="176" rx="8" fill="#ffffff" stroke="#94a3b8"/>
-  <text x="64" y="88" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">MassNavigation diagram retired</text>
-  <text x="64" y="126" font-family="Arial, sans-serif" font-size="16" fill="#334155">Formal Selection runtime diagrams are obsolete.</text>
-  <text x="64" y="154" font-family="Arial, sans-serif" font-size="16" fill="#334155">Use gitbook/reference/mass-navigation-formal-chain.md for the current EntityCollectionStore + OrderBuffer chain.</text>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1296pt" height="1108.8pt" viewBox="0 0 1296 1108.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-07-20T06:14:31.278518</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 1108.8 
+L 1296 1108.8 
+L 1296 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 240.48 93.6 
+L 493.92 93.6 
+Q 504 93.6 504 103.68 
+L 504 321.12 
+Q 504 331.2 493.92 331.2 
+L 240.48 331.2 
+Q 230.4 331.2 230.4 321.12 
+L 230.4 103.68 
+Q 230.4 93.6 240.48 93.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 542.88 93.6 
+L 810.72 93.6 
+Q 820.8 93.6 820.8 103.68 
+L 820.8 321.12 
+Q 820.8 331.2 810.72 331.2 
+L 542.88 331.2 
+Q 532.8 331.2 532.8 321.12 
+L 532.8 103.68 
+Q 532.8 93.6 542.88 93.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 859.68 93.6 
+L 1242.72 93.6 
+Q 1252.8 93.6 1252.8 103.68 
+L 1252.8 393.12 
+Q 1252.8 403.2 1242.72 403.2 
+L 859.68 403.2 
+Q 849.6 403.2 849.6 393.12 
+L 849.6 103.68 
+Q 849.6 93.6 859.68 93.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 240.48 446.4 
+L 1242.72 446.4 
+Q 1252.8 446.4 1252.8 456.48 
+L 1252.8 911.52 
+Q 1252.8 921.6 1242.72 921.6 
+L 240.48 921.6 
+Q 230.4 921.6 230.4 911.52 
+L 230.4 456.48 
+Q 230.4 446.4 240.48 446.4 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="241.92" y="109.193437" transform="rotate(-0 241.92 109.193437)">Input &amp; Control</text>
+   </g>
+   <g id="text_2">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="544.32" y="109.157344" transform="rotate(-0 544.32 109.157344)">MassNavigation Runtime</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="861.12" y="109.142578" transform="rotate(-0 861.12 109.142578)">Core Systems</text>
+   </g>
+   <g id="text_4">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="241.92" y="461.993437" transform="rotate(-0 241.92 461.993437)">Fixed-Step Pipeline (13 Steps)</text>
+   </g>
+   <g id="patch_6">
+    <path d="M 257.76 133.2 
+L 476.64 133.2 
+Q 482.4 133.2 482.4 138.96 
+L 482.4 185.04 
+Q 482.4 190.8 476.64 190.8 
+L 257.76 190.8 
+Q 252 190.8 252 185.04 
+L 252 138.96 
+Q 252 133.2 257.76 133.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 257.76 205.2 
+L 476.64 205.2 
+Q 482.4 205.2 482.4 210.96 
+L 482.4 257.04 
+Q 482.4 262.8 476.64 262.8 
+L 257.76 262.8 
+Q 252 262.8 252 257.04 
+L 252 210.96 
+Q 252 205.2 257.76 205.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 257.76 267.84 
+L 476.64 267.84 
+Q 482.4 267.84 482.4 273.6 
+L 482.4 319.68 
+Q 482.4 325.44 476.64 325.44 
+L 257.76 325.44 
+Q 252 325.44 252 319.68 
+L 252 273.6 
+Q 252 267.84 257.76 267.84 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 560.16 126 
+L 793.44 126 
+Q 799.2 126 799.2 131.76 
+L 799.2 177.84 
+Q 799.2 183.6 793.44 183.6 
+L 560.16 183.6 
+Q 554.4 183.6 554.4 177.84 
+L 554.4 131.76 
+Q 554.4 126 560.16 126 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 560.16 198 
+L 793.44 198 
+Q 799.2 198 799.2 203.76 
+L 799.2 249.84 
+Q 799.2 255.6 793.44 255.6 
+L 560.16 255.6 
+Q 554.4 255.6 554.4 249.84 
+L 554.4 203.76 
+Q 554.4 198 560.16 198 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 560.16 262.8 
+L 793.44 262.8 
+Q 799.2 262.8 799.2 268.56 
+L 799.2 314.64 
+Q 799.2 320.4 793.44 320.4 
+L 560.16 320.4 
+Q 554.4 320.4 554.4 314.64 
+L 554.4 268.56 
+Q 554.4 262.8 560.16 262.8 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 876.96 133.2 
+L 1038.24 133.2 
+Q 1044 133.2 1044 138.96 
+L 1044 185.04 
+Q 1044 190.8 1038.24 190.8 
+L 876.96 190.8 
+Q 871.2 190.8 871.2 185.04 
+L 871.2 138.96 
+Q 871.2 133.2 876.96 133.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 1064.16 133.2 
+L 1225.44 133.2 
+Q 1231.2 133.2 1231.2 138.96 
+L 1231.2 185.04 
+Q 1231.2 190.8 1225.44 190.8 
+L 1064.16 190.8 
+Q 1058.4 190.8 1058.4 185.04 
+L 1058.4 138.96 
+Q 1058.4 133.2 1064.16 133.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 876.96 205.2 
+L 1038.24 205.2 
+Q 1044 205.2 1044 210.96 
+L 1044 257.04 
+Q 1044 262.8 1038.24 262.8 
+L 876.96 262.8 
+Q 871.2 262.8 871.2 257.04 
+L 871.2 210.96 
+Q 871.2 205.2 876.96 205.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 1064.16 205.2 
+L 1225.44 205.2 
+Q 1231.2 205.2 1231.2 210.96 
+L 1231.2 257.04 
+Q 1231.2 262.8 1225.44 262.8 
+L 1064.16 262.8 
+Q 1058.4 262.8 1058.4 257.04 
+L 1058.4 210.96 
+Q 1058.4 205.2 1064.16 205.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 876.96 284.4 
+L 1225.44 284.4 
+Q 1231.2 284.4 1231.2 290.16 
+L 1231.2 343.44 
+Q 1231.2 349.2 1225.44 349.2 
+L 876.96 349.2 
+Q 871.2 349.2 871.2 343.44 
+L 871.2 290.16 
+Q 871.2 284.4 876.96 284.4 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 264.96 489.6 
+L 555.84 489.6 
+Q 561.6 489.6 561.6 495.36 
+L 561.6 541.44 
+Q 561.6 547.2 555.84 547.2 
+L 264.96 547.2 
+Q 259.2 547.2 259.2 541.44 
+L 259.2 495.36 
+Q 259.2 489.6 264.96 489.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 264.96 561.6 
+L 555.84 561.6 
+Q 561.6 561.6 561.6 567.36 
+L 561.6 613.44 
+Q 561.6 619.2 555.84 619.2 
+L 264.96 619.2 
+Q 259.2 619.2 259.2 613.44 
+L 259.2 567.36 
+Q 259.2 561.6 264.96 561.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 264.96 633.6 
+L 555.84 633.6 
+Q 561.6 633.6 561.6 639.36 
+L 561.6 685.44 
+Q 561.6 691.2 555.84 691.2 
+L 264.96 691.2 
+Q 259.2 691.2 259.2 685.44 
+L 259.2 639.36 
+Q 259.2 633.6 264.96 633.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 264.96 705.6 
+L 555.84 705.6 
+Q 561.6 705.6 561.6 711.36 
+L 561.6 757.44 
+Q 561.6 763.2 555.84 763.2 
+L 264.96 763.2 
+Q 259.2 763.2 259.2 757.44 
+L 259.2 711.36 
+Q 259.2 705.6 264.96 705.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 264.96 777.6 
+L 555.84 777.6 
+Q 561.6 777.6 561.6 783.36 
+L 561.6 829.44 
+Q 561.6 835.2 555.84 835.2 
+L 264.96 835.2 
+Q 259.2 835.2 259.2 829.44 
+L 259.2 783.36 
+Q 259.2 777.6 264.96 777.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 603.36 489.6 
+L 894.24 489.6 
+Q 900 489.6 900 495.36 
+L 900 541.44 
+Q 900 547.2 894.24 547.2 
+L 603.36 547.2 
+Q 597.6 547.2 597.6 541.44 
+L 597.6 495.36 
+Q 597.6 489.6 603.36 489.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_23">
+    <path d="M 603.36 561.6 
+L 894.24 561.6 
+Q 900 561.6 900 567.36 
+L 900 613.44 
+Q 900 619.2 894.24 619.2 
+L 603.36 619.2 
+Q 597.6 619.2 597.6 613.44 
+L 597.6 567.36 
+Q 597.6 561.6 603.36 561.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 603.36 633.6 
+L 894.24 633.6 
+Q 900 633.6 900 639.36 
+L 900 685.44 
+Q 900 691.2 894.24 691.2 
+L 603.36 691.2 
+Q 597.6 691.2 597.6 685.44 
+L 597.6 639.36 
+Q 597.6 633.6 603.36 633.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 603.36 705.6 
+L 894.24 705.6 
+Q 900 705.6 900 711.36 
+L 900 757.44 
+Q 900 763.2 894.24 763.2 
+L 603.36 763.2 
+Q 597.6 763.2 597.6 757.44 
+L 597.6 711.36 
+Q 597.6 705.6 603.36 705.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 603.36 777.6 
+L 894.24 777.6 
+Q 900 777.6 900 783.36 
+L 900 829.44 
+Q 900 835.2 894.24 835.2 
+L 603.36 835.2 
+Q 597.6 835.2 597.6 829.44 
+L 597.6 783.36 
+Q 597.6 777.6 603.36 777.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_27">
+    <path d="M 941.76 489.6 
+L 1232.64 489.6 
+Q 1238.4 489.6 1238.4 495.36 
+L 1238.4 541.44 
+Q 1238.4 547.2 1232.64 547.2 
+L 941.76 547.2 
+Q 936 547.2 936 541.44 
+L 936 495.36 
+Q 936 489.6 941.76 489.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_28">
+    <path d="M 941.76 561.6 
+L 1232.64 561.6 
+Q 1238.4 561.6 1238.4 567.36 
+L 1238.4 613.44 
+Q 1238.4 619.2 1232.64 619.2 
+L 941.76 619.2 
+Q 936 619.2 936 613.44 
+L 936 567.36 
+Q 936 561.6 941.76 561.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_29">
+    <path d="M 941.76 633.6 
+L 1232.64 633.6 
+Q 1238.4 633.6 1238.4 639.36 
+L 1238.4 685.44 
+Q 1238.4 691.2 1232.64 691.2 
+L 941.76 691.2 
+Q 936 691.2 936 685.44 
+L 936 639.36 
+Q 936 633.6 941.76 633.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f5f0e8; stroke: #b39b7d; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_30">
+    <path d="M 819.36 979.2 
+L 1196.64 979.2 
+Q 1202.4 979.2 1202.4 984.96 
+L 1202.4 1031.04 
+Q 1202.4 1036.8 1196.64 1036.8 
+L 819.36 1036.8 
+Q 813.6 1036.8 813.6 1031.04 
+L 813.6 984.96 
+Q 813.6 979.2 819.36 979.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f0f0ea; stroke: #999a7e; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="367.2" y="162.632187" transform="rotate(-0 367.2 162.632187)">PlayerInputHandler</text>
+   </g>
+   <g id="text_6">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="367.2" y="234.632187" transform="rotate(-0 367.2 234.632187)">InputOrderMappingSystem</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="367.2" y="297.272187" transform="rotate(-0 367.2 297.272187)">SelectionRuntime</text>
+   </g>
+   <g id="text_8">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="676.8" y="148.549219" transform="rotate(-0 676.8 148.549219)">MassNavigationRuntime</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="676.8" y="165.593156" transform="rotate(-0 676.8 165.593156)">Lifecycle + System Install</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="676.8" y="218.029219" transform="rotate(-0 676.8 218.029219)">MassNavigation</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="676.8" y="234.953625" transform="rotate(-0 676.8 234.953625)">SimulationRuntime</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="676.8" y="248.633625" transform="rotate(-0 676.8 248.633625)">Facade: Selection Sync / Command Focus</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="676.8" y="285.392187" transform="rotate(-0 676.8 285.392187)">MassNavigationCadenceScheduler</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="676.8" y="302.273625" transform="rotate(-0 676.8 302.273625)">Fixed-Step Scheduler</text>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="957.6" y="162.632187" transform="rotate(-0 957.6 162.632187)">OrderIngestionSystem</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1144.8" y="162.632187" transform="rotate(-0 1144.8 162.632187)">SelectionSyncSystem</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="957.6" y="234.589219" transform="rotate(-0 957.6 234.589219)">FormationSystem</text>
+   </g>
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1144.8" y="234.632187" transform="rotate(-0 1144.8 234.632187)">LocalCommandInputSystem</text>
+   </g>
+   <g id="text_19">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1051.2" y="310.549219" transform="rotate(-0 1051.2 310.549219)">MassNavigationFormationSystem</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1051.2" y="327.473625" transform="rotate(-0 1051.2 327.473625)">13-Step Fixed-Step Pipeline</text>
+   </g>
+   <g id="text_21">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="410.4" y="519.032187" transform="rotate(-0 410.4 519.032187)">1. Group Target Update</text>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="410.4" y="591.032187" transform="rotate(-0 410.4 591.032187)">2. Formation Slot Update</text>
+   </g>
+   <g id="text_23">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="410.4" y="663.032187" transform="rotate(-0 410.4 663.032187)">3. Flow Field Rebuild</text>
+   </g>
+   <g id="text_24">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="410.4" y="735.032187" transform="rotate(-0 410.4 735.032187)">4. Local Steering</text>
+   </g>
+   <g id="text_25">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="410.4" y="807.032187" transform="rotate(-0 410.4 807.032187)">5. Separation</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="748.8" y="519.032187" transform="rotate(-0 748.8 519.032187)">6. ORCA Avoidance</text>
+   </g>
+   <g id="text_27">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="748.8" y="591.032187" transform="rotate(-0 748.8 591.032187)">7. Sonar Avoidance</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="748.8" y="663.032187" transform="rotate(-0 748.8 663.032187)">8. Dominant Mass Resolution</text>
+   </g>
+   <g id="text_29">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="748.8" y="735.032187" transform="rotate(-0 748.8 735.032187)">9. Hard Resolve</text>
+   </g>
+   <g id="text_30">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="748.8" y="807.032187" transform="rotate(-0 748.8 807.032187)">10. Arrival Check</text>
+   </g>
+   <g id="text_31">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1087.2" y="519.032187" transform="rotate(-0 1087.2 519.032187)">11. Arrival Recovery</text>
+   </g>
+   <g id="text_32">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1087.2" y="590.989219" transform="rotate(-0 1087.2 590.989219)">12. Entity Sync</text>
+   </g>
+   <g id="text_33">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1087.2" y="663.032187" transform="rotate(-0 1087.2 663.032187)">13. Telemetry Capture</text>
+   </g>
+   <g id="text_34">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1008" y="1008.790391" transform="rotate(-0 1008 1008.790391)">WorldPositionCm / FacingDirection / VisualTransform</text>
+   </g>
+   <g id="line2d_1">
+    <path d="M 504 212.4 
+L 532.8 212.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 820.8 226.246154 
+L 849.6 229.015385 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 1023.882353 349.2 
+L 941.929412 446.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 561.6 806.4 
+L 597.6 806.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 900 806.4 
+L 918 806.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 918 806.4 
+L 1087.2 806.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 1087.2 806.4 
+L 1087.2 565.2 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 1087.2 565.2 
+L 1087.2 547.2 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 1081.737931 619.2 
+L 1013.462069 979.2 
+" clip-path="url(#p00d6d3eb03)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_31">
+    <path d="M 506.000391 212.4 
+Q 518.400771 212.4 530.801152 212.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 526.001152 210 
+L 530.801152 212.4 
+L 526.001152 214.8 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_32">
+    <path d="M 822.793359 226.437823 
+Q 835.200266 227.630795 847.607172 228.823767 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 843.058919 225.975365 
+L 847.607172 228.823767 
+L 842.599499 230.753329 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_33">
+    <path d="M 1022.594335 350.727649 
+Q 982.905608 397.800326 943.21688 444.873003 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 948.1458 442.750329 
+L 943.21688 444.873003 
+L 944.476093 439.656262 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_34">
+    <path d="M 563.599512 806.4 
+Q 579.601573 806.4 595.603633 806.4 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 590.803633 804 
+L 595.603633 806.4 
+L 590.803633 808.8 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_35">
+    <path d="M 1087.2 563.200488 
+Q 1087.2 556.198321 1087.2 549.196155 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 1084.8 553.996155 
+L 1087.2 549.196155 
+L 1089.6 553.996155 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="patch_36">
+    <path d="M 1081.365485 621.163806 
+Q 1047.60002 799.199893 1013.834556 977.23598 
+" clip-path="url(#p00d6d3eb03)" style="fill: none"/>
+    <path d="M 1017.086925 972.967245 
+L 1013.834556 977.23598 
+L 1012.370989 972.072844 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #8a94a3"/>
+   </g>
+   <g id="text_35">
+    <text style="font-weight: 700; font-size: 20px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #181b20" x="648" y="40.4675" transform="rotate(-0 648 40.4675)">MassNavigation System Architecture</text>
+   </g>
+   <g id="text_36">
+    <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="648" y="68.6325" transform="rotate(-0 648 68.6325)">MassNavigation Engine - Fixed-Step Simulation Pipeline</text>
+   </g>
+   <g id="text_37">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="43.2" y="1051.594063" transform="rotate(-0 43.2 1051.594063)">MassNavigationFlowSolverState ~ 2700 lines partial class</text>
+   </g>
+   <g id="text_38">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="43.2" y="1070.425391" transform="rotate(-0 43.2 1070.425391)">0-GC hot path: unsafe fixed arrays, no heap allocation</text>
+   </g>
+   <g id="text_39">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="43.2" y="1089.034063" transform="rotate(-0 43.2 1089.034063)">Formations: Grid / Wedge / Line / Square / Circle</text>
+   </g>
+   <g id="patch_37">
+    <path d="M 36 93.6 
+L 187.2 93.6 
+Q 194.4 93.6 194.4 100.8 
+L 194.4 266.4 
+Q 194.4 273.6 187.2 273.6 
+L 36 273.6 
+Q 28.8 273.6 28.8 266.4 
+L 28.8 100.8 
+Q 28.8 93.6 36 93.6 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #ffffff; stroke: #dfe3e9; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_40">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #23272e" x="41.76" y="110.633438" transform="rotate(-0 41.76 110.633438)">Legend</text>
+   </g>
+   <g id="patch_38">
+    <path d="M 45.36 124.2 
+L 58.32 124.2 
+Q 61.92 124.2 61.92 127.8 
+L 61.92 135 
+Q 61.92 138.6 58.32 138.6 
+L 45.36 138.6 
+Q 41.76 138.6 41.76 135 
+L 41.76 127.8 
+Q 41.76 124.2 45.36 124.2 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_41">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="134.150016" transform="rotate(-0 67.68 134.150016)">Navigation</text>
+   </g>
+   <g id="patch_39">
+    <path d="M 45.36 147.96 
+L 58.32 147.96 
+Q 61.92 147.96 61.92 151.56 
+L 61.92 158.76 
+Q 61.92 162.36 58.32 162.36 
+L 45.36 162.36 
+Q 41.76 162.36 41.76 158.76 
+L 41.76 151.56 
+Q 41.76 147.96 45.36 147.96 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_42">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="157.968984" transform="rotate(-0 67.68 157.968984)">Avoidance / Flow</text>
+   </g>
+   <g id="patch_40">
+    <path d="M 45.36 171.72 
+L 58.32 171.72 
+Q 61.92 171.72 61.92 175.32 
+L 61.92 182.52 
+Q 61.92 186.12 58.32 186.12 
+L 45.36 186.12 
+Q 41.76 186.12 41.76 182.52 
+L 41.76 175.32 
+Q 41.76 171.72 45.36 171.72 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_43">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="181.728984" transform="rotate(-0 67.68 181.728984)">Mass Execution</text>
+   </g>
+   <g id="patch_41">
+    <path d="M 45.36 195.48 
+L 58.32 195.48 
+Q 61.92 195.48 61.92 199.08 
+L 61.92 206.28 
+Q 61.92 209.88 58.32 209.88 
+L 45.36 209.88 
+Q 41.76 209.88 41.76 206.28 
+L 41.76 199.08 
+Q 41.76 195.48 45.36 195.48 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="205.488984" transform="rotate(-0 67.68 205.488984)">Arrival / Input</text>
+   </g>
+   <g id="patch_42">
+    <path d="M 45.36 219.24 
+L 58.32 219.24 
+Q 61.92 219.24 61.92 222.84 
+L 61.92 230.04 
+Q 61.92 233.64 58.32 233.64 
+L 45.36 233.64 
+Q 41.76 233.64 41.76 230.04 
+L 41.76 222.84 
+Q 41.76 219.24 45.36 219.24 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_45">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="229.248984" transform="rotate(-0 67.68 229.248984)">Presentation</text>
+   </g>
+   <g id="patch_43">
+    <path d="M 45.36 243 
+L 58.32 243 
+Q 61.92 243 61.92 246.6 
+L 61.92 253.8 
+Q 61.92 257.4 58.32 257.4 
+L 45.36 257.4 
+Q 41.76 257.4 41.76 253.8 
+L 41.76 246.6 
+Q 41.76 243 45.36 243 
+z
+" clip-path="url(#p00d6d3eb03)" style="fill: #f5f0e8; stroke: #b39b7d; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="252.9795" transform="rotate(-0 67.68 252.9795)">Telemetry</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p00d6d3eb03">
+   <rect x="0" y="0" width="1296" height="1108.8"/>
+  </clipPath>
+ </defs>
 </svg>
