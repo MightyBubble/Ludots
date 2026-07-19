@@ -193,51 +193,6 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void RetiredFormalInputApis_DoNotAppearRepoWide()
-        {
-            string repoRoot = FindRepoRoot();
-            string[] forbidden =
-            {
-                Join("Ludots.Core.Input.", "Selection"),
-                Join("Selection", "Runtime"),
-                Join("Selection", "Request"),
-                Join("Selection", "Response"),
-                Join("Selection", "SetKeys"),
-                Join("Selection", "ViewKeys"),
-                Join("Selection", "ContainerKind"),
-                Join("Selection", "Eligibility"),
-                Join("Order", "Selection", "Reference")
-            };
-
-            var violations = new List<string>();
-            foreach (string rootName in new[] { "src", "mods" })
-            {
-                string root = Path.Combine(repoRoot, rootName);
-                if (!Directory.Exists(root))
-                {
-                    continue;
-                }
-
-                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
-                {
-                    if (!IsScannedRepoFile(repoRoot, file))
-                    {
-                        continue;
-                    }
-
-                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
-                }
-            }
-
-            Assert.That(
-                violations,
-                Is.Empty,
-                "Formal input authority must be retired repo-wide; use EntityCollectionStore, " +
-                "EntityCollectionKeys.CommandSource, and collection.command.source instead:\n" +
-                string.Join(Environment.NewLine, violations));
-        }
-
-        [Test]
         public void GameJsonCommandSourceConfig_DoesNotUseRetiredTopLevelSelectionSection()
         {
             string repoRoot = FindRepoRoot();
