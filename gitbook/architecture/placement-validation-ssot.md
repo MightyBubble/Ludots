@@ -68,6 +68,6 @@ Placement Validation **不负责**：
 
 ## 验证
 
-- `src/Tests/GasTests/PlacementValidationTests.cs`
-- `src/Tests/GasTests/TransportNetworkCoreTests.cs`（GraphQuery 基座）
+- `src/Tests/GasTests/Effect/PlacementValidationTests.cs`
+- `src/Tests/GasTests/Map/TransportNetworkCoreTests.cs`（GraphQuery 基座）
 - `InputOrderAbilityAuditTests`、`AbilityAimPresentationRuntimeTests`、`EffectPhaseArchitectureTests`

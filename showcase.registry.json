@@ -2194,12 +2194,12 @@
     },
     {
       "id": "native_events_demo",
-      "path": "mods/NativeEventsDemoMod",
+      "path": "mods/fixtures/native_events_demo/NativeEventsDemoMod",
       "projectPath": "NativeEventsDemoMod.csproj",
       "title": "原生事件演示",
       "summary": "原生事件机制演示 mod（按名称推断）。",
       "tier": "T3",
-      "category": "demo",
+      "category": "fixture",
       "binding": null,
       "preset": null,
       "docsPath": null,
@@ -2210,8 +2210,7 @@
       "status": "active",
       "tags": [
         "events"
-      ],
-      "proposedMove": "mods/showcases/native_events_demo"
+      ]
     },
     {
       "id": "performance",
@@ -2637,7 +2636,7 @@
     },
     {
       "id": "broken_build",
-      "path": "mods/BrokenBuildMod",
+      "path": "mods/fixtures/broken_build/BrokenBuildMod",
       "projectPath": "BrokenBuildMod.csproj",
       "title": "构建失败夹具",
       "summary": "故意构建失败的负向测试夹具，用于验证构建管线报错行为。",
@@ -2654,12 +2653,11 @@
       "tags": [
         "build",
         "negative-test"
-      ],
-      "proposedMove": "mods/fixtures/broken_build"
+      ]
     },
     {
       "id": "cycle_a",
-      "path": "mods/CycleAMod",
+      "path": "mods/fixtures/cycle_a/CycleAMod",
       "projectPath": "CycleAMod.csproj",
       "title": "循环依赖夹具 A",
       "summary": "循环依赖检测夹具（与 CycleBMod 成对）。",
@@ -2676,12 +2674,11 @@
       "tags": [
         "dependency",
         "negative-test"
-      ],
-      "proposedMove": "mods/fixtures/cycle_a"
+      ]
     },
     {
       "id": "cycle_b",
-      "path": "mods/CycleBMod",
+      "path": "mods/fixtures/cycle_b/CycleBMod",
       "projectPath": "CycleBMod.csproj",
       "title": "循环依赖夹具 B",
       "summary": "循环依赖检测夹具（与 CycleAMod 成对）。",
@@ -2698,12 +2695,11 @@
       "tags": [
         "dependency",
         "negative-test"
-      ],
-      "proposedMove": "mods/fixtures/cycle_b"
+      ]
     },
     {
       "id": "dep_api",
-      "path": "mods/DepApiMod",
+      "path": "mods/fixtures/dep_api/DepApiMod",
       "projectPath": "DepApiMod.csproj",
       "title": "依赖 API 夹具",
       "summary": "Mod 依赖 API 提供方夹具（与 DepConsumerMod 配对验证依赖解析）。",
@@ -2719,12 +2715,11 @@
       "status": "active",
       "tags": [
         "dependency"
-      ],
-      "proposedMove": "mods/fixtures/dep_api"
+      ]
     },
     {
       "id": "dep_consumer",
-      "path": "mods/DepConsumerMod",
+      "path": "mods/fixtures/dep_consumer/DepConsumerMod",
       "projectPath": "DepConsumerMod.csproj",
       "title": "依赖消费夹具",
       "summary": "Mod 依赖消费方夹具（与 DepApiMod 配对验证依赖解析）。",
@@ -2740,12 +2735,11 @@
       "status": "active",
       "tags": [
         "dependency"
-      ],
-      "proposedMove": "mods/fixtures/dep_consumer"
+      ]
     },
     {
       "id": "missing_dep",
-      "path": "mods/MissingDepMod",
+      "path": "mods/fixtures/missing_dep/MissingDepMod",
       "projectPath": "MissingDepMod.csproj",
       "title": "缺失依赖夹具",
       "summary": "依赖缺失负向测试夹具，验证加载期 fail-fast 行为。",
@@ -2762,8 +2756,7 @@
       "tags": [
         "dependency",
         "negative-test"
-      ],
-      "proposedMove": "mods/fixtures/missing_dep"
+      ]
     },
     {
       "id": "physics2d_playground",
@@ -2788,7 +2781,7 @@
     },
     {
       "id": "reactive_test",
-      "path": "mods/ReactiveTestMod",
+      "path": "mods/fixtures/reactive_test/ReactiveTestMod",
       "projectPath": "ReactiveTestMod.csproj",
       "title": "响应式测试夹具",
       "summary": "响应式（Reactive）系统测试 mod（按名称推断为测试夹具）。",
@@ -2805,12 +2798,11 @@
       "tags": [
         "reactive",
         "test"
-      ],
-      "proposedMove": "mods/fixtures/reactive_test"
+      ]
     },
     {
       "id": "version_mismatch",
-      "path": "mods/VersionMismatchMod",
+      "path": "mods/fixtures/version_mismatch/VersionMismatchMod",
       "projectPath": "VersionMismatchMod.csproj",
       "title": "版本不匹配夹具",
       "summary": "Mod 版本不匹配负向测试夹具，验证版本校验行为。",
@@ -2827,8 +2819,7 @@
       "tags": [
         "version",
         "negative-test"
-      ],
-      "proposedMove": "mods/fixtures/version_mismatch"
+      ]
     }
   ]
 }

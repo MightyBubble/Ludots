@@ -85,7 +85,7 @@ Fields:
 
 ## Config To Behavior Tests
 
-The contract tests are in `src/Tests/PresentationTests/MassNavigationRouteExecutionContractTests.cs`.
+The contract tests are in `src/Tests/PresentationTests/MassNavigation/MassNavigationRouteExecutionContractTests.cs`.
 
 They pin:
 

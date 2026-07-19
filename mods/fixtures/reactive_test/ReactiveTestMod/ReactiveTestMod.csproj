@@ -8,13 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj">
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj">
         <Private>false</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
         <Private>false</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj">
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj">
         <Private>false</Private>
     </ProjectReference>
   </ItemGroup>

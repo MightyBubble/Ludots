@@ -101,12 +101,12 @@
 
   <!-- ============ 关键数字 ============ -->
   <!-- 数据来源（治理调研结论，2026-07 基线）：
-       13 个 NUnit 项目 = src/Tests/ 下 csproj 计数；
+       12 个 NUnit 项目 = src/Tests/ 下 csproj 计数（ModdingTest 为手工冒烟工具，已迁至 src/Tools/ModdingSmoke）；
        2765 测试 = src/Tests 下 [Test] 属性计数（grep -c '[Test]' -r src/Tests --include='*.cs'）；
        验收证据目录 = artifacts/acceptance/ 实扫（见下方证据专区，由 build-site.py 注入） -->
   <div class="grid cols-4">
     <div class="card stat-card" style="padding: 22px;">
-      <div class="value" style="font-size: 32px;">13</div>
+      <div class="value" style="font-size: 32px;">12</div>
       <div class="label">个 NUnit 测试项目</div>
       <div class="note">src/Tests/ 下 csproj 计数</div>
     </div>
@@ -151,7 +151,7 @@
         <span class="lv" style="background: var(--olive-light); color: var(--olive);">L2</span>
         <h3>子系统集成</h3>
         <p>单 World 内的子系统级集成：GAS 战斗、3C、存档、Mod 加载。</p>
-        <code>GasTests · ThreeCTests · PersistenceTests · ModdingTest</code>
+        <code>GasTests · ThreeCTests · PersistenceTests</code>
       </div>
       <div class="card layer-card">
         <span class="lv" style="background: var(--olive-light); color: var(--olive);">L3</span>
@@ -245,12 +245,13 @@
     </p>
   </section>
 
-  <!-- ============ 13 个测试项目 ============ -->
+  <!-- ============ 12 个测试项目 + 1 个手工工具 ============ -->
   <section class="section">
     <div class="section-head">
       <div class="kicker">PROJECTS</div>
-      <h2>13 个 NUnit 测试项目</h2>
-      <p>全部位于 <code>src/Tests/</code>。常用命令：
+      <h2>12 个 NUnit 测试项目</h2>
+      <p>全部位于 <code>src/Tests/</code>。另有 1 个手工冒烟工具 <code>ModdingTest</code>（OutputType=Exe，非 NUnit），
+        已迁至 <code>src/Tools/ModdingSmoke/</code>。常用命令：
         <code>dotnet test src/Tests/GasTests/GasTests.csproj</code></p>
     </div>
     <div class="table-wrap">
@@ -262,7 +263,6 @@
           <tr><td><code>GasTests</code></td><td>GAS 战斗/属性/Tag 与通用运行时；<code>Production/</code> 下承载 showcase 验收（L4）</td><td>L1/L2/L4</td></tr>
           <tr><td><code>ThreeCTests</code></td><td>3C：相机 / 角色 / 控制</td><td>L2</td></tr>
           <tr><td><code>PersistenceTests</code></td><td>通用存档系统</td><td>L2</td></tr>
-          <tr><td><code>ModdingTest</code></td><td>Mod 加载、ALC 隔离、依赖解析</td><td>L2</td></tr>
           <tr><td><code>PresentationTests</code></td><td>表现层与 Performer 渲染管线</td><td>L3</td></tr>
           <tr><td><code>RaylibAdapterTests</code></td><td>Raylib 平台适配器契约</td><td>L3</td></tr>
           <tr><td><code>BrowserCefTests</code></td><td>CEF 浏览器壳</td><td>L3</td></tr>
@@ -273,6 +273,10 @@
         </tbody>
       </table>
     </div>
+    <p style="font-size: 13px; color: var(--faint); margin-top: 12px;">
+      注：<code>ModdingTest</code>（覆盖 Mod 加载、ALC 隔离、依赖解析，原 L2）是 OutputType=Exe 的手工冒烟工具而非 NUnit 测试，
+      已迁至 <code>src/Tools/ModdingSmoke/</code>；其编译由 solution-verify.yml 显式 <code>dotnet build</code> 步骤保留。
+    </p>
   </section>
 
   <!-- ============ Showcase T1–T4 分层 ============ -->

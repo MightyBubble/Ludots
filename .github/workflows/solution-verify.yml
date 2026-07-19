@@ -60,6 +60,12 @@ jobs:
             }
           }
 
+          # ModdingSmoke is a manual smoke tool (OutputType=Exe) that lives outside src/Tests.
+          dotnet build src/Tools/ModdingSmoke/ModdingTest.csproj -c Debug -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run architecture guard tests
         shell: pwsh
         run: |

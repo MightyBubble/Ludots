@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -29,17 +29,17 @@
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\DepApiMod\DepApiMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\DepConsumerMod\DepConsumerMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\CycleAMod\CycleAMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\CycleBMod\CycleBMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\dep_api\DepApiMod\DepApiMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\dep_consumer\DepConsumerMod\DepConsumerMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\cycle_a\CycleAMod\CycleAMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\cycle_b\CycleBMod\CycleBMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ExampleMod\ExampleMod.csproj" />
     <ProjectReference Include="..\..\..\mods\GasBenchmarkMod\GasBenchmarkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\HtmlTestMod\HtmlTestMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\MissingDepMod\MissingDepMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\missing_dep\MissingDepMod\MissingDepMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceMod\PerformanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\ReactiveTestMod\ReactiveTestMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\reactive_test\ReactiveTestMod\ReactiveTestMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\UiTestMod\UiTestMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
@@ -48,7 +48,7 @@
     <ProjectReference Include="..\..\..\mods\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\version_mismatch\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
