@@ -24,6 +24,7 @@ namespace Ludots.Tests.GAS.Production;
 /// </summary>
 [NonParallelizable]
 [TestFixture]
+[Category("acceptance")]
 public sealed class DomainStanceBridgeAcceptanceTests
 {
     private const string MapId = "capability_standard_participant_views";

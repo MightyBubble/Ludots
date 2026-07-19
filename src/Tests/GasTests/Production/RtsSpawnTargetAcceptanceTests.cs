@@ -22,6 +22,7 @@ namespace Ludots.Tests.GAS.Production
 {
     [NonParallelizable]
     [TestFixture]
+    [Category("acceptance")]
     public sealed class RtsSpawnTargetAcceptanceTests
     {
         private const float DeltaTime = 1f / 60f;

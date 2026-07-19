@@ -1,4 +1,4 @@
-﻿# Feature 开发工作流规范
+# Feature 开发工作流规范
 
 本篇定义 Ludots 仓库中新功能开发的完整流程，从需求发现到合并验收。核心目标：杜绝重复造轮子，消除幻觉代码（引用不存在的 API），确保每一行新代码都挂靠在已有架构管线上。
 
@@ -105,7 +105,7 @@ AI Agent 专项规则见 [02_ai_assisted_development.md](02_ai_assisted_developm
 | 架构边界变更 | ArchitectureTests 通过 |
 | 导航相关变更 | ArchitectureTests、PresentationTests 的 MassNavigation contracts、相关 GasTests 全量通过 |
 
-测试风格遵循 `src/Tests/GasTests/TESTING_STYLE.md`。
+测试风格遵循 `src/Tests/TESTING_STYLE.md`。
 测试命令见 [03_environment_setup.md](03_environment_setup.md)。
 
 ### 4.3 UI、Showcase 与表现层附加验收

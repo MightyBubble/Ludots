@@ -1,5 +1,7 @@
 # GasTests 测试编写风格规范（唯一真源）
 
+> 本规范适用全部 12 个 NUnit 测试工程（`src/Tests/` 下各 csproj），已由 `src/Tests/GasTests/` 上移为仓库级测试规范。
+
 本文档规定 `src/Tests/GasTests` 下的测试编写风格与约束，目标是：用例可读、断言可追踪、运行确定性、对性能/零 GC 约束不引入噪音。
 
 ## 1. 命名规则

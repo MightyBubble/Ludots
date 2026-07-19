@@ -193,9 +193,9 @@ namespace Ludots.Tests.GAS
         public void RtsDemo_LocalInputAssets_AreCompleteAndReachable()
         {
             string repoRoot = FindRepoRoot();
-            string inputPath = Path.Combine(repoRoot, "mods", "RtsDemoMod", "assets", "Input", "default_input.json");
-            string mappingPath = Path.Combine(repoRoot, "mods", "RtsDemoMod", "assets", "Input", "input_order_mappings.json");
-            string gamePath = Path.Combine(repoRoot, "mods", "RtsDemoMod", "assets", "game.json");
+            string inputPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "default_input.json");
+            string mappingPath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "input_order_mappings.json");
+            string gamePath = Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "game.json");
 
             Assert.That(File.Exists(inputPath), Is.True, $"Missing RTS input config: {inputPath}");
             Assert.That(File.Exists(mappingPath), Is.True, $"Missing RTS mapping config: {mappingPath}");

@@ -31,6 +31,7 @@ using System.Text.Json.Nodes;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("ci-gate")]
     public sealed class ProgressionRequirementTests
     {
         [SetUp]

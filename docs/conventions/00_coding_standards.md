@@ -1,4 +1,4 @@
-﻿# 编码标准
+# 编码标准
 
 本篇定义 Ludots 仓库的编码规范。第 1 节为核心架构铁律，是本仓库最高优先级的约束，其余章节为具体编码规则。所有人类开发者和 AI Agent 均须遵守。
 
@@ -184,7 +184,7 @@ Cleanup → EventDispatch → ClearPresentationFlags
 *   GAS 热路径测试中不使用 LINQ
 *   `GameplayEventBus.Events` 通过索引访问（`for` + `events[i]`），不使用 `foreach`
 
-完整测试风格指南：`src/Tests/GasTests/TESTING_STYLE.md`
+完整测试风格指南：`src/Tests/TESTING_STYLE.md`
 
 ## 6 Commit 格式
 

@@ -19,6 +19,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PerformerBlacksmithShowcaseScatterBenchmarkTests
     {
         private const int DeclaredWarmupFrames = 12;

@@ -279,6 +279,41 @@
     </p>
   </section>
 
+  <!-- ============ 目录治理现状 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">DIRECTORY GOVERNANCE</div>
+      <h2>目录治理现状</h2>
+      <p>测试目录已按子系统域簇化重组：用例归属按域入簇、一眼可定位，新增用例不再平铺堆在工程根。</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>工程</th><th>目录结构</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GasTests</code></td>
+            <td>14 个域簇 + <code>Production/</code> 验收区</td>
+            <td>AI / Ability / Association / Config / Effect / GasCore / Graph / Integration / InteractionInput /
+              Map / Physics2D / Presentation / Spatial / Vision 共 14 个域簇；<code>Production/</code> 单独承载
+              showcase 验收（L4），与注册表 <code>acceptanceTest</code> 字段配对。</td>
+          </tr>
+          <tr>
+            <td><code>PresentationTests</code></td>
+            <td>8 个域簇</td>
+            <td>Animation / Camera / Core / MassNavigation / Panels / Performer / Rendering / Showcases。</td>
+          </tr>
+          <tr>
+            <td><code>TestCommon</code></td>
+            <td>共享链接源（<code>src/Tests/TestCommon/</code>）</td>
+            <td>GasTests / PersistenceTests / PresentationTests / ThreeCTests 以
+              <code>&lt;Compile Include="..\TestCommon\*.cs" Link="*.cs" /&gt;</code> 相对路径链接其源码，
+              因此 TestCommon <strong>不可下沉工程层级</strong>，必须保持在 <code>src/Tests/</code> 顶层。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ============ Showcase T1–T4 分层 ============ -->
   <section class="section">
     <div class="section-head">

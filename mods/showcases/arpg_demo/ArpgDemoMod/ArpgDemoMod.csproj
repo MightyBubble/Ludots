@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
   </ItemGroup>
 </Project>
 

@@ -6,6 +6,6 @@
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
-    "../../../../../../../mods/MobaDemoMod"
+    "../../../../../../../mods/showcases/moba_demo/MobaDemoMod"
   ]
 }

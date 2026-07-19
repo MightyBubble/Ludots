@@ -7,6 +7,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 [TestFixture]
+[Category("acceptance")]
 public sealed class BrowserMinimapWebShellShowcaseAcceptanceTests
 {
     private const string BindingName = "browser_minimap_composited_overlay_showcase";

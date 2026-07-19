@@ -18,6 +18,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("ci-gate")]
     public sealed class ExchangeRuntimeTests
     {
         private const int CreditDef = 1;

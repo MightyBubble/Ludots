@@ -343,6 +343,43 @@ table.data tr:last-child td { border-bottom: none; }
   justify-content: space-between;
 }
 
+/* ============ docs 文档页（prd / tdd / reference）侧边栏布局 ============
+   issue #695：由各页原内联 <style> 逐条收敛而来，统一 scoped 到 .docs-layout，
+   避免影响门户页（index / gallery / tests / diagrams）。 */
+.docs-layout { display: flex; min-height: 100vh; line-height: 1.7; }
+.docs-layout .sidebar { width: 280px; background: var(--bg-soft); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
+.docs-layout .sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
+.docs-layout .sidebar a:hover { background: var(--accent-light); color: var(--accent); }
+.docs-layout .sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.docs-layout .sidebar .group { margin-bottom: 18px; }
+.docs-layout .sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
+.docs-layout .main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
+.docs-layout .main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
+.docs-layout .main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.docs-layout .main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
+.docs-layout .main h4 { font-size: 16px; margin-top: 24px; }
+.docs-layout .main p { margin: 12px 0; }
+.docs-layout .main a { color: var(--accent); text-decoration: none; }
+.docs-layout .main a:hover { text-decoration: underline; }
+.docs-layout .main ul, .docs-layout .main ol { margin: 12px 0; padding-left: 24px; }
+.docs-layout .main li { margin: 4px 0; }
+.docs-layout .main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.docs-layout .main th, .docs-layout .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.docs-layout .main th { background: var(--accent-light); font-weight: 600; }
+.docs-layout .main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.docs-layout .main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.docs-layout .main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
+.docs-layout .main pre code { padding: 0; background: transparent; }
+.docs-layout .main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
+.docs-layout .main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.docs-layout .main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
+.docs-layout .main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+@media (max-width: 900px) {
+  .docs-layout .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .docs-layout .main { margin-left: 0; }
+  .docs-layout { flex-direction: column; }
+}
+
 /* ============ 响应式 ============ */
 @media (max-width: 960px) {
   .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }

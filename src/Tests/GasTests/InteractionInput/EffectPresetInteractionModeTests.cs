@@ -21,7 +21,7 @@ namespace Ludots.Tests.GAS
         public void MobaEffects_CoversSharedCombatPresetTypes()
         {
             string repoRoot = FindRepoRoot();
-            string effectsPath = Path.Combine(repoRoot, "mods", "MobaDemoMod", "assets", "GAS", "effects.json");
+            string effectsPath = Path.Combine(repoRoot, "mods", "showcases", "moba_demo", "MobaDemoMod", "assets", "GAS", "effects.json");
             Assert.That(File.Exists(effectsPath), Is.True, "MobaDemoMod effects.json is missing.");
 
             using var stream = File.OpenRead(effectsPath);

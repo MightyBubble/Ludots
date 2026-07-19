@@ -11,6 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("ci-gate")]
     public sealed class VisionResolverTests
     {
         [Test]

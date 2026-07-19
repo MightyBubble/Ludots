@@ -18,6 +18,7 @@ namespace Ludots.Tests.GAS.Production;
 
 [TestFixture]
 [NonParallelizable]
+[Category("acceptance")]
 public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
 {
     private const string BindingName = "capability_standard_time_flow_showcase";

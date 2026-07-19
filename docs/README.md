@@ -12,7 +12,7 @@
 | L2 架构 | `docs/architecture/` | 深度架构设计、模块边界、数据流与实现细节 |
 | L3 参考 | `docs/reference/` | 长版操作手册、查表和补充材料 |
 | L4 记录型 | `docs/adr/`、`docs/audits/`、`docs/rfcs/` | 架构决策记录（为什么这样定）、审计/验收/回顾证据、提案与讨论稿 |
-| L5 站点生成区 | `index.html`、`diagrams.html`、`issues.html`、`assets/`、`prd/`、`tdd/`、`diagrams/` | 门户站点源码（手写 HTML/CSS/JS）与架构图库，经 `build-site.py` 组装进 `_site/` |
+| L5 站点生成区 | `index.html`、`gallery.html`、`tests.html`、`diagrams.html`、`issues.html`、`assets/`、`site-assets/`、`prd/`、`tdd/`、`diagrams/` | 门户站点源码（手写 HTML/CSS/JS）与架构图库，经 `build-site.py` 组装进 `_site/` |
 
 ## 2 单源与入口
 

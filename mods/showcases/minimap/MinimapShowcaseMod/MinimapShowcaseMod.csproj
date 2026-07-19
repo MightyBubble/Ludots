@@ -9,7 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
-    <ProjectReference Include="..\..\..\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\fourx_demo\FourXDemoMod\FourXDemoMod.csproj" />
   </ItemGroup>
 
 </Project>
