@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = "D:\001_AI\LudotsDev\Ludots"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $launcher = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.exe"
 
 if ([string]::IsNullOrWhiteSpace($ScreenshotPath)) {

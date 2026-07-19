@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = "D:\001_AI\LudotsDev\Ludots-item-worktree"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $launcher = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.exe"
 $captureRoot = Join-Path $repoRoot "artifacts\acceptance\item-system-showcase\capture-runtime"
 $overrideModRoot = Join-Path $captureRoot "startup-map-override"

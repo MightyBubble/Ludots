@@ -1,13 +1,13 @@
 param(
-    [string]$ScreenshotPath = "D:\001_AI\LudotsDev\Ludots-item-worktree\artifacts\acceptance\item-loadout-showcase\item-loadout-showcase-raylib.png",
-    [string]$DiagnosticPath = "D:\001_AI\LudotsDev\Ludots-item-worktree\artifacts\acceptance\item-loadout-showcase\item-loadout-showcase-raylib-diagnostic.log",
+    [string]$ScreenshotPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "artifacts\acceptance\item-loadout-showcase\item-loadout-showcase-raylib.png"),
+    [string]$DiagnosticPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "artifacts\acceptance\item-loadout-showcase\item-loadout-showcase-raylib-diagnostic.log"),
     [int]$ScreenshotFrame = 180,
     [int]$KillAfterSeconds = 45,
     [string]$Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = "D:\001_AI\LudotsDev\Ludots-item-worktree"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $scriptPath = Join-Path $repoRoot "scripts\acceptance\run-item-system-showcase-acceptance.ps1"
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath `

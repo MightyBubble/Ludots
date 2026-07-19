@@ -54,7 +54,7 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
-        "projectPath": null
+        "projectPath": "RoadNetworkShowcaseMod.csproj"
       }
     },
     {

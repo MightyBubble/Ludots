@@ -22,8 +22,12 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 ## 🚀 快速开始
 
 ### 前置要求
-*   .NET 8.0 SDK 或更高版本
+*   .NET 8.0 SDK
+*   .NET 9.0 SDK
+*   .NET 10.0 preview SDK
 *   Node.js & npm (用于编辑器)
+
+三个 .NET SDK 缺一不可——缺少任一 SDK 都可能导致 `dotnet restore` 或 launcher 构建失败。完整契约见 [快速开始](gitbook/quick-start.md)。
 
 ### 构建与运行
 
@@ -42,11 +46,15 @@ Ludots 是一个现代化的 C# 游戏框架，专为高性能游戏逻辑设计
 **手动构建 (CLI)**
 
 ```bash
-# 构建主 Raylib 应用程序
-dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
+# 通过启动器运行 Mass Navigation 示例（canonical 产品入口）
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
+```
 
-# 通过启动器运行 Mass Navigation 示例
-.\scripts\run-mod-launcher.cmd preset mass_navigation
+直接构建 adapter app 仅用于调试，不是产品入口：
+
+```bash
+# 仅调试用途：直接构建 Raylib adapter app
+dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
 ```
 
 ## 📂 项目结构

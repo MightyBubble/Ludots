@@ -22,8 +22,12 @@ Ludots is a modern C# game framework designed for high-performance gameplay logi
 ## 🚀 Quick Start
 
 ### Prerequisites
-*   .NET 8.0 SDK or later
+*   .NET 8.0 SDK
+*   .NET 9.0 SDK
+*   .NET 10.0 preview SDK
 *   Node.js & npm (for Editor)
+
+All three .NET SDKs are required — a missing SDK can cause `dotnet restore` or launcher build failures. See the [Quick Start](gitbook/quick-start.md) for the full contract.
 
 ### Build & Run
 
@@ -42,11 +46,15 @@ Scripts are located in the `scripts/` directory:
 **Manual Build (CLI)**
 
 ```bash
-# Build the main Raylib App
-dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
+# Run the Mass Navigation showcase through the launcher (canonical product entry)
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
+```
 
-# Run the Mass Navigation showcase through the launcher
-.\scripts\run-mod-launcher.cmd preset mass_navigation
+Building the adapter app directly is for debugging only — it is not the product entry:
+
+```bash
+# Debug use only: build the Raylib adapter app
+dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
 ```
 
 ## 📂 Project Structure
