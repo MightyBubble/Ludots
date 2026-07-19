@@ -9,6 +9,33 @@ namespace Ludots.Tests.Architecture
     [TestFixture]
     public sealed class NavigationLegacyDomainRemovalContractTests
     {
+        private static readonly HashSet<string> TextFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".cs",
+            ".csproj",
+            ".css",
+            ".editorconfig",
+            ".fs",
+            ".html",
+            ".js",
+            ".json",
+            ".jsx",
+            ".md",
+            ".mjs",
+            ".props",
+            ".razor",
+            ".sln",
+            ".slnx",
+            ".targets",
+            ".toml",
+            ".ts",
+            ".tsx",
+            ".txt",
+            ".xml",
+            ".yaml",
+            ".yml"
+        };
+
         [Test]
         public void Repository_DoesNotReferenceRemovedNavigationExecutionDomain()
         {
@@ -146,7 +173,8 @@ namespace Ludots.Tests.Architecture
                     }
 
                     string[] segments = relative.Split('/');
-                    return !segments.Any(segment => excludedDirectories.Contains(segment));
+                    return TextFileExtensions.Contains(Path.GetExtension(relative)) &&
+                           !segments.Any(segment => excludedDirectories.Contains(segment));
                 });
         }
 

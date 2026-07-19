@@ -13,6 +13,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
+using Ludots.Tests.GAS.Production;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Integration.ProductionWiring

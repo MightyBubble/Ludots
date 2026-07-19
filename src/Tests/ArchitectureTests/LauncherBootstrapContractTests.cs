@@ -52,8 +52,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -155,8 +156,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -895,8 +897,9 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-order-fingerprint");
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
+                Assert.That(engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
                     "Graph-planned order should remain the runtime load order even when priority would have reordered an ad-hoc resolve path.");
             }
             finally
