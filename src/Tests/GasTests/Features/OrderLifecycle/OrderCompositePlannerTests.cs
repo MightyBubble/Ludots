@@ -10,7 +10,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Orders;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.OrderLifecycle
 {
     [TestFixture]
     public sealed class OrderCompositePlannerTests

@@ -27,7 +27,7 @@ using Ludots.Core.Scripting;
 using MobaDemoMod.Systems;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.InputRouting
 {
     [TestFixture]
     public sealed class InputOrderContractTests

@@ -24,7 +24,7 @@ using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.InputRouting
 {
     /// <summary>
     /// Unit tests covering the features introduced by the Input/Order/Ability audit:

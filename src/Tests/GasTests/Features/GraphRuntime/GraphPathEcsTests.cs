@@ -4,7 +4,7 @@ using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphEcs;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.GraphRuntime
 {
     [TestFixture]
     public sealed class GraphPathEcsTests

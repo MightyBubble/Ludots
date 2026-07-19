@@ -63,12 +63,14 @@ jobs:
       - name: Run architecture guard tests
         shell: pwsh
         run: |
-          $guardFilter = @(
-            'FullyQualifiedName~ArchitectureGuardTests',
-            'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
-          ) -join '|'
+          $guardFilter = 'FullyQualifiedName~ArchitectureGuardTests'
 
           dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $guardFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj -c Debug --no-build --filter 'FullyQualifiedName~GasRuntimeStateContractTests|FullyQualifiedName~GraphRuntimeArchitectureGuardTests' -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

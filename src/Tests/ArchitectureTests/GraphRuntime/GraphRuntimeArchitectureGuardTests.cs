@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.Architecture.GraphRuntime
 {
     public class GraphRuntimeArchitectureGuardTests
     {
@@ -73,4 +73,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

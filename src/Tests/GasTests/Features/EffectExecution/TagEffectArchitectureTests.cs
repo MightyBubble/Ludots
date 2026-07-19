@@ -23,7 +23,7 @@ using Ludots.Core.Mathematics;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.EffectExecution
 {
     /// <summary>
     /// Comprehensive tests for the Tag-Effect Architecture:

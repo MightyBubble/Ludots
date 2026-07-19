@@ -19,7 +19,7 @@ using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.EffectExecution
 {
     [TestFixture]
     public class RootBudgetTests

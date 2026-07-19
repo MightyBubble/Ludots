@@ -168,7 +168,7 @@ focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的
 - `src/Tests/GasTests/ParticipantBindingContractTests.cs`
 - `src/Tests/GasTests/MapLoadEntityIndexContractTests.cs`
 - `src/Tests/GasTests/MapManagerInheritanceTests.cs`
-- `src/Tests/GasTests/InputOrderContractTests.cs`
+- `src/Tests/GasTests/Features/InputRouting/InputOrderContractTests.cs`
 - `src/Tests/GasTests/AuthoritativeInputConvergenceTests.cs`
 
 这些测试验证：

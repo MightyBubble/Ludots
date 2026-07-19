@@ -9,7 +9,7 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.RuntimeBudget
 {
     [TestFixture]
     public sealed class GasExecutionBudgetTests

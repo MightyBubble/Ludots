@@ -5,7 +5,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.EffectExecution
 {
     [TestFixture]
     public sealed class ResponseChainListenerCacheTests
@@ -14,7 +14,7 @@ namespace Ludots.Tests.GAS
         public void RuntimeListenerRegistration_RebuildsCacheAndAffectsNextRequest()
         {
             using var world = World.Create();
-            const int healthAttributeId = 0;
+            int healthAttributeId = AttributeRegistry.Register("tests.response-listener.health");
             const int effectTagId = 71;
             const int effectTemplateId = 81;
 

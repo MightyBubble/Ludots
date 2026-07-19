@@ -13,13 +13,12 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
-using Ludots.Tests.GAS.Production;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GasTests
+namespace Ludots.Tests.GAS.Integration.ProductionWiring
 {
     [TestFixture]
-    public sealed class GasProductionWiringTests
+    public sealed class GasProductionWiringIntegrationTests
     {
         [Test]
         public void GraphOutputs_WhenOwnerVersionRetires_ReclaimsSlotsAndInvalidatesHandles()

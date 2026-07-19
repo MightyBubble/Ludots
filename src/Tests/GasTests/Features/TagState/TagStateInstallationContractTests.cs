@@ -14,10 +14,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.Association;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS;
+namespace Ludots.Tests.GAS.Features.TagState;
 
 [TestFixture]
-public sealed class Issue669TagStateTests
+public sealed class TagStateInstallationContractTests
 {
     [Test]
     public void TagStateInstaller_InstallsCompleteStateAtomically()
@@ -372,7 +372,7 @@ public sealed class Issue669TagStateTests
         formExec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 12, tagId: 42);
         definitions.Register(formAbilityId, new AbilityDefinition { ExecSpec = formExec });
 
-        int formSetId = AbilityFormSetIdRegistry.Register($"Issue669.FormSet.{Guid.NewGuid():N}");
+        int formSetId = AbilityFormSetIdRegistry.Register($"tag-state.form-set.{Guid.NewGuid():N}");
         var formSets = new AbilityFormSetRegistry();
         formSets.Register(
             formSetId,
@@ -446,24 +446,24 @@ public sealed class Issue669TagStateTests
         var ownership = new OwnershipResolver(relationships, relationshipTypes.GetId("Owns"));
 
         var shapes = new ItemShapeRegistry();
-        int shapeId = shapes.Register("issue669_1x1", new ItemShapeDefinition
+        int shapeId = shapes.Register("tag_state_1x1", new ItemShapeDefinition
         {
-            Id = "issue669_1x1",
+            Id = "tag_state_1x1",
             Rotations = new[] { new ItemShapeRotation(1, 1, new[] { true }) },
         });
         var layouts = new ItemLayoutRegistry();
-        int layoutId = layouts.Register("issue669_equipment", new ItemLayoutDefinition
+        int layoutId = layouts.Register("tag_state_equipment", new ItemLayoutDefinition
         {
-            Id = "issue669_equipment",
+            Id = "tag_state_equipment",
             Purpose = ItemContainerPurpose.Equipment,
             Width = 1,
             Height = 1,
             GrantsEquipmentBonuses = true,
         }.InitializeBlockedMask(new bool[1]));
         var itemDefinitions = new ItemDefinitionRegistry();
-        int itemDefinitionId = itemDefinitions.Register("issue669_timed_grant", new ItemDefinition
+        int itemDefinitionId = itemDefinitions.Register("tag_state_timed_grant", new ItemDefinition
         {
-            Id = "issue669_timed_grant",
+            Id = "tag_state_timed_grant",
             ShapeId = shapeId,
             AbilityGrants = new[] { new ItemAbilityGrant { SlotIndex = 0, AbilityId = abilityId } },
         });
