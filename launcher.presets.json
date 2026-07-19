@@ -250,6 +250,132 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_virtual_camera_showcase_raylib",
+      "name": "Capability Standard Virtual Camera Raylib",
+      "selectors": [
+        "$capability_standard_virtual_camera_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "animation_acceptance_raylib",
+      "name": "Animation Acceptance Raylib",
+      "selectors": [
+        "$animation_acceptance"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "blacksmith_test_raylib",
+      "name": "Blacksmith Test Raylib",
+      "selectors": [
+        "$blacksmith_test"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "fog_of_war_raylib",
+      "name": "Fog Of War Raylib",
+      "selectors": [
+        "$fog_of_war"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "fog_vision_decay_raylib",
+      "name": "Fog Vision Decay Raylib",
+      "selectors": [
+        "$fog_vision_decay"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "item_system_raylib",
+      "name": "Item System Raylib",
+      "selectors": [
+        "$item_system"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "forge_socket_raylib",
+      "name": "Forge Socket Raylib",
+      "selectors": [
+        "$forge_socket"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "item_loadout_raylib",
+      "name": "Item Loadout Raylib",
+      "selectors": [
+        "$item_loadout"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "raid_loop_raylib",
+      "name": "Raid Loop Raylib",
+      "selectors": [
+        "$raid_loop"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "weapon_bench_raylib",
+      "name": "Weapon Bench Raylib",
+      "selectors": [
+        "$weapon_bench"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "entity_command_panel_raylib",
+      "name": "Entity Command Panel Raylib",
+      "selectors": [
+        "$entity_command_panel_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "interaction_raylib",
+      "name": "Interaction Raylib",
+      "selectors": [
+        "$interaction_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "superweapon_context_raylib",
+      "name": "Superweapon Context Raylib",
+      "selectors": [
+        "$superweapon_context_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "control_plane_projection_raylib",
+      "name": "Control Plane Projection Raylib",
+      "selectors": [
+        "$control_plane_projection_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

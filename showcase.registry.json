@@ -20,14 +20,15 @@
         "animation",
         "skinned"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "animation_acceptance",
+      "preset": "animation_acceptance_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "AnimationAcceptancePrototypeTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "blacksmith_test",
@@ -41,14 +42,15 @@
         "performer",
         "uat"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "blacksmith_test",
+      "preset": "blacksmith_test_raylib",
       "docsPath": "gitbook/architecture/performer-raylib-uat.md",
       "readmePath": null,
       "acceptanceTest": "BlacksmithPerformerUatTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "camera_acceptance",
@@ -90,7 +92,8 @@
       "acceptanceTest": "CameraAcceptanceModTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_mass_navigation_large_world_10k",
@@ -112,7 +115,8 @@
       "acceptanceTest": "CapabilityStandardMassNavigationLargeWorld10kProductionPathTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_participant_views",
@@ -133,7 +137,8 @@
       "acceptanceTest": "ParticipantViewKnowledgeShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_physics2d",
@@ -153,7 +158,8 @@
       "acceptanceTest": "CapabilityStandardPhysics2DAcceptanceTests",
       "artifactDir": "artifacts/showcases/capability-standard-physics2d",
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_physics2d_showcase",
@@ -174,7 +180,8 @@
       "acceptanceTest": "CapabilityStandardPhysics2DShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_physics2d_stress",
@@ -195,7 +202,8 @@
       "acceptanceTest": "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests",
       "artifactDir": "artifacts/showcases/capability-standard-physics2d-stress",
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_time_flow_showcase",
@@ -215,7 +223,8 @@
       "acceptanceTest": "CapabilityStandardTimeFlowShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "capability_standard_virtual_camera_showcase",
@@ -229,14 +238,15 @@
         "camera",
         "virtual-camera"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "capability_standard_virtual_camera_showcase",
+      "preset": "capability_standard_virtual_camera_showcase_raylib",
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardVirtualCameraShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "control_plane_projection",
@@ -252,13 +262,14 @@
         "dataplane"
       ],
       "binding": "control_plane_projection_showcase",
-      "preset": null,
+      "preset": "control_plane_projection_raylib",
       "docsPath": null,
       "readmePath": "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/README.md",
       "acceptanceTest": "ControlPlaneProjectionShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "entity_command_panel",
@@ -273,13 +284,14 @@
         "command"
       ],
       "binding": "entity_command_panel_showcase",
-      "preset": null,
+      "preset": "entity_command_panel_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "EntityCommandPanelShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "fog_of_war",
@@ -293,14 +305,15 @@
         "fog-of-war",
         "vision"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "fog_of_war",
+      "preset": "fog_of_war_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "FogOfWarShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "fog_vision_decay",
@@ -314,14 +327,15 @@
         "fog-of-war",
         "vision"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "fog_vision_decay",
+      "preset": "fog_vision_decay_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "FogVisionDecayShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "forge_socket",
@@ -335,14 +349,15 @@
         "item",
         "forge"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "forge_socket",
+      "preset": "forge_socket_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "interaction",
@@ -357,13 +372,14 @@
         "input"
       ],
       "binding": "interaction_showcase",
-      "preset": null,
+      "preset": "interaction_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "InteractionShowcasePlayableAcceptanceTests",
       "artifactDir": "artifacts/acceptance/interaction-showcase",
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "item_loadout",
@@ -376,14 +392,15 @@
       "tags": [
         "item"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "item_loadout",
+      "preset": "item_loadout_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "item_system",
@@ -397,14 +414,15 @@
         "item",
         "inventory"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "item_system",
+      "preset": "item_system_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "progression_scope",
@@ -424,7 +442,8 @@
       "acceptanceTest": "ProgressionScopeShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "raid_loop",
@@ -438,14 +457,15 @@
         "item",
         "raid"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "raid_loop",
+      "preset": "raid_loop_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "superweapon_context",
@@ -460,13 +480,14 @@
         "targeting"
       ],
       "binding": "superweapon_context_showcase",
-      "preset": null,
+      "preset": "superweapon_context_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "SuperweaponContextShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "weapon_bench",
@@ -479,14 +500,15 @@
       "tags": [
         "item"
       ],
-      "binding": null,
-      "preset": null,
+      "binding": "weapon_bench",
+      "preset": "weapon_bench_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
-      "status": "active"
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
     },
     {
       "id": "arpg_demo",

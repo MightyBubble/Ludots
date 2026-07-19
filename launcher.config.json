@@ -248,6 +248,85 @@
         "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
         "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_virtual_camera_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardVirtualCameraShowcaseMod",
+        "projectPath": "CapabilityStandardVirtualCameraShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "animation_acceptance",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/animation/AnimationAcceptanceMod",
+        "projectPath": "AnimationAcceptanceMod.csproj"
+      }
+    },
+    {
+      "name": "blacksmith_test",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/blacksmith/BlacksmithTestMod"
+      }
+    },
+    {
+      "name": "fog_of_war",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/fog_of_war/FogOfWarShowcaseMod",
+        "projectPath": "FogOfWarShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "fog_vision_decay",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/fog_vision_decay/FogVisionDecayShowcaseMod",
+        "projectPath": "FogVisionDecayShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "item_system",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/ItemSystemShowcaseMod",
+        "projectPath": "ItemSystemShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "forge_socket",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/ForgeSocketShowcaseMod",
+        "projectPath": "ForgeSocketShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "item_loadout",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/ItemLoadoutShowcaseMod",
+        "projectPath": "ItemLoadoutShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "raid_loop",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/RaidLoopShowcaseMod",
+        "projectPath": "RaidLoopShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "weapon_bench",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
+        "projectPath": "WeaponBenchShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {
