@@ -45,5 +45,5 @@ Global Field Rendering 是面向全图或大面积栅格数据的正式 Presenta
 - `src/Core/Vision/FogGlobalFieldVisualProjector.cs`
 - `src/Client/Ludots.Client.Raylib/Rendering/RaylibFieldRenderPerformer.cs`
 - `src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs`
-- `src/Tests/GasTests/GlobalFieldVisualBufferTests.cs`
+- `src/Tests/GasTests/Vision/GlobalFieldVisualBufferTests.cs`
 - `src/Tests/RaylibAdapterTests/RaylibFieldRenderPerformerTests.cs`

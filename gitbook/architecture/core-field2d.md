@@ -46,5 +46,5 @@ VisionResolver -> FogField(ChunkedField2D<CellVisibility>) -> FogGlobalFieldVisu
 - `src/Core/Fields/FieldChunk2D.cs`
 - `src/Core/Fields/ChunkedField2D.cs`
 - `src/Core/Vision/FogField.cs`
-- `src/Tests/GasTests/CoreField2DTests.cs`
-- `src/Tests/GasTests/FogFieldTests.cs`
+- `src/Tests/GasTests/Spatial/CoreField2DTests.cs`
+- `src/Tests/GasTests/Vision/FogFieldTests.cs`

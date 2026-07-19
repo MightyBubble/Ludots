@@ -255,5 +255,5 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 - `docs/architecture/persistent_static_adapter_sync.md`
 - `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
 - 开发者仓库中的商业引擎 adapter render bridge
-- `src/Tests/PresentationTests/PrefabFinalizationAndVisualHeightmapTests.cs`
-- `src/Tests/PresentationTests/PresentationFoundationTests.cs`
+- `src/Tests/PresentationTests/Rendering/PrefabFinalizationAndVisualHeightmapTests.cs`
+- `src/Tests/PresentationTests/Core/PresentationFoundationTests.cs`
