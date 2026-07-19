@@ -3,6 +3,13 @@ param(
     [switch]$NoBuild
 )
 
+# 推荐使用新增 preset（canonical 入口，经 launcher 统一解析 binding/构建依赖）：
+#   scripts/run-mod-launcher.cmd cli launch --preset entity_command_panel_raylib
+#   等价 selector 形式（见 gitbook/reference/cli-runbook.md）：
+#   scripts/run-mod-launcher.cmd cli launch 'preset:entity_command_panel_raylib'
+# 本脚本为历史遗留的手动路径：绕过 launcher 直接逐个 dotnet build 4 个 mod 并启动
+# Raylib 宿主，仅用于需要精细控制构建顺序/参数的场景；常规验收请走上面的 preset。
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -63,3 +70,10 @@ try {
 finally {
     Pop-Location
 }
+
+# 等价 canonical 命令（launcher preset 入口）：
+#   scripts/run-mod-launcher.cmd cli launch --preset entity_command_panel_raylib
+#   等价 selector 形式（见 gitbook/reference/cli-runbook.md）：
+#   scripts/run-mod-launcher.cmd cli launch 'preset:entity_command_panel_raylib'
+# preset 定义见 launcher.presets.json（selectors: $entity_command_panel_showcase），
+# binding 定义见 launcher.config.json（entity_command_panel_showcase）。

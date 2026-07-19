@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string[]]$Paths = @()
 )
@@ -63,6 +63,37 @@ function Resolve-RepoTarget {
     }
 
     return [System.IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $SourceFile) $normalizedTarget))
+}
+
+# 稀疏检出容错：Test-Path 失败时回退 git 树查询（blobless/sparse 克隆中
+# 未物料化的路径在文件系统不存在，但可能真实存在于 HEAD 树中）。
+function Test-RepoPath {
+    param(
+        [string]$RepoRoot,
+        [string]$ResolvedPath
+    )
+
+    if (Test-Path $ResolvedPath) {
+        return $true
+    }
+
+    $fullRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+    $fullPath = [System.IO.Path]::GetFullPath($ResolvedPath)
+    if (-not $fullPath.StartsWith($fullRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $false
+    }
+
+    $relative = $fullPath.Substring($fullRoot.Length).TrimStart('\', '/').Replace('\', '/')
+    if ([string]::IsNullOrWhiteSpace($relative)) {
+        return $false
+    }
+
+    try {
+        $output = & git -C $fullRoot ls-tree HEAD -- $relative 2>$null
+        return (-not [string]::IsNullOrWhiteSpace(($output | Out-String)))
+    } catch {
+        return $false
+    }
 }
 
 function Get-MarkdownLinks {
@@ -245,7 +276,7 @@ foreach ($file in $filesToValidate) {
             continue
         }
 
-        if (-not (Test-Path $resolved)) {
+        if (-not (Test-RepoPath -RepoRoot $repoRoot -ResolvedPath $resolved)) {
             Add-Finding -Collection $findings -Rule 'missing-link-target' -Source $relativeSource -Detail "markdown link target not found: '$target'"
         }
     }
@@ -271,7 +302,7 @@ foreach ($file in $filesToValidate) {
             $normalizedToken = $Matches[1]
         }
 
-        if (-not (Test-Path $resolved)) {
+        if (-not (Test-RepoPath -RepoRoot $repoRoot -ResolvedPath $resolved)) {
             if ([string]::IsNullOrWhiteSpace([System.IO.Path]::GetExtension($normalizedToken))) {
                 continue
             }
