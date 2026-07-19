@@ -8,7 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
-namespace GasTests
+namespace Ludots.Tests.Architecture.Governance
 {
     public class ArchitectureGuardTests
     {
