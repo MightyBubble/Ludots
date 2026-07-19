@@ -2595,7 +2595,7 @@ public static class LauncherEvidenceRecorder
         int selectedCount = 0;
         foreach (MassNavigationAvoidanceAgentSnapshot agent in agents)
         {
-            if (!agent.Selected)
+            if (!agent.CommandActor)
             {
                 continue;
             }
@@ -2686,7 +2686,7 @@ public static class LauncherEvidenceRecorder
                 heavyCount++;
             }
 
-            if (agent.Selected)
+            if (agent.CommandActor)
             {
                 selectedVisibleCount++;
             }
@@ -2982,7 +2982,7 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavigationMs: simulation.CommandSourceSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.CommandActorSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
