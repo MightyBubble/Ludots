@@ -10,6 +10,7 @@ using ParticipantViewCapabilityMod.Runtime;
 namespace Ludots.Tests.GAS;
 
 [TestFixture]
+[Category("ci-gate")]
 public sealed class ParticipantViewProjectionTests
 {
     [Test]

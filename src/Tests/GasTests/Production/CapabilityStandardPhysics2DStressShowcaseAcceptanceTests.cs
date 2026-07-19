@@ -17,6 +17,7 @@ namespace Ludots.Tests.GAS.Production;
 
 [TestFixture]
 [NonParallelizable]
+[Category("acceptance")]
 public sealed class CapabilityStandardPhysics2DStressShowcaseAcceptanceTests
 {
     private const string ShowcaseModId = "CapabilityStandardPhysics2DStressMod";

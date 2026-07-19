@@ -14,6 +14,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class RaylibIsmBenchmarkShowcaseTests
     {
         private const string RendererServiceKey = "Platform.RaylibBenchmarkRenderer";

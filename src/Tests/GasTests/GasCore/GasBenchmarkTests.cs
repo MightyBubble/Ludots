@@ -12,6 +12,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("benchmark")]
     public class GasBenchmarkTests
     {
         private readonly TagOps _tagOps = new TagOps();

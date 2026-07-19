@@ -23,6 +23,7 @@ namespace Ludots.Tests.GAS
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class EntityCollectionQueryBenchmarkTests
     {
         private const string CollectionSourceId = "gas.collection-ability-slots";

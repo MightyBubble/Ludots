@@ -5,6 +5,8 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
+    [Category("ci-gate")]
+    [Category("arch-guard")]
     public class GraphRuntimeArchitectureGuardTests
     {
         [Test]

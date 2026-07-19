@@ -15,6 +15,7 @@ namespace Ludots.Tests.GAS
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public class AiBenchmarkTests
     {
         [Test]

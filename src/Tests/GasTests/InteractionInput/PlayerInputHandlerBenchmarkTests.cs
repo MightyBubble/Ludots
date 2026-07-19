@@ -10,6 +10,7 @@ namespace Ludots.Tests.GAS
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PlayerInputHandlerBenchmarkTests
     {
         [Test]

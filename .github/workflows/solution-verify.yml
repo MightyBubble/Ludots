@@ -69,52 +69,19 @@ jobs:
       - name: Run architecture guard tests
         shell: pwsh
         run: |
-          $guardFilter = @(
-            'FullyQualifiedName~ArchitectureGuardTests',
-            'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
-          ) -join '|'
-
-          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $guardFilter -v minimal
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter "TestCategory=arch-guard" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
 
       # Full GasTests and full PresentationTests are already red on origin/main.
       # Keep this workflow honest by gating the AAC slice that currently passes on main.
+      # The slice membership lives in the test sources as [Category("ci-gate")];
+      # arch-guard classes also carry ci-gate but run in their own step above.
       - name: Run association core GasTests slice
         shell: pwsh
         run: |
-          $associationFilter = @(
-            'FullyQualifiedName~EntityKeyedSoaTableTests',
-            'FullyQualifiedName~EntityCollectionStoreTests',
-            'FullyQualifiedName~KnowledgeProjectionStoreTests',
-            'FullyQualifiedName~KnowledgeProjectionResolverTests',
-            'FullyQualifiedName~KnowledgeProjectionRelationGrantTests',
-            'FullyQualifiedName~KnowledgeProjectionAspectMaskTests',
-            'FullyQualifiedName~ScopeResolverTests',
-            'FullyQualifiedName~OwnershipRelationTests',
-            'FullyQualifiedName~ExchangeRuntimeTests',
-            'FullyQualifiedName~ProgressionRequirementTests',
-            'FullyQualifiedName~ParticipantViewProjectionTests',
-            'FullyQualifiedName~SelectionKnowledgeProjectionTests',
-            'FullyQualifiedName~AssociationStressShowcaseAcceptanceTests',
-            'FullyQualifiedName~FogVisionDecayShowcaseAcceptanceTests',
-            'FullyQualifiedName~FogOfWarShowcaseAcceptanceTests',
-            'FullyQualifiedName~VisionResolverTests',
-            'FullyQualifiedName~FogFieldTests',
-            'FullyQualifiedName~FogKnowledgeAndSnapshotTests',
-            'FullyQualifiedName~FogBenchmarkTests',
-            'FullyQualifiedName~OwnershipCascadeShowcaseAcceptanceTests',
-            'FullyQualifiedName~DiplomacyTradeGateShowcaseAcceptanceTests',
-            'FullyQualifiedName~GoldMarketShowcaseAcceptanceTests',
-            'FullyQualifiedName~ScopeSwitchShowcaseAcceptanceTests',
-            'FullyQualifiedName~TeamResearchShowcaseAcceptanceTests',
-            'FullyQualifiedName~ProgressionScopeShowcaseAcceptanceTests',
-            'FullyQualifiedName~ParticipantViewKnowledgeShowcaseAcceptanceTests',
-            'FullyQualifiedName~FourXAssociationShowcaseAcceptanceTests'
-          ) -join '|'
-
-          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $associationFilter -v minimal
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -122,7 +89,7 @@ jobs:
       - name: Run Raylib field rendering tests
         shell: pwsh
         run: |
-          dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj -c Debug --no-build --filter 'FullyQualifiedName~RaylibFieldRenderPerformerTests' -v minimal
+          dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj -c Debug --no-build --filter "TestCategory=raylib-field" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

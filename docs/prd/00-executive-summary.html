@@ -4,76 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Executive Summary — Ludots Wiki</title>
-    <base href="/Ludots/">
-<style>:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
-.container { display: flex; min-height: 100vh; }
-.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
-.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
-.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
-.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
-.sidebar .group { margin-bottom: 18px; }
-.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
-.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
-.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
-.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
-.main h4 { font-size: 16px; margin-top: 24px; }
-.main p { margin: 12px 0; }
-.main a { color: var(--accent); text-decoration: none; }
-.main a:hover { text-decoration: underline; }
-.main ul, .main ol { margin: 12px 0; padding-left: 24px; }
-.main li { margin: 4px 0; }
-.main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-.main th, .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-.main th { background: var(--accent-light); font-weight: 600; }
-.main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
-.main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
-.main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
-.main pre code { padding: 0; background: transparent; }
-.main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
-.main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }
-.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
-.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-</style>
+<link rel="stylesheet" href="../site-assets/site.css">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="../site-assets/site.js"></script>
 </head>
-<body>
-<div class="container">
+<body data-docs-page="prd/00-executive-summary.html">
+<div class="container docs-layout">
 <nav class="sidebar" id="nav"></nav>
 <main class="main" id="content"></main>
 </div>
 <script>
-const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
-const currentPage = "prd/00-executive-summary.html";
 const mdContent = "# 执行摘要（Executive Summary）\n\n## 1. 功能概述\n\n**Ludots** 是一个基于 **Arch ECS**（Entity Component System）架构的高性能 C# 游戏引擎框架，采用**六边形架构**（Hexagonal Architecture）与**\"一切皆 Mod\"**的设计理念。引擎核心（`LudotsCoreMod`）以最低优先级（-1000）加载，所有业务功能——包括 RTS 的单位调度、MOBA 的技能系统、ARPG 的装备与属性计算——均通过独立的 `IMod` 模块注册到引擎中，实现严格的功能隔离与可扩展性。\n\n引擎的核心价值在于将**逻辑仿真**（Simulation）与**视觉表现**（Presentation）完全解耦：前者通过 `SystemGroup` 的 11 个固定 Phase 执行，受 `IPacemaker` 控制的仿真预算约束；后者在独立的 `Update` 循环中运行，不受预算限制，始终保证视觉流畅。这种双层循环设计使 Ludots 能够同时承载高确定性逻辑（如回合制策略、网络同步）与高性能实时渲染（如 RTS 千人同屏、大规模地形渲染）。\n\n## 2. 目标用户\n\n| 用户类型 | 核心诉求 | 对应能力 |\n|---------|---------|---------|\n| **独立游戏开发者** | 快速原型、可维护的架构、跨平台部署 | 可复用的 GAS 管线、Instanced Mesh 批量渲染、Web 串流 |\n| **Mod 作者** | 不修改引擎源码即可扩展玩法 | `IModContext` 提供的 6 个正式扩展点、Config 自动合并、VFS 资源访问 |\n| **工具开发者** | 为引擎生态开发编辑器、调试器、数据工具 | `ScriptContext` + `CoreServiceKeys` 的 typed service scope、存档 `.ldsave` 格式规范 |\n| **大型团队技术负责人** | 架构治理、多团队协作、长期可维护 | 六边形架构的端口/适配器隔离、Mod ALC 隔离、组件注册冲突报告 |\n\n## 3. 使用场景\n\n- **RTS 游戏**：`RtsDemoMod` / `RtsStarcraftLikeMod` / `RtsRedAlertLikeMod` 展示了大单位数量下的寻路（`MassNavigationRuntime` + `NavTileStore` + `AutoPathService`）、编队移动（`FormationCapability`）、视野/战争迷雾（`FogField` / `VisionSystem`）、阵营关系（`TeamManager`）与技能释放（GAS 完整管线）。\n- **MOBA 游戏**：`MobaDemoMod` / `ChampionSkillSandboxMod` 展示了能力定义（`AbilityDefinitionRegistry`）、Effect 阶段执行（`EffectPhaseExecutor`）、投射物生成（`CreateProjectile` builtin handler）、属性计算（`AttributeBindingSystem`）与关系网络（`RelationshipRuntime`）。\n- **ARPG 游戏**：`ArpgDemoMod` 展示了物品/装备/库存（`InventoryRuntimeService` / `ItemLayoutDefinition`）、进度系统（`ProgressionDomain`）、叙事导演（`NarrativeDirector`）与实体生成（`RuntimeEntitySpawnSystem` / `TemplateEntityBatchSpawner`）。\n- **回合制策略**：`FourXDemoMod` / `DiplomacyTradeGateMod` 展示了交易执行（`ExchangeRuntime` / `TryExecute` + 回滚）、外交关系（`RelationshipRuntime` / `RelationshipSynergyProcessor`）、科技树（`TechTreeScope`）与地图层（`MapManager` / `MapConfig`）。\n\n## 4. 核心能力\n\nLudots 当前已实现的核心能力包括：\n\n1. **ECS 仿真核心**：基于 `Arch` 的 `World` 与 `WorldRuntime` 工厂，支持 `SystemGroup` 的 11 个 phase 顺序执行（`src/Core/Engine/GameEngine.cs` 第 97–134 行）。\n2. **Gameplay Ability System（GAS）**：完整的能力-效果管线，含 `AbilityDefinitionRegistry`、`EffectPhaseExecutor`、`BuiltinHandlerRegistry`（64 槽零 GC）、`AttributeBindingSystem`、`GameplayEventBus`。\n3. **Mod 体系**：`ModLoader`（599 行）驱动的 `mod.json` 扫描、依赖拓扑排序（`DependencyResolver`）、ALC 隔离（`ModLoadContext` / `isCollectible: true`）、VFS 挂载（`VirtualFileSystem`）。\n4. **配置管线**：`ConfigPipeline`（218 行）支持 Core → Mod 的 `DeepMerge`、`ArrayById` 合并策略，`ConfigCatalog` 驱动目录化配置加载。\n5. **图运行时 VM**：`GraphCompiler` 将 JSON 图配置编译为 `GraphInstruction[]` 字节码，`GraphExecutor` 通过 opcode handler 表执行，支持 133 种 opcode（`GraphNodeOp`）与 4 类各 32 个寄存器。\n6. **存档系统**：`SaveContainerCodec` 编码的 `.ldsave` 单文件容器，含 `header.json` + `domains.json` + `world.bin`；`ISaveParticipant` 接口支持非 ECS 域（如叙事变量、库存、关系网络）参与存档。\n7. **平台适配**：Raylib 桌面路径（完整 3D 渲染 + Skia UI 合成）与 Web 串流路径（`FrameProtocol` / `BinaryFrameEncoder` / `DeltaCompressor` → Three.js 瘦客户端）。\n\n## 5. 输入 / 输出\n\n| 输入 | 来源 | 处理路径 |\n|------|------|---------|\n| `mod.json` + 程序集 | 文件系统 | `ModDiscovery` → `DependencyResolver` → `ModLoader.LoadResolvedPlan` → `ModLoadContext` → `IMod.OnLoad` |\n| `game.json` + 配置片段 | VFS（`ModId:Path`） | `ConfigPipeline.CollectFragments` → `DeepMerge` / `MergeArrayById` → `JsonSerializer.Deserialize<GameConfig>` |\n| 玩家输入（键鼠/手柄） | `RaylibInputBackend` / `WebInputBackend` | `InputRequestQueue` → `InputCollection` phase → `AbilityActivation` / `OrderProcessing` |\n| 网络输入（Web 串流） | WebSocket `InputProtocol`（33 字节） | `WebInputBackend` → `WireInputState` → `QueuedFrameState` → `InputRequestQueue` |\n\n| 输出 | 目标 | 生成路径 |\n|------|------|---------|\n| 表现 Buffer（Primitive / WorldHUD / ScreenHUD / DebugDraw / GroundOverlay） | 渲染器 | `Presentation` systems → `Update` 循环中生成各 Buffer |\n| 二进制帧（Web） | Three.js 瘦客户端 | `PresentationExtractor.CaptureFrame` → `BinaryFrameEncoder` → `WebTransportLayer.BroadcastFrame` |\n| `.ldsave` 存档 | 文件系统 | `WorldSnapshotService.Capture` → `SaveContainerCodec.Encode` → `SaveSlotStore.Write` |\n| 日志 | 控制台 / 日志后端 | `ILogBackend` / `LogChannel`（`RaylibConsoleLogBackend`） |\n\n## 6. 依赖关系\n\nLudots 的核心依赖极少，保持框架级轻量：\n\n- **Arch** (`Arch` / `Arch.System`)：ECS 运行时与 `Arch.Persistence` 二进制序列化。\n- **Arch ECS 的 `JobScheduler`**：用于并行 system 执行（`InitializeWorld` 中构造）。\n- **Raylib-cs**（仅限 Raylib 路径）：跨平台图形/输入库。\n- **SkiaSharp**（仅限 Raylib 路径）：2D 矢量 UI 渲染与合成。\n- **ASP.NET Core** + `System.Net.WebSockets`（仅限 Web 路径）：WebSocket 服务器与静态文件服务。\n- **Three.js**（仅限 Web 客户端）：浏览器端 3D 渲染与插值。\n\n## 7. 非功能需求（性能约束）\n\n| 约束项 | 指标 | 实现机制 |\n|--------|------|---------|\n| 仿真预算 | `SimulationBudgetMsPerFrame` + `SimulationMaxSlicesPerLogicFrame` | `IPacemaker` 在 `Tick` 中控制每帧 simulation 循环的时间上限，防止逻辑帧耗尽宿主线程（`GameEngine.cs`）。 |\n| 零 GC 触发 | `BuiltinHandlerRegistry` 固定 64 槽数组 | `Register(BuiltinHandlerId, fn)` / `Invoke(...)` 通过索引直接访问，无字典查找或委托分配。 |\n| 批量实体生成 | `TemplateEntityBatchSpawner` | 绕过 `ComponentRegistry` 的逐 entity 设置，直接通过 Arch chunk span 填充组件，避免逐 entity 的 `ComponentRegistry.Apply` 开销。 |\n| 二进制帧零分配 | `BinaryFrameEncoder` | 使用 `Span<byte>` 连续编码，UTF-8 字符串表与 TextTemplate 表避免每帧字符串分配。 |\n| 图 VM 防无限循环 | `MaxInstructionsPerExecution = 4096` | `GraphExecutor` 的 PC 驱动循环中，超出指令上限自动终止。 |\n| 存档引用完整性 | `SaveEntityReferenceValidator` | `LudotsBinaryWorldSerializer.Serialize` 中校验 entity ref 不指向缺失或被排除实体。 |\n| Mod 内存隔离 | `AssemblyLoadContext`（`isCollectible: true`） | `ModLoadContext` 支持进程共享、Host 共享、Mod 私有三层解析策略；`UnloadAll` 可卸载 Mod 程序集。 |\n\n---\n\n> **版本说明**：本摘要基于 Ludots `main` 分支（2026-07-02 扫描）。标注为「⚠️ 文档过承诺/待实现」的能力详见各子章节。";
 
-function buildNav() {
-  let html = '';
-  const pathParts = window.location.pathname.split('/');
-  // 提取项目根路径（如 /Ludots 或 /）
-  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
-  for (const [group, items] of Object.entries(navData)) {
-    if (items.length === 0) continue;
-    html += '<div class="group"><div class="group-title">' + group + '</div>';
-    for (const [href, title] of items) {
-      const cls = href === currentPage ? 'active' : '';
-      const link = basePath + '/' + href;
-      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
-    }
-    html += '</div>';
-  }
-  document.getElementById('nav').innerHTML = html;
-}
-
-function render() {
-  buildNav();
-  document.getElementById('content').innerHTML = marked.parse(mdContent);
-}
-render();
+document.getElementById('content').innerHTML = marked.parse(mdContent);
 </script>
 </body>
 </html>

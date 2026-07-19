@@ -20,6 +20,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PerformerSubtypePerformanceBenchmarkTests
     {
         private const int CountPerSubtype = 2_000;

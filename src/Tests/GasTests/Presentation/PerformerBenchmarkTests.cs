@@ -30,6 +30,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
+    [Category("benchmark")]
     public class PerformerBenchmarkTests
     {
         private const int ENTITY_COUNT = 1000;

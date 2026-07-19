@@ -30,6 +30,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PerformerDynamicWorkerBenchmarkTests
     {
         private const int WarmupFrames = 8;

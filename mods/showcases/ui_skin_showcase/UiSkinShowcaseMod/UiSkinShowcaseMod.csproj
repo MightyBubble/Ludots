@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\UiShowcaseCoreMod\UiShowcaseCoreMod.csproj">
+    <ProjectReference Include="..\..\..\UiShowcaseCoreMod\UiShowcaseCoreMod.csproj">
       <Private>false</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj">
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj">
       <Private>false</Private>
     </ProjectReference>
   </ItemGroup>

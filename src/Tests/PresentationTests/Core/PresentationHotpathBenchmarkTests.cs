@@ -12,6 +12,7 @@ using SkiaSharp;
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
+    [Category("benchmark")]
     public sealed class PresentationHotpathBenchmarkTests
     {
         private const int VisibleEntityCount = 10240;

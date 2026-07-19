@@ -3,6 +3,6 @@
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/EntityCommandPanelMod",
-    "../../../../../../../mods/RtsDemoMod"
+    "../../../../../../../mods/showcases/rts_demo/RtsDemoMod"
   ]
 }

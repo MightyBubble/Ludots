@@ -3,11 +3,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
-    <ProjectReference Include="..\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>
+

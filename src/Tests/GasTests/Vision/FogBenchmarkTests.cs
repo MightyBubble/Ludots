@@ -13,6 +13,8 @@ namespace Ludots.Tests.GAS
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("ci-gate")]
+    [Category("benchmark")]
     public sealed class FogBenchmarkTests
     {
         [Test]

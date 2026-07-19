@@ -512,7 +512,7 @@
     },
     {
       "id": "arpg_demo",
-      "path": "mods/ArpgDemoMod",
+      "path": "mods/showcases/arpg_demo/ArpgDemoMod",
       "projectPath": "ArpgDemoMod.csproj",
       "title": "ARPG 演示",
       "summary": "ARPG 玩法演示 mod（game.arpg.json 正式入口），新人学习参考实现之一。",
@@ -528,8 +528,7 @@
       "status": "active",
       "tags": [
         "arpg"
-      ],
-      "proposedMove": "mods/showcases/arpg_demo"
+      ]
     },
     {
       "id": "browser_minimap_composited_overlay",
@@ -803,7 +802,7 @@
     },
     {
       "id": "fourx_demo",
-      "path": "mods/FourXDemoMod",
+      "path": "mods/showcases/fourx_demo/FourXDemoMod",
       "projectPath": "FourXDemoMod.csproj",
       "title": "4X 演示",
       "summary": "4X 策略玩法演示 mod（game.fourx.json 正式入口），外交/阵营/经济参考实现。",
@@ -819,8 +818,7 @@
       "status": "active",
       "tags": [
         "4x"
-      ],
-      "proposedMove": "mods/showcases/fourx_demo"
+      ]
     },
     {
       "id": "gap_generator",
@@ -987,7 +985,7 @@
     },
     {
       "id": "moba_demo",
-      "path": "mods/MobaDemoMod",
+      "path": "mods/showcases/moba_demo/MobaDemoMod",
       "projectPath": "MobaDemoMod.csproj",
       "title": "MOBA 演示",
       "summary": "MOBA 玩法演示 mod（game.moba.json 与默认 game.json 入口），千人同屏批量生成参考实现。",
@@ -1003,8 +1001,7 @@
       "status": "active",
       "tags": [
         "moba"
-      ],
-      "proposedMove": "mods/showcases/moba_demo"
+      ]
     },
     {
       "id": "multi_layer_fog_field",
@@ -1342,7 +1339,7 @@
     },
     {
       "id": "rts_demo",
-      "path": "mods/RtsDemoMod",
+      "path": "mods/showcases/rts_demo/RtsDemoMod",
       "projectPath": "RtsDemoMod.csproj",
       "title": "RTS 演示",
       "summary": "RTS 玩法演示 mod（game.rts-demo.json 入口），launcher 默认演示路径与新人上手参考。",
@@ -1358,8 +1355,7 @@
       "status": "active",
       "tags": [
         "rts"
-      ],
-      "proposedMove": "mods/showcases/rts_demo"
+      ]
     },
     {
       "id": "rts_fourx_like",
@@ -1406,7 +1402,7 @@
     },
     {
       "id": "rts_showcase",
-      "path": "mods/RtsShowcaseMod",
+      "path": "mods/showcases/rts_showcase/RtsShowcaseMod",
       "projectPath": "RtsShowcaseMod.csproj",
       "title": "RTS 综合 Showcase",
       "summary": "RTS 综合 showcase mod（game.rts.json「RTS Showcase」入口），与 RtsDemoMod 组合加载。",
@@ -1422,8 +1418,7 @@
       "status": "active",
       "tags": [
         "rts"
-      ],
-      "proposedMove": "mods/showcases/rts_showcase"
+      ]
     },
     {
       "id": "rts_starcraft_like",
@@ -1655,7 +1650,7 @@
     },
     {
       "id": "tcg_demo",
-      "path": "mods/TcgDemoMod",
+      "path": "mods/showcases/tcg_demo/TcgDemoMod",
       "projectPath": "TcgDemoMod.csproj",
       "title": "TCG 演示",
       "summary": "集换式卡牌（TCG）玩法演示 mod（game.tcg.json 入口）。",
@@ -1671,8 +1666,7 @@
       "status": "active",
       "tags": [
         "tcg"
-      ],
-      "proposedMove": "mods/showcases/tcg_demo"
+      ]
     },
     {
       "id": "team_research",
@@ -1800,7 +1794,7 @@
     },
     {
       "id": "ai_demo",
-      "path": "mods/AIDemoMod",
+      "path": "mods/showcases/ai_demo/AIDemoMod",
       "projectPath": "AIDemoMod.csproj",
       "title": "AI 演示",
       "summary": "Utility AI 演示 mod（RFC-0060 相关背景），推断为 AI 能力演示。",
@@ -1816,8 +1810,7 @@
       "status": "active",
       "tags": [
         "ai"
-      ],
-      "proposedMove": "mods/showcases/ai_demo"
+      ]
     },
     {
       "id": "ai_inspector",
@@ -2173,7 +2166,7 @@
     },
     {
       "id": "html_test",
-      "path": "mods/HtmlTestMod",
+      "path": "mods/showcases/html_test/HtmlTestMod",
       "projectPath": "HtmlTestMod.csproj",
       "title": "HTML UI 测试",
       "summary": "HTML UI 渲染链路测试/演示 mod（按名称推断）。",
@@ -2189,8 +2182,7 @@
       "status": "active",
       "tags": [
         "webui"
-      ],
-      "proposedMove": "mods/showcases/html_test"
+      ]
     },
     {
       "id": "native_events_demo",
@@ -2487,7 +2479,7 @@
     },
     {
       "id": "ui_showcase_hub",
-      "path": "mods/UiShowcaseHubMod",
+      "path": "mods/showcases/ui_showcase_hub/UiShowcaseHubMod",
       "projectPath": "UiShowcaseHubMod.csproj",
       "title": "UI Showcase 枢纽",
       "summary": "UI showcase 统一入口枢纽 mod（按名称推断）。",
@@ -2504,8 +2496,7 @@
       "tags": [
         "ui",
         "hub"
-      ],
-      "proposedMove": "mods/showcases/ui_showcase_hub"
+      ]
     },
     {
       "id": "ui_skin_classic",
@@ -2572,7 +2563,7 @@
     },
     {
       "id": "ui_skin_showcase",
-      "path": "mods/UiSkinShowcaseMod",
+      "path": "mods/showcases/ui_skin_showcase/UiSkinShowcaseMod",
       "projectPath": "UiSkinShowcaseMod.csproj",
       "title": "皮肤展示",
       "summary": "UI 皮肤展示 showcase mod（按名称推断）。",
@@ -2589,8 +2580,7 @@
       "tags": [
         "ui",
         "skin"
-      ],
-      "proposedMove": "mods/showcases/ui_skin_showcase"
+      ]
     },
     {
       "id": "ui_test",

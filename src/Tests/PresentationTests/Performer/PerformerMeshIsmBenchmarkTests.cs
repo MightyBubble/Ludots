@@ -25,6 +25,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PerformerMeshIsmBenchmarkTests
     {
         private const string BenchmarkTemplateId = "blacksmith_mesh_benchmark_entity";

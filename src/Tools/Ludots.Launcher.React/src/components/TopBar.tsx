@@ -3,6 +3,8 @@ import {
   Gamepad2,
   Globe,
   Hammer,
+  LayoutGrid,
+  Layers,
   Loader2,
   Monitor,
   Play,
@@ -34,6 +36,8 @@ export function TopBar() {
     launch,
     toggleCreateDialog,
     toggleWorkspace,
+    mainView,
+    setMainView,
   } = useLauncherStore();
 
   const selectedPreset = presets.find((preset) => preset.id === selectedPresetId) ?? null;
@@ -80,6 +84,35 @@ export function TopBar() {
           <span className="text-sm font-bold tracking-[0.25em]">LUDOTS</span>
           <span className="text-[10px] uppercase tracking-[0.35em] text-gray-500">Launcher</span>
         </div>
+      </div>
+
+      <div className="h-6 w-px bg-bg-border" />
+
+      <div className="flex rounded-xl border border-bg-border bg-bg p-1">
+        <button
+          onClick={() => setMainView("mods")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition",
+            mainView === "mods"
+              ? "bg-accent text-white shadow-lg shadow-accent/20"
+              : "text-gray-400 hover:bg-bg-hover hover:text-gray-200",
+          )}
+        >
+          <LayoutGrid size={13} />
+          Mods
+        </button>
+        <button
+          onClick={() => setMainView("showcase")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition",
+            mainView === "showcase"
+              ? "bg-accent text-white shadow-lg shadow-accent/20"
+              : "text-gray-400 hover:bg-bg-hover hover:text-gray-200",
+          )}
+        >
+          <Layers size={13} />
+          Showcase
+        </button>
       </div>
 
       <div className="h-6 w-px bg-bg-border" />

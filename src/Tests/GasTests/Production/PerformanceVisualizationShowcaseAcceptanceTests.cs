@@ -19,6 +19,7 @@ namespace Ludots.Tests.GAS.Production
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("acceptance")]
     public sealed class PerformanceVisualizationShowcaseAcceptanceTests
     {
         private static readonly string[] AcceptanceMods =

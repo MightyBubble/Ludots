@@ -278,7 +278,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             QueryRuntimeSetup setup = CreateQueryRuntime(world);
             string repoRoot = FindRepoRoot();
-            string fourXRoot = Path.Combine(repoRoot, "mods", "FourXDemoMod");
+            string fourXRoot = Path.Combine(repoRoot, "mods", "showcases", "fourx_demo", "FourXDemoMod");
             string graphsPath = Path.Combine(fourXRoot, "assets", "GAS", "graphs.json");
             string catalogPath = Path.Combine(fourXRoot, "assets", "Relationships", "catalog.json");
             string templatesPath = Path.Combine(fourXRoot, "assets", "Entities", "templates.json");

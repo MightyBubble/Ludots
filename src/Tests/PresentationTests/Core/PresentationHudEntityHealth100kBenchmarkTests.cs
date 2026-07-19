@@ -14,6 +14,7 @@ namespace Ludots.Tests.Presentation
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("benchmark")]
     public sealed class PresentationHudEntityHealth100kBenchmarkTests
     {
         private const int EntityCount = 100_000;

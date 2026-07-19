@@ -10,6 +10,8 @@ using NUnit.Framework;
 
 namespace GasTests
 {
+    [Category("ci-gate")]
+    [Category("arch-guard")]
     public class ArchitectureGuardTests
     {
         [Test]
@@ -578,7 +580,7 @@ namespace GasTests
             var repoRoot = FindRepoRoot();
             string[] files =
             {
-                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsCommandSourceFeedbackPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "Systems", "RtsCommandSourceFeedbackPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),
