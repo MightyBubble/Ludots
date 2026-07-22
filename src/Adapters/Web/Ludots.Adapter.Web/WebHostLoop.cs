@@ -7,6 +7,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
@@ -143,9 +144,22 @@ namespace Ludots.Adapter.Web
                             lastDiagMs = nowMs;
                             var primBuf = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
                             int primCount = primBuf?.Count ?? 0;
+                            var skinnedBuf = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
+                            int visibleSkinnedCount = 0;
+                            if (skinnedBuf != null)
+                            {
+                                var skinnedSpan = skinnedBuf.GetSpan();
+                                for (int i = 0; i < skinnedSpan.Length; i++)
+                                {
+                                    if (skinnedSpan[i].Visibility == VisualVisibility.Visible)
+                                    {
+                                        visibleSkinnedCount++;
+                                    }
+                                }
+                            }
                             var ddBuf = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
                             int ddLines = ddBuf?.Lines.Count ?? 0;
-                            Log.Info(in LogChannel, $"[Diag] Primitives={primCount} DebugLines={ddLines} Clients={setup.Transport.ClientCount} Tick={engine.GameSession?.CurrentTick ?? 0}");
+                            Log.Info(in LogChannel, $"[Diag] Primitives={primCount} VisibleSkinned={visibleSkinnedCount} DebugLines={ddLines} Clients={setup.Transport.ClientCount} Tick={engine.GameSession?.CurrentTick ?? 0}");
                         }
                     }
                     catch (Exception ex)

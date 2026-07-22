@@ -67,6 +67,22 @@ namespace Ludots.Tests.GAS
                 "A PlayerOwner id with no bound rep has no control domain, so no edge exists.");
         }
 
+        [Test]
+        public void RuntimeSpawn_DefaultRequest_DoesNotInferExplicitRelationshipsFromEntityDefaults()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Assert.That(harness.Requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Assembly,
+                WorldPositionCm = Fix64Vec2.FromInt(1, 2),
+                HasWorldPosition = 1,
+            }), Is.True);
+
+            Assert.DoesNotThrow(() => harness.System.Update(0f));
+        }
+
         private static Entity SpawnAssembly(Harness harness, int playerOwnerIdOverride)
         {
             Assert.That(harness.Requests.TryEnqueue(new RuntimeEntitySpawnRequest

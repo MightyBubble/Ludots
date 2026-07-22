@@ -234,6 +234,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void DefaultCommandIntentProfile_RoutesGroundAndInspectableEntityHitsToMove()
+        {
+            string repoRoot = FindRepoRoot();
+            string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
+                    File.ReadAllText(profilePath),
+                    options)
+                ?? throw new InvalidOperationException("Default command intent profile config failed to parse.");
+
+            CommandIntentProfileDefinition profile = config.Profiles.Single(p =>
+                string.Equals(p.Id, "intent.command.default", StringComparison.Ordinal));
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    rule.Target?.HasEntity == false &&
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                Is.True,
+                "Default command must keep explicit ground movement.");
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    rule.Target?.HasEntity == true &&
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                Is.True,
+                "Default command must explicitly treat an inspectable entity under the pointer as a valid move destination, so right-clicking neutral showcase props is not silently dropped.");
+        }
+
+        [Test]
         public void MobaLocalOrderSource_ResolvesCallerSuppliedTargetCollectionKey()
         {
             const string customCollectionKey = "collection.test.explicit.targets";
@@ -860,7 +887,16 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(500f, 0f, 600f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Multi-actor collection dispatch must use the atomic batch submit handler."));
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             system.Update(0f);
 
@@ -871,16 +907,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ActorOrderRouting_RoutedMoveTo_AppliesGroupFormationToMoveSubsetOnly()
+        public void ActorOrderRouting_RoutedMoveTo_AppliesGroupTargetLayoutToMoveSubsetOnly()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -934,7 +970,16 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(1000f, 0f, 1000f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Multi-actor routed move dispatch must use the atomic batch submit handler."));
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             system.Update(0f);
 
@@ -982,16 +1027,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GroupMoveFormation_OrderTypeKeyMatching_IsCaseSensitive()
+        public void GroupMoveTargetLayout_OrderTypeKeyMatching_IsCaseSensitive()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "MoveTo" },
                 },
@@ -1033,7 +1078,16 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(1000f, 0f, 1000f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Multi-actor collection dispatch must use the atomic batch submit handler."));
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             system.Update(0f);
 
@@ -1042,13 +1096,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GroupMoveFormation_GridMode_RequiresOrderTypeKeys()
+        public void GroupMoveTargetLayout_GridMode_RequiresOrderTypeKeys()
         {
             var config = new InputOrderMappingConfig
             {
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                 },
                 Mappings = new List<InputOrderMapping>
@@ -1067,7 +1121,37 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 InputOrderMappingLoader.Validate(config, "test.json"));
-            Assert.That(ex!.Message, Does.Contain("groupMoveFormation.orderTypeKeys"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.orderTypeKeys"));
+        }
+
+        [Test]
+        public void GroupMoveTargetLayout_GridMode_RejectsNonPositiveSpacing()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 0,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.spacingCm"));
         }
 
         [Test]
@@ -1435,6 +1519,144 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommandIntentRouting_ExpandsAfterCastDispatchAndRejectsClusteredBatchAtomically()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity firstSource = world.Create();
+            Entity secondSource = world.Create();
+            Entity firstMember = world.Create();
+            Entity secondMember = world.Create();
+            var queue = new OrderQueue(capacity: 64);
+            for (int i = 0; i < 63; i++)
+            {
+                var filler = new Order { OrderTypeId = 2 };
+                Assert.That(queue.TryEnqueue(in filler), Is.True);
+            }
+
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Expanded command intent must use the clustered batch submit handler."));
+            system.SetOrderBatchSubmitHandler((Span<Order> _) =>
+            {
+                Assert.Fail("Expanded command intent must not use the shared batch handler.");
+                return false;
+            });
+            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueClusteredBatch(orders));
+            var expander = new TestCommandActorExpander(
+                new Dictionary<Entity, Entity>
+                {
+                    [firstSource] = firstMember,
+                    [secondSource] = secondMember,
+                });
+            system.SetCommandActorExpander(expander);
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, firstSource);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, secondSource);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.atomic_batch",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.atomic_batch",
+                            CastDispatchProfileId = "dispatch.all_together",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            var ex = Assert.Throws<InvalidOperationException>(() => system.TryActivateMappedAction("Command"));
+
+            Assert.That(ex!.Message, Does.Contain("clustered fan-out was rejected"));
+            Assert.That(queue.Count, Is.EqualTo(63),
+                "The expanded fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+            Assert.That(expander.ExpandCallCount, Is.EqualTo(2),
+                "CastDispatch must select the two sources before the command router expands either source into members.");
+        }
+
+        [Test]
         public void CommandIntentRouting_DispatchSeesOnlyRoutedActors()
         {
             var input = new FrozenInputActionReader();
@@ -1735,6 +1957,27 @@ namespace Ludots.Tests.GAS
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private sealed class TestCommandActorExpander : ICommandActorExpander
+        {
+            private readonly IReadOnlyDictionary<Entity, Entity> _membersBySource;
+
+            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity> membersBySource)
+            {
+                _membersBySource = membersBySource;
+            }
+
+            public int MaxExpandedActorsPerSource => 1;
+            public int MaxExpandedActorCount => _membersBySource.Count;
+            public int ExpandCallCount { get; private set; }
+
+            public int Expand(Entity source, Span<Entity> destination)
+            {
+                ExpandCallCount++;
+                destination[0] = _membersBySource[source];
+                return 1;
+            }
         }
 
         private static Func<InputOrderMapping, bool> ReferencesOrderTypeKey(string orderTypeKey)

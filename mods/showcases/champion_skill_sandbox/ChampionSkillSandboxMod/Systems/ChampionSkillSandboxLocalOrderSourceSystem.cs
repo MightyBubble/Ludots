@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
@@ -19,6 +20,7 @@ namespace ChampionSkillSandboxMod.Systems
         private readonly LocalOrderSourceHelper _helper;
         private readonly IModContext _context;
         private InputOrderMappingSystem? _mapping;
+        private string _commandActionId = string.Empty;
         private bool _initialized;
 
         public ChampionSkillSandboxLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext context)
@@ -79,6 +81,9 @@ namespace ChampionSkillSandboxMod.Systems
             }
 
             _initialized = true;
+            _commandActionId = InteractionActionBindingsResolver.Require(
+                _globals,
+                nameof(ChampionSkillSandboxLocalOrderSourceSystem)).CommandActionId;
             _mapping = _helper.TryCreateMapping(_context);
             if (_mapping == null)
             {
@@ -97,7 +102,7 @@ namespace ChampionSkillSandboxMod.Systems
         {
             return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
                    inputObj is IInputActionReader input &&
-                   input.PressedThisFrame("Command");
+                   input.PressedThisFrame(_commandActionId);
         }
     }
 }

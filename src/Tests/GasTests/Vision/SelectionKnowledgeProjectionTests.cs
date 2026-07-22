@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using CoreInputMod.Systems;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
@@ -33,76 +34,66 @@ public sealed class SelectionKnowledgeProjectionTests
     [Test]
     public void Issue197_ClickAndBoxCommandSourceGateCameraVisibleCandidatesThroughKnowledgeProjection()
     {
-        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
-        try
-        {
-            TeamManager.Clear();
-            using var world = World.Create();
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(new Team { Id = 1 });
-            Entity ally = world.Create();
-            Entity unknown = CreateSelectable(world, xCm: 1000, zCm: 1000, teamId: 1);
-            Entity lastKnown = CreateSelectable(world, xCm: 2000, zCm: 1000, teamId: 1);
-            Entity disclosedLive = CreateSelectable(world, xCm: 3000, zCm: 1000, teamId: 1);
-            Entity directLive = CreateSelectable(world, xCm: 4000, zCm: 1000, teamId: 1);
-            var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
-            InstallKnowledge(
-                world,
-                globals,
-                local,
-                ally,
-                disclosedLive,
-                directLive,
-                lastKnown);
-            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+        using var world = World.Create();
+        var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+        var local = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity ally = world.Create();
+        Entity unknown = CreateSelectable(world, xCm: 1000, zCm: 1000);
+        Entity lastKnown = CreateSelectable(world, xCm: 2000, zCm: 1000);
+        Entity disclosedLive = CreateSelectable(world, xCm: 3000, zCm: 1000);
+        Entity directLive = CreateSelectable(world, xCm: 4000, zCm: 1000);
+        var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
+        CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
+        domains.Relationships.EnsureLink(local, unknown, domains.OwnsTypeId);
+        domains.Relationships.EnsureLink(local, lastKnown, domains.OwnsTypeId);
+        domains.Relationships.EnsureLink(local, disclosedLive, domains.OwnsTypeId);
+        domains.Relationships.EnsureLink(local, directLive, domains.OwnsTypeId);
+        InstallKnowledge(
+            world,
+            globals,
+            local,
+            ally,
+            disclosedLive,
+            directLive,
+            lastKnown);
+        var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+        var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
-            Click(system, globals, input, new Vector2(1000f, 1000f));
-            AssertCommandSource(collections, local);
+        Click(system, globals, input, new Vector2(1000f, 1000f));
+        AssertCommandSource(collections, local);
 
-            Click(system, globals, input, new Vector2(2000f, 1000f));
-            AssertCommandSource(collections, local);
+        Click(system, globals, input, new Vector2(2000f, 1000f));
+        AssertCommandSource(collections, local);
 
-            Click(system, globals, input, new Vector2(3000f, 1000f));
-            AssertCommandSource(collections, local, disclosedLive);
+        Click(system, globals, input, new Vector2(3000f, 1000f));
+        AssertCommandSource(collections, local, disclosedLive);
 
-            DragSelect(system, globals, input, new Vector2(500f, 500f), new Vector2(4500f, 1500f));
-            AssertCommandSourceEquivalent(collections, local, disclosedLive, directLive);
-            Assert.That(unknown, Is.Not.EqualTo(Entity.Null));
-        }
-        finally
-        {
-            TeamManager.RestoreSnapshot(relationships);
-        }
+        DragSelect(system, globals, input, new Vector2(500f, 500f), new Vector2(4500f, 1500f));
+        AssertCommandSourceEquivalent(collections, local, disclosedLive, directLive);
+        Assert.That(unknown, Is.Not.EqualTo(Entity.Null));
     }
 
     [Test]
     public void Issue197_RelationshipFilterStillDeniesHostileEvenWhenKnowledgeAllowsLiveInspection()
     {
-        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
-        try
-        {
-            TeamManager.Clear();
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            using var world = World.Create();
-            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(new Team { Id = 1 });
-            Entity hostile = CreateSelectable(world, xCm: 2000, zCm: 1000, teamId: 2);
-            var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
-            var store = new KnowledgeProjectionStore();
-            store.Upsert(local, hostile, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
-            globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
-            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+        using var world = World.Create();
+        var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+        var local = world.Create(new PlayerIdentity { PlayerId = 1 });
+        var hostileDomain = world.Create(new PlayerIdentity { PlayerId = 2 });
+        Entity hostile = CreateSelectable(world, xCm: 2000, zCm: 1000);
+        var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
+        CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
+        domains.Relationships.EnsureLink(hostileDomain, hostile, domains.OwnsTypeId);
+        domains.Relationships.EnsureLink(local, hostileDomain, domains.HostileTypeId);
+        var store = new KnowledgeProjectionStore();
+        store.Upsert(local, hostile, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
+        globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
+        var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+        var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
-            Click(system, globals, input, new Vector2(2000f, 1000f));
+        Click(system, globals, input, new Vector2(2000f, 1000f));
 
-            AssertCommandSource(collections, local);
-        }
-        finally
-        {
-            TeamManager.RestoreSnapshot(relationships);
-        }
+        AssertCommandSource(collections, local);
     }
 
     [Test]
@@ -216,14 +207,46 @@ public sealed class SelectionKnowledgeProjectionTests
         return globals;
     }
 
-    private static Entity CreateSelectable(World world, int xCm, int zCm, int teamId)
+    private static Entity CreateSelectable(World world, int xCm, int zCm)
     {
         return world.Create(
             WorldPositionCm.FromCm(xCm, zCm),
             new VisualTransform { Position = new Vector3(xCm / 100f, 0f, zCm / 100f) },
             new CullState { IsVisible = true },
-            new CommandSourceSelectableTag(),
-            new Team { Id = teamId });
+            new CommandSourceSelectableTag());
+    }
+
+    private static CommandSourceDomainHarness InstallCommandSourceDomainServices(
+        World world,
+        Dictionary<string, object> globals)
+    {
+        var types = new RelationshipTypeRegistry();
+        int ownsTypeId = types.Register("Owns");
+        int controlsTypeId = types.Register("Controls");
+        int memberOfTypeId = types.Register("MemberOf");
+        int hostileTypeId = types.Register("Hostile", isSymmetric: true);
+        types.Register("Friendly", isSymmetric: true);
+        types.Register("Neutral", isSymmetric: true);
+        var relationships = new RelationshipRuntime(
+            world,
+            types,
+            new RelationshipMetricRegistry(),
+            new RelationshipFlagRegistry(),
+            new RelationshipBandRegistry(),
+            new RelationshipChangeBuffer(capacity: 8),
+            new RelationshipReverseIndex(world));
+        var ownership = new OwnershipResolver(relationships, ownsTypeId);
+        var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+        var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
+        {
+            StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
+            SameDomainStance = "Friendly",
+            SameTeamStance = "Friendly",
+            DefaultStance = "Neutral",
+        });
+        globals[CoreServiceKeys.ControlDomainQuery.Name] = controlDomains;
+        globals[CoreServiceKeys.DomainStanceQuery.Name] = stances;
+        return new CommandSourceDomainHarness(relationships, ownsTypeId, hostileTypeId);
     }
 
     private static void InstallKnowledge(
@@ -297,6 +320,11 @@ public sealed class SelectionKnowledgeProjectionTests
             confidencePermille: 900,
             revision: 0);
     }
+
+    private readonly record struct CommandSourceDomainHarness(
+        RelationshipRuntime Relationships,
+        int OwnsTypeId,
+        int HostileTypeId);
 
     private static void Click(
         CommandSourceAcquisitionSystem system,

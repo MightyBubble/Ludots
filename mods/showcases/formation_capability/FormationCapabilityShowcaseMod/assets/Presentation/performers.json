@@ -1,18 +1,18 @@
 [
   {
-    "id": "formation_capability_showcase_formation_agent_bootstrap",
+    "id": "formation_capability_showcase_formation_anchor_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_formation_agent" },
+        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_formation_anchor" },
         "condition": { "inline": "SourceHasVisualTransform" },
         "command": {
           "kind": "CreatePerformer",
-          "definitionId": "formation_capability_showcase_formation_agent",
+          "definitionId": "formation_capability_showcase_formation_anchor",
           "scopeSource": "EventPayloadA"
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_formation_agent" },
+        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_formation_anchor" },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -105,7 +105,7 @@
     ]
   },
   {
-    "id": "formation_capability_showcase_formation_agent",
+    "id": "formation_capability_showcase_formation_anchor",
     "defaultColor": [0.92, 0.94, 0.86, 1.0],
     "rules": [
       {

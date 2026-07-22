@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Association;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -12,6 +13,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
@@ -187,7 +190,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -201,15 +213,15 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossExplicitActorCollection()
+        public void InputOrderMapping_PositionMoveCommand_WithGroupTargetLayout_AssignsOffsetTargetsAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.TargetFirst,
-                GroupMoveFormation = new GroupMoveFormationSettings
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
-                    Mode = GroupMoveFormationMode.Grid,
+                    Mode = GroupMoveTargetLayoutMode.Grid,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -250,7 +262,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Command");
             input.Update();
@@ -302,7 +323,16 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Order>();
-            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must use the atomic batch submit handler."));
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return true;
+            });
 
             input.InjectButtonPress("Stop");
             input.Update();
@@ -313,6 +343,53 @@ namespace Ludots.Tests.GAS
             That(orders[1].Actor, Is.EqualTo(second));
             That(orders[0].OrderTypeId, Is.EqualTo(1003));
             That(orders[1].OrderTypeId, Is.EqualTo(1003));
+        }
+
+        [Test]
+        public void InputOrderMapping_MultiActorCollectionWithoutBatchHandler_FailsFast()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        ActorCollectionKey = "collection.test.actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var local = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetLocalPlayer(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            {
+                That(collectionKey, Is.EqualTo("collection.test.actors"));
+                entities.Clear();
+                entities.Add(first);
+                entities.Add(second);
+                return true;
+            });
+            mapping.SetOrderSubmitHandler((in Order _) => Fail("Multi-actor collection fan-out must not silently fall back to direct per-order submission."));
+
+            input.InjectButtonPress("Stop");
+            input.Update();
+
+            var ex = Throws<InvalidOperationException>(() => mapping.Update(0f));
+
+            That(ex!.Message, Does.Contain("atomic batch submit handler"));
         }
 
         [Test]
@@ -555,6 +632,11 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
                 CreateCommandSourceRuntime(world, globals, "Friendly");
+                CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
+                Entity teamOne = world.Create(new TeamIdentity { TeamId = 1 });
+                Entity teamTwo = world.Create(new TeamIdentity { TeamId = 2 });
+                domains.Relationships.EnsureLink(local, teamOne, domains.MemberOfTypeId);
+                domains.Relationships.EnsureLink(formation, teamTwo, domains.MemberOfTypeId);
                 var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
                 Click(system, globals, input, new Vector2(1600f, 1200f));
@@ -564,6 +646,8 @@ namespace Ludots.Tests.GAS
                 That(hovered, Is.EqualTo(formation));
 
                 world.Set(formation, new Team { Id = 1 });
+                domains.Relationships.RemoveLink(formation, teamTwo, domains.MemberOfTypeId);
+                domains.Relationships.EnsureLink(formation, teamOne, domains.MemberOfTypeId);
                 Click(system, globals, input, new Vector2(1600f, 1200f));
 
                 AssertCommandSource(globals, local, formation);
@@ -590,7 +674,7 @@ namespace Ludots.Tests.GAS
                     new CullState { IsVisible = true },
                     new CommandSourceSelectableTag(),
                     new Team { Id = 1 });
-                _ = world.Create(
+                var second = world.Create(
                     WorldPositionCm.FromCm(2600, 1600),
                     new VisualTransform { Position = new Vector3(26f, 0f, 16f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                     new CullState { IsVisible = true },
@@ -620,6 +704,13 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
                 CreateCommandSourceRuntime(world, globals, "Friendly");
+                CommandSourceDomainHarness domains = InstallCommandSourceDomainServices(world, globals);
+                Entity teamOne = world.Create(new TeamIdentity { TeamId = 1 });
+                Entity teamTwo = world.Create(new TeamIdentity { TeamId = 2 });
+                domains.Relationships.EnsureLink(local, teamOne, domains.MemberOfTypeId);
+                domains.Relationships.EnsureLink(first, teamOne, domains.MemberOfTypeId);
+                domains.Relationships.EnsureLink(second, teamTwo, domains.MemberOfTypeId);
+                domains.Relationships.EnsureLink(third, teamOne, domains.MemberOfTypeId);
                 var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
                 DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
@@ -1142,6 +1233,43 @@ namespace Ludots.Tests.GAS
             globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry;
             return collections;
         }
+
+        private static CommandSourceDomainHarness InstallCommandSourceDomainServices(
+            World world,
+            Dictionary<string, object> globals)
+        {
+            var types = new RelationshipTypeRegistry();
+            int ownsTypeId = types.Register("Owns");
+            int controlsTypeId = types.Register("Controls");
+            int memberOfTypeId = types.Register("MemberOf");
+            types.Register("Hostile", isSymmetric: true);
+            types.Register("Friendly", isSymmetric: true);
+            types.Register("Neutral", isSymmetric: true);
+            var relationships = new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
+            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            var controlDomains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
+            var stances = DomainStanceQuery.Create(relationships, memberOfTypeId, new DomainStanceConfig
+            {
+                StanceTypes = new List<string> { "Hostile", "Friendly", "Neutral" },
+                SameDomainStance = "Friendly",
+                SameTeamStance = "Friendly",
+                DefaultStance = "Neutral",
+            });
+            globals[CoreServiceKeys.ControlDomainQuery.Name] = controlDomains;
+            globals[CoreServiceKeys.DomainStanceQuery.Name] = stances;
+            return new CommandSourceDomainHarness(relationships, memberOfTypeId);
+        }
+
+        private readonly record struct CommandSourceDomainHarness(
+            RelationshipRuntime Relationships,
+            int MemberOfTypeId);
 
         private static void SeedCommandSource(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
         {

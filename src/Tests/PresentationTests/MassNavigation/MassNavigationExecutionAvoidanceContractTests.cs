@@ -117,7 +117,9 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             MassNavigationConfig config = CreateConfig(mode);
             var runtime = new MassNavigationSimulationRuntime(config);
-            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
 
             MassNavigationAgentSeed[] seeds =
             {
@@ -173,7 +175,9 @@ namespace Ludots.Tests.Presentation
         {
             MassNavigationConfig config = CreateConfig("Separation");
             var runtime = new MassNavigationSimulationRuntime(config);
-            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
             MassNavigationAgentSeed[] seeds =
             {
                 new(
@@ -194,9 +198,10 @@ namespace Ludots.Tests.Presentation
         private static Entity[] CreateAgentEntities(World world, int count)
         {
             var entities = new Entity[count];
+            int profileId = MassNavigationProfileRegistry.Register("light");
             for (int i = 0; i < count; i++)
             {
-                entities[i] = world.Create();
+                entities[i] = world.Create(new MassNavigationAgent { ProfileId = profileId });
             }
 
             return entities;
@@ -221,7 +226,7 @@ namespace Ludots.Tests.Presentation
                 PlayAreaMaxYCm = 9_950f,
             };
 
-            var config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            var config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.Solver = solver;
             config.World!.SolverWindowWidthCm = solver.FieldWidthCm;
             config.World.SolverWindowHeightCm = solver.FieldHeightCm;

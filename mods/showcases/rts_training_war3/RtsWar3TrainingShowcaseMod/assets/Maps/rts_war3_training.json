@@ -16,6 +16,7 @@
   "Entities": [
     {
       "Template": "rts_war3_barracks",
+      "InstanceId": "war3_training_barracks",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 6700, "Y": 4700 } },
         "Name": { "Value": "Barracks" }
@@ -28,5 +29,20 @@
         "Name": { "Value": "Line Infantry" }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "war3_training_barracks" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "war3_training_barracks" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsDemo.Participant", "Symmetric": false }
+    ]
+  }
 }

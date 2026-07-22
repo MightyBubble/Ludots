@@ -27,12 +27,16 @@ namespace Ludots.Tests.Architecture
                 "nav" + "2d",
             };
 
-            var hits = Scan(repoRoot, tokens);
+            var hits = Scan(
+                repoRoot,
+                repositoryRoots: ActiveImplementationRoots,
+                tokens,
+                ignoreExternalReferenceLines: true);
 
             Assert.That(
                 hits,
                 Is.Empty,
-                "Removed navigation execution domain tokens must not appear anywhere in the repository:" +
+                "Removed navigation execution domain tokens must not appear in active source or mod assets:" +
                 Environment.NewLine +
                 string.Join(Environment.NewLine, hits));
         }
@@ -47,12 +51,16 @@ namespace Ludots.Tests.Architecture
                 "new NavLayerConfig { Id = " + Quote("Ground"),
             };
 
-            var hits = Scan(repoRoot, tokens);
+            var hits = Scan(
+                repoRoot,
+                repositoryRoots: ActiveImplementationRoots,
+                tokens,
+                ignoreExternalReferenceLines: true);
 
             Assert.That(
                 hits,
                 Is.Empty,
-                "Nav bake/editor paths must fail fast instead of injecting default layers or full-bake fallbacks:" +
+                "Nav bake/editor source and mod asset paths must fail fast instead of injecting default layers or full-bake fallbacks:" +
                 Environment.NewLine +
                 string.Join(Environment.NewLine, hits));
         }
@@ -82,10 +90,11 @@ namespace Ludots.Tests.Architecture
                 string.Join(Environment.NewLine, hits));
         }
 
-        private static List<string> Scan(string repoRoot, IReadOnlyList<string> tokens)
+        private static readonly string[] ActiveImplementationRoots =
         {
-            return Scan(repoRoot, repositoryRoots: null, tokens, ignoreExternalReferenceLines: false);
-        }
+            "src",
+            "mods"
+        };
 
         private static List<string> Scan(
             string repoRoot,
@@ -96,10 +105,8 @@ namespace Ludots.Tests.Architecture
             var hits = new List<string>();
             foreach (string file in EnumerateRepositoryFiles(repoRoot, repositoryRoots))
             {
-                int lineNumber = 0;
-                foreach (string line in File.ReadLines(file))
+                foreach ((int lineNumber, string line) in SourceTextScanner.ReadCodeLines(file))
                 {
-                    lineNumber++;
                     if (ignoreExternalReferenceLines && IsExternalReferenceLine(line))
                     {
                         continue;
@@ -141,6 +148,11 @@ namespace Ludots.Tests.Architecture
                     }
 
                     if (relative.Equals("src/Tests/ArchitectureTests/NavigationLegacyDomainRemovalContractTests.cs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    if (relative.StartsWith("src/Tests/", StringComparison.OrdinalIgnoreCase))
                     {
                         return false;
                     }

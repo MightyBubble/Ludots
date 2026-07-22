@@ -16,6 +16,7 @@
   "Entities": [
     {
       "Template": "rts_sc2_gateway",
+      "InstanceId": "sc2_training_gateway",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 6200, "Y": 6200 } },
         "Name": { "Value": "Gateway" }
@@ -28,5 +29,20 @@
         "Name": { "Value": "Frontline Vanguard" }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 3, "RepresentativeInstanceId": "sc2_training_gateway" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 3, "RepresentativeInstanceId": "sc2_training_gateway" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 3, "TeamB": 3, "TypeId": "RtsDemo.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 3, "TypeId": "RtsDemo.Participant", "Symmetric": false }
+    ]
+  }
 }

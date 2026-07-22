@@ -1,5 +1,13 @@
 [
     {
+        "id":  "champion_skill_sandbox_participant_anchor",
+        "components":  {
+                           "Name":  {
+                                        "Value":  "ChampionSkillSandbox.ParticipantAnchor"
+                                    }
+                       }
+    },
+    {
         "id":  "champion_skill_sandbox_ezreal",
         "components":  {
                            "Name":  {

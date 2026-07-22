@@ -12,7 +12,29 @@
   },
   "Entities": [
     {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-sandbox-team-blue-anchor",
+      "Overrides": {
+        "Name": { "Value": "Blue Team Anchor" }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-sandbox-player-blue-anchor",
+      "Overrides": {
+        "Name": { "Value": "Blue Player Anchor" }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_participant_anchor",
+      "InstanceId": "champion-sandbox-team-red-anchor",
+      "Overrides": {
+        "Name": { "Value": "Red Team Anchor" }
+      }
+    },
+    {
       "Template": "champion_skill_sandbox_ezreal",
+      "InstanceId": "champion-sandbox-ezreal-alpha",
       "Overrides": {
         "Name": { "Value": "Ezreal Alpha" },
         "PlayerOwner": { "PlayerId": 1 },
@@ -77,6 +99,7 @@
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
+      "InstanceId": "champion-sandbox-target-dummy-a",
       "Overrides": {
         "Name": { "Value": "Target Dummy A" },
         "WorldPositionCm": { "Value": { "X": 1960, "Y": 680 } }
@@ -131,5 +154,23 @@
         "WorldPositionCm": { "Value": { "X": 2460, "Y": 1420 } }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "champion-sandbox-team-blue-anchor" },
+    { "TeamId": 2, "RepresentativeInstanceId": "champion-sandbox-team-red-anchor" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "champion-sandbox-player-blue-anchor" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false }
+    ]
+  }
 }

@@ -10,20 +10,15 @@ namespace Ludots.Tests.Presentation
         public void BeginFrame_ResetsFrameCountersAndKeepsTotals()
         {
             var telemetry = new MassNavigationTelemetry();
-            telemetry.MarkCommandActorSnapshot();
             telemetry.MarkCommandApply();
-            telemetry.MarkCommandRejected(12f, 34f);
             telemetry.MarkFocusBudgetUpdated();
             telemetry.MarkSolverWindowMoved();
 
             telemetry.BeginFrame(0.02f);
 
-            Assert.That(telemetry.CommandActorSnapshotCountFrame, Is.Zero);
             Assert.That(telemetry.CommandCountFrame, Is.Zero);
-            Assert.That(telemetry.CommandRejectsFrame, Is.Zero);
             Assert.That(telemetry.FocusBudgetUpdatesFrame, Is.Zero);
             Assert.That(telemetry.SolverWindowMovesFrame, Is.Zero);
-            Assert.That(telemetry.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(telemetry.FocusBudgetUpdatesTotal, Is.EqualTo(1));
             Assert.That(telemetry.SolverWindowMovesTotal, Is.EqualTo(1));
             Assert.That(telemetry.FrameMs, Is.EqualTo(20f).Within(0.001f));

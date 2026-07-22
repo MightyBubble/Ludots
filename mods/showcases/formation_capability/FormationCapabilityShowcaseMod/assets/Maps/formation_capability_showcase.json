@@ -5,6 +5,15 @@
     "mass_navigation",
     "formation_capability_showcase_movement"
   ],
+  "DefaultCamera": {
+    "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 12000,
+    "FovYDeg": 55
+  },
   "Boards": [
     {
       "Name": "default",

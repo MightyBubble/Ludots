@@ -16,6 +16,7 @@
   "Entities": [
     {
       "Template": "rts_ra2_conyard",
+      "InstanceId": "allied_conyard",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 6200, "Y": 23500 } },
         "Name": { "Value": "Allied ConYard" }
@@ -58,6 +59,7 @@
     },
     {
       "Template": "rts_ra2_conyard",
+      "InstanceId": "soviet_conyard",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 29200, "Y": 5800 } },
         "Name": { "Value": "Soviet ConYard" },
@@ -72,5 +74,27 @@
         "Team": { "Id": 2 }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "allied_conyard" },
+    { "TeamId": 2, "RepresentativeInstanceId": "soviet_conyard" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_conyard" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_conyard" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsShowcase.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": false }
+    ]
+  }
 }

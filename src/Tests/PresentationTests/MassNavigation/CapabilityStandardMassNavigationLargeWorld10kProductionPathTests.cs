@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Reflection;
 using Arch.Core;
+using Arch.System;
 using CapabilityStandardMassNavigationLargeWorld10kMod;
+using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.CommandSources;
@@ -18,6 +22,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Assets;
@@ -36,6 +41,9 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class CapabilityStandardMassNavigationLargeWorld10kProductionPathTests
     {
+        private static readonly QueryDescription MassNavigationAgentQuery = new QueryDescription()
+            .WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
+
         private const int ExpectedAgentCount = 10_000;
         private const int ExpectedTeamCount = 4;
         private const float FixedDeltaSeconds = 1f / 60f;
@@ -82,7 +90,13 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
-            var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
+            var spatialQueries = engine.SpatialQueries as SpatialQueryService
+                ?? throw new InvalidOperationException("Production engine must keep a stable SpatialQueryService instance.");
+            ILoadedChunks loadedChunks = RequireService(engine, CoreServiceKeys.LoadedChunks);
+            Assert.That(spatialQueries.LoadedChunks, Is.SameAs(loadedChunks),
+                "GridBoard focus must publish one loaded-chunk SSOT to both Core services and spatial queries.");
+
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
@@ -93,6 +107,7 @@ namespace Ludots.Tests.Presentation
             var minimapRuntime = RequireService(engine, CoreServiceKeys.MinimapRuntime);
             var minimapMarkers = RequireService(engine, CoreServiceKeys.MinimapMarkerBuffer);
             var minimapScreenMarkers = RequireService(engine, CoreServiceKeys.MinimapScreenMarkerBuffer);
+            var worldHud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
             var screenHud = RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer);
             string diagnostics = sample.Diagnostics;
 
@@ -106,6 +121,41 @@ namespace Ludots.Tests.Presentation
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.TextCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
+            Assert.That(worldHud.Count, Is.LessThanOrEqualTo(worldHud.Capacity), diagnostics);
+            Assert.That(screenHud.Count, Is.LessThanOrEqualTo(screenHud.Capacity), diagnostics);
+            Assert.That(minimapMarkers.Count, Is.LessThanOrEqualTo(minimapMarkers.Capacity), diagnostics);
+            Assert.That(minimapScreenMarkers.Count, Is.LessThanOrEqualTo(minimapScreenMarkers.Capacity), diagnostics);
+            Assert.That(worldHud.DroppedTotal, Is.Zero, diagnostics);
+            Assert.That(screenHud.DroppedTotal, Is.Zero, diagnostics);
+            Assert.That(minimapMarkers.DroppedTotal, Is.Zero, diagnostics);
+            Assert.That(minimapScreenMarkers.DroppedTotal, Is.Zero, diagnostics);
+            AssertFixedAnchorChain(engine, simulation, sampleCount: 64, toleranceCm: 25f);
+        }
+
+        [Test]
+        public void Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution()
+        {
+            GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
+
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
+            var hudProjection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, hudProjection, simulation, ExpectedAgentCount);
+
+            MassNavigationAuthoredAgentBindingSystem bindingSystem = RequireSystem<MassNavigationAuthoredAgentBindingSystem>(
+                engine,
+                SystemGroup.RuntimeEntityBinding);
+            ControlDomainQuery controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
+            uint relationshipRevision = controlDomains.Revision;
+            int resolutionCount = bindingSystem.DomainResolutionCount;
+            Assert.That(resolutionCount, Is.GreaterThanOrEqualTo(ExpectedAgentCount));
+
+            TickProjectionFrames(engine, hudProjection, 3);
+
+            Assert.That(controlDomains.Revision, Is.EqualTo(relationshipRevision));
+            Assert.That(bindingSystem.DomainResolutionCount, Is.EqualTo(resolutionCount),
+                "Stable 10K fixed steps must consume the committed domain projection without per-agent relationship queries.");
         }
 
         [Test]
@@ -116,14 +166,11 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
-            var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorSnapshotCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
 
             var hudProjection = CreateHudProjection(engine);
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
@@ -132,8 +179,7 @@ namespace Ludots.Tests.Presentation
             Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
             ReplaceCommandSource(engine, localPlayer, agents);
 
-            Assert.DoesNotThrow(() => simulation.SetCommandActorSnapshot(agents, simulation.CommandActorSnapshotRevision + 1));
-            Assert.That(simulation.CommandActorCount, Is.EqualTo(expectedAgents));
+            Assert.That(SnapshotCommandSource(engine), Has.Length.EqualTo(expectedAgents));
         }
 
         [Test]
@@ -144,7 +190,7 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
-            var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
             AssertScenarioAgentTemplatesDoNotDriveHealthPeriodically(engine, simulation);
@@ -168,7 +214,7 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
-            var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
@@ -189,7 +235,6 @@ namespace Ludots.Tests.Presentation
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics after = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
             Assert.That(commandActors.Length, Is.GreaterThan(0), after.ToString());
-            Assert.That(simulation.CommandActorCount, Is.GreaterThan(0), after.ToString());
             Assert.That(CountActiveCommandMarkers(engine), Is.EqualTo(commandActors.Length), after.ToString());
         }
 
@@ -201,7 +246,7 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine();
             StartStartupMap(engine);
 
-            var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
+            MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
 
@@ -216,19 +261,16 @@ namespace Ludots.Tests.Presentation
             Entity[] commandActors = SnapshotCommandSource(engine);
             CommandSourceDiagnostics commandSourceDiagnostics = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
             Assert.That(commandActors.Length, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
-            Assert.That(simulation.CommandActorCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             AssertCommandActorsAreCommandable(engine, commandActors);
 
             int activeOrdersBefore = CountActiveMoveOrders(engine, commandActors);
-            int rejectsBefore = simulation.CommandRejectsTotal;
             Vector2[] positionsBefore = CaptureCommandActorWorldPositions(engine, simulation, commandActors);
             Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, commandActors);
 
             DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
 
-            Assert.That(simulation.CommandRejectsTotal, Is.EqualTo(rejectsBefore), commandSourceDiagnostics.ToString());
             Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
-            Assert.That(simulation.LastCommandActorCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
+            Assert.That(simulation.LastOrderMemberCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
             Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
             TickProjectionFrames(engine, hudProjection, MovementObservationFrames);
@@ -249,6 +291,32 @@ namespace Ludots.Tests.Presentation
             engine.Start();
             engine.LoadStartupMap();
             AssertStartupParticipantBindings(engine);
+            WaitForMassNavigationRuntimeReady(engine);
+        }
+
+        private static MassNavigationSimulationRuntime RequireMassNavigationSimulation(GameEngine engine)
+        {
+            return RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
+        }
+
+        private static void WaitForMassNavigationRuntimeReady(GameEngine engine)
+        {
+            for (int frame = 0; frame < MaxWarmupFrames; frame++)
+            {
+                if (MassNavigationIds.IsCurrentNavigationRuntimeReady(engine))
+                {
+                    return;
+                }
+
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+            }
+
+            MassNavigationRuntimeBinding binding = RequireService(engine, MassNavigationKeys.RuntimeBinding);
+            Assert.Fail(
+                $"MassNavigation runtime did not become prepared within {MaxWarmupFrames} frames. " +
+                $"currentMap={engine.CurrentMapSession?.MapId.Value ?? "<none>"}, bindingMap={binding.CurrentMapId.Value ?? "<none>"}, revision={binding.Revision}, preparedRevision={binding.PreparedRevision}.");
         }
 
         private static void AssertStartupParticipantBindings(GameEngine engine)
@@ -299,6 +367,29 @@ namespace Ludots.Tests.Presentation
             InstallInput(engine);
             HeadlessPresentationTestHost.Install(engine);
             return engine;
+        }
+
+        private static TSystem RequireSystem<TSystem>(GameEngine engine, SystemGroup group)
+            where TSystem : class, ISystem<float>
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine system groups field is unavailable.");
+            var groups = field.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>
+                ?? throw new InvalidOperationException("GameEngine system groups could not be inspected.");
+            if (!groups.TryGetValue(group, out List<ISystem<float>>? systems))
+            {
+                throw new InvalidOperationException($"System group {group} is not registered.");
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i] is TSystem system)
+                {
+                    return system;
+                }
+            }
+
+            throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
         }
 
         private static void ApplyHostAssets(GameEngine engine)
@@ -354,7 +445,7 @@ namespace Ludots.Tests.Presentation
             {
                 TickProjectionFrames(engine, hudProjection, 1);
                 lastSample = CaptureProjectionSample(engine, simulation);
-                if (simulation.AgentState.HasBoundAgents(expectedAgents) &&
+                if (simulation.NavigationAgentCount == expectedAgents &&
                     lastSample.MinimapSnapshot.ZoomBand == MinimapZoomBand.Strategic &&
                     lastSample.MinimapScreenMarkers >= expectedAgents &&
                     lastSample.MinimapSnapshot.VisibleMarkerCount >= expectedAgents &&
@@ -399,6 +490,54 @@ namespace Ludots.Tests.Presentation
                     screenHud,
                     worldHudBars,
                     worldHudText));
+        }
+
+        private static void AssertFixedAnchorChain(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            int sampleCount,
+            float toleranceCm)
+        {
+            int sampled = 0;
+            float toleranceSq = toleranceCm * toleranceCm;
+            engine.World.Query(in MassNavigationAgentQuery, (Entity entity, ref MassNavigationAgent agent, ref MassNavigationAgentIndex agentIndex, ref WorldPositionCm worldPosition) =>
+            {
+                if (sampled >= sampleCount)
+                {
+                    return;
+                }
+
+                Assert.That(engine.World.TryGet(entity, out VisualTransform visual), Is.True,
+                    $"Agent {agentIndex.Value} is missing VisualTransform.");
+                Assert.That(engine.World.TryGet(entity, out PresentationOwnerHasPerformerPayload payload), Is.True,
+                    $"Agent {agentIndex.Value} is missing performer payload.");
+                Assert.That(payload.RootCount, Is.EqualTo(1),
+                    $"Agent {agentIndex.Value} must have exactly one performer root.");
+                Assert.That(engine.World.IsAlive(payload.SingleRootPerformer), Is.True,
+                    $"Agent {agentIndex.Value} performer root is not alive.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerState performerState), Is.True,
+                    $"Agent {agentIndex.Value} performer root has no PerformerState.");
+                Assert.That(performerState.OwnerEntity, Is.EqualTo(entity),
+                    $"Agent {agentIndex.Value} performer root owner mismatch.");
+                Assert.That(performerState.StableId, Is.GreaterThan(0),
+                    $"Agent {agentIndex.Value} performer root has no stable id.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPlanePosition performerPosition), Is.True,
+                    $"Agent {agentIndex.Value} performer root has no plane position.");
+
+                Vector2 solverCm = simulation.GetAgentWorldPositionCm(agentIndex.Value);
+                Vector2 ecsCm = worldPosition.Value.ToVector2();
+                Vector2 visualCm = WorldPlane2D.VisualMetersToLogicCm(in visual.Position);
+                Vector2 performerCm = performerPosition.ValueCm;
+                Assert.That(Vector2.DistanceSquared(solverCm, ecsCm), Is.LessThanOrEqualTo(toleranceSq),
+                    $"Agent {agentIndex.Value} solver/ECS anchor diverged: {solverCm} vs {ecsCm}.");
+                Assert.That(Vector2.DistanceSquared(ecsCm, visualCm), Is.LessThanOrEqualTo(toleranceSq),
+                    $"Agent {agentIndex.Value} ECS/VisualTransform anchor diverged: {ecsCm} vs {visualCm}.");
+                Assert.That(Vector2.DistanceSquared(visualCm, performerCm), Is.LessThanOrEqualTo(toleranceSq),
+                    $"Agent {agentIndex.Value} VisualTransform/performer root anchor diverged: {visualCm} vs {performerCm}.");
+                sampled++;
+            });
+
+            Assert.That(sampled, Is.EqualTo(sampleCount), $"Expected {sampleCount} fixed anchor samples, got {sampled}.");
         }
 
         private static void TickProjectionFrames(GameEngine engine, WorldHudToScreenSystem hudProjection, int frames)
@@ -804,60 +943,66 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertCommandActorsAreCommandable(GameEngine engine, ReadOnlySpan<Entity> commandActors)
         {
-            int playerId = engine.MergedConfig.StartupLocalPlayerId;
+            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             for (int i = 0; i < commandActors.Length; i++)
             {
                 Entity entity = commandActors[i];
                 string diagnostics = DescribeEntityCommandState(engine, entity);
                 Assert.That(engine.World.IsAlive(entity), Is.True, diagnostics);
-                Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True, diagnostics);
-                Assert.That(owner.PlayerId, Is.EqualTo(playerId), diagnostics);
+                Assert.That(controlDomains.IsControllableBy(localPlayer, entity), Is.True, diagnostics);
+                Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, diagnostics);
+                Assert.That(engine.World.Has<Team>(entity), Is.False, diagnostics);
             }
         }
 
         private static void AssertLocalScenarioAgentsAreCommandable(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupLocalPlayerId;
             Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
-            Assert.That(engine.World.TryGet(localPlayer, out Team localTeam), Is.True, "Startup local player must have a Team.");
+            var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
+            MassNavigationSimulationRuntime simulation = RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
 
-            int localTeamAgents = 0;
-            int localOwnedAgents = 0;
-            var query = new QueryDescription().WithAll<MassNavigationAgent, Team>();
-            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref Team team) =>
+            int totalAgents = 0;
+            int controllableAgents = 0;
+            int legacyIdentityMirrors = 0;
+            var query = new QueryDescription().WithAll<MassNavigationAgent>();
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _) =>
             {
-                if (team.Id != localTeam.Id)
+                totalAgents++;
+                if (controlDomains.IsControllableBy(localPlayer, entity))
                 {
-                    return;
+                    controllableAgents++;
                 }
 
-                localTeamAgents++;
-                if (engine.World.TryGet(entity, out PlayerOwner owner) &&
-                    owner.PlayerId == playerId)
+                if (engine.World.Has<PlayerOwner>(entity) || engine.World.Has<Team>(entity))
                 {
-                    localOwnedAgents++;
+                    legacyIdentityMirrors++;
                 }
             });
 
-            Assert.That(localTeamAgents, Is.GreaterThan(0), $"MassNavigation scenario should spawn agents for local team {localTeam.Id}.");
+            Assert.That(totalAgents, Is.EqualTo(ExpectedAgentCount));
             Assert.That(
-                localOwnedAgents,
-                Is.EqualTo(localTeamAgents),
-                $"MassNavigation scenario local team {localTeam.Id} agents must be owned by startup player {playerId}.");
+                controllableAgents,
+                Is.EqualTo(simulation.AgentsPerTeam),
+                "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
+            Assert.That(
+                legacyIdentityMirrors,
+                Is.Zero,
+                "MassNavigation agents must not mirror ownership or membership into PlayerOwner/Team components.");
         }
 
         private static string DescribeEntityCommandState(GameEngine engine, Entity entity)
         {
             string alive = engine.World.IsAlive(entity) ? "alive" : "dead";
-            string team = engine.World.TryGet(entity, out Team teamComponent)
-                ? teamComponent.Id.ToString()
-                : "none";
-            string owner = engine.World.TryGet(entity, out PlayerOwner ownerComponent)
-                ? ownerComponent.PlayerId.ToString()
+            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            ControlDomainQuery? controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery);
+            bool controllable = controlDomains?.IsControllableBy(localPlayer, entity) == true;
+            string controlDomain = controlDomains != null && controlDomains.TryResolveControlDomain(entity, out Entity domain)
+                ? domain.Id.ToString()
                 : "none";
             var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
             string relationFilter = commandSourceConfig.TargetFilter?.RelationFilter ?? string.Empty;
-            return $"commandActor={entity.Id}, state={alive}, team={team}, playerOwner={owner}, targetRelationFilter={relationFilter}";
+            return $"commandActor={entity.Id}, state={alive}, controlDomain={controlDomain}, controllable={controllable}, targetRelationFilter={relationFilter}";
         }
 
         private static int CountActiveMoveOrders(GameEngine engine, ReadOnlySpan<Entity> commandActors)

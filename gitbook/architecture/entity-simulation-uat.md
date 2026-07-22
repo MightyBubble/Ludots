@@ -30,62 +30,71 @@
 - 文档、代码、任务拆分三者口径一致
 - 无“同一个 entity 双写位置”的未决灰区
 
-## 3 UAT-1：FormationPhysics 车道
+## 3 UAT-1：精确物理车道决议（#643）
 
 ### 3.1 验收目标
 
-确认少量高价值方阵本体已走 `FullPhysics2D + OBB + ORCA/Hybrid` 正式车道。
+当前没有可执行的精确物理车道 UAT。历史 `FormationPhysics` 枚举与解析入口已经删除，也不存在正式的 `FormationPhysicsPlaygroundMod`。[#643](https://github.com/MightyBubble/Ludots/issues/643) 继续负责中性精确物理车道的真实需求与验收入口。
 
-### 3.2 操作步骤
+### 3.2 启动条件
 
-1. 进入方阵本体验收入口
-2. 生成 100、300、1000 规模的方阵本体样本
-3. 下达相向移动、交叉移动、狭窄通过命令
-4. 观察碰撞、推挤、转向、停下与恢复
+- 若 #643 决定删除，该 UAT 一并删除。
+- 若 #643 决定中性化，必须先实现真实消费者和正式可玩入口，再补玩家视角的 Cucumber 场景。
+- 在此之前不得用 Formation Capability Showcase 冒充精确物理车道验收；该 Showcase 使用 MassNavigation 明确成员目标链路。
 
-### 3.3 期望结果
+### 3.3 当前通过标准
 
-- 方阵本体之间不会直接穿透
-- OBB / Box 碰撞能明显生效
-- ORCA 或 Hybrid 对少量高价值单位有稳定效果
-- `Physics2D -> WorldPositionCm` 同步后，视觉与逻辑位置一致
+- 文档、矩阵和任务不再宣称不存在的 lane、playground 或性能结果已经交付。
+- #643 有明确的删除或中性化决议。
 
-### 3.4 必记指标
+### 3.4 后续指标
 
-- 100、300、1000 三档的：
-  - `fps`
-  - `frame ms`
-  - 物理步数
-  - 接触对数量
-  - 每帧物理解算时间
+只有 #643 选择中性化并完成实现后，才记录 100、300、1000 三档的 `fps`、`frame ms`、物理步数、接触对数量和每帧物理解算时间。
 
 ## 4 UAT-2：MassNavigation 车道
 
 ### 4.1 验收目标
 
-确认大量 crowd 已走正式 SoA / CrowdFlow 车道，并能支持方阵成员跟随与局部碰撞。
+确认大量 crowd 已走正式 SoA / CrowdFlow 车道，并能执行明确空间目标和局部避让。当前仓库的 large-world headless 证据门只落地 10K；Formation 是 showcase-owned command cluster：anchor 经 Command Router 展开成员，成员订单由 GAS 投影成 typed MovePlan intent，MassNavigation 只执行 typed 数据。
 
-### 4.2 操作步骤
+### 4.2 玩家验收场景
 
-1. 进入 crowd 验收入口
-2. 生成 2k、5k、10k 规模的 crowd
-3. 分别测试：
-   - 独立散布 crowd
-   - 方阵跟随成员
-   - 路人 / 羊群等预算实体
-4. 观察局部碰撞、绕行、slot 跟随和密集区域表现
+```gherkin
+Feature: 大规模单位移动
+
+  Scenario Outline: 玩家向大规模单位下达移动命令
+    Given 玩家进入正式的大规模导航战场
+    And 战场中有 <规模> 个可移动单位
+    When 玩家框选一批单位并右键点击远处地面
+    Then 被命令的单位向目标区域移动
+    And 单位在密集区域会绕开彼此与地图障碍
+    And 战场保持可操作，不出现单位静默停摆
+
+    Examples:
+      | 规模 |
+      | 10000 |
+
+  Scenario: Formation Showcase 通过明确成员目标驱动士兵
+    Given 玩家进入 Formation Capability Showcase
+    And 玩家选中了一个方阵控制单位
+    When 玩家右键移动并使用旋转操作改变朝向
+    Then 控制单位移动到目标区域
+    And 士兵绕开障碍后重新聚集到各自槽位
+    And 旋转操作不会制造一次“移动到当前位置”的伪移动命令
+```
 
 ### 4.3 期望结果
 
 - crowd 不依赖 `FullPhysics2D` 也能稳定运行
-- 跟随成员不会把后端方阵真相拖乱
+- Formation showcase 通过 Command Router 原子转发成员订单；anchor 不持有 `OrderBuffer` 或 `MassNavigationAgent`，成员复用正式 GAS / MovePlanning / MassNavigation 链路
 - 成员之间存在可感知的分离或避让
 - 可见规模提升时仍保持可玩
+- 当前 headless evidence 不宣称 live render FPS；真实 FPS 走 Raylib HUD 或 renderer benchmark
+- 通用 `massNavigationMove` 不包含 formation mode、slot 或 rotation payload
 
 ### 4.4 必记指标
 
-- 2k、5k、10k 三档的：
-  - `fps`
+- 10K 门的：
   - `frame ms`
   - crowd step 耗时
   - prepare / steer / resolve / sync 耗时
@@ -97,16 +106,19 @@
 
 确认 budgeted entity 会随 AOI 与 LOD 进入降频、休眠或去物质化，而 authority entity 不会被误裁。
 
-### 5.2 操作步骤
+### 5.2 玩家验收场景
 
-1. 进入大地图预算入口
-2. 放置：
-   - authority 方阵
-   - crowd 跟随成员
-   - 路人
-   - 羊群
-3. 控制镜头与 focus 在不同区域来回切换
-4. 观察 entity 的 LOD、tick、可见与物质化状态变化
+```gherkin
+Feature: 大地图仿真预算
+
+  Scenario: 玩家在不同战区之间移动镜头
+    Given 玩家进入包含控制单位、路人和羊群的大地图
+    When 玩家把镜头从当前战区移到远处战区并来回切换
+    Then 关键控制单位始终保留其战斗和命令状态
+    And 远处非关键单位可以降低更新频率或暂时休眠
+    And 玩家返回原战区时仍能看到一致的业务结果
+    And 预算面板能展示数量和资源消耗变化
+```
 
 ### 5.3 期望结果
 
@@ -128,20 +140,26 @@
 
 ### 6.1 验收目标
 
-确认团队有一个统一入口能同时观察后端方阵真相、前端 crowd 表演和 AOI / LOD 预算。
+确认团队有一个统一入口能同时观察 authority entity 后端真相、crowd 表演和 AOI / LOD 预算；Formation 只在其业务 Showcase 中作为明确目标生产者出现。
 
-### 6.2 操作步骤
+### 6.2 玩家验收场景
 
-1. 进入统一 showcase
-2. 下达多组方阵命令
-3. 观察方阵本体碰撞
-4. 观察方阵内成员跟随和局部碰撞
-5. 拉远镜头并切换区域
-6. 观察成员被裁剪或降频、方阵本体保持真相
+```gherkin
+Feature: 统一实体仿真展示
+
+  Scenario: 玩家在同一入口观察移动、避让和预算
+    Given 玩家进入统一实体仿真 showcase
+    And 场景中存在关键控制单位和大量普通单位
+    When 玩家下达多组移动命令并切换观察区域
+    Then 单位会移动、避让并在目标区域稳定下来
+    And 远处普通单位可以降频或休眠
+    And 关键控制单位继续保持业务真相
+    And 面板展示车道、预算和关键性能指标
+```
 
 ### 6.3 期望结果
 
-- 后端方阵碰撞和前端 crowd 表演同时成立
+- 已实现的后端 authority 仿真和 crowd 表演同时成立；不得把 #643 未决车道写入通过结论
 - 远距离只裁剪或降频 budgeted entity
 - performer 只负责表现，不承载逻辑真相
 - 面板能展示：
@@ -156,7 +174,7 @@
   - authority 数量
   - budgeted 数量
   - visible / dormant / dematerialized 数量
-  - physics 车道耗时
+  - 已实现的 physics 车道耗时；#643 若删除候选车道则不保留空指标
   - crowd 车道耗时
   - 总 `fps`
   - 总 `frame ms`

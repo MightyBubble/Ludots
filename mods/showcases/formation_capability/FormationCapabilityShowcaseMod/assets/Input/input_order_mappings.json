@@ -13,6 +13,11 @@
       "modifierBehavior": "QueueOnModifier"
     }
   ],
+  "groupMoveTargetLayout": {
+    "mode": "Grid",
+    "spacingCm": 1800,
+    "orderTypeKeys": [ "massNavigationMove" ]
+  },
   "userOverrides": {
     "enabled": false,
     "persistPath": ""

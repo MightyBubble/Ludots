@@ -12,6 +12,7 @@
   "Entities": [
     {
       "Template": "relationship_liu_bei",
+      "InstanceId": "relationship-liu-bei",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 1080, "Y": 920 } }
       }
@@ -30,6 +31,7 @@
     },
     {
       "Template": "relationship_rebel_captain",
+      "InstanceId": "relationship-rebel-captain",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 1940, "Y": 860 } }
       }
@@ -40,5 +42,18 @@
         "WorldPositionCm": { "Value": { "X": 2140, "Y": 1090 } }
       }
     }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "relationship-liu-bei" },
+    { "TeamId": 2, "RepresentativeInstanceId": "relationship-rebel-captain" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

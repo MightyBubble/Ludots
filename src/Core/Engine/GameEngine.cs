@@ -266,6 +266,33 @@ namespace Ludots.Core.Engine
             system.Initialize();
         }
 
+        public bool UnregisterSystem(ISystem<float> system, SystemGroup group)
+        {
+            if (system == null)
+            {
+                throw new ArgumentNullException(nameof(system));
+            }
+
+            if (!_systemGroups.TryGetValue(group, out var systems))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (!ReferenceEquals(systems[i], system))
+                {
+                    continue;
+                }
+
+                systems.RemoveAt(i);
+                system.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
         public void InsertSystemBeforeRequired<TAnchor>(ISystem<float> system, SystemGroup group)
             where TAnchor : class
         {
@@ -293,6 +320,28 @@ namespace Ludots.Core.Engine
         {
             _presentationSystems.Add(system);
             system.Initialize();
+        }
+
+        public bool UnregisterPresentationSystem(ISystem<float> system)
+        {
+            if (system == null)
+            {
+                throw new ArgumentNullException(nameof(system));
+            }
+
+            for (int i = 0; i < _presentationSystems.Count; i++)
+            {
+                if (!ReferenceEquals(_presentationSystems[i], system))
+                {
+                    continue;
+                }
+
+                _presentationSystems.RemoveAt(i);
+                system.Dispose();
+                return true;
+            }
+
+            return false;
         }
 
         public void InsertPresentationSystemBefore<TAnchor>(ISystem<float> system)
@@ -1648,7 +1697,10 @@ namespace Ludots.Core.Engine
                 presentationTimingDiagnostics,
                 componentAuthoringContext,
                 ownership: ownershipResolver,
-                playerLookup: playerEntityLookup),
+                playerLookup: playerEntityLookup,
+                teamLookup: teamEntityLookup,
+                relationships: relationshipRuntime,
+                memberOfTypeId: memberOfRelationshipTypeId),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
@@ -2025,9 +2077,9 @@ namespace Ludots.Core.Engine
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
             CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
-            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
+            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
 
@@ -2195,9 +2247,9 @@ namespace Ludots.Core.Engine
             {
                 CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
 
-                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
+                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
             }
@@ -2419,6 +2471,8 @@ namespace Ludots.Core.Engine
                 HexGridAOI = null;
                 loadedChunks = board.LoadedChunks;
             }
+
+            sharedSpatialQueries.SetLoadedChunks(loadedChunks);
 
             if (board is INodeGraphBoard nodeGraphBoard)
             {

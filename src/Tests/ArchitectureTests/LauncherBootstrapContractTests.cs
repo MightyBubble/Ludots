@@ -11,6 +11,52 @@ namespace Ludots.Tests.Architecture
     public class LauncherBootstrapContractTests
     {
         [Test]
+        public async Task RunProcessAsync_ReturnsWithoutHanging_WhenDescendantKeepsRedirectedOutputOpen()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Ignore("The redirected-handle regression uses Windows cmd/start process inheritance.");
+            }
+
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-output-drain-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var scriptPath = Path.Combine(tempDirectory, "leave-output-open.cmd");
+
+            try
+            {
+                File.WriteAllText(
+                    scriptPath,
+                    "@echo off\r\n" +
+                    "start \"\" /b powershell.exe -NoProfile -NonInteractive -Command \"Start-Sleep -Milliseconds 1500\"\r\n" +
+                    "echo parent-done\r\n" +
+                    "exit /b 0\r\n");
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                var result = await LauncherService.RunProcessAsync(
+                    "cmd.exe",
+                    $"/c \"{scriptPath}\"",
+                    tempDirectory,
+                    timeoutMs: 5_000,
+                    outputDrainTimeoutMs: 250);
+                stopwatch.Stop();
+
+                Assert.That(result.ExitCode, Is.Zero);
+                Assert.That(result.Output, Does.Contain("parent-done"));
+                Assert.That(result.Output, Does.Contain("Redirected output remained open"));
+                Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+            }
+            finally
+            {
+                await Task.Delay(1_600);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_PrefersLaunchGraphMetadata_WhenPresent()
         {
             var repoRoot = FindRepoRoot();
@@ -550,9 +596,10 @@ namespace Ludots.Tests.Architecture
                         "LudotsCoreMod",
                         "CoreInputMod",
                         "CameraProfilesMod",
+                        "MassNavigationMod",
                         "FormationCapabilityShowcaseMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(

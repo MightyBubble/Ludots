@@ -14,9 +14,10 @@ namespace FormationCapabilityShowcaseMod.Runtime;
 internal sealed class FormationCapabilityShowcaseConfig
 {
     public string MapId { get; set; } = string.Empty;
-    public FormationCapabilityShowcaseAgentAuthoringConfig FormationAgent { get; set; } = new();
+    public FormationCapabilityShowcaseTemplateAuthoringConfig FormationAnchor { get; set; } = new();
     public string InitialCommandSourceFormationId { get; set; } = string.Empty;
     public int InitialCommandSourceEntityCapacity { get; set; }
+    public int OrderBatchCapacity { get; set; }
     public FormationCapabilityShowcaseObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public FormationCapabilityShowcaseFormationConfig[] Formations { get; set; } = Array.Empty<FormationCapabilityShowcaseFormationConfig>();
     public int FormationOutlineOwnerCapacity => Formations.Length;
@@ -55,9 +56,10 @@ internal sealed class FormationCapabilityShowcaseConfig
     private static void ValidateRequiredProperties(JsonElement root)
     {
         RequireProperty(root, "mapId");
-        RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
+        RequireProperty(RequireProperty(root, "formationAnchor"), "templateId");
         RequireProperty(root, "initialCommandSourceFormationId");
         RequireProperty(root, "initialCommandSourceEntityCapacity");
+        RequireProperty(root, "orderBatchCapacity");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
@@ -165,11 +167,16 @@ internal sealed class FormationCapabilityShowcaseConfig
     private void Validate()
     {
         RequireNonEmpty(MapId, nameof(MapId));
-        FormationAgent.Validate(nameof(FormationAgent));
+        FormationAnchor.Validate(nameof(FormationAnchor));
         RequireNonEmpty(InitialCommandSourceFormationId, nameof(InitialCommandSourceFormationId));
         if (InitialCommandSourceEntityCapacity <= 0)
         {
             throw new InvalidOperationException("Formation Capability showcase config requires initialCommandSourceEntityCapacity > 0.");
+        }
+
+        if (OrderBatchCapacity <= 0)
+        {
+            throw new InvalidOperationException("Formation Capability showcase config requires orderBatchCapacity > 0.");
         }
 
         ObstacleOverlay.Validate();
@@ -200,24 +207,12 @@ internal sealed class FormationCapabilityShowcaseConfig
 
     public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet, AgentProfileRegistry geometryProfiles)
     {
-        MassNavigationAgentProfileConfig formationProfile = ResolveFormationAgentProfile(profileSet);
-        geometryProfiles.Require(FormationAgent.ProfileId, "formationAgent.profileId");
         for (int i = 0; i < Formations.Length; i++)
         {
             FormationCapabilityShowcaseFormationConfig formation = Formations[i];
-            MassNavigationAgentProfileConfig soldierProfile = ResolveSoldierAgentProfile(profileSet, i);
+            _ = ResolveSoldierAgentProfile(profileSet, i);
             geometryProfiles.Require(formation.SoldierAgent.ProfileId, $"formations[{i}].soldierAgent.profileId");
-            if (!(soldierProfile.SpeedCmPerSecond > formationProfile.SpeedCmPerSecond))
-            {
-                throw new InvalidOperationException(
-                    $"Formation Capability formation '{formation.Id}' at formations[{i}] requires soldierAgent.profileId '{formation.SoldierAgent.ProfileId}' speedCmPerSecond ({soldierProfile.SpeedCmPerSecond}) > formationAgent.profileId '{FormationAgent.ProfileId}' speedCmPerSecond ({formationProfile.SpeedCmPerSecond}).");
-            }
         }
-    }
-
-    public MassNavigationAgentProfileConfig ResolveFormationAgentProfile(MassNavigationAgentProfileSetConfig profileSet)
-    {
-        return ResolveAgentProfile(profileSet, FormationAgent.ProfileId, "formationAgent.profileId");
     }
 
     public MassNavigationAgentProfileConfig ResolveSoldierAgentProfile(MassNavigationAgentProfileSetConfig profileSet, int formationIndex)
@@ -258,7 +253,7 @@ internal sealed class FormationCapabilityShowcaseConfig
             $"Formation Capability showcase config {label} references MassNavigation agent profile '{profileId}', but that profile is not configured.");
     }
 
-    private static void RequireNonEmpty(string value, string fieldName)
+    internal static void RequireNonEmpty(string value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -349,6 +344,16 @@ internal sealed class FormationCapabilityShowcaseAgentAuthoringConfig
         {
             throw new InvalidOperationException($"Formation Capability showcase config requires non-empty {fieldName}.");
         }
+    }
+}
+
+internal sealed class FormationCapabilityShowcaseTemplateAuthoringConfig
+{
+    public string TemplateId { get; set; } = string.Empty;
+
+    public void Validate(string label)
+    {
+        FormationCapabilityShowcaseConfig.RequireNonEmpty(TemplateId, $"{label}.templateId");
     }
 }
 

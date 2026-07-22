@@ -21,7 +21,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private const string CrimsonOutlineKey = "formation_capability.formation_outline.crimson";
 
     private static readonly QueryDescription FormationOutlineQuery = new QueryDescription()
-        .WithAll<FormationCapabilityShowcaseFormationAgent, FormationCapabilityShowcaseFormationState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
+        .WithAll<FormationAnchorState, FormationRuntimeState, FormationCapabilityShowcaseFormationOutline, VisualTransform, PresentationStableId>()
         .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
@@ -92,7 +92,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
-            Span<FormationCapabilityShowcaseFormationState> states = chunk.GetSpan<FormationCapabilityShowcaseFormationState>();
+            Span<FormationRuntimeState> states = chunk.GetSpan<FormationRuntimeState>();
             Span<FormationCapabilityShowcaseFormationOutline> outlines = chunk.GetSpan<FormationCapabilityShowcaseFormationOutline>();
             Span<VisualTransform> transforms = chunk.GetSpan<VisualTransform>();
             Span<PresentationStableId> stableIds = chunk.GetSpan<PresentationStableId>();
@@ -127,7 +127,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
 
     private int EmitOutline(
         Entity entity,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform,
         int ownerStableId)
@@ -159,7 +159,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private int EmitRectangle(
         Entity entity,
         int ownerStableId,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform)
     {
@@ -167,7 +167,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         float depthM = WorldUnits.CmToM(outline.DepthCm);
         float edgeWidthM = WorldUnits.CmToM(outline.EdgeLineWidthCm);
         Vector3 center = ResolveCenter(in transform, outline.HeightOffsetM);
-        Vector2 forward = ResolveForward(state.FacingRad);
+        Vector2 forward = ResolveForward(FormationNumericEncoding.DecodeRadians(state.FacingMicroRad));
         Vector2 lateral = new(-forward.Y, forward.X);
         Vector3 forward3 = ToVisualVector(forward);
         Vector3 lateral3 = ToVisualVector(lateral);
@@ -216,7 +216,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private int EmitCircle(
         Entity entity,
         int ownerStableId,
-        in FormationCapabilityShowcaseFormationState state,
+        in FormationRuntimeState state,
         in FormationCapabilityShowcaseFormationOutline outline,
         in VisualTransform transform)
     {
@@ -229,7 +229,12 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
 
         Vector3 center = ResolveCenter(in transform, outline.HeightOffsetM);
         int count = EmitSampledCircle(entity, ownerStableId, center, radiusM, ringWidthM, in outline);
-        count += EmitFrontIndicator(entity, ownerStableId, center, ResolveForward(state.FacingRad), in outline);
+        count += EmitFrontIndicator(
+            entity,
+            ownerStableId,
+            center,
+            ResolveForward(FormationNumericEncoding.DecodeRadians(state.FacingMicroRad)),
+            in outline);
         return count;
     }
 
@@ -592,7 +597,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
         }
 
         public static OutlineEmissionState From(
-            in FormationCapabilityShowcaseFormationState state,
+            in FormationRuntimeState state,
             in FormationCapabilityShowcaseFormationOutline outline,
             in VisualTransform transform)
         {
@@ -601,7 +606,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
                 transform.Position.X,
                 transform.Position.Y,
                 transform.Position.Z,
-                state.FacingRad,
+                FormationNumericEncoding.DecodeRadians(state.FacingMicroRad),
                 in outline);
         }
 

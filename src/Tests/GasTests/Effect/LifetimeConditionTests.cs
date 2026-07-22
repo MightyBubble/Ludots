@@ -3,6 +3,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -235,6 +236,76 @@ namespace Ludots.Tests.GAS
 
             That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(firstPeriodTick == 2 ? 4 : 5));
             That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(expectedAfterThirdTick).Within(0.001f));
+        }
+
+        [Test]
+        public void EffectLifetime_InitialPeriodOffset_IsIndependentOfRelationshipProjectionEntities()
+        {
+            int baselineTick = ResolveFirstPeriodTick(materializeSelfRelationshipBeforeEffect: false);
+            int withSelfRelationshipTick = ResolveFirstPeriodTick(materializeSelfRelationshipBeforeEffect: true);
+
+            That(withSelfRelationshipTick, Is.EqualTo(baselineTick));
+        }
+
+        private static int ResolveFirstPeriodTick(bool materializeSelfRelationshipBeforeEffect)
+        {
+            using var world = World.Create();
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+
+            if (materializeSelfRelationshipBeforeEffect)
+            {
+                var relationshipTypes = new RelationshipTypeRegistry();
+                var relationships = new RelationshipRuntime(
+                    world,
+                    relationshipTypes,
+                    new RelationshipMetricRegistry(),
+                    new RelationshipFlagRegistry(),
+                    new RelationshipBandRegistry(),
+                    new RelationshipChangeBuffer(capacity: 4),
+                    new RelationshipReverseIndex(world));
+                int typeId = relationshipTypes.Register("Tests.GAS.PeriodOffset.Self", isSymmetric: true);
+                relationships.EnsureLink(source, source, typeId);
+                That(relationships.TryResolveRelationshipEntity(source, source, typeId, out Entity relationshipEntity), Is.True);
+                That(relationshipEntity, Is.Not.EqualTo(Entity.Null));
+            }
+
+            const int templateId = 701;
+            var clock = new DiscreteClock();
+            var templates = new EffectTemplateRegistry();
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.None,
+                LifetimeKind = EffectLifetimeKind.After,
+                ClockId = GasClockId.FixedFrame,
+                DurationTicks = 120,
+                PeriodTicks = 30,
+            });
+
+            var lifetime = new EffectLifetimeSystem(
+                world,
+                clock,
+                new GasConditionRegistry(),
+                templates: templates);
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 120,
+                lifetimeKind: EffectLifetimeKind.After,
+                periodTicks: 30,
+                clockId: GasClockId.FixedFrame);
+            world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+            world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+            world.Get<ActiveEffectContainer>(target).Add(effect);
+
+            clock.Advance(ClockDomainId.FixedFrame);
+            lifetime.Update(0.016f);
+
+            return world.Get<GameplayEffect>(effect).NextTickAtTick;
         }
     }
 }

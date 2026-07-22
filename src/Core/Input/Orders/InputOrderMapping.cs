@@ -218,21 +218,21 @@ namespace Ludots.Core.Input.Orders
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum GroupMoveFormationMode
+    public enum GroupMoveTargetLayoutMode
     {
         None = 0,
         Grid = 1
     }
 
-    public sealed class GroupMoveFormationSettings
+    public sealed class GroupMoveTargetLayoutSettings
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public GroupMoveFormationMode Mode { get; set; } = GroupMoveFormationMode.None;
+        public GroupMoveTargetLayoutMode Mode { get; set; } = GroupMoveTargetLayoutMode.None;
 
         public int SpacingCm { get; set; } = 120;
 
         /// <summary>
-        /// Order type keys eligible for grid formation when mode is Grid.
+        /// Order type keys eligible for a grid target layout when mode is Grid.
         /// Required when mode is Grid.
         /// </summary>
         public List<string> OrderTypeKeys { get; set; } = new();
@@ -484,9 +484,9 @@ namespace Ludots.Core.Input.Orders
         public List<InputOrderMapping> Mappings { get; set; } = new();
 
         /// <summary>
-        /// Global move formation behavior for multi-actor moveTo position commands.
+        /// Global target-layout behavior for multi-actor position commands.
         /// </summary>
-        public GroupMoveFormationSettings GroupMoveFormation { get; set; } = new();
+        public GroupMoveTargetLayoutSettings GroupMoveTargetLayout { get; set; } = new();
         
         /// <summary>
         /// User override settings.

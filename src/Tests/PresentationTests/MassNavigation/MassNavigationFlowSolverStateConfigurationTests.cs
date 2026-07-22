@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -14,6 +15,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
@@ -56,32 +58,6 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
             Assert.That(missing.Message, Does.Contain("randomSeed"));
-        }
-
-        [Test]
-        public void MassNavigationConfig_CommandActorCapacityMustCoverAuthoredScenarioAgents()
-        {
-            JsonObject initialScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            int authoredAgentCount = ResolveAuthoredAgentCount(initialScratchConfig);
-            JsonObject scenarioRuntime = initialScratchConfig["scenarioRuntime"]?.AsObject()
-                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored.");
-            scenarioRuntime["initialCommandActorScratchCapacity"] = authoredAgentCount - 1;
-
-            InvalidOperationException initialScratch = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(initialScratchConfig))!;
-            Assert.That(initialScratch.Message, Does.Contain("scenarioRuntime.initialCommandActorScratchCapacity"));
-            Assert.That(initialScratch.Message, Does.Contain("authored scenario agent count"));
-
-            JsonObject runtimeScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
-            authoredAgentCount = ResolveAuthoredAgentCount(runtimeScratchConfig);
-            MassNavigationConfig runtimeConfig = MassNavigationConfig.Load(runtimeScratchConfig);
-            runtimeConfig.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = authoredAgentCount - 1;
-
-            InvalidOperationException runtimeScratch = Assert.Throws<InvalidOperationException>(
-                () => runtimeConfig.ScenarioRuntime.RuntimeCapacity.ValidateForScenario(
-                    runtimeConfig.Scenario.Teams.Length,
-                    runtimeConfig.Scenario.AgentsPerTeam))!;
-            Assert.That(runtimeScratch.Message, Does.Contain("scenarioRuntime.runtimeCapacity.commandActorScratchCapacity"));
-            Assert.That(runtimeScratch.Message, Does.Contain("authored scenario agent count"));
         }
 
         [Test]
@@ -151,7 +127,7 @@ namespace Ludots.Tests.Presentation
 
                 using var world = World.Create();
                 var navGroups = new MassNavigationGroupRuntime(
-                    new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                    LoadBaseMassNavigationConfig().Semantics.Group,
                     CreateRuntimeCapacity(agentCapacity: 2, groupMemberCapacity: 2));
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                     flow.Step(
@@ -213,7 +189,7 @@ namespace Ludots.Tests.Presentation
 
             using var world = World.Create();
             var navGroups = new MassNavigationGroupRuntime(
-                new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                LoadBaseMassNavigationConfig().Semantics.Group,
                 CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
 
             flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
@@ -279,29 +255,19 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void SimulationRuntime_PropagatesFormationGroupSemanticsToMassNavigationFlow()
+        public void SimulationRuntime_PropagatesGroupedAgentSemanticsToMassNavigationFlow()
         {
             MassNavigationConfig config = MassNavigationConfig.Load(
                 ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
             MassNavigationGroupSemantics group = config.Semantics.Group;
-            group.FormationLineSpacingCm = 111f;
-            group.FormationSquareSpacingCm = 222f;
-            group.FormationCircleSpacingCm = 333f;
-            group.FormationCircleMinRadiusCm = 444f;
-            group.FormationWedgeSpacingCm = 555f;
-            group.FormationRotationEpsilonRadians = 0.0123f;
-            group.FormationRotationSpeedRadiansPerSecond = 6.75f;
+            group.GroupedAgentArriveThresholdCm = 222f;
+            group.GroupedAgentFlowSlowRadiusCm = 444f;
 
             var runtime = new MassNavigationSimulationRuntime(config);
             MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
 
-            Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
-            Assert.That(massFlowGroup.FormationSquareSpacingCm, Is.EqualTo(group.FormationSquareSpacingCm));
-            Assert.That(massFlowGroup.FormationCircleSpacingCm, Is.EqualTo(group.FormationCircleSpacingCm));
-            Assert.That(massFlowGroup.FormationCircleMinRadiusCm, Is.EqualTo(group.FormationCircleMinRadiusCm));
-            Assert.That(massFlowGroup.FormationWedgeSpacingCm, Is.EqualTo(group.FormationWedgeSpacingCm));
-            Assert.That(massFlowGroup.FormationRotationEpsilonRadians, Is.EqualTo(group.FormationRotationEpsilonRadians));
-            Assert.That(massFlowGroup.FormationRotationSpeedRadiansPerSecond, Is.EqualTo(group.FormationRotationSpeedRadiansPerSecond));
+            Assert.That(massFlowGroup.GroupedAgentArriveThresholdCm, Is.EqualTo(group.GroupedAgentArriveThresholdCm));
+            Assert.That(massFlowGroup.GroupedAgentFlowSlowRadiusCm, Is.EqualTo(group.GroupedAgentFlowSlowRadiusCm));
         }
 
         [Test]
@@ -323,6 +289,61 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void SimulationRuntime_PreallocatesRelationshipMatrixFromRuntimeCapacity()
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 5;
+
+            var runtime = new MassNavigationSimulationRuntime(config);
+            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
+
+            Assert.That(
+                flow.DomainRelationshipMatrixCapacity,
+                Is.EqualTo(25),
+                "Relationship-domain cooperative matrix must be prepared from runtime capacity before fixed-step; it must not grow on demand while stepping.");
+        }
+
+        [Test]
+        public void SimulationRuntime_AuthoredRebuildKeepsPreallocatedRelationshipMatrixCapacity()
+        {
+            using var world = World.Create();
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = 4;
+            var runtime = new MassNavigationSimulationRuntime(config);
+            MassNavigationFlowSolverState flow = runtime.GetFlowSolverForTests();
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            Entity agent = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateAvoidanceSeed(teamId: 1, localX: 1000f, localY: 1200f, heavy: false, layer),
+            };
+
+            runtime.RebuildFromAuthoredAgents(world, new[] { agent }, seeds, new[] { true });
+
+            Assert.That(
+                flow.DomainRelationshipMatrixCapacity,
+                Is.EqualTo(16),
+                "Authored map binding must keep the cold-preallocated relationship matrix capacity; shrinking it would make later domain append fail or allocate during fixed-step.");
+        }
+
+        [Test]
+        public void MassNavigationAuthoringContract_DoesNotRequirePresentationServicesWhenScenarioIsExternallyAuthored()
+        {
+            using var engine = new GameEngine();
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.ScenarioRuntime.AutoSpawnConfiguredScenario = false;
+            engine.RemoveService(CoreServiceKeys.PerformerDefinitionRegistry);
+            engine.RemoveService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            engine.RemoveService(CoreServiceKeys.VisualHeightmap);
+
+            Assert.That(
+                () => MassNavigationAuthoringContract.Require(engine, config),
+                Throws.Nothing,
+                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation performer, mesh, or VisualHeightmap services.");
+        }
+
+        [Test]
         public void SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot()
         {
             using var world = World.Create();
@@ -334,14 +355,13 @@ namespace Ludots.Tests.Presentation
             config.Solver.PlayAreaMinYCm = 50f;
             config.Solver.PlayAreaMaxYCm = 9_950f;
             config.Solver.MaxObstacleCount = 8;
-            config.ScenarioRuntime.InitialCommandActorSnapshotCapacity = 4;
-            config.ScenarioRuntime.InitialCommandActorScratchCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;
             var runtime = new MassNavigationSimulationRuntime(config);
-            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100));
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity light = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
@@ -352,7 +372,6 @@ namespace Ludots.Tests.Presentation
                 CreateAvoidanceSeed(teamId: 2, localX: 1400f, localY: 1200f, heavy: true, layer),
             };
             runtime.RebuildFromAuthoredAgents(world, new[] { light, heavy }, seeds, new[] { true, true });
-            runtime.SetCommandActorSnapshot(new[] { light }, revision: 1);
             runtime.RebuildRuntimeObstacles(new[]
             {
                 new MassNavigationObstacleSnapshot(worldXCm: 2200f, worldYCm: 2300f, radiusCm: 150f),
@@ -372,16 +391,15 @@ namespace Ludots.Tests.Presentation
                 Assert.That(obstacles, Has.Length.EqualTo(1));
             });
 
-            MassNavigationAvoidanceAgentSnapshot commandActorAgent = agents.Single(agent => agent.AgentIndex == 0);
+            MassNavigationAvoidanceAgentSnapshot lightAgent = agents.Single(agent => agent.AgentIndex == 0);
             MassNavigationAvoidanceAgentSnapshot heavyAgent = agents.Single(agent => agent.AgentIndex == 1);
             Assert.Multiple(() =>
             {
-                Assert.That(commandActorAgent.LocalXCm, Is.EqualTo(1000f).Within(0.001f));
-                Assert.That(commandActorAgent.LocalYCm, Is.EqualTo(1200f).Within(0.001f));
-                Assert.That(commandActorAgent.WorldXCm, Is.EqualTo(-4000f).Within(0.001f));
-                Assert.That(commandActorAgent.WorldYCm, Is.EqualTo(-3800f).Within(0.001f));
-                Assert.That(commandActorAgent.CommandActor, Is.True);
-                Assert.That(commandActorAgent.InsidePlayArea, Is.True);
+                Assert.That(lightAgent.LocalXCm, Is.EqualTo(1000f).Within(0.001f));
+                Assert.That(lightAgent.LocalYCm, Is.EqualTo(1200f).Within(0.001f));
+                Assert.That(lightAgent.WorldXCm, Is.EqualTo(-4000f).Within(0.001f));
+                Assert.That(lightAgent.WorldYCm, Is.EqualTo(-3800f).Within(0.001f));
+                Assert.That(lightAgent.InsidePlayArea, Is.True);
                 Assert.That(heavyAgent.TeamId, Is.EqualTo(2));
                 Assert.That(heavyAgent.HeavyProfile, Is.True);
                 Assert.That(heavyAgent.BodyRadiusCm, Is.EqualTo(20f));
@@ -464,7 +482,7 @@ namespace Ludots.Tests.Presentation
         {
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
             return new MassNavigationGroupRuntime(
-                new MassNavigationFormationRuntime(config.Semantics.Group),
+                config.Semantics.Group,
                 CreateRuntimeCapacity(agentCapacity: agentCapacity, groupMemberCapacity: agentCapacity));
         }
 
@@ -502,12 +520,14 @@ namespace Ludots.Tests.Presentation
             {
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,
-                CommandActorScratchCapacity = groupMemberCapacity,
                 GroupMemberCapacity = groupMemberCapacity,
-                OrderIngestionTokenCapacity = 8,
-                OrderIngestionMemberCapacity = groupMemberCapacity,
+                MovePlanExecutionGroupCapacity = 8,
+                MovePlanExecutionMemberCapacity = groupMemberCapacity,
+                RouteStateCapacity = 8,
+                RouteMaxExpandedPerRequest = 128,
+                RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
-                MetadataTeamCapacity = 4,
+                RelationshipDomainCapacity = 4,
             };
         }
 

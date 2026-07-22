@@ -7,7 +7,7 @@
     "TargetYCm": 2640
   },
   "Entities": [
-    { "Template": "ux_city", "Overrides": { "Name": { "Value": "Blue City" }, "WorldPositionCm": { "Value": { "X": 2400, "Y": 2400 } } } },
+    { "Template": "ux_city", "InstanceId": "ux-blue-city", "Overrides": { "Name": { "Value": "Blue City" }, "WorldPositionCm": { "Value": { "X": 2400, "Y": 2400 } } } },
     { "Template": "ux_barracks", "Overrides": { "Name": { "Value": "Blue Barracks" }, "WorldPositionCm": { "Value": { "X": 3150, "Y": 2220 } } } },
     { "Template": "ux_stable", "Overrides": { "Name": { "Value": "Blue Stable" }, "WorldPositionCm": { "Value": { "X": 3150, "Y": 2720 } } } },
     { "Template": "ux_workshop", "Overrides": { "Name": { "Value": "Blue Workshop" }, "WorldPositionCm": { "Value": { "X": 3680, "Y": 2480 } } } },
@@ -31,7 +31,20 @@
     { "Template": "ux_well_column", "Overrides": { "Name": { "Value": "Well Column A" }, "WorldPositionCm": { "Value": { "X": 4800, "Y": 3620 } } } },
     { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit North" }, "WorldPositionCm": { "Value": { "X": 1440, "Y": 1740 } } } },
     { "Template": "ux_gold_deposit", "Overrides": { "Name": { "Value": "Gold Deposit South" }, "WorldPositionCm": { "Value": { "X": 1500, "Y": 3200 } } } },
-    { "Template": "ux_enemy_raider", "Overrides": { "Name": { "Value": "Enemy Raider A" }, "WorldPositionCm": { "Value": { "X": 6100, "Y": 2480 } } } },
+    { "Template": "ux_enemy_raider", "InstanceId": "ux-enemy-raider-a", "Overrides": { "Name": { "Value": "Enemy Raider A" }, "WorldPositionCm": { "Value": { "X": 6100, "Y": 2480 } } } },
     { "Template": "ux_enemy_raider", "Overrides": { "Name": { "Value": "Enemy Raider B" }, "WorldPositionCm": { "Value": { "X": 6240, "Y": 2740 } } } }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "ux-blue-city" },
+    { "TeamId": 2, "RepresentativeInstanceId": "ux-enemy-raider-a" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "UxPrototype.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "UxPrototype.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "UxPrototype.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

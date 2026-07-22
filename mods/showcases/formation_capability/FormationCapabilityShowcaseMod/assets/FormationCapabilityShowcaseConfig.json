@@ -1,11 +1,11 @@
 {
   "mapId": "formation_capability_showcase",
-  "formationAgent": {
-    "templateId": "formation_capability_showcase_formation_agent",
-    "profileId": "formation"
+  "formationAnchor": {
+    "templateId": "formation_capability_showcase_formation_anchor"
   },
   "initialCommandSourceFormationId": "shu_left_vanguard",
   "initialCommandSourceEntityCapacity": 1,
+  "orderBatchCapacity": 512,
   "obstacleOverlay": {
     "templateId": "formation_capability_showcase_obstacle_overlay",
     "heightOffsetM": 0.28,

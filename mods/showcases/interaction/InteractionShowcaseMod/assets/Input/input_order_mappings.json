@@ -96,6 +96,7 @@
       "actionId": "Stop",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
+      "actorCollectionKey": "collection.command.source",
       "argsTemplate": {},
       "requireTarget": false,
       "targetType": "None",

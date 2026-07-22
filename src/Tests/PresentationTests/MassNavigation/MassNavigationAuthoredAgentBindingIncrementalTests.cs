@@ -8,6 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -17,6 +18,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -25,7 +27,7 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationAuthoredAgentBindingIncrementalTests
     {
         private const int TeamId = 1;
-        private const float PositionToleranceCm = MassNavigationGroupRuntime.OrderPathRestoreTargetToleranceCm;
+        private const float PositionToleranceCm = MassNavigationGroupRuntime.OrderTargetRestoreToleranceCm;
 
         [Test]
         public void AppendAuthoredAgents_PreservesActiveMoveGroupState()
@@ -36,15 +38,14 @@ namespace Ludots.Tests.Presentation
                 out Entity agent0,
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 simulation.MassNavigationFlow,
-                world,
                 simulation.AgentState,
-                simulation.CommandActors,
-                moveDestination,
-                MassNavigationFormationMode.Square);
+                orderToken: 1,
+                memberIndices: new[] { 0, 1 },
+                teamId: TeamId,
+                destinationWorldCm: moveDestination);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
@@ -72,20 +73,19 @@ namespace Ludots.Tests.Presentation
             harness.BindingSystem.Update(0f);
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
 
-            harness.Simulation.SetCommandActorSnapshot(new[] { harness.Agent0, harness.Agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = harness.Simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
+            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 harness.Simulation.MassNavigationFlow,
-                harness.Engine.World,
                 harness.Simulation.AgentState,
-                harness.Simulation.CommandActors,
-                moveDestination,
-                MassNavigationFormationMode.Square);
+                orderToken: 1,
+                memberIndices: new[] { 0, 1 },
+                teamId: TeamId,
+                destinationWorldCm: moveDestination);
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
 
-            Entity newAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            Entity newAgent = harness.CreateAuthoredAgent(localX: 1500f, localY: 1500f);
             harness.BindingSystem.Update(0f);
 
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
@@ -186,17 +186,93 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AppendAuthoredAgents_AfterWarmupAllocatesZeroBytesForIncrementalBinding()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer,
+                membershipCapacity: 8);
+
+            Entity warmupAgent = CreateAuthoredAgentEntity(world, localX: 1500f, localY: 1000f, layer);
+            MassNavigationAgentSeed warmupSeed = CreateSeed(localX: 1500f, localY: 1000f, layer);
+            simulation.AppendAuthoredAgents(world, new[] { warmupAgent }, new[] { warmupSeed }, new[] { true });
+
+            Entity measuredAgent = CreateAuthoredAgentEntity(world, localX: 1700f, localY: 1000f, layer);
+            MassNavigationAgentSeed measuredSeed = CreateSeed(localX: 1700f, localY: 1000f, layer);
+            Entity[] measuredEntities = { measuredAgent };
+            MassNavigationAgentSeed[] measuredSeeds = { measuredSeed };
+            bool[] controllableFlags = { true };
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            simulation.AppendAuthoredAgents(world, measuredEntities, measuredSeeds, controllableFlags);
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(
+                allocatedBytes,
+                Is.Zero,
+                $"Incremental MassNavigation authored binding must reuse preallocated runtime scratch after warmup; measured {allocatedBytes} B.");
+            Assert.That(world.Has<MassNavigationAgentIndex>(measuredAgent), Is.True);
+        }
+
+        [Test]
         public void AuthoredAgentBindingSystem_IncrementalInsert_DoesNotBumpAuthoredRuntimeBindingRevision()
         {
             using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
             harness.BindingSystem.Update(0f);
             int revisionBeforeInsert = harness.Simulation.AuthoredRuntimeBindingRevision;
 
-            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            harness.CreateAuthoredAgent(localX: 1500f, localY: 1500f);
             harness.BindingSystem.Update(0f);
 
             Assert.That(harness.Simulation.AuthoredRuntimeBindingRevision, Is.EqualTo(revisionBeforeInsert));
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_UnchangedRelationshipRevisionDoesNotResolveDomainsAgain()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+
+            harness.BindingSystem.Update(0f);
+            int firstRefreshResolutionCount = harness.BindingSystem.DomainResolutionCount;
+            Assert.That(firstRefreshResolutionCount, Is.GreaterThanOrEqualTo(2));
+
+            harness.BindingSystem.Update(0f);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(
+                harness.BindingSystem.DomainResolutionCount,
+                Is.EqualTo(firstRefreshResolutionCount),
+                "A stable relationship revision must reuse the bounded domain projection instead of resolving every authored agent again.");
+
+            Entity nextTeam = harness.MoveAgentToNewTeam(harness.Agent0, teamId: 2);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.BindingSystem.DomainResolutionCount, Is.EqualTo(firstRefreshResolutionCount + 2));
+            Assert.That(harness.Simulation.GetAgentDomainId(0), Is.EqualTo(nextTeam.Id));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_MissingCommittedAgentIndexRebuildsInsteadOfRepeatedlyResolving()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int resolutionCountBeforeDamage = harness.BindingSystem.DomainResolutionCount;
+
+            harness.Engine.World.Remove<MassNavigationAgentIndex>(harness.Agent0);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex restored), Is.True);
+            Assert.That(restored.Value, Is.GreaterThanOrEqualTo(0));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            int resolutionCountAfterRepair = harness.BindingSystem.DomainResolutionCount;
+
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.BindingSystem.DomainResolutionCount, Is.EqualTo(resolutionCountAfterRepair));
+            Assert.That(resolutionCountAfterRepair, Is.GreaterThan(resolutionCountBeforeDamage));
         }
 
         [Test]
@@ -247,10 +323,196 @@ namespace Ludots.Tests.Presentation
         {
             using BindingHarness harness = CreateBindingHarness(membershipCapacity: 2);
             harness.BindingSystem.Update(0f);
-            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1400f, localY: 1000f, harness.Layer);
+            harness.CreateAuthoredAgent(localX: 1400f, localY: 1000f);
 
             var ex = Assert.Throws<InvalidOperationException>(() => harness.BindingSystem.Update(0f));
             Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_RelationshipDomainCapacityFailurePreservesCommittedRuntime()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8, relationshipDomainCapacity: 1);
+            harness.BindingSystem.Update(0f);
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0IndexBefore), Is.True);
+            Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1IndexBefore), Is.True);
+
+            int orderToken = 191;
+            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                harness.Simulation.MassNavigationFlow,
+                harness.Simulation.AgentState,
+                orderToken,
+                new[] { agent0IndexBefore.Value, agent1IndexBefore.Value },
+                TeamId,
+                new Vector2(2400f, 2200f));
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(
+                harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    agent0IndexBefore.Value,
+                    out float orderTargetX,
+                    out float orderTargetY),
+                Is.True);
+            Assert.That(
+                harness.Simulation.TryGetAgentNavigationTargetLocalCm(
+                    agent0IndexBefore.Value,
+                    out float navigationTargetX,
+                    out float navigationTargetY),
+                Is.True);
+
+            harness.MoveAgentToNewTeam(harness.Agent1, teamId: 2);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => harness.BindingSystem.Update(0f));
+            Assert.That(ex!.Message, Does.Contain("relationshipDomainCapacity"));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0IndexAfter), Is.True);
+            Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1IndexAfter), Is.True);
+            Assert.That(agent0IndexAfter.Value, Is.EqualTo(agent0IndexBefore.Value));
+            Assert.That(agent1IndexAfter.Value, Is.EqualTo(agent1IndexBefore.Value));
+            Assert.That(harness.Simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(
+                harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    agent0IndexAfter.Value,
+                    out float preservedOrderTargetX,
+                    out float preservedOrderTargetY),
+                Is.True);
+            Assert.That(preservedOrderTargetX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderTargetY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
+            Assert.That(
+                harness.Simulation.TryGetAgentNavigationTargetLocalCm(
+                    agent0IndexAfter.Value,
+                    out float preservedNavigationTargetX,
+                    out float preservedNavigationTargetY),
+                Is.True);
+            Assert.That(preservedNavigationTargetX, Is.EqualTo(navigationTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedNavigationTargetY, Is.EqualTo(navigationTargetY).Within(PositionToleranceCm));
+        }
+
+        [Test]
+        public void AppendAuthoredAgents_RelationshipDomainCapacityFailureDoesNotReserveRejectedDomains()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8, relationshipDomainCapacity: 2);
+            harness.BindingSystem.Update(0f);
+            Entity rejectedTeam = harness.CreateTeamRepresentative(teamId: 2);
+            Entity retryTeam = harness.CreateTeamRepresentative(teamId: 3);
+            Entity rejectedAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1400f, localY: 1000f, harness.Layer);
+            Entity retryAgent = CreateAuthoredAgentEntity(harness.Engine.World, localX: 1600f, localY: 1000f, harness.Layer);
+            MassNavigationAgentSeed rejectedSeed = CreateSeed(rejectedTeam, localX: 1400f, localY: 1000f, harness.Layer);
+            MassNavigationAgentSeed retrySeed = CreateSeed(retryTeam, localX: 1600f, localY: 1000f, harness.Layer);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.Simulation.AppendAuthoredAgents(
+                    harness.Engine.World,
+                    new[] { rejectedAgent, retryAgent },
+                    new[] { rejectedSeed, retrySeed },
+                    new[] { true, true }));
+            Assert.That(ex!.Message, Does.Contain("relationshipDomainCapacity"));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(rejectedAgent), Is.False);
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(retryAgent), Is.False);
+
+            Assert.DoesNotThrow(() =>
+                harness.Simulation.AppendAuthoredAgents(
+                    harness.Engine.World,
+                    new[] { retryAgent },
+                    new[] { retrySeed },
+                    new[] { true }));
+            Assert.That(harness.Engine.World.TryGet(retryAgent, out MassNavigationAgentIndex retryIndex), Is.True);
+            Assert.That(retryIndex.Value, Is.EqualTo(2));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void AppendAuthoredAgents_InvalidSecondEntityDoesNotMutateFlowOrFirstEntity()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer);
+            Entity validNewAgent = CreateAuthoredAgentEntity(world, localX: 1500f, localY: 1000f, layer);
+            Entity invalidNewAgent = world.Create(
+                WorldPositionCm.FromCmFloat(1700f, 1000f),
+                new EntityLayer(layer.CategoryMask, layer.InteractionMask),
+                new FacingDirection { AngleRad = 0f },
+                OrderBuffer.CreateEmpty());
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateSeed(localX: 1500f, localY: 1000f, layer),
+                CreateSeed(localX: 1700f, localY: 1000f, layer),
+            };
+            int totalAgentsBefore = simulation.AgentState.TotalAgents;
+            int flowUnitsBefore = simulation.MassNavigationFlow.UnitCount;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                simulation.AppendAuthoredAgents(
+                    world,
+                    new[] { validNewAgent, invalidNewAgent },
+                    seeds,
+                    new[] { true, true }))!;
+
+            Assert.That(ex.Message, Does.Contain("requires MassNavigationAgent"));
+            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(totalAgentsBefore));
+            Assert.That(simulation.MassNavigationFlow.UnitCount, Is.EqualTo(flowUnitsBefore));
+            Assert.That(world.Has<MassNavigationAgentIndex>(validNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentProfile>(validNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentIndex>(invalidNewAgent), Is.False);
+            Assert.That(world.Has<MassNavigationAgentProfile>(invalidNewAgent), Is.False);
+        }
+
+        [Test]
+        public void RebuildFromAuthoredAgents_InvalidSecondEntityPreservesCommittedRuntime()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out MassNavigationAgentLayer layer);
+            int orderToken = 333;
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                simulation.MassNavigationFlow,
+                simulation.AgentState,
+                orderToken,
+                new[] { 0, 1 },
+                TeamId,
+                new Vector2(2600f, 2200f));
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0IndexBefore), Is.True);
+            Assert.That(world.TryGet(agent1, out MassNavigationAgentIndex agent1IndexBefore), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float orderTargetX, out float orderTargetY), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float navigationTargetX, out float navigationTargetY), Is.True);
+            int totalAgentsBefore = simulation.AgentState.TotalAgents;
+            int flowUnitsBefore = simulation.MassNavigationFlow.UnitCount;
+            Entity invalidAgent = CreateAuthoredAgentEntity(world, localX: 1600f, localY: 1000f, layer);
+            world.Destroy(invalidAgent);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                simulation.RebuildFromAuthoredAgents(
+                    world,
+                    new[] { agent0, invalidAgent },
+                    new[]
+                    {
+                        CreateSeed(localX: 1000f, localY: 1000f, layer),
+                        CreateSeed(localX: 1600f, localY: 1000f, layer),
+                    },
+                    new[] { true, true }))!;
+
+            Assert.That(ex.Message, Does.Contain("dead entity"));
+            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(totalAgentsBefore));
+            Assert.That(simulation.MassNavigationFlow.UnitCount, Is.EqualTo(flowUnitsBefore));
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0IndexAfter), Is.True);
+            Assert.That(world.TryGet(agent1, out MassNavigationAgentIndex agent1IndexAfter), Is.True);
+            Assert.That(agent0IndexAfter.Value, Is.EqualTo(agent0IndexBefore.Value));
+            Assert.That(agent1IndexAfter.Value, Is.EqualTo(agent1IndexBefore.Value));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float preservedOrderX, out float preservedOrderY), Is.True);
+            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float preservedTargetX, out float preservedTargetY), Is.True);
+            Assert.That(preservedTargetX, Is.EqualTo(navigationTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedTargetY, Is.EqualTo(navigationTargetY).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -272,9 +534,7 @@ namespace Ludots.Tests.Presentation
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2600f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                new Vector2(2600f, 2200f));
             Assert.That(movedCount, Is.EqualTo(3));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float agent0OrderX, out float agent0OrderY), Is.True);
@@ -316,7 +576,6 @@ namespace Ludots.Tests.Presentation
                 out Entity agent2,
                 out _,
                 out MassNavigationAgentSeed[] seeds);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1, agent2 }, revision: 7);
             int orderToken = 84;
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
@@ -325,9 +584,7 @@ namespace Ludots.Tests.Presentation
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2800f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                new Vector2(2800f, 2200f));
             Assert.That(movedCount, Is.EqualTo(3));
 
             world.Remove<MassNavigationAgent>(agent1);
@@ -340,9 +597,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
             Assert.That(world.TryGet(agent2, out MassNavigationAgentIndex agent2Index), Is.True);
             Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.CommandActors.Length, Is.EqualTo(2));
-            Assert.That(simulation.CommandActors[0], Is.EqualTo(agent0));
-            Assert.That(simulation.CommandActors[1], Is.EqualTo(agent2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
@@ -350,48 +604,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent2Index.Value, out _, out _), Is.True);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out _, out _), Is.True);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent2Index.Value, out _, out _), Is.True);
-        }
-
-        [Test]
-        public void RebuildFromAuthoredAgents_DissolvesSelectionGroupWithOneSurvivor()
-        {
-            using var world = World.Create();
-            MassNavigationSimulationRuntime simulation = CreateSimulation(
-                world,
-                out Entity agent0,
-                out Entity agent1,
-                out MassNavigationAgentLayer layer);
-            MassNavigationAgentSeed survivingSeed = CreateSeed(localX: 1000f, localY: 1000f, layer);
-            simulation.SetCommandActorSnapshot(new[] { agent0, agent1 }, revision: 9);
-            int movedCount = simulation.NavGroupRuntime.IssueCommandActorMoveCommand(
-                simulation.MassNavigationFlow,
-                world,
-                simulation.AgentState,
-                simulation.CommandActors,
-                new Vector2(2400f, 2200f),
-                MassNavigationFormationMode.Square);
-            Assert.That(movedCount, Is.EqualTo(2));
-            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
-            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-
-            world.Remove<MassNavigationAgent>(agent1);
-            simulation.RebuildFromAuthoredAgents(
-                world,
-                new[] { agent0 },
-                new[] { survivingSeed },
-                new[] { true });
-
-            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
-            Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.CommandActors.Length, Is.EqualTo(1));
-            Assert.That(simulation.CommandActors[0], Is.EqualTo(agent0));
-            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
-            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-            Assert.That(simulation.NavGroupRuntime.HasGroup(agent0Index.Value), Is.False);
-            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.False);
-            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float heldTargetX, out float heldTargetY), Is.True);
-            Assert.That(heldTargetX, Is.EqualTo(1000f).Within(PositionToleranceCm));
-            Assert.That(heldTargetY, Is.EqualTo(1000f).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -407,9 +619,7 @@ namespace Ludots.Tests.Presentation
                 orderToken,
                 members,
                 TeamId,
-                new Vector2(2600f, 2200f),
-                MassNavigationFormationMode.Square,
-                rotationRadians: 0f);
+                new Vector2(2600f, 2200f));
             Assert.That(movedCount, Is.EqualTo(2));
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
 
@@ -470,40 +680,63 @@ namespace Ludots.Tests.Presentation
             return simulation;
         }
 
-        private static BindingHarness CreateBindingHarness(int membershipCapacity)
+        private static BindingHarness CreateBindingHarness(int membershipCapacity, int? relationshipDomainCapacity = null)
         {
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
                 Path.Combine(FindRepoRoot(), "assets"));
 
-            MassNavigationConfig config = CreateTestConfig(membershipCapacity);
+            MassNavigationConfig config = CreateTestConfig(membershipCapacity, relationshipDomainCapacity);
             var simulation = CreateConfiguredSimulation(config);
-            simulation.SetWorldOperationsReady(true);
-            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-            engine.SetCurrentMapSessionForTests(new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId }));
+            DomainStanceQuery stances = engine.GetService(CoreServiceKeys.DomainStanceQuery)
+                ?? throw new InvalidOperationException("Test requires DomainStanceQuery.");
+            simulation.SetDomainRelationshipProjection(new MassNavigationDomainStanceProjection(
+                stances,
+                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
+                config.RelationshipPolicy.CooperativeStance));
+            var mapId = new MapId(config.MapId);
+            var runtimeBinding = new MassNavigationRuntimeBinding();
+            runtimeBinding.Activate(mapId, simulation);
+            runtimeBinding.MarkPrepared(mapId, simulation);
+            engine.SetService(MassNavigationKeys.RuntimeBinding, runtimeBinding);
+            engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity agent0 = CreateAuthoredAgentEntity(engine.World, localX: 1000f, localY: 1000f, layer);
             Entity agent1 = CreateAuthoredAgentEntity(engine.World, localX: 1200f, localY: 1000f, layer);
-            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, simulation);
-            return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1);
+            RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                ?? throw new InvalidOperationException("Test requires RelationshipRuntime.");
+            RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("Test requires RelationshipTypeRegistry.");
+            Entity teamRep = engine.World.Create(new TeamIdentity { TeamId = 1 });
+            int memberOfTypeId = relationshipTypes.GetId("MemberOf");
+            relationships.EnsureLink(agent0, teamRep, memberOfTypeId);
+            relationships.EnsureLink(agent1, teamRep, memberOfTypeId);
+            var bindingSystem = new MassNavigationAuthoredAgentBindingSystem(engine, config);
+            return new BindingHarness(engine, simulation, bindingSystem, layer, agent0, agent1, teamRep, relationships, memberOfTypeId);
         }
 
-        private static MassNavigationConfig CreateTestConfig(int membershipCapacity)
+        private static MassNavigationConfig CreateTestConfig(int membershipCapacity, int? relationshipDomainCapacity = null)
         {
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;
-            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = membershipCapacity;
+            config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = membershipCapacity;
+            if (relationshipDomainCapacity.HasValue)
+            {
+                config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity = relationshipDomainCapacity.Value;
+            }
+
             return config;
         }
 
         private static MassNavigationSimulationRuntime CreateConfiguredSimulation(MassNavigationConfig config)
         {
             var simulation = new MassNavigationSimulationRuntime(config);
-            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
+            simulation.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
             return simulation;
         }
 
@@ -528,23 +761,25 @@ namespace Ludots.Tests.Presentation
                 layer);
         }
 
-        private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer, bool controllable = true)
+        private static MassNavigationAgentSeed CreateSeed(Entity domainRep, float localX, float localY, MassNavigationAgentLayer layer)
+        {
+            return new MassNavigationAgentSeed(
+                domainRep,
+                localPositionXCm: localX,
+                localPositionYCm: localY,
+                heavy: false,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer);
+        }
+
+        private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer)
         {
             int profileId = MassNavigationProfileRegistry.Register("light");
-            if (controllable)
-            {
-                return world.Create(
-                    new MassNavigationAgent { ProfileId = profileId },
-                    new Team { Id = TeamId },
-                    WorldPositionCm.FromCmFloat(localX, localY),
-                    new EntityLayer(layer.CategoryMask, layer.InteractionMask),
-                    new FacingDirection { AngleRad = 0f },
-                    OrderBuffer.CreateEmpty());
-            }
-
             return world.Create(
                 new MassNavigationAgent { ProfileId = profileId },
-                new Team { Id = TeamId },
                 WorldPositionCm.FromCmFloat(localX, localY),
                 new EntityLayer(layer.CategoryMask, layer.InteractionMask),
                 new FacingDirection { AngleRad = 0f });
@@ -575,7 +810,10 @@ namespace Ludots.Tests.Presentation
                 MassNavigationAuthoredAgentBindingSystem bindingSystem,
                 MassNavigationAgentLayer layer,
                 Entity agent0,
-                Entity agent1)
+                Entity agent1,
+                Entity teamRep,
+                RelationshipRuntime relationships,
+                int memberOfTypeId)
             {
                 Engine = engine;
                 Simulation = simulation;
@@ -583,6 +821,9 @@ namespace Ludots.Tests.Presentation
                 Layer = layer;
                 Agent0 = agent0;
                 Agent1 = agent1;
+                TeamRep = teamRep;
+                Relationships = relationships;
+                MemberOfTypeId = memberOfTypeId;
             }
 
             public GameEngine Engine { get; }
@@ -591,6 +832,29 @@ namespace Ludots.Tests.Presentation
             public MassNavigationAgentLayer Layer { get; }
             public Entity Agent0 { get; }
             public Entity Agent1 { get; }
+            private Entity TeamRep { get; }
+            private RelationshipRuntime Relationships { get; }
+            private int MemberOfTypeId { get; }
+
+            public Entity CreateAuthoredAgent(float localX, float localY)
+            {
+                Entity entity = CreateAuthoredAgentEntity(Engine.World, localX, localY, Layer);
+                Relationships.EnsureLink(entity, TeamRep, MemberOfTypeId);
+                return entity;
+            }
+
+            public Entity CreateTeamRepresentative(int teamId)
+            {
+                return Engine.World.Create(new TeamIdentity { TeamId = teamId });
+            }
+
+            public Entity MoveAgentToNewTeam(Entity agent, int teamId)
+            {
+                Relationships.RemoveLink(agent, TeamRep, MemberOfTypeId);
+                Entity nextTeam = Engine.World.Create(new TeamIdentity { TeamId = teamId });
+                Relationships.EnsureLink(agent, nextTeam, MemberOfTypeId);
+                return nextTeam;
+            }
 
             public void Dispose()
             {

@@ -39,12 +39,11 @@
   "navigationRuntimeCapacity": {
     "navigationGroupCapacity": 4,
     "groupMembershipAgentCapacity": 4,
-    "commandActorScratchCapacity": 4,
     "groupMemberCapacity": 4,
-    "orderIngestionTokenCapacity": 4,
-    "orderIngestionMemberCapacity": 4,
+    "movePlanExecutionGroupCapacity": 4,
+    "movePlanExecutionMemberCapacity": 4,
     "loadedChunkCapacity": 4,
-    "metadataTeamCapacity": 1
+    "relationshipDomainCapacity": 1
   },
   "navigationArrival": {
     "enabled": true,

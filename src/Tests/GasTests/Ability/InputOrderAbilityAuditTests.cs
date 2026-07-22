@@ -163,6 +163,46 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderQueue_BatchAdmission_IsAtomicWhenCapacityIsInsufficient()
+        {
+            var queue = new OrderQueue(capacity: 64);
+            var seed = new Order { OrderTypeId = 1 };
+            for (int i = 0; i < 63; i++)
+            {
+                Assert.That(queue.TryEnqueue(in seed), Is.True);
+            }
+
+            var batch = new[]
+            {
+                new Order { OrderTypeId = 1 },
+                new Order { OrderTypeId = 1 },
+            };
+
+            Assert.That(queue.TryEnqueueBatch(batch), Is.False);
+            Assert.That(queue.Count, Is.EqualTo(63));
+            Assert.That(batch[0].OrderId, Is.Zero);
+            Assert.That(batch[1].OrderId, Is.Zero);
+        }
+
+        [Test]
+        public void OrderQueue_SharedBatch_AssignsOneQueueOwnedId()
+        {
+            var queue = new OrderQueue(capacity: 64);
+            var batch = new[]
+            {
+                new Order { OrderTypeId = 1 },
+                new Order { OrderTypeId = 1 },
+            };
+
+            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.True);
+            Assert.That(batch[0].OrderId, Is.GreaterThan(0));
+            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(queue.TryDequeue(out Order first), Is.True);
+            Assert.That(queue.TryDequeue(out Order second), Is.True);
+            Assert.That(second.OrderId, Is.EqualTo(first.OrderId));
+        }
+
+        [Test]
         public void PlanExecutor_UnregisteredOrderTypeId_Throws()
         {
             var queue = new OrderQueue();

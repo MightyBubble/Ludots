@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
@@ -385,7 +386,7 @@ namespace Ludots.Core.Gameplay.Teams
             RelationshipTypeRegistry? relationshipTypes,
             OwnershipResolver? ownership)
         {
-            if (mapConfig.Players.Count == 0)
+            if (mapConfig.Teams.Count == 0 && mapConfig.Players.Count == 0)
             {
                 return;
             }
@@ -403,6 +404,36 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity playerRep = players.Get(binding.PlayerId);
                 Entity teamRep = teams.Get(binding.TeamId);
                 relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+            }
+
+            var stanceMembers = new List<(Entity Entity, int TeamId)>();
+            var stanceMemberQuery = new QueryDescription()
+                .WithAll<Team, MapEntity>()
+                .WithNone<PlayerIdentity, TeamIdentity>();
+            world.Query(in stanceMemberQuery, (Entity entity, ref Team team, ref MapEntity mapEntity) =>
+            {
+                if (mapEntity.MapId == session.MapId && team.Id > 0)
+                {
+                    stanceMembers.Add((entity, team.Id));
+                }
+            });
+
+            for (int i = 0; i < stanceMembers.Count; i++)
+            {
+                (Entity member, int teamId) = stanceMembers[i];
+                if (!world.IsAlive(member))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' team member entity {member.Id} became invalid while building control-plane membership edges.");
+                }
+
+                if (!teams.TryGet(teamId, out Entity teamRep) || !world.IsAlive(teamRep))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' entity {member.Id} authors Team {teamId}, but no live team representative is bound.");
+                }
+
+                relationships.EnsureLink(member, teamRep, memberOfTypeId);
             }
 
             OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);

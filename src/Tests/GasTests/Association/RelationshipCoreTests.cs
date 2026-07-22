@@ -76,6 +76,39 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RelationshipRuntime_RejectsEntitiesFromAnotherWorld()
+        {
+            using var runtimeWorld = World.Create();
+            using var foreignWorld = World.Create();
+            RelationshipRuntime runtime = CreateRuntime(runtimeWorld, out RelationshipTypeRegistry types);
+            int socialBondTypeId = types.Register("Tests.Relationship.ForeignWorld");
+            Entity runtimeTarget = runtimeWorld.Create();
+            Entity foreignSource = foreignWorld.Create();
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(
+                () => runtime.EnsureLink(foreignSource, runtimeTarget, socialBondTypeId));
+
+            Assert.That(ex!.Message, Does.Contain("World"));
+            Assert.That(runtime.HasLink(foreignSource, runtimeTarget, socialBondTypeId), Is.False);
+            Assert.That(runtime.TryResolveRelationshipEntity(foreignSource, runtimeTarget, socialBondTypeId, out _), Is.False);
+        }
+
+        [Test]
+        public void EntityCompareTo_OrdersReusedLowerIdsAfterOlderHigherIds()
+        {
+            using var world = World.Create();
+            Entity lowerId = world.Create();
+            Entity higherId = world.Create();
+            world.Destroy(lowerId);
+            Entity reusedLowerId = world.Create();
+
+            Assert.That(reusedLowerId.Id, Is.EqualTo(lowerId.Id), "Arch should reuse the freed lower id in this characterization.");
+            Assert.That(reusedLowerId.Version, Is.GreaterThan(higherId.Version));
+            Assert.That(reusedLowerId.Id, Is.LessThan(higherId.Id));
+            Assert.That(reusedLowerId.CompareTo(higherId), Is.GreaterThan(0));
+        }
+
+        [Test]
         public void RelationshipEntityAttributesReceiveGasBuffs()
         {
             using var world = World.Create();

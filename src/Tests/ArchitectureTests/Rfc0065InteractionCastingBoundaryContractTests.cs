@@ -435,7 +435,14 @@ namespace Ludots.Tests.Architecture
                 "InteractionContextStack",
                 "CommandSourceAcquisition",
                 "InputOrderMappingSystem",
-                "MassNavigationLocalCommandInputSystem"
+                "MassNavigationLocalCommandInputSystem",
+                "AuthoritativeInput",
+                "Ludots.Core.Input.Runtime",
+                "GetSpan<Team>",
+                "out Team ",
+                "new Team {",
+                "PlayerOwner",
+                "TeamManager"
             };
 
             var violations = new List<string>();
@@ -448,7 +455,196 @@ namespace Ludots.Tests.Architecture
                 violations,
                 Is.Empty,
                 "RFC-0065: MassNavigation is an execution domain. It must ingest explicit OrderBuffer move orders " +
-                "and must not resolve command actors from input, command-source collections, or interaction context APIs:\n" +
+                "and must not resolve command actors or affiliation from input, command-source collections, embodied Team/PlayerOwner, or interaction context APIs:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void CommandAcquisitionAndMassNavigationAgents_UseRelationshipDomainsInsteadOfIdentityMirrors()
+        {
+            string repoRoot = FindRepoRoot();
+            string eligibilityPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Input",
+                "CommandSources",
+                "CommandSourceEligibility.cs");
+            string eligibility = File.ReadAllText(eligibilityPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(eligibility, Does.Contain("CoreServiceKeys.ControlDomainQuery"));
+                Assert.That(eligibility, Does.Contain("CoreServiceKeys.DomainStanceQuery"));
+                Assert.That(eligibility, Does.Not.Contain("TryGet(selector, out Team"));
+                Assert.That(eligibility, Does.Not.Contain("TryGet(candidate, out Team"));
+                Assert.That(eligibility, Does.Not.Contain("RelationshipFilterUtil.Passes"));
+            });
+
+            string templatesPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "assets",
+                "Entities",
+                "templates.json");
+            JsonArray templates = JsonNode.Parse(File.ReadAllText(templatesPath))?.AsArray()
+                ?? throw new InvalidOperationException($"MassNavigation templates must be a JSON array: {templatesPath}");
+            var violations = new List<string>();
+            foreach (JsonNode? templateNode in templates)
+            {
+                JsonObject template = templateNode?.AsObject()
+                    ?? throw new InvalidOperationException("MassNavigation template entry must be an object.");
+                string id = template["id"]?.GetValue<string>() ?? string.Empty;
+                if (!id.StartsWith("mass_navigation_agent_", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                JsonObject components = template["components"]?.AsObject()
+                    ?? throw new InvalidOperationException($"MassNavigation agent template '{id}' requires components.");
+                if (components.ContainsKey("PlayerOwner") || components.ContainsKey("Team"))
+                {
+                    violations.Add(id);
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "MassNavigation agent templates must receive ownership and membership through relationship edges, not PlayerOwner/Team mirrors: " +
+                string.Join(", ", violations));
+
+            string formationRuntimePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "formation_capability",
+                "FormationCapabilityShowcaseMod",
+                "Runtime",
+                "FormationCapabilityShowcaseRuntime.cs");
+            string formationRuntime = File.ReadAllText(formationRuntimePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(formationRuntime, Does.Not.Contain("TeamIdOverride = plan.TeamId"));
+                Assert.That(formationRuntime, Does.Not.Contain("PlayerOwnerIdOverride = formation.OwnerPlayerId"));
+                Assert.That(formationRuntime, Does.Not.Contain("new Team { Id = formation.TeamId }"));
+                Assert.That(formationRuntime, Does.Not.Contain("new PlayerOwner { PlayerId = formation.OwnerPlayerId }"));
+            });
+        }
+
+        [Test]
+        public void ProductionMods_CannotReachMassNavigationExecutionInternals()
+        {
+            string repoRoot = FindRepoRoot();
+            string modsRoot = Path.Combine(repoRoot, "mods");
+            string[] forbidden =
+            {
+                ".NavGroupRuntime",
+                ".AgentState",
+                "RotateCommandActors",
+                "IssueCommandActorMoveCommand",
+                "SetCommandActorSnapshot",
+                "CommandActorSnapshotRevision",
+            };
+
+            var violations = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(modsRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "MassNavigation execution state is internal to Core. Production mods may produce orders and read public results, but may not mutate groups, agent storage, or command-source mirrors:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void MassNavigationExecutionInternals_AreNotPublicApi()
+        {
+            Assembly core = typeof(EntityCollectionStore).Assembly;
+            Type groupRuntime = core.GetType("Ludots.Core.MassNavigation.Runtime.MassNavigationGroupRuntime", throwOnError: true)!;
+            Type agentState = core.GetType("Ludots.Core.MassNavigation.Runtime.MassNavigationAgentState", throwOnError: true)!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(groupRuntime.IsPublic, Is.False, "MassNavigationGroupRuntime must not be a mod-facing API.");
+                Assert.That(agentState.IsPublic, Is.False, "MassNavigationAgentState must not be a mod-facing API.");
+            });
+        }
+
+        [Test]
+        public void MassNavigationCore_HasNoCommandSourceMirrorOrMutableTuningApi()
+        {
+            string repoRoot = FindRepoRoot();
+            string massNavigationRoot = Path.Combine(repoRoot, "src", "Core", "MassNavigation");
+            string[] forbidden =
+            {
+                "SetCommandActorSnapshot",
+                "ClearCommandActorSnapshot",
+                "CommandActorSnapshotRevision",
+                "CommandActorRotationRadians",
+                "SetActiveTeam",
+                "CycleActiveTeam",
+                "SetAgentsPerTeam",
+                "SetFormationMode",
+                "RequestSceneReset",
+                "ConsumeSceneReset",
+                "AdjustIterations",
+            };
+
+            var violations = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(massNavigationRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "MassNavigation Core must not restore command-source mirrors, scene controls, active-team state, or runtime tuning switches:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void ProductionOrderProducers_UseOrderQueueInsteadOfOrderBufferSubmitOrder()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods"),
+                Path.Combine(repoRoot, "src", "Tools"),
+            };
+            var violations = new List<string>();
+            foreach (string root in roots)
+            {
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    string normalized = file.Replace('\\', '/');
+                    if (normalized.Contains("/bin/", StringComparison.Ordinal) ||
+                        normalized.Contains("/obj/", StringComparison.Ordinal) ||
+                        normalized.Contains("/Tests/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string source = File.ReadAllText(file);
+                    if (source.Contains("OrderBufferSystem.SubmitOrder", StringComparison.Ordinal) ||
+                        source.Contains("orderBufferSystem.SubmitOrder", StringComparison.Ordinal))
+                    {
+                        violations.Add(Path.GetRelativePath(repoRoot, file));
+                    }
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065: production order producers must enter through OrderQueue; direct OrderBufferSystem.SubmitOrder is forbidden:\n" +
                 string.Join(Environment.NewLine, violations));
         }
 
@@ -839,15 +1035,13 @@ namespace Ludots.Tests.Architecture
             IReadOnlyList<string> forbidden,
             List<string> hits)
         {
-            string[] lines = File.ReadAllLines(file);
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            foreach ((int lineNumber, string line) in SourceTextScanner.ReadCodeLines(file))
             {
-                string line = lines[lineIndex];
                 for (int tokenIndex = 0; tokenIndex < forbidden.Count; tokenIndex++)
                 {
                     if (line.Contains(forbidden[tokenIndex], StringComparison.Ordinal))
                     {
-                        hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {forbidden[tokenIndex]}: {line.Trim()}");
+                        hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineNumber}: {forbidden[tokenIndex]}: {line.Trim()}");
                         break;
                     }
                 }
@@ -898,7 +1092,8 @@ namespace Ludots.Tests.Architecture
             return !relative.Contains("/bin/", StringComparison.OrdinalIgnoreCase) &&
                    !relative.Contains("/obj/", StringComparison.OrdinalIgnoreCase) &&
                    !relative.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) &&
-                   !relative.Contains("/.git/", StringComparison.OrdinalIgnoreCase);
+                   !relative.Contains("/.git/", StringComparison.OrdinalIgnoreCase) &&
+                   !relative.StartsWith("src/Tests/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FindRepoRoot()

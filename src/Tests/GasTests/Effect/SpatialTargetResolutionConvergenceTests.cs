@@ -99,6 +99,45 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TargetResolver_LineSearch_ExplicitTargetPointOverridesActorFacing()
+        {
+            using var world = World.Create();
+            var actor = world.Create(
+                WorldPositionCm.FromCm(300, 300),
+                new FacingDirection { AngleRad = 0f },
+                new AbilityExecInstance
+                {
+                    TargetPosCm = Fix64Vec2.FromInt(300, 930),
+                    HasTargetPos = 1
+                });
+
+            var spatial = new RecordingSpatialQueryService();
+            var query = new TargetQueryDescriptor
+            {
+                Kind = TargetResolverKind.BuiltinSpatial,
+                Spatial = new BuiltinSpatialDescriptor
+                {
+                    Shape = SpatialShape.Line,
+                    LengthCm = 640,
+                    HalfWidthCm = 80
+                }
+            };
+
+            Span<Entity> buffer = stackalloc Entity[8];
+            int count = TargetResolverFanOutHelper.ResolveTargets(
+                world,
+                new EffectContext { Source = actor },
+                in query,
+                spatial,
+                buffer.ToArray());
+
+            That(count, Is.EqualTo(0));
+            That(spatial.LastLineOrigin, Is.EqualTo(new WorldCmInt2(300, 300)));
+            That(spatial.LastLineDirectionDeg, Is.EqualTo(90));
+            That(spatial.LastLineLengthCm, Is.EqualTo(640));
+        }
+
+        [Test]
         public void TargetResolver_LineSearch_UsesVectorOrigin_WhenCastStoresTwoPoints()
         {
             using var world = World.Create();

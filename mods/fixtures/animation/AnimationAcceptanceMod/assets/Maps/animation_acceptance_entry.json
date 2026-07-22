@@ -16,10 +16,12 @@
   },
   "Entities": [
     {
-      "Template": "animation_acceptance_tank"
+      "Template": "animation_acceptance_tank",
+      "InstanceId": "animation-acceptance-tank"
     },
     {
-      "Template": "animation_acceptance_humanoid"
+      "Template": "animation_acceptance_humanoid",
+      "InstanceId": "animation-acceptance-humanoid"
     },
     {
       "Template": "moba_dummy",
@@ -28,5 +30,9 @@
         "WorldPositionCm": { "Value": { "X": 2300, "Y": 900 } }
       }
     }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "animation-acceptance-tank" },
+    { "TeamId": 2, "RepresentativeInstanceId": "animation-acceptance-humanoid" }
   ]
 }

@@ -19,9 +19,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry _orderRuleRegistry;
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
+        private readonly Order[] _incomingBatchScratch;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
+
+        public uint IncomingRevision { get; private set; }
 
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
@@ -41,6 +44,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _incomingOrders = incomingOrders;
+            _incomingBatchScratch = incomingOrders != null
+                ? new Order[incomingOrders.Capacity]
+                : Array.Empty<Order>();
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
@@ -95,42 +101,53 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_incomingOrders == null) return;
 
-            while (_incomingOrders.TryDequeue(out var order))
+            while (_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out int batchCount))
             {
-                order.SubmitStep = currentStep;
+                if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
+                {
+                    ProcessIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    continue;
+                }
 
-                if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+                if (!PreflightIncomingBatch(batchCount, currentStep))
                 {
                     continue;
                 }
 
-                var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                if (config.ValidationGraphId > 0)
+                for (int i = 0; i < batchCount; i++)
                 {
-                    if (_graphProgramRegistry == null || _graphApi == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Order type {order.OrderTypeId} requires validation graph {config.ValidationGraphId}, but graph validation services are not configured.");
-                    }
-
-                    if (!_graphProgramRegistry.TryGetProgram(config.ValidationGraphId, out var validationProgram))
-                    {
-                        throw new InvalidOperationException(
-                            $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
-                    }
-
-                    var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
-                    bool passed = GasGraphExecutor.ExecuteValidation(
+                    ref Order order = ref _incomingBatchScratch[i];
+                    OrderSubmitResult result = OrderSubmitter.Submit(
                         World,
                         order.Actor,
-                        order.Target,
-                        targetPos,
-                        validationProgram,
-                        _graphApi);
-                    if (!passed) continue;
+                        in order,
+                        _orderTypeRegistry,
+                        _orderRuleRegistry,
+                        currentStep,
+                        _stepRateHz);
+                    if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
+                    {
+                        throw new InvalidOperationException(
+                            $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
+                    }
+
+                    IncomingRevision++;
+                }
+            }
+        }
+
+        private bool PreflightIncomingBatch(int batchCount, int currentStep)
+        {
+            for (int i = 0; i < batchCount; i++)
+            {
+                ref Order order = ref _incomingBatchScratch[i];
+                order.SubmitStep = currentStep;
+                if (!ValidateIncomingOrder(in order))
+                {
+                    return false;
                 }
 
-                var result = OrderSubmitter.Submit(
+                OrderSubmitResult result = OrderSubmitter.Preview(
                     World,
                     order.Actor,
                     in order,
@@ -138,14 +155,75 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _orderRuleRegistry,
                     currentStep,
                     _stepRateHz);
-
-                if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
+                if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                 {
-                    int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                    ref var buffer = ref World.Get<OrderBuffer>(order.Actor);
-                    buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+                    return false;
                 }
             }
+
+            return true;
+        }
+
+        private void ProcessIncomingOrder(ref Order order, int currentStep)
+        {
+            IncomingRevision++;
+            order.SubmitStep = currentStep;
+            if (!ValidateIncomingOrder(in order))
+            {
+                return;
+            }
+
+            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
+            OrderSubmitResult result = OrderSubmitter.Submit(
+                World,
+                order.Actor,
+                in order,
+                _orderTypeRegistry,
+                _orderRuleRegistry,
+                currentStep,
+                _stepRateHz);
+
+            if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
+            {
+                int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                ref OrderBuffer buffer = ref World.Get<OrderBuffer>(order.Actor);
+                buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+            }
+        }
+
+        private bool ValidateIncomingOrder(in Order order)
+        {
+            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            {
+                return false;
+            }
+
+            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
+            if (config.ValidationGraphId <= 0)
+            {
+                return true;
+            }
+
+            if (_graphProgramRegistry == null || _graphApi == null)
+            {
+                throw new InvalidOperationException(
+                    $"Order type {order.OrderTypeId} requires validation graph {config.ValidationGraphId}, but graph validation services are not configured.");
+            }
+
+            if (!_graphProgramRegistry.TryGetProgram(config.ValidationGraphId, out var validationProgram))
+            {
+                throw new InvalidOperationException(
+                    $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
+            }
+
+            var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
+            return GasGraphExecutor.ExecuteValidation(
+                World,
+                order.Actor,
+                order.Target,
+                targetPos,
+                validationProgram,
+                _graphApi);
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
@@ -216,6 +294,4 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-
-
 

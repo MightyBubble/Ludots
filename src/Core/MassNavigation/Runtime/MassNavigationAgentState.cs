@@ -1,18 +1,33 @@
 using Arch.Core;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
-public sealed class MassNavigationAgentState
+internal sealed class MassNavigationAgentState
 {
-    private readonly System.Collections.Generic.List<Entity> _spawnedEntities = new();
-    private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds = new();
-    private readonly System.Collections.Generic.List<Entity> _allAgents = new();
-    private readonly System.Collections.Generic.List<Entity> _controllableAgents = new();
-    private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId = new();
+    private readonly System.Collections.Generic.List<Entity> _spawnedEntities;
+    private readonly System.Collections.Generic.HashSet<int> _spawnedEntityIds;
+    private readonly System.Collections.Generic.List<Entity> _allAgents;
+    private readonly System.Collections.Generic.List<Entity> _controllableAgents;
+    private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId;
     private int _boundAgentCount;
     private int _controllableAgentSlotCount;
+
+    public MassNavigationAgentState(int agentCapacity)
+    {
+        if (agentCapacity <= 0)
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(agentCapacity));
+        }
+
+        _spawnedEntities = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _spawnedEntityIds = new System.Collections.Generic.HashSet<int>(agentCapacity);
+        _allAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _controllableAgents = new System.Collections.Generic.List<Entity>(agentCapacity);
+        _controllableIndexByEntityId = new System.Collections.Generic.Dictionary<int, int>(agentCapacity);
+    }
 
     public IReadOnlyList<Entity> SpawnedEntities => _spawnedEntities;
     public IReadOnlyList<Entity> AllAgents => _allAgents;
@@ -123,23 +138,7 @@ public sealed class MassNavigationAgentState
 
     public void RegisterAgentAtIndex(Entity entity, int agentIndex, bool controllable)
     {
-        if (agentIndex < 0)
-        {
-            throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
-        }
-
-        if ((uint)agentIndex < (uint)_allAgents.Count &&
-            _allAgents[agentIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {agentIndex} is already registered.");
-        }
-
-        if (controllable &&
-            (uint)agentIndex < (uint)_controllableAgents.Count &&
-            _controllableAgents[agentIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {agentIndex} is already registered.");
-        }
+        ValidateAgentRegistration(agentIndex, controllable);
 
         TrackSpawnedEntity(entity);
         while (_allAgents.Count <= agentIndex)
@@ -164,6 +163,27 @@ public sealed class MassNavigationAgentState
         _controllableAgentSlotCount++;
     }
 
+    public void ValidateAgentRegistration(int agentIndex, bool controllable)
+    {
+        if (agentIndex < 0)
+        {
+            throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
+        }
+
+        if ((uint)agentIndex < (uint)_allAgents.Count &&
+            _allAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {agentIndex} is already registered.");
+        }
+
+        if (controllable &&
+            (uint)agentIndex < (uint)_controllableAgents.Count &&
+            _controllableAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {agentIndex} is already registered.");
+        }
+    }
+
     private static void RemoveMassNavigationRuntimeBindings(World world, Entity entity)
     {
         if (world.Has<MassNavigationAgentIndex>(entity))
@@ -179,6 +199,16 @@ public sealed class MassNavigationAgentState
         if (world.Has<MassNavigationBlockerProfile>(entity))
         {
             world.Remove<MassNavigationBlockerProfile>(entity);
+        }
+
+        if (world.Has<MovePlanExecutionIntent>(entity))
+        {
+            world.Remove<MovePlanExecutionIntent>(entity);
+        }
+
+        if (world.Has<MovePlanExecutionResult>(entity))
+        {
+            world.Remove<MovePlanExecutionResult>(entity);
         }
     }
 
