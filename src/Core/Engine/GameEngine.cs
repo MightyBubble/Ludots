@@ -3335,8 +3335,6 @@ namespace Ludots.Core.Engine
                     capabilities);
             }
 
-            // Clear GAS presentation events AFTER all presentation systems have consumed them
-            _gasPresentationEvents?.Clear();
         }
 
         private void BeginPresentationCameraSnapshotScope()

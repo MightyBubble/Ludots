@@ -34,6 +34,34 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void GasPresentationEvents_AreClearedOnlyByClearPresentationFlagsProjection()
+        {
+            var repoRoot = FindRepoRoot();
+            string engineSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Engine",
+                "GameEngine.cs"));
+            string projectionSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Systems",
+                "GameplayPresentationProjectionSystem.cs"));
+
+            Assert.That(
+                engineSource,
+                Does.Not.Contain("_gasPresentationEvents?.Clear("),
+                "The visual loop must not clear GAS events before a sliced simulation reaches ClearPresentationFlags.");
+            Assert.That(
+                projectionSource,
+                Does.Contain("_gasEvents.Clear();"),
+                "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+        }
+
+        [Test]
         public void Codebase_MustNotContainCompatibilityOrFallbackMarkers()
         {
             var repoRoot = FindRepoRoot();

@@ -529,6 +529,89 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void EffectLifetime_IncompleteSlice_DoesNotExposeCleanupBeforeCommit()
+        {
+            const int grantedTagId = 42;
+            const int templateId = 74;
+
+            using var world = World.Create();
+            var dirtyEntities = new DirtyEntityQueue(capacity: 4);
+            var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry());
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 4);
+            Entity source = world.Create();
+            Entity target = world.Create(
+                new ActiveEffectContainer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+            Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);
+            Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);
+            dirtyEntities.TryDequeue(out _);
+            world.Get<DirtyFlags>(target).ClearTagDirty(grantedTagId);
+            world.Get<DirtyFlags>(target).DeferredTriggerQueued = 0;
+
+            var grantedTags = new EffectGrantedTags();
+            Assert.That(grantedTags.Add(new TagContribution
+            {
+                TagId = grantedTagId,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 1,
+            }), Is.True);
+
+            ref ActiveEffectContainer container = ref world.Get<ActiveEffectContainer>(target);
+            for (int i = 0; i < 2; i++)
+            {
+                Entity effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: i + 1,
+                    source,
+                    target,
+                    durationTicks: 0,
+                    lifetimeKind: EffectLifetimeKind.After);
+                world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+                world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+                world.Add(effect, grantedTags);
+                Assert.That(container.Add(effect), Is.True);
+            }
+
+            var system = new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 4,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                tagOps: tagOps,
+                presentationEvents: presentationEvents)
+            {
+                MaxWorkUnitsPerSlice = 1,
+            };
+
+            Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+
+            Assert.That(presentationEvents.Count, Is.Zero);
+            Assert.That(world.CountEntities(in EffectQuery), Is.EqualTo(2));
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(2));
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(grantedTagId), Is.True);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(grantedTagId), Is.EqualTo(2));
+            Assert.That(dirtyEntities.Count, Is.Zero);
+
+            int slices = 1;
+            while (!system.UpdateSlice(0f, int.MaxValue))
+            {
+                slices++;
+                Assert.That(slices, Is.LessThan(16));
+            }
+
+            Assert.That(slices, Is.GreaterThan(1));
+            Assert.That(world.CountEntities(in EffectQuery), Is.Zero);
+            Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+            Assert.That(world.Get<GameplayTagContainer>(target).HasTag(grantedTagId), Is.False);
+            Assert.That(world.Get<TagCountContainer>(target).GetCount(grantedTagId), Is.Zero);
+            Assert.That(dirtyEntities.Count, Is.EqualTo(1));
+            Assert.That(CountGasPresentationEvents(presentationEvents, GasPresentationEventKind.EffectExpired), Is.EqualTo(2));
+        }
+
+        [Test]
         public void EffectLifetime_ResetSlice_AfterExternalCommit_CompletesCommittedCleanup()
         {
             using var world = World.Create();
@@ -897,6 +980,22 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
             };
+        }
+
+        private static int CountGasPresentationEvents(
+            GasPresentationEventBuffer events,
+            GasPresentationEventKind kind)
+        {
+            int count = 0;
+            ReadOnlySpan<GasPresentationEvent> span = events.Events;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i].Kind == kind)
+                {
+                    count++;
+                }
+            }
+            return count;
         }
     }
 }

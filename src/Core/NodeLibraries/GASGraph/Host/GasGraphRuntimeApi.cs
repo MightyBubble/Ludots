@@ -552,6 +552,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool HasTag(Entity entity, int tagId)
         {
+            if (_effectSideEffects?.TryHasTag(entity, tagId, out bool stagedHasTag) == true)
+            {
+                return stagedHasTag;
+            }
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
@@ -657,11 +661,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public int FilterTagAny(Span<Entity> entities, int count, int tagId)
         {
+            if (_effectSideEffects != null)
+            {
+                int write = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    Entity entity = entities[i];
+                    if (HasTag(entity, tagId))
+                    {
+                        entities[write++] = entity;
+                    }
+                }
+                return write;
+            }
+
             return RequireEntityQueries().FilterTagAny(entities, count, tagId);
         }
 
         public int FilterTagNone(Span<Entity> entities, int count, int tagId)
         {
+            if (_effectSideEffects != null)
+            {
+                int write = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    Entity entity = entities[i];
+                    if (!HasTag(entity, tagId))
+                    {
+                        entities[write++] = entity;
+                    }
+                }
+                return write;
+            }
+
             return RequireEntityQueries().FilterTagNone(entities, count, tagId);
         }
 

@@ -38,6 +38,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly RuntimeEntitySpawnRequest[] _stagedSpawnRequests;
     private readonly GasPresentationEvent[] _stagedPresentationEvents;
     private readonly GameplayEvent[] _stagedGameplayEvents;
+    private readonly Entity[] _gameplayEffectEntities;
+    private readonly GameplayEffect[] _gameplayEffectOriginalValues;
+    private readonly GameplayEffect[] _gameplayEffectValues;
+    private readonly Entity[] _tagEntities;
+    private readonly GameplayTagContainer[] _tagOriginalValues;
+    private readonly GameplayTagContainer[] _tagValues;
+    private readonly TagCountContainer[] _tagCountOriginalValues;
+    private readonly TagCountContainer[] _tagCountValues;
+    private readonly DirtyFlags[] _tagDirtyOriginalValues;
+    private readonly DirtyFlags[] _tagDirtyValues;
+    private readonly Entity[] _activeEffectEntities;
+    private readonly ActiveEffectContainer[] _activeEffectOriginalValues;
+    private readonly ActiveEffectContainer[] _activeEffectValues;
+    private readonly Entity[] _destroyedEffects;
     private readonly Entity[] _blackboardFloatEntities;
     private readonly BlackboardFloatBuffer[] _blackboardFloatOriginalValues;
     private readonly BlackboardFloatBuffer[] _blackboardFloatValues;
@@ -66,6 +80,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int _spawnRequestCount;
     private int _presentationEventCount;
     private int _gameplayEventCount;
+    private int _gameplayEffectCount;
+    private int _tagEntityCount;
+    private int _activeEffectCount;
+    private int _destroyedEffectCount;
     private int _blackboardFloatCount;
     private int _blackboardIntCount;
     private int _blackboardEntityCount;
@@ -114,6 +132,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _stagedSpawnRequests = new RuntimeEntitySpawnRequest[spawnRequests?.Capacity ?? 1];
         _stagedPresentationEvents = new GasPresentationEvent[presentationEvents?.Capacity ?? 1];
         _stagedGameplayEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
+        _gameplayEffectEntities = new Entity[attributeEntityCapacity];
+        _gameplayEffectOriginalValues = new GameplayEffect[attributeEntityCapacity];
+        _gameplayEffectValues = new GameplayEffect[attributeEntityCapacity];
+        _tagEntities = new Entity[attributeEntityCapacity];
+        _tagOriginalValues = new GameplayTagContainer[attributeEntityCapacity];
+        _tagValues = new GameplayTagContainer[attributeEntityCapacity];
+        _tagCountOriginalValues = new TagCountContainer[attributeEntityCapacity];
+        _tagCountValues = new TagCountContainer[attributeEntityCapacity];
+        _tagDirtyOriginalValues = new DirtyFlags[attributeEntityCapacity];
+        _tagDirtyValues = new DirtyFlags[attributeEntityCapacity];
+        _activeEffectEntities = new Entity[attributeEntityCapacity];
+        _activeEffectOriginalValues = new ActiveEffectContainer[attributeEntityCapacity];
+        _activeEffectValues = new ActiveEffectContainer[attributeEntityCapacity];
+        _destroyedEffects = new Entity[attributeEntityCapacity];
         _blackboardFloatEntities = new Entity[attributeEntityCapacity];
         _blackboardFloatOriginalValues = new BlackboardFloatBuffer[attributeEntityCapacity];
         _blackboardFloatValues = new BlackboardFloatBuffer[attributeEntityCapacity];
@@ -154,6 +186,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _spawnRequestCount = 0;
         _presentationEventCount = 0;
         _gameplayEventCount = 0;
+        _gameplayEffectCount = 0;
+        _tagEntityCount = 0;
+        _activeEffectCount = 0;
+        _destroyedEffectCount = 0;
         _blackboardFloatCount = 0;
         _blackboardIntCount = 0;
         _blackboardEntityCount = 0;
@@ -316,6 +352,124 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _stagedGameplayEvents[_gameplayEventCount++] = gameplayEvent;
     }
 
+    public void StageGameplayEffectState(Entity entity, in GameplayEffect effect)
+    {
+        int index = GetOrAddGameplayEffectEntity(entity);
+        _gameplayEffectValues[index] = effect;
+    }
+
+    public bool TryGetGameplayEffectState(Entity entity, out GameplayEffect effect)
+    {
+        int index = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
+        if (index >= 0)
+        {
+            effect = _gameplayEffectValues[index];
+            return true;
+        }
+
+        effect = default;
+        return false;
+    }
+
+    public bool TryHasTag(Entity entity, int tagId, out bool hasTag)
+    {
+        int index = FindEntity(_tagEntities, _tagEntityCount, entity);
+        if (index < 0)
+        {
+            hasTag = false;
+            return false;
+        }
+        if (_tagOps == null)
+        {
+            throw new InvalidOperationException(TagOps.MissingTagOpsError);
+        }
+
+        hasTag = _tagOps.HasTag(ref _tagValues[index], tagId, TagSense.Effective);
+        return true;
+    }
+
+    public void StageGrantedTagRevoke(Entity target, in EffectGrantedTags grantedTags, int stackCount)
+    {
+        RequireActive();
+        if (!_world.IsAlive(target) || grantedTags.Count <= 0)
+        {
+            return;
+        }
+        if (_tagOps == null)
+        {
+            throw new InvalidOperationException(TagOps.MissingTagOpsError);
+        }
+
+        int index = GetOrAddTagEntity(target);
+        bool changed = false;
+        for (int grantIndex = 0; grantIndex < grantedTags.Count; grantIndex++)
+        {
+            TagContribution contribution = grantedTags.Get(grantIndex);
+            int amount = contribution.Compute(stackCount);
+            for (int repeat = 0; repeat < amount; repeat++)
+            {
+                changed |= _tagOps.RemoveTag(
+                    ref _tagValues[index],
+                    ref _tagCountValues[index],
+                    contribution.TagId,
+                    ref _tagDirtyValues[index]);
+            }
+        }
+
+        if (changed)
+        {
+            StageDirtyEntity(target);
+        }
+    }
+
+    public bool StageActiveEffectRemoval(Entity target, Entity effect)
+    {
+        RequireActive();
+        if (!_world.IsAlive(target) || !_world.Has<ActiveEffectContainer>(target))
+        {
+            return false;
+        }
+
+        int index = GetOrAddActiveEffectEntity(target);
+        int countBefore = _activeEffectValues[index].Count;
+        _activeEffectValues[index].Remove(effect);
+        return _activeEffectValues[index].Count != countBefore;
+    }
+
+    public bool TryGetActiveEffectContainer(Entity target, out ActiveEffectContainer container)
+    {
+        int index = FindEntity(_activeEffectEntities, _activeEffectCount, target);
+        if (index >= 0)
+        {
+            container = _activeEffectValues[index];
+            return true;
+        }
+        if (_world.IsAlive(target) && _world.Has<ActiveEffectContainer>(target))
+        {
+            container = _world.Get<ActiveEffectContainer>(target);
+            return true;
+        }
+
+        container = default;
+        return false;
+    }
+
+    public void StageEffectDestroy(Entity effect)
+    {
+        RequireActive();
+        if (!_world.IsAlive(effect) || Contains(_destroyedEffects, _destroyedEffectCount, effect))
+        {
+            return;
+        }
+        if (_destroyedEffectCount >= _destroyedEffects.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=DestroyedEffects, staged={_destroyedEffectCount + 1}, capacity={_destroyedEffects.Length}.");
+        }
+
+        _destroyedEffects[_destroyedEffectCount++] = effect;
+    }
+
     public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
     {
         int index = FindEntity(_blackboardFloatEntities, _blackboardFloatCount, entity);
@@ -379,12 +533,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageEffectCancellation(Entity target, int templateId)
     {
         RequireActive();
-        if (!_world.IsAlive(target) || templateId <= 0 || !_world.Has<ActiveEffectContainer>(target))
+        if (!_world.IsAlive(target) || templateId <= 0 || !TryGetActiveEffectContainer(target, out ActiveEffectContainer container))
         {
             return;
         }
 
-        ActiveEffectContainer container = _world.Get<ActiveEffectContainer>(target);
         for (int i = 0; i < container.Count; i++)
         {
             Entity effect = container.GetEntity(i);
@@ -403,7 +556,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             }
 
             _cancelledEffects[_cancelledEffectCount++] = effect;
-            if (_world.Get<GameplayEffect>(effect).AggregatesModifiers)
+            GameplayEffect gameplayEffect = TryGetGameplayEffectState(effect, out GameplayEffect stagedEffect)
+                ? stagedEffect
+                : _world.Get<GameplayEffect>(effect);
+            if (gameplayEffect.AggregatesModifiers)
             {
                 StageAggregateDirty(target);
             }
@@ -548,6 +704,21 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                     }
                 }
             }
+            for (int i = 0; i < _tagEntityCount; i++)
+            {
+                Entity entity = _tagEntities[i];
+                _world.Get<GameplayTagContainer>(entity) = _tagValues[i];
+                _world.Get<TagCountContainer>(entity) = _tagCountValues[i];
+                _world.Get<DirtyFlags>(entity) = _tagDirtyValues[i];
+            }
+            for (int i = 0; i < _activeEffectCount; i++)
+            {
+                _world.Get<ActiveEffectContainer>(_activeEffectEntities[i]) = _activeEffectValues[i];
+            }
+            for (int i = 0; i < _gameplayEffectCount; i++)
+            {
+                _world.Get<GameplayEffect>(_gameplayEffectEntities[i]) = _gameplayEffectValues[i];
+            }
 
             for (int i = 0; i < _blackboardFloatCount; i++)
             {
@@ -595,6 +766,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             for (int i = 0; i < _gameplayEventCount; i++)
             {
                 _gameplayEventBus!.Publish(_stagedGameplayEvents[i]);
+            }
+            for (int i = 0; i < _destroyedEffectCount; i++)
+            {
+                Entity effect = _destroyedEffects[i];
+                if (_world.IsAlive(effect))
+                {
+                    _world.Destroy(effect);
+                }
             }
 
             End();
@@ -659,6 +838,90 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _attributeValues[index] = _attributeOriginalValues[index];
         _attributeChangedMasks[index] = 0UL;
         StageDirtyEntity(entity);
+        return index;
+    }
+
+    private int GetOrAddGameplayEffectEntity(Entity entity)
+    {
+        RequireActive();
+        int existing = FindEntity(_gameplayEffectEntities, _gameplayEffectCount, entity);
+        if (existing >= 0)
+        {
+            return existing;
+        }
+        if (!_world.IsAlive(entity) || !_world.Has<GameplayEffect>(entity))
+        {
+            throw new InvalidOperationException(
+                $"GAS.EFFECT_TRANSACTION.ERR.GameplayEffectInvalid: entity={entity.Id}.");
+        }
+        if (_gameplayEffectCount >= _gameplayEffectEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=GameplayEffects, staged={_gameplayEffectCount + 1}, capacity={_gameplayEffectEntities.Length}.");
+        }
+
+        int index = _gameplayEffectCount++;
+        _gameplayEffectEntities[index] = entity;
+        _gameplayEffectOriginalValues[index] = _world.Get<GameplayEffect>(entity);
+        _gameplayEffectValues[index] = _gameplayEffectOriginalValues[index];
+        return index;
+    }
+
+    private int GetOrAddTagEntity(Entity entity)
+    {
+        RequireActive();
+        int existing = FindEntity(_tagEntities, _tagEntityCount, entity);
+        if (existing >= 0)
+        {
+            return existing;
+        }
+        if (!_world.IsAlive(entity) ||
+            !_world.Has<GameplayTagContainer>(entity) ||
+            !_world.Has<TagCountContainer>(entity) ||
+            !_world.Has<DirtyFlags>(entity))
+        {
+            throw new InvalidOperationException(TagOps.MissingDirtyFlagsError);
+        }
+        if (_tagEntityCount >= _tagEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=TagEntities, staged={_tagEntityCount + 1}, capacity={_tagEntities.Length}.");
+        }
+
+        int index = _tagEntityCount++;
+        _tagEntities[index] = entity;
+        _tagOriginalValues[index] = _world.Get<GameplayTagContainer>(entity);
+        _tagValues[index] = _tagOriginalValues[index];
+        _tagCountOriginalValues[index] = _world.Get<TagCountContainer>(entity);
+        _tagCountValues[index] = _tagCountOriginalValues[index];
+        _tagDirtyOriginalValues[index] = _world.Get<DirtyFlags>(entity);
+        _tagDirtyValues[index] = _tagDirtyOriginalValues[index];
+        return index;
+    }
+
+    private int GetOrAddActiveEffectEntity(Entity entity)
+    {
+        RequireActive();
+        int existing = FindEntity(_activeEffectEntities, _activeEffectCount, entity);
+        if (existing >= 0)
+        {
+            return existing;
+        }
+        if (!_world.IsAlive(entity) || !_world.Has<ActiveEffectContainer>(entity))
+        {
+            throw new InvalidOperationException(
+                $"GAS.EFFECT_TRANSACTION.ERR.ActiveEffectContainerInvalid: entity={entity.Id}.");
+        }
+        if (_activeEffectCount >= _activeEffectEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=ActiveEffectContainers, staged={_activeEffectCount + 1}, capacity={_activeEffectEntities.Length}.");
+        }
+
+        int index = _activeEffectCount++;
+        _activeEffectEntities[index] = entity;
+        _activeEffectOriginalValues[index] = _world.Get<ActiveEffectContainer>(entity);
+        _activeEffectValues[index] = _activeEffectOriginalValues[index];
         return index;
     }
 
@@ -810,6 +1073,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             throw new InvalidOperationException(
                 $"{CapacityExceededError}: destination=GasPresentationEventBuffer, staged={_presentationEventCount}, available={_presentationEvents?.AvailableCapacity ?? 0}.");
         }
+        ValidateEntities<GameplayEffect>(_gameplayEffectEntities, _gameplayEffectCount);
+        ValidateTagEntities();
+        ValidateEntities<ActiveEffectContainer>(_activeEffectEntities, _activeEffectCount);
         if (_spawnRequestCount > 0 &&
             (_spawnRequests == null || _spawnRequestCount > _spawnRequests.FreeCapacity))
         {
@@ -833,6 +1099,14 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.CancelTargetInvalid");
             }
         }
+        for (int i = 0; i < _destroyedEffectCount; i++)
+        {
+            if (!_world.IsAlive(_destroyedEffects[i]))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_TRANSACTION.ERR.DestroyedEffectInvalid: entity={_destroyedEffects[i].Id}.");
+            }
+        }
         for (int i = 0; i < _aggregateDirtyCount; i++)
         {
             if (!_world.IsAlive(_aggregateDirtyEntities[i]))
@@ -842,6 +1116,22 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         ValidateListenerRegistrations();
         ValidateListenerRemovals();
+    }
+
+    private void ValidateTagEntities()
+    {
+        for (int i = 0; i < _tagEntityCount; i++)
+        {
+            Entity entity = _tagEntities[i];
+            if (!_world.IsAlive(entity) ||
+                !_world.Has<GameplayTagContainer>(entity) ||
+                !_world.Has<TagCountContainer>(entity) ||
+                !_world.Has<DirtyFlags>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_TRANSACTION.ERR.TagEntityInvalid: entity={entity.Id}.");
+            }
+        }
     }
 
     private void ValidateListenerRemovals()
@@ -1114,6 +1404,35 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _world.Get<DirtyFlags>(entity) = _dirtyOriginalValues[i];
             }
         }
+        for (int i = 0; i < _tagEntityCount; i++)
+        {
+            Entity entity = _tagEntities[i];
+            if (_world.IsAlive(entity) &&
+                _world.Has<GameplayTagContainer>(entity) &&
+                _world.Has<TagCountContainer>(entity) &&
+                _world.Has<DirtyFlags>(entity))
+            {
+                _world.Get<GameplayTagContainer>(entity) = _tagOriginalValues[i];
+                _world.Get<TagCountContainer>(entity) = _tagCountOriginalValues[i];
+                _world.Get<DirtyFlags>(entity) = _tagDirtyOriginalValues[i];
+            }
+        }
+        for (int i = 0; i < _activeEffectCount; i++)
+        {
+            Entity entity = _activeEffectEntities[i];
+            if (_world.IsAlive(entity) && _world.Has<ActiveEffectContainer>(entity))
+            {
+                _world.Get<ActiveEffectContainer>(entity) = _activeEffectOriginalValues[i];
+            }
+        }
+        for (int i = 0; i < _gameplayEffectCount; i++)
+        {
+            Entity entity = _gameplayEffectEntities[i];
+            if (_world.IsAlive(entity) && _world.Has<GameplayEffect>(entity))
+            {
+                _world.Get<GameplayEffect>(entity) = _gameplayEffectOriginalValues[i];
+            }
+        }
         for (int i = 0; i < _blackboardFloatCount; i++)
         {
             _world.Get<BlackboardFloatBuffer>(_blackboardFloatEntities[i]) = _blackboardFloatOriginalValues[i];
@@ -1222,6 +1541,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _spawnRequestCount = 0;
         _presentationEventCount = 0;
         _gameplayEventCount = 0;
+        _gameplayEffectCount = 0;
+        _tagEntityCount = 0;
+        _activeEffectCount = 0;
+        _destroyedEffectCount = 0;
         _blackboardFloatCount = 0;
         _blackboardIntCount = 0;
         _blackboardEntityCount = 0;
