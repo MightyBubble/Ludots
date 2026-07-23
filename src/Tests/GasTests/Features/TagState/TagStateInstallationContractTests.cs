@@ -17,8 +17,21 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Features.TagState;
 
 [TestFixture]
+[NonParallelizable]
 public sealed class TagStateInstallationContractTests
 {
+    [SetUp]
+    public void SetUp()
+    {
+        AbilityFormSetIdRegistry.Clear();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        AbilityFormSetIdRegistry.Clear();
+    }
+
     [Test]
     public void TagStateInstaller_InstallsCompleteStateAtomically()
     {

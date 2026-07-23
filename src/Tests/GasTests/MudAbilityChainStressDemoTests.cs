@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -16,13 +17,16 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudAbilityChainStressDemoTests
     {
+        private const string ChainHealthAttributeName = "tests.mud.ability-chain.health";
+        private const string StressHealthAttributeName = "tests.mud.ability-stress.health";
+
         [Test]
         public void MudCombat_AbilityRelease_ChainAndDot_WritesLogFile()
         {
             var world = World.Create();
             try
             {
-                int attrHealth = 0;
+                int attrHealth = ResolveAttributeId(ChainHealthAttributeName);
 
                 int tagFireboltHit = 10;
                 int tagBurning = 11;
@@ -133,12 +137,12 @@ namespace Ludots.Tests.GAS
                 abilityDefs.RegisterFromEntity(world, abilityHeal, 6002);
                 playerAbilities.AddAbility(6001);
                 playerAbilities.AddAbility(6002);
-                world.Get<AttributeBuffer>(player).SetCurrent(attrHealth, 100f);
+                world.Get<AttributeBuffer>(player).SetBase(attrHealth, 100f);
 
                 var goblinA = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var goblinB = world.Create(new AttributeBuffer(), new DirtyFlags());
-                world.Get<AttributeBuffer>(goblinA).SetCurrent(attrHealth, 100f);
-                world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
+                world.Get<AttributeBuffer>(goblinA).SetBase(attrHealth, 100f);
+                world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
@@ -224,7 +228,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                int attrHealth = 0;
+                int attrHealth = ResolveAttributeId(StressHealthAttributeName);
 
                 int tagVolleyHit = 20;
                 int tagBurning = 21;
@@ -307,7 +311,7 @@ namespace Ludots.Tests.GAS
                 {
                     targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
-                    attr.SetCurrent(attrHealth, 1000f);
+                    attr.SetBase(attrHealth, 1000f);
                 }
 
                 var player = world.Create(new AbilityStateBuffer());
@@ -412,6 +416,12 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static int ResolveAttributeId(string name)
+        {
+            int id = AttributeRegistry.GetId(name);
+            return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
         }
     }
 }

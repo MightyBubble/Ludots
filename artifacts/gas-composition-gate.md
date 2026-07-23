@@ -693,3 +693,59 @@ Behavior remains in the existing effect template and phase graph assets. No JSON
 ### 8. Next variant test
 
 A new Mod lifetime variant changes an effect template or phase graph connection and automatically uses the same lifetime transaction. It does not add a Core enum, preset switch, alternate transaction, or compatibility path.
+
+---
+
+## GAS Composition Gate - PR #660 Self Regression Test Isolation
+
+- **Task / Issue**: PR #660 self-regression cleanup after full GasTests / merge-base TRX comparison
+- **Date**: 2026-07-23
+- **Agent / Author**: Codex supervising Cursor
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（收紧现有 GAS 测试的 registry / attribute SSOT 使用；不新增 gameplay 变体）
+
+结论: PASS
+
+一句话理由: 修改只让 PR 新增/改过的 GAS 测试显式隔离全局 id registry，并通过 `AttributeRegistry` 使用测试专属属性 id；没有新增 graph op、effect preset、profile 字段、loader、registry 或平行运行时。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Ability form set 测试隔离 | N/A | `TagStateInstallationContractTests` fixture setup/teardown |
+| Mud demo 测试属性 SSOT | N/A | `AttributeRegistry` + `AttributeBuffer.SetBase` |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing Ability / Effect phase test systems unchanged
+- Resolvers / Registries: existing `AbilityFormSetIdRegistry`, `AttributeRegistry`
+- Existing presets / graphs: existing test graph instructions unchanged except attribute id source
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A；本次不改生产 mutation transaction。测试只消除跨用例全局状态污染，避免 full suite 中 registry freeze 和 attribute constraints 影响后续用例。
+
+### 6. Config SSOT
+
+行为配置落在: existing test graph instructions and registry ids.
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn/effect/order 平行的运行时管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback 或兼容旁路
+- [x] 未新增 registry、preset 或 schema
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤。测试若需要属性或 form set id，继续从正式 registry 取 id，不硬编码共享全局槽位。
