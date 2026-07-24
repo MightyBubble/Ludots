@@ -93,11 +93,15 @@ namespace Ludots.Core.Networking.Runtime
     }
 
     /// <summary>
-    /// Copies the current authoritative network-entity handle set into caller-owned fixed storage.
+    /// Copies one seat's strictly slot-ordered authoritative interest set into caller-owned fixed storage.
+    /// The port selects spatial or gameplay interest; Core remains the sole owner of disclosure and baseline semantics.
     /// </summary>
-    public interface IAuthoritativeReplicationInputPort
+    public interface IAuthoritativeReplicationInterestPort
     {
-        bool TryCopyActiveHandles(Span<NetworkEntityHandle> destination, out int count);
+        bool TryCopyInterest(
+            in SessionSeatBinding seat,
+            Span<NetworkEntityHandle> destination,
+            out int count);
     }
 
     public enum ClientCredentialLoadStatus : byte
@@ -143,6 +147,8 @@ namespace Ludots.Core.Networking.Runtime
 
     public interface IClientReplicationBridgeFactory
     {
+        int GlobalEntityCapacity { get; }
+
         ClientWorldReplicationBridge Create(ulong sessionEpoch);
     }
 
@@ -171,26 +177,33 @@ namespace Ludots.Core.Networking.Runtime
         public AuthoritativeReplicationSeatRuntime(
             AuthoritativeWorldReplicationBridge bridge,
             AuthoritativeReplicationChannel channel,
-            ReplicationDisclosureChangeLog disclosureLog,
             ReplicationProjectionBuffer projection,
             ReplicationPacketBuffer packet)
         {
             Bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
             Channel = channel ?? throw new ArgumentNullException(nameof(channel));
-            DisclosureLog = disclosureLog ?? throw new ArgumentNullException(nameof(disclosureLog));
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             Packet = packet ?? throw new ArgumentNullException(nameof(packet));
 
-            int capacity = bridge.EntityCapacity;
+            int capacity = bridge.ReplicationEntityCapacityPerSeat;
             if (projection.EntityCapacity != capacity || packet.EntityCapacity != capacity)
             {
                 throw new ArgumentException("Replication seat capacities must match its world bridge.");
+            }
+
+            if (channel.ReplicationEntityCapacityPerSeat != capacity)
+            {
+                throw new ArgumentException("Replication channel capacity must match its world bridge.");
+            }
+
+            if (channel.DisclosureChangeLogCapacity < packet.DisclosureCapacity)
+            {
+                throw new ArgumentException("Replication disclosure log must hold one maximum-area transition.");
             }
         }
 
         public AuthoritativeWorldReplicationBridge Bridge { get; }
         public AuthoritativeReplicationChannel Channel { get; }
-        public ReplicationDisclosureChangeLog DisclosureLog { get; }
         public ReplicationProjectionBuffer Projection { get; }
         public ReplicationPacketBuffer Packet { get; }
     }

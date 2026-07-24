@@ -97,6 +97,13 @@ namespace Ludots.Core.Networking.Runtime
             _contentFingerprint = contentFingerprint;
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _replicationFactory = replicationFactory ?? throw new ArgumentNullException(nameof(replicationFactory));
+            if (_replicationFactory.GlobalEntityCapacity != capacity.GlobalEntityCapacity)
+            {
+                throw new ArgumentException(
+                    "Client replication factory capacity must match the global network entity table.",
+                    nameof(replicationFactory));
+            }
+
             _admissions = admissions ?? throw new ArgumentNullException(nameof(admissions));
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
             _commandEncoder = new CommandFragmentEncoder(
@@ -106,7 +113,7 @@ namespace Ludots.Core.Networking.Runtime
             _snapshotReassembler = new SnapshotFragmentReassembler(
                 capacity.MaxSnapshotBytes,
                 capacity.MaxSnapshotFragments);
-            _replicationPacket = new ReplicationPacketBuffer(capacity.EntityCapacity);
+            _replicationPacket = new ReplicationPacketBuffer(capacity.ReplicationEntityCapacityPerSeat);
             _outbound = new FixedClientDatagramSendQueue(capacity.OutboundQueueCapacity, capacity.MaxDatagramPayloadBytes);
             _receiveBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.RequestSizeInBytes)];
@@ -400,8 +407,15 @@ namespace Ludots.Core.Networking.Runtime
 
             if (_replicationBridge == null)
             {
-                _replicationBridge = _replicationFactory.Create(response.SessionEpoch.Value) ??
+                ClientWorldReplicationBridge bridge = _replicationFactory.Create(response.SessionEpoch.Value) ??
                     throw new InvalidOperationException("Client replication bridge factory returned null.");
+                if (bridge.EntityCapacity != _capacity.GlobalEntityCapacity)
+                {
+                    throw new InvalidOperationException(
+                        "Client replication bridge capacity differs from its factory and the global network entity table.");
+                }
+
+                _replicationBridge = bridge;
             }
             else if (_sessionEpoch != response.SessionEpoch)
             {

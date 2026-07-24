@@ -24,7 +24,7 @@ namespace Ludots.Tests.Architecture
             };
             var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 4);
             var channel = new AuthoritativeReplicationChannel(
-                entityCapacity: 4,
+                replicationEntityCapacityPerSeat: 4,
                 baselineCapacity: 2,
                 disclosureLog);
             var packet = new ReplicationPacketBuffer(entityCapacity: 4);
@@ -123,7 +123,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 10) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
-                entityCapacity: 2,
+                replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(capacity: 8));
             var packet = new ReplicationPacketBuffer(entityCapacity: 2);
@@ -148,7 +148,7 @@ namespace Ludots.Tests.Architecture
             var previouslyVisible = new NetworkEntityHandle(slot: 0, generation: 1);
             var neverDisclosed = new NetworkEntityHandle(slot: 1, generation: 1);
             var channel = new AuthoritativeReplicationChannel(
-                entityCapacity: 3,
+                replicationEntityCapacityPerSeat: 3,
                 baselineCapacity: 3,
                 new ReplicationDisclosureChangeLog(capacity: 8));
             var packet = new ReplicationPacketBuffer(entityCapacity: 3);
@@ -210,7 +210,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 10) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
-                entityCapacity: 2,
+                replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 3,
                 new ReplicationDisclosureChangeLog(capacity: 8));
             var full = new ReplicationPacketBuffer(entityCapacity: 2);
@@ -221,7 +221,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(channel.BuildDelta(7, 106, 3, 1, states, disclosures, laterDeltaFromOne), Is.EqualTo(ReplicationBuildResult.Success));
 
             var wrongEpochChannel = new AuthoritativeReplicationChannel(
-                entityCapacity: 2,
+                replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 1,
                 new ReplicationDisclosureChangeLog(capacity: 2));
             var wrongEpoch = new ReplicationPacketBuffer(entityCapacity: 2);
@@ -272,7 +272,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 1) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
-                entityCapacity: 1,
+                replicationEntityCapacityPerSeat: 1,
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(capacity: 1));
             var packet = new ReplicationPacketBuffer(entityCapacity: 1);

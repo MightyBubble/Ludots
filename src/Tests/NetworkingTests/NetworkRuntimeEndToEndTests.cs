@@ -42,12 +42,11 @@ public sealed class NetworkRuntimeEndToEndTests
             knowledge,
             player,
             projectorRegistry,
-            entityCapacity: 2);
+            replicationEntityCapacityPerSeat: 2);
         var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 32);
         var serverSeat = new AuthoritativeReplicationSeatRuntime(
             bridge,
-            new AuthoritativeReplicationChannel(entityCapacity: 2, baselineCapacity: 4, disclosureLog),
-            disclosureLog,
+            new AuthoritativeReplicationChannel(replicationEntityCapacityPerSeat: 2, baselineCapacity: 4, disclosureLog),
             new ReplicationProjectionBuffer(entityCapacity: 2),
             new ReplicationPacketBuffer(entityCapacity: 2));
 
@@ -56,7 +55,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var capacity = Capacity(simulationTickRateHz: 30, statePublishRateHz: 10);
         var transport = new InMemoryTransport(new ConnectionId(11));
         var observer = new RecordingObserver();
-        var input = new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle);
+        var interest = new FixedReplicationInterest(commandHarness.FirstHandle, commandHarness.SecondHandle);
         var sessions = new AuthoritativeSessionRegistry(
             seatCapacity: 1,
             new SessionEpoch(77),
@@ -73,7 +72,7 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Ingress,
             commandHarness.Results,
             new FixedControllerResolver(player),
-            input,
+            interest,
             new[] { serverSeat },
             observer);
 
@@ -116,6 +115,12 @@ public sealed class NetworkRuntimeEndToEndTests
         server.BeforeAuthoritativeTick(12);
         server.AfterAuthoritativeCommit(12);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(interest.CopyCalls, Is.EqualTo(1));
+            Assert.That(interest.LastSeat.Slot, Is.EqualTo(0));
+            Assert.That(interest.LastSeat.PlayerId.Value, Is.EqualTo(1));
+        });
         client.PumpTransport();
         server.PumpTransport();
 
@@ -233,6 +238,132 @@ public sealed class NetworkRuntimeEndToEndTests
     }
 
     [Test]
+    public void ServerResync_DiscardsUnacknowledgedAreaTransitionBeforeFullSnapshot()
+    {
+        using World serverWorld = World.Create();
+        using World clientWorld = World.Create();
+        Entity player = serverWorld.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity first = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+        Entity second = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 20));
+        var commandHarness = CreateCommandHarness(serverWorld, player, first, second);
+        commandHarness.Knowledge.Upsert(player, first, VisibleDisclosure());
+        commandHarness.Knowledge.Upsert(player, second, VisibleDisclosure());
+
+        var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
+        Assert.That(projectors.Register(1, new TestProjector()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+        projectors.Freeze();
+        var bridge = new AuthoritativeWorldReplicationBridge(
+            serverWorld,
+            commandHarness.Entities,
+            commandHarness.Knowledge,
+            player,
+            projectors,
+            replicationEntityCapacityPerSeat: 1);
+        var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 2);
+        var serverSeat = new AuthoritativeReplicationSeatRuntime(
+            bridge,
+            new AuthoritativeReplicationChannel(1, baselineCapacity: 4, disclosureLog),
+            new ReplicationProjectionBuffer(1),
+            new ReplicationPacketBuffer(1));
+        int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(1, 1, 2);
+        var capacity = new NetworkRuntimeCapacity(
+            simulationTickRateHz: 30,
+            statePublishRateHz: 30,
+            maxDatagramPayloadBytes: 128,
+            connectionCapacity: 1,
+            globalEntityCapacity: 2,
+            replicationEntityCapacityPerSeat: 1,
+            maxCommandEntries: 1,
+            maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(1),
+            maxCommandFragments: 4,
+            maxSnapshotBytes,
+            maxSnapshotFragments: 4,
+            outboundQueueCapacity: 16,
+            acknowledgementHistoryCapacity: 4,
+            controlChannel: new ChannelId(0),
+            commandChannel: new ChannelId(1),
+            stateChannel: new ChannelId(2));
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 7, 7 });
+        var protocol = new ProtocolVersion(1, 0);
+        var transport = new InMemoryTransport(new ConnectionId(17));
+        var observer = new RecordingObserver();
+        var interest = new FixedReplicationInterest(commandHarness.FirstHandle);
+        var sessions = new AuthoritativeSessionRegistry(
+            seatCapacity: 1,
+            new SessionEpoch(77),
+            protocol,
+            fingerprint,
+            reconnectWindowTicks: 2);
+        var server = new AuthoritativeServerNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            sessions,
+            commandHarness.Ingress,
+            commandHarness.Results,
+            new FixedControllerResolver(player),
+            interest,
+            new[] { serverSeat },
+            observer);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            new NetworkCommandAdmissionResultBuffer(4),
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        server.PumpTransport();
+        client.PumpTransport();
+        server.BeforeAuthoritativeTick(1);
+        server.AfterAuthoritativeCommit(1);
+        Assert.That(disclosureLog.Count, Is.EqualTo(1));
+        client.PumpTransport();
+        server.PumpTransport();
+        Assert.That(disclosureLog.Count, Is.Zero, "The initial Full acknowledgement must release its disclosure record.");
+
+        interest.Replace(commandHarness.SecondHandle);
+        server.BeforeAuthoritativeTick(2);
+        server.AfterAuthoritativeCommit(2);
+        Assert.That(disclosureLog.Count, Is.EqualTo(2), "A complete one-entity area transition must consume conceal plus reveal.");
+
+        var resync = new NetworkResyncRequired(
+            sessionEpoch: 77,
+            NetworkResyncReason.SnapshotGap,
+            latestCommittedTick: 1,
+            latestSnapshotId: 1);
+        Span<byte> resyncPayload = stackalloc byte[NetworkResyncRequired.SizeInBytes];
+        Assert.That(
+            SnapshotControlWireCodec.TryEncodeResyncRequired(in resync, resyncPayload, out int resyncBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueClientFrame(
+            capacity.ControlChannel,
+            NetworkWireKind.ResyncRequired,
+            resyncPayload[..resyncBytes]);
+        server.PumpTransport();
+        Assert.That(disclosureLog.Count, Is.Zero, "The Full boundary must discard disclosure history replaced by resync.");
+
+        server.BeforeAuthoritativeTick(3);
+        server.AfterAuthoritativeCommit(3);
+        Assert.Multiple(() =>
+        {
+            Assert.That(disclosureLog.Count, Is.EqualTo(1));
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(server.IsFaulted, Is.False);
+        });
+    }
+
+    [Test]
     public void ClientRuntime_ReportsWrongChannelAndDoesNotAcceptHandshake()
     {
         var capacity = Capacity();
@@ -275,6 +406,175 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(observer.Faults, Is.EqualTo(1));
             Assert.That(observer.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.UnexpectedChannel));
         });
+    }
+
+    [Test]
+    public void ClientRuntime_AppliesHighGlobalSlotThroughSmallPerSeatPacket()
+    {
+        const int globalEntityCapacity = 100_000;
+        const int perSeatCapacity = 1;
+        int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(
+            perSeatCapacity,
+            perSeatCapacity,
+            perSeatCapacity * 2);
+        var capacity = new NetworkRuntimeCapacity(
+            simulationTickRateHz: 30,
+            statePublishRateHz: 10,
+            maxDatagramPayloadBytes: 128,
+            connectionCapacity: 2,
+            globalEntityCapacity,
+            replicationEntityCapacityPerSeat: perSeatCapacity,
+            maxCommandEntries: 1,
+            maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(1),
+            maxCommandFragments: 4,
+            maxSnapshotBytes,
+            maxSnapshotFragments: 4,
+            outboundQueueCapacity: 16,
+            acknowledgementHistoryCapacity: 4,
+            controlChannel: new ChannelId(0),
+            commandChannel: new ChannelId(1),
+            stateChannel: new ChannelId(2));
+        var transport = new InMemoryTransport(new ConnectionId(31));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 4, 2 });
+        using World world = World.Create();
+        var factory = new ClientBridgeFactory(world, globalEntityCapacity);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            factory,
+            new NetworkCommandAdmissionResultBuffer(4),
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        var seat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
+            in seat,
+            new ReconnectToken(3, 9),
+            protocol,
+            fingerprint,
+            new SessionEpoch(7));
+        Span<byte> handshake = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in response, handshake, out int handshakeBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueServerFrame(
+            capacity.ControlChannel,
+            NetworkWireKind.SessionHandshakeResponse,
+            handshake[..handshakeBytes]);
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+
+        var highHandle = new NetworkEntityHandle(slot: 99_999, generation: 1);
+        var channel = new AuthoritativeReplicationChannel(
+            perSeatCapacity,
+            baselineCapacity: 2,
+            new ReplicationDisclosureChangeLog(perSeatCapacity * 2));
+        var packet = new ReplicationPacketBuffer(perSeatCapacity);
+        Assert.That(
+            channel.BuildFull(
+                sessionEpoch: 7,
+                tick: 30,
+                snapshotId: 1,
+                new[] { new ReplicatedEntityState(highHandle, 1, 1, new ReplicationStateVector(99_999, 0, 0, 0)) },
+                new[] { new ReplicationDisclosureInput(highHandle, KnowledgePresence.LiveVisible) },
+                packet),
+            Is.EqualTo(ReplicationBuildResult.Success));
+        byte[] snapshot = new byte[maxSnapshotBytes];
+        Assert.That(
+            ReplicationPacketWireCodec.TryEncode(packet, snapshot, out int snapshotBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+
+        var fragmentEncoder = new SnapshotFragmentEncoder(
+            capacity.MaxDatagramPayloadBytes,
+            capacity.MaxSnapshotBytes,
+            capacity.MaxSnapshotFragments);
+        Assert.That(
+            fragmentEncoder.TryGetFragmentCount(snapshotBytes, out ushort fragmentCount),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(fragmentCount, Is.GreaterThan(1));
+        byte[] fragment = new byte[capacity.MaxDatagramPayloadBytes];
+        for (ushort fragmentIndex = 0; fragmentIndex < fragmentCount; fragmentIndex++)
+        {
+            Assert.That(
+                fragmentEncoder.TryEncodeFragment(
+                    sessionEpoch: 7,
+                    snapshotId: 1,
+                    snapshot.AsSpan(0, snapshotBytes),
+                    fragmentIndex,
+                    fragmentCount,
+                    fragment,
+                    out int fragmentBytes),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            transport.EnqueueServerFrame(
+                capacity.ControlChannel,
+                NetworkWireKind.SnapshotFragment,
+                fragment.AsSpan(0, fragmentBytes));
+        }
+
+        client.PumpTransport();
+        Assert.That(
+            observer.Faults,
+            Is.Zero,
+            $"Last fault: {observer.LastFault.Code}, detail {observer.LastFault.Detail}.");
+        Assert.That(client.LastCommittedTick, Is.EqualTo(30));
+        Assert.That(factory.Bridge, Is.Not.Null);
+        Assert.That(factory.Bridge!.TryResolve(highHandle, out Entity mirrored), Is.True);
+        Assert.That(world.Get<TestAppliedState>(mirrored).Value, Is.EqualTo(99_999));
+    }
+
+    [Test]
+    public void ClientRuntime_RejectsFactoryThatCreatesDifferentGlobalCapacity()
+    {
+        var capacity = Capacity();
+        var transport = new InMemoryTransport(new ConnectionId(32));
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 5, 1 });
+        using World world = World.Create();
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(world, entityCapacity: 1, declaredGlobalEntityCapacity: 2),
+            new NetworkCommandAdmissionResultBuffer(4),
+            new RecordingObserver());
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        var seat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
+            in seat,
+            new ReconnectToken(3, 10),
+            protocol,
+            fingerprint,
+            new SessionEpoch(8));
+        Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in response, payload, out int payloadBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueServerFrame(
+            capacity.ControlChannel,
+            NetworkWireKind.SessionHandshakeResponse,
+            payload[..payloadBytes]);
+
+        Assert.That(
+            client.PumpTransport,
+            Throws.InvalidOperationException.With.Message.Contains("differs from its factory"));
     }
 
     [Test]
@@ -420,11 +720,12 @@ public sealed class NetworkRuntimeEndToEndTests
         statePublishRateHz,
         maxDatagramPayloadBytes: 128,
         connectionCapacity: 2,
-        entityCapacity: 2,
+        globalEntityCapacity: 2,
+        replicationEntityCapacityPerSeat: 2,
         maxCommandEntries: 2,
         maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(2),
         maxCommandFragments: 4,
-        maxSnapshotBytes: 256,
+        maxSnapshotBytes: ReplicationPacketWireCodec.GetPayloadSize(2, 2, 4),
         maxSnapshotFragments: 4,
         outboundQueueCapacity: 32,
         acknowledgementHistoryCapacity: 4,
@@ -565,14 +866,20 @@ public sealed class NetworkRuntimeEndToEndTests
     {
         private readonly World _world;
         private readonly int _entityCapacity;
+        private readonly int _declaredGlobalEntityCapacity;
 
-        public ClientBridgeFactory(World world, int entityCapacity)
+        public ClientBridgeFactory(
+            World world,
+            int entityCapacity,
+            int? declaredGlobalEntityCapacity = null)
         {
             _world = world;
             _entityCapacity = entityCapacity;
+            _declaredGlobalEntityCapacity = declaredGlobalEntityCapacity ?? entityCapacity;
         }
 
         public ClientWorldReplicationBridge? Bridge { get; private set; }
+        public int GlobalEntityCapacity => _declaredGlobalEntityCapacity;
 
         public ClientWorldReplicationBridge Create(ulong sessionEpoch)
         {
@@ -596,13 +903,23 @@ public sealed class NetworkRuntimeEndToEndTests
         }
     }
 
-    private sealed class FixedReplicationInput : IAuthoritativeReplicationInputPort
+    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestPort
     {
-        private readonly NetworkEntityHandle[] _handles;
-        public FixedReplicationInput(params NetworkEntityHandle[] handles) => _handles = handles;
+        private NetworkEntityHandle[] _handles;
+        public FixedReplicationInterest(params NetworkEntityHandle[] handles) => _handles = handles;
 
-        public bool TryCopyActiveHandles(Span<NetworkEntityHandle> destination, out int count)
+        public void Replace(params NetworkEntityHandle[] handles) => _handles = handles;
+
+        public int CopyCalls { get; private set; }
+        public SessionSeatBinding LastSeat { get; private set; }
+
+        public bool TryCopyInterest(
+            in SessionSeatBinding seat,
+            Span<NetworkEntityHandle> destination,
+            out int count)
         {
+            CopyCalls++;
+            LastSeat = seat;
             count = _handles.Length;
             if (destination.Length < count)
             {
@@ -748,6 +1065,13 @@ public sealed class NetworkRuntimeEndToEndTests
             byte[] framed = new byte[NetworkWireEnvelopeCodec.GetFramedLength(payload.Length)];
             Assert.That(NetworkWireEnvelopeCodec.TryEncode(kind, payload, framed, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
             _clientInbound.Enqueue(new Frame(channel, framed));
+        }
+
+        public void EnqueueClientFrame(ChannelId channel, NetworkWireKind kind, ReadOnlySpan<byte> payload)
+        {
+            byte[] framed = new byte[NetworkWireEnvelopeCodec.GetFramedLength(payload.Length)];
+            Assert.That(NetworkWireEnvelopeCodec.TryEncode(kind, payload, framed, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+            _serverInbound.Enqueue(new Frame(channel, framed));
         }
 
         public void Pump() { }

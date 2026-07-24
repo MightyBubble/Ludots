@@ -989,7 +989,7 @@ namespace Ludots.Core.Engine
             NetworkEntityTable? networkEntityTable = null;
             if (networkConfig != null)
             {
-                networkEntityTable = new NetworkEntityTable(networkConfig.NetworkEntityCapacity);
+                networkEntityTable = new NetworkEntityTable(networkConfig.GlobalNetworkEntityCapacity);
             }
             var orderRequestQueue = new OrderRequestQueue();
             var responseChainTelemetry = new ResponseChainTelemetryBuffer();
