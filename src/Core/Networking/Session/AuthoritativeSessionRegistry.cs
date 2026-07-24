@@ -94,8 +94,6 @@ namespace Ludots.Core.Networking.Session
             uint currentTick,
             out SessionHandshakeResponse response)
         {
-            ExpireAwaitingSeats(currentTick);
-
             if (!request.IsWellFormed)
             {
                 response = Reject(HandshakeRejectReason.MalformedRequest);
@@ -142,8 +140,6 @@ namespace Ludots.Core.Networking.Session
 
         public bool TryDisconnect(ConnectionId connectionId, uint currentTick)
         {
-            ExpireAwaitingSeats(currentTick);
-
             if (!FindConnectedSeat(connectionId.Value, out int seat))
             {
                 return false;
@@ -179,20 +175,42 @@ namespace Ludots.Core.Networking.Session
             return true;
         }
 
-        public void ExpireAwaitingSeats(uint currentTick)
+        /// <summary>
+        /// Atomically expires reconnect windows and returns every released seat so callers can
+        /// clear command, replication, and disclosure state before the slot is reused.
+        /// </summary>
+        public bool TryExpireAwaitingSeats(
+            uint currentTick,
+            Span<SessionSeatBinding> expiredSeats,
+            out int expiredCount)
         {
+            expiredCount = 0;
             for (int i = 0; i < _states.Length; i++)
             {
-                if (_states[i] != SeatState.AwaitingReconnect)
+                if (_states[i] == SeatState.AwaitingReconnect && IsReconnectExpired(i, currentTick))
+                {
+                    expiredCount++;
+                }
+            }
+
+            if (expiredSeats.Length < expiredCount)
+            {
+                return false;
+            }
+
+            int writeIndex = 0;
+            for (int i = 0; i < _states.Length; i++)
+            {
+                if (_states[i] != SeatState.AwaitingReconnect || !IsReconnectExpired(i, currentTick))
                 {
                     continue;
                 }
 
-                if (IsReconnectExpired(i, currentTick))
-                {
-                    ClearSeat(i);
-                }
+                expiredSeats[writeIndex++] = GetSeatBinding(i);
+                ClearSeat(i);
             }
+
+            return true;
         }
 
         private bool TryInitialJoin(ConnectionId connectionId, out SessionHandshakeResponse response)
@@ -230,13 +248,6 @@ namespace Ludots.Core.Networking.Session
                 _states[seat] != SeatState.AwaitingReconnect ||
                 IsReconnectExpired(seat, currentTick))
             {
-                if (FindSeatByToken(token, out int staleSeat) &&
-                    _states[staleSeat] == SeatState.AwaitingReconnect &&
-                    IsReconnectExpired(staleSeat, currentTick))
-                {
-                    ClearSeat(staleSeat);
-                }
-
                 response = Reject(HandshakeRejectReason.StaleOrInvalidReconnectToken);
                 return false;
             }

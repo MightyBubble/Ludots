@@ -206,6 +206,37 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
+    public void CommandAdmissionOutcome_AcceptsLatestNetworkResultAndRejectsUnknownResult()
+    {
+        var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 4,
+            targetTick: 50,
+            actorCount: 2,
+            orderId: 12,
+            admissionBatchId: 3,
+            OrderSubmitResult.NetworkCommandSchemaMismatch,
+            isReplay: false);
+
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(
+            CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.NetworkCommandSchemaMismatch));
+        Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.NetworkIntake));
+
+        buffer[CommandAdmissionWireCodec.SizeInBytes - 3] =
+            checked((byte)((byte)OrderSubmitResult.NetworkCommandSchemaMismatch + 1));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
+    }
+
+    [Test]
     public void ReplicationPacket_FullAndDelta_RoundTrip()
     {
         var visible = new NetworkEntityHandle(0, 1);

@@ -168,6 +168,11 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(registry.TryHandshake(new ConnectionId(1), JoinRequest(), currentTick: 1, out SessionHandshakeResponse join), Is.True);
         Assert.That(registry.TryDisconnect(new ConnectionId(1), currentTick: 2), Is.True);
 
+        Span<SessionSeatBinding> expiredSeats = stackalloc SessionSeatBinding[1];
+        Assert.That(registry.TryExpireAwaitingSeats(8, expiredSeats, out int expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+        Assert.That(expiredSeats[0], Is.EqualTo(join.Seat));
+
         Assert.That(
             registry.TryHandshake(
                 new ConnectionId(2),
@@ -244,6 +249,11 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(registry.TryHandshake(new ConnectionId(1), JoinRequest(), currentTick: uint.MaxValue - 2, out SessionHandshakeResponse join), Is.True);
         Assert.That(registry.TryDisconnect(new ConnectionId(1), currentTick: uint.MaxValue - 1), Is.True);
 
+        Span<SessionSeatBinding> expiredSeats = stackalloc SessionSeatBinding[1];
+        Assert.That(registry.TryExpireAwaitingSeats(5, expiredSeats, out int expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+        Assert.That(expiredSeats[0], Is.EqualTo(join.Seat));
+
         Assert.That(
             registry.TryHandshake(
                 new ConnectionId(2),
@@ -254,6 +264,26 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(expired.RejectReason, Is.EqualTo(HandshakeRejectReason.StaleOrInvalidReconnectToken));
 
         Assert.That(registry.TryHandshake(new ConnectionId(3), JoinRequest(), currentTick: 6, out _), Is.True);
+    }
+
+    [Test]
+    public void ExpirationOutputCapacity_IsAtomicAndReportsRequiredCount()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 5);
+        Assert.That(registry.TryHandshake(new ConnectionId(1), JoinRequest(), currentTick: 1, out SessionHandshakeResponse first), Is.True);
+        Assert.That(registry.TryHandshake(new ConnectionId(2), JoinRequest(), currentTick: 1, out SessionHandshakeResponse second), Is.True);
+        Assert.That(registry.TryDisconnect(new ConnectionId(1), currentTick: 2), Is.True);
+        Assert.That(registry.TryDisconnect(new ConnectionId(2), currentTick: 2), Is.True);
+
+        Span<SessionSeatBinding> tooSmall = stackalloc SessionSeatBinding[1];
+        Assert.That(registry.TryExpireAwaitingSeats(8, tooSmall, out int required), Is.False);
+        Assert.That(required, Is.EqualTo(2));
+
+        Span<SessionSeatBinding> released = stackalloc SessionSeatBinding[2];
+        Assert.That(registry.TryExpireAwaitingSeats(8, released, out int releasedCount), Is.True);
+        Assert.That(releasedCount, Is.EqualTo(2));
+        Assert.That(released[0], Is.EqualTo(first.Seat));
+        Assert.That(released[1], Is.EqualTo(second.Seat));
     }
 
     [Test]

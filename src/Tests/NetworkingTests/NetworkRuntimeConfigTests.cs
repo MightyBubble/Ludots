@@ -1,4 +1,7 @@
 using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Networking.Protocol;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Networking;
@@ -21,7 +24,11 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.NetworkEntityCapacity, Is.EqualTo(256));
             Assert.That(config.MaxCommandBatchesPerSecondPerPlayer, Is.EqualTo(32));
             Assert.That(config.MaxActorsPerCommandBatch, Is.EqualTo(128));
+            Assert.That(config.CommandSchemas, Has.Count.EqualTo(3));
             Assert.That(config.ReconnectWindowSeconds, Is.EqualTo(30));
+            Assert.That(config.ControlChannelId, Is.EqualTo(0));
+            Assert.That(config.CommandChannelId, Is.EqualTo(1));
+            Assert.That(config.StateChannelId, Is.EqualTo(2));
             Assert.That(config.MaxServerOutboundBytesPerSecondPerClient, Is.EqualTo(256 * 1024));
             Assert.That(config.TickP95BudgetMicroseconds, Is.EqualTo(26_700));
             Assert.That(config.TickP99BudgetMicroseconds, Is.EqualTo(31_000));
@@ -35,6 +42,27 @@ public sealed class NetworkRuntimeConfigTests
         config.ReplicationPacketEntityCapacity = 128;
 
         Assert.That(config.Validate, Throws.InvalidOperationException.With.Message.Contains("below network entity capacity"));
+    }
+
+    [Test]
+    public void MissingOrDuplicateCommandSchemas_AreRejectedAtStartup()
+    {
+        NetworkRuntimeConfig missing = CreateRtsDuelConfig();
+        missing.CommandSchemas.Clear();
+        Assert.That(
+            missing.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("must explicitly expose"));
+
+        NetworkRuntimeConfig duplicate = CreateRtsDuelConfig();
+        duplicate.CommandSchemas.Add(new NetworkCommandSchemaConfig
+        {
+            OrderTypeKey = "moveTo",
+            TargetKind = NetworkCommandTargetKind.WorldPositionCm,
+            SubmitMode = OrderSubmitMode.Queued,
+        });
+        Assert.That(
+            duplicate.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("duplicated"));
     }
 
     private static NetworkRuntimeConfig CreateRtsDuelConfig() => new()
@@ -64,9 +92,35 @@ public sealed class NetworkRuntimeConfigTests
         ConnectionEventCapacity = 64,
         MaxDatagramPayloadBytes = 1200,
         TransportChannelCount = 8,
+        ControlChannelId = 0,
+        CommandChannelId = 1,
+        StateChannelId = 2,
+        SnapshotChunkCapacity = 256,
         MaxServerOutboundBytesPerSecondPerClient = 256 * 1024,
         TickP95BudgetMicroseconds = 26_700,
         TickP99BudgetMicroseconds = 31_000,
+        CommandSchemas =
+        {
+            new NetworkCommandSchemaConfig
+            {
+                OrderTypeKey = "moveTo",
+                TargetKind = NetworkCommandTargetKind.WorldPositionCm,
+                SubmitMode = OrderSubmitMode.Queued,
+            },
+            new NetworkCommandSchemaConfig
+            {
+                OrderTypeKey = "attackTarget",
+                TargetKind = NetworkCommandTargetKind.NetworkEntity,
+                SubmitMode = OrderSubmitMode.Queued,
+                RequiredTargetPositionAccess = KnowledgePositionAccess.LastKnown,
+            },
+            new NetworkCommandSchemaConfig
+            {
+                OrderTypeKey = "stop",
+                TargetKind = NetworkCommandTargetKind.None,
+                SubmitMode = OrderSubmitMode.Immediate,
+            },
+        },
         NormalConnection = new NetworkFaultProfileConfig(),
         UnstableConnection = new NetworkFaultProfileConfig
         {
