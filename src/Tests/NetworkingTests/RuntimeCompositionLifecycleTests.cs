@@ -292,6 +292,7 @@ public sealed class RuntimeCompositionLifecycleTests
                 "fixedInputSchemaId": 1,
                 "fixedInputFramePayloadBytes": 12,
                 "fixedInputMaxFutureTicks": 4,
+                "fixedInputLeadTicks": 2,
                 "fixedInputMaxFramesPerBatch": 4,
                 "fixedInputPendingFrameCapacity": 8,
                 "snapshotChunkCapacity": 32,

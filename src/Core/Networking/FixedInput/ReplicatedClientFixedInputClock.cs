@@ -21,13 +21,21 @@ namespace Ludots.Core.Networking.FixedInput
         SourceFailed = 3,
         /// <summary>Outbox enqueue rejected; no tick advanced and accumulated due time is retained.</summary>
         EnqueueRejected = 4,
-        /// <summary>Pulse failed after a successful enqueue; runtime/send contract is broken.</summary>
+        /// <summary>
+        /// Pulse failed after a successful enqueue. Terminal local contract fault — the tick is already
+        /// owned by the outbox and must never be submitted again.
+        /// </summary>
         PulseFailed = 5,
         /// <summary>
         /// Accumulated due steps exceed the configured backlog ceiling.
         /// No steps are emitted and accumulated time is retained (never silently discarded).
         /// </summary>
         CatchUpBacklogExceeded = 6,
+        /// <summary>
+        /// Connected but waiting for a new authoritative fixed-input ACK observed after the Connected edge.
+        /// Elapsed time is not accumulated and no input is sampled or enqueued.
+        /// </summary>
+        WaitingForAuthoritativeAcknowledgement = 7,
     }
 
     /// <summary>
@@ -62,6 +70,8 @@ namespace Ludots.Core.Networking.FixedInput
     /// Formal replicated-client fixed-input clock driven by elapsed real time at
     /// <c>NetworkRuntimeConfig.SimulationTickRateHz</c>. Independent of presentation/render update
     /// semantics; never sends inside <see cref="INetworkRuntimePort.PumpReplicatedClient"/>.
+    /// Target-tick SSOT is
+    /// <c>max(lastEnqueued + 1, acknowledgedCommittedThrough + FixedInputLeadTicks)</c>.
     /// </summary>
     public sealed class ReplicatedClientFixedInputClock
     {
@@ -75,23 +85,27 @@ namespace Ludots.Core.Networking.FixedInput
         private readonly IFixedInputPayloadSource _source;
         private readonly int _simulationTickRateHz;
         private readonly int _payloadBytes;
+        private readonly int _fixedInputLeadTicks;
         private readonly int _maxStepsPerAdvance;
         private readonly int _maxAccumulatedSteps;
         private readonly double _tickDurationSeconds;
         private readonly byte[] _payloadScratch;
 
         private double _accumulatorSeconds;
-        private uint _nextTargetTick;
         private uint _lastEmittedTargetTick;
         private ulong _armedSessionEpochValue;
+        private ulong _ackObservationBaseline;
         private bool _armed;
+        private bool _waitingForAuthoritativeAck;
         private bool _observedConnected;
+        private bool _terminalPulseFault;
 
         public ReplicatedClientFixedInputClock(
             IReplicatedClientFixedInputPort client,
             IFixedInputPayloadSource source,
             int simulationTickRateHz,
             int payloadBytes,
+            int fixedInputLeadTicks,
             int maxStepsPerAdvance,
             int maxAccumulatedSteps)
         {
@@ -105,6 +119,11 @@ namespace Ludots.Core.Networking.FixedInput
             if (payloadBytes <= 0 || payloadBytes > ushort.MaxValue)
             {
                 throw new ArgumentOutOfRangeException(nameof(payloadBytes));
+            }
+
+            if (fixedInputLeadTicks < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fixedInputLeadTicks));
             }
 
             if (maxStepsPerAdvance <= 0)
@@ -122,23 +141,35 @@ namespace Ludots.Core.Networking.FixedInput
 
             _simulationTickRateHz = simulationTickRateHz;
             _payloadBytes = payloadBytes;
+            _fixedInputLeadTicks = fixedInputLeadTicks;
             _maxStepsPerAdvance = maxStepsPerAdvance;
             _maxAccumulatedSteps = maxAccumulatedSteps;
             _tickDurationSeconds = 1d / simulationTickRateHz;
             _payloadScratch = new byte[payloadBytes];
-            _nextTargetTick = 1;
         }
 
         public int SimulationTickRateHz => _simulationTickRateHz;
         public int PayloadBytes => _payloadBytes;
+        public int FixedInputLeadTicks => _fixedInputLeadTicks;
         public int MaxStepsPerAdvance => _maxStepsPerAdvance;
         public int MaxAccumulatedSteps => _maxAccumulatedSteps;
         public double AccumulatedSeconds => _accumulatorSeconds;
-        public uint NextTargetTick => _nextTargetTick;
         public uint LastEmittedTargetTick => _lastEmittedTargetTick;
         public bool IsArmed => _armed;
+        public bool IsWaitingForAuthoritativeAcknowledgement => _waitingForAuthoritativeAck;
+        public bool IsTerminalPulseFaulted => _terminalPulseFault;
         public SessionEpoch ArmedSessionEpoch =>
             _armed ? new SessionEpoch(_armedSessionEpochValue) : SessionEpoch.Empty;
+
+        /// <summary>
+        /// Peek the next target tick that would be selected from current port ACK/outbox SSOT.
+        /// Throws when the tick domain overflows.
+        /// </summary>
+        public uint PeekNextTargetTick()
+        {
+            EnsureNotTerminalPulseFaulted();
+            return SelectNextTargetTickOrThrow();
+        }
 
         /// <summary>
         /// Advances the fixed-input clock by elapsed real time.
@@ -146,6 +177,8 @@ namespace Ludots.Core.Networking.FixedInput
         /// </summary>
         public ReplicatedClientFixedInputClockAdvanceResult Advance(float elapsedRealSeconds)
         {
+            EnsureNotTerminalPulseFaulted();
+
             if (!float.IsFinite(elapsedRealSeconds) || elapsedRealSeconds < 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(elapsedRealSeconds));
@@ -154,7 +187,7 @@ namespace Ludots.Core.Networking.FixedInput
             if (_client.State != ReplicatedClientConnectionState.Connected)
             {
                 // Pause: do not accumulate while disconnected, and never send.
-                // Explicit disarm so the next Connected edge restarts tick SSOT for the new/outbox session.
+                // Explicit disarm so the next Connected edge requires a fresh ACK observation.
                 Disarm();
                 _observedConnected = false;
                 return new ReplicatedClientFixedInputClockAdvanceResult(
@@ -176,13 +209,27 @@ namespace Ludots.Core.Networking.FixedInput
 
             if (!_observedConnected)
             {
-                // Rising edge Connected: arm (or re-arm) for this session generation.
-                Arm(epoch);
+                // Rising edge Connected: arm (or re-arm) and wait for a NEW ACK after this edge.
+                ArmForConnectedEdge(epoch);
                 _observedConnected = true;
             }
             else
             {
                 EnsureArmedForSession(epoch);
+            }
+
+            if (_waitingForAuthoritativeAck)
+            {
+                if (_client.FixedInputAcknowledgementObservationVersion <= _ackObservationBaseline)
+                {
+                    return new ReplicatedClientFixedInputClockAdvanceResult(
+                        ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement,
+                        stepsEmitted: 0,
+                        lastTargetTick: _lastEmittedTargetTick,
+                        enqueueStatus: FixedInputOutboxEnqueueStatus.InvalidInput);
+                }
+
+                _waitingForAuthoritativeAck = false;
             }
 
             if (elapsedRealSeconds == 0f)
@@ -238,7 +285,7 @@ namespace Ludots.Core.Networking.FixedInput
 
         /// <summary>
         /// Explicit session reset used by tests and reconnect composition. Clears accumulated time and
-        /// restarts target-tick selection at 1 for the given non-empty epoch.
+        /// requires a fresh authoritative ACK observation before sampling again.
         /// </summary>
         public void ResetForSession(SessionEpoch sessionEpoch)
         {
@@ -247,24 +294,18 @@ namespace Ludots.Core.Networking.FixedInput
                 throw new ArgumentException("Session epoch must be non-empty.", nameof(sessionEpoch));
             }
 
-            Arm(sessionEpoch);
+            EnsureNotTerminalPulseFaulted();
+            ArmForConnectedEdge(sessionEpoch);
+            _observedConnected = _client.State == ReplicatedClientConnectionState.Connected
+                && _client.SessionEpoch == sessionEpoch;
         }
 
         private ReplicatedClientFixedInputClockAdvanceResult TryEmitOneFixedStep()
         {
-            uint targetTick = _nextTargetTick;
-            if (!FixedInputWireCodec.IsValidInputTargetTick(targetTick))
-            {
-                throw new NetworkRuntimeException(
-                    new NetworkRuntimeFault(
-                        NetworkRuntimeFaultSeverity.LocalContractViolation,
-                        NetworkRuntimeFaultCode.FixedInputRejected,
-                        wireKind: NetworkWireKind.FixedInputBatch,
-                        detail: (int)FixedInputOutboxEnqueueStatus.InvalidInput));
-            }
+            uint targetTick = SelectNextTargetTickOrThrow();
 
             Span<byte> payload = _payloadScratch.AsSpan(0, _payloadBytes);
-            FixedInputPayloadSampleStatus sampled = _source.TrySample(payload);
+            FixedInputPayloadSampleStatus sampled = _source.TrySample(targetTick, payload);
             if (sampled != FixedInputPayloadSampleStatus.Sampled)
             {
                 return new ReplicatedClientFixedInputClockAdvanceResult(
@@ -286,20 +327,43 @@ namespace Ludots.Core.Networking.FixedInput
 
             if (!_client.TryPulseFixedInputSend())
             {
-                return new ReplicatedClientFixedInputClockAdvanceResult(
-                    ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed,
-                    stepsEmitted: 0,
-                    lastTargetTick: _lastEmittedTargetTick,
-                    enqueueStatus: FixedInputOutboxEnqueueStatus.Enqueued);
+                // Tick is already owned by the outbox. Never remain in a normal retry state that could
+                // submit the same tick again — this is a permanent local contract fault.
+                _terminalPulseFault = true;
+                throw new NetworkRuntimeException(
+                    new NetworkRuntimeFault(
+                        NetworkRuntimeFaultSeverity.LocalContractViolation,
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        wireKind: NetworkWireKind.FixedInputBatch,
+                        detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
             }
 
             _lastEmittedTargetTick = targetTick;
-            _nextTargetTick = checked(targetTick + 1);
             return new ReplicatedClientFixedInputClockAdvanceResult(
                 ReplicatedClientFixedInputClockAdvanceStatus.Stepped,
                 stepsEmitted: 1,
                 lastTargetTick: targetTick,
                 enqueueStatus: FixedInputOutboxEnqueueStatus.Enqueued);
+        }
+
+        private uint SelectNextTargetTickOrThrow()
+        {
+            if (!FixedInputWireCodec.TryComputeNextTargetTick(
+                    _client.LastEnqueuedFixedInputTargetTick,
+                    _client.HasEnqueuedFixedInputTargetTick,
+                    _client.FixedInputAcknowledgedCommittedTick,
+                    _fixedInputLeadTicks,
+                    out uint nextTargetTick))
+            {
+                throw new NetworkRuntimeException(
+                    new NetworkRuntimeFault(
+                        NetworkRuntimeFaultSeverity.LocalContractViolation,
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        wireKind: NetworkWireKind.FixedInputBatch,
+                        detail: (int)FixedInputOutboxEnqueueStatus.InvalidInput));
+            }
+
+            return nextTargetTick;
         }
 
         private void EnsureArmedForSession(SessionEpoch epoch)
@@ -309,17 +373,18 @@ namespace Ludots.Core.Networking.FixedInput
                 return;
             }
 
-            // New session generation: restart tick SSOT at 1 and clear pause accumulator.
-            Arm(epoch);
+            // New session generation: clear pause accumulator and require a fresh ACK for the new outbox.
+            ArmForConnectedEdge(epoch);
         }
 
-        private void Arm(SessionEpoch epoch)
+        private void ArmForConnectedEdge(SessionEpoch epoch)
         {
             _armed = true;
             _armedSessionEpochValue = epoch.Value;
             _accumulatorSeconds = 0d;
-            _nextTargetTick = 1;
             _lastEmittedTargetTick = 0;
+            _ackObservationBaseline = _client.FixedInputAcknowledgementObservationVersion;
+            _waitingForAuthoritativeAck = true;
         }
 
         private void Disarm()
@@ -332,9 +397,24 @@ namespace Ludots.Core.Networking.FixedInput
             _armed = false;
             _armedSessionEpochValue = 0;
             _accumulatorSeconds = 0d;
-            // Keep last/next tick values only until the next session arm; they are not authoritative while disarmed.
-            _nextTargetTick = 1;
+            _waitingForAuthoritativeAck = false;
+            _ackObservationBaseline = 0;
             _lastEmittedTargetTick = 0;
+        }
+
+        private void EnsureNotTerminalPulseFaulted()
+        {
+            if (!_terminalPulseFault)
+            {
+                return;
+            }
+
+            throw new NetworkRuntimeException(
+                new NetworkRuntimeFault(
+                    NetworkRuntimeFaultSeverity.LocalContractViolation,
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    wireKind: NetworkWireKind.FixedInputBatch,
+                    detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
         }
 
         private ReplicatedClientFixedInputClockAdvanceResult IdleResult() =>

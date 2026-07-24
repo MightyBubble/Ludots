@@ -27,6 +27,59 @@ namespace Ludots.Core.Networking.Protocol
         /// </summary>
         public static bool IsValidInputTargetTick(uint tick) => tick != 0 && tick <= MaxSimulationTick;
 
+        /// <summary>
+        /// Computes the next client fixed-input target tick from outbox and ACK SSOT:
+        /// <c>max(lastEnqueuedTargetTick + 1, acknowledgedCommittedThroughTick + leadTicks)</c>.
+        /// Uses range-safe arithmetic inside the simulation tick domain; overflow fails explicitly.
+        /// When nothing has been enqueued yet, <paramref name="lastEnqueuedTargetTick"/> is treated as 0.
+        /// </summary>
+        public static bool TryComputeNextTargetTick(
+            uint lastEnqueuedTargetTick,
+            bool hasEnqueued,
+            uint acknowledgedCommittedThroughTick,
+            int leadTicks,
+            out uint nextTargetTick)
+        {
+            nextTargetTick = 0;
+            if (leadTicks < 1)
+            {
+                return false;
+            }
+
+            if (!IsValidSimulationTickField(acknowledgedCommittedThroughTick))
+            {
+                return false;
+            }
+
+            if (hasEnqueued && !IsValidInputTargetTick(lastEnqueuedTargetTick))
+            {
+                return false;
+            }
+
+            ulong fromAck = (ulong)acknowledgedCommittedThroughTick + (ulong)leadTicks;
+            if (fromAck == 0UL || fromAck > MaxSimulationTick)
+            {
+                return false;
+            }
+
+            ulong fromOutbox = hasEnqueued
+                ? (ulong)lastEnqueuedTargetTick + 1UL
+                : 1UL;
+            if (fromOutbox == 0UL || fromOutbox > MaxSimulationTick)
+            {
+                return false;
+            }
+
+            ulong next = fromOutbox > fromAck ? fromOutbox : fromAck;
+            if (next == 0UL || next > MaxSimulationTick)
+            {
+                return false;
+            }
+
+            nextTargetTick = (uint)next;
+            return true;
+        }
+
         public static int GetFrameSize(int framePayloadBytes)
         {
             if (framePayloadBytes < 0)

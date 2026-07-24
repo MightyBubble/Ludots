@@ -30,6 +30,7 @@ namespace Ludots.Core.Networking.Runtime
             ushort fixedInputSchemaId,
             ushort fixedInputFramePayloadBytes,
             int fixedInputMaxFutureTicks,
+            int fixedInputLeadTicks,
             int fixedInputMaxFramesPerBatch,
             int fixedInputPendingFrameCapacity)
         {
@@ -100,6 +101,14 @@ namespace Ludots.Core.Networking.Runtime
                     $"Fixed-input pending frame capacity must be >= max future ticks ({fixedInputMaxFutureTicks}).");
             }
 
+            if (fixedInputLeadTicks < 1 || fixedInputLeadTicks > fixedInputMaxFutureTicks)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(fixedInputLeadTicks),
+                    fixedInputLeadTicks,
+                    $"Fixed-input lead ticks must satisfy 1 <= lead <= max future ticks ({fixedInputMaxFutureTicks}).");
+            }
+
             // Fail-fast SSOT: fixed-input datagram and ring contracts must hold before runtime construction.
             _ = new FixedInputProtocolConfig(
                 connectionCapacity,
@@ -136,6 +145,7 @@ namespace Ludots.Core.Networking.Runtime
             FixedInputSchemaId = fixedInputSchemaId;
             FixedInputFramePayloadBytes = fixedInputFramePayloadBytes;
             FixedInputMaxFutureTicks = fixedInputMaxFutureTicks;
+            FixedInputLeadTicks = fixedInputLeadTicks;
             FixedInputMaxFramesPerBatch = fixedInputMaxFramesPerBatch;
             FixedInputPendingFrameCapacity = fixedInputPendingFrameCapacity;
         }
@@ -162,6 +172,7 @@ namespace Ludots.Core.Networking.Runtime
         public ushort FixedInputSchemaId { get; }
         public ushort FixedInputFramePayloadBytes { get; }
         public int FixedInputMaxFutureTicks { get; }
+        public int FixedInputLeadTicks { get; }
         public int FixedInputMaxFramesPerBatch { get; }
         public int FixedInputPendingFrameCapacity { get; }
 
@@ -223,6 +234,7 @@ namespace Ludots.Core.Networking.Runtime
                 checked((ushort)config.FixedInputSchemaId),
                 checked((ushort)config.FixedInputFramePayloadBytes),
                 config.FixedInputMaxFutureTicks,
+                config.FixedInputLeadTicks,
                 config.FixedInputMaxFramesPerBatch,
                 config.FixedInputPendingFrameCapacity);
         }

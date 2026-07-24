@@ -148,6 +148,7 @@ public sealed class Physics3DNetworkClockValidatorTests
         FixedInputSchemaId = 1,
         FixedInputFramePayloadBytes = 12,
         FixedInputMaxFutureTicks = 4,
+        FixedInputLeadTicks = 2,
         FixedInputMaxFramesPerBatch = 4,
         FixedInputPendingFrameCapacity = 8,
         SnapshotChunkCapacity = 8,

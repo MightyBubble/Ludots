@@ -20,9 +20,11 @@ namespace Ludots.Core.Networking.FixedInput
     public interface IFixedInputPayloadSource
     {
         /// <summary>
-        /// Writes exactly one configured fixed-size payload into <paramref name="destination"/>.
-        /// <paramref name="destination"/>.Length is the sole payload size contract for this sample.
+        /// Writes exactly one configured fixed-size payload for <paramref name="targetTick"/> into
+        /// <paramref name="destination"/>. <paramref name="destination"/>.Length is the sole payload
+        /// size contract for this sample. The source observes the exact selected tick so recording
+        /// and replay remain deterministic.
         /// </summary>
-        FixedInputPayloadSampleStatus TrySample(Span<byte> destination);
+        FixedInputPayloadSampleStatus TrySample(uint targetTick, Span<byte> destination);
     }
 }

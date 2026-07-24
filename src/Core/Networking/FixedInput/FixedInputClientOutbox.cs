@@ -24,6 +24,7 @@ namespace Ludots.Core.Networking.FixedInput
         private uint _appliedCommittedThrough;
         private uint _appliedLatestReceived;
         private bool _hasAppliedAck;
+        private ulong _appliedAcknowledgementVersion;
 
         public FixedInputClientOutbox(in FixedInputProtocolConfig config, int pendingFrameCapacity)
         {
@@ -44,8 +45,12 @@ namespace Ludots.Core.Networking.FixedInput
 
         public int PendingCount => _count;
         public int Capacity => _capacity;
+        public bool HasEnqueued => _hasEnqueued;
+        public uint HighestEnqueuedTick => _highestEnqueuedTick;
+        public bool HasAppliedAcknowledgement => _hasAppliedAck;
         public uint AppliedCommittedThrough => _appliedCommittedThrough;
         public uint AppliedLatestReceived => _appliedLatestReceived;
+        public ulong AppliedAcknowledgementVersion => _appliedAcknowledgementVersion;
 
         public FixedInputOutboxEnqueueStatus TryEnqueue(uint targetTick, ReadOnlySpan<byte> payload)
         {
@@ -157,6 +162,7 @@ namespace Ludots.Core.Networking.FixedInput
             _appliedCommittedThrough = acknowledgement.CommittedThroughTick;
             _appliedLatestReceived = acknowledgement.LatestReceivedTick;
             _hasAppliedAck = true;
+            _appliedAcknowledgementVersion = checked(_appliedAcknowledgementVersion + 1UL);
             return FixedInputAckApplyStatus.Applied;
         }
 
