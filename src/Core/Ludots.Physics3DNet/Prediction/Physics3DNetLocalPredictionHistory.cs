@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Physics3DNet.Input;
 
 namespace Ludots.Core.Physics3DNet;
 
@@ -54,6 +55,7 @@ public readonly struct Physics3DNetCorrectionReplayRange
 
 /// <summary>
 /// Local prediction history for only the local Character3D or locally driven Vehicle3D.
+/// Stores exact <see cref="Physics3DFixedInputFrameCodec.PayloadBytes"/> input payloads in fixed SoA lanes.
 /// Rejects attempts to roll back arbitrary remote/world entities.
 /// </summary>
 public sealed class Physics3DNetLocalPredictionHistory
@@ -73,7 +75,7 @@ public sealed class Physics3DNetLocalPredictionHistory
     private readonly float[] _angVelX;
     private readonly float[] _angVelY;
     private readonly float[] _angVelZ;
-    private readonly Physics3DNetInputFrameView[] _inputs;
+    private readonly byte[] _inputPayloads;
     private readonly bool[] _occupied;
 
     private bool _bound;
@@ -102,11 +104,12 @@ public sealed class Physics3DNetLocalPredictionHistory
         _angVelX = new float[_capacity];
         _angVelY = new float[_capacity];
         _angVelZ = new float[_capacity];
-        _inputs = new Physics3DNetInputFrameView[_capacity];
+        _inputPayloads = new byte[checked(_capacity * Physics3DFixedInputFrameCodec.PayloadBytes)];
         _occupied = new bool[_capacity];
     }
 
     public int Capacity => _capacity;
+    public int InputPayloadBytes => Physics3DFixedInputFrameCodec.PayloadBytes;
     public bool IsBound => _bound;
     public int BoundNetworkEntityId => _boundNetworkEntityId;
     public int BoundGeneration => _boundGeneration;
@@ -143,7 +146,7 @@ public sealed class Physics3DNetLocalPredictionHistory
         _boundKind = kind;
     }
 
-    public void Record(in Physics3DNetPredictedPose pose, in Physics3DNetInputFrameView input)
+    public void Record(in Physics3DNetPredictedPose pose, ReadOnlySpan<byte> inputPayload)
     {
         EnsureBound();
         if (pose.Tick <= 0)
@@ -151,21 +154,24 @@ public sealed class Physics3DNetLocalPredictionHistory
             throw new ArgumentOutOfRangeException(nameof(pose), pose.Tick, "Pose tick must be positive.");
         }
 
-        if (input.Tick != pose.Tick)
+        if (inputPayload.Length != Physics3DFixedInputFrameCodec.PayloadBytes)
         {
-            throw new InvalidOperationException(
-                $"Prediction pose tick {pose.Tick} must match input tick {input.Tick}.");
+            throw new ArgumentException(
+                $"Input payload must be exactly {Physics3DFixedInputFrameCodec.PayloadBytes} bytes.",
+                nameof(inputPayload));
+        }
+
+        if (!Physics3DFixedInputFrameCodec.TryDecode(inputPayload, out _))
+        {
+            throw new ArgumentException(
+                "Input payload must match Physics3DFixedInputFrameCodec semantics.",
+                nameof(inputPayload));
         }
 
         int index = IndexForTick(pose.Tick);
         if (_occupied[index] && _tick[index] == pose.Tick)
         {
             throw new InvalidOperationException($"Prediction history already contains tick {pose.Tick}.");
-        }
-
-        if (_count >= _capacity && (!_occupied[index] || _tick[index] != pose.Tick))
-        {
-            // Overwriting the oldest ring cell is allowed; capacity itself is fixed.
         }
 
         bool wasOccupiedSameCell = _occupied[index];
@@ -183,7 +189,7 @@ public sealed class Physics3DNetLocalPredictionHistory
         _angVelX[index] = pose.AngularVelocityRadiansPerSecond.X;
         _angVelY[index] = pose.AngularVelocityRadiansPerSecond.Y;
         _angVelZ[index] = pose.AngularVelocityRadiansPerSecond.Z;
-        _inputs[index] = input;
+        inputPayload.CopyTo(PayloadSpan(index));
         _occupied[index] = true;
         if (!wasOccupiedSameCell)
         {
@@ -216,7 +222,7 @@ public sealed class Physics3DNetLocalPredictionHistory
         int generation,
         long authoritativeConfirmedTick,
         Span<Physics3DNetPredictedPose> poseDestination,
-        Span<Physics3DNetInputFrameView> inputDestination)
+        Span<byte> inputPayloadDestination)
     {
         EnsureBoundEntity(networkEntityId, generation);
         if (authoritativeConfirmedTick <= 0)
@@ -234,11 +240,12 @@ public sealed class Physics3DNetLocalPredictionHistory
         }
 
         int needed = checked((int)(toTick - fromTick + 1));
-        if (needed > poseDestination.Length || needed > inputDestination.Length)
+        int neededPayloadBytes = checked(needed * Physics3DFixedInputFrameCodec.PayloadBytes);
+        if (needed > poseDestination.Length || neededPayloadBytes > inputPayloadDestination.Length)
         {
             throw new Physics3DNetCapacityExceededException(
                 "local correction replay destination",
-                Math.Min(poseDestination.Length, inputDestination.Length),
+                Math.Min(poseDestination.Length, inputPayloadDestination.Length / Physics3DFixedInputFrameCodec.PayloadBytes),
                 authoritativeConfirmedTick);
         }
 
@@ -258,7 +265,10 @@ public sealed class Physics3DNetLocalPredictionHistory
                 new Quaternion(_orientX[index], _orientY[index], _orientZ[index], _orientW[index]),
                 new Vector3(_linVelX[index], _linVelY[index], _linVelZ[index]),
                 new Vector3(_angVelX[index], _angVelY[index], _angVelZ[index]));
-            inputDestination[written] = _inputs[index];
+            PayloadSpan(index).CopyTo(
+                inputPayloadDestination.Slice(
+                    written * Physics3DFixedInputFrameCodec.PayloadBytes,
+                    Physics3DFixedInputFrameCodec.PayloadBytes));
             written++;
         }
 
@@ -276,15 +286,26 @@ public sealed class Physics3DNetLocalPredictionHistory
         }
     }
 
-    public bool TryGet(long tick, out Physics3DNetPredictedPose pose, out Physics3DNetInputFrameView input)
+    public bool TryGet(
+        long tick,
+        out Physics3DNetPredictedPose pose,
+        Span<byte> inputPayloadDestination,
+        out int bytesWritten)
     {
         EnsureBound();
+        bytesWritten = 0;
         int index = IndexForTick(tick);
         if (!_occupied[index] || _tick[index] != tick)
         {
             pose = default;
-            input = default;
             return false;
+        }
+
+        if (inputPayloadDestination.Length < Physics3DFixedInputFrameCodec.PayloadBytes)
+        {
+            throw new ArgumentException(
+                $"Destination must hold {Physics3DFixedInputFrameCodec.PayloadBytes} payload bytes.",
+                nameof(inputPayloadDestination));
         }
 
         pose = new Physics3DNetPredictedPose(
@@ -293,9 +314,13 @@ public sealed class Physics3DNetLocalPredictionHistory
             new Quaternion(_orientX[index], _orientY[index], _orientZ[index], _orientW[index]),
             new Vector3(_linVelX[index], _linVelY[index], _linVelZ[index]),
             new Vector3(_angVelX[index], _angVelY[index], _angVelZ[index]));
-        input = _inputs[index];
+        PayloadSpan(index).CopyTo(inputPayloadDestination[..Physics3DFixedInputFrameCodec.PayloadBytes]);
+        bytesWritten = Physics3DFixedInputFrameCodec.PayloadBytes;
         return true;
     }
+
+    private Span<byte> PayloadSpan(int index) =>
+        _inputPayloads.AsSpan(index * Physics3DFixedInputFrameCodec.PayloadBytes, Physics3DFixedInputFrameCodec.PayloadBytes);
 
     private long FindNewestTick()
     {

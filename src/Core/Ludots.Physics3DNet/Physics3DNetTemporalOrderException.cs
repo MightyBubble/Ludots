@@ -7,17 +7,17 @@ namespace Ludots.Core.Physics3DNet;
 /// </summary>
 public sealed class Physics3DNetTemporalOrderException : InvalidOperationException
 {
-    public Physics3DNetTemporalOrderException(int networkEntityId, long newestTick, long attemptedTick)
+    public Physics3DNetTemporalOrderException(int networkEntitySlot, long newestTick, long attemptedTick)
         : base(
-            $"Remote interpolation push for entity {networkEntityId} violates temporal order. "
+            $"Remote interpolation push for entity slot {networkEntitySlot} violates temporal order. "
             + $"Newest tick {newestTick}, attempted tick {attemptedTick}.")
     {
-        NetworkEntityId = networkEntityId;
+        NetworkEntitySlot = networkEntitySlot;
         NewestTick = newestTick;
         AttemptedTick = attemptedTick;
     }
 
-    public int NetworkEntityId { get; }
+    public int NetworkEntitySlot { get; }
     public long NewestTick { get; }
     public long AttemptedTick { get; }
 }
