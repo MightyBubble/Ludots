@@ -5,7 +5,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -161,20 +163,24 @@ namespace EntityCommandPanelMod.Runtime
             return BuildAggregatedSlots(handle, config, destination, updateActivationMap: true);
         }
 
-        public bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
+        public InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
         {
             if (groupIndex != 0 ||
                 slotIndex < 0 ||
                 !TryResolveCollection(context, out EntityCommandPanelCollectionQueryConfig config, out EntityCollectionHandle handle, out _))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(
+                    context.TargetEntity,
+                    OrderSubmitResult.RejectedValidation);
             }
 
             BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
             if ((uint)slotIndex >= (uint)_activationOwners.Length ||
                 _activationOwners[slotIndex] == Entity.Null)
             {
-                return false;
+                return InputOrderActivationResult.Rejected(
+                    context.TargetEntity,
+                    OrderSubmitResult.RejectedValidation);
             }
 
             return _gasSource.ActivateSlot(_activationOwners[slotIndex], groupIndex, _activationSlotIndices[slotIndex]);
@@ -232,7 +238,8 @@ namespace EntityCommandPanelMod.Runtime
 
         public int CopySlots(Entity target, int groupIndex, Span<EntityCommandPanelSlotView> destination) => 0;
 
-        public bool ActivateSlot(Entity target, int groupIndex, int slotIndex) => false;
+        public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex) =>
+            InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedByRule);
 
         private bool TryResolveCollection(
             in EntityCommandPanelSourceContext context,
