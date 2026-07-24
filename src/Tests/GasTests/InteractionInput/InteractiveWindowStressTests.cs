@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
                 var conditions = new GasConditionRegistry();
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
-                var inputReq = new InputRequestQueue();
+                var inputReq = new InputRequestQueue(capacity: 4096);
                 var admissionResults = new OrderAdmissionResultBuffer(3, 3);
                 var chainOrders = new OrderQueue(64, admissionResults);
 
@@ -83,7 +83,7 @@ namespace Ludots.Tests.GAS
                     inputReq,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
-                    new OrderRequestQueue(),
+                    new OrderRequestQueue(capacity: 4096),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
                 {

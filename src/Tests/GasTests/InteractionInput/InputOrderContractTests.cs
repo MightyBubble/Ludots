@@ -1671,7 +1671,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity secondSource = world.Create();
             Entity firstMember = world.Create();
             Entity secondMember = world.Create();
-            var queue = new OrderQueue(capacity: 64, new OrderAdmissionResultBuffer(64, 64));
+            var admissionResults = new OrderAdmissionResultBuffer(128, 128);
+            var queue = new OrderQueue(capacity: 64, admissionResults);
             for (int i = 0; i < 63; i++)
             {
                 var filler = new Order { OrderTypeId = 2 };
@@ -1778,11 +1779,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     return true;
                 });
 
-            var ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f));
+            Assert.DoesNotThrow(() => system.Update(0f));
 
-            Assert.That(ex!.Message, Does.Contain("clustered fan-out was rejected"));
             Assert.That(queue.Count, Is.EqualTo(63),
                 "The expanded fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(
+                admissionResults.TryGet(system.LastActivationResult.OrderId, OrderAdmissionStage.GlobalIntake, out var outcome),
+                Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
             Assert.That(expander.ExpandCallCount, Is.EqualTo(2),
                 "CastDispatch must select the two sources before the command router expands either source into members.");
         }
@@ -2307,6 +2314,131 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(result.Actor, Is.EqualTo(actor));
             Assert.That(result.OrderId, Is.EqualTo(77));
             Assert.That(result.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+        }
+
+        [Test]
+        public void Update_CollectionFanOutSuccess_ReturnsAssignedBatchOrderId()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(firstActor, 1);
+            system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
+            system.SetCollectionEntityListProvider((_, list) =>
+            {
+                list.Add(firstActor);
+                list.Add(secondActor);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(10f, 0f, 20f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 8);
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && (actor == firstActor || actor == secondActor));
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("Multi-actor collection fan-out must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 700;
+                }
+
+                return true;
+            });
+
+            system.Update(0f);
+
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(firstActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(700));
+        }
+
+        [Test]
+        public void Update_CollectionFanOutQueueFull_ReturnsTypedRejectionInsteadOfThrowing()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            var queue = new OrderQueue(capacity: 1, admissionResults);
+            var seed = new Order { OrderTypeId = 8 };
+            Assert.That(queue.TryEnqueue(in seed), Is.True);
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(firstActor, 1);
+            system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
+            system.SetCollectionEntityListProvider((_, list) =>
+            {
+                list.Add(firstActor);
+                list.Add(secondActor);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(10f, 0f, 20f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 8);
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && (actor == firstActor || actor == secondActor));
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("Multi-actor collection fan-out must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) => queue.TryEnqueueSharedBatch(batch));
+
+            Assert.DoesNotThrow(() => system.Update(0f));
+
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(firstActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(
+                admissionResults.TryGet(system.LastActivationResult.OrderId, OrderAdmissionStage.GlobalIntake, out var outcome),
+                Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         }
 
         [Test]

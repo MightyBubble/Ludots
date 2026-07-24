@@ -126,17 +126,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ValidateOrderTypeId(orders[i].OrderTypeId);
             }
 
-            if (orders.Length > AvailableCapacity)
-            {
-                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
-            }
-
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
                 orders[i].AdmissionBatchId = 0;
                 orders[i].AdmissionBatchSize = 0;
                 orders[i].AdmissionBatchIndex = 0;
+            }
+
+            if (orders.Length > AvailableCapacity)
+            {
+                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
             }
 
             ReserveBatch(orders);
@@ -170,11 +170,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ValidateUniqueActor(orders, i);
             }
 
-            if (orders.Length > AvailableCapacity)
-            {
-                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
-            }
-
             if (orders.Length > ushort.MaxValue)
             {
                 throw new InvalidOperationException(
@@ -192,6 +187,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
+            }
+
+            if (orders.Length > AvailableCapacity)
+            {
+                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
             }
 
             ReserveBatch(orders);
@@ -239,11 +239,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
             }
 
-            if (orders.Length > AvailableCapacity)
-            {
-                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
-            }
-
             if (orders.Length > ushort.MaxValue)
             {
                 throw new InvalidOperationException(
@@ -270,6 +265,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
+            }
+
+            if (orders.Length > AvailableCapacity)
+            {
+                return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
             }
 
             ReserveBatch(orders);
@@ -421,17 +421,45 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private bool RejectBatchWithoutQueueMutation(ReadOnlySpan<Order> orders, OrderSubmitResult result)
         {
-            for (int i = 0; i < orders.Length; i++)
+            OrderAdmissionReservation reservation = default;
+            int reservedCount = 0;
+            int committedCount = 0;
+            try
             {
-                var outcome = new OrderAdmissionOutcome(
-                    orders[i].OrderId,
-                    orders[i].OrderTypeId,
-                    OrderAdmissionStage.GlobalIntake,
-                    result);
-                _admissionResults.TryWrite(in outcome);
-            }
+                for (int i = 0; i < orders.Length; i++)
+                {
+                    OrderAdmissionReservation next = _admissionResults.Reserve(
+                        OrderAdmissionStage.GlobalIntake,
+                        orders[i].OrderId,
+                        orders[i].OrderTypeId);
+                    if (reservedCount == 0)
+                    {
+                        reservation = next;
+                    }
+                    else if (next.IsPendingGeneration != reservation.IsPendingGeneration)
+                    {
+                        throw new InvalidOperationException("ORDER.ADMISSION.ERR.BatchReservationGenerationChanged");
+                    }
 
-            return false;
+                    reservedCount++;
+                }
+
+                for (int i = 0; i < orders.Length; i++)
+                {
+                    CommitAdmission(in reservation, in orders[i], result);
+                    committedCount++;
+                }
+
+                return false;
+            }
+            finally
+            {
+                int remainingReservations = reservedCount - committedCount;
+                for (int i = 0; i < remainingReservations; i++)
+                {
+                    _admissionResults.Cancel(in reservation);
+                }
+            }
         }
 
         private int NextAdmissionBatchId()

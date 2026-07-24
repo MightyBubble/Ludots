@@ -23,6 +23,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Order[] _incomingBatchScratch;
         private readonly OrderSubmitResult[] _incomingBatchResultsScratch;
         private readonly OrderAdmissionReservation[] _entityAdmissionReservationsScratch;
+        private readonly bool _closeEntityIntakeOnUpdate;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -41,7 +42,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            bool closeEntityIntakeOnUpdate = true)
             : base(world)
         {
             _clock = clock;
@@ -69,6 +71,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _graphApi = graphApi;
             _admissionResults = admissionResults
                 ?? throw new ArgumentNullException(nameof(admissionResults));
+            _closeEntityIntakeOnUpdate = closeEntityIntakeOnUpdate;
             if (_incomingOrders != null && !ReferenceEquals(_incomingOrders.AdmissionResults, _admissionResults))
             {
                 throw new InvalidOperationException("ORDER.ADMISSION.ERR.AdmissionResultBufferMismatch");
@@ -96,7 +99,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            _admissionResults.EndEntityIntake();
+            if (_closeEntityIntakeOnUpdate)
+            {
+                _admissionResults.EndEntityIntake();
+            }
         }
 
         private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)

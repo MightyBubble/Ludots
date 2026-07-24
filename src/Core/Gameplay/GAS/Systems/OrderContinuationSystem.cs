@@ -16,6 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly OrderRuleRegistry _orderRuleRegistry;
+        private readonly OrderAdmissionResultBuffer _admissionResults;
         private readonly OrderTerminalResultBuffer _terminalResults;
         private readonly int _stepRateHz;
         private uint _processedGeneration;
@@ -26,12 +27,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IClock clock,
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
+            OrderAdmissionResultBuffer admissionResults,
             int stepRateHz = 30)
             : base(world)
         {
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _orderRuleRegistry = orderRuleRegistry ?? throw new ArgumentNullException(nameof(orderRuleRegistry));
+            _admissionResults = admissionResults ?? throw new ArgumentNullException(nameof(admissionResults));
             _terminalResults = orderTypeRegistry.TerminalResults;
             _processedGeneration = _terminalResults.Generation;
             if (stepRateHz <= 0)
@@ -46,6 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
             Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            Span<OrderAdmissionReservation> reservations = stackalloc OrderAdmissionReservation[OrderContinuationBuffer.MAX_CONTINUATIONS];
 
             if (_processedGeneration != _terminalResults.Generation)
             {
@@ -78,7 +82,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int matchingCount = continuation.CountByTrigger(outcome.OrderId);
                     _orderTypeRegistry.EnsureTerminalResultCapacity(matchingCount);
-                    count = continuation.Extract(outcome.OrderId, extracted);
+                    count = continuation.CopyByTrigger(outcome.OrderId, extracted);
+                    ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
+                    int extractedCount = continuation.Extract(outcome.OrderId, extracted);
+                    if (extractedCount != count)
+                    {
+                        CancelContinuationAdmissions(reservations, count);
+                        throw new InvalidOperationException(
+                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={outcome.OrderId}, expected={count}, actual={extractedCount}.");
+                    }
                 }
                 else
                 {
@@ -99,46 +111,100 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
 
-                for (int i = 0; i < count; i++)
+                try
                 {
-                    var order = extracted[i];
-                    order.Actor = entity;
-
-                    var result = OrderSubmitter.Submit(
-                        World,
-                        entity,
-                        in order,
-                        _orderTypeRegistry,
-                        _orderRuleRegistry,
-                        currentStep,
-                        _stepRateHz);
-
-                    if (OrderSubmitResultSemantics.IsAccepted(result))
+                    for (int i = 0; i < count; i++)
                     {
-                        continue;
-                    }
+                        var order = extracted[i];
+                        order.Actor = entity;
 
-                    if (result == OrderSubmitResult.RejectedByRule)
-                    {
-                        var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                        if (config.PendingBufferWindowMs > 0)
+                        var result = OrderSubmitter.Submit(
+                            World,
+                            entity,
+                            in order,
+                            _orderTypeRegistry,
+                            _orderRuleRegistry,
+                            currentStep,
+                            _stepRateHz);
+
+                        if (result == OrderSubmitResult.RejectedByRule)
                         {
-                            int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                            OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
+                            var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                            if (config.PendingBufferWindowMs > 0)
+                            {
+                                int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                                OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
+                                CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
+                                reservations[i] = default;
+                                continue;
+                            }
+                        }
+
+                        CommitAdmission(in reservations[i], in order, result);
+                        reservations[i] = default;
+
+                        if (OrderSubmitResultSemantics.IsAccepted(result))
+                        {
                             continue;
                         }
-                    }
 
-                    OrderSpatialPayloadOps.Release(World, in order);
-                    var rejected = new OrderTerminalOutcome(
-                        order.OrderId,
-                        order.OrderTypeId,
-                        OrderTerminalState.Failed,
-                        OrderSubmitResultSemantics.ToFailureReason(result),
-                        entity);
-                    _orderTypeRegistry.PublishTerminalResult(in rejected);
+                        OrderSpatialPayloadOps.Release(World, in order);
+                        var rejected = new OrderTerminalOutcome(
+                            order.OrderId,
+                            order.OrderTypeId,
+                            OrderTerminalState.Failed,
+                            OrderSubmitResultSemantics.ToFailureReason(result),
+                            entity);
+                        _orderTypeRegistry.PublishTerminalResult(in rejected);
+                    }
+                }
+                finally
+                {
+                    CancelContinuationAdmissions(reservations, count);
                 }
             }
+        }
+
+        private void ReserveContinuationAdmissions(
+            ReadOnlySpan<Order> orders,
+            Span<OrderAdmissionReservation> reservations)
+        {
+            for (int i = 0; i < orders.Length; i++)
+            {
+                try
+                {
+                    reservations[i] = _admissionResults.Reserve(
+                        OrderAdmissionStage.EntityIntake,
+                        orders[i].OrderId,
+                        orders[i].OrderTypeId);
+                }
+                catch
+                {
+                    CancelContinuationAdmissions(reservations, i);
+                    throw;
+                }
+            }
+        }
+
+        private void CancelContinuationAdmissions(Span<OrderAdmissionReservation> reservations, int count)
+        {
+            for (int i = count - 1; i >= 0; i--)
+            {
+                if (reservations[i].IsValid)
+                {
+                    _admissionResults.Cancel(in reservations[i]);
+                    reservations[i] = default;
+                }
+            }
+        }
+
+        private void CommitAdmission(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result)
+        {
+            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
+            _admissionResults.Commit(in reservation, in outcome);
         }
     }
 }

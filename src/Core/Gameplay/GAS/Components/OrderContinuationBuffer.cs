@@ -111,6 +111,37 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return written;
         }
 
+        public readonly int CopyByTrigger(int triggerOrderId, Span<Order> destination)
+        {
+            if (triggerOrderId <= 0 || Count <= 0)
+            {
+                return 0;
+            }
+
+            int matchingCount = CountByTrigger(triggerOrderId);
+            if (matchingCount == 0)
+            {
+                return 0;
+            }
+            if (destination.Length < matchingCount)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: triggerOrderId={triggerOrderId}, matching={matchingCount}, capacity={destination.Length}.");
+            }
+
+            int written = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                OrderContinuationEntry entry = _entries[i];
+                if (entry.TriggerOrderId == triggerOrderId)
+                {
+                    destination[written++] = entry.Order;
+                }
+            }
+
+            return written;
+        }
+
         public readonly int CountByTrigger(int triggerOrderId)
         {
             if (triggerOrderId <= 0 || Count <= 0)

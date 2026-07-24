@@ -38,8 +38,8 @@ public sealed class MovePlanOrderLifecycleTests
             Assert.That(queue.Count, Is.EqualTo(3));
         });
 
-        var full = CreateOrderQueue(capacity: 64);
-        for (int i = 0; i < 63; i++)
+        var full = CreateOrderQueue(capacity: 4, resultCapacity: 16);
+        for (int i = 0; i < 3; i++)
         {
             Order filler = CreateOrder(actors[0], firstSource);
             Assert.That(full.TryEnqueue(in filler), Is.True);
@@ -53,9 +53,11 @@ public sealed class MovePlanOrderLifecycleTests
         Assert.That(full.TryEnqueueClusteredBatch(rejected), Is.False);
         Assert.Multiple(() =>
         {
-            Assert.That(full.Count, Is.EqualTo(63));
-            Assert.That(rejected[0].OrderId, Is.Zero);
-            Assert.That(rejected[1].OrderId, Is.Zero);
+            Assert.That(full.Count, Is.EqualTo(3));
+            Assert.That(rejected[0].OrderId, Is.Positive);
+            Assert.That(rejected[1].OrderId, Is.EqualTo(rejected[0].OrderId));
+            Assert.That(full.AdmissionResults.TryGet(rejected[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         });
 
         Order[] duplicateActor =
@@ -304,9 +306,10 @@ public sealed class MovePlanOrderLifecycleTests
         return registry;
     }
 
-    private static OrderQueue CreateOrderQueue(int capacity)
+    private static OrderQueue CreateOrderQueue(int capacity, int? resultCapacity = null)
     {
-        return new OrderQueue(capacity, new OrderAdmissionResultBuffer(capacity, capacity));
+        int admissionCapacity = resultCapacity ?? capacity;
+        return new OrderQueue(capacity, new OrderAdmissionResultBuffer(admissionCapacity, admissionCapacity));
     }
 
     private static OrderTypeRegistry CreateOrderTypeRegistry()

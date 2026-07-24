@@ -11,6 +11,9 @@ namespace Ludots.Core.Presentation.Systems
         private readonly int _chainPassOrderTypeId;
         private int _lastSubmittedRootId;
 
+        public OrderSubmitResult LastSubmissionResult { get; private set; } = OrderSubmitResult.RejectedByRule;
+        public int LastSubmittedOrderId { get; private set; }
+
         public ResponseChainAiOrderSourceSystem(ResponseChainUiState ui, OrderQueue chainOrders, int chainPassOrderTypeId = 1)
         {
             _ui = ui;
@@ -26,7 +29,7 @@ namespace Ludots.Core.Presentation.Systems
             if (_ui.PlayerId != 2) return;
             if (_ui.RootId == _lastSubmittedRootId) return;
 
-            _chainOrders.TryEnqueue(new Order
+            var order = new Order
             {
                 OrderTypeId = _chainPassOrderTypeId,
                 PlayerId = _ui.PlayerId,
@@ -34,9 +37,14 @@ namespace Ludots.Core.Presentation.Systems
                 Target = _ui.Target,
                 TargetContext = _ui.TargetContext,
                 Args = default
-            });
+            };
+            LastSubmissionResult = _chainOrders.SubmitAssigned(ref order);
+            LastSubmittedOrderId = order.OrderId;
 
-            _lastSubmittedRootId = _ui.RootId;
+            if (OrderSubmitResultSemantics.IsAccepted(LastSubmissionResult))
+            {
+                _lastSubmittedRootId = _ui.RootId;
+            }
         }
 
         public void BeforeUpdate(in float dt) { }

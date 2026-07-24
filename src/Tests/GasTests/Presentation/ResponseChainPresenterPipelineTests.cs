@@ -302,6 +302,93 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ResponseChainHumanOrderSourceSystem_QueueFullPublishesRejectedOrderResult()
+        {
+            using var world = World.Create();
+            var (backend, handler) = BuildResponseChainHandler();
+            var actor = world.Create();
+            var ui = new ResponseChainUiState();
+            var request = default(OrderRequest);
+            request.PlayerId = 3;
+            request.PromptTagId = 9001;
+            request.Actor = actor;
+            request.Target = actor;
+            ui.ApplyRequest(request);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
+                {
+                    Constants = new GameConstants
+                    {
+                        ResponseChainOrderTypeIds = new Dictionary<string, int>
+                        {
+                            ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
+                            ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
+                            ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
+                        }
+                    }
+                },
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ResponseChainPassActionId = "UiPass",
+                    ResponseChainNegateActionId = "UiNegate",
+                    ResponseChainActivateActionId = "UiActivate"
+                }
+            };
+            var admissionResults = new OrderAdmissionResultBuffer(4, 4);
+            var chainOrders = new OrderQueue(capacity: 1, admissionResults);
+            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            That(chainOrders.TryEnqueue(in seed), Is.True);
+            var system = new ResponseChainHumanOrderSourceSystem(globals, ui, chainOrders);
+
+            PressButton(handler, backend, "<Keyboard>/f");
+            system.Update(0f);
+
+            That(chainOrders.Count, Is.EqualTo(1));
+            That(system.LastSubmissionResult, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            That(system.LastSubmittedOrderId, Is.GreaterThan(0));
+            That(admissionResults.TryGet(system.LastSubmittedOrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
+            That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+        }
+
+        [Test]
+        public void ResponseChainAiOrderSourceSystem_QueueFullDoesNotMarkRootSubmitted()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var ui = new ResponseChainUiState();
+            var request = default(OrderRequest);
+            request.RequestId = 77;
+            request.PlayerId = 2;
+            request.Actor = actor;
+            request.Target = actor;
+            ui.ApplyRequest(request);
+            var admissionResults = new OrderAdmissionResultBuffer(4, 4);
+            var chainOrders = new OrderQueue(capacity: 1, admissionResults);
+            var seed = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass };
+            That(chainOrders.TryEnqueue(in seed), Is.True);
+            var system = new ResponseChainAiOrderSourceSystem(
+                ui,
+                chainOrders,
+                TestResponseChainOrderTypeIds.ChainPass);
+
+            system.Update(0f);
+            That(system.LastSubmissionResult, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            That(chainOrders.TryDequeue(out _), Is.True);
+
+            system.Update(0f);
+
+            That(chainOrders.TryDequeue(out var retry), Is.True);
+            That(retry.OrderTypeId, Is.EqualTo(TestResponseChainOrderTypeIds.ChainPass));
+            That(retry.PlayerId, Is.EqualTo(2));
+            That(system.LastSubmissionResult, Is.EqualTo(OrderSubmitResult.Queued));
+
+            system.Update(0f);
+            That(chainOrders.TryDequeue(out _), Is.False);
+        }
+
+        [Test]
         public void ResponseChainHumanOrderSourceSystem_MissingOrderTypes_IsRejected()
         {
             using var world = World.Create();

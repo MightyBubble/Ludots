@@ -2,6 +2,65 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 Order Admission Mergeability Repair - 2026-07-24
+
+This is the live self-review section for the order admission repair on branch `codex/issues-649-651-ordering`. Older sections below are historical context only.
+
+- **Task / Issue**: PR #660 strict audit repair for #649 / #650 / #651 / #669 order-result traceability.
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex.
+
+### 1. Core judgment
+
+Primary delivery: A. Repair existing Order admission, input fan-out, ResponseChain, and continuation paths so every player-visible order attempt produces a typed, queryable result.
+
+Result: PASS.
+
+Reason: This work reuses the existing `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderBufferSystem`, `InputOrderMappingSystem`, `ResponseChain*OrderSourceSystem`, `CompositeOrderPlanner`, and `OrderContinuationSystem`. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel order runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Batch queue-full rejection keeps nonzero order ids | N/A | existing `OrderQueue` + `OrderAdmissionResultBuffer` |
+| Collection fan-out returns assigned batch id or typed rejection | N/A | existing `InputOrderMappingSystem` batch submit path |
+| ResponseChain enqueue failure is observable and retryable | N/A | existing `ResponseChainHumanOrderSourceSystem` and `ResponseChainAiOrderSourceSystem` |
+| Continuation follow-up admission result is published | N/A | existing `OrderContinuationBuffer`, `OrderContinuationSystem`, `OrderSubmitter` |
+| Entity-intake close remains explicit in production | N/A | existing cleanup phase with `OrderAdmissionEntityIntakeEndSystem` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderBufferSystem`, `OrderContinuationSystem`, `ResponseChainHumanOrderSourceSystem`, `ResponseChainAiOrderSourceSystem`.
+- Resolvers / Registries: existing `OrderTypeRegistry`, input mapping profiles, response-chain order type ids.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Batch and continuation intake must reserve admission-result capacity before mutating queue or continuation state. Queue-full paths must publish `RejectedQueueFull` with a nonzero order id instead of silently dropping, throwing from player input, or marking an AI response as submitted when it was not accepted.
+
+### 6. Config SSOT
+
+Behavior remains in the existing order type catalog, input mapping data, response-chain queue contracts, and runtime capacity values.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, response-chain, continuation, or lifecycle runtime added
+- [x] No fallback constructor or compatibility bypass added
+- [x] No silent queue-full, zero-id rejection, or unqueryable order result remains in the repaired paths
+- [x] No Core gameplay enum, preset, loader, registry, or schema added
+
+### 8. Next variant test
+
+A new player command variant changes input mapping data, effect chains, or graph wiring and continues through the same order admission/result contract. It must not add an alternate Core order runtime or silently bypass admission results.
+
 ## PR #660 Final Status - 2026-07-24
 
 This is the current status for the PR #660 worktree. Older sections below are historical evidence and must not be treated as alternate live branches.

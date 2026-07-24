@@ -1537,7 +1537,7 @@ namespace Ludots.Core.Input.Orders
 
             if (batchCount > 0)
             {
-                SubmitAtomicOrderBatchOrThrow(
+                SubmitAtomicOrderBatch(
                     mapping,
                     _commandIntentOrdersScratch.AsSpan(0, batchCount),
                     "actorOrderRouting");
@@ -1731,14 +1731,11 @@ namespace Ludots.Core.Input.Orders
                         ref _commandIntentOrdersScratch[dispatchIndex]);
                 }
 
-                if (_orderClusterBatchSubmitHandler(
-                        _commandIntentOrdersScratch.AsSpan(0, dispatchCount)))
-                {
-                    return true;
-                }
-
-                throw new InvalidOperationException(
-                    "Command intent clustered fan-out was rejected; no partial orders were accepted.");
+                OrderSubmitResult result = SubmitClusteredOrderBatch(
+                    mapping,
+                    _commandIntentOrdersScratch.AsSpan(0, dispatchCount),
+                    "command intent clustered fan-out");
+                return OrderSubmitResultSemantics.IsAccepted(result);
             }
 
             if (routing.SharedOrderId && dispatchCount > 1)
@@ -1771,10 +1768,11 @@ namespace Ludots.Core.Input.Orders
                     };
                 }
 
-                return SubmitAtomicOrderBatchOrThrow(
+                OrderSubmitResult result = SubmitAtomicOrderBatch(
                     mapping,
                     _commandIntentOrdersScratch.AsSpan(0, dispatchCount),
                     "command intent shared fan-out");
+                return OrderSubmitResultSemantics.IsAccepted(result);
             }
 
             int sharedOrderId = 0;
@@ -2145,7 +2143,7 @@ namespace Ludots.Core.Input.Orders
 
             if (batchCount > 0)
             {
-                SubmitAtomicOrderBatchOrThrow(
+                aggregate = SubmitAtomicOrderBatch(
                     mapping,
                     _commandIntentOrdersScratch.AsSpan(0, batchCount),
                     "actorCollectionKey fan-out");
@@ -2191,7 +2189,7 @@ namespace Ludots.Core.Input.Orders
             return false;
         }
 
-        private bool SubmitAtomicOrderBatchOrThrow(InputOrderMapping mapping, Span<Order> orders, string context)
+        private OrderSubmitResult SubmitAtomicOrderBatch(InputOrderMapping mapping, Span<Order> orders, string context)
         {
             if (_orderBatchSubmitHandler == null)
             {
@@ -2199,13 +2197,34 @@ namespace Ludots.Core.Input.Orders
                     $"Input mapping '{mapping.ActionId}' requires atomic batch submission for {context}, but no order batch submit handler is configured.");
             }
 
-            if (_orderBatchSubmitHandler(orders))
+            bool accepted = _orderBatchSubmitHandler(orders);
+            return RecordBatchSubmissionResult(orders, accepted);
+        }
+
+        private OrderSubmitResult SubmitClusteredOrderBatch(InputOrderMapping mapping, Span<Order> orders, string context)
+        {
+            if (_orderClusterBatchSubmitHandler == null)
             {
-                return true;
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' requires atomic clustered batch submission for {context}, but no order cluster batch submit handler is configured.");
             }
 
-            throw new InvalidOperationException(
-                $"Input mapping '{mapping.ActionId}' atomic batch submit was rejected for {context}; no partial orders were accepted.");
+            bool accepted = _orderClusterBatchSubmitHandler(orders);
+            return RecordBatchSubmissionResult(orders, accepted);
+        }
+
+        private OrderSubmitResult RecordBatchSubmissionResult(ReadOnlySpan<Order> orders, bool accepted)
+        {
+            OrderSubmitResult result = accepted
+                ? OrderSubmitResult.Queued
+                : OrderSubmitResult.RejectedQueueFull;
+            Entity actor = orders.IsEmpty ? Entity.Null : orders[0].Actor;
+            _lastSubmittedOrderId = orders.IsEmpty ? 0 : orders[0].OrderId;
+            LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
+                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
+                : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
+
+            return result;
         }
 
         private void ApplyGroupMoveTargetLayout(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
