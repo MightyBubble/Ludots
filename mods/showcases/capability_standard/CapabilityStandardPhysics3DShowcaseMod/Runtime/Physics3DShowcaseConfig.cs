@@ -169,11 +169,6 @@ internal sealed class Physics3DShowcaseConfig
         RequireFinitePositive(SpringAngularFrequency, nameof(SpringAngularFrequency));
         RequireFiniteNonNegative(SpringTwiceDampingRatio, nameof(SpringTwiceDampingRatio));
         ScannerRange.Validate(nameof(ScannerRange));
-        if (ScannerRange.SweepVisualMaximumSpacingCm > BodySizeCm * 0.6f)
-        {
-            throw new InvalidOperationException(
-                "scannerRange.sweepVisualMaximumSpacingCm must not exceed the capsule diameter, so the displayed swept volume has no gaps.");
-        }
         MaterialHill.Validate(nameof(MaterialHill));
         WindTunnel.Validate(nameof(WindTunnel));
         ScaleCity.Validate(nameof(ScaleCity), BodySizeCm, BenchmarkPresets[0]);

@@ -154,6 +154,169 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_ScannerRange_Scenario_PlayerSingleStepsCapsuleSweepFromStartingOverlapToOrderedCompletion()
+    {
+        // Given the player pauses Scanner Range and chooses the capsule sweep that starts inside target #1.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.TogglePause));
+        harness.Step();
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerQueryKind,
+            (int)Physics3DShowcaseQueryKind.CapsuleCast));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerDistancePreset,
+            config.ScannerRange.DistancePresetsCm.Length - 1));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerLayerFilter,
+            config.ScannerRange.LayerFilters.Length - 1));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+
+        // Then the formal result is ready, but the paused playhead remains at the origin with only #1 revealed.
+        Physics3DShowcasePanelState started = harness.Runtime.CapturePanelState();
+        int queryIndex = (int)Physics3DShowcaseQueryKind.CapsuleCast - 1;
+        Assert.That(harness.Runtime.TryGetQueryVisual(queryIndex, out Physics3DShowcaseQueryVisual query), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(started.Paused, Is.True);
+            Assert.That(started.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Playing));
+            Assert.That(started.ScannerPlaybackTick, Is.Zero);
+            Assert.That(started.ScannerPlaybackDistanceCm, Is.Zero);
+            Assert.That(query.HitCount, Is.EqualTo(config.ScannerRange.TargetCount));
+            Assert.That(query.VisibleHitCount, Is.EqualTo(1));
+        });
+        Assert.That(harness.Runtime.TryGetQueryHitVisual(queryIndex, 0, out Physics3DShowcaseQueryHitVisual first), Is.True);
+        Assert.That(first.StartedOverlapping, Is.True, "The red crossed #1 marker must explain a cast starting inside a target.");
+        Assert.That(first.DistanceCm, Is.Zero.Within(0.001f));
+
+        float previousDistanceCm = float.NegativeInfinity;
+        for (int hitIndex = 0; hitIndex < query.HitCount; hitIndex++)
+        {
+            Assert.That(harness.Runtime.TryGetQueryHitVisual(queryIndex, hitIndex, out Physics3DShowcaseQueryHitVisual hit), Is.True);
+            Assert.That(hit.DistanceCm, Is.GreaterThanOrEqualTo(previousDistanceCm));
+            previousDistanceCm = hit.DistanceCm;
+        }
+
+        // When the player presses Single Step, exactly one 30 Hz playback frame advances and the world stays paused.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.SingleStep));
+        harness.Step();
+        Physics3DShowcasePanelState oneStep = harness.Runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(oneStep.Paused, Is.True);
+            Assert.That(oneStep.ScannerPlaybackTick, Is.EqualTo(1));
+            Assert.That(oneStep.ScannerPlaybackDistanceCm, Is.EqualTo(
+                oneStep.ScannerDistanceCm / config.ScannerRange.CastPlaybackDurationTicks).Within(0.001f));
+            Assert.That(oneStep.ScannerVisibleHitCount, Is.EqualTo(1));
+        });
+
+        // When the player single-steps to the end, then #1..#N appear in distance order and playback completes.
+        for (int tick = 1; tick < config.ScannerRange.CastPlaybackDurationTicks; tick++)
+        {
+            harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.SingleStep));
+            harness.Step();
+        }
+        Physics3DShowcasePanelState completed = harness.Runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(completed.Paused, Is.True);
+            Assert.That(completed.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Complete));
+            Assert.That(completed.ScannerPlaybackTick, Is.EqualTo(config.ScannerRange.CastPlaybackDurationTicks));
+            Assert.That(completed.ScannerVisibleHitCount, Is.EqualTo(query.HitCount));
+            Assert.That(completed.LastAction, Does.Contain("numbered in the world"));
+        });
+
+        // When Reset Station is pressed, then the playhead, numbering, result, and authored selection reset together.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.Reset));
+        harness.Step();
+        Physics3DShowcasePanelState reset = harness.Runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(reset.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Waiting));
+            Assert.That(reset.ScannerPlaybackTick, Is.Zero);
+            Assert.That(reset.ScannerVisibleHitCount, Is.Zero);
+            Assert.That(reset.ScannerHasResult, Is.False);
+            Assert.That(reset.ScannerQueryKind, Is.EqualTo(config.ScannerRange.InitialQueryKind));
+        });
+    }
+
+    [Test]
+    public void Feature_ScannerRange_Scenario_OverlapPulseStaysAtItsAuthoredOrigin()
+    {
+        // Given the player pauses and runs a sphere overlap.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.TogglePause));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerQueryKind,
+            (int)Physics3DShowcaseQueryKind.SphereOverlap));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        int queryIndex = (int)Physics3DShowcaseQueryKind.SphereOverlap - 1;
+        Assert.That(harness.Runtime.TryGetQueryVisual(queryIndex, out Physics3DShowcaseQueryVisual initial), Is.True);
+
+        // When the player advances one pulse quarter-cycle, then only scale changes; origin and distance stay fixed.
+        int steps = config.ScannerRange.OverlapPulseCycleTicks / 4;
+        for (int i = 0; i < steps; i++)
+        {
+            harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.SingleStep));
+            harness.Step();
+        }
+        Assert.That(harness.Runtime.TryGetQueryVisual(queryIndex, out Physics3DShowcaseQueryVisual pulsed), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Pulsing));
+            Assert.That(pulsed.OriginCm, Is.EqualTo(initial.OriginCm));
+            Assert.That(pulsed.PlaybackDistanceCm, Is.Zero);
+            Assert.That(pulsed.PulseScale, Is.GreaterThan(1f));
+            Assert.That(pulsed.VisibleHitCount, Is.EqualTo(pulsed.HitCount));
+        });
+    }
+
+    [Test]
+    public void ScannerRange_CastPlaybackSteadyFixedTicks_DoNotAllocateOnCallingThread()
+    {
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        config.ScannerRange.CastPlaybackDurationTicks = 120;
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerQueryKind,
+            (int)Physics3DShowcaseQueryKind.CapsuleCast));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        for (int i = 0; i < 16; i++)
+        {
+            harness.Step();
+        }
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 30; i++)
+        {
+            harness.Step();
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(allocated, Is.Zero);
+            Assert.That(harness.Runtime.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Playing));
+        });
+    }
+
+    [Test]
     public void Feature_ScannerRange_Scenario_EachChoicePublishesOnlyItsOwnOrderedHits()
     {
         // Given the authored Scanner Range has four casts and three overlap lanes.
@@ -230,7 +393,15 @@ public sealed class Physics3DShowcaseTests
                     if (!query.IsOverlap)
                     {
                         Assert.That(hit.DistanceCm, Is.InRange(0f, query.DistanceCm));
-                        Assert.That(hit.Normal.Length(), Is.EqualTo(1f).Within(1e-4f));
+                        if (hit.StartedOverlapping)
+                        {
+                            Assert.That(hit.DistanceCm, Is.Zero.Within(0.001f));
+                            Assert.That(hit.Normal, Is.EqualTo(Vector3.Zero));
+                        }
+                        else
+                        {
+                            Assert.That(hit.Normal.Length(), Is.EqualTo(1f).Within(1e-4f));
+                        }
                     }
                     else
                     {
