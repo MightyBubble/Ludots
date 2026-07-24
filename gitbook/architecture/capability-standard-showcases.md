@@ -14,6 +14,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Physics2D | `capability_standard_physics2d` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DMod` | Pure Physics2D startup, static polygon wall, restitution bounce, ForceInput knockback, damping field, kinematic rotating door, friction tangent impulse, radial impulse symmetry |
 | Physics2D Stress | `capability_standard_physics2d_stress` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod` | Large-N Physics2D throughput budget and pipeline-level steady-state allocation evidence |
 | Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
+| Physics3D Sample Lab | `capability_standard_physics3d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics3DShowcaseMod` | Player-facing 30Hz lab for bodies, shapes, stacking, CCD, seven spatial queries, contact events, joints, deterministic replay, and exact 1K/2K/5K/10K awake-body presets |
 | TimeFlow | `capability_standard_time_flow_showcase` | `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod` | TimeFlow pause/scale token stacks: settings pause, menu pause, skill indicator pause, nested system guide pause, scale layering, with MassNavigation, Physics2D, and GAS clock probes and no Formation/action coupling |
 
 Standard launch commands:
@@ -27,6 +28,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_stress' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics3d_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_time_flow_showcase' --adapter raylib
 ```
 
@@ -41,6 +43,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_stress_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics3d_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_time_flow_showcase_raylib'
 ```
 
@@ -48,6 +51,8 @@ Preset launch commands:
 
 - Root mods own scenario entry, productized config, and minimal scene glue.
 - Reusable logic stays in capability mods, for example `MassNavigationMod`, `ParticipantViewCapabilityMod`, and shared Physics2D runtime modules.
+- The Physics3D Sample Lab owns only scene composition, player controls, bounded presentation sampling, and evidence. The authoritative Bepu world, fixed-step scheduling, SoA body state, queries, contacts, and constraints stay in `Ludots.Physics3D` plus `Physics3DMod`.
+- Engine and Physics3D clocks are both 30Hz. A 20Hz engine clock is not a supported configuration because it forces alternating Physics3D substep counts instead of one authoritative step per source tick.
 - Standard root mod dependency closure must not include historical showcase entry mods such as `PerformerBlacksmithShowcaseMod`, `PerformerBlacksmithScatterHudTextBenchmarkEntryMod`, or `Physics2DPlaygroundMod`.
 - The Physics2D capability-standard root retires old `Physics2DPlaygroundMod` as formal entry; historical playgrounds are not acceptance SSOTs.
 - Historical showcase mods may remain local debugging material, but they are not adapter or core-mainline acceptance SSOTs.
@@ -61,6 +66,7 @@ Adapter authors should verify:
 - launcher bindings and presets resolve to the same ordered mod IDs;
 - `game.json`, `config_catalog.json`, map, presentation, GAS, input, and camera configs enter runtime through ConfigPipeline;
 - Physics2D root keeps `physics2D.enabled=true`, with runtime bodies spawned through `RuntimeEntitySpawnQueue`;
+- Physics3D root keeps engine and Physics3D fixed clocks at 30Hz with `MaximumPhysicsStepsPerSourceTick=1`, and renders only the configured sample while all benchmark bodies remain active in the authoritative world;
 - HUD bars, HUD text, minimap, selection, and path preview use formal platform rendering paths;
 - asset references resolve through `ModId:assets/...`;
 - adapters do not hardcode private paths or business names for these showcases.

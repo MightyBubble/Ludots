@@ -1,0 +1,30 @@
+{
+  "startupMapId": "capability_standard_physics3d_showcase",
+  "windowTitle": "Ludots Engine - Physics3D Sample Lab",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 20000,
+      "mediumLodDistanceCm": 60000,
+      "lowLodDistanceCm": 160000
+    },
+    "performerInstanceCapacity": 4096,
+    "presentationEventStreamCapacity": 8192,
+    "presentationOwnerChangeCapacity": 4096,
+    "performerCommandCapacity": 4096,
+    "primitiveDrawBufferCapacity": 32768,
+    "visualSnapshotBufferCapacity": 4096,
+    "visualProxyBufferCapacity": 4096,
+    "presentationRequestCapacity": 4096,
+    "groundOverlayCapacity": 2048,
+    "worldHudCapacity": 4096,
+    "screenHudCapacity": 4096,
+    "skinnedVisualBatchCapacity": 2048,
+    "minimapMarkerCapacity": 4096,
+    "runtimeEntitySpawnQueueCapacity": 4096,
+    "runtimeEntitySpawnReceiptQueueCapacity": 4096
+  }
+}

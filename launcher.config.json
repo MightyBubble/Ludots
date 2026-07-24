@@ -234,6 +234,14 @@
       }
     },
     {
+      "name": "capability_standard_physics3d_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics3DShowcaseMod",
+        "projectPath": "CapabilityStandardPhysics3DShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_time_flow_showcase",
       "target": {
         "type": "path",

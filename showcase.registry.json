@@ -184,6 +184,28 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "capability_standard_physics3d_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardPhysics3DShowcaseMod",
+      "projectPath": "CapabilityStandardPhysics3DShowcaseMod.csproj",
+      "title": "标准能力·3D 物理实验室",
+      "summary": "面向新玩家的九场景 3D 物理实验室：刚体、形状、堆叠、连续碰撞、空间查询、接触事件、关节、确定性回放与 1K/2K/5K/10K 服务器规模展示。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "physics3d",
+        "fixed-step",
+        "benchmark"
+      ],
+      "binding": "capability_standard_physics3d_showcase",
+      "preset": "capability_standard_physics3d_showcase_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CapabilityStandardPhysics3DShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/physics3d-showcase",
+      "screenshot": "artifacts/acceptance/physics3d-showcase/screens/000_start.png",
+      "status": "active"
+    },
+    {
       "id": "capability_standard_physics2d_stress",
       "path": "mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod",
       "projectPath": "CapabilityStandardPhysics2DStressMod.csproj",
