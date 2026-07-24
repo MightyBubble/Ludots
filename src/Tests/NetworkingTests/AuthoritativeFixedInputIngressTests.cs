@@ -69,8 +69,9 @@ public sealed class AuthoritativeFixedInputIngressTests
         Assert.That(AdmitOne(ingress, in seat, 11, 1, out FixedInputAdmissionDisposition duplicate), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
         Assert.That(duplicate, Is.EqualTo(FixedInputAdmissionDisposition.Duplicate));
 
-        Assert.That(AdmitOne(ingress, in seat, 11, 9, out FixedInputAdmissionDisposition conflict), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(AdmitOne(ingress, in seat, 11, 9, out FixedInputAdmissionDisposition conflict), Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
         Assert.That(conflict, Is.EqualTo(FixedInputAdmissionDisposition.Conflict));
+        Assert.That(ingress.ConflictCount, Is.EqualTo(1));
 
         Assert.That(AdmitOne(ingress, in seat, 10, 2, out FixedInputAdmissionDisposition late), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
         Assert.That(late, Is.EqualTo(FixedInputAdmissionDisposition.Late));
@@ -85,6 +86,38 @@ public sealed class AuthoritativeFixedInputIngressTests
         Span<byte> kept = stackalloc byte[PayloadBytes];
         Assert.That(ingress.TryGet(in seat, 11, kept, out _), Is.EqualTo(FixedInputLookupResult.Present));
         Assert.That(kept[0], Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Admit_ConflictInMixedBatch_RejectsEntireBatchWithoutPartialMutation()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        ticks.RestoreCommittedTick(10);
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(maxFuture: 8), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        Assert.That(AdmitOne(ingress, in seat, 11, 1, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+
+        Span<uint> batchTicks = stackalloc uint[2] { 11, 12 };
+        Span<byte> batchPayloads = stackalloc byte[PayloadBytes * 2];
+        FillPayload(batchPayloads.Slice(0, PayloadBytes), 9); // conflicts with accepted tick 11
+        FillPayload(batchPayloads.Slice(PayloadBytes, PayloadBytes), 2); // would otherwise be Accepted
+        Span<FixedInputAdmissionDisposition> dispositions = stackalloc FixedInputAdmissionDisposition[2];
+        var header = new NetworkFixedInputBatchHeader(1, SchemaId, PayloadBytes, 10, 2);
+
+        Assert.That(
+            ingress.TryAdmitBatch(in seat, in header, batchTicks, batchPayloads, dispositions),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
+        Assert.That(dispositions[0], Is.EqualTo(FixedInputAdmissionDisposition.Conflict));
+        Assert.That(dispositions[1], Is.EqualTo(FixedInputAdmissionDisposition.Conflict));
+        Assert.That(ingress.ConflictCount, Is.EqualTo(1));
+        Assert.That(ingress.AcceptedCount, Is.EqualTo(1)); // only the pre-batch accept
+
+        Span<byte> kept = stackalloc byte[PayloadBytes];
+        Assert.That(ingress.TryGet(in seat, 11, kept, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        Assert.That(kept[0], Is.EqualTo(1));
+        Assert.That(ingress.TryGet(in seat, 12, kept, out _), Is.EqualTo(FixedInputLookupResult.Missing));
     }
 
     [Test]
@@ -114,27 +147,78 @@ public sealed class AuthoritativeFixedInputIngressTests
     }
 
     [Test]
-    public void Admit_AllOrNothing_OnRingWrap_AndInvalidSeatEpochSchemaPayload()
+    public void BuildAcknowledgement_DoesNotInferMissingFromFutureGaps_AndAdvancesOnlyOnObservedDeadlineMisses()
     {
         var ticks = new AuthoritativeSimulationTickState();
-        ticks.RestoreCommittedTick(1);
-        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(history: 4, maxFuture: 8), ticks);
+        ticks.RestoreCommittedTick(10);
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(maxFuture: 8), ticks);
         SessionSeatBinding seat = Seat();
         ingress.BindSeat(in seat);
 
-        Assert.That(AdmitOne(ingress, in seat, 2, 1, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
-        // Same ring cell as tick 2 when history=4: tick 6 maps to index 2.
-        Span<uint> wrapTicks = stackalloc uint[2] { 3, 6 };
-        Span<byte> wrapPayloads = stackalloc byte[PayloadBytes * 2];
-        wrapPayloads.Clear();
-        Span<FixedInputAdmissionDisposition> wrapDispositions = stackalloc FixedInputAdmissionDisposition[2];
-        var wrapHeader = new NetworkFixedInputBatchHeader(1, SchemaId, PayloadBytes, 1, 2);
+        Assert.That(AdmitOne(ingress, in seat, 12, 1, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(AdmitOne(ingress, in seat, 13, 2, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+
+        NetworkFixedInputAcknowledgement beforeMiss = ingress.BuildAcknowledgement(in seat);
+        Assert.That(beforeMiss.LatestReceivedTick, Is.EqualTo(13u));
+        Assert.That(beforeMiss.ReceivedMask & 1UL, Is.EqualTo(1UL));
+        Assert.That((beforeMiss.ReceivedMask >> 1) & 1UL, Is.EqualTo(1UL));
+        // Gap at tick 11 must not be reported as missing — only observed MissingAtDeadline counts.
+        Assert.That(beforeMiss.LatestMissingInputTick, Is.EqualTo(0u));
+
+        ticks.Begin(11);
+        Span<byte> destination = stackalloc byte[PayloadBytes];
         Assert.That(
-            ingress.TryAdmitBatch(in seat, in wrapHeader, wrapTicks, wrapPayloads, wrapDispositions),
-            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
-        Assert.That(wrapDispositions[0], Is.EqualTo(FixedInputAdmissionDisposition.RingWrap));
-        Span<byte> stillMissing = stackalloc byte[PayloadBytes];
-        Assert.That(ingress.TryGet(in seat, 3, stillMissing, out _), Is.EqualTo(FixedInputLookupResult.Missing));
+            ingress.TryGet(in seat, 11, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
+        NetworkFixedInputAcknowledgement afterOneMiss = ingress.BuildAcknowledgement(in seat);
+        Assert.That(afterOneMiss.LatestMissingInputTick, Is.EqualTo(11u));
+        ticks.Commit(11);
+
+        ticks.Begin(12);
+        Assert.That(ingress.TryGet(in seat, 12, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        ticks.Commit(12);
+
+        ticks.Begin(13);
+        Assert.That(ingress.TryGet(in seat, 13, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        ticks.Commit(13);
+
+        ticks.Begin(14);
+        Assert.That(
+            ingress.TryGet(in seat, 14, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
+        NetworkFixedInputAcknowledgement afterLaterMiss = ingress.BuildAcknowledgement(in seat);
+        Assert.That(afterLaterMiss.LatestMissingInputTick, Is.EqualTo(14u));
+        Assert.That(ingress.MissingAtDeadlineCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ReleaseSeat_ClearsMissingAtDeadlineTracking()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        ticks.Begin(1);
+        Span<byte> destination = stackalloc byte[PayloadBytes];
+        Assert.That(ingress.TryGet(in seat, 1, destination, out _), Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
+        Assert.That(ingress.BuildAcknowledgement(in seat).LatestMissingInputTick, Is.EqualTo(1u));
+        ticks.Commit(1);
+
+        Assert.That(ingress.TryReleaseSeat(in seat), Is.True);
+        SessionSeatBinding next = Seat(generation: 2);
+        ingress.BindSeat(in next);
+        Assert.That(ingress.BuildAcknowledgement(in next).LatestMissingInputTick, Is.EqualTo(0u));
+    }
+
+    [Test]
+    public void Admit_AllOrNothing_OnHardRejects_AndInvalidSeatEpochSchemaPayload()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        ticks.RestoreCommittedTick(1);
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(history: 8, maxFuture: 8), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
 
         SessionSeatBinding stale = Seat(generation: 99);
         Assert.That(AdmitOne(ingress, in stale, 3, 1, out FixedInputAdmissionDisposition badSeat), Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
@@ -172,6 +256,49 @@ public sealed class AuthoritativeFixedInputIngressTests
                 oneDisposition),
             Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
         Assert.That(oneDisposition[0], Is.EqualTo(FixedInputAdmissionDisposition.PayloadMismatch));
+
+        // Invalid frame order rejects without writing earlier frames in the same batch.
+        Span<uint> unordered = stackalloc uint[2] { 4, 3 };
+        Span<byte> unorderedPayloads = stackalloc byte[PayloadBytes * 2];
+        Span<FixedInputAdmissionDisposition> unorderedDispositions = stackalloc FixedInputAdmissionDisposition[2];
+        Assert.That(
+            ingress.TryAdmitBatch(
+                in seat,
+                new NetworkFixedInputBatchHeader(1, SchemaId, PayloadBytes, 1, 2),
+                unordered,
+                unorderedPayloads,
+                unorderedDispositions),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
+        Assert.That(unorderedDispositions[0], Is.EqualTo(FixedInputAdmissionDisposition.InvalidFrameOrder));
+        Span<byte> stillMissing = stackalloc byte[PayloadBytes];
+        Assert.That(ingress.TryGet(in seat, 4, stillMissing, out _), Is.EqualTo(FixedInputLookupResult.Missing));
+    }
+
+    [Test]
+    public void Admit_AfterCommit_SafelyReusesRingCellForModuloEquivalentTick()
+    {
+        const int history = 8;
+        var ticks = new AuthoritativeSimulationTickState();
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(history: history, maxFuture: history), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        Assert.That(AdmitOne(ingress, in seat, 1, 1, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(AdmitOne(ingress, in seat, 2, 2, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+
+        ticks.Begin(1);
+        ticks.Commit(1);
+
+        uint reused = 1u + (uint)history; // same ring cell as tick 1
+        Assert.That(AdmitOne(ingress, in seat, reused, 9, out FixedInputAdmissionDisposition accepted), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(accepted, Is.EqualTo(FixedInputAdmissionDisposition.Accepted));
+        Assert.That(ingress.RingWrapCount, Is.EqualTo(0));
+
+        Span<byte> destination = stackalloc byte[PayloadBytes];
+        Assert.That(ingress.TryGet(in seat, reused, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        Assert.That(destination[0], Is.EqualTo(9));
+        Assert.That(ingress.TryGet(in seat, 2, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        Assert.That(destination[0], Is.EqualTo(2));
     }
 
     [Test]
@@ -209,7 +336,7 @@ public sealed class AuthoritativeFixedInputIngressTests
         Assert.That(ack.LatestReceivedTick, Is.EqualTo(13u));
         Assert.That(ack.ReceivedMask & 1UL, Is.EqualTo(1UL)); // tick 13
         Assert.That((ack.ReceivedMask >> 1) & 1UL, Is.EqualTo(1UL)); // tick 12
-        Assert.That(ack.LatestMissingInputTick, Is.EqualTo(11u));
+        Assert.That(ack.LatestMissingInputTick, Is.EqualTo(0u));
     }
 
     [Test]

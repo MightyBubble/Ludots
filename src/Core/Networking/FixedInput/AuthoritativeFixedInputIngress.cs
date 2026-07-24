@@ -30,6 +30,7 @@ namespace Ludots.Core.Networking.FixedInput
         private readonly bool[] _hasAcceptedBySeat;
         private readonly uint[] _lastAcceptedTickBySeat;
         private readonly uint[] _latestReceivedTickBySeat;
+        private readonly uint[] _latestMissingAtDeadlineBySeat;
 
         private readonly FixedInputAdmissionDisposition[] _scratchDispositions;
 
@@ -55,6 +56,7 @@ namespace Ludots.Core.Networking.FixedInput
             _hasAcceptedBySeat = new bool[_seatCapacity];
             _lastAcceptedTickBySeat = new uint[_seatCapacity];
             _latestReceivedTickBySeat = new uint[_seatCapacity];
+            _latestMissingAtDeadlineBySeat = new uint[_seatCapacity];
 
             _scratchDispositions = new FixedInputAdmissionDisposition[config.MaxFramesPerBatch];
         }
@@ -133,8 +135,8 @@ namespace Ludots.Core.Networking.FixedInput
 
         /// <summary>
         /// All-or-nothing batch admission: the batch is fully classified against the pre-batch ring
-        /// state; hard rejects mutate nothing. Soft outcomes (duplicate/conflict/late/cutoff/future)
-        /// are applied after classification without inventing input.
+        /// state; hard rejects (including Conflict and RingWrap) mutate nothing. Soft outcomes
+        /// (duplicate/late/cutoff/future) are applied after classification without inventing input.
         /// </summary>
         public FixedInputBatchAdmissionStatus TryAdmitBatch(
             in SessionSeatBinding seat,
@@ -265,6 +267,12 @@ namespace Ludots.Core.Networking.FixedInput
             {
                 if (_ticks.IsExecuting && (uint)_ticks.ExecutingTick == tick)
                 {
+                    int slot = seat.Slot;
+                    if (tick > _latestMissingAtDeadlineBySeat[slot])
+                    {
+                        _latestMissingAtDeadlineBySeat[slot] = tick;
+                    }
+
                     MissingAtDeadlineCount++;
                     return FixedInputLookupResult.MissingAtDeadline;
                 }
@@ -291,7 +299,6 @@ namespace Ludots.Core.Networking.FixedInput
                 : (uint)_ticks.CommittedTick;
             uint latestReceived = _latestReceivedTickBySeat[slot];
             ulong mask = 0;
-            uint latestMissing = 0;
 
             if (latestReceived != 0)
             {
@@ -313,22 +320,6 @@ namespace Ludots.Core.Networking.FixedInput
                     {
                         mask |= 1UL << bit;
                     }
-                    else if (candidate > committedThrough)
-                    {
-                        latestMissing = candidate;
-                    }
-                }
-            }
-
-            if (_ticks.IsExecuting)
-            {
-                uint executing = (uint)_ticks.ExecutingTick;
-                int cell = CellIndex(slot, executing);
-                if ((!_cellOccupied[cell] || _cellTicks[cell] != executing) &&
-                    executing > committedThrough &&
-                    executing >= latestMissing)
-                {
-                    latestMissing = executing;
                 }
             }
 
@@ -338,7 +329,7 @@ namespace Ludots.Core.Networking.FixedInput
                 committedThrough,
                 latestReceived,
                 mask,
-                latestMissing);
+                _latestMissingAtDeadlineBySeat[slot]);
         }
 
         private FixedInputAdmissionDisposition ClassifyFrame(
@@ -366,7 +357,12 @@ namespace Ludots.Core.Networking.FixedInput
             int cell = CellIndex(seatSlot, tick);
             if (_cellOccupied[cell] && _cellTicks[cell] != tick)
             {
-                return FixedInputAdmissionDisposition.RingWrap;
+                // Safe reuse: an older modulo-equivalent tick that is already committed may be overwritten.
+                // RingWrap is only an error while the occupied different tick remains uncommitted.
+                if (_cellTicks[cell] > committed)
+                {
+                    return FixedInputAdmissionDisposition.RingWrap;
+                }
             }
 
             if (_cellOccupied[cell] && _cellTicks[cell] == tick)
@@ -469,6 +465,7 @@ namespace Ludots.Core.Networking.FixedInput
                 or FixedInputAdmissionDisposition.SchemaMismatch
                 or FixedInputAdmissionDisposition.PayloadMismatch
                 or FixedInputAdmissionDisposition.RingWrap
+                or FixedInputAdmissionDisposition.Conflict
                 or FixedInputAdmissionDisposition.ReservedNonZero
                 or FixedInputAdmissionDisposition.InvalidFrameOrder
                 or FixedInputAdmissionDisposition.BatchRejected;
@@ -493,6 +490,7 @@ namespace Ludots.Core.Networking.FixedInput
             _hasAcceptedBySeat[seatSlot] = false;
             _lastAcceptedTickBySeat[seatSlot] = 0;
             _latestReceivedTickBySeat[seatSlot] = 0;
+            _latestMissingAtDeadlineBySeat[seatSlot] = 0;
         }
 
         private int CellIndex(int seatSlot, uint tick)

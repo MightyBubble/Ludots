@@ -98,15 +98,15 @@ namespace Ludots.Core.Networking.FixedInput
                     return FixedInputAckApplyStatus.RejectedRegression;
                 }
 
-                if (acknowledgement.CommittedThroughTick == _appliedCommittedThrough &&
-                    acknowledgement.LatestReceivedTick < _appliedLatestReceived)
+                // LatestReceived must never regress within an epoch, even when CommittedThrough advances.
+                if (acknowledgement.LatestReceivedTick < _appliedLatestReceived)
                 {
                     return FixedInputAckApplyStatus.RejectedRegression;
                 }
             }
 
             if (acknowledgement.LatestReceivedTick != 0 &&
-                acknowledgement.CommittedThroughTick > acknowledgement.LatestReceivedTick)
+                (acknowledgement.ReceivedMask & 1UL) == 0UL)
             {
                 return FixedInputAckApplyStatus.InvalidInput;
             }

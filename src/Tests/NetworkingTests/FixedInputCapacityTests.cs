@@ -55,6 +55,43 @@ public sealed class FixedInputCapacityTests
     }
 
     [Test]
+    public void ProtocolConfig_RequiresPositivePayload_AndHistoryAtLeastMaxFuture()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FixedInputProtocolConfig(
+                seatCapacity: 2,
+                historyTicksPerSeat: 8,
+                schemaId: 1,
+                framePayloadBytes: 0,
+                maxFutureTicks: 4,
+                maxFramesPerBatch: 4,
+                maxDatagramPayloadBytes: 1200,
+                sessionEpoch: 1));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FixedInputProtocolConfig(
+                seatCapacity: 2,
+                historyTicksPerSeat: 4,
+                schemaId: 1,
+                framePayloadBytes: 12,
+                maxFutureTicks: 8,
+                maxFramesPerBatch: 4,
+                maxDatagramPayloadBytes: 1200,
+                sessionEpoch: 1));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FixedInputProtocolConfig(
+                seatCapacity: 2,
+                historyTicksPerSeat: 8,
+                schemaId: 1,
+                framePayloadBytes: 12,
+                maxFutureTicks: 0,
+                maxFramesPerBatch: 4,
+                maxDatagramPayloadBytes: 1200,
+                sessionEpoch: 1));
+    }
+
+    [Test]
     public void Acknowledgement_AlwaysFitsStandardDatagram()
     {
         Assert.DoesNotThrow(() => FixedInputWireCodec.ValidateAcknowledgementFitsDatagram(1200));

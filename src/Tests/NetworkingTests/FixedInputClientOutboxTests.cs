@@ -87,6 +87,47 @@ public sealed class FixedInputClientOutboxTests
     }
 
     [Test]
+    public void Outbox_RejectsLatestReceivedRegressionEvenWhenCommittedAdvances_WithoutMutation()
+    {
+        var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);
+        Span<byte> payload = stackalloc byte[PayloadBytes];
+        Fill(payload, 1);
+        Assert.That(outbox.TryEnqueue(1, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        Fill(payload, 2);
+        Assert.That(outbox.TryEnqueue(2, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        Fill(payload, 3);
+        Assert.That(outbox.TryEnqueue(3, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+
+        var first = new NetworkFixedInputAcknowledgement(1, SchemaId, 0, 2, 0b11UL, 0);
+        Assert.That(outbox.TryApplyAcknowledgement(in first), Is.EqualTo(FixedInputAckApplyStatus.Applied));
+        Assert.That(outbox.PendingCount, Is.EqualTo(3));
+        Assert.That(outbox.AppliedLatestReceived, Is.EqualTo(2u));
+        Assert.That(outbox.AppliedCommittedThrough, Is.EqualTo(0u));
+
+        // Committed advances, but LatestReceived regresses — must reject and leave outbox untouched.
+        var regressLatest = new NetworkFixedInputAcknowledgement(1, SchemaId, 1, 1, 1UL, 0);
+        Assert.That(outbox.TryApplyAcknowledgement(in regressLatest), Is.EqualTo(FixedInputAckApplyStatus.RejectedRegression));
+        Assert.That(outbox.PendingCount, Is.EqualTo(3));
+        Assert.That(outbox.AppliedLatestReceived, Is.EqualTo(2u));
+        Assert.That(outbox.AppliedCommittedThrough, Is.EqualTo(0u));
+    }
+
+    [Test]
+    public void Outbox_RejectsAckWhenLatestReceivedNonZeroButMaskBit0Clear_WithoutMutation()
+    {
+        var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);
+        Span<byte> payload = stackalloc byte[PayloadBytes];
+        Fill(payload, 1);
+        Assert.That(outbox.TryEnqueue(1, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+
+        var invalid = new NetworkFixedInputAcknowledgement(1, SchemaId, 0, 1, 0UL, 0);
+        Assert.That(outbox.TryApplyAcknowledgement(in invalid), Is.EqualTo(FixedInputAckApplyStatus.InvalidInput));
+        Assert.That(outbox.PendingCount, Is.EqualTo(1));
+        Assert.That(outbox.AppliedLatestReceived, Is.EqualTo(0u));
+        Assert.That(outbox.AppliedCommittedThrough, Is.EqualTo(0u));
+    }
+
+    [Test]
     public void Outbox_EnqueueRejectsNonIncreasingAndCapacityExceeded()
     {
         var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 2);

@@ -31,10 +31,26 @@ namespace Ludots.Core.Networking.FixedInput
             }
 
             SchemaId = schemaId;
+            if (framePayloadBytes == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(framePayloadBytes),
+                    framePayloadBytes,
+                    "FramePayloadBytes must be positive.");
+            }
+
             FramePayloadBytes = framePayloadBytes;
             if (maxFutureTicks <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxFutureTicks), "MaxFutureTicks must be positive.");
+            }
+
+            if (historyTicksPerSeat < maxFutureTicks)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(historyTicksPerSeat),
+                    historyTicksPerSeat,
+                    $"HistoryTicksPerSeat must be >= MaxFutureTicks ({maxFutureTicks}) so admissible uncommitted ticks cannot alias in the ring.");
             }
 
             MaxFutureTicks = maxFutureTicks;
