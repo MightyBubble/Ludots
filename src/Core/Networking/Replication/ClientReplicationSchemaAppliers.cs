@@ -2,22 +2,74 @@ using Arch.Core;
 
 namespace Ludots.Core.Networking.Replication
 {
+    /// <summary>
+    /// Why a client mirror is leaving the client replication bridge.
+    /// </summary>
+    public enum ReplicationMirrorLeaveKind : byte
+    {
+        Conceal = 1,
+        Removal = 2,
+        Teardown = 3,
+    }
+
+    /// <summary>
+    /// Context passed through every validated client replication lifecycle step.
+    /// Snapshot fields are zero/default only for explicit bridge teardown outside packet apply.
+    /// </summary>
+    public readonly struct ReplicationApplyContext
+    {
+        public ReplicationApplyContext(
+            ulong sessionEpoch,
+            uint committedTick,
+            ulong snapshotId,
+            ReplicationPacketKind packetKind)
+        {
+            if (sessionEpoch == 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(sessionEpoch));
+            }
+
+            SessionEpoch = sessionEpoch;
+            CommittedTick = committedTick;
+            SnapshotId = snapshotId;
+            PacketKind = packetKind;
+        }
+
+        public ulong SessionEpoch { get; }
+        public uint CommittedTick { get; }
+        public ulong SnapshotId { get; }
+        public ReplicationPacketKind PacketKind { get; }
+    }
+
     public interface IClientReplicationSchemaApplier
     {
-        bool CanCreate(World world, in ReplicatedEntityState state);
+        bool CanCreate(World world, in ReplicatedEntityState state, in ReplicationApplyContext context);
 
-        bool CanApply(World world, Entity entity, in ReplicatedEntityState state);
+        bool CanApply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context);
 
-        bool CanConceal(World world, Entity entity);
+        bool CanRelease(
+            World world,
+            Entity entity,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context);
 
         Entity Create(
             World world,
             in ReplicationMirrorIdentity identity,
-            in ReplicationMirrorState state);
+            in ReplicationMirrorState state,
+            in ReplicationApplyContext context);
 
-        void Apply(World world, Entity entity, in ReplicatedEntityState state);
+        void Apply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context);
 
-        void Conceal(World world, Entity entity);
+        /// <summary>
+        /// Releases physics and other external resources for both owned and borrowed mirrors.
+        /// The reason distinguishes visibility loss, permanent removal, and epoch teardown.
+        /// </summary>
+        void Release(
+            World world,
+            Entity entity,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context);
     }
 
     public sealed class ClientReplicationSchemaApplierRegistry

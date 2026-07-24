@@ -633,6 +633,175 @@ public sealed class NetworkRuntimeEndToEndTests
     }
 
     [Test]
+    public void ClientRuntime_SessionEpochRollover_ReleasesOwnedAndBorrowedThenAcceptsNewFull()
+    {
+        var capacity = new NetworkRuntimeCapacity(
+            simulationTickRateHz: 30,
+            statePublishRateHz: 30,
+            maxDatagramPayloadBytes: 512,
+            connectionCapacity: 2,
+            globalEntityCapacity: 2,
+            replicationEntityCapacityPerSeat: 2,
+            maxCommandEntries: 2,
+            maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(2),
+            maxCommandFragments: 4,
+            maxSnapshotBytes: ReplicationPacketWireCodec.GetPayloadSize(2, 2, 4),
+            maxSnapshotFragments: 4,
+            outboundQueueCapacity: 32,
+            acknowledgementHistoryCapacity: 4,
+            controlChannel: new ChannelId(0),
+            commandChannel: new ChannelId(1),
+            stateChannel: new ChannelId(2));
+        var transport = new InMemoryTransport(new ConnectionId(41));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 8, 1 });
+        var credentials = new MemoryCredentials();
+        using World world = World.Create();
+        Entity authored = world.Create(new TestAppliedState(0));
+        var factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            protocol,
+            fingerprint,
+            credentials,
+            factory,
+            new NetworkCommandAdmissionResultBuffer(4),
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        AcceptHandshake(
+            transport,
+            capacity.ControlChannel,
+            protocol,
+            fingerprint,
+            new SessionEpoch(7),
+            reconnectToken: new ReconnectToken(1, 7));
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+        Assert.That(factory.CreateCount, Is.EqualTo(1));
+        Assert.That(factory.Bridge, Is.Not.Null);
+
+        var ownedHandle = new NetworkEntityHandle(0, 1);
+        var borrowedHandle = new NetworkEntityHandle(1, 1);
+        Assert.That(factory.Bridge!.BindExisting(borrowedHandle, authored), Is.EqualTo(ReplicationBridgeResult.Success));
+        ClientWorldReplicationBridge oldBridge = factory.Bridge;
+
+        DeliverFullSnapshot(
+            transport,
+            capacity,
+            sessionEpoch: 7,
+            tick: 10,
+            snapshotId: 1,
+            new[]
+            {
+                new ReplicatedEntityState(ownedHandle, 1, 1, new ReplicationStateVector(11, 0, 0, 0)),
+                new ReplicatedEntityState(borrowedHandle, 1, 1, new ReplicationStateVector(22, 0, 0, 0)),
+            },
+            new[]
+            {
+                new ReplicationDisclosureInput(ownedHandle, KnowledgePresence.LiveVisible),
+                new ReplicationDisclosureInput(borrowedHandle, KnowledgePresence.LiveVisible),
+            });
+        client.PumpTransport();
+        Assert.That(observer.Faults, Is.Zero, $"Last fault: {observer.LastFault.Code}");
+        Assert.That(client.LastCommittedTick, Is.EqualTo(10));
+        Assert.That(oldBridge.TryResolve(ownedHandle, out Entity owned), Is.True);
+        Assert.That(oldBridge.TryResolve(borrowedHandle, out Entity borrowed), Is.True);
+        Assert.That(borrowed, Is.EqualTo(authored));
+        Assert.That(world.Get<TestAppliedState>(owned).Value, Is.EqualTo(11));
+        Assert.That(world.Get<TestAppliedState>(authored).Value, Is.EqualTo(22));
+
+        transport.Disconnect();
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Disconnected));
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        RejectHandshake(
+            transport,
+            capacity.ControlChannel,
+            protocol,
+            fingerprint,
+            HandshakeRejectReason.SessionEpochMismatch,
+            new SessionEpoch(8));
+        Assert.DoesNotThrow(client.PumpTransport);
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Disconnected));
+            Assert.That(client.SessionEpoch, Is.EqualTo(SessionEpoch.Empty));
+            Assert.That(client.IsFaulted, Is.False);
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(factory.CreateCount, Is.EqualTo(1));
+            Assert.That(oldBridge.IsTornDown, Is.True);
+            Assert.That(factory.Applier.ReleaseCalls, Is.EqualTo(2));
+            Assert.That(factory.Applier.LastLeaveKind, Is.EqualTo(ReplicationMirrorLeaveKind.Teardown));
+            Assert.That(world.IsAlive(owned), Is.False);
+            Assert.That(world.IsAlive(authored), Is.True);
+            Assert.That(world.Has<ReplicationMirrorIdentity>(authored), Is.False);
+            Assert.That(credentials.TryLoad(out _), Is.EqualTo(ClientCredentialLoadStatus.Empty));
+        });
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        AcceptHandshake(
+            transport,
+            capacity.ControlChannel,
+            protocol,
+            fingerprint,
+            new SessionEpoch(8),
+            reconnectToken: new ReconnectToken(2, 8));
+        Assert.DoesNotThrow(client.PumpTransport);
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(client.SessionEpoch, Is.EqualTo(new SessionEpoch(8)));
+            Assert.That(client.IsFaulted, Is.False);
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(observer.LastFault.Code, Is.Not.EqualTo(NetworkRuntimeFaultCode.SessionContractViolation));
+            Assert.That(factory.CreateCount, Is.EqualTo(2));
+            Assert.That(factory.Bridge, Is.Not.SameAs(oldBridge));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials stored), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(stored.SessionEpoch, Is.EqualTo(new SessionEpoch(8)));
+        });
+
+        Assert.That(factory.Bridge!.BindExisting(borrowedHandle, authored), Is.EqualTo(ReplicationBridgeResult.Success));
+        DeliverFullSnapshot(
+            transport,
+            capacity,
+            sessionEpoch: 8,
+            tick: 1,
+            snapshotId: 1,
+            new[]
+            {
+                new ReplicatedEntityState(ownedHandle, 1, 1, new ReplicationStateVector(33, 0, 0, 0)),
+                new ReplicatedEntityState(borrowedHandle, 1, 1, new ReplicationStateVector(44, 0, 0, 0)),
+            },
+            new[]
+            {
+                new ReplicationDisclosureInput(ownedHandle, KnowledgePresence.LiveVisible),
+                new ReplicationDisclosureInput(borrowedHandle, KnowledgePresence.LiveVisible),
+            });
+        client.PumpTransport();
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.Faults, Is.Zero, $"Last fault: {observer.LastFault.Code}");
+            Assert.That(client.LastCommittedTick, Is.EqualTo(1));
+            Assert.That(factory.Bridge.TryResolve(ownedHandle, out Entity newOwned), Is.True);
+            Assert.That(factory.Bridge.TryResolve(borrowedHandle, out Entity newBorrowed), Is.True);
+            Assert.That(newBorrowed, Is.EqualTo(authored));
+            Assert.That(world.Get<TestAppliedState>(newOwned).Value, Is.EqualTo(33));
+            Assert.That(world.Get<TestAppliedState>(authored).Value, Is.EqualTo(44));
+        });
+    }
+
+    [Test]
     public void ClientRuntime_Dispose_RespectsDeclaredTransportOwnership()
     {
         var capacity = Capacity();
@@ -716,6 +885,75 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(second.DisposeCalls, Is.EqualTo(1));
             Assert.That(third.DisposeCalls, Is.EqualTo(1));
         });
+    }
+
+    private static void AcceptHandshake(
+        InMemoryTransport transport,
+        ChannelId controlChannel,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint,
+        SessionEpoch epoch,
+        ReconnectToken reconnectToken)
+    {
+        var seat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
+            in seat,
+            reconnectToken,
+            protocol,
+            fingerprint,
+            epoch);
+        Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in response, payload, out int payloadBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueServerFrame(controlChannel, NetworkWireKind.SessionHandshakeResponse, payload[..payloadBytes]);
+    }
+
+    private static void RejectHandshake(
+        InMemoryTransport transport,
+        ChannelId controlChannel,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint,
+        HandshakeRejectReason reason,
+        SessionEpoch epoch)
+    {
+        SessionHandshakeResponse response = SessionHandshakeResponse.Reject(
+            reason,
+            protocol,
+            fingerprint,
+            epoch);
+        Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in response, payload, out int payloadBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueServerFrame(controlChannel, NetworkWireKind.SessionHandshakeResponse, payload[..payloadBytes]);
+    }
+
+    private static void DeliverFullSnapshot(
+        InMemoryTransport transport,
+        in NetworkRuntimeCapacity capacity,
+        ulong sessionEpoch,
+        uint tick,
+        ulong snapshotId,
+        ReplicatedEntityState[] states,
+        ReplicationDisclosureInput[] disclosures)
+    {
+        var channel = new AuthoritativeReplicationChannel(
+            capacity.ReplicationEntityCapacityPerSeat,
+            baselineCapacity: 2,
+            new ReplicationDisclosureChangeLog(capacity.ReplicationEntityCapacityPerSeat * 4));
+        var packet = new ReplicationPacketBuffer(capacity.ReplicationEntityCapacityPerSeat);
+        Assert.That(
+            channel.BuildFull(sessionEpoch, tick, snapshotId, states, disclosures, packet),
+            Is.EqualTo(ReplicationBuildResult.Success));
+        byte[] snapshot = new byte[capacity.MaxSnapshotBytes];
+        Assert.That(
+            ReplicationPacketWireCodec.TryEncode(packet, snapshot, out int snapshotBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueServerFrame(
+            capacity.StateChannel,
+            NetworkWireKind.ReplicationPacket,
+            snapshot.AsSpan(0, snapshotBytes));
     }
 
     private static NetworkRuntimeCapacity Capacity(
@@ -851,20 +1089,42 @@ public sealed class NetworkRuntimeEndToEndTests
 
     private sealed class TestApplier : IClientReplicationSchemaApplier
     {
-        public bool CanCreate(World world, in ReplicatedEntityState state) => true;
-        public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) => world.Has<TestAppliedState>(entity);
-        public bool CanConceal(World world, Entity entity) => world.Has<TestAppliedState>(entity);
+        public int ReleaseCalls { get; private set; }
+        public ReplicationMirrorLeaveKind LastLeaveKind { get; private set; }
 
-        public Entity Create(World world, in ReplicationMirrorIdentity identity, in ReplicationMirrorState state)
+        public bool CanCreate(World world, in ReplicatedEntityState state, in ReplicationApplyContext context) => true;
+        public bool CanApply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context)
+            => world.Has<TestAppliedState>(entity);
+        public bool CanRelease(
+            World world,
+            Entity entity,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context)
+            => world.Has<TestAppliedState>(entity);
+
+        public Entity Create(
+            World world,
+            in ReplicationMirrorIdentity identity,
+            in ReplicationMirrorState state,
+            in ReplicationApplyContext context)
         {
             var applied = new TestAppliedState(state.Values.Value0);
             return world.Create(in identity, in state, in applied);
         }
 
-        public void Apply(World world, Entity entity, in ReplicatedEntityState state) =>
+        public void Apply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context) =>
             world.Set(entity, new TestAppliedState(state.Values.Value0));
 
-        public void Conceal(World world, Entity entity) => world.Set(entity, new TestAppliedState(0));
+        public void Release(
+            World world,
+            Entity entity,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context)
+        {
+            ReleaseCalls++;
+            LastLeaveKind = leaveKind;
+            world.Set(entity, new TestAppliedState(0));
+        }
     }
 
     private sealed class ClientBridgeFactory : IClientReplicationBridgeFactory
@@ -872,25 +1132,31 @@ public sealed class NetworkRuntimeEndToEndTests
         private readonly World _world;
         private readonly int _entityCapacity;
         private readonly int _declaredGlobalEntityCapacity;
+        private readonly TestApplier _applier;
 
         public ClientBridgeFactory(
             World world,
             int entityCapacity,
-            int? declaredGlobalEntityCapacity = null)
+            int? declaredGlobalEntityCapacity = null,
+            TestApplier? applier = null)
         {
             _world = world;
             _entityCapacity = entityCapacity;
             _declaredGlobalEntityCapacity = declaredGlobalEntityCapacity ?? entityCapacity;
+            _applier = applier ?? new TestApplier();
         }
 
         public ClientWorldReplicationBridge? Bridge { get; private set; }
+        public TestApplier Applier => _applier;
+        public int CreateCount { get; private set; }
         public int GlobalEntityCapacity => _declaredGlobalEntityCapacity;
 
         public ClientWorldReplicationBridge Create(ulong sessionEpoch)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
-            Assert.That(appliers.Register(1, new TestApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+            Assert.That(appliers.Register(1, _applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
+            CreateCount++;
             Bridge = new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
             return Bridge;
         }

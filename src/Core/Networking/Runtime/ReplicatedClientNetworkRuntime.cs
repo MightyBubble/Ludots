@@ -387,6 +387,13 @@ namespace Ludots.Core.Networking.Runtime
                         Fail(NetworkRuntimeFaultCode.CredentialStoreFailed, NetworkWireKind.SessionHandshakeResponse);
                     }
 
+                    if (response.RejectReason == HandshakeRejectReason.SessionEpochMismatch &&
+                        !_sessionEpoch.IsEmpty &&
+                        response.SessionEpoch != _sessionEpoch)
+                    {
+                        TeardownReplicationEpoch(NetworkWireKind.SessionHandshakeResponse);
+                    }
+
                     _connectionControl.Disconnect();
                     _state = ReplicatedClientConnectionState.Disconnected;
                     _reconnectElapsedSeconds = 0f;
@@ -397,6 +404,18 @@ namespace Ludots.Core.Networking.Runtime
                 }
 
                 return;
+            }
+
+            if (_replicationBridge != null &&
+                !_sessionEpoch.IsEmpty &&
+                _sessionEpoch != response.SessionEpoch)
+            {
+                if (!_credentials.TryClear())
+                {
+                    Fail(NetworkRuntimeFaultCode.CredentialStoreFailed, NetworkWireKind.SessionHandshakeResponse);
+                }
+
+                TeardownReplicationEpoch(NetworkWireKind.SessionHandshakeResponse);
             }
 
             var stored = new ClientSessionCredentials(response.SessionEpoch, response.ReconnectToken);
@@ -413,6 +432,12 @@ namespace Ludots.Core.Networking.Runtime
                 {
                     throw new InvalidOperationException(
                         "Client replication bridge capacity differs from its factory and the global network entity table.");
+                }
+
+                if (bridge.SessionEpoch != response.SessionEpoch.Value)
+                {
+                    throw new InvalidOperationException(
+                        "Client replication bridge SessionEpoch differs from the accepted handshake epoch.");
                 }
 
                 _replicationBridge = bridge;
@@ -567,6 +592,30 @@ namespace Ludots.Core.Networking.Runtime
                 _capacity.ControlChannel,
                 NetworkWireKind.SnapshotAcknowledgement,
                 _payloadBuffer.AsSpan(0, payloadBytes));
+        }
+
+        private void TeardownReplicationEpoch(NetworkWireKind wireKind)
+        {
+            if (_replicationBridge != null)
+            {
+                ReplicationBridgeResult tornDown = _replicationBridge.Teardown();
+                if (tornDown != ReplicationBridgeResult.Success)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.SessionContractViolation,
+                        wireKind,
+                        detail: (int)tornDown);
+                }
+
+                _replicationBridge = null;
+            }
+
+            _seat = default;
+            _reconnectToken = ReconnectToken.Empty;
+            _sessionEpoch = SessionEpoch.Empty;
+            _lastCommittedTick = 0;
+            _awaitingFullSnapshot = false;
+            _snapshotReassembler.Reset();
         }
 
         private void RequestResync(NetworkResyncReason reason)

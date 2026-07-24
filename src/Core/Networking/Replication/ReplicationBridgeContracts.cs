@@ -15,6 +15,7 @@ namespace Ludots.Core.Networking.Replication
         InvalidPacket = 10,
         EcsStateMismatch = 11,
         SchemaApplyRejected = 12,
+        TornDown = 13,
     }
 
     internal static class ReplicationBridgeResultMapper
