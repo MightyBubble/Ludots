@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -138,7 +139,7 @@ namespace Ludots.Tests.Architecture
             knowledge.Upsert(viewer, target, Disclosure(KnowledgePresence.LiveVisible));
             var bridge = CreateBridge(world, table, knowledge, viewer, capacity: 1);
             var output = new ReplicationProjectionBuffer(entityCapacity: 1);
-            var channel = new AuthoritativeReplicationChannel(1, 1, new ReplicationDisclosureChangeLog(2));
+            var channel = new AuthoritativeReplicationChannel(table, 1, 1, new ReplicationDisclosureChangeLog(2));
             var packet = new ReplicationPacketBuffer(1);
 
             Assert.That(
@@ -147,6 +148,168 @@ namespace Ludots.Tests.Architecture
                 Is.EqualTo(ReplicationBridgeResult.ResyncRequired));
             Assert.That(output.States.Length, Is.EqualTo(0));
             Assert.That(packet.Upserts.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void BuildDelta_EntityLeavingInterestIsConcealedWhileItsHandleRemainsAllocated()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity target = world.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+            var table = new NetworkEntityTable(capacity: 1);
+            Assert.That(table.TryAllocate(target, out NetworkEntityHandle handle), Is.True);
+            var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
+            knowledge.Upsert(viewer, target, Disclosure(KnowledgePresence.LiveVisible));
+            var bridge = CreateBridge(world, table, knowledge, viewer, capacity: 1);
+            var channel = new AuthoritativeReplicationChannel(table, 1, 2, new ReplicationDisclosureChangeLog(4));
+            var projection = new ReplicationProjectionBuffer(entityCapacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+
+            Assert.That(
+                bridge.BuildFull(channel, 7, 1, 1, new[] { handle }, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(
+                bridge.BuildDelta(channel, 7, 2, 2, 1, ReadOnlySpan<NetworkEntityHandle>.Empty, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+
+            Assert.That(packet.Removals.Length, Is.Zero);
+            Assert.That(packet.DisclosureChanges.Length, Is.EqualTo(1));
+            Assert.That(packet.DisclosureChanges[0].Entity, Is.EqualTo(handle));
+            Assert.That(packet.DisclosureChanges[0].Kind, Is.EqualTo(ReplicationDisclosureChangeKind.Conceal));
+        }
+
+        [Test]
+        public void BuildDelta_ReleasedEntityIsPermanentlyRemoved()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity target = world.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+            var table = new NetworkEntityTable(capacity: 1);
+            Assert.That(table.TryAllocate(target, out NetworkEntityHandle handle), Is.True);
+            var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
+            knowledge.Upsert(viewer, target, Disclosure(KnowledgePresence.LiveVisible));
+            var bridge = CreateBridge(world, table, knowledge, viewer, capacity: 1);
+            var channel = new AuthoritativeReplicationChannel(table, 1, 2, new ReplicationDisclosureChangeLog(4));
+            var projection = new ReplicationProjectionBuffer(entityCapacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+
+            Assert.That(
+                bridge.BuildFull(channel, 7, 1, 1, new[] { handle }, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(table.TryRelease(handle), Is.True);
+            world.Destroy(target);
+            Assert.That(
+                bridge.BuildDelta(channel, 7, 2, 2, 1, ReadOnlySpan<NetworkEntityHandle>.Empty, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+
+            Assert.That(packet.Removals.ToArray(), Is.EqualTo(new[] { handle }));
+            Assert.That(packet.DisclosureChanges.Length, Is.Zero);
+        }
+
+        [Test]
+        public void BuildDelta_ReusedSlotRemovesOldGenerationAndRevealsReplacement()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity original = world.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+            var table = new NetworkEntityTable(capacity: 1);
+            Assert.That(table.TryAllocate(original, out NetworkEntityHandle originalHandle), Is.True);
+            var knowledge = new KnowledgeProjectionStore(initialCapacity: 2);
+            knowledge.Upsert(viewer, original, Disclosure(KnowledgePresence.LiveVisible));
+            var bridge = CreateBridge(world, table, knowledge, viewer, capacity: 1);
+            var channel = new AuthoritativeReplicationChannel(table, 1, 2, new ReplicationDisclosureChangeLog(4));
+            var projection = new ReplicationProjectionBuffer(entityCapacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+
+            Assert.That(
+                bridge.BuildFull(channel, 7, 1, 1, new[] { originalHandle }, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(table.TryRelease(originalHandle), Is.True);
+            world.Destroy(original);
+
+            Entity replacement = world.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 20));
+            Assert.That(table.TryAllocate(replacement, out NetworkEntityHandle replacementHandle), Is.True);
+            Assert.That(replacementHandle.Slot, Is.EqualTo(originalHandle.Slot));
+            Assert.That(replacementHandle.Generation, Is.EqualTo(originalHandle.Generation + 1));
+            knowledge.Upsert(viewer, replacement, Disclosure(KnowledgePresence.LiveVisible));
+
+            Assert.That(
+                bridge.BuildDelta(channel, 7, 2, 2, 1, new[] { replacementHandle }, projection, packet),
+                Is.EqualTo(ReplicationBridgeResult.Success));
+
+            Assert.That(packet.Removals.ToArray(), Is.EqualTo(new[] { originalHandle }));
+            Assert.That(packet.Upserts.Length, Is.EqualTo(1));
+            Assert.That(packet.Upserts[0].Entity, Is.EqualTo(replacementHandle));
+            Assert.That(packet.DisclosureChanges.Length, Is.EqualTo(1));
+            Assert.That(packet.DisclosureChanges[0].Entity, Is.EqualTo(replacementHandle));
+            Assert.That(packet.DisclosureChanges[0].Kind, Is.EqualTo(ReplicationDisclosureChangeKind.Reveal));
+        }
+
+        [Test]
+        public void SeatRuntime_RejectsBridgeAndChannelWithDifferentEntityLifeTruth()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            var bridgeTable = new NetworkEntityTable(capacity: 1);
+            var channelTable = new NetworkEntityTable(capacity: 1);
+            var bridge = CreateBridge(
+                world,
+                bridgeTable,
+                new KnowledgeProjectionStore(initialCapacity: 1),
+                viewer,
+                capacity: 1);
+            var channel = new AuthoritativeReplicationChannel(
+                channelTable,
+                replicationEntityCapacityPerSeat: 1,
+                baselineCapacity: 1,
+                new ReplicationDisclosureChangeLog(2));
+
+            Assert.That(
+                () => new AuthoritativeReplicationSeatRuntime(
+                    bridge,
+                    channel,
+                    new ReplicationProjectionBuffer(1),
+                    new ReplicationPacketBuffer(1)),
+                Throws.ArgumentException.With.Message.Contains("same network entity table"));
+        }
+
+        [Test]
+        public void SnapshotPublication_RejectsReentrantEntityReleaseAndAlwaysClosesItsScope()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity target = world.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+            var table = new NetworkEntityTable(capacity: 1);
+            Assert.That(table.TryAllocate(target, out NetworkEntityHandle handle), Is.True);
+            var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
+            knowledge.Upsert(viewer, target, Disclosure(KnowledgePresence.LiveVisible));
+            var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
+            Assert.That(
+                projectors.Register(1, new ReentrantReleaseProjector(table, handle)),
+                Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+            projectors.Freeze();
+            var bridge = new AuthoritativeWorldReplicationBridge(
+                world,
+                table,
+                knowledge,
+                viewer,
+                projectors,
+                replicationEntityCapacityPerSeat: 1);
+            var channel = new AuthoritativeReplicationChannel(table, 1, 1, new ReplicationDisclosureChangeLog(2));
+
+            Assert.That(
+                () => bridge.BuildFull(
+                    channel,
+                    7,
+                    1,
+                    1,
+                    new[] { handle },
+                    new ReplicationProjectionBuffer(1),
+                    new ReplicationPacketBuffer(1)),
+                Throws.InvalidOperationException.With.Message.Contains("during snapshot publication"));
+            Assert.That(table.TryResolve(handle, out Entity resolved), Is.True);
+            Assert.That(resolved, Is.EqualTo(target));
+            Assert.That(table.TryRelease(handle), Is.True);
         }
 
         [Test]
@@ -246,6 +409,29 @@ namespace Ludots.Tests.Architecture
                 in KnowledgeDisclosureRecord disclosure,
                 out ReplicationProjectedState state)
             {
+                state = default;
+                return false;
+            }
+        }
+
+        private sealed class ReentrantReleaseProjector : IReplicationSchemaProjector
+        {
+            private readonly NetworkEntityTable _entities;
+            private readonly NetworkEntityHandle _handle;
+
+            public ReentrantReleaseProjector(NetworkEntityTable entities, NetworkEntityHandle handle)
+            {
+                _entities = entities;
+                _handle = handle;
+            }
+
+            public bool TryProject(
+                World world,
+                Entity entity,
+                in KnowledgeDisclosureRecord disclosure,
+                out ReplicationProjectedState state)
+            {
+                _entities.TryRelease(_handle);
                 state = default;
                 return false;
             }

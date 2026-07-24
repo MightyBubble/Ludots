@@ -196,6 +196,11 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentException("Replication channel capacity must match its world bridge.");
             }
 
+            if (!ReferenceEquals(bridge.EntityTable, channel.EntityTable))
+            {
+                throw new ArgumentException("Replication bridge and channel must share the same network entity table.");
+            }
+
             if (channel.DisclosureChangeLogCapacity < packet.DisclosureCapacity)
             {
                 throw new ArgumentException("Replication disclosure log must hold one maximum-area transition.");

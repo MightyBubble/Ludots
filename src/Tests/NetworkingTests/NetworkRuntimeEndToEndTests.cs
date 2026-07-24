@@ -46,7 +46,11 @@ public sealed class NetworkRuntimeEndToEndTests
         var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 32);
         var serverSeat = new AuthoritativeReplicationSeatRuntime(
             bridge,
-            new AuthoritativeReplicationChannel(replicationEntityCapacityPerSeat: 2, baselineCapacity: 4, disclosureLog),
+            new AuthoritativeReplicationChannel(
+                commandHarness.Entities,
+                replicationEntityCapacityPerSeat: 2,
+                baselineCapacity: 4,
+                disclosureLog),
             new ReplicationProjectionBuffer(entityCapacity: 2),
             new ReplicationPacketBuffer(entityCapacity: 2));
 
@@ -262,7 +266,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 2);
         var serverSeat = new AuthoritativeReplicationSeatRuntime(
             bridge,
-            new AuthoritativeReplicationChannel(1, baselineCapacity: 4, disclosureLog),
+            new AuthoritativeReplicationChannel(commandHarness.Entities, 1, baselineCapacity: 4, disclosureLog),
             new ReplicationProjectionBuffer(1),
             new ReplicationPacketBuffer(1));
         int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(1, 1, 2);
@@ -476,6 +480,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
         var highHandle = new NetworkEntityHandle(slot: 99_999, generation: 1);
         var channel = new AuthoritativeReplicationChannel(
+            new NetworkEntityTable(capacity: 100_000),
             perSeatCapacity,
             baselineCapacity: 2,
             new ReplicationDisclosureChangeLog(perSeatCapacity * 2));

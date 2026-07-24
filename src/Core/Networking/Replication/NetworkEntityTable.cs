@@ -17,6 +17,7 @@ namespace Ludots.Core.Networking.Replication
         private readonly int[] _entityVersions;
         private readonly uint[] _generations;
         private readonly int[] _freeSlots;
+        private readonly int _ownerThreadId;
 
         private readonly byte[] _entityBucketStates;
         private readonly int[] _entityBucketIds;
@@ -26,6 +27,7 @@ namespace Ludots.Core.Networking.Replication
 
         private int _freeCount;
         private int _count;
+        private int _snapshotPublicationDepth;
 
         public NetworkEntityTable(int capacity)
         {
@@ -58,6 +60,7 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _freeCount = capacity;
+            _ownerThreadId = Environment.CurrentManagedThreadId;
         }
 
         public int Capacity => _active.Length;
@@ -67,6 +70,13 @@ namespace Ludots.Core.Networking.Replication
         public int AvailableCapacity => _freeCount;
 
         public bool TryAllocate(Entity entity, out NetworkEntityHandle handle)
+        {
+            EnsureOwnerThread();
+            EnsureLifecycleMutationAllowed();
+            return TryAllocateCore(entity, out handle);
+        }
+
+        private bool TryAllocateCore(Entity entity, out NetworkEntityHandle handle)
         {
             handle = default;
             if (entity == Entity.Null ||
@@ -103,6 +113,7 @@ namespace Ludots.Core.Networking.Replication
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryResolve(NetworkEntityHandle handle, out Entity entity)
         {
+            EnsureOwnerThread();
             if (!handle.IsValid ||
                 (uint)handle.Slot >= (uint)_active.Length ||
                 !_active[handle.Slot] ||
@@ -119,6 +130,7 @@ namespace Ludots.Core.Networking.Replication
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryResolve(Entity entity, out NetworkEntityHandle handle)
         {
+            EnsureOwnerThread();
             if (entity == Entity.Null ||
                 !TryFindEntityBucket(entity.Id, entity.WorldId, entity.Version, out int bucket))
             {
@@ -138,6 +150,13 @@ namespace Ludots.Core.Networking.Replication
         }
 
         public bool TryRelease(NetworkEntityHandle handle)
+        {
+            EnsureOwnerThread();
+            EnsureLifecycleMutationAllowed();
+            return TryReleaseCore(handle);
+        }
+
+        private bool TryReleaseCore(NetworkEntityHandle handle)
         {
             if (!handle.IsValid ||
                 (uint)handle.Slot >= (uint)_active.Length ||
@@ -180,6 +199,42 @@ namespace Ludots.Core.Networking.Replication
             _generations[slot] = nextGeneration;
             _freeSlots[_freeCount++] = slot;
             return true;
+        }
+
+        internal void EnterSnapshotPublication()
+        {
+            EnsureOwnerThread();
+            _snapshotPublicationDepth++;
+        }
+
+        internal void ExitSnapshotPublication()
+        {
+            EnsureOwnerThread();
+            if (_snapshotPublicationDepth <= 0)
+            {
+                throw new InvalidOperationException("Snapshot publication scope is not active.");
+            }
+
+            _snapshotPublicationDepth--;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureOwnerThread()
+        {
+            if (Environment.CurrentManagedThreadId != _ownerThreadId)
+            {
+                throw new InvalidOperationException(
+                    "Network entity table access must remain on its authoritative fixed-frame thread.");
+            }
+        }
+
+        private void EnsureLifecycleMutationAllowed()
+        {
+            if (_snapshotPublicationDepth != 0)
+            {
+                throw new InvalidOperationException(
+                    "Network entity allocation and release cannot run during snapshot publication.");
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

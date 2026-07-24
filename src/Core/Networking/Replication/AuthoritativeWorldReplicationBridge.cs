@@ -100,6 +100,7 @@ namespace Ludots.Core.Networking.Replication
 
         public int GlobalEntityCapacity => _entities.Capacity;
         public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
+        internal NetworkEntityTable EntityTable => _entities;
 
         public ReplicationBridgeResult Project(
             ReadOnlySpan<NetworkEntityHandle> interestHandles,
@@ -208,6 +209,34 @@ namespace Ludots.Core.Networking.Replication
             ReplicationProjectionBuffer projection,
             ReplicationPacketBuffer packet)
         {
+            EnsureSharedEntityTable(channel);
+            _entities.EnterSnapshotPublication();
+            try
+            {
+                return BuildFullCore(
+                    channel,
+                    sessionEpoch,
+                    tick,
+                    snapshotId,
+                    interestHandles,
+                    projection,
+                    packet);
+            }
+            finally
+            {
+                _entities.ExitSnapshotPublication();
+            }
+        }
+
+        private ReplicationBridgeResult BuildFullCore(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
             if (channel == null || projection == null || packet == null || tick > int.MaxValue)
             {
                 packet?.Reset(default);
@@ -233,6 +262,36 @@ namespace Ludots.Core.Networking.Replication
         }
 
         public ReplicationBridgeResult BuildDelta(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ulong acknowledgedBaselineId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
+            EnsureSharedEntityTable(channel);
+            _entities.EnterSnapshotPublication();
+            try
+            {
+                return BuildDeltaCore(
+                    channel,
+                    sessionEpoch,
+                    tick,
+                    snapshotId,
+                    acknowledgedBaselineId,
+                    interestHandles,
+                    projection,
+                    packet);
+            }
+            finally
+            {
+                _entities.ExitSnapshotPublication();
+            }
+        }
+
+        private ReplicationBridgeResult BuildDeltaCore(
             AuthoritativeReplicationChannel channel,
             ulong sessionEpoch,
             uint tick,
@@ -271,6 +330,16 @@ namespace Ludots.Core.Networking.Replication
             }
 
             return result;
+        }
+
+        private void EnsureSharedEntityTable(AuthoritativeReplicationChannel channel)
+        {
+            if (channel != null && !ReferenceEquals(_entities, channel.EntityTable))
+            {
+                throw new ArgumentException(
+                    "Replication bridge and channel must share the same network entity table.",
+                    nameof(channel));
+            }
         }
 
         private static ReplicationBridgeResult Fail(
