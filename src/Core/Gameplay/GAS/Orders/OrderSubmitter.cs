@@ -10,10 +10,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     {
         Activated = 0,
         Queued = 1,
-        Blocked = 2,
-        QueueFull = 3,
-        Ignored = 4,
-        InvalidEntity = 5
+        Pending = 2,
+        Blocked = 3,
+        QueueFull = 4,
+        Ignored = 5,
+        InvalidEntity = 6,
+        BatchRejected = 7,
+        ValidationRejected = 8,
+        InvalidOrderType = 9,
+        NetworkRateLimited = 10,
+        NetworkTargetTickExpired = 11,
+        NetworkTargetTickTooFarAhead = 12,
+        NetworkActorLimitExceeded = 13,
+        NetworkAdmissionBackpressured = 14,
+        NetworkInvalidConnectionSeat = 15,
+        NetworkSequenceGap = 16,
+        NetworkSequenceOutsideHistory = 17
     }
 
     public static class OrderSubmitter

@@ -234,6 +234,25 @@ public sealed class AuthoritativeSessionRegistryTests
     }
 
     [Test]
+    public void TickWrap_RejectsReconnectAfterConfiguredWindow()
+    {
+        var registry = CreateRegistry(seatCapacity: 1, reconnectWindowTicks: 5);
+        Assert.That(registry.TryHandshake(new ConnectionId(1), JoinRequest(), currentTick: uint.MaxValue - 2, out SessionHandshakeResponse join), Is.True);
+        Assert.That(registry.TryDisconnect(new ConnectionId(1), currentTick: uint.MaxValue - 1), Is.True);
+
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(2),
+                ReconnectRequest(join.ReconnectToken, join.SessionEpoch),
+                currentTick: 5,
+                out SessionHandshakeResponse expired),
+            Is.False);
+        Assert.That(expired.RejectReason, Is.EqualTo(HandshakeRejectReason.StaleOrInvalidReconnectToken));
+
+        Assert.That(registry.TryHandshake(new ConnectionId(3), JoinRequest(), currentTick: 6, out _), Is.True);
+    }
+
+    [Test]
     public void SteadyState_DisconnectReconnectLookup_AllocatesZeroBytesAfterWarmup()
     {
         var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 100);

@@ -25,7 +25,8 @@ namespace Ludots.Core.Engine.Pacemaker
         ];
 
         private readonly Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups;
-        private readonly Action<float> _onStepCompleted;
+        private readonly Action<float>? _onStepStarted;
+        private readonly Action<float>? _onStepCompleted;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         private bool _stepActive;
@@ -34,10 +35,12 @@ namespace Ludots.Core.Engine.Pacemaker
 
         public PhaseOrderedCooperativeSimulation(
             Dictionary<SystemGroup, List<ISystem<float>>> systemGroups,
-            Action<float> onStepCompleted = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            Action<float>? onStepCompleted = null,
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            Action<float>? onStepStarted = null)
         {
             _systemGroups = systemGroups;
+            _onStepStarted = onStepStarted;
             _onStepCompleted = onStepCompleted;
             _timingDiagnostics = timingDiagnostics;
         }
@@ -49,6 +52,7 @@ namespace Ludots.Core.Engine.Pacemaker
                 _stepActive = true;
                 _phaseIndex = 0;
                 _systemIndex = 0;
+                _onStepStarted?.Invoke(fixedDt);
             }
 
             if (timeBudgetMs <= 0) timeBudgetMs = 1;

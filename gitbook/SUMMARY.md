@@ -26,6 +26,7 @@
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
+  - [《双人前线》RTS 联机 Showcase 设计与验收](architecture/rts-multiplayer-showcase.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
   - [Transport Network SSOT](architecture/transport-network-ssot.md)
   - [Placement Validation SSOT](architecture/placement-validation-ssot.md)

@@ -20,11 +20,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
         private readonly Order[] _incomingBatchScratch;
+        private readonly OrderSubmitResult[] _incomingBatchResultsScratch;
+        private readonly OrderAdmissionResultBuffer? _admissionResults;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
 
         public uint IncomingRevision { get; private set; }
+        public long AdmissionBackpressureCount { get; private set; }
 
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
@@ -37,7 +40,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            OrderAdmissionResultBuffer? admissionResults = null)
             : base(world)
         {
             _clock = clock;
@@ -47,6 +51,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _incomingBatchScratch = incomingOrders != null
                 ? new Order[incomingOrders.Capacity]
                 : Array.Empty<Order>();
+            _incomingBatchResultsScratch = incomingOrders != null
+                ? new OrderSubmitResult[incomingOrders.Capacity]
+                : Array.Empty<OrderSubmitResult>();
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
@@ -56,6 +63,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _graphProgramRegistry = graphProgramRegistry;
             _graphApi = graphApi;
+            _admissionResults = admissionResults;
         }
 
         public override void Update(in float dt)
@@ -101,16 +109,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_incomingOrders == null) return;
 
-            while (_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out int batchCount))
+            while (_incomingOrders.TryPeekBatchSize(out int nextBatchSize))
             {
+                if (_admissionResults != null &&
+                    _admissionResults.AvailableCapacity < nextBatchSize)
+                {
+                    AdmissionBackpressureCount++;
+                    break;
+                }
+
+                if (!_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out int batchCount))
+                {
+                    throw new InvalidOperationException(
+                        "OrderQueue changed after a successful batch-size peek.");
+                }
+
                 if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
                 {
-                    ProcessIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    OrderSubmitResult result = ProcessIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    PublishAdmission(in _incomingBatchScratch[0], result);
                     continue;
                 }
 
                 if (!PreflightIncomingBatch(batchCount, currentStep))
                 {
+                    for (int i = 0; i < batchCount; i++)
+                    {
+                        OrderSubmitResult result = _incomingBatchResultsScratch[i];
+                        if (result == OrderSubmitResult.Activated || result == OrderSubmitResult.Queued)
+                        {
+                            result = OrderSubmitResult.BatchRejected;
+                        }
+
+                        PublishAdmission(in _incomingBatchScratch[i], result);
+                    }
+
                     continue;
                 }
 
@@ -131,6 +164,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
                     }
 
+                    PublishAdmission(in order, result);
                     IncomingRevision++;
                 }
             }
@@ -142,9 +176,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 ref Order order = ref _incomingBatchScratch[i];
                 order.SubmitStep = currentStep;
-                if (!ValidateIncomingOrder(in order))
+                OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out _);
+                if (validationResult != OrderSubmitResult.Activated)
                 {
-                    return false;
+                    _incomingBatchResultsScratch[i] = validationResult;
+                    continue;
                 }
 
                 OrderSubmitResult result = OrderSubmitter.Preview(
@@ -155,6 +191,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _orderRuleRegistry,
                     currentStep,
                     _stepRateHz);
+                _incomingBatchResultsScratch[i] = result;
+                if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
+                {
+                    continue;
+                }
+            }
+
+            for (int i = 0; i < batchCount; i++)
+            {
+                OrderSubmitResult result = _incomingBatchResultsScratch[i];
                 if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                 {
                     return false;
@@ -164,16 +210,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private void ProcessIncomingOrder(ref Order order, int currentStep)
+        private OrderSubmitResult ProcessIncomingOrder(ref Order order, int currentStep)
         {
             IncomingRevision++;
             order.SubmitStep = currentStep;
-            if (!ValidateIncomingOrder(in order))
+            OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out OrderTypeConfig config);
+            if (validationResult != OrderSubmitResult.Activated)
             {
-                return;
+                return validationResult;
             }
 
-            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
             OrderSubmitResult result = OrderSubmitter.Submit(
                 World,
                 order.Actor,
@@ -188,20 +234,46 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(order.Actor);
                 buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+                return OrderSubmitResult.Pending;
+            }
+
+            return result;
+        }
+
+        private void PublishAdmission(in Order order, OrderSubmitResult result)
+        {
+            if (_admissionResults == null)
+            {
+                return;
+            }
+
+            var outcome = new OrderAdmissionOutcome(
+                in order,
+                OrderAdmissionStage.EntityIntake,
+                result);
+            if (!_admissionResults.TryWrite(in outcome))
+            {
+                throw new InvalidOperationException(
+                    $"Order admission result capacity {_admissionResults.Capacity} is exhausted.");
             }
         }
 
-        private bool ValidateIncomingOrder(in Order order)
+        private OrderSubmitResult ValidateIncomingOrder(in Order order, out OrderTypeConfig config)
         {
+            config = default;
             if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
             {
-                return false;
+                return OrderSubmitResult.InvalidEntity;
             }
 
-            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
+            if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out config))
+            {
+                return OrderSubmitResult.InvalidOrderType;
+            }
+
             if (config.ValidationGraphId <= 0)
             {
-                return true;
+                return OrderSubmitResult.Activated;
             }
 
             if (_graphProgramRegistry == null || _graphApi == null)
@@ -217,13 +289,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
-            return GasGraphExecutor.ExecuteValidation(
+            bool passed = GasGraphExecutor.ExecuteValidation(
                 World,
                 order.Actor,
                 order.Target,
                 targetPos,
                 validationProgram,
                 _graphApi);
+            return passed
+                ? OrderSubmitResult.Activated
+                : OrderSubmitResult.ValidationRejected;
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
@@ -294,4 +369,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation;
+using Ludots.Core.Networking.Configuration;
 
 namespace Ludots.Core.Config
 {
@@ -59,6 +60,8 @@ namespace Ludots.Core.Config
         public LogConfig Logging { get; set; } = new LogConfig();
 
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
+
+        public NetworkRuntimeConfig? Networking { get; set; }
 
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
