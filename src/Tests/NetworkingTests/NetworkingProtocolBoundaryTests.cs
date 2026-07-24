@@ -14,7 +14,15 @@ public sealed class NetworkingProtocolBoundaryTests
         string networkingRoot = Path.Combine(repoRoot, "src", "Core", "Networking");
         Assert.That(Directory.Exists(networkingRoot), Is.True);
 
-        string[] forbidden = { "System.Net.Sockets", "PresentationStableId" };
+        string[] forbidden =
+        {
+            "System.Net.Sockets",
+            "PresentationStableId",
+            "Raylib",
+            "Browser",
+            "Microsoft.AspNetCore",
+            "System.Net.Http",
+        };
         var offenders = new List<string>();
 
         foreach (string file in Directory.EnumerateFiles(networkingRoot, "*.cs", SearchOption.AllDirectories))
@@ -49,12 +57,47 @@ public sealed class NetworkingProtocolBoundaryTests
             "CommandAdmissionWireCodec.cs",
             "ReplicationPacketWireCodec.cs",
             "SnapshotControlWireCodec.cs",
+            "SnapshotFragmentWireCodec.cs",
+            "SnapshotFragmentReassembler.cs",
         };
 
         foreach (string name in required)
         {
             Assert.That(File.Exists(Path.Combine(protocolRoot, name)), Is.True, $"Missing {name}");
         }
+    }
+
+    [Test]
+    public void ProtocolFolder_DoesNotReference_SocketsRaylibBrowserOrPresentationStableId()
+    {
+        string repoRoot = FindRepoRoot();
+        string protocolRoot = Path.Combine(repoRoot, "src", "Core", "Networking", "Protocol");
+        Assert.That(Directory.Exists(protocolRoot), Is.True);
+
+        string[] forbidden =
+        {
+            "System.Net.Sockets",
+            "Socket",
+            "PresentationStableId",
+            "Raylib",
+            "Browser",
+            "Microsoft.AspNetCore",
+        };
+        var offenders = new List<string>();
+
+        foreach (string file in Directory.EnumerateFiles(protocolRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            string text = File.ReadAllText(file);
+            foreach (string token in forbidden)
+            {
+                if (text.Contains(token, StringComparison.Ordinal))
+                {
+                    offenders.Add($"{Path.GetRelativePath(repoRoot, file)}:{token}");
+                }
+            }
+        }
+
+        Assert.That(offenders, Is.Empty, "Protocol must stay free of platform hosts:\n" + string.Join("\n", offenders));
     }
 
     private static string FindRepoRoot()

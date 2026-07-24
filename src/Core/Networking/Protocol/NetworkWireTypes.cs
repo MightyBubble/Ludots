@@ -14,6 +14,7 @@ namespace Ludots.Core.Networking.Protocol
         ReplicationPacket = 5,
         SnapshotAcknowledgement = 6,
         ResyncRequired = 7,
+        SnapshotFragment = 8,
     }
 
     /// <summary>
@@ -49,6 +50,32 @@ namespace Ludots.Core.Networking.Protocol
         BaselineExpired = 2,
         SnapshotGap = 3,
         ExplicitServerRequest = 4,
+    }
+
+    /// <summary>
+    /// Explicit outcomes for fixed-capacity snapshot fragment reassembly.
+    /// Rejected fragments never mutate assembler state.
+    /// </summary>
+    public enum SnapshotReassemblyStatus : byte
+    {
+        Incomplete = 0,
+        Completed = 1,
+        CapacityExceeded = 2,
+        InvalidFragment = 3,
+        Duplicate = 4,
+        StaleOrOutOfOrder = 5,
+        MixedMetadata = 6,
+    }
+
+    /// <summary>
+    /// Lifecycle phase of <see cref="SnapshotFragmentReassembler"/>.
+    /// Completed payloads require an explicit <c>Reset</c> before a new snapshot may begin.
+    /// </summary>
+    public enum SnapshotReassemblyPhase : byte
+    {
+        Empty = 0,
+        Assembling = 1,
+        Completed = 2,
     }
 
     /// <summary>
@@ -89,6 +116,39 @@ namespace Ludots.Core.Networking.Protocol
         public ulong SessionEpoch { get; }
         public ulong SnapshotId { get; }
         public uint CommittedTick { get; }
+    }
+
+    /// <summary>
+    /// Fixed little-endian header for one snapshot datagram fragment.
+    /// Layout (28 bytes): sessionEpoch u64 | snapshotId u64 | fragmentIndex u16 | fragmentCount u16 |
+    /// totalPayloadLength u32 | fragmentPayloadLength u16 | reserved u16 (must be 0).
+    /// </summary>
+    public readonly struct NetworkSnapshotFragmentHeader
+    {
+        public const int SizeInBytes = 8 + 8 + 2 + 2 + 4 + 2 + 2;
+
+        public NetworkSnapshotFragmentHeader(
+            ulong sessionEpoch,
+            ulong snapshotId,
+            ushort fragmentIndex,
+            ushort fragmentCount,
+            uint totalPayloadLength,
+            ushort fragmentPayloadLength)
+        {
+            SessionEpoch = sessionEpoch;
+            SnapshotId = snapshotId;
+            FragmentIndex = fragmentIndex;
+            FragmentCount = fragmentCount;
+            TotalPayloadLength = totalPayloadLength;
+            FragmentPayloadLength = fragmentPayloadLength;
+        }
+
+        public ulong SessionEpoch { get; }
+        public ulong SnapshotId { get; }
+        public ushort FragmentIndex { get; }
+        public ushort FragmentCount { get; }
+        public uint TotalPayloadLength { get; }
+        public ushort FragmentPayloadLength { get; }
     }
 
     public readonly struct NetworkResyncRequired
