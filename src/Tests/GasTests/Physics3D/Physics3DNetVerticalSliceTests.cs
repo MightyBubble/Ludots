@@ -644,11 +644,49 @@ public sealed class Physics3DNetVerticalSliceTests
         Assert.That(temporal.NewestTick, Is.EqualTo(12));
         Assert.That(temporal.AttemptedTick, Is.EqualTo(11));
 
-        var stale = new NetworkEntityHandle(slot: 7, generation: 2);
-        Assert.Throws<InvalidOperationException>(() => buffer.Push(in stale, new Physics3DNetRemoteSample(13, Vector3.Zero, Quaternion.Identity, Vector3.Zero, Vector3.Zero)));
-        Assert.Throws<InvalidOperationException>(() => buffer.Untrack(in stale));
+        var mismatchedNewer = new NetworkEntityHandle(slot: 7, generation: 2);
+        Assert.Throws<InvalidOperationException>(() => buffer.Push(in mismatchedNewer, new Physics3DNetRemoteSample(13, Vector3.Zero, Quaternion.Identity, Vector3.Zero, Vector3.Zero)));
+        Assert.Throws<InvalidOperationException>(() => buffer.Untrack(in mismatchedNewer));
         buffer.Untrack(in handle);
         Assert.Throws<InvalidOperationException>(() => buffer.Untrack(in handle));
+    }
+
+    [Test]
+    public void RemoteInterpolation_RejectsStaleGenerationTrackAndSampleUpdates()
+    {
+        Physics3DNetConfig config = CreateLocalConfig(remoteInterpolationHistoryTicks: 4);
+        var buffer = new Physics3DNetRemoteInterpolationBuffer(config, remoteEntityCapacity: 4);
+        var gen1 = new NetworkEntityHandle(slot: 2, generation: 1);
+        var gen2 = new NetworkEntityHandle(slot: 2, generation: 2);
+
+        buffer.Track(in gen1);
+        buffer.Push(in gen1, new Physics3DNetRemoteSample(10, new Vector3(10f, 0f, 0f), Quaternion.Identity, Vector3.Zero, Vector3.Zero));
+        Assert.That(buffer.GetSampleCount(in gen1), Is.EqualTo(1));
+
+        // Newer generation may reclaim the same slot and clears prior samples.
+        buffer.Track(in gen2);
+        Assert.That(buffer.GetSampleCount(in gen2), Is.EqualTo(0));
+        buffer.Push(in gen2, new Physics3DNetRemoteSample(20, new Vector3(20f, 0f, 0f), Quaternion.Identity, Vector3.Zero, Vector3.Zero));
+        Assert.That(buffer.GetSampleCount(in gen2), Is.EqualTo(1));
+
+        // Stale Track for the older generation must not replace the newer occupant.
+        Assert.Throws<InvalidOperationException>(() => buffer.Track(in gen1));
+        Assert.That(buffer.GetSampleCount(in gen2), Is.EqualTo(1));
+        Assert.That(buffer.TryGetSampleTick(in gen2, 20, out Physics3DNetRemoteSample kept), Is.True);
+        Assert.That(kept.PositionCm.X, Is.EqualTo(20f));
+
+        // Stale sample/update paths also reject the older generation identity.
+        Assert.Throws<InvalidOperationException>(
+            () => buffer.Push(in gen1, new Physics3DNetRemoteSample(21, Vector3.Zero, Quaternion.Identity, Vector3.Zero, Vector3.Zero)));
+        Assert.Throws<InvalidOperationException>(() => _ = buffer.Sample(in gen1, renderTick: 20f));
+        Assert.Throws<InvalidOperationException>(() => _ = buffer.GetSampleCount(in gen1));
+        Assert.Throws<InvalidOperationException>(() => _ = buffer.TryGetSampleTick(in gen1, 20, out _));
+        Assert.Throws<InvalidOperationException>(() => buffer.Untrack(in gen1));
+
+        Physics3DNetInterpolationSample sample = buffer.Sample(in gen2, renderTick: 20f);
+        Assert.That(sample.Kind, Is.EqualTo(Physics3DNetInterpolationResultKind.Sampled));
+        Assert.That(sample.PositionCm.X, Is.EqualTo(20f));
+        buffer.Untrack(in gen2);
     }
 
     [Test]

@@ -68,7 +68,8 @@ public readonly struct Physics3DNetInterpolationSample
 
 /// <summary>
 /// Bounded remote-body interpolation buffer with explicit underflow/overflow behavior.
-/// Lane identity is <see cref="NetworkEntityHandle.Slot"/> with generation checks; no linear scan.
+/// Lane identity is full <see cref="NetworkEntityHandle"/> (slot + generation); no linear scan.
+/// A later <see cref="Track"/> for an older generation never replaces a newer occupant.
 /// Tick jumps/wraps purge all samples older than the retained bounded window. No extrapolation.
 /// </summary>
 public sealed class Physics3DNetRemoteInterpolationBuffer
@@ -136,12 +137,21 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
         int slot = handle.Slot;
         if (_entityActive[slot])
         {
-            if (_generation[slot] != handle.Generation)
+            if (handle.Generation == _generation[slot])
             {
-                ClearEntitySamples(slot);
-                _generation[slot] = handle.Generation;
+                return;
             }
 
+            // Slot identity is (slot + generation). A late Track for an older generation must
+            // never replace the newer generation currently occupying the lane.
+            if (handle.Generation < _generation[slot])
+            {
+                throw new InvalidOperationException(
+                    $"Remote interpolation slot {slot} rejects stale Track generation {handle.Generation}; tracked {_generation[slot]}.");
+            }
+
+            ClearEntitySamples(slot);
+            _generation[slot] = handle.Generation;
             return;
         }
 
