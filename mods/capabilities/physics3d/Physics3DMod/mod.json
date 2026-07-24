@@ -1,0 +1,12 @@
+{
+  "name": "Physics3DMod",
+  "version": "1.0.0",
+  "description": "Authoritative fixed-step 3D physics runtime for a single server world.",
+  "main": "bin/net8.0/Physics3DMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots",
+  "tags": ["physics", "3d", "server", "fixed-step"]
+}

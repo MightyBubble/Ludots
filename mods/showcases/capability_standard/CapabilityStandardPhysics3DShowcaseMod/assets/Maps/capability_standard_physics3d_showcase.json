@@ -1,0 +1,14 @@
+{
+  "Id": "capability_standard_physics3d_showcase",
+  "Tags": ["showcase", "capability-standard", "physics3d", "benchmark"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Physics3DLab",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 7000,
+    "Pitch": 48,
+    "Yaw": 205,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

@@ -1,0 +1,55 @@
+{
+  "actions": [
+    { "id": "Physics3D.PlayerMove", "name": "Physics3D_PlayerMove", "type": "Axis2D" },
+    { "id": "Physics3D.PlayerJump", "name": "Physics3D_PlayerJump", "type": "Button" },
+    { "id": "Physics3D.PlayerTraverse", "name": "Physics3D_PlayerTraverse", "type": "Button" },
+    { "id": "Physics3D.VehicleThrottle", "name": "Physics3D_VehicleThrottle", "type": "Axis1D" },
+    { "id": "Physics3D.VehicleSteering", "name": "Physics3D_VehicleSteering", "type": "Axis1D" },
+    { "id": "Physics3D.VehicleBrake", "name": "Physics3D_VehicleBrake", "type": "Button" },
+    { "id": "Physics3D.VehicleNextMode", "name": "Physics3D_VehicleNextMode", "type": "Button" },
+    { "id": "Physics3D.VehicleReset", "name": "Physics3D_VehicleReset", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Physics3D.Playground.Character",
+      "name": "Physics3D Playground Character",
+      "priority": 220,
+      "bindings": [
+        {
+          "actionId": "Physics3D.PlayerMove",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        { "actionId": "Physics3D.PlayerJump", "path": "<Keyboard>/space" },
+        { "actionId": "Physics3D.PlayerTraverse", "path": "<Keyboard>/e" },
+        { "actionId": "Physics3D.VehicleThrottle", "path": "<Keyboard>/w" },
+        {
+          "actionId": "Physics3D.VehicleThrottle",
+          "path": "<Keyboard>/s",
+          "processors": [
+            { "type": "Invert" }
+          ]
+        },
+        { "actionId": "Physics3D.VehicleSteering", "path": "<Keyboard>/d" },
+        {
+          "actionId": "Physics3D.VehicleSteering",
+          "path": "<Keyboard>/a",
+          "processors": [
+            { "type": "Invert" }
+          ]
+        },
+        { "actionId": "Physics3D.VehicleBrake", "path": "<Keyboard>/space" },
+        { "actionId": "Physics3D.VehicleNextMode", "path": "<Keyboard>/q" },
+        { "actionId": "Physics3D.VehicleReset", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}
