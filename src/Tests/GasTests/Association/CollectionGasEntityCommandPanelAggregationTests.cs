@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
@@ -26,8 +26,8 @@ namespace Ludots.Tests.GAS
     /// RFC-0065 PNL-4 - <c>CollectionGasEntityCommandPanelSource</c> consumes the
     /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the M6 catalog cases
     /// (mixed marine/tank selection grouped by cast family, FormSet override recompute) and P3
-    /// (runtime profile switch regroups without re-selection), plus activation routing to the
-    /// group's first member. All family/ability names are test data, never Core concepts.
+    /// (runtime profile switch regroups without re-selection), plus activation fan-out to every
+    /// surviving group member. All family/ability names are test data, never Core concepts.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -138,7 +138,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ActivateSlot_RoutesToGroupFirstMemberSlot()
+        public void ActivateSlot_SubmitsEveryGroupMemberSlot()
         {
             using var engine = CreateEngineWithCommandPanelMod();
             var fixture = SelectionFixture.Create(engine);
@@ -162,10 +162,55 @@ namespace Ludots.Tests.GAS
             InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
 
             Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(activated.Actor, Is.EqualTo(fixture.Elite));
             Assert.That(activated.OrderId, Is.GreaterThan(0));
-            Assert.That(submitted.Count, Is.EqualTo(1));
+            Assert.That(submitted.Count, Is.EqualTo(3));
             Assert.That(submitted[0].Args.I0, Is.EqualTo(2),
-                "activation routes to the group's first member (elite marine, charge cannon on slot 2), not a tank's slot 1.");
+                "activation starts from the representative member (elite marine, charge cannon on slot 2).");
+            Assert.That(submitted[0].Actor, Is.EqualTo(fixture.Elite));
+            Assert.That(submitted[1].Args.I0, Is.EqualTo(1));
+            Assert.That(submitted[1].Actor, Is.EqualTo(fixture.Tank1));
+            Assert.That(submitted[2].Args.I0, Is.EqualTo(1));
+            Assert.That(submitted[2].Actor, Is.EqualTo(fixture.Tank2));
+        }
+
+        [Test]
+        public void ActivateSlot_MemberFailureReturnsTypedRejectionWithoutDroppingOtherMembers()
+        {
+            using var engine = CreateEngineWithCommandPanelMod();
+            var fixture = SelectionFixture.Create(engine);
+
+            var submitted = new List<Order>();
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
+            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetActorProvider((out Entity actor) =>
+            {
+                actor = fixture.CollectionOwner;
+                return true;
+            });
+            mapping.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return order.Actor == fixture.Tank1
+                    ? OrderSubmitResult.RejectedQueueFull
+                    : OrderSubmitResult.Queued;
+            });
+            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
+
+            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
+            var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
+            var slots = new EntityCommandPanelSlotView[8];
+            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
+            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
+
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(activated.Actor, Is.EqualTo(fixture.Tank1));
+            Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(activated.OrderId, Is.GreaterThan(0));
+            Assert.That(submitted.Count, Is.EqualTo(3),
+                "one member failing must not silently collapse the aggregate command back to the representative unit.");
         }
 
         [Test]
@@ -205,14 +250,18 @@ namespace Ludots.Tests.GAS
         /// <summary>M6 background selection: [marine1, marine2, eliteMarine, tank1, tank2].</summary>
         private readonly struct SelectionFixture
         {
-            public SelectionFixture(Entity collectionOwner, Entity elite)
+            public SelectionFixture(Entity collectionOwner, Entity elite, Entity tank1, Entity tank2)
             {
                 CollectionOwner = collectionOwner;
                 Elite = elite;
+                Tank1 = tank1;
+                Tank2 = tank2;
             }
 
             public Entity CollectionOwner { get; }
             public Entity Elite { get; }
+            public Entity Tank1 { get; }
+            public Entity Tank2 { get; }
 
             public static SelectionFixture Create(GameEngine engine)
             {
@@ -241,7 +290,7 @@ namespace Ludots.Tests.GAS
                     Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
                 });
 
-                return new SelectionFixture(collectionOwner, elite);
+                return new SelectionFixture(collectionOwner, elite, tank1, tank2);
             }
         }
 

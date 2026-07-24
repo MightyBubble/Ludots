@@ -120,6 +120,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)
         {
+            int terminalResultCount = 0;
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
+            {
+                QueuedOrder queued = buffer.GetQueued(i);
+                if (queued.ExpireStep >= 0 && queued.ExpireStep <= currentStep)
+                {
+                    terminalResultCount++;
+                }
+            }
+
+            if (buffer.HasPending &&
+                buffer.PendingOrder.ExpireStep >= 0 &&
+                buffer.PendingOrder.ExpireStep <= currentStep)
+            {
+                terminalResultCount++;
+            }
+
+            if (terminalResultCount > 0)
+            {
+                _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
+            }
+
             for (int i = buffer.QueuedCount - 1; i >= 0; i--)
             {
                 QueuedOrder queued = buffer.GetQueued(i);
@@ -194,12 +216,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             ReserveEntityAdmissions(batchCount);
             bool committed = false;
+            bool dequeued = false;
             try
             {
-                DequeueReservedBatch(batchCount);
                 bool accepted = PreflightIncomingBatch(batchCount, currentStep, out OrderSubmitResult failureResult);
                 if (!accepted)
                 {
+                    DequeueReservedBatch(batchCount);
+                    dequeued = true;
                     for (int i = 0; i < batchCount; i++)
                     {
                         if (OrderSubmitResultSemantics.IsAccepted(_incomingBatchResultsScratch[i]))
@@ -219,6 +243,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return;
                 }
 
+                DequeueReservedBatch(batchCount);
+                dequeued = true;
                 for (int i = 0; i < batchCount; i++)
                 {
                     ref Order order = ref _incomingBatchScratch[i];
@@ -248,9 +274,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (!committed)
                 {
                     CancelEntityAdmissions(batchCount);
-                    for (int i = 0; i < batchCount; i++)
+                    if (dequeued)
                     {
-                        OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        for (int i = 0; i < batchCount; i++)
+                        {
+                            OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        }
                     }
                 }
             }
@@ -310,6 +339,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private bool PreflightIncomingBatch(int batchCount, int currentStep, out OrderSubmitResult failureResult)
         {
             failureResult = OrderSubmitResult.Queued;
+            int terminalResultCount = 0;
             for (int i = 0; i < batchCount; i++)
             {
                 ref Order order = ref _incomingBatchScratch[i];
@@ -336,6 +366,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     failureResult = result;
                     return false;
                 }
+
+                terminalResultCount += OrderSubmitter.CountTerminalResultsRequiredForSubmit(
+                    World,
+                    order.Actor,
+                    in order,
+                    _orderTypeRegistry,
+                    _orderRuleRegistry,
+                    currentStep,
+                    _stepRateHz);
+            }
+
+            if (terminalResultCount > 0)
+            {
+                _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
             }
 
             return true;
@@ -524,8 +568,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var pendingOrder = buffer.PendingOrder.Order;
-            buffer.ClearPendingTransferred();
-
             int currentStep = _clock.Now(ClockDomainId.Step);
             OrderSubmitResult result = OrderSubmitter.Submit(
                 World,
@@ -535,6 +577,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderRuleRegistry,
                 currentStep,
                 _stepRateHz);
+
+            buffer.ClearPendingTransferred();
             if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 OrderSpatialPayloadOps.Release(World, in pendingOrder);

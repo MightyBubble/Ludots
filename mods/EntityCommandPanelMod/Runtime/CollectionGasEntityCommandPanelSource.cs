@@ -19,8 +19,8 @@ namespace EntityCommandPanelMod.Runtime
     /// one panel cell, the cell view is composed from the group's member slot views (representative
     /// icon/label from the first member, state flags OR-ed, cooldown max, badge = member count).
     /// <see cref="CopyAggregationMembers"/> exposes the surviving member set for CommandDeck route
-    /// profiles; <see cref="ActivateSlot"/> still activates the group's first surviving member for
-    /// the legacy panel path. <see cref="SetAggregationProfile"/> switches the active profile at
+    /// profiles; <see cref="ActivateSlot"/> activates every surviving member behind the displayed
+    /// group cell. <see cref="SetAggregationProfile"/> switches the active profile at
     /// runtime (P3): the next build regroups and the revision hash changes, so open panels re-pull
     /// without rebinding. FormSet switches need no extra code here — the kernel groups over the
     /// <c>AbilitySlotResolver</c> effective abilities on every build.
@@ -175,15 +175,66 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
-            if ((uint)slotIndex >= (uint)_activationOwners.Length ||
-                _activationOwners[slotIndex] == Entity.Null)
+            if ((uint)slotIndex >= (uint)MaxAggregatedSlots)
             {
                 return InputOrderActivationResult.Rejected(
                     context.TargetEntity,
                     OrderSubmitResult.RejectedValidation);
             }
 
-            return _gasSource.ActivateSlot(_activationOwners[slotIndex], groupIndex, _activationSlotIndices[slotIndex]);
+            int start = _memberStarts[slotIndex];
+            int count = _ownerCounts[slotIndex];
+            if (count <= 0 ||
+                start < 0 ||
+                start + count > _memberScratch.Length)
+            {
+                return InputOrderActivationResult.Rejected(
+                    context.TargetEntity,
+                    OrderSubmitResult.RejectedValidation);
+            }
+
+            InputOrderActivationResult firstAccepted = default;
+            InputOrderActivationResult firstRejected = default;
+            bool hasAccepted = false;
+            bool hasRejected = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                EntityCommandPanelAggregationMember member = _memberScratch[start + i];
+                InputOrderActivationResult result = _gasSource.ActivateSlot(member.Owner, groupIndex, member.SlotIndex);
+                if (result.State == InputOrderActivationState.Rejected)
+                {
+                    if (!hasRejected)
+                    {
+                        firstRejected = result;
+                        hasRejected = true;
+                    }
+
+                    continue;
+                }
+
+                if (!hasAccepted)
+                {
+                    firstAccepted = result;
+                    hasAccepted = true;
+                }
+
+                if (result.State == InputOrderActivationState.EnteredAiming)
+                {
+                    break;
+                }
+            }
+
+            if (hasRejected)
+            {
+                return firstRejected;
+            }
+
+            return hasAccepted
+                ? firstAccepted
+                : InputOrderActivationResult.Rejected(
+                    context.TargetEntity,
+                    OrderSubmitResult.RejectedValidation);
         }
 
         public int CopyAggregationMembers(
@@ -275,7 +326,7 @@ namespace EntityCommandPanelMod.Runtime
         /// One kernel group = one panel cell: <see cref="AbilityAggregationProfileRegistry.BuildGroups"/>
         /// decides membership, this method only composes the per-cell view from the members' slot
         /// views (query filter, flags OR, cooldown max, badge count) and maps activation to the
-        /// group's first surviving member.
+        /// group's surviving members.
         /// </summary>
         private int BuildAggregatedSlots(
             EntityCollectionHandle handle,

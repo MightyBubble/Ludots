@@ -927,6 +927,78 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void OrderBufferSystem_SharedBatchTerminalCapacityMiss_KeepsQueuedPayloadForRetry()
+        {
+            using var world = World.Create();
+            const int orderTypeId = 42;
+            const int spatialKey = 4;
+            var results = new OrderAdmissionResultBuffer(16, 16);
+            results.BeginLogicStep();
+            var incoming = new OrderQueue(64, results);
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 1);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 100,
+                CanInterruptSelf = true,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity first = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
+            Entity second = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
+            ref OrderBuffer firstBuffer = ref world.Get<OrderBuffer>(first);
+            var active = new Order { OrderId = 700, Actor = first, OrderTypeId = orderTypeId };
+            firstBuffer.SetActiveDirect(in active, priority: 100);
+
+            Entity terminalOccupant = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer terminalOccupantBuffer = ref world.Get<OrderBuffer>(terminalOccupant);
+            var queuedToCancel = new Order { OrderId = 701, Actor = terminalOccupant, OrderTypeId = orderTypeId };
+            That(terminalOccupantBuffer.Enqueue(in queuedToCancel, priority: 1, expireStep: -1, insertStep: 0), Is.True);
+            OrderSubmitter.CancelAll(world, terminalOccupant, orderTypes);
+            That(terminalResults.Count, Is.EqualTo(1));
+
+            var batch = new[]
+            {
+                new Order { Actor = first, OrderTypeId = orderTypeId, SubmitMode = OrderSubmitMode.Immediate },
+                new Order { Actor = second, OrderTypeId = orderTypeId, SubmitMode = OrderSubmitMode.Immediate },
+            };
+            var pointX = new[] { 100, 200, 300 };
+            var pointY = new[] { 400, 500, 600 };
+            OrderSpatialPayloadOps.SetPath(world, first, ref batch[0], pointX, pointY, pointX.Length);
+            OrderSpatialPayloadHandle firstHandle = batch[0].Args.Spatial.Payload;
+            OrderSpatialPayloadOps.SetPath(world, second, ref batch[1], pointX, pointY, pointX.Length);
+            That(incoming.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                incoming);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => intake.Update(0f))!;
+
+            That(ex.Message, Does.StartWith("ORDER.TERMINAL.ERR.ResultCapacityExceeded"));
+            That(incoming.Count, Is.EqualTo(2));
+            ref OrderSpatialPayloadBuffer payloads = ref world.Get<OrderSpatialPayloadBuffer>(first);
+            That(payloads.GetPointCount(in firstHandle), Is.EqualTo(pointX.Length));
+            That(firstBuffer.HasActive, Is.True);
+            That(firstBuffer.ActiveOrder.Order.OrderId, Is.EqualTo(active.OrderId));
+
+            terminalResults.Clear();
+            Assert.DoesNotThrow(() => intake.Update(0f));
+
+            That(incoming.Count, Is.Zero);
+            That(firstBuffer.HasActive, Is.True);
+            That(firstBuffer.ActiveOrder.Order.OrderId, Is.EqualTo(batch[0].OrderId));
+            That(world.Get<OrderBuffer>(second).HasActive, Is.True);
+            That(world.Get<OrderBuffer>(second).ActiveOrder.Order.OrderId, Is.EqualTo(batch[1].OrderId));
+        }
+
+        [Test]
         public void OrderSubmitter_QueueCleanupPaths_PublishCancelledTerminalOutcomes()
         {
             using var world = World.Create();

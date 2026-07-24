@@ -119,10 +119,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var order = extracted[i];
                         order.Actor = entity;
 
-                        OrderSubmitResult result;
                         try
                         {
-                            result = OrderSubmitter.Submit(
+                            OrderSubmitResult result = OrderSubmitter.Submit(
                                 World,
                                 entity,
                                 in order,
@@ -130,6 +129,43 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 _orderRuleRegistry,
                                 currentStep,
                                 _stepRateHz);
+
+                            if (result == OrderSubmitResult.RejectedByRule)
+                            {
+                                var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                                if (config.PendingBufferWindowMs > 0)
+                                {
+                                    int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                                    OrderSubmitter.ReplacePending(
+                                        World,
+                                        ref buffer,
+                                        _orderTypeRegistry,
+                                        in order,
+                                        config.Priority,
+                                        expireStep,
+                                        currentStep);
+                                    CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
+                                    reservations[i] = default;
+                                    continue;
+                                }
+                            }
+
+                            CommitAdmission(in reservations[i], in order, result);
+                            reservations[i] = default;
+
+                            if (OrderSubmitResultSemantics.IsAccepted(result))
+                            {
+                                continue;
+                            }
+
+                            OrderSpatialPayloadOps.Release(World, in order);
+                            var rejected = new OrderTerminalOutcome(
+                                order.OrderId,
+                                order.OrderTypeId,
+                                OrderTerminalState.Failed,
+                                OrderSubmitResultSemantics.ToFailureReason(result),
+                                entity);
+                            _orderTypeRegistry.PublishTerminalResult(in rejected);
                         }
                         catch
                         {
@@ -140,43 +176,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 reservations.Slice(i, count - i));
                             throw;
                         }
-
-                        if (result == OrderSubmitResult.RejectedByRule)
-                        {
-                            var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                            if (config.PendingBufferWindowMs > 0)
-                            {
-                                int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                                OrderSubmitter.ReplacePending(
-                                    World,
-                                    ref buffer,
-                                    _orderTypeRegistry,
-                                    in order,
-                                    config.Priority,
-                                    expireStep,
-                                    currentStep);
-                                CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
-                                reservations[i] = default;
-                                continue;
-                            }
-                        }
-
-                        CommitAdmission(in reservations[i], in order, result);
-                        reservations[i] = default;
-
-                        if (OrderSubmitResultSemantics.IsAccepted(result))
-                        {
-                            continue;
-                        }
-
-                        OrderSpatialPayloadOps.Release(World, in order);
-                        var rejected = new OrderTerminalOutcome(
-                            order.OrderId,
-                            order.OrderTypeId,
-                            OrderTerminalState.Failed,
-                            OrderSubmitResultSemantics.ToFailureReason(result),
-                            entity);
-                        _orderTypeRegistry.PublishTerminalResult(in rejected);
                     }
                 }
                 finally
@@ -239,8 +238,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 Order order = orders[i];
-                OrderSpatialPayloadOps.Release(World, in order);
                 _orderTypeRegistry.EnsureTerminalResultCapacity();
+                OrderSpatialPayloadOps.Release(World, in order);
                 var failed = new OrderTerminalOutcome(
                     order.OrderId,
                     order.OrderTypeId,
