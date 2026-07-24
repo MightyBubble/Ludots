@@ -2,7 +2,6 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
-using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.FixedInput;
@@ -85,8 +84,9 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
         ContentFingerprint contentFingerprint,
-        NetworkRuntimeStateObserver observer)
+        NetworkRuntimeStateObserver stateObserver)
     {
+        INetworkRuntimeObserver observer = ResolveNetworkRuntimeObserver(engine, stateObserver);
         ReplicationSchemaProjectorRegistry projectors = Require(
             engine,
             CoreServiceKeys.ReplicationSchemaProjectors);
@@ -96,8 +96,6 @@ public static class LiteNetLibNetworkRuntimeInstaller
             throw new InvalidOperationException(
                 "Authoritative launch registered no replication schema projectors during runtime composition.");
         }
-        NetworkEntityTable entities = Require(engine, CoreServiceKeys.NetworkEntityTable);
-        KnowledgeProjectionStore knowledge = Require(engine, CoreServiceKeys.KnowledgeProjectionStore);
         NetworkCommandIngress commands = Require(engine, CoreServiceKeys.NetworkCommandIngress);
         NetworkCommandAdmissionResultBuffer admissions = Require(
             engine,
@@ -105,15 +103,15 @@ public static class LiteNetLibNetworkRuntimeInstaller
         IAuthoritativeReplicationInterestPort replicationInterest = Require(
             engine,
             CoreServiceKeys.AuthoritativeReplicationInterest);
-        var mapSession = engine.CurrentMapSession ??
-            throw new InvalidOperationException(
-                "Authoritative networking requires the startup map before accepting connections.");
-        var controllers = new AuthoritativeSeatControllerRegistry(
-            engine.World,
-            mapSession.PlayerEntityLookup,
-            config.PlayerCapacity);
 
         var capacity = NetworkRuntimeCapacity.FromConfig(config);
+        ResolveAuthoritativeComposition(
+            engine,
+            capacity.ConnectionCapacity,
+            capacity.GlobalEntityCapacity,
+            capacity.ReplicationEntityCapacityPerSeat,
+            out IAuthoritativeSeatControllerResolver controllers,
+            out IAuthoritativeReplicationSeatRuntimeFactory seatFactory);
         var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
         var sessionEpoch = IssueSessionEpoch();
         var sessions = new AuthoritativeSessionRegistry(
@@ -122,12 +120,6 @@ public static class LiteNetLibNetworkRuntimeInstaller
             protocol,
             contentFingerprint,
             checked((uint)(config.ReconnectWindowSeconds * config.SimulationTickRateHz)));
-        var seatFactory = new AuthoritativeReplicationSeatRuntimeFactory(
-            engine.World,
-            entities,
-            knowledge,
-            projectors,
-            config);
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessionEpoch.Value, sessions.SeatCapacity),
             engine.GameSession.SimulationTicks);
@@ -154,7 +146,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
                 fixedInput,
                 observer);
 
-            PublishAuthoritativeComposition(engine, controllers, seatFactory, fixedInput);
+            PublishAuthoritativeFixedInput(engine, fixedInput);
             return runtime;
         }
         catch
@@ -177,9 +169,10 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
         ContentFingerprint contentFingerprint,
-        NetworkRuntimeStateObserver observer,
+        NetworkRuntimeStateObserver stateObserver,
         string runtimeBaseDirectory)
     {
+        INetworkRuntimeObserver observer = ResolveNetworkRuntimeObserver(engine, stateObserver);
         ClientReplicationSchemaApplierRegistry appliers = Require(
             engine,
             CoreServiceKeys.ClientReplicationSchemaAppliers);
@@ -219,7 +212,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
                     config.GlobalNetworkEntityCapacity,
                     appliers),
                 admissions,
-                new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
+                observer);
         }
         catch
         {
@@ -228,22 +221,48 @@ public static class LiteNetLibNetworkRuntimeInstaller
         }
     }
 
-    private static void PublishAuthoritativeComposition(
+    internal static void ResolveAuthoritativeComposition(
         GameEngine engine,
-        AuthoritativeSeatControllerRegistry controllers,
-        IAuthoritativeReplicationSeatRuntimeFactory seatFactory,
-        AuthoritativeFixedInputIngress fixedInput)
+        int seatCapacity,
+        int globalEntityCapacity,
+        int replicationEntityCapacityPerSeat,
+        out IAuthoritativeSeatControllerResolver controllers,
+        out IAuthoritativeReplicationSeatRuntimeFactory seatFactory)
     {
-        if (engine.TryGetService(CoreServiceKeys.AuthoritativeSeatControllers, out _) ||
-            engine.TryGetService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory, out _) ||
-            engine.TryGetService(CoreServiceKeys.AuthoritativeFixedInputIngress, out _))
+        ArgumentNullException.ThrowIfNull(engine);
+        controllers = Require(engine, CoreServiceKeys.AuthoritativeSeatControllerResolver);
+        seatFactory = Require(engine, CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory);
+        if (seatFactory.SeatCapacity != seatCapacity ||
+            seatFactory.GlobalEntityCapacity != globalEntityCapacity ||
+            seatFactory.ReplicationEntityCapacityPerSeat != replicationEntityCapacityPerSeat)
         {
             throw new InvalidOperationException(
-                "Authoritative network composition services are already owned by another composition root.");
+                "Authoritative replication seat factory capacities do not match the validated network runtime capacity.");
+        }
+    }
+
+    internal static INetworkRuntimeObserver ResolveNetworkRuntimeObserver(
+        GameEngine engine,
+        NetworkRuntimeStateObserver stateObserver)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        ArgumentNullException.ThrowIfNull(stateObserver);
+        INetworkRuntimeObserver bridge = Require(
+            engine,
+            CoreServiceKeys.NetworkRuntimeObserverBridge);
+        return new NetworkRuntimeObserverFanout(stateObserver, bridge);
+    }
+
+    private static void PublishAuthoritativeFixedInput(
+        GameEngine engine,
+        AuthoritativeFixedInputIngress fixedInput)
+    {
+        if (engine.TryGetService(CoreServiceKeys.AuthoritativeFixedInputIngress, out _))
+        {
+            throw new InvalidOperationException(
+                "AuthoritativeFixedInputIngress is already owned by another composition root.");
         }
 
-        engine.SetService(CoreServiceKeys.AuthoritativeSeatControllers, controllers);
-        engine.SetService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory, seatFactory);
         engine.SetService(CoreServiceKeys.AuthoritativeFixedInputIngress, fixedInput);
     }
 
