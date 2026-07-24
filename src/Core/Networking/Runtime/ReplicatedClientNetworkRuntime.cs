@@ -141,6 +141,13 @@ namespace Ludots.Core.Networking.Runtime
         public NetworkRuntimeFault LastFault => _lastFault;
         public int FixedInputPendingCount => _fixedInputOutbox?.PendingCount ?? 0;
 
+        /// <summary>
+        /// Latest fixed-input ACK CommittedThroughTick applied to the outbox.
+        /// Distinct from <see cref="LastCommittedTick"/> (replication snapshot cadence).
+        /// </summary>
+        public uint FixedInputAcknowledgedCommittedTick =>
+            _fixedInputOutbox?.AppliedCommittedThrough ?? 0;
+
         public bool TrySubmitCommand(
             in NetworkCommandBatchHeader header,
             ReadOnlySpan<NetworkCommandWireEntry> entries)
@@ -220,8 +227,9 @@ namespace Ludots.Core.Networking.Runtime
                 return false;
             }
 
+            // Batch header acknowledges the latest fixed-input ACK, not the slower replication tick.
             FixedInputBatchBuildStatus built = _fixedInputOutbox.TryBuildBatch(
-                _lastCommittedTick,
+                _fixedInputOutbox.AppliedCommittedThrough,
                 _fixedInputTargetTicks,
                 _fixedInputPayloads,
                 out NetworkFixedInputBatchHeader header,

@@ -74,7 +74,7 @@ public sealed class FixedInputRuntimeTests
         Assert.That(lookup.ToArray(), Is.All.EqualTo(0));
         harness.TickState.Commit(1);
         harness.Server.AfterAuthoritativeCommit(1);
-        Assert.That(harness.Server.FixedInput.MissingAtDeadlineCount, Is.EqualTo(1));
+        Assert.That(harness.Server.FixedInputMissingAtDeadlineCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -94,6 +94,135 @@ public sealed class FixedInputRuntimeTests
             Assert.That(harness.Transport.ServerSnapshotFragmentCount, Is.Zero);
             Assert.That(harness.Transport.ServerReplicationPacketCount, Is.Zero);
         });
+    }
+
+    [Test]
+    public void BeforeAuthoritativeTick_MismatchedOrOutOfDomainTick_FailsFast()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        Assert.That(
+            () => harness.Server.BeforeAuthoritativeTick(0),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Server.IsFaulted, Is.True);
+        Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.SessionContractViolation));
+    }
+
+    [Test]
+    public void BeforeAuthoritativeTick_WithoutMatchingExecutingTickState_FailsFast()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        Assert.That(
+            () => harness.Server.BeforeAuthoritativeTick(1),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.SessionContractViolation));
+    }
+
+    [Test]
+    public void AfterAuthoritativeCommit_WhileStillExecutingOrMismatched_FailsFast()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        harness.TickState.Begin(1);
+        harness.Server.BeforeAuthoritativeTick(1);
+        Assert.That(
+            () => harness.Server.AfterAuthoritativeCommit(1),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+    }
+
+    [Test]
+    public void AfterAuthoritativeCommit_MismatchedCommittedTick_FailsFast()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        harness.TickState.Begin(1);
+        harness.Server.BeforeAuthoritativeTick(1);
+        harness.TickState.Commit(1);
+        Assert.That(
+            () => harness.Server.AfterAuthoritativeCommit(2),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+    }
+
+    [Test]
+    public void BatchHeader_AcknowledgesLatestInputAck_NotStaleReplicationTick()
+    {
+        // 10Hz snapshot cadence (interval=3) vs 30Hz input ACK every commit.
+        using FixedInputHarness harness = CreateHarness(statePublishRateHz: 10);
+        Handshake(harness);
+
+        RunAuthoritativeFrame(harness, 1);
+        RunAuthoritativeFrame(harness, 2);
+        harness.Client.PumpTransport();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Client.LastCommittedTick, Is.EqualTo(0u), "No replication snapshot yet.");
+            Assert.That(harness.Client.FixedInputAcknowledgedCommittedTick, Is.EqualTo(2u));
+            Assert.That(harness.Transport.ServerFixedInputAckCount, Is.EqualTo(2));
+            Assert.That(harness.Transport.ServerSnapshotFragmentCount, Is.Zero);
+            Assert.That(harness.Transport.ServerReplicationPacketCount, Is.Zero);
+        });
+
+        Span<byte> frame = stackalloc byte[PayloadBytes];
+        frame.Fill(0x44);
+        Assert.That(harness.Client.TrySubmitFixedInput(3, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(harness.Transport.LastClientBatchHeader.AcknowledgedCommittedTick, Is.EqualTo(2u));
+    }
+
+    [Test]
+    public void FixedInputAck_NotReady_KeepsOneLatestSlotPerSeat()
+    {
+        using FixedInputHarness harness = CreateHarness(statePublishRateHz: 10);
+        Handshake(harness);
+
+        harness.Transport.BlockFixedInputAckSends = true;
+        RunAuthoritativeFrame(harness, 1);
+        Assert.That(harness.Transport.ServerFixedInputAckCount, Is.Zero);
+        RunAuthoritativeFrame(harness, 2);
+        Assert.That(harness.Transport.ServerFixedInputAckCount, Is.Zero);
+        RunAuthoritativeFrame(harness, 3);
+        Assert.That(harness.Transport.ServerFixedInputAckCount, Is.Zero);
+
+        harness.Transport.BlockFixedInputAckSends = false;
+        harness.Server.PumpTransport();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Transport.ServerFixedInputAckCount, Is.EqualTo(1));
+            Assert.That(harness.Transport.LastServerFixedInputAck.CommittedThroughTick, Is.EqualTo(3u));
+        });
+
+        harness.Client.PumpTransport();
+        Assert.That(harness.Client.FixedInputAcknowledgedCommittedTick, Is.EqualTo(3u));
+    }
+
+    [Test]
+    public void PumpReplicatedClient_RepeatedCalls_NeverPulseFixedInput()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        Span<byte> frame = stackalloc byte[PayloadBytes];
+        frame.Fill(0x55);
+        Assert.That(harness.Client.TrySubmitFixedInput(1, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        Assert.That(harness.Client.FixedInputPendingCount, Is.EqualTo(1));
+
+        for (int i = 0; i < 144; i++)
+        {
+            harness.Client.PumpReplicatedClient(1f / 144f);
+        }
+
+        Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
+        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -194,10 +323,11 @@ public sealed class FixedInputRuntimeTests
         harness.Transport.Disconnect();
         harness.Server.PumpTransport();
         harness.Client.PumpTransport();
-        harness.TickState.Begin(1);
-        harness.Server.BeforeAuthoritativeTick(1);
-        harness.TickState.Commit(1);
+        RunAuthoritativeFrame(harness, 1);
+        harness.TickState.Begin(2);
         harness.Server.BeforeAuthoritativeTick(2);
+        harness.TickState.Commit(2);
+        harness.Server.AfterAuthoritativeCommit(2);
         Assert.That(harness.Observer.SeatReleases, Is.EqualTo(1));
 
         // Stale reconnect token after release clears credentials and outbox once.
@@ -352,6 +482,20 @@ public sealed class FixedInputRuntimeTests
         harness.Client.PumpTransport();
         Assert.That(harness.Client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
         Assert.That(harness.Client.FixedInputPendingCount, Is.Zero);
+    }
+
+    private static void RunAuthoritativeFrame(FixedInputHarness harness, uint tick)
+    {
+        int expected = harness.TickState.CommittedTick + 1;
+        if ((int)tick != expected)
+        {
+            harness.TickState.RestoreCommittedTick(checked((int)tick) - 1);
+        }
+
+        harness.TickState.Begin(checked((int)tick));
+        harness.Server.BeforeAuthoritativeTick(tick);
+        harness.TickState.Commit(checked((int)tick));
+        harness.Server.AfterAuthoritativeCommit(tick);
     }
 
     private static FixedInputHarness CreateHarness(
@@ -853,6 +997,8 @@ public sealed class FixedInputRuntimeTests
         private readonly Queue<ClientConnectionEvent> _clientEvents = new();
         private readonly Frame[] _serverInbound = new Frame[QueueCapacity];
         private readonly Frame[] _clientInbound = new Frame[QueueCapacity];
+        private readonly uint[] _decodeBatchTicks = new uint[4];
+        private readonly byte[] _decodeBatchPayloads = new byte[4 * PayloadBytes];
         private int _serverInboundHead;
         private int _serverInboundTail;
         private int _serverInboundCount;
@@ -877,6 +1023,9 @@ public sealed class FixedInputRuntimeTests
         public ChannelId LastClientSendChannel { get; private set; }
         public ChannelId LastServerSendChannel { get; private set; }
         public ClientConnectionControlState State { get; private set; }
+        public bool BlockFixedInputAckSends { get; set; }
+        public NetworkFixedInputAcknowledgement LastServerFixedInputAck { get; private set; }
+        public NetworkFixedInputBatchHeader LastClientBatchHeader { get; private set; }
 
         public void Connect()
         {
@@ -955,11 +1104,30 @@ public sealed class FixedInputRuntimeTests
 
         public DatagramSendStatus TrySend(ConnectionId connectionId, ChannelId channelId, ReadOnlySpan<byte> payload)
         {
+            if (TryGetKind(payload, out NetworkWireKind kind) &&
+                kind == NetworkWireKind.FixedInputAcknowledgement &&
+                BlockFixedInputAckSends)
+            {
+                return DatagramSendStatus.NotReady;
+            }
+
             Enqueue(ref _clientInboundHead, ref _clientInboundTail, ref _clientInboundCount, _clientInbound, channelId, payload);
             LastServerSendChannel = channelId;
-            if (TryGetKind(payload, out NetworkWireKind kind))
+            if (TryGetKind(payload, out kind))
             {
-                if (kind == NetworkWireKind.FixedInputAcknowledgement) ServerFixedInputAckCount++;
+                if (kind == NetworkWireKind.FixedInputAcknowledgement)
+                {
+                    ServerFixedInputAckCount++;
+                    if (NetworkWireEnvelopeCodec.TryDecode(payload, out _, out ReadOnlySpan<byte> ackPayload) ==
+                            NetworkWireCodecStatus.Success &&
+                        FixedInputWireCodec.TryDecodeAcknowledgement(
+                            ackPayload,
+                            out NetworkFixedInputAcknowledgement ack) == NetworkWireCodecStatus.Success)
+                    {
+                        LastServerFixedInputAck = ack;
+                    }
+                }
+
                 if (kind == NetworkWireKind.SnapshotFragment) ServerSnapshotFragmentCount++;
                 if (kind == NetworkWireKind.ReplicationPacket) ServerReplicationPacketCount++;
             }
@@ -974,6 +1142,17 @@ public sealed class FixedInputRuntimeTests
             if (TryGetKind(payload, out NetworkWireKind kind) && kind == NetworkWireKind.FixedInputBatch)
             {
                 ClientFixedInputBatchCount++;
+                if (NetworkWireEnvelopeCodec.TryDecode(payload, out _, out ReadOnlySpan<byte> batchPayload) ==
+                        NetworkWireCodecStatus.Success &&
+                    FixedInputWireCodec.TryDecodeBatch(
+                        batchPayload,
+                        _decodeBatchTicks,
+                        _decodeBatchPayloads,
+                        out NetworkFixedInputBatchHeader header,
+                        out _) == NetworkWireCodecStatus.Success)
+                {
+                    LastClientBatchHeader = header;
+                }
             }
 
             return DatagramSendStatus.Sent;

@@ -117,14 +117,11 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(observer.Faults, Is.Zero);
         });
 
-        server.BeforeAuthoritativeTick(10);
-        server.AfterAuthoritativeCommit(10);
+        RunAuthoritativeFrame(server, tickState, 10);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.Zero);
-        server.BeforeAuthoritativeTick(11);
-        server.AfterAuthoritativeCommit(11);
+        RunAuthoritativeFrame(server, tickState, 11);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.Zero);
-        server.BeforeAuthoritativeTick(12);
-        server.AfterAuthoritativeCommit(12);
+        RunAuthoritativeFrame(server, tickState, 12);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(1));
         Assert.Multiple(() =>
         {
@@ -161,7 +158,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
         Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
 
-        server.BeforeAuthoritativeTick(12);
+        // Drain the late targetTick=12 batch on the next authoritative frame.
+        RunAuthoritativeFrame(server, tickState, 13);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
         Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
@@ -170,8 +168,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(admittedCount, Is.EqualTo(2));
 
         serverWorld.Set(first, new TestReplicatedData(2, 99));
-        server.BeforeAuthoritativeTick(15);
-        server.AfterAuthoritativeCommit(15);
+        RunAuthoritativeFrame(server, tickState, 15);
         client.PumpTransport();
         server.PumpTransport();
         Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(99));
@@ -199,16 +196,15 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(clientFactory.Applier.ReleaseCalls, Is.Zero);
         });
 
-        server.BeforeAuthoritativeTick(18);
-        server.AfterAuthoritativeCommit(18);
+        RunAuthoritativeFrame(server, tickState, 18);
         client.PumpTransport();
         server.PumpTransport();
         transport.Disconnect();
         server.PumpTransport();
         client.PumpTransport();
-        server.BeforeAuthoritativeTick(19);
+        RunAuthoritativeFrame(server, tickState, 19);
         Assert.That(observer.SeatReleases, Is.Zero);
-        server.BeforeAuthoritativeTick(22);
+        RunAuthoritativeFrame(server, tickState, 22);
 
         Assert.Multiple(() =>
         {
@@ -298,19 +294,12 @@ public sealed class NetworkRuntimeEndToEndTests
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
             stateChannel: new ChannelId(2),
-
             inputChannel: new ChannelId(3),
-
             fixedInputHistoryTicksPerSeat: 8,
-
             fixedInputSchemaId: 1,
-
             fixedInputFramePayloadBytes: 12,
-
             fixedInputMaxFutureTicks: 4,
-
             fixedInputMaxFramesPerBatch: 4,
-
             fixedInputPendingFrameCapacity: 8);
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 7, 7 });
         var protocol = new ProtocolVersion(1, 0);
@@ -359,16 +348,14 @@ public sealed class NetworkRuntimeEndToEndTests
         client.PumpTransport();
         server.PumpTransport();
         client.PumpTransport();
-        server.BeforeAuthoritativeTick(1);
-        server.AfterAuthoritativeCommit(1);
+        RunAuthoritativeFrame(server, tickState, 1);
         Assert.That(disclosureLog.Count, Is.EqualTo(1));
         client.PumpTransport();
         server.PumpTransport();
         Assert.That(disclosureLog.Count, Is.Zero, "The initial Full acknowledgement must release its disclosure record.");
 
         interest.Replace(commandHarness.SecondHandle);
-        server.BeforeAuthoritativeTick(2);
-        server.AfterAuthoritativeCommit(2);
+        RunAuthoritativeFrame(server, tickState, 2);
         Assert.That(disclosureLog.Count, Is.EqualTo(2), "A complete one-entity area transition must consume conceal plus reveal.");
 
         var resync = new NetworkResyncRequired(
@@ -387,8 +374,7 @@ public sealed class NetworkRuntimeEndToEndTests
         server.PumpTransport();
         Assert.That(disclosureLog.Count, Is.Zero, "The Full boundary must discard disclosure history replaced by resync.");
 
-        server.BeforeAuthoritativeTick(3);
-        server.AfterAuthoritativeCommit(3);
+        RunAuthoritativeFrame(server, tickState, 3);
         Assert.Multiple(() =>
         {
             Assert.That(disclosureLog.Count, Is.EqualTo(1));
@@ -468,19 +454,12 @@ public sealed class NetworkRuntimeEndToEndTests
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
             stateChannel: new ChannelId(2),
-
             inputChannel: new ChannelId(3),
-
             fixedInputHistoryTicksPerSeat: 8,
-
             fixedInputSchemaId: 1,
-
             fixedInputFramePayloadBytes: 12,
-
             fixedInputMaxFutureTicks: 4,
-
             fixedInputMaxFramesPerBatch: 4,
-
             fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(31));
         var observer = new RecordingObserver();
@@ -696,19 +675,12 @@ public sealed class NetworkRuntimeEndToEndTests
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
             stateChannel: new ChannelId(2),
-
             inputChannel: new ChannelId(3),
-
             fixedInputHistoryTicksPerSeat: 8,
-
             fixedInputSchemaId: 1,
-
             fixedInputFramePayloadBytes: 12,
-
             fixedInputMaxFutureTicks: 4,
-
             fixedInputMaxFramesPerBatch: 4,
-
             fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(41));
         var observer = new RecordingObserver();
@@ -1029,6 +1001,23 @@ public sealed class NetworkRuntimeEndToEndTests
             snapshot.AsSpan(0, snapshotBytes));
     }
 
+    private static void RunAuthoritativeFrame(
+        AuthoritativeServerNetworkRuntime server,
+        AuthoritativeSimulationTickState tickState,
+        uint tick)
+    {
+        int expected = tickState.CommittedTick + 1;
+        if ((int)tick != expected)
+        {
+            tickState.RestoreCommittedTick(checked((int)tick) - 1);
+        }
+
+        tickState.Begin(checked((int)tick));
+        server.BeforeAuthoritativeTick(tick);
+        tickState.Commit(checked((int)tick));
+        server.AfterAuthoritativeCommit(tick);
+    }
+
     private static NetworkRuntimeCapacity Capacity(
         int simulationTickRateHz = 30,
         int statePublishRateHz = 30) => new(
@@ -1048,19 +1037,12 @@ public sealed class NetworkRuntimeEndToEndTests
         controlChannel: new ChannelId(0),
         commandChannel: new ChannelId(1),
         stateChannel: new ChannelId(2),
-
         inputChannel: new ChannelId(3),
-
         fixedInputHistoryTicksPerSeat: 8,
-
         fixedInputSchemaId: 1,
-
         fixedInputFramePayloadBytes: 12,
-
         fixedInputMaxFutureTicks: 4,
-
         fixedInputMaxFramesPerBatch: 4,
-
         fixedInputPendingFrameCapacity: 8);
 
     private static CommandHarness CreateCommandHarness(World world, Entity player, Entity first, Entity second)

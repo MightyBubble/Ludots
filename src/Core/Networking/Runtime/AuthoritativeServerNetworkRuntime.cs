@@ -168,7 +168,8 @@ namespace Ludots.Core.Networking.Runtime
         public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
-        public AuthoritativeFixedInputIngress FixedInput => _fixedInput;
+        public int FixedInputMissingAtDeadlineCount => _fixedInput.MissingAtDeadlineCount;
+        public int FixedInputAcceptedCount => _fixedInput.AcceptedCount;
 
         public FixedInputLookupResult TryGetFixedInput(
             in SessionSeatBinding seat,
@@ -207,6 +208,18 @@ namespace Ludots.Core.Networking.Runtime
         public void BeforeAuthoritativeTick(uint executingTick)
         {
             EnsureOperational();
+            if (executingTick == 0 || executingTick > FixedInputWireCodec.MaxSimulationTick)
+            {
+                Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: unchecked((int)executingTick));
+            }
+
+            // Command scheduling and fixed-input admission share one Tick truth.
+            if (!_fixedInput.TickState.IsExecuting ||
+                (uint)_fixedInput.TickState.ExecutingTick != executingTick)
+            {
+                Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: unchecked((int)executingTick));
+            }
+
             if (executingTick < _currentTick)
             {
                 Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: unchecked((int)executingTick));
@@ -222,6 +235,18 @@ namespace Ludots.Core.Networking.Runtime
         public void AfterAuthoritativeCommit(uint committedTick)
         {
             EnsureOperational();
+            if (committedTick == 0 || committedTick > FixedInputWireCodec.MaxSimulationTick)
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)committedTick));
+            }
+
+            // ACK CommittedThrough and replication snapshot Tick must publish the same commit.
+            if (_fixedInput.TickState.IsExecuting ||
+                (uint)_fixedInput.TickState.CommittedTick != committedTick)
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)committedTick));
+            }
+
             if (committedTick < _lastCommittedTick)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)committedTick));
