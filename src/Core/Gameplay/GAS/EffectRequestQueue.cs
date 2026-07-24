@@ -21,6 +21,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public sealed class EffectRequestQueue
     {
+        public const string CapacityExceededError = "GAS.EFFECT_REQUEST_QUEUE.ERR.CapacityExceeded";
+
         private EffectRequest[] _items;
         private int _count;
         private int _nextRootId = 1;
@@ -152,8 +154,8 @@ namespace Ludots.Core.Gameplay.GAS
 
             if (_overflowCount >= _overflow.Length)
             {
-                _dropped++;
-                return;
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: capacity={_items.Length}, overflowCapacity={_overflow.Length}, requestedTemplateId={r.TemplateId}, rootId={r.RootId}.");
             }
 
             _overflow[_overflowTail] = r;

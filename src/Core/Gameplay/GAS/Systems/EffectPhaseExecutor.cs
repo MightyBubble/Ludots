@@ -27,6 +27,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class EffectPhaseExecutor
     {
+        public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
+        private const int PhaseListenerDispatchScratchCapacity =
+            EffectPhaseListenerBuffer.CAPACITY * 2 + GlobalPhaseListenerRegistry.MAX_LISTENERS;
+
         private readonly GraphProgramRegistry _programs;
         private readonly PresetTypeRegistry _presetTypes;
         private readonly BuiltinHandlerRegistry _builtinHandlers;
@@ -44,7 +48,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
 
         // Scratch buffer for collected listener actions
-        private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[32];
+        private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[PhaseListenerDispatchScratchCapacity];
         private int[] _scratchRegisterCountsByGraphId = new int[64];
 
         public EffectPhaseExecutor(
@@ -384,6 +388,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (totalDropped > 0 && _budget != null)
             {
                 _budget.PhaseListenerDispatchDropped += totalDropped;
+            }
+
+            if (totalDropped > 0)
+            {
+                throw new InvalidOperationException(
+                    $"{PhaseListenerDispatchCapacityExceededError}: capacity={scratch.Length}, dropped={totalDropped}, phase={(int)phase}, effectTagId={effectTagId}, effectTemplateId={effectTemplateId}.");
             }
 
             if (totalCollected == 0) return;

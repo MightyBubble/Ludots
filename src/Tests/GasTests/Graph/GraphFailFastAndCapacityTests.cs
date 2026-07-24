@@ -70,16 +70,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GameplayEventBus_DropsAfterCapacity_AndReportsDropped()
+        public void GameplayEventBus_WhenCapacityExceeded_ThrowsBeforeDropping()
         {
             var bus = new GameplayEventBus();
-            for (int i = 0; i < GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 7; i++)
+            for (int i = 0; i < GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME; i++)
             {
                 bus.Publish(new GameplayEvent { TagId = i });
             }
-            bus.Update();
-            That(bus.Events.Count, Is.EqualTo(GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME));
-            That(bus.DroppedEventsLastUpdate, Is.EqualTo(7));
+
+            var error = Throws<InvalidOperationException>(() =>
+                bus.Publish(new GameplayEvent { TagId = GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 1 }));
+
+            That(error!.Message, Does.StartWith(GameplayEventBus.CapacityExceededError));
         }
 
         [Test]
@@ -100,6 +102,24 @@ namespace Ludots.Tests.GAS
             // After consuming 32 from main (4096→4064), overflow 9 refilled → 4073 total.
             That(q.Count, Is.EqualTo(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 32 + 9));
             That(q.OverflowCount, Is.EqualTo(0));
+            That(q.DroppedCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EffectRequestQueue_WhenTotalCapacityExceeded_ThrowsBeforeDropping()
+        {
+            var q = new EffectRequestQueue();
+            for (int i = 0; i < q.TotalCapacity; i++)
+            {
+                q.Publish(new EffectRequest { TemplateId = i + 1 });
+            }
+
+            var error = Throws<InvalidOperationException>(() =>
+                q.Publish(new EffectRequest { TemplateId = q.TotalCapacity + 1 }));
+
+            That(error!.Message, Does.StartWith(EffectRequestQueue.CapacityExceededError));
+            That(q.Count, Is.EqualTo(q.Capacity));
+            That(q.OverflowCount, Is.EqualTo(q.Capacity));
             That(q.DroppedCount, Is.EqualTo(0));
         }
 

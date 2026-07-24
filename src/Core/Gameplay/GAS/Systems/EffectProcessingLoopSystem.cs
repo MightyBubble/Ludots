@@ -46,7 +46,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectProposalProcessingSystem _proposal;
         private readonly EffectApplicationSystem _application;
         private readonly EffectLifetimeSystem _lifetime;
-        private readonly RootBudgetTable _fanOutBudget = new(16384);
+        private readonly RootBudgetTable _fanOutBudget;
 
         private EffectLoopStage _stage;
         private EffectLoopSubstage _substage;
@@ -70,6 +70,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _inputRequests = inputRequests;
             _chainOrders = chainOrders;
             _orderRequests = orderRequests;
+            _fanOutBudget = new RootBudgetTable(fanOutCommandCapacity);
 
             var configuredResponseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
                 responseChainOrderTypes,

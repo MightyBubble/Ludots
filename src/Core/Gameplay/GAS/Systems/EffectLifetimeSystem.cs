@@ -109,7 +109,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _effectSnapshot = new Entity[snapshotCapacity];
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
-            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
             _ownsFanOutBudget = fanOutBudget == null;
             _periodPhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
             _expirePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);

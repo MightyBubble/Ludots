@@ -50,6 +50,66 @@ namespace Ludots.Tests.GAS
             That(q.Capacity, Is.GreaterThan(before));
         }
 
+        [Test]
+        [Timeout(1000)]
+        public void RootBudgetTable_WhenDistinctRootsFillTable_ReturnsFalseWithoutDeadLoop()
+        {
+            var table = new RootBudgetTable(capacity: 2);
+
+            That(table.TryConsume(rootId: 1, limit: GasConstants.MAX_CREATES_PER_ROOT), Is.True);
+            That(table.TryConsume(rootId: 2, limit: GasConstants.MAX_CREATES_PER_ROOT), Is.True);
+
+            That(table.TryConsume(rootId: 3, limit: GasConstants.MAX_CREATES_PER_ROOT), Is.False);
+        }
+
+        [Test]
+        public void TargetResolverFanOut_WhenRootBudgetExceeded_ThrowsBeforeDroppingTarget()
+        {
+            using var world = World.Create();
+            var source = world.Create();
+            var target = world.Create();
+            var candidates = new[] { target };
+            var budget = new RootBudgetTable(capacity: 8);
+            for (int i = 0; i < GasConstants.MAX_CREATES_PER_ROOT; i++)
+            {
+                That(budget.TryConsume(rootId: 77, limit: GasConstants.MAX_CREATES_PER_ROOT), Is.True);
+            }
+
+            var commands = new FanOutCommandBuffer(capacity: 8);
+            var ctx = new EffectContext
+            {
+                RootId = 77,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+            };
+            var query = new TargetQueryDescriptor();
+            var filter = new TargetFilterDescriptor();
+            var dispatch = new TargetDispatchDescriptor
+            {
+                PayloadEffectTemplateId = 1001,
+                ContextMapping = TargetResolverContextMapping.Default,
+            };
+            int dropped = 0;
+
+            var error = Throws<InvalidOperationException>(() =>
+                TargetResolverFanOutHelper.ValidateAndCollect(
+                    world,
+                    in ctx,
+                    in query,
+                    in filter,
+                    in dispatch,
+                    candidates,
+                    candidates.Length,
+                    budget,
+                    commands,
+                    ref dropped));
+
+            That(error!.Message, Does.StartWith(TargetResolverFanOutHelper.RootBudgetExceededError));
+            That(commands.Count, Is.Zero);
+            That(dropped, Is.Zero);
+        }
+
         // Note: EffectCallbackComponent has been removed per the "Everything is Graph" architecture.
         // OnApply/OnExpire callbacks are now Phase Graph bindings in EffectPhaseGraphBindings.
         // Budget tests for Phase Graph-based callbacks will be added once graph programs
@@ -346,7 +406,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectApplicationSystem_WhenActiveEffectContainerFull_TracksDroppedInBudget()
+        public void EffectApplicationSystem_WhenActiveEffectContainerFull_ThrowsBeforeDroppingEffect()
         {
             var world = World.Create();
             try
@@ -377,10 +437,11 @@ namespace Ludots.Tests.GAS
                     durationTicks: 60,
                     lifetimeKind: EffectLifetimeKind.After);
 
-                app.Update(0.016f);
+                var error = Throws<InvalidOperationException>(() => app.Update(0.016f));
 
-                That(world.IsAlive(effect), Is.False, "overflow attachment should drop and destroy effect");
-                That(budget.ActiveEffectContainerAttachDropped, Is.EqualTo(1));
+                That(error!.Message, Does.StartWith(EffectApplicationSystem.ActiveEffectContainerCapacityExceededError));
+                That(world.IsAlive(effect), Is.True, "overflow attachment must fail explicitly instead of destroying the effect silently");
+                That(budget.ActiveEffectContainerAttachDropped, Is.EqualTo(0));
             }
             finally
             {
@@ -465,7 +526,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectPhaseExecutor_WhenListenerCollectionTruncates_TracksDroppedInBudget()
+        public void EffectPhaseExecutor_DispatchesAllListenerScopesWithoutTruncation()
         {
             var world = World.Create();
             try
@@ -542,7 +603,11 @@ namespace Ludots.Tests.GAS
                     effectTagId: 1,
                     effectTemplateId: 1);
 
-                That(budget.PhaseListenerDispatchDropped, Is.EqualTo(16));
+                eventBus.Update();
+
+                That(eventBus.Events.Count, Is.EqualTo(
+                    EffectPhaseListenerBuffer.CAPACITY * 2 + GlobalPhaseListenerRegistry.MAX_LISTENERS));
+                That(budget.PhaseListenerDispatchDropped, Is.EqualTo(0));
             }
             finally
             {
@@ -551,20 +616,19 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GameplayEventDispatchSystem_WhenBusOverflows_TracksDroppedInBudget()
+        public void GameplayEventBus_WhenFull_ThrowsBeforeDroppingEvent()
         {
             var bus = new GameplayEventBus();
-            var budget = new GasBudget();
-            var dispatch = new GameplayEventDispatchSystem(bus, budget);
 
-            for (int i = 0; i < GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 7; i++)
+            for (int i = 0; i < GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME; i++)
             {
                 bus.Publish(new GameplayEvent { TagId = i + 1 });
             }
 
-            dispatch.Update(0.016f);
+            var error = Throws<InvalidOperationException>(() =>
+                bus.Publish(new GameplayEvent { TagId = GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 1 }));
 
-            That(budget.GameplayEventBusDropped, Is.EqualTo(7));
+            That(error!.Message, Does.StartWith(GameplayEventBus.CapacityExceededError));
         }
     }
 }

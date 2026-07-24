@@ -8,6 +8,8 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public class GameplayEventBus
     {
+        public const string CapacityExceededError = "GAS.GAMEPLAY_EVENT_BUS.ERR.CapacityExceeded";
+
         private GameplayEvent[] _currentEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         private GameplayEvent[] _nextEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         private int _currentCount = 0;
@@ -58,8 +60,8 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     _nextBudgetFused = true;
                 }
-                _droppedInNext++;
-                return;
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: capacity={_nextEvents.Length}, tagId={evt.TagId}.");
             }
             
             _nextEvents[_nextCount++] = evt;

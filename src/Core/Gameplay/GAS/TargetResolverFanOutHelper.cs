@@ -93,6 +93,7 @@ namespace Ludots.Core.Gameplay.GAS
     public static class TargetResolverFanOutHelper
     {
         public const string CommandCapacityExceededError = "GAS.FAN_OUT.ERR.CommandCapacityExceeded";
+        public const string RootBudgetExceededError = "GAS.FAN_OUT.ERR.RootBudgetExceeded";
 
         // ── OnResolve Phase: spatial query, returns raw candidates ──
 
@@ -287,8 +288,8 @@ namespace Ludots.Core.Gameplay.GAS
                 // Budget check
                 if (!budget.TryConsume(ctx.RootId, GasConstants.MAX_CREATES_PER_ROOT))
                 {
-                    dropped++;
-                    continue;
+                    throw new InvalidOperationException(
+                        $"{RootBudgetExceededError}: rootId={ctx.RootId}, perRootLimit={GasConstants.MAX_CREATES_PER_ROOT}, rootBudgetCapacity={budget.Capacity}.");
                 }
 
                 commands.Add(new FanOutCommand

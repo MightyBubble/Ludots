@@ -272,7 +272,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             : base(world)
         {
             _queue = queue;
-            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
             _ownsFanOutBudget = fanOutBudget == null;
             _instantFanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));

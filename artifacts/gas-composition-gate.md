@@ -2,6 +2,64 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - PR #660 Capacity Fail-Fast Repair
+
+- **Task / Issue**: PR #660 merge readiness repair for GAS capacity overflow audit findings
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Repair existing GAS queue, fan-out, root-budget, active-effect, and phase-listener capacity handling.
+
+Result: PASS
+
+Reason: This work changes existing budget enforcement from silent drop/truncation to explicit capacity failure. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Root budget table full-table guard | N/A | existing `RootBudgetTable` |
+| Fan-out root budget exhaustion | N/A | existing `TargetResolverFanOutHelper` |
+| Effect request queue overflow | N/A | existing `EffectRequestQueue` |
+| Gameplay event bus overflow | N/A | existing `GameplayEventBus` |
+| Phase listener dispatch capacity | N/A | existing `EffectPhaseExecutor` scratch buffer |
+| Active effect/listener registration capacity | N/A | existing `EffectApplicationSystem` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `EffectRequestQueue`, `GameplayEventBus`, `EffectProcessingLoopSystem`, `EffectProposalProcessingSystem`, `EffectApplicationSystem`, `EffectLifetimeSystem`.
+- Resolvers / Registries: `TargetResolverFanOutHelper`, `RootBudgetTable`, `GlobalPhaseListenerRegistry`.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Capacity overflow now fails before publishing partial requests, dropping fan-out targets, truncating listener dispatch, destroying an unattached active effect, or partially registering listener entries. Existing side-effect transactions continue to own rollback for graph-triggered side effects.
+
+### 6. Config SSOT
+
+Root fan-out budget capacity is derived from the existing `gasRuntimeCapacity.effectFanOutCommandCapacity` path through the existing constructors. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel queue, event bus, effect pipeline, or listener runtime added
+- [x] No fallback constructor or silent overflow branch added
+- [x] No capacity truncation that lets gameplay continue with missing effects/events
+- [x] No Core gameplay enum, preset type, loader, or registry added
+
+### 8. Next variant test
+
+The next Mod variant changes effect chains, graph wiring, or configured runtime capacity. It must not change Core enums to bypass a capacity failure.
+
+---
+
 ## GAS Composition Gate - PR #660 Final Main-Lag Repair
 
 - **Task / Issue**: PR #660 final merge repair against current `main`

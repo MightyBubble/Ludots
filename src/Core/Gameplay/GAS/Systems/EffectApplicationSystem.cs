@@ -26,6 +26,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public class EffectApplicationSystem : BaseSystem<World, float>
         , ITimeSlicedSystem
     {
+        public const string ActiveEffectContainerCapacityExceededError = "GAS.ACTIVE_EFFECT_CONTAINER.ERR.CapacityExceeded";
+        public const string PhaseListenerRegistrationCapacityExceededError = "GAS.PHASE_LISTENER.ERR.RegistrationCapacityExceeded";
+
         private static readonly QueryDescription _pendingEffectsQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext, EffectModifiers>();
 
@@ -117,7 +120,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
-            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(16384);
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
             _ownsFanOutBudget = fanOutBudget == null;
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _effectRequests = effectRequests;
@@ -252,7 +255,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.State = EffectState.Calculate;
                         effect.State = EffectState.Apply;
 
-                        bool attachRejectedByCapacity = false;
                         if (World.IsAlive(context.Target))
                         {
                             if (World.Has<ActiveEffectContainer>(context.Target))
@@ -260,13 +262,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
                                 if (!container.Add(effectEntity))
                                 {
-                                    _activeEffectAttachDropped++;
-                                    attachRejectedByCapacity = true;
+                                    throw CreateActiveEffectContainerCapacityExceeded(context.Target, effectEntity);
                                 }
-                                else
-                                {
-                                    _effectsToActivate.Add(effectEntity);
-                                }
+
+                                _effectsToActivate.Add(effectEntity);
                             }
                             else
                             {
@@ -276,13 +275,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         else
                         {
-                            attachRejectedByCapacity = true;
-                        }
-
-                        if (attachRejectedByCapacity)
-                        {
-                            effect.State = EffectState.Committed;
-                            _effectsToDestroy.Add(effectEntity);
+                            throw new InvalidOperationException(
+                                $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.TargetUnavailable: target={context.Target.Id}, effect={effectEntity.Id}.");
                         }
 
                         ConsumeWork(ref workUnits);
@@ -347,9 +341,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var item = _pendingAttach[_playbackCursor++];
                         if (!World.IsAlive(item.Target))
                         {
-                            if (World.IsAlive(item.Effect)) World.Destroy(item.Effect);
-                            ConsumeWork(ref workUnits);
-                            continue;
+                            throw new InvalidOperationException(
+                                $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.TargetUnavailable: target={item.Target.Id}, effect={item.Effect.Id}.");
                         }
                         if (!World.IsAlive(item.Effect)) { ConsumeWork(ref workUnits); continue; }
                         if (World.Has<ActiveEffectContainer>(item.Target))
@@ -357,20 +350,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ref var container = ref World.Get<ActiveEffectContainer>(item.Target);
                             if (!container.Add(item.Effect))
                             {
-                                _activeEffectAttachDropped++;
-                                if (World.IsAlive(item.Effect))
-                                {
-                                    World.Destroy(item.Effect);
-                                }
+                                throw CreateActiveEffectContainerCapacityExceeded(item.Target, item.Effect);
                             }
-                            else
-                            {
-                                _effectsToActivate.Add(item.Effect);
-                            }
+
+                            _effectsToActivate.Add(item.Effect);
                         }
                         else
                         {
-                            World.Destroy(item.Effect);
+                            throw new InvalidOperationException(
+                                $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.MissingContainerAfterCreate: target={item.Target.Id}, effect={item.Effect.Id}.");
                         }
                         ConsumeWork(ref workUnits);
                     }
@@ -877,6 +865,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref readonly var setup = ref tpl.ListenerSetup;
             if (setup.Count == 0) return;
 
+            ValidateListenerRegistrationCapacity(in context, in setup);
+
             for (int i = 0; i < setup.Count; i++)
             {
                 var scope = (PhaseListenerScope)setup.Scopes[i];
@@ -898,9 +888,70 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     setup.Priorities[i],
                     ownerEffectId))
                 {
-                    _listenerRegistrationDropped++;
+                    throw CreatePhaseListenerRegistrationCapacityExceeded(entity, setup.Count, 0);
                 }
             }
+        }
+
+        private unsafe void ValidateListenerRegistrationCapacity(
+            in EffectContext context,
+            in EffectPhaseListenerBuffer setup)
+        {
+            int targetAdds = 0;
+            int sourceAdds = 0;
+            for (int i = 0; i < setup.Count; i++)
+            {
+                var scope = (PhaseListenerScope)setup.Scopes[i];
+                if (scope == PhaseListenerScope.Target)
+                {
+                    targetAdds++;
+                }
+                else
+                {
+                    sourceAdds++;
+                }
+            }
+
+            if (context.Target.Equals(context.Source))
+            {
+                ValidateListenerCapacityForEntity(context.Target, targetAdds + sourceAdds);
+                return;
+            }
+
+            ValidateListenerCapacityForEntity(context.Target, targetAdds);
+            ValidateListenerCapacityForEntity(context.Source, sourceAdds);
+        }
+
+        private void ValidateListenerCapacityForEntity(Entity entity, int additionalCount)
+        {
+            if (additionalCount <= 0 || !World.IsAlive(entity))
+            {
+                return;
+            }
+
+            int existingCount = World.Has<EffectPhaseListenerBuffer>(entity)
+                ? World.Get<EffectPhaseListenerBuffer>(entity).Count
+                : 0;
+            int available = EffectPhaseListenerBuffer.CAPACITY - existingCount;
+            if (additionalCount > available)
+            {
+                throw CreatePhaseListenerRegistrationCapacityExceeded(entity, additionalCount, available);
+            }
+        }
+
+        private static InvalidOperationException CreateActiveEffectContainerCapacityExceeded(Entity target, Entity effect)
+        {
+            return new InvalidOperationException(
+                $"{ActiveEffectContainerCapacityExceededError}: target={target.Id}, effect={effect.Id}, capacity={ActiveEffectContainer.CAPACITY}.");
+        }
+
+        private static InvalidOperationException CreatePhaseListenerRegistrationCapacityExceeded(
+            Entity entity,
+            int requested,
+            int available)
+        {
+            return new InvalidOperationException(
+                $"{PhaseListenerRegistrationCapacityExceededError}: entity={entity.Id}, requested={requested}, available={available}, capacity={EffectPhaseListenerBuffer.CAPACITY}.");
         }
 
         private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, in EffectContext context)

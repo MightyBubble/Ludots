@@ -26,6 +26,8 @@ namespace Ludots.Core.Gameplay.GAS
             _stamp = 1;
         }
 
+        public int Capacity => _keys.Length;
+
         private static int NextPowerOfTwo(int v)
         {
             if (v <= 0) return 1;
@@ -59,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS
 
             int mask = _keys.Length - 1;
             int idx = (unchecked(rootId * (int)0x9E3779B1)) & mask;
-            while (true)
+            for (int probes = 0; probes < _keys.Length; probes++)
             {
                 if (_stamps[idx] != _stamp)
                 {
@@ -79,6 +81,8 @@ namespace Ludots.Core.Gameplay.GAS
 
                 idx = (idx + 1) & mask;
             }
+
+            return false;
         }
     }
 }
