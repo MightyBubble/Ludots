@@ -22,6 +22,7 @@ public enum Physics3DNetworkPlayerLifecycleFailure : byte
     EntityTableMismatch = 7,
     SeatConnectionStateMismatch = 8,
     DestinationCapacityExceeded = 9,
+    BindingStoreRejected = 10,
 }
 
 public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControllerResolver, IDisposable
@@ -29,6 +30,7 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
     private readonly World _world;
     private readonly IPhysics3DWorld _physics;
     private readonly NetworkEntityTable _networkEntities;
+    private readonly Physics3DNetworkReplicatedBindingStore _bindings;
     private readonly KnowledgeProjectionStore _knowledge;
     private readonly int _schemaId;
     private readonly Physics3DNetworkPlayerBodyConfig _bodyConfig;
@@ -49,6 +51,7 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         World world,
         IPhysics3DWorld physics,
         NetworkEntityTable networkEntities,
+        Physics3DNetworkReplicatedBindingStore bindings,
         KnowledgeProjectionStore knowledge,
         int seatCapacity,
         int schemaId,
@@ -58,7 +61,14 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         _world = world ?? throw new ArgumentNullException(nameof(world));
         _physics = physics ?? throw new ArgumentNullException(nameof(physics));
         _networkEntities = networkEntities ?? throw new ArgumentNullException(nameof(networkEntities));
+        _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
         _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
+        if (bindings.BodySlotCapacity != physics.BodySlotCapacity)
+        {
+            throw new ArgumentException(
+                "Physics3D player lifecycle binding store capacity must match the Physics3D body slot capacity.",
+                nameof(bindings));
+        }
         if (seatCapacity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(seatCapacity));
@@ -99,6 +109,7 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
     public int ActivePlayerCount { get; private set; }
     public int ConnectedPlayerCount { get; private set; }
     public Physics3DNetworkPlayerLifecycleFailure LastFailure { get; private set; }
+    public Physics3DNetworkReplicatedBindingStore Bindings => _bindings;
     internal KnowledgeProjectionStore Knowledge => _knowledge;
 
     public bool TryResolveController(in SessionSeatBinding seat, out Entity controller)
@@ -173,6 +184,20 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
             _physics.DestroyBody(bodyId);
             _world.Destroy(entity);
             LastFailure = Physics3DNetworkPlayerLifecycleFailure.NetworkEntityCapacityExceeded;
+            return false;
+        }
+
+        if (!_bindings.TryBind(bodyId, entity, handle, _schemaId, Physics3DBodyKind.Dynamic))
+        {
+            if (!_networkEntities.TryRelease(handle))
+            {
+                throw new InvalidOperationException(
+                    $"Physics3D player lifecycle failed to roll back network handle after binding rejection '{_bindings.LastFailure}'.");
+            }
+
+            _physics.DestroyBody(bodyId);
+            _world.Destroy(entity);
+            LastFailure = Physics3DNetworkPlayerLifecycleFailure.BindingStoreRejected;
             return false;
         }
 
@@ -302,14 +327,22 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         }
 
         NetworkEntityHandle handle = _networkHandles[slot];
-        if (!_networkEntities.TryResolve(handle, out Entity mapped) || mapped != _entities[slot] || !_networkEntities.TryRelease(handle))
+        Physics3DBodyId body = _bodies[slot];
+        Entity entity = _entities[slot];
+        if (!_bindings.TryUnbind(body, entity, handle))
+        {
+            LastFailure = Physics3DNetworkPlayerLifecycleFailure.BindingStoreRejected;
+            return false;
+        }
+
+        if (!_networkEntities.TryResolve(handle, out Entity mapped) || mapped != entity || !_networkEntities.TryRelease(handle))
         {
             LastFailure = Physics3DNetworkPlayerLifecycleFailure.EntityTableMismatch;
             return false;
         }
 
-        _physics.DestroyBody(_bodies[slot]);
-        _world.Destroy(_entities[slot]);
+        _physics.DestroyBody(body);
+        _world.Destroy(entity);
         _active[slot] = false;
         _everConnected[slot] = false;
         _retiredSeatGenerations[slot] = seat.Generation;

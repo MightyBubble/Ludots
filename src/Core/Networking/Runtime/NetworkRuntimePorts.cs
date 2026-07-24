@@ -95,12 +95,30 @@ namespace Ludots.Core.Networking.Runtime
     }
 
     /// <summary>
-    /// Copies one seat's strictly slot-ordered authoritative interest set into caller-owned fixed storage.
-    /// The port selects spatial or gameplay interest; Core remains the sole owner of disclosure and baseline semantics.
+    /// Two-phase authoritative interest batch for every connected seat that needs publication.
+    /// Prepare must not mutate knowledge or outbound state. Commit applies knowledge for all prepared
+    /// seats atomically in ascending seat-slot order, or mutates nothing. Core remains the sole owner
+    /// of disclosure and baseline semantics after commit.
     /// </summary>
-    public interface IAuthoritativeReplicationInterestPort
+    public interface IAuthoritativeReplicationInterestBatchPort
     {
-        bool TryCopyInterest(
+        /// <summary>
+        /// Computes interest for every connected seat. <paramref name="connectedSeats"/> must be unique
+        /// and sorted by ascending seat slot. Failure leaves knowledge and prepared results unpublished.
+        /// </summary>
+        bool TryPrepareConnectedSeats(ReadOnlySpan<SessionSeatBinding> connectedSeats);
+
+        /// <summary>
+        /// After a successful prepare, commits knowledge mutations for every prepared seat in seat-slot
+        /// order. Either all seats commit or none do.
+        /// </summary>
+        bool TryCommitPreparedKnowledge();
+
+        /// <summary>
+        /// Copies one seat's prepared, strictly slot-ordered interest set into caller-owned fixed storage.
+        /// Valid only after a successful prepare for that seat.
+        /// </summary>
+        bool TryCopyPreparedInterest(
             in SessionSeatBinding seat,
             Span<NetworkEntityHandle> destination,
             out int count);

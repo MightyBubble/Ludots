@@ -1129,16 +1129,51 @@ public sealed class FixedInputRuntimeTests
         }
     }
 
-    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestPort
+    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestBatchPort
     {
         private readonly NetworkEntityHandle[] _handles;
+        private SessionSeatBinding[] _preparedSeats = Array.Empty<SessionSeatBinding>();
+        private int _preparedCount;
+
         public FixedReplicationInterest(params NetworkEntityHandle[] handles) => _handles = handles;
 
-        public bool TryCopyInterest(
+        public bool TryPrepareConnectedSeats(ReadOnlySpan<SessionSeatBinding> connectedSeats)
+        {
+            if (_preparedSeats.Length < connectedSeats.Length)
+            {
+                _preparedSeats = new SessionSeatBinding[connectedSeats.Length];
+            }
+
+            connectedSeats.CopyTo(_preparedSeats);
+            _preparedCount = connectedSeats.Length;
+            return true;
+        }
+
+        public bool TryCommitPreparedKnowledge() => true;
+
+        public bool TryCopyPreparedInterest(
             in SessionSeatBinding seat,
             Span<NetworkEntityHandle> destination,
             out int count)
         {
+            bool prepared = false;
+            for (int index = 0; index < _preparedCount; index++)
+            {
+                if (_preparedSeats[index].Slot == seat.Slot &&
+                    _preparedSeats[index].Generation == seat.Generation &&
+                    _preparedSeats[index].PlayerId.Value == seat.PlayerId.Value)
+                {
+                    prepared = true;
+                    break;
+                }
+            }
+
+            if (!prepared)
+            {
+                count = 0;
+                return false;
+            }
+
             count = _handles.Length;
             if (destination.Length < count)
             {

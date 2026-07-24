@@ -17,9 +17,11 @@ public interface IPhysics3DWorld : IDisposable
     int ActuationCommandCapacity { get; }
     int PendingActuationCommandCount { get; }
     int WorkerCount { get; }
+    int BodySlotCapacity { get; }
     long StepIndex { get; }
     Physics3DStepMetrics LastStepMetrics { get; }
     float FixedDeltaSeconds { get; }
+    long BackgroundWorkerAllocatedBytesCurrentDispatch { get; }
 
     /// <summary>
     /// True after a Step advanced the Bepu simulation but failed contact finalization.
@@ -170,8 +172,31 @@ public interface IPhysics3DWorld : IDisposable
     int OverlapBox(Vector3 centerCm, Vector3 sizeCm, Quaternion orientation, in Physics3DQueryFilter filter, Span<Physics3DOverlapHit> hits);
     int OverlapSphere(Vector3 centerCm, float radiusCm, in LayerMask queryLayer, Span<Physics3DOverlapHit> hits);
     int OverlapSphere(Vector3 centerCm, float radiusCm, in Physics3DQueryFilter filter, Span<Physics3DOverlapHit> hits);
+
+    /// <summary>
+    /// Concurrent-safe OverlapSphere that spends only the named worker's private buffer pool.
+    /// Valid only inside a <see cref="DispatchWorkers"/> body for that worker index while the world is not stepping.
+    /// </summary>
+    int OverlapSphere(
+        int workerIndex,
+        Vector3 centerCm,
+        float radiusCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits);
+
     int OverlapCapsule(Vector3 centerCm, float radiusCm, float cylinderLengthCm, Quaternion orientation, in LayerMask queryLayer, Span<Physics3DOverlapHit> hits);
     int OverlapCapsule(Vector3 centerCm, float radiusCm, float cylinderLengthCm, Quaternion orientation, in Physics3DQueryFilter filter, Span<Physics3DOverlapHit> hits);
+
+    /// <summary>
+    /// Dispatches work across the world's fixed worker set. Must not nest with Step or another dispatch.
+    /// </summary>
+    void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue);
+
+    /// <summary>
+    /// Clears per-worker allocation counters before a <see cref="DispatchWorkers"/> call that should be measured.
+    /// </summary>
+    void BeginWorkerDispatchMetrics();
+
     void Step();
     ulong ComputeObservableBodyStateHash();
 }

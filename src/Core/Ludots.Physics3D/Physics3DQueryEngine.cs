@@ -399,6 +399,7 @@ internal sealed class Physics3DQueryEngine
             centerCm,
             orientation,
             filter,
+            _pool,
             hits);
     }
 
@@ -409,7 +410,19 @@ internal sealed class Physics3DQueryEngine
         Span<Physics3DOverlapHit> hits)
     {
         Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
-        return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, filter, hits);
+        return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, filter, _pool, hits);
+    }
+
+    public int OverlapSphere(
+        Vector3 centerCm,
+        float radiusCm,
+        in Physics3DQueryFilter filter,
+        BufferPool pool,
+        Span<Physics3DOverlapHit> hits)
+    {
+        Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
+        ArgumentNullException.ThrowIfNull(pool);
+        return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, filter, pool, hits);
     }
 
     public int OverlapCapsule(
@@ -426,6 +439,7 @@ internal sealed class Physics3DQueryEngine
             centerCm,
             orientation,
             filter,
+            _pool,
             hits);
     }
 
@@ -518,6 +532,7 @@ internal sealed class Physics3DQueryEngine
         Vector3 centerCm,
         Quaternion orientation,
         in Physics3DQueryFilter filter,
+        BufferPool pool,
         Span<Physics3DOverlapHit> hits)
         where TShape : unmanaged, IConvexShape
     {
@@ -533,7 +548,7 @@ internal sealed class Physics3DQueryEngine
             var callbacks = new OverlapCallbacks(_bodies, prepared, hitPointer, hits.Length);
             var enumerator = new OverlapCandidateEnumerator<TShape>(
                 _simulation,
-                _pool,
+                pool,
                 _bodies,
                 shape,
                 pose,

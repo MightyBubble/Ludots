@@ -1265,23 +1265,70 @@ public sealed class NetworkRuntimeEndToEndTests
         }
     }
 
-    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestPort
+    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestBatchPort
     {
         private NetworkEntityHandle[] _handles;
+        private SessionSeatBinding[] _preparedSeats = Array.Empty<SessionSeatBinding>();
+        private int _preparedCount;
+
         public FixedReplicationInterest(params NetworkEntityHandle[] handles) => _handles = handles;
 
         public void Replace(params NetworkEntityHandle[] handles) => _handles = handles;
 
+        public int PrepareCalls { get; private set; }
+        public int CommitCalls { get; private set; }
         public int CopyCalls { get; private set; }
         public SessionSeatBinding LastSeat { get; private set; }
 
-        public bool TryCopyInterest(
+        public bool TryPrepareConnectedSeats(ReadOnlySpan<SessionSeatBinding> connectedSeats)
+        {
+            PrepareCalls++;
+            if (_preparedSeats.Length < connectedSeats.Length)
+            {
+                _preparedSeats = new SessionSeatBinding[connectedSeats.Length];
+            }
+
+            connectedSeats.CopyTo(_preparedSeats);
+            _preparedCount = connectedSeats.Length;
+            if (_preparedCount > 0)
+            {
+                LastSeat = _preparedSeats[_preparedCount - 1];
+            }
+
+            return true;
+        }
+
+        public bool TryCommitPreparedKnowledge()
+        {
+            CommitCalls++;
+            return true;
+        }
+
+        public bool TryCopyPreparedInterest(
             in SessionSeatBinding seat,
             Span<NetworkEntityHandle> destination,
             out int count)
         {
             CopyCalls++;
             LastSeat = seat;
+            bool prepared = false;
+            for (int index = 0; index < _preparedCount; index++)
+            {
+                if (_preparedSeats[index].Slot == seat.Slot &&
+                    _preparedSeats[index].Generation == seat.Generation &&
+                    _preparedSeats[index].PlayerId.Value == seat.PlayerId.Value)
+                {
+                    prepared = true;
+                    break;
+                }
+            }
+
+            if (!prepared)
+            {
+                count = 0;
+                return false;
+            }
+
             count = _handles.Length;
             if (destination.Length < count)
             {

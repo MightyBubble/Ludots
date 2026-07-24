@@ -24,7 +24,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
-        private readonly IAuthoritativeReplicationInterestPort _replicationInterest;
+        private readonly IAuthoritativeReplicationInterestBatchPort _replicationInterest;
         private readonly IAuthoritativeReplicationSeatRuntimeFactory _replicationSeatFactory;
         private readonly AuthoritativeReplicationSeatRuntime?[] _replicationSeats;
         private readonly AuthoritativeFixedInputIngress _fixedInput;
@@ -49,6 +49,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly CommandFragmentReassembler[] _commandReassemblers;
         private readonly NetworkCommandWireEntry[] _commandEntries;
         private readonly NetworkEntityHandle[] _interestHandles;
+        private readonly SessionSeatBinding[] _connectedInterestSeats;
         private readonly SessionSeatBinding[] _expiredSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
@@ -81,7 +82,7 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandIngress commands,
             NetworkCommandAdmissionResultBuffer commandResults,
             IAuthoritativeSeatControllerResolver controllers,
-            IAuthoritativeReplicationInterestPort replicationInterest,
+            IAuthoritativeReplicationInterestBatchPort replicationInterest,
             IAuthoritativeReplicationSeatRuntimeFactory replicationSeatFactory,
             AuthoritativeFixedInputIngress fixedInput,
             INetworkRuntimeObserver observer)
@@ -149,6 +150,7 @@ namespace Ludots.Core.Networking.Runtime
 
             _commandEntries = new NetworkCommandWireEntry[capacity.MaxCommandEntries];
             _interestHandles = new NetworkEntityHandle[capacity.ReplicationEntityCapacityPerSeat];
+            _connectedInterestSeats = new SessionSeatBinding[seats];
             _expiredSeats = new SessionSeatBinding[seats];
             _pendingAdmissions = new NetworkCommandAdmissionOutcome[commandResults.Capacity];
             _pendingAdmissionActive = new bool[commandResults.Capacity];
@@ -275,6 +277,7 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
+            int connectedInterestCount = 0;
             for (int seat = 0; seat < _seatStates.Length; seat++)
             {
                 if (_seatStates[seat] != SeatConnected)
@@ -290,8 +293,36 @@ namespace Ludots.Core.Networking.Runtime
                     continue;
                 }
 
-                SessionSeatBinding binding = GetSeatBinding(seat);
-                if (!_replicationInterest.TryCopyInterest(in binding, _interestHandles, out int interestCount) ||
+                _connectedInterestSeats[connectedInterestCount++] = GetSeatBinding(seat);
+            }
+
+            if (connectedInterestCount == 0)
+            {
+                FlushOutbound();
+                FlushPendingFixedInputAcknowledgements();
+                return;
+            }
+
+            ReadOnlySpan<SessionSeatBinding> connectedSeats =
+                _connectedInterestSeats.AsSpan(0, connectedInterestCount);
+            if (!_replicationInterest.TryPrepareConnectedSeats(connectedSeats))
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, detail: connectedInterestCount);
+            }
+
+            if (!_replicationInterest.TryCommitPreparedKnowledge())
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, detail: ~connectedInterestCount);
+            }
+
+            for (int seatIndex = 0; seatIndex < connectedInterestCount; seatIndex++)
+            {
+                SessionSeatBinding binding = connectedSeats[seatIndex];
+                int seat = binding.Slot;
+                if (!_replicationInterest.TryCopyPreparedInterest(
+                        in binding,
+                        _interestHandles,
+                        out int interestCount) ||
                     (uint)interestCount > (uint)_interestHandles.Length)
                 {
                     Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, _seatConnections[seat], detail: interestCount);

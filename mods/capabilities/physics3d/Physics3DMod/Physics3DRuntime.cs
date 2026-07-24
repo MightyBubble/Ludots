@@ -112,10 +112,12 @@ internal sealed class Physics3DRuntime : IDisposable
                 knowledge.ReserveRecords(physicsNetwork.KnowledgeRecordCapacity);
                 projectors = RequireService(engine, CoreServiceKeys.ReplicationSchemaProjectors);
                 RequireMutableSchemaSlot(projectors, physicsNetwork.ReplicationSchemaId);
+                var bindings = new Physics3DNetworkReplicatedBindingStore(world.BodySlotCapacity);
                 bodyRegistry = new Physics3DNetworkBodyRegistry(
                     engine.World,
                     world,
                     entities,
+                    bindings,
                     engine.GameSession.SimulationTicks,
                     physicsNetwork.ReplicationSchemaId,
                     physicsNetwork.BodyRegistryCommandCapacity);
@@ -124,6 +126,7 @@ internal sealed class Physics3DRuntime : IDisposable
                     engine.World,
                     world,
                     entities,
+                    bindings,
                     knowledge,
                     network.PlayerCapacity,
                     physicsNetwork.ReplicationSchemaId,
@@ -139,10 +142,10 @@ internal sealed class Physics3DRuntime : IDisposable
                     network.BaselineCapacity,
                     network.DisclosureChangeLogCapacity);
                 interest = new Physics3DNetworkAoiInterestPort(
-                    engine.World,
                     world,
                     entities,
                     players,
+                    bindings,
                     knowledge,
                     network.ReplicationEntityCapacityPerSeat,
                     physicsNetwork.Aoi);
@@ -229,7 +232,7 @@ internal sealed class Physics3DRuntime : IDisposable
                 seatFactoryServiceSet = true;
                 engine.SetService(
                     CoreServiceKeys.AuthoritativeReplicationInterest,
-                    (IAuthoritativeReplicationInterestPort)interest!);
+                    (IAuthoritativeReplicationInterestBatchPort)interest!);
                 interestServiceSet = true;
             }
 
@@ -327,7 +330,7 @@ internal sealed class Physics3DRuntime : IDisposable
             RequireOwnedService(
                 _engine,
                 CoreServiceKeys.AuthoritativeReplicationInterest,
-                (IAuthoritativeReplicationInterestPort)_interest!);
+                (IAuthoritativeReplicationInterestBatchPort)_interest!);
         }
 
         if (_fixedInputSystem != null &&

@@ -128,9 +128,21 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     public int ActuationCommandCapacity => _actuationCommands.Capacity;
     public int PendingActuationCommandCount => _actuationCommands.Count;
     public int WorkerCount => _threadDispatcher.ThreadCount;
+    public int BodySlotCapacity => _bodies.TotalCapacity;
     public long StepIndex { get; private set; }
     public Physics3DStepMetrics LastStepMetrics { get; private set; }
     public float FixedDeltaSeconds => _config.FixedDeltaSeconds;
+
+    public long BackgroundWorkerAllocatedBytesCurrentDispatch
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _threadDispatcher is Physics3DThreadDispatcher metricsDispatcher
+                ? metricsDispatcher.BackgroundWorkerAllocatedBytesCurrentStep
+                : 0L;
+        }
+    }
 
     /// <inheritdoc cref="IPhysics3DWorld.IsTerminalFaulted"/>
     public bool IsTerminalFaulted => _terminalFault is not null;
@@ -1160,6 +1172,48 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     {
         ThrowIfDisposed();
         return _queries.OverlapSphere(centerCm, radiusCm, filter, hits);
+    }
+
+    public int OverlapSphere(
+        int workerIndex,
+        Vector3 centerCm,
+        float radiusCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits)
+    {
+        ThrowIfDisposed();
+        if ((uint)workerIndex >= (uint)_threadDispatcher.ThreadCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(workerIndex), workerIndex, "Worker index is outside the configured range.");
+        }
+
+        if (_isStepping)
+        {
+            throw new InvalidOperationException("Physics3D cannot run concurrent overlap queries while stepping.");
+        }
+
+        BufferPool pool = _threadDispatcher.GetThreadMemoryPool(workerIndex);
+        return _queries.OverlapSphere(centerCm, radiusCm, filter, pool, hits);
+    }
+
+    public void DispatchWorkers(Action<int> workerBody, int maximumWorkerCount = int.MaxValue)
+    {
+        ThrowIfDisposed();
+        if (_isStepping)
+        {
+            throw new InvalidOperationException("Physics3D cannot dispatch workers while stepping.");
+        }
+
+        _threadDispatcher.DispatchWorkers(workerBody, maximumWorkerCount);
+    }
+
+    public void BeginWorkerDispatchMetrics()
+    {
+        ThrowIfDisposed();
+        if (_threadDispatcher is Physics3DThreadDispatcher metricsDispatcher)
+        {
+            metricsDispatcher.BeginStepMetrics();
+        }
     }
 
     public int OverlapCapsule(

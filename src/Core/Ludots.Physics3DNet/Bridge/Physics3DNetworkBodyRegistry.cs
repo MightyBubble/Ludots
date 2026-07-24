@@ -31,6 +31,7 @@ public enum Physics3DNetworkBodyRegistryFailure : byte
     ReplicatedComponentMismatch = 19,
     DuplicateReleaseCommand = 20,
     DuplicateRegistrationCommand = 21,
+    BindingStoreRejected = 22,
 }
 
 public sealed class Physics3DNetworkBodyRegistry : IDisposable
@@ -42,6 +43,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
     private readonly World _world;
     private readonly IPhysics3DWorld _physics;
     private readonly NetworkEntityTable _networkEntities;
+    private readonly Physics3DNetworkReplicatedBindingStore _bindings;
     private readonly AuthoritativeSimulationTickState _simulationTicks;
     private readonly int _schemaId;
 
@@ -49,6 +51,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
     private readonly uint[] _slotGenerations;
     private readonly Entity[] _slotEntities;
     private readonly Physics3DBodyKind[] _slotKinds;
+    private readonly Physics3DBodyId[] _slotBodies;
 
     private readonly Entity[] _registerEntities;
     private readonly Physics3DBodyId[] _registerBodies;
@@ -64,6 +67,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         World world,
         IPhysics3DWorld physics,
         NetworkEntityTable networkEntities,
+        Physics3DNetworkReplicatedBindingStore bindings,
         AuthoritativeSimulationTickState simulationTicks,
         int schemaId,
         int commandCapacity)
@@ -71,7 +75,15 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         _world = world ?? throw new ArgumentNullException(nameof(world));
         _physics = physics ?? throw new ArgumentNullException(nameof(physics));
         _networkEntities = networkEntities ?? throw new ArgumentNullException(nameof(networkEntities));
+        _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
         _simulationTicks = simulationTicks ?? throw new ArgumentNullException(nameof(simulationTicks));
+        if (bindings.BodySlotCapacity != physics.BodySlotCapacity)
+        {
+            throw new ArgumentException(
+                "Physics3D body registry binding store capacity must match the Physics3D body slot capacity.",
+                nameof(bindings));
+        }
+
         if (schemaId <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(schemaId));
@@ -91,6 +103,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         _slotGenerations = new uint[networkEntities.Capacity];
         _slotEntities = new Entity[networkEntities.Capacity];
         _slotKinds = new Physics3DBodyKind[networkEntities.Capacity];
+        _slotBodies = new Physics3DBodyId[networkEntities.Capacity];
         _registerEntities = new Entity[commandCapacity];
         _registerBodies = new Physics3DBodyId[commandCapacity];
         _registerKinds = new Physics3DBodyKind[commandCapacity];
@@ -107,6 +120,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
     public Physics3DNetworkBodyRegistryFailure LastFailure { get; private set; }
     public Entity LastFailureEntity { get; private set; }
     public NetworkEntityHandle LastFailureHandle { get; private set; }
+    public Physics3DNetworkReplicatedBindingStore Bindings => _bindings;
 
     public bool TryQueueRegister(Entity entity)
     {
@@ -309,6 +323,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         {
             RegisterValidated(
                 _registerEntities[command],
+                _registerBodies[command],
                 _registerKinds[command]);
         }
 
@@ -504,7 +519,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         return true;
     }
 
-    private void RegisterValidated(Entity entity, Physics3DBodyKind kind)
+    private void RegisterValidated(Entity entity, Physics3DBodyId bodyId, Physics3DBodyKind kind)
     {
         if (!_networkEntities.TryAllocate(entity, out NetworkEntityHandle handle))
         {
@@ -525,6 +540,18 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
                 $"Physics3D network body registry slot {slot} remained active during validated allocation.");
         }
 
+        if (!_bindings.TryBind(bodyId, entity, handle, _schemaId, kind))
+        {
+            if (!_networkEntities.TryRelease(handle))
+            {
+                throw new InvalidOperationException(
+                    $"Physics3D network body registry failed to roll back handle after binding rejection '{_bindings.LastFailure}'.");
+            }
+
+            throw new InvalidOperationException(
+                $"Physics3D network body registry binding store rejected body '{bodyId}': {_bindings.LastFailure}.");
+        }
+
         var replicated = new Physics3DNetworkReplicatedBody
         {
             Handle = handle,
@@ -535,6 +562,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         _slotGenerations[slot] = handle.Generation;
         _slotEntities[slot] = entity;
         _slotKinds[slot] = kind;
+        _slotBodies[slot] = bodyId;
         Count++;
     }
 
@@ -542,6 +570,13 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
     {
         int slot = handle.Slot;
         Entity entity = _slotEntities[slot];
+        Physics3DBodyId bodyId = _slotBodies[slot];
+        if (!_bindings.TryUnbind(bodyId, entity, handle))
+        {
+            throw new InvalidOperationException(
+                $"Validated Physics3D network body handle '{handle}' could not unbind from the replicated binding store: {_bindings.LastFailure}.");
+        }
+
         if (!_networkEntities.TryRelease(handle))
         {
             throw new InvalidOperationException(
@@ -553,6 +588,7 @@ public sealed class Physics3DNetworkBodyRegistry : IDisposable
         _slotGenerations[slot] = 0;
         _slotEntities[slot] = Entity.Null;
         _slotKinds[slot] = default;
+        _slotBodies[slot] = default;
         Count--;
     }
 
