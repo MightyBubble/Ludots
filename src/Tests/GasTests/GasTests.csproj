@@ -25,9 +25,16 @@
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics3D\Ludots.Physics3D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics3DNet\Ludots.Physics3DNet.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Character3D\Ludots.Character3D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Traversal3D\Ludots.Traversal3D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Vehicle3D\Ludots.Vehicle3D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Ragdoll\Ludots.Ragdoll.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\physics3d\Physics3DMod\Physics3DMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\moba_demo\MobaDemoMod\MobaDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_api\DepApiMod\DepApiMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_consumer\DepConsumerMod\DepConsumerMod.csproj" />
@@ -84,6 +91,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics3DShowcaseMod\CapabilityStandardPhysics3DShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />

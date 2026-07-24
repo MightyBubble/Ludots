@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Physics3D\Ludots.Physics3D.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Character3D\Ludots.Character3D.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Traversal3D\Ludots.Traversal3D.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Vehicle3D\Ludots.Vehicle3D.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Ragdoll\Ludots.Ragdoll.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

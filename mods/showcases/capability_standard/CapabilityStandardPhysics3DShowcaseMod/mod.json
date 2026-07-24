@@ -1,0 +1,15 @@
+{
+  "name": "CapabilityStandardPhysics3DShowcaseMod",
+  "version": "1.0.0",
+  "description": "Player-facing Physics3D Playground for scanning, materials, platforms, wind, traversal, wheels, ragdolls, constraints, deterministic rebuild comparison, and server scale.",
+  "main": "bin/net8.0/CapabilityStandardPhysics3DShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "Physics3DMod": "^1.0.0"
+  },
+  "author": "Ludots",
+  "tags": ["showcase", "capability-standard", "physics3d", "benchmark"]
+}
