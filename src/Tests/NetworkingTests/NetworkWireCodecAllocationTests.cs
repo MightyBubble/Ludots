@@ -154,8 +154,12 @@ public sealed class NetworkWireCodecAllocationTests
         AssertSuccess(HandshakeWireCodec.TryDecodeResponse(handshakeResponse, out _));
         AssertSuccess(CommandBatchWireCodec.TryEncode(in commandHeader, commandEntries, commandPayload, out _));
         AssertSuccess(CommandBatchWireCodec.TryDecode(commandPayload, decodeEntries, out _, out _));
-        AssertSuccess(CommandAdmissionWireCodec.TryEncode(in outcome, admissionPayload, out _));
-        AssertSuccess(CommandAdmissionWireCodec.TryDecode(admissionPayload, out _));
+        var authenticatedSeat = new NetworkCommandSeat(
+            outcome.SeatSlot,
+            outcome.SeatGeneration,
+            outcome.PlayerId);
+        AssertSuccess(CommandAdmissionWireCodec.TryEncode(1, in outcome, admissionPayload, out _));
+        AssertSuccess(CommandAdmissionWireCodec.TryDecode(admissionPayload, 1, in authenticatedSeat, out _));
         AssertSuccess(ReplicationPacketWireCodec.TryEncode(packet, replicationPayload, out int replicationBytes));
         AssertSuccess(ReplicationPacketWireCodec.TryDecode(replicationPayload.AsSpan(0, replicationBytes), decodePacket));
         AssertSuccess(SnapshotControlWireCodec.TryEncodeAcknowledgement(in ack, ackPayload, out _));

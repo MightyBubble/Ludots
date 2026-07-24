@@ -9,12 +9,13 @@ namespace Ludots.Core.Networking.Protocol
     /// </summary>
     public static class CommandAdmissionWireCodec
     {
-        // seatSlot i32 | seatGeneration u32 | playerId i32 | clientBatchSequence u64 |
-        // targetTick i32 | actorCount i32 | orderId i32 | admissionBatchId i32 |
+        // sessionEpoch u64 | clientBatchSequence u64 | targetTick i32 | actorCount i32 |
+        // orderId i32 | admissionBatchId i32 |
         // stage u8 | result u8 | isReplay u8 | reserved u8
-        public const int SizeInBytes = 4 + 4 + 4 + 8 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+        public const int SizeInBytes = 8 + 8 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
 
         public static NetworkWireCodecStatus TryEncode(
+            ulong sessionEpoch,
             in NetworkCommandAdmissionOutcome outcome,
             Span<byte> destination,
             out int bytesWritten)
@@ -25,7 +26,10 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidEnum;
             }
 
-            if (outcome.SeatSlot < 0 || outcome.PlayerId <= 0 || outcome.ActorCount < 0)
+            if (sessionEpoch == 0 ||
+                outcome.SeatSlot < 0 ||
+                outcome.PlayerId <= 0 ||
+                outcome.ActorCount < 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
@@ -36,9 +40,7 @@ namespace Ludots.Core.Networking.Protocol
             }
 
             int offset = 0;
-            if (!NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.SeatSlot) ||
-                !NetworkWireBinary.TryWriteUInt32(destination, ref offset, outcome.SeatGeneration) ||
-                !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.PlayerId) ||
+            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, sessionEpoch) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, outcome.ClientBatchSequence) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.TargetTick) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.ActorCount) ||
@@ -58,6 +60,8 @@ namespace Ludots.Core.Networking.Protocol
 
         public static NetworkWireCodecStatus TryDecode(
             ReadOnlySpan<byte> source,
+            ulong expectedSessionEpoch,
+            in NetworkCommandSeat authenticatedSeat,
             out NetworkCommandAdmissionOutcome outcome)
         {
             outcome = default;
@@ -67,9 +71,7 @@ namespace Ludots.Core.Networking.Protocol
             }
 
             int offset = 0;
-            if (!NetworkWireBinary.TryReadInt32(source, ref offset, out int seatSlot) ||
-                !NetworkWireBinary.TryReadUInt32(source, ref offset, out uint seatGeneration) ||
-                !NetworkWireBinary.TryReadInt32(source, ref offset, out int playerId) ||
+            if (!NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong sessionEpoch) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong clientBatchSequence) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int targetTick) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int actorCount) ||
@@ -99,14 +101,17 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidEnum;
             }
 
-            if (seatSlot < 0 || playerId <= 0 || actorCount < 0)
+            if (expectedSessionEpoch == 0 ||
+                sessionEpoch != expectedSessionEpoch ||
+                authenticatedSeat.Slot < 0 ||
+                authenticatedSeat.PlayerId <= 0 ||
+                actorCount < 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
 
-            var seat = new NetworkCommandSeat(seatSlot, seatGeneration, playerId);
             outcome = new NetworkCommandAdmissionOutcome(
-                in seat,
+                in authenticatedSeat,
                 clientBatchSequence,
                 targetTick,
                 actorCount,
