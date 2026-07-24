@@ -16,6 +16,8 @@ namespace Ludots.Core.Networking.Protocol
         ResyncRequired = 7,
         SnapshotFragment = 8,
         CommandFragment = 9,
+        FixedInputBatch = 10,
+        FixedInputAcknowledgement = 11,
     }
 
     /// <summary>
@@ -338,5 +340,128 @@ namespace Ludots.Core.Networking.Protocol
         public int TargetTick { get; }
         public int AcknowledgedCommittedTick { get; }
         public ushort EntryCount { get; }
+    }
+
+    /// <summary>
+    /// Fixed little-endian header for one unfragmented fixed-input batch datagram body.
+    /// Layout (20 bytes): sessionEpoch u64 | schemaId u16 | framePayloadBytes u16 |
+    /// acknowledgedCommittedTick u32 | frameCount u16 | reserved u16 (must be 0).
+    /// Each frame is targetTick u32 plus exactly <see cref="FramePayloadBytes"/> bytes.
+    /// </summary>
+    public readonly struct NetworkFixedInputBatchHeader
+    {
+        public const int SizeInBytes = 8 + 2 + 2 + 4 + 2 + 2;
+
+        public NetworkFixedInputBatchHeader(
+            ulong sessionEpoch,
+            ushort schemaId,
+            ushort framePayloadBytes,
+            uint acknowledgedCommittedTick,
+            ushort frameCount)
+        {
+            SessionEpoch = sessionEpoch;
+            SchemaId = schemaId;
+            FramePayloadBytes = framePayloadBytes;
+            AcknowledgedCommittedTick = acknowledgedCommittedTick;
+            FrameCount = frameCount;
+        }
+
+        public ulong SessionEpoch { get; }
+        public ushort SchemaId { get; }
+        public ushort FramePayloadBytes { get; }
+        public uint AcknowledgedCommittedTick { get; }
+        public ushort FrameCount { get; }
+    }
+
+    /// <summary>
+    /// Fixed 32-byte little-endian fixed-input acknowledgement body.
+    /// Layout: sessionEpoch u64 | schemaId u16 | reserved u16 (must be 0) |
+    /// committedThroughTick u32 | latestReceivedTick u32 | receivedMask u64 |
+    /// latestMissingInputTick u32.
+    /// Bit 0 of <see cref="ReceivedMask"/> represents <see cref="LatestReceivedTick"/>.
+    /// </summary>
+    public readonly struct NetworkFixedInputAcknowledgement
+    {
+        public const int SizeInBytes = 8 + 2 + 2 + 4 + 4 + 8 + 4;
+
+        public NetworkFixedInputAcknowledgement(
+            ulong sessionEpoch,
+            ushort schemaId,
+            uint committedThroughTick,
+            uint latestReceivedTick,
+            ulong receivedMask,
+            uint latestMissingInputTick)
+        {
+            SessionEpoch = sessionEpoch;
+            SchemaId = schemaId;
+            CommittedThroughTick = committedThroughTick;
+            LatestReceivedTick = latestReceivedTick;
+            ReceivedMask = receivedMask;
+            LatestMissingInputTick = latestMissingInputTick;
+        }
+
+        public ulong SessionEpoch { get; }
+        public ushort SchemaId { get; }
+        public uint CommittedThroughTick { get; }
+        public uint LatestReceivedTick { get; }
+        public ulong ReceivedMask { get; }
+        public uint LatestMissingInputTick { get; }
+    }
+
+    /// <summary>
+    /// Explicit per-frame outcomes for authoritative fixed-input admission.
+    /// </summary>
+    public enum FixedInputAdmissionDisposition : byte
+    {
+        Accepted = 1,
+        AcceptedOutOfOrder = 2,
+        Duplicate = 3,
+        Conflict = 4,
+        RejectedAtExecutionCutoff = 5,
+        Late = 6,
+        TooFarFuture = 7,
+        InvalidSeatGeneration = 8,
+        EpochMismatch = 9,
+        SchemaMismatch = 10,
+        PayloadMismatch = 11,
+        RingWrap = 12,
+        BatchRejected = 13,
+        ReservedNonZero = 14,
+        InvalidFrameOrder = 15,
+    }
+
+    /// <summary>
+    /// Explicit lookup outcomes. Missing input at an executing tick is never fabricated.
+    /// </summary>
+    public enum FixedInputLookupResult : byte
+    {
+        Present = 1,
+        Missing = 2,
+        MissingAtDeadline = 3,
+        InvalidSeat = 4,
+    }
+
+    public enum FixedInputBatchAdmissionStatus : byte
+    {
+        Success = 0,
+        Rejected = 1,
+    }
+
+    public enum FixedInputAckApplyStatus : byte
+    {
+        Applied = 0,
+        RejectedRegression = 1,
+        EpochMismatch = 2,
+        SchemaMismatch = 3,
+        InvalidInput = 4,
+    }
+
+    public enum FixedInputOutboxEnqueueStatus : byte
+    {
+        Enqueued = 0,
+        CapacityExceeded = 1,
+        TickNotIncreasing = 2,
+        PayloadMismatch = 3,
+        InvalidInput = 4,
     }
 }
