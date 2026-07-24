@@ -170,10 +170,11 @@ public sealed class LoadClientHostOrchestrationTests
             Assert.That(evidence.Outcome, Is.EqualTo(LoadClientRunOutcome.Passed), evidence.FaultDetail);
             Assert.That(evidence.HeldThirtyHzContract, Is.True);
             Assert.That(evidence.ReadyClients, Is.EqualTo(2));
-            // If readiness consumed duration, the host would have ended near durationSeconds (~0.45s)
-            // before both clients were ready and could not pass a post-ready measurement window.
-            Assert.That(evidence.ElapsedSeconds, Is.GreaterThanOrEqualTo(readyDelaySeconds + durationSeconds - 0.05d));
-            Assert.That(wall.Elapsed.TotalSeconds, Is.GreaterThanOrEqualTo(readyDelaySeconds + warmUpSeconds));
+            // Completion is readyAt + warmUp + duration. If readiness ate the window, or if warm-up
+            // were omitted from the deadline, elapsed would undershoot this floor (~1.05s).
+            double minElapsed = readyDelaySeconds + warmUpSeconds + durationSeconds - 0.05d;
+            Assert.That(evidence.ElapsedSeconds, Is.GreaterThanOrEqualTo(minElapsed));
+            Assert.That(wall.Elapsed.TotalSeconds, Is.GreaterThanOrEqualTo(minElapsed));
             Assert.That(evidence.FixedInputsGenerated, Is.GreaterThan(0));
         });
     }
