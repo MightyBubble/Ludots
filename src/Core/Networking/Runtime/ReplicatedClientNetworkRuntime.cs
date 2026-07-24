@@ -17,7 +17,7 @@ namespace Ludots.Core.Networking.Runtime
         Rejected = 3,
     }
 
-    public sealed class ReplicatedClientNetworkRuntime : INetworkRuntimePort
+    public sealed class ReplicatedClientNetworkRuntime : INetworkRuntimePort, IReplicatedClientFixedInputPort
     {
         private readonly NetworkRuntimeCapacity _capacity;
         private readonly NetworkTransportPortOwnership _transportOwnership;
