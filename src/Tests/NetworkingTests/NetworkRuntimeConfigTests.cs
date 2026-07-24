@@ -27,6 +27,8 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.MaxActorsPerCommandBatch, Is.EqualTo(128));
             Assert.That(config.CommandSchemas, Has.Count.EqualTo(3));
             Assert.That(config.ReconnectWindowSeconds, Is.EqualTo(30));
+            Assert.That(config.ClientReconnectRetryMilliseconds, Is.EqualTo(500));
+            Assert.That(config.ReplicationSchemaCapacity, Is.EqualTo(32));
             Assert.That(config.ControlChannelId, Is.EqualTo(0));
             Assert.That(config.CommandChannelId, Is.EqualTo(1));
             Assert.That(config.StateChannelId, Is.EqualTo(2));
@@ -94,6 +96,22 @@ public sealed class NetworkRuntimeConfigTests
     }
 
     [Test]
+    public void HostCompositionCapacities_AreRequiredExplicitly()
+    {
+        NetworkRuntimeConfig missingRetry = CreateRtsDuelConfig();
+        missingRetry.ClientReconnectRetryMilliseconds = 0;
+        Assert.That(
+            missingRetry.Validate,
+            Throws.InvalidOperationException.With.Message.Contains(nameof(NetworkRuntimeConfig.ClientReconnectRetryMilliseconds)));
+
+        NetworkRuntimeConfig missingSchemas = CreateRtsDuelConfig();
+        missingSchemas.ReplicationSchemaCapacity = 0;
+        Assert.That(
+            missingSchemas.Validate,
+            Throws.InvalidOperationException.With.Message.Contains(nameof(NetworkRuntimeConfig.ReplicationSchemaCapacity)));
+    }
+
+    [Test]
     public void MissingOrDuplicateCommandSchemas_AreRejectedAtStartup()
     {
         NetworkRuntimeConfig missing = CreateRtsDuelConfig();
@@ -135,6 +153,8 @@ public sealed class NetworkRuntimeConfigTests
         NetworkAdmissionResultCapacity = 512,
         EntityAdmissionResultCapacity = 1024,
         ReconnectWindowSeconds = 30,
+        ClientReconnectRetryMilliseconds = 500,
+        ReplicationSchemaCapacity = 32,
         BaselineCapacity = 32,
         DisclosureChangeLogCapacity = 4096,
         DatagramQueueCapacity = 1024,

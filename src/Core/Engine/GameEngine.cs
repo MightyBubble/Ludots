@@ -1009,9 +1009,13 @@ namespace Ludots.Core.Engine
             NetworkCommandIngress? networkCommandIngress = null;
             NetworkCommandSchemaRegistry? networkCommandSchemas = null;
             NetworkEntityTable? networkEntityTable = null;
+            ReplicationSchemaProjectorRegistry? replicationSchemaProjectors = null;
+            ClientReplicationSchemaApplierRegistry? clientReplicationSchemaAppliers = null;
             if (networkConfig != null)
             {
                 networkEntityTable = new NetworkEntityTable(networkConfig.GlobalNetworkEntityCapacity);
+                replicationSchemaProjectors = new ReplicationSchemaProjectorRegistry(networkConfig.ReplicationSchemaCapacity);
+                clientReplicationSchemaAppliers = new ClientReplicationSchemaApplierRegistry(networkConfig.ReplicationSchemaCapacity);
             }
             var orderRequestQueue = new OrderRequestQueue();
             var responseChainTelemetry = new ResponseChainTelemetryBuffer();
@@ -1556,6 +1560,8 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.NetworkCommandAdmissionResults, networkCommandAdmissionResults!);
                 SetService(CoreServiceKeys.EntityOrderAdmissionResults, entityOrderAdmissionResults!);
                 SetService(CoreServiceKeys.NetworkEntityTable, networkEntityTable!);
+                SetService(CoreServiceKeys.ReplicationSchemaProjectors, replicationSchemaProjectors!);
+                SetService(CoreServiceKeys.ClientReplicationSchemaAppliers, clientReplicationSchemaAppliers!);
             }
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -128,6 +129,7 @@ public sealed class RuntimeCompositionLifecycleTests
             Assert.That(
                 engine.GetService(CoreServiceKeys.NetworkRuntimePort),
                 Is.SameAs(RuntimeCompositionProbeState.InstalledNetworkRuntime));
+            Assert.That(RuntimeCompositionProbeState.NetworkingCompositionServicesVisible, Is.True);
             Assert.DoesNotThrow(engine.Start);
             Assert.That(RuntimeCompositionProbeState.GameStartCount, Is.EqualTo(1));
         }
@@ -275,6 +277,8 @@ public sealed class RuntimeCompositionLifecycleTests
                 "networkAdmissionResultCapacity": 64,
                 "entityAdmissionResultCapacity": 128,
                 "reconnectWindowSeconds": 30,
+                "clientReconnectRetryMilliseconds": 500,
+                "replicationSchemaCapacity": 16,
                 "baselineCapacity": 16,
                 "disclosureChangeLogCapacity": 256,
                 "datagramQueueCapacity": 128,
@@ -389,6 +393,8 @@ public static class RuntimeCompositionProbeState
 
     public static bool CoreSystemVisible { get; set; }
 
+    public static bool NetworkingCompositionServicesVisible { get; set; }
+
     public static RuntimeCompositionNetworkRuntime? InstalledNetworkRuntime { get; set; }
 
     public static IReadOnlyList<string> Events => EventLog;
@@ -409,6 +415,7 @@ public static class RuntimeCompositionProbeState
         WorldVisible = false;
         CoreServiceVisible = false;
         CoreSystemVisible = false;
+        NetworkingCompositionServicesVisible = false;
         InstalledNetworkRuntime = null;
         EventLog.Clear();
     }
@@ -465,6 +472,16 @@ public sealed class RuntimeCompositionProbeMod : IMod
             context.Get(CoreServiceKeys.OrderTypeRegistry) != null;
         RuntimeCompositionProbeState.CoreSystemVisible =
             context.Get(CoreServiceKeys.PresentationFrameSetup) != null;
+        RuntimeCompositionProbeState.NetworkingCompositionServicesVisible =
+            engine.MergedConfig.Networking != null &&
+            engine.TryGetService(
+                CoreServiceKeys.ReplicationSchemaProjectors,
+                out ReplicationSchemaProjectorRegistry projectors) &&
+            engine.TryGetService(
+                CoreServiceKeys.ClientReplicationSchemaAppliers,
+                out ClientReplicationSchemaApplierRegistry appliers) &&
+            projectors.SchemaCapacity == engine.MergedConfig.Networking.ReplicationSchemaCapacity &&
+            appliers.SchemaCapacity == engine.MergedConfig.Networking.ReplicationSchemaCapacity;
 
         if (RuntimeCompositionProbeState.InstallNetworkRuntime)
         {

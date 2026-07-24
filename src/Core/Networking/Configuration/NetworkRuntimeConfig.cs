@@ -28,6 +28,8 @@ namespace Ludots.Core.Networking.Configuration
         public int NetworkAdmissionResultCapacity { get; set; }
         public int EntityAdmissionResultCapacity { get; set; }
         public int ReconnectWindowSeconds { get; set; }
+        public int ClientReconnectRetryMilliseconds { get; set; }
+        public int ReplicationSchemaCapacity { get; set; }
         public int BaselineCapacity { get; set; }
         public int DisclosureChangeLogCapacity { get; set; }
         public int DatagramQueueCapacity { get; set; }
@@ -111,6 +113,8 @@ namespace Ludots.Core.Networking.Configuration
 
             RequirePositive(EntityAdmissionResultCapacity, nameof(EntityAdmissionResultCapacity));
             RequirePositive(ReconnectWindowSeconds, nameof(ReconnectWindowSeconds));
+            RequirePositive(ClientReconnectRetryMilliseconds, nameof(ClientReconnectRetryMilliseconds));
+            RequirePositive(ReplicationSchemaCapacity, nameof(ReplicationSchemaCapacity));
             RequirePositive(BaselineCapacity, nameof(BaselineCapacity));
             RequirePositive(DisclosureChangeLogCapacity, nameof(DisclosureChangeLogCapacity));
             int maximumAreaDisclosureChanges = checked(ReplicationEntityCapacityPerSeat * 2);
