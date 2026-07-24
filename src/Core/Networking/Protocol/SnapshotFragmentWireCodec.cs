@@ -234,6 +234,11 @@ namespace Ludots.Core.Networking.Protocol
             in NetworkSnapshotFragmentHeader header,
             ReadOnlySpan<byte> fragmentData)
         {
+            if (header.SessionEpoch == 0 || header.SnapshotId == 0)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
             if (header.FragmentCount == 0 || header.FragmentIndex >= header.FragmentCount)
             {
                 return NetworkWireCodecStatus.InvalidInput;
@@ -366,6 +371,11 @@ namespace Ludots.Core.Networking.Protocol
             out int bytesWritten)
         {
             bytesWritten = 0;
+            if (sessionEpoch == 0 || snapshotId == 0)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
             if ((uint)snapshotPayload.Length > (uint)_maxSnapshotBytes)
             {
                 return NetworkWireCodecStatus.CapacityExhausted;
