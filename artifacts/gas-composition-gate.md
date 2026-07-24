@@ -96,3 +96,94 @@ profile data**. It does not require a Core enum.
 | Add Layer 1 | Networking command-batch admission; snapshot apply transaction |
 | Add Layer 2 | RTS duel composition using existing gameplay capabilities |
 | Forbidden | Networking-specific order queue; spawn/morph profile DSL; browser/socket types in Core; silent capacity truncation |
+
+---
+
+# GAS Composition Gate - Physics3D 30Hz Scale Extension
+
+## Task Summary
+
+The Physics3D 30Hz scale extension completes network-entity removal semantics,
+session-epoch teardown, fixed-input admission, and Physics3D replication on the
+existing issue #709 networking runtime. It does not add a gameplay lifecycle
+preset, spawn/morph schema, or a second materialization pipeline.
+
+## GAS Composition Gate - Self Review
+
+- **Task / Issue**: Physics3D 30Hz fixed-input and replication completion
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex with delegated agents
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: The work extends the existing committed lifecycle and
+networking boundaries; gameplay variants remain effect/graph compositions and
+no profile switch or parallel spawn path is introduced.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Allocate or release a network handle at a committed Tick | 1 | Existing lifecycle commit boundary plus `NetworkEntityTable` |
+| Apply conceal or permanent removal on a client | 1 | Existing replication bridge transaction with explicit apply context |
+| Admit a player's fixed-frame input | 1 | Existing authenticated session seat plus authoritative Tick state |
+| Compose character, vehicle, platform, and ragdoll behavior | 2 | Existing Physics3D gameplay systems and Mod configuration |
+| Present the ten-station Playground | 3 | Existing capability showcase Mod and launch presets |
+
+### 3. Reuse list
+
+- Handlers: existing lifecycle built-in handlers; no new GAS handler.
+- Queues / Systems: existing runtime lifecycle queues, Pacemaker fixed Tick,
+  authoritative/client network runtimes, and replication bridges.
+- Resolvers / Registries: `NetworkEntityTable`, `SessionSeatBinding`, existing
+  Core service keys, Mod/config registries, and entity association services.
+- Existing presets / graphs: current spawn, consume, character, traversal,
+  vehicle, ragdoll, and Physics3D showcase compositions.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. Conceal, removal, input admission, and session teardown are networking
+state transitions around existing lifecycle operations, not new gameplay
+lifecycle operations.
+
+### 5. Transaction boundary
+
+Network handles are allocated or released only at a committed fixed-frame
+boundary. A snapshot page is validated before mutation. Session-epoch changes
+tear down the complete old client mirror before creating the new bridge. A
+fixed-input batch is fully validated before any frame in the batch is admitted.
+
+### 6. Config SSOT
+
+Gameplay behavior remains in existing effect templates, graphs, and Mod
+configuration. Networking capacities and fixed-input schema live in the
+existing versioned networking configuration path.
+
+New JSON schema: **NO**. The extension adds fields to the existing networking
+contract and does not create a parallel loader or gameplay DSL.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle operation.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **graph wiring / effect steps** and existing
+networking profile data. It does not require a Core gameplay enum.
+
+## Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Pacemaker Tick; authenticated session seats; `NetworkEntityTable`; authoritative/client runtimes; replication bridge; lifecycle queues; Physics3D modules |
+| Add Layer 0 op | None |
+| Add Layer 1 | Explicit replication apply context; conceal/removal release contract; epoch teardown; fixed-input admission and acknowledgement |
+| Add Layer 2 | Physics3D network projector/applier and existing Mod configuration |
+| Forbidden | Tombstone registry; second Tick/AOI/baseline/input-ACK truth; silent missing input; implicit keep-last-input; parallel materialization path |
