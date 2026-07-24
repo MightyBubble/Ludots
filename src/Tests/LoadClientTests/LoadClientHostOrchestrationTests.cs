@@ -453,10 +453,14 @@ public sealed class LoadClientHostOrchestrationTests
             return FixedInputOutboxEnqueueStatus.Enqueued;
         }
 
-        public bool TryPulseFixedInputSend()
+        public FixedInputSendPulseResult TryPulseFixedInputSend()
         {
             PulseCount++;
-            return true;
+            return new FixedInputSendPulseResult(
+                FixedInputSendPulseStatus.Accepted,
+                _lastEnqueued,
+                _lastEnqueued,
+                acceptedFrameCount: 1);
         }
     }
 }
