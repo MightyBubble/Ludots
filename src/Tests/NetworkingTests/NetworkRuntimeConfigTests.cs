@@ -29,6 +29,9 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.ControlChannelId, Is.EqualTo(0));
             Assert.That(config.CommandChannelId, Is.EqualTo(1));
             Assert.That(config.StateChannelId, Is.EqualTo(2));
+            Assert.That(config.TransportMaxConnectAttempts, Is.EqualTo(10));
+            Assert.That(config.TransportDisconnectTimeoutMilliseconds, Is.EqualTo(5_000));
+            Assert.That(config.ReliableDisconnectFlushTimeoutMilliseconds, Is.EqualTo(4_000));
             Assert.That(config.MaxServerOutboundBytesPerSecondPerClient, Is.EqualTo(256 * 1024));
             Assert.That(config.TickP95BudgetMicroseconds, Is.EqualTo(26_700));
             Assert.That(config.TickP99BudgetMicroseconds, Is.EqualTo(31_000));
@@ -42,6 +45,28 @@ public sealed class NetworkRuntimeConfigTests
         config.ReplicationPacketEntityCapacity = 128;
 
         Assert.That(config.Validate, Throws.InvalidOperationException.With.Message.Contains("below network entity capacity"));
+    }
+
+    [Test]
+    public void StatePublishRate_MustDivideSimulationRateExactly()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.StatePublishRateHz = 7;
+
+        Assert.That(
+            config.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("must divide simulation rate"));
+    }
+
+    [Test]
+    public void ReliableDisconnectFlushTimeout_MustPrecedeTransportDisconnectTimeout()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.ReliableDisconnectFlushTimeoutMilliseconds = config.TransportDisconnectTimeoutMilliseconds;
+
+        Assert.That(
+            config.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("must be below transport disconnect timeout"));
     }
 
     [Test]
@@ -91,6 +116,9 @@ public sealed class NetworkRuntimeConfigTests
         DatagramQueueCapacity = 1024,
         ConnectionEventCapacity = 64,
         MaxDatagramPayloadBytes = 1200,
+        TransportMaxConnectAttempts = 10,
+        TransportDisconnectTimeoutMilliseconds = 5_000,
+        ReliableDisconnectFlushTimeoutMilliseconds = 4_000,
         TransportChannelCount = 8,
         ControlChannelId = 0,
         CommandChannelId = 1,

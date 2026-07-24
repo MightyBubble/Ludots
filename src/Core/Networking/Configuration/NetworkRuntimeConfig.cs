@@ -32,6 +32,9 @@ namespace Ludots.Core.Networking.Configuration
         public int DatagramQueueCapacity { get; set; }
         public int ConnectionEventCapacity { get; set; }
         public int MaxDatagramPayloadBytes { get; set; }
+        public int TransportMaxConnectAttempts { get; set; }
+        public int TransportDisconnectTimeoutMilliseconds { get; set; }
+        public int ReliableDisconnectFlushTimeoutMilliseconds { get; set; }
         public int TransportChannelCount { get; set; }
         public int ControlChannelId { get; set; }
         public int CommandChannelId { get; set; }
@@ -104,6 +107,15 @@ namespace Ludots.Core.Networking.Configuration
             {
                 throw new InvalidOperationException(
                     $"Configured datagram payload {MaxDatagramPayloadBytes} exceeds the IPv6-safe 1200 byte contract.");
+            }
+
+            RequirePositive(TransportMaxConnectAttempts, nameof(TransportMaxConnectAttempts));
+            RequirePositive(TransportDisconnectTimeoutMilliseconds, nameof(TransportDisconnectTimeoutMilliseconds));
+            RequirePositive(ReliableDisconnectFlushTimeoutMilliseconds, nameof(ReliableDisconnectFlushTimeoutMilliseconds));
+            if (ReliableDisconnectFlushTimeoutMilliseconds >= TransportDisconnectTimeoutMilliseconds)
+            {
+                throw new InvalidOperationException(
+                    $"Reliable disconnect flush timeout {ReliableDisconnectFlushTimeoutMilliseconds}ms must be below transport disconnect timeout {TransportDisconnectTimeoutMilliseconds}ms.");
             }
 
             if ((uint)(TransportChannelCount - 1) >= 64u)

@@ -15,8 +15,10 @@ namespace Ludots.Core.Networking.Runtime
         private const byte SeatAwaitingReconnect = 2;
 
         private readonly NetworkRuntimeCapacity _capacity;
+        private readonly NetworkTransportPortOwnership _transportOwnership;
         private readonly IServerConnectionEventPort _connectionEvents;
         private readonly IServerDatagramPort _datagrams;
+        private readonly IServerConnectionControlPort _connectionControl;
         private readonly AuthoritativeSessionRegistry _sessions;
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
@@ -61,8 +63,10 @@ namespace Ludots.Core.Networking.Runtime
 
         public AuthoritativeServerNetworkRuntime(
             in NetworkRuntimeCapacity capacity,
+            NetworkTransportPortOwnership transportOwnership,
             IServerConnectionEventPort connectionEvents,
             IServerDatagramPort datagrams,
+            IServerConnectionControlPort connectionControl,
             AuthoritativeSessionRegistry sessions,
             NetworkCommandIngress commands,
             NetworkCommandAdmissionResultBuffer commandResults,
@@ -72,8 +76,15 @@ namespace Ludots.Core.Networking.Runtime
             INetworkRuntimeObserver observer)
         {
             _capacity = capacity;
+            _transportOwnership = transportOwnership;
             _connectionEvents = connectionEvents ?? throw new ArgumentNullException(nameof(connectionEvents));
             _datagrams = datagrams ?? throw new ArgumentNullException(nameof(datagrams));
+            _connectionControl = connectionControl ?? throw new ArgumentNullException(nameof(connectionControl));
+            NetworkTransportPortLifetime.Validate(
+                transportOwnership,
+                _connectionEvents,
+                _datagrams,
+                _connectionControl);
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
@@ -187,6 +198,11 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _lastCommittedTick = committedTick;
+            if (committedTick % (uint)_capacity.StatePublishIntervalTicks != 0)
+            {
+                return;
+            }
+
             bool anyConnected = false;
             for (int i = 0; i < _seatStates.Length; i++)
             {
@@ -226,7 +242,13 @@ namespace Ludots.Core.Networking.Runtime
 
         public void Dispose()
         {
+            if (_disposed) return;
             _disposed = true;
+            NetworkTransportPortLifetime.DisposeOwned(
+                _transportOwnership,
+                _connectionEvents,
+                _datagrams,
+                _connectionControl);
         }
 
         private void ProcessConnectionEvent(in ServerConnectionEvent connectionEvent)
@@ -329,6 +351,7 @@ namespace Ludots.Core.Networking.Runtime
             if (FindSeatByConnection(connection.Value) >= 0)
             {
                 ProtocolFault(NetworkRuntimeFaultCode.SessionContractViolation, connection.Value, NetworkWireKind.SessionHandshakeRequest);
+                _connectionControl.DisconnectAfterReliableFlush(connection);
                 return;
             }
 
@@ -355,6 +378,10 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             SendHandshakeResponse(connection, in response);
+            if (!response.Accepted)
+            {
+                _connectionControl.DisconnectAfterReliableFlush(connection);
+            }
         }
 
         private void BindAcceptedSeat(ConnectionId connection, in SessionSeatBinding binding)
