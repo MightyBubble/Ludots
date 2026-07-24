@@ -250,8 +250,18 @@ public sealed class NetworkWireCodecTests
         var packet = new ReplicationPacketBuffer(entityCapacity: 4);
         var states = new[]
         {
-            new ReplicatedEntityState(visible, schemaId: 1, revision: 10, new ReplicationStateVector(1, 2, 3, 4)),
-            new ReplicatedEntityState(hidden, schemaId: 1, revision: 20, new ReplicationStateVector(5, 6, 7, 8)),
+            new ReplicatedEntityState(
+                visible,
+                schemaId: 1,
+                revision: 10,
+                new ReplicationStateVector(1, 2, 3, 4),
+                new ReplicationControlOwnership(seatSlot: 3, seatGeneration: 7, controlKind: 11)),
+            new ReplicatedEntityState(
+                hidden,
+                schemaId: 1,
+                revision: 20,
+                new ReplicationStateVector(5, 6, 7, 8),
+                ReplicationControlOwnership.Unowned),
         };
         var disclosures = new[]
         {
@@ -274,11 +284,17 @@ public sealed class NetworkWireCodecTests
         Assert.That(decoded.Header.Kind, Is.EqualTo(ReplicationPacketKind.Full));
         Assert.That(decoded.Upserts.Length, Is.EqualTo(1));
         Assert.That(decoded.Upserts[0].Entity, Is.EqualTo(visible));
+        Assert.That(decoded.Upserts[0].Ownership, Is.EqualTo(states[0].Ownership));
         Assert.That(decoded.DisclosureChanges.Length, Is.EqualTo(1));
 
         var nextStates = new[]
         {
-            new ReplicatedEntityState(visible, schemaId: 1, revision: 11, new ReplicationStateVector(9, 8, 7, 6)),
+            new ReplicatedEntityState(
+                visible,
+                schemaId: 1,
+                revision: 11,
+                new ReplicationStateVector(9, 8, 7, 6),
+                ReplicationControlOwnership.Unowned),
         };
         var nextDisclosures = new[]
         {
@@ -297,6 +313,47 @@ public sealed class NetworkWireCodecTests
         Assert.That(decoded.Header.Kind, Is.EqualTo(ReplicationPacketKind.Delta));
         Assert.That(decoded.Header.BaselineSnapshotId, Is.EqualTo(1UL));
         Assert.That(decoded.Upserts[0].Revision, Is.EqualTo(11u));
+        Assert.That(decoded.Upserts[0].Ownership.IsOwned, Is.False);
+    }
+
+    [Test]
+    public void ReplicationPacket_RejectsPartiallyEncodedControlOwnership()
+    {
+        var entity = new NetworkEntityHandle(0, 1);
+        var channel = new AuthoritativeReplicationChannel(
+            new NetworkEntityTable(capacity: 1),
+            replicationEntityCapacityPerSeat: 1,
+            baselineCapacity: 1,
+            new ReplicationDisclosureChangeLog(capacity: 1));
+        var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+        var ownership = new ReplicationControlOwnership(seatSlot: 3, seatGeneration: 7, controlKind: 11);
+        var states = new[]
+        {
+            new ReplicatedEntityState(
+                entity,
+                schemaId: 1,
+                revision: 10,
+                new ReplicationStateVector(1, 2, 3, 4),
+                in ownership),
+        };
+        var disclosures = new[] { new ReplicationDisclosureInput(entity, KnowledgePresence.LiveVisible) };
+        Assert.That(
+            channel.BuildFull(7, 100, 1, states, disclosures, packet),
+            Is.EqualTo(ReplicationBuildResult.Success));
+
+        Span<byte> buffer = stackalloc byte[ReplicationPacketWireCodec.GetPayloadSize(1, 0, 1)];
+        Assert.That(
+            ReplicationPacketWireCodec.TryEncode(packet, buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+
+        const int ownerSeatGenerationOffset =
+            ReplicationPacketWireCodec.HeaderSizeInBytes + 4 + 4 + 4 + 4 + 8 + 8 + 8 + 8 + 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(ownerSeatGenerationOffset, 4), 0);
+        var decoded = new ReplicationPacketBuffer(entityCapacity: 1);
+        Assert.That(
+            ReplicationPacketWireCodec.TryDecode(buffer, decoded),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(decoded.Upserts.Length, Is.Zero);
     }
 
     [Test]

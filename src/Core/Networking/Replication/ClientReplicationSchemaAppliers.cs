@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Networking.Session;
 
 namespace Ludots.Core.Networking.Replication
 {
@@ -19,22 +20,30 @@ namespace Ludots.Core.Networking.Replication
     public readonly struct ReplicationApplyContext
     {
         public ReplicationApplyContext(
+            in SessionSeatBinding clientSeat,
             ulong sessionEpoch,
             uint committedTick,
             ulong snapshotId,
             ReplicationPacketKind packetKind)
         {
+            if (!clientSeat.IsValid)
+            {
+                throw new System.ArgumentException("Replication apply requires the accepted client seat.", nameof(clientSeat));
+            }
+
             if (sessionEpoch == 0)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(sessionEpoch));
             }
 
+            ClientSeat = clientSeat;
             SessionEpoch = sessionEpoch;
             CommittedTick = committedTick;
             SnapshotId = snapshotId;
             PacketKind = packetKind;
         }
 
+        public SessionSeatBinding ClientSeat { get; }
         public ulong SessionEpoch { get; }
         public uint CommittedTick { get; }
         public ulong SnapshotId { get; }

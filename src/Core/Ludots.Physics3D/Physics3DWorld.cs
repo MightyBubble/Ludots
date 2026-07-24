@@ -117,6 +117,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         }
     }
 
+    public int MobileBodyCapacity => _config.MobileBodyCapacity;
     public int ActiveBodyCount => _bodies.ActiveBodyCount;
     public int ActiveMobileBodyCount => _bodies.ActiveMobileBodyCount;
     public int ActiveStaticBodyCount => _bodies.ActiveStaticBodyCount;

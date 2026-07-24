@@ -118,6 +118,37 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Delta_ControlOwnershipChangeIsReplicatedEvenWhenStateRevisionAndValuesDoNotChange()
+        {
+            var entity = new NetworkEntityHandle(slot: 0, generation: 1);
+            var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 1),
+                replicationEntityCapacityPerSeat: 1,
+                baselineCapacity: 2,
+                new ReplicationDisclosureChangeLog(capacity: 2));
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+            var disclosures = new[] { Visible(entity) };
+            var values = new ReplicationStateVector(10, 20, 30, 40);
+            var firstOwner = new ReplicationControlOwnership(seatSlot: 2, seatGeneration: 7, controlKind: 11);
+            var first = new[] { new ReplicatedEntityState(entity, 1, 5, in values, in firstOwner) };
+
+            Assert.That(
+                channel.BuildFull(7, 100, 1, first, disclosures, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+
+            var nextOwner = new ReplicationControlOwnership(seatSlot: 3, seatGeneration: 1, controlKind: 12);
+            var next = new[] { new ReplicatedEntityState(entity, 1, 5, in values, in nextOwner) };
+            Assert.That(
+                channel.BuildDelta(7, 101, 2, acknowledgedBaselineId: 1, next, disclosures, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+
+            Assert.That(packet.Upserts.Length, Is.EqualTo(1));
+            Assert.That(packet.Upserts[0].Values, Is.EqualTo(values));
+            Assert.That(packet.Upserts[0].Revision, Is.EqualTo(5));
+            Assert.That(packet.Upserts[0].Ownership, Is.EqualTo(nextOwner));
+        }
+
+        [Test]
         public void Delta_MissingAcknowledgedBaselineIsRejectedWithoutCommittingSnapshot()
         {
             var entity = new NetworkEntityHandle(slot: 0, generation: 1);
@@ -325,7 +356,8 @@ namespace Ludots.Tests.Architecture
                 handle,
                 schemaId: 1,
                 revision,
-                new ReplicationStateVector(value, 0, 0, 0));
+                new ReplicationStateVector(value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
         }
 
         private static ReplicationDisclosureInput Visible(NetworkEntityHandle handle)

@@ -168,6 +168,16 @@ public sealed class LoadClientNetworkObserver : INetworkRuntimeObserver
     public void OnClientResyncRequired(in NetworkResyncRequired message)
     {
     }
+
+    public void OnClientReplicationCommitted(
+        in SessionSeatBinding seat,
+        in ReplicationPacketHeader header)
+    {
+    }
+
+    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch)
+    {
+    }
 }
 
 public sealed class DeterministicFixedInputPayloadSource : IFixedInputPayloadSource
@@ -239,8 +249,13 @@ public sealed class LoadClientReplicationBridgeFactory : IClientReplicationBridg
 
     public int GlobalEntityCapacity { get; }
 
-    public ClientWorldReplicationBridge Create(ulong sessionEpoch)
+    public ClientWorldReplicationBridge Create(in SessionSeatBinding clientSeat, ulong sessionEpoch)
     {
+        if (!clientSeat.IsValid)
+        {
+            throw new ArgumentException("Client replication bridge requires an accepted seat.", nameof(clientSeat));
+        }
+
         if (sessionEpoch == 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sessionEpoch));
@@ -249,6 +264,7 @@ public sealed class LoadClientReplicationBridgeFactory : IClientReplicationBridg
         return new ClientWorldReplicationBridge(
             _world,
             GlobalEntityCapacity,
+            in clientSeat,
             sessionEpoch,
             _appliers);
     }
@@ -282,7 +298,11 @@ public sealed class LoadClientMirrorSchemaApplier : IClientReplicationSchemaAppl
 
     public void Apply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context)
     {
-        var mirror = new ReplicationMirrorState(state.SchemaId, state.Revision, state.Values);
+        var mirror = new ReplicationMirrorState(
+            state.SchemaId,
+            state.Revision,
+            state.Values,
+            state.Ownership);
         world.Set(entity, in mirror);
     }
 

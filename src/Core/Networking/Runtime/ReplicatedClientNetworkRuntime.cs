@@ -530,11 +530,13 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
-            if (_replicationBridge != null &&
-                !_sessionEpoch.IsEmpty &&
-                _sessionEpoch != response.SessionEpoch)
+            SessionSeatBinding acceptedSeat = response.Seat;
+            bool acceptedIdentityChanged =
+                _seat.IsValid &&
+                (_seat != acceptedSeat || _sessionEpoch != response.SessionEpoch);
+            if (_replicationBridge != null && acceptedIdentityChanged)
             {
-                if (!_credentials.TryClear())
+                if (_sessionEpoch != response.SessionEpoch && !_credentials.TryClear())
                 {
                     Fail(NetworkRuntimeFaultCode.CredentialStoreFailed, NetworkWireKind.SessionHandshakeResponse);
                 }
@@ -550,7 +552,9 @@ namespace Ludots.Core.Networking.Runtime
 
             if (_replicationBridge == null)
             {
-                ClientWorldReplicationBridge bridge = _replicationFactory.Create(response.SessionEpoch.Value) ??
+                ClientWorldReplicationBridge bridge = _replicationFactory.Create(
+                    in acceptedSeat,
+                    response.SessionEpoch.Value) ??
                     throw new InvalidOperationException("Client replication bridge factory returned null.");
                 if (bridge.EntityCapacity != _capacity.GlobalEntityCapacity)
                 {
@@ -562,6 +566,12 @@ namespace Ludots.Core.Networking.Runtime
                 {
                     throw new InvalidOperationException(
                         "Client replication bridge SessionEpoch differs from the accepted handshake epoch.");
+                }
+
+                if (bridge.ClientSeat != acceptedSeat)
+                {
+                    throw new InvalidOperationException(
+                        "Client replication bridge seat differs from the accepted handshake seat.");
                 }
 
                 _replicationBridge = bridge;
@@ -682,6 +692,8 @@ namespace Ludots.Core.Networking.Runtime
                 _awaitingFullSnapshot = false;
             }
 
+            ReplicationPacketHeader committedHeader = _replicationPacket.Header;
+            _observer.OnClientReplicationCommitted(in _seat, in committedHeader);
             SendAcknowledgement(_replicationPacket.Header.SnapshotId, _replicationPacket.Header.Tick);
         }
 
@@ -751,6 +763,9 @@ namespace Ludots.Core.Networking.Runtime
 
         private void TeardownReplicationEpoch(NetworkWireKind wireKind)
         {
+            SessionSeatBinding tornDownSeat = _seat;
+            ulong tornDownEpoch = _sessionEpoch.Value;
+            bool hadReplicationBridge = _replicationBridge != null;
             if (_replicationBridge != null)
             {
                 ReplicationBridgeResult tornDown = _replicationBridge.Teardown();
@@ -772,6 +787,11 @@ namespace Ludots.Core.Networking.Runtime
             _awaitingFullSnapshot = false;
             _snapshotReassembler.Reset();
             ClearFixedInputOutboxOnce();
+
+            if (hadReplicationBridge && tornDownSeat.IsValid && tornDownEpoch != 0)
+            {
+                _observer.OnClientReplicationTornDown(in tornDownSeat, tornDownEpoch);
+            }
         }
 
         private void EnsureFixedInputOutbox(in SessionHandshakeResponse response)

@@ -533,7 +533,15 @@ public sealed class NetworkRuntimeEndToEndTests
                 sessionEpoch: 7,
                 tick: 30,
                 snapshotId: 1,
-                new[] { new ReplicatedEntityState(highHandle, 1, 1, new ReplicationStateVector(99_999, 0, 0, 0)) },
+                new[]
+                {
+                    new ReplicatedEntityState(
+                        highHandle,
+                        1,
+                        1,
+                        new ReplicationStateVector(99_999, 0, 0, 0),
+                        ReplicationControlOwnership.Unowned),
+                },
                 new[] { new ReplicationDisclosureInput(highHandle, KnowledgePresence.LiveVisible) },
                 packet),
             Is.EqualTo(ReplicationBuildResult.Success));
@@ -752,8 +760,18 @@ public sealed class NetworkRuntimeEndToEndTests
             snapshotId: 1,
             new[]
             {
-                new ReplicatedEntityState(ownedHandle, 1, 1, new ReplicationStateVector(11, 0, 0, 0)),
-                new ReplicatedEntityState(borrowedHandle, 1, 1, new ReplicationStateVector(22, 0, 0, 0)),
+                new ReplicatedEntityState(
+                    ownedHandle,
+                    1,
+                    1,
+                    new ReplicationStateVector(11, 0, 0, 0),
+                    ReplicationControlOwnership.Unowned),
+                new ReplicatedEntityState(
+                    borrowedHandle,
+                    1,
+                    1,
+                    new ReplicationStateVector(22, 0, 0, 0),
+                    ReplicationControlOwnership.Unowned),
             },
             new[]
             {
@@ -763,6 +781,13 @@ public sealed class NetworkRuntimeEndToEndTests
         client.PumpTransport();
         Assert.That(observer.Faults, Is.Zero, $"Last fault: {observer.LastFault.Code}");
         Assert.That(client.LastCommittedTick, Is.EqualTo(10));
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.ClientReplicationCommits, Is.EqualTo(1));
+            Assert.That(observer.LastClientReplicationSeat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(observer.LastClientReplicationHeader.Tick, Is.EqualTo(10));
+            Assert.That(observer.LastClientReplicationHeader.SnapshotId, Is.EqualTo(1));
+        });
         Assert.That(oldBridge.TryResolve(ownedHandle, out Entity owned), Is.True);
         Assert.That(oldBridge.TryResolve(borrowedHandle, out Entity borrowed), Is.True);
         Assert.That(borrowed, Is.EqualTo(authored));
@@ -793,6 +818,9 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(oldBridge.IsTornDown, Is.True);
             Assert.That(factory.Applier.ReleaseCalls, Is.EqualTo(2));
             Assert.That(factory.Applier.LastLeaveKind, Is.EqualTo(ReplicationMirrorLeaveKind.Teardown));
+            Assert.That(observer.ClientReplicationTeardowns, Is.EqualTo(1));
+            Assert.That(observer.LastClientReplicationTornDownSeat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(observer.LastClientReplicationTornDownEpoch, Is.EqualTo(7));
             Assert.That(world.IsAlive(owned), Is.False);
             Assert.That(world.IsAlive(authored), Is.True);
             Assert.That(world.Has<ReplicationMirrorIdentity>(authored), Is.False);
@@ -831,8 +859,18 @@ public sealed class NetworkRuntimeEndToEndTests
             snapshotId: 1,
             new[]
             {
-                new ReplicatedEntityState(ownedHandle, 1, 1, new ReplicationStateVector(33, 0, 0, 0)),
-                new ReplicatedEntityState(borrowedHandle, 1, 1, new ReplicationStateVector(44, 0, 0, 0)),
+                new ReplicatedEntityState(
+                    ownedHandle,
+                    1,
+                    1,
+                    new ReplicationStateVector(33, 0, 0, 0),
+                    ReplicationControlOwnership.Unowned),
+                new ReplicatedEntityState(
+                    borrowedHandle,
+                    1,
+                    1,
+                    new ReplicationStateVector(44, 0, 0, 0),
+                    ReplicationControlOwnership.Unowned),
             },
             new[]
             {
@@ -849,6 +887,83 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(newBorrowed, Is.EqualTo(authored));
             Assert.That(world.Get<TestAppliedState>(newOwned).Value, Is.EqualTo(33));
             Assert.That(world.Get<TestAppliedState>(authored).Value, Is.EqualTo(44));
+            Assert.That(observer.ClientReplicationCommits, Is.EqualTo(2));
+            Assert.That(observer.LastClientReplicationHeader.Tick, Is.EqualTo(1));
+            Assert.That(observer.LastClientReplicationHeader.SnapshotId, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void ClientRuntime_SameEpochSeatGenerationChange_TearsDownOldBridgeBeforeCreatingReplacement()
+    {
+        NetworkRuntimeCapacity capacity = Capacity();
+        var transport = new InMemoryTransport(new ConnectionId(42));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 8, 2 });
+        var credentials = new MemoryCredentials();
+        using World world = World.Create();
+        var factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            protocol,
+            fingerprint,
+            credentials,
+            factory,
+            new NetworkCommandAdmissionResultBuffer(4),
+            observer);
+        observer.ClientIdentityClearedProbe = () =>
+            !client.Seat.IsValid && client.SessionEpoch == SessionEpoch.Empty;
+        observer.ClientBridgeCreateCountProbe = () => factory.CreateCount;
+
+        SessionSeatBinding firstSeat = new(0, 1, new PlayerId(1));
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        AcceptHandshake(
+            transport,
+            capacity.ControlChannel,
+            protocol,
+            fingerprint,
+            new SessionEpoch(7),
+            in firstSeat,
+            reconnectToken: new ReconnectToken(1, 7));
+        client.PumpTransport();
+        ClientWorldReplicationBridge oldBridge = factory.Bridge!;
+
+        transport.Disconnect();
+        client.PumpTransport();
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        SessionSeatBinding replacementSeat = new(0, 2, new PlayerId(1));
+        AcceptHandshake(
+            transport,
+            capacity.ControlChannel,
+            protocol,
+            fingerprint,
+            new SessionEpoch(7),
+            in replacementSeat,
+            reconnectToken: new ReconnectToken(2, 7));
+        client.PumpTransport();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(oldBridge.IsTornDown, Is.True);
+            Assert.That(factory.CreateCount, Is.EqualTo(2));
+            Assert.That(factory.Bridge, Is.Not.SameAs(oldBridge));
+            Assert.That(factory.Bridge!.ClientSeat, Is.EqualTo(replacementSeat));
+            Assert.That(client.Seat, Is.EqualTo(replacementSeat));
+            Assert.That(client.SessionEpoch, Is.EqualTo(new SessionEpoch(7)));
+            Assert.That(observer.ClientReplicationTeardowns, Is.EqualTo(1));
+            Assert.That(observer.LastClientReplicationTornDownSeat, Is.EqualTo(firstSeat));
+            Assert.That(observer.LastClientReplicationTornDownEpoch, Is.EqualTo(7));
+            Assert.That(observer.ClientIdentityWasClearedAtLastTeardown, Is.True);
+            Assert.That(observer.ClientBridgeCreateCountAtLastTeardown, Is.EqualTo(1));
+            Assert.That(observer.Faults, Is.Zero);
         });
     }
 
@@ -947,6 +1062,25 @@ public sealed class NetworkRuntimeEndToEndTests
         ReconnectToken reconnectToken)
     {
         var seat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        AcceptHandshake(
+            transport,
+            controlChannel,
+            protocol,
+            fingerprint,
+            epoch,
+            in seat,
+            reconnectToken);
+    }
+
+    private static void AcceptHandshake(
+        InMemoryTransport transport,
+        ChannelId controlChannel,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint,
+        SessionEpoch epoch,
+        in SessionSeatBinding seat,
+        ReconnectToken reconnectToken)
+    {
         SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
             in seat,
             reconnectToken,
@@ -1173,7 +1307,10 @@ public sealed class NetworkRuntimeEndToEndTests
                 return false;
             }
 
-            state = new ReplicationProjectedState(data.Revision, new ReplicationStateVector(data.Value, 0, 0, 0));
+            state = new ReplicationProjectedState(
+                data.Revision,
+                new ReplicationStateVector(data.Value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
             return true;
         }
     }
@@ -1242,13 +1379,18 @@ public sealed class NetworkRuntimeEndToEndTests
         public int CreateCount { get; private set; }
         public int GlobalEntityCapacity => _declaredGlobalEntityCapacity;
 
-        public ClientWorldReplicationBridge Create(ulong sessionEpoch)
+        public ClientWorldReplicationBridge Create(in SessionSeatBinding clientSeat, ulong sessionEpoch)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, _applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
             CreateCount++;
-            Bridge = new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
+            Bridge = new ClientWorldReplicationBridge(
+                _world,
+                _entityCapacity,
+                in clientSeat,
+                sessionEpoch,
+                appliers);
             return Bridge;
         }
     }
@@ -1332,7 +1474,17 @@ public sealed class NetworkRuntimeEndToEndTests
         public int SeatReconnections { get; private set; }
         public int SeatDisconnections { get; private set; }
         public int SeatReleases { get; private set; }
+        public int ClientReplicationCommits { get; private set; }
+        public int ClientReplicationTeardowns { get; private set; }
+        public SessionSeatBinding LastClientReplicationSeat { get; private set; }
+        public ReplicationPacketHeader LastClientReplicationHeader { get; private set; }
+        public SessionSeatBinding LastClientReplicationTornDownSeat { get; private set; }
+        public ulong LastClientReplicationTornDownEpoch { get; private set; }
+        public bool ClientIdentityWasClearedAtLastTeardown { get; private set; }
+        public int ClientBridgeCreateCountAtLastTeardown { get; private set; }
         public NetworkRuntimeFault LastFault { get; private set; }
+        public Func<bool>? ClientIdentityClearedProbe { get; set; }
+        public Func<int>? ClientBridgeCreateCountProbe { get; set; }
 
         public void OnFault(in NetworkRuntimeFault fault)
         {
@@ -1350,6 +1502,24 @@ public sealed class NetworkRuntimeEndToEndTests
         public void OnClientHandshake(in SessionHandshakeResponse response) { }
         public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) { }
         public void OnClientResyncRequired(in NetworkResyncRequired message) { }
+
+        public void OnClientReplicationCommitted(
+            in SessionSeatBinding seat,
+            in ReplicationPacketHeader header)
+        {
+            ClientReplicationCommits++;
+            LastClientReplicationSeat = seat;
+            LastClientReplicationHeader = header;
+        }
+
+        public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch)
+        {
+            ClientReplicationTeardowns++;
+            LastClientReplicationTornDownSeat = seat;
+            LastClientReplicationTornDownEpoch = sessionEpoch;
+            ClientIdentityWasClearedAtLastTeardown = ClientIdentityClearedProbe?.Invoke() ?? false;
+            ClientBridgeCreateCountAtLastTeardown = ClientBridgeCreateCountProbe?.Invoke() ?? 0;
+        }
     }
 
     private sealed class InMemoryTransport :

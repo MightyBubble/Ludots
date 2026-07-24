@@ -204,7 +204,7 @@ public sealed class Physics3DNetworkBridgeTests
     }
 
     [Test]
-    public void Replication_QuantizesAuthoritativeBody_AndCreatesKinematicClientMirror()
+    public void Replication_QuantizesAuthoritativeBody_AndUsesOwnershipForLocalDynamicMirror()
     {
         using World serverEcs = World.Create();
         using var serverPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
@@ -239,6 +239,11 @@ public sealed class Physics3DNetworkBridgeTests
                 runtime.Packet),
             Is.EqualTo(ReplicationBridgeResult.Success));
 
+        Assert.That(runtime.Packet.Upserts.Length, Is.EqualTo(1));
+        Assert.That(
+            runtime.Packet.Upserts[0].Ownership.Matches(in seat, Physics3DNetworkControlKinds.PlayerBody),
+            Is.True);
+
         using World clientEcs = World.Create();
         using var clientPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: SchemaId);
@@ -250,23 +255,55 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(appliers.Register(SchemaId, applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
         var clientFactory = new ClientReplicationBridgeFactory(clientEcs, entities.Capacity, appliers);
-        ClientWorldReplicationBridge client = clientFactory.Create(SessionEpoch);
+        ClientWorldReplicationBridge client = clientFactory.Create(in seat, SessionEpoch);
 
         Assert.That(client.Apply(runtime.Packet), Is.EqualTo(ReplicationBridgeResult.Success));
         Assert.That(client.TryResolve(handle, out Entity mirror), Is.True);
+        Assert.That(
+            clientEcs.Get<Physics3DNetworkReplicatedBody>(mirror).Ownership,
+            Is.EqualTo(runtime.Packet.Upserts[0].Ownership));
         Physics3DBodyCm clientBody = clientEcs.Get<Physics3DBodyCm>(mirror);
         Physics3DPoseCm clientPose = clientEcs.Get<Physics3DPoseCm>(mirror);
         Assert.Multiple(() =>
         {
-            Assert.That(clientBody.Kind, Is.EqualTo(Physics3DBodyKind.Kinematic));
-            Assert.That(clientPhysics.GetBodyKind(clientBody.Id), Is.EqualTo(Physics3DBodyKind.Kinematic));
+            Assert.That(clientBody.Kind, Is.EqualTo(Physics3DBodyKind.Dynamic));
+            Assert.That(clientPhysics.GetBodyKind(clientBody.Id), Is.EqualTo(Physics3DBodyKind.Dynamic));
+            Assert.That(clientEcs.Get<Physics3DNetworkClientMirror>(mirror).IsLocallyControlled, Is.True);
             Assert.That(clientPose.Position.X, Is.EqualTo(123.5f).Within(0.001f));
             Assert.That(clientPose.Position.Y, Is.EqualTo(45.5f).Within(0.001f));
             Assert.That(clientPose.Position.Z, Is.EqualTo(-89f).Within(0.001f));
         });
 
+        using World remoteEcs = World.Create();
+        using var remotePhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
+        var remoteAppliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: SchemaId);
+        Assert.That(
+            remoteAppliers.Register(
+                SchemaId,
+                new Physics3DClientBodyReplicationApplier(
+                    remotePhysics,
+                    SchemaId,
+                    new Physics3DReplicationQuantizationConfig(),
+                    CreateBodyConfig())),
+            Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+        remoteAppliers.Freeze();
+        SessionSeatBinding remoteSeat = Seat(slot: 1, generation: 1);
+        ClientWorldReplicationBridge remoteClient = new ClientReplicationBridgeFactory(
+            remoteEcs,
+            entities.Capacity,
+            remoteAppliers).Create(in remoteSeat, SessionEpoch);
+        Assert.That(remoteClient.Apply(runtime.Packet), Is.EqualTo(ReplicationBridgeResult.Success));
+        Assert.That(remoteClient.TryResolve(handle, out Entity remoteMirror), Is.True);
+        Physics3DBodyCm remoteBody = remoteEcs.Get<Physics3DBodyCm>(remoteMirror);
+        Assert.Multiple(() =>
+        {
+            Assert.That(remoteBody.Kind, Is.EqualTo(Physics3DBodyKind.Kinematic));
+            Assert.That(remotePhysics.GetBodyKind(remoteBody.Id), Is.EqualTo(Physics3DBodyKind.Kinematic));
+            Assert.That(remoteEcs.Get<Physics3DNetworkClientMirror>(remoteMirror).IsLocallyControlled, Is.False);
+        });
+
         var wrongEpoch = new ClientReplicationBridgeFactory(clientEcs, entities.Capacity, appliers)
-            .Create(SessionEpoch + 1);
+            .Create(in seat, SessionEpoch + 1);
         Assert.That(wrongEpoch.Apply(runtime.Packet), Is.EqualTo(ReplicationBridgeResult.EpochMismatch));
 
         Assert.That(
@@ -287,6 +324,123 @@ public sealed class Physics3DNetworkBridgeTests
             Assert.That(clientEcs.IsAlive(mirror), Is.False);
             Assert.That(clientPhysics.ActiveMobileBodyCount, Is.Zero);
         });
+    }
+
+    [TestCase(1, ReplicationBridgeResult.SchemaApplyRejected)]
+    [TestCase(2, ReplicationBridgeResult.Success)]
+    public void OwnershipTransfer_RequiresTemporaryMobileCapacity_AndNeverDestroysTheCurrentBody(
+        int mobileCapacity,
+        ReplicationBridgeResult expectedResult)
+    {
+        SessionSeatBinding localSeat = Seat(slot: 0, generation: 1);
+        var handle = new NetworkEntityHandle(slot: 0, generation: 1);
+        var localOwnership = new ReplicationControlOwnership(
+            localSeat.Slot,
+            localSeat.Generation,
+            Physics3DNetworkControlKinds.PlayerBody);
+        var bodyState = new Physics3DBodyState
+        {
+            PositionCm = new Vector3(100f, 200f, 300f),
+            Orientation = Quaternion.Identity,
+            LinearVelocityCmPerSecond = new Vector3(10f, 0f, 0f),
+            AngularVelocityRadiansPerSecond = Vector3.Zero,
+            Awake = true,
+        };
+        var quantization = new Physics3DReplicationQuantizationConfig();
+        Assert.That(
+            Physics3DReplicationStateCodec.TryEncode(
+                in bodyState,
+                Physics3DBodyKind.Dynamic,
+                quantization,
+                out ReplicationStateVector values),
+            Is.True);
+
+        var channel = new AuthoritativeReplicationChannel(
+            new NetworkEntityTable(capacity: 1),
+            replicationEntityCapacityPerSeat: 1,
+            baselineCapacity: 2,
+            new ReplicationDisclosureChangeLog(capacity: 2));
+        var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+        var visible = new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible);
+        Assert.That(
+            channel.BuildFull(
+                SessionEpoch,
+                tick: 1,
+                snapshotId: 1,
+                new[] { new ReplicatedEntityState(handle, SchemaId, 1, values, localOwnership) },
+                new[] { visible },
+                packet),
+            Is.EqualTo(ReplicationBuildResult.Success));
+
+        using World clientEcs = World.Create();
+        using var clientPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity));
+        var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: SchemaId);
+        Assert.That(
+            appliers.Register(
+                SchemaId,
+                new Physics3DClientBodyReplicationApplier(
+                    clientPhysics,
+                    SchemaId,
+                    quantization,
+                    CreateBodyConfig())),
+            Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+        appliers.Freeze();
+        ClientWorldReplicationBridge client = new ClientReplicationBridgeFactory(
+            clientEcs,
+            1,
+            appliers).Create(in localSeat, SessionEpoch);
+        Assert.That(client.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+        Assert.That(client.TryResolve(handle, out Entity mirror), Is.True);
+        Physics3DBodyId originalBody = clientEcs.Get<Physics3DBodyCm>(mirror).Id;
+
+        Assert.That(
+            channel.BuildDelta(
+                SessionEpoch,
+                tick: 2,
+                snapshotId: 2,
+                acknowledgedBaselineId: 1,
+                new[]
+                {
+                    new ReplicatedEntityState(
+                        handle,
+                        SchemaId,
+                        revision: 2,
+                        values,
+                        ReplicationControlOwnership.Unowned),
+                },
+                new[] { visible },
+                packet),
+            Is.EqualTo(ReplicationBuildResult.Success));
+        Assert.That(client.Apply(packet), Is.EqualTo(expectedResult));
+
+        Physics3DBodyCm committedBody = clientEcs.Get<Physics3DBodyCm>(mirror);
+        if (expectedResult == ReplicationBridgeResult.Success)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(committedBody.Id, Is.Not.EqualTo(originalBody));
+                Assert.That(committedBody.Kind, Is.EqualTo(Physics3DBodyKind.Kinematic));
+                Assert.That(clientPhysics.ContainsBody(originalBody), Is.False);
+                Assert.That(clientPhysics.ContainsBody(committedBody.Id), Is.True);
+                Assert.That(clientPhysics.ActiveMobileBodyCount, Is.EqualTo(1));
+                Assert.That(client.LastSnapshotId, Is.EqualTo(2));
+                Assert.That(clientEcs.Get<Physics3DNetworkReplicatedBody>(mirror).Ownership.IsOwned, Is.False);
+            });
+        }
+        else
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(committedBody.Id, Is.EqualTo(originalBody));
+                Assert.That(committedBody.Kind, Is.EqualTo(Physics3DBodyKind.Dynamic));
+                Assert.That(clientPhysics.ContainsBody(originalBody), Is.True);
+                Assert.That(clientPhysics.ActiveMobileBodyCount, Is.EqualTo(1));
+                Assert.That(client.LastSnapshotId, Is.EqualTo(1));
+                Assert.That(
+                    clientEcs.Get<Physics3DNetworkReplicatedBody>(mirror).Ownership,
+                    Is.EqualTo(localOwnership));
+            });
+        }
     }
 
     [Test]

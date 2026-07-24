@@ -35,6 +35,7 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
     public bool CanCreate(World world, in ReplicatedEntityState state, in ReplicationApplyContext context) =>
         world != null &&
         state.SchemaId == _schemaId &&
+        IsSupportedOwnership(state.Ownership) &&
         TryDecodeDynamic(state.Values, out _);
 
     public bool CanApply(
@@ -43,19 +44,27 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
         in ReplicatedEntityState state,
         in ReplicationApplyContext context)
     {
-        return world != null &&
-            world.IsAlive(entity) &&
-            state.SchemaId == _schemaId &&
-            TryDecodeDynamic(state.Values, out _) &&
-            world.TryGet(entity, out ReplicationSchemaRef schema) &&
-            schema.SchemaId == _schemaId &&
-            world.TryGet(entity, out ReplicationMirrorIdentity identity) &&
-            identity.Handle == state.Entity &&
-            world.TryGet(entity, out Physics3DBodyCm body) &&
-            body.Kind == Physics3DBodyKind.Kinematic &&
-            _physics.ContainsBody(body.Id) &&
-            world.TryGet(entity, out Physics3DNetworkClientMirror mirror) &&
-            mirror.SessionEpoch == context.SessionEpoch;
+        if (world == null ||
+            !world.IsAlive(entity) ||
+            state.SchemaId != _schemaId ||
+            !IsSupportedOwnership(state.Ownership) ||
+            !TryDecodeDynamic(state.Values, out _) ||
+            !world.TryGet(entity, out ReplicationSchemaRef schema) ||
+            schema.SchemaId != _schemaId ||
+            !world.TryGet(entity, out ReplicationMirrorIdentity identity) ||
+            identity.Handle != state.Entity ||
+            !world.TryGet(entity, out Physics3DBodyCm body) ||
+            !_physics.ContainsBody(body.Id) ||
+            _physics.GetBodyKind(body.Id) != body.Kind ||
+            !world.TryGet(entity, out Physics3DNetworkClientMirror mirror) ||
+            mirror.SessionEpoch != context.SessionEpoch)
+        {
+            return false;
+        }
+
+        Physics3DBodyKind clientKind = ResolveClientKind(state.Ownership, in context);
+        return body.Kind == clientKind ||
+            _physics.ActiveMobileBodyCount < _physics.MobileBodyCapacity;
     }
 
     public bool CanRelease(
@@ -85,7 +94,8 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
         }
 
         var schema = new ReplicationSchemaRef(_schemaId);
-        var body = new Physics3DBodyCm { Kind = Physics3DBodyKind.Kinematic };
+        Physics3DBodyKind clientKind = ResolveClientKind(state.Ownership, in context);
+        var body = new Physics3DBodyCm { Kind = clientKind };
         var pose = ToPose(in decoded);
         var previous = new PreviousPhysics3DPoseCm
         {
@@ -96,10 +106,12 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
         {
             Handle = identity.Handle,
             AuthoritativeKind = Physics3DBodyKind.Dynamic,
+            Ownership = state.Ownership,
         };
         var mirror = new Physics3DNetworkClientMirror
         {
             AuthoritativeKind = Physics3DBodyKind.Dynamic,
+            IsLocallyControlled = clientKind == Physics3DBodyKind.Dynamic,
             SessionEpoch = context.SessionEpoch,
             LastCommittedTick = context.CommittedTick,
         };
@@ -115,7 +127,7 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
 
         try
         {
-            Physics3DBodyDescription description = CreateDescription(entity, in decoded);
+            Physics3DBodyDescription description = CreateDescription(entity, clientKind, in decoded);
             body.Id = _physics.CreateBody(in description);
             world.Set(entity, body);
             return entity;
@@ -149,10 +161,37 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
         Physics3DPoseCm next = ToPose(in decoded);
         Physics3DNetworkClientMirror mirror = world.Get<Physics3DNetworkClientMirror>(entity);
         mirror.LastCommittedTick = context.CommittedTick;
+        Physics3DNetworkReplicatedBody replicated = world.Get<Physics3DNetworkReplicatedBody>(entity);
+        replicated.Ownership = state.Ownership;
+        Physics3DBodyKind clientKind = ResolveClientKind(state.Ownership, in context);
+        mirror.IsLocallyControlled = clientKind == Physics3DBodyKind.Dynamic;
 
-        _physics.SetBodyState(body.Id, in decoded);
+        if (body.Kind == clientKind)
+        {
+            _physics.SetBodyState(body.Id, in decoded);
+        }
+        else
+        {
+            Physics3DBodyDescription description = CreateDescription(entity, clientKind, in decoded);
+            Physics3DBodyId oldBody = body.Id;
+            Physics3DBodyId replacement = _physics.CreateBody(in description);
+            try
+            {
+                _physics.DestroyBody(oldBody);
+            }
+            catch
+            {
+                _physics.DestroyBody(replacement);
+                throw;
+            }
+
+            body.Id = replacement;
+            body.Kind = clientKind;
+            world.Set(entity, body);
+        }
         world.Set(entity, previous);
         world.Set(entity, next);
+        world.Set(entity, replicated);
         world.Set(entity, mirror);
     }
 
@@ -187,18 +226,31 @@ public sealed class Physics3DClientBodyReplicationApplier : IClientReplicationSc
             authoritativeKind == Physics3DBodyKind.Dynamic;
     }
 
-    private Physics3DBodyDescription CreateDescription(Entity entity, in Physics3DBodyState state) => new(
+    private Physics3DBodyDescription CreateDescription(
+        Entity entity,
+        Physics3DBodyKind clientKind,
+        in Physics3DBodyState state) => new(
         entity,
-        Physics3DBodyKind.Kinematic,
+        clientKind,
         _shape,
         state.PositionCm,
         state.Orientation,
         state.LinearVelocityCmPerSecond,
         state.AngularVelocityRadiansPerSecond,
-        mass: 0f,
+        mass: clientKind == Physics3DBodyKind.Dynamic ? _bodyConfig.Mass : 0f,
         _bodyConfig.CollisionLayer,
         _bodyConfig.Material,
         _bodyConfig.ContinuousDetection);
+
+    private static bool IsSupportedOwnership(ReplicationControlOwnership ownership) =>
+        !ownership.IsOwned || ownership.ControlKind == Physics3DNetworkControlKinds.PlayerBody;
+
+    private static Physics3DBodyKind ResolveClientKind(
+        ReplicationControlOwnership ownership,
+        in ReplicationApplyContext context) =>
+        ownership.Matches(context.ClientSeat, Physics3DNetworkControlKinds.PlayerBody)
+            ? Physics3DBodyKind.Dynamic
+            : Physics3DBodyKind.Kinematic;
 
     private static Physics3DPoseCm ToPose(in Physics3DBodyState state) => new()
     {

@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Networking.Session;
 
 namespace Ludots.Core.Networking.Replication
 {
@@ -65,13 +66,76 @@ namespace Ludots.Core.Networking.Replication
         public static bool operator !=(ReplicationStateVector left, ReplicationStateVector right) => !left.Equals(right);
     }
 
+    /// <summary>
+    /// Server-authored control ownership for one replicated entity. The zero value is explicitly unowned.
+    /// ControlKind is schema-defined and must be non-zero for an owned entity.
+    /// </summary>
+    public readonly struct ReplicationControlOwnership : IEquatable<ReplicationControlOwnership>
+    {
+        private readonly int _encodedSeatSlot;
+
+        public ReplicationControlOwnership(int seatSlot, uint seatGeneration, uint controlKind)
+        {
+            if (seatSlot < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seatSlot));
+            }
+
+            if (seatSlot == int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seatSlot), "Seat slot cannot exceed the encoded ownership range.");
+            }
+
+            if (seatGeneration == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seatGeneration));
+            }
+
+            if (controlKind == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(controlKind));
+            }
+
+            _encodedSeatSlot = seatSlot + 1;
+            SeatGeneration = seatGeneration;
+            ControlKind = controlKind;
+        }
+
+        public static ReplicationControlOwnership Unowned => default;
+        public bool IsOwned => _encodedSeatSlot != 0;
+        public int SeatSlot => IsOwned ? _encodedSeatSlot - 1 : -1;
+        public uint SeatGeneration { get; }
+        public uint ControlKind { get; }
+
+        public bool Matches(in SessionSeatBinding seat, uint controlKind) =>
+            IsOwned &&
+            seat.IsValid &&
+            SeatSlot == seat.Slot &&
+            SeatGeneration == seat.Generation &&
+            ControlKind == controlKind;
+
+        public bool Equals(ReplicationControlOwnership other) =>
+            _encodedSeatSlot == other._encodedSeatSlot &&
+            SeatGeneration == other.SeatGeneration &&
+            ControlKind == other.ControlKind;
+
+        public override bool Equals(object? obj) =>
+            obj is ReplicationControlOwnership other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(_encodedSeatSlot, SeatGeneration, ControlKind);
+
+        public static bool operator ==(ReplicationControlOwnership left, ReplicationControlOwnership right) => left.Equals(right);
+        public static bool operator !=(ReplicationControlOwnership left, ReplicationControlOwnership right) => !left.Equals(right);
+    }
+
     public readonly struct ReplicatedEntityState : IEquatable<ReplicatedEntityState>
     {
         public ReplicatedEntityState(
             NetworkEntityHandle entity,
             int schemaId,
             uint revision,
-            in ReplicationStateVector values)
+            in ReplicationStateVector values,
+            in ReplicationControlOwnership ownership)
         {
             if (!entity.IsValid)
             {
@@ -87,23 +151,26 @@ namespace Ludots.Core.Networking.Replication
             SchemaId = schemaId;
             Revision = revision;
             Values = values;
+            Ownership = ownership;
         }
 
         public NetworkEntityHandle Entity { get; }
         public int SchemaId { get; }
         public uint Revision { get; }
         public ReplicationStateVector Values { get; }
+        public ReplicationControlOwnership Ownership { get; }
 
         public bool Equals(ReplicatedEntityState other)
             => Entity == other.Entity &&
                SchemaId == other.SchemaId &&
                Revision == other.Revision &&
-               Values == other.Values;
+               Values == other.Values &&
+               Ownership == other.Ownership;
 
         public override bool Equals(object? obj)
             => obj is ReplicatedEntityState other && Equals(other);
 
-        public override int GetHashCode() => HashCode.Combine(Entity, SchemaId, Revision, Values);
+        public override int GetHashCode() => HashCode.Combine(Entity, SchemaId, Revision, Values, Ownership);
 
         public static bool operator ==(ReplicatedEntityState left, ReplicatedEntityState right) => left.Equals(right);
         public static bool operator !=(ReplicatedEntityState left, ReplicatedEntityState right) => !left.Equals(right);

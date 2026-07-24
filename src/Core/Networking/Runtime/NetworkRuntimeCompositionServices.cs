@@ -38,6 +38,8 @@ namespace Ludots.Core.Networking.Runtime
         public SessionHandshakeResponse LastClientHandshake { get; private set; }
         public NetworkCommandAdmissionOutcome LastClientAdmission { get; private set; }
         public NetworkResyncRequired LastClientResync { get; private set; }
+        public ReplicationPacketHeader LastClientReplicationCommit { get; private set; }
+        public int ClientReplicationTeardownCount { get; private set; }
 
         public NetworkSeatConnectionState GetSeatState(int seatSlot)
         {
@@ -94,6 +96,13 @@ namespace Ludots.Core.Networking.Runtime
         public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) => LastClientAdmission = outcome;
 
         public void OnClientResyncRequired(in NetworkResyncRequired message) => LastClientResync = message;
+
+        public void OnClientReplicationCommitted(
+            in SessionSeatBinding seat,
+            in ReplicationPacketHeader header) => LastClientReplicationCommit = header;
+
+        public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch) =>
+            ClientReplicationTeardownCount++;
 
         private void ValidateBinding(in SessionSeatBinding binding)
         {
@@ -186,6 +195,20 @@ namespace Ludots.Core.Networking.Runtime
             Bridge.OnClientResyncRequired(in message);
             StateObserver.OnClientResyncRequired(in message);
         }
+
+        public void OnClientReplicationCommitted(
+            in SessionSeatBinding seat,
+            in ReplicationPacketHeader header)
+        {
+            Bridge.OnClientReplicationCommitted(in seat, in header);
+            StateObserver.OnClientReplicationCommitted(in seat, in header);
+        }
+
+        public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch)
+        {
+            Bridge.OnClientReplicationTornDown(in seat, sessionEpoch);
+            StateObserver.OnClientReplicationTornDown(in seat, sessionEpoch);
+        }
     }
 
     public sealed class ClientReplicationBridgeFactory : IClientReplicationBridgeFactory
@@ -216,8 +239,13 @@ namespace Ludots.Core.Networking.Runtime
 
         public int GlobalEntityCapacity { get; }
 
-        public ClientWorldReplicationBridge Create(ulong sessionEpoch)
+        public ClientWorldReplicationBridge Create(in SessionSeatBinding clientSeat, ulong sessionEpoch)
         {
+            if (!clientSeat.IsValid)
+            {
+                throw new ArgumentException("Client replication bridge requires an accepted seat.", nameof(clientSeat));
+            }
+
             if (sessionEpoch == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(sessionEpoch));
@@ -226,6 +254,7 @@ namespace Ludots.Core.Networking.Runtime
             return new ClientWorldReplicationBridge(
                 _world,
                 GlobalEntityCapacity,
+                in clientSeat,
                 sessionEpoch,
                 _appliers);
         }

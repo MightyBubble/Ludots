@@ -323,7 +323,7 @@ public sealed class FixedInputRuntimeTests
             harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
             Is.EqualTo(FixedInputLookupResult.Missing));
 
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(harness.Client.TryPulseFixedInputSend().IsAccepted, Is.True);
         harness.Server.PumpTransport();
         Assert.That(
             harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
@@ -1057,7 +1057,10 @@ public sealed class FixedInputRuntimeTests
                 return false;
             }
 
-            state = new ReplicationProjectedState(data.Revision, new ReplicationStateVector(data.Value, 0, 0, 0));
+            state = new ReplicationProjectedState(
+                data.Revision,
+                new ReplicationStateVector(data.Value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
             return true;
         }
     }
@@ -1108,12 +1111,17 @@ public sealed class FixedInputRuntimeTests
 
         public int GlobalEntityCapacity => _entityCapacity;
 
-        public ClientWorldReplicationBridge Create(ulong sessionEpoch)
+        public ClientWorldReplicationBridge Create(in SessionSeatBinding clientSeat, ulong sessionEpoch)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, new TestApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            return new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
+            return new ClientWorldReplicationBridge(
+                _world,
+                _entityCapacity,
+                in clientSeat,
+                sessionEpoch,
+                appliers);
         }
     }
 
@@ -1201,6 +1209,10 @@ public sealed class FixedInputRuntimeTests
         public void OnClientHandshake(in SessionHandshakeResponse response) { }
         public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) { }
         public void OnClientResyncRequired(in NetworkResyncRequired message) { }
+        public void OnClientReplicationCommitted(
+            in SessionSeatBinding seat,
+            in ReplicationPacketHeader header) { }
+        public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch) { }
     }
 
     private sealed class TrackingTransport :

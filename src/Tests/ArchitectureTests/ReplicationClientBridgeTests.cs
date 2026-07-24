@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Session;
 using NUnit.Framework;
 using System.Runtime.CompilerServices;
 
@@ -271,7 +272,8 @@ namespace Ludots.Tests.Architecture
             using World world = World.Create();
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             appliers.Freeze();
-            var bridge = new ClientWorldReplicationBridge(world, 1, 7, appliers);
+            SessionSeatBinding clientSeat = Seat();
+            var bridge = new ClientWorldReplicationBridge(world, 1, in clientSeat, 7, appliers);
             var handle = new NetworkEntityHandle(0, 1);
             var packet = new ReplicationPacketBuffer(1);
             var channel = Channel(capacity: 1);
@@ -374,11 +376,24 @@ namespace Ludots.Tests.Architecture
                 appliers.Register(1, tracking ?? new TrackingSchemaApplier()),
                 Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            return new ClientWorldReplicationBridge(world, entityCapacity, sessionEpoch, appliers);
+            SessionSeatBinding clientSeat = Seat();
+            return new ClientWorldReplicationBridge(
+                world,
+                entityCapacity,
+                in clientSeat,
+                sessionEpoch,
+                appliers);
         }
 
         private static ReplicatedEntityState State(NetworkEntityHandle handle, uint revision, long value)
-            => new(handle, schemaId: 1, revision, new ReplicationStateVector(value, 0, 0, 0));
+            => new(
+                handle,
+                schemaId: 1,
+                revision,
+                new ReplicationStateVector(value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
+
+        private static SessionSeatBinding Seat() => new(0, 1, new PlayerId(1));
 
         private readonly struct AuthoredMapEntity
         {

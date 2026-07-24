@@ -152,6 +152,10 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         var replicated = new Physics3DNetworkReplicatedBody
         {
             AuthoritativeKind = Physics3DBodyKind.Dynamic,
+            Ownership = new ReplicationControlOwnership(
+                slot,
+                seat.Generation,
+                Physics3DNetworkControlKinds.PlayerBody),
         };
         Entity entity = _world.Create(
             in playerIdentity,
@@ -473,6 +477,12 @@ public sealed class Physics3DNetworkPlayerLifecycleObserver : INetworkRuntimeObs
     public void OnClientAdmission(in Ludots.Core.Networking.Commands.NetworkCommandAdmissionOutcome outcome) { }
 
     public void OnClientResyncRequired(in Ludots.Core.Networking.Protocol.NetworkResyncRequired message) { }
+
+    public void OnClientReplicationCommitted(
+        in SessionSeatBinding seat,
+        in ReplicationPacketHeader header) { }
+
+    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch) { }
 }
 
 public sealed class Physics3DClientNetworkRuntimeObserver : INetworkRuntimeObserver
@@ -490,4 +500,10 @@ public sealed class Physics3DClientNetworkRuntimeObserver : INetworkRuntimeObser
     public void OnClientAdmission(in Ludots.Core.Networking.Commands.NetworkCommandAdmissionOutcome outcome) { }
 
     public void OnClientResyncRequired(in Ludots.Core.Networking.Protocol.NetworkResyncRequired message) { }
+
+    public void OnClientReplicationCommitted(
+        in SessionSeatBinding seat,
+        in ReplicationPacketHeader header) { }
+
+    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch) { }
 }

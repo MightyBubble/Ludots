@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Networking.Session;
 
 namespace Ludots.Core.Networking.Replication
 {
@@ -15,16 +16,22 @@ namespace Ludots.Core.Networking.Replication
 
     public readonly struct ReplicationMirrorState
     {
-        public ReplicationMirrorState(int schemaId, uint revision, in ReplicationStateVector values)
+        public ReplicationMirrorState(
+            int schemaId,
+            uint revision,
+            in ReplicationStateVector values,
+            in ReplicationControlOwnership ownership)
         {
             SchemaId = schemaId;
             Revision = revision;
             Values = values;
+            Ownership = ownership;
         }
 
         public int SchemaId { get; }
         public uint Revision { get; }
         public ReplicationStateVector Values { get; }
+        public ReplicationControlOwnership Ownership { get; }
     }
 
     public sealed class ClientWorldReplicationBridge
@@ -39,6 +46,7 @@ namespace Ludots.Core.Networking.Replication
         private readonly World _world;
         private readonly ClientReplicationMirror _mirror;
         private readonly ClientReplicationSchemaApplierRegistry _appliers;
+        private readonly SessionSeatBinding _clientSeat;
         private readonly bool[] _active;
         private readonly bool[] _owned;
         private readonly bool[] _plannedActive;
@@ -60,6 +68,7 @@ namespace Ludots.Core.Networking.Replication
         public ClientWorldReplicationBridge(
             World world,
             int entityCapacity,
+            in SessionSeatBinding clientSeat,
             ulong sessionEpoch,
             ClientReplicationSchemaApplierRegistry appliers)
         {
@@ -70,11 +79,17 @@ namespace Ludots.Core.Networking.Replication
                 throw new ArgumentOutOfRangeException(nameof(entityCapacity));
             }
 
+            if (!clientSeat.IsValid)
+            {
+                throw new ArgumentException("Client replication bridge requires an accepted seat.", nameof(clientSeat));
+            }
+
             if (!appliers.IsFrozen)
             {
                 throw new InvalidOperationException("Client replication schema applier registry must be frozen before bridge construction.");
             }
 
+            _clientSeat = clientSeat;
             _mirror = new ClientReplicationMirror(entityCapacity, sessionEpoch);
             _active = new bool[entityCapacity];
             _owned = new bool[entityCapacity];
@@ -93,6 +108,7 @@ namespace Ludots.Core.Networking.Replication
         }
 
         public int EntityCapacity => _active.Length;
+        public SessionSeatBinding ClientSeat => _clientSeat;
         public ulong SessionEpoch => _mirror.SessionEpoch;
         public ulong LastSnapshotId => _mirror.LastSnapshotId;
         public bool IsTornDown => _tornDown;
@@ -170,6 +186,7 @@ namespace Ludots.Core.Networking.Replication
             Array.Copy(_schemas, _plannedSchemas, _schemas.Length);
             _batchCount = 0;
             _pendingContext = new ReplicationApplyContext(
+                in _clientSeat,
                 packet.Header.SessionEpoch,
                 packet.Header.Tick,
                 packet.Header.SnapshotId,
@@ -210,6 +227,7 @@ namespace Ludots.Core.Networking.Replication
 
             ReplicationApplyContext context = _mirror.LastSnapshotId == 0
                 ? new ReplicationApplyContext(
+                    in _clientSeat,
                     _mirror.SessionEpoch,
                     committedTick: 0,
                     snapshotId: 0,
@@ -685,6 +703,6 @@ namespace Ludots.Core.Networking.Replication
         }
 
         private static ReplicationMirrorState ToMirrorState(in ReplicatedEntityState state)
-            => new(state.SchemaId, state.Revision, state.Values);
+            => new(state.SchemaId, state.Revision, state.Values, state.Ownership);
     }
 }
