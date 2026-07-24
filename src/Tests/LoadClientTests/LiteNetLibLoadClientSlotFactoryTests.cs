@@ -96,7 +96,8 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
             config.Networking.GlobalNetworkEntityCapacity,
             config.Networking.ReplicationEntityCapacityPerSeat,
             appliers);
-        ClientWorldReplicationBridge bridge = factory.Create(sessionEpoch: 42);
+        var clientSeat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        ClientWorldReplicationBridge bridge = factory.Create(in clientSeat, sessionEpoch: 42);
 
         Assert.Multiple(() =>
         {
@@ -139,6 +140,7 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
         const long allocationCeilingBytes = 256L * 1024L * 1024L;
         var worlds = new World[bridgeCount];
         var bridges = new ClientWorldReplicationBridge[bridgeCount];
+        var clientSeat = new SessionSeatBinding(0, 1, new PlayerId(1));
 
         _ = GC.GetAllocatedBytesForCurrentThread();
         long before = GC.GetAllocatedBytesForCurrentThread();
@@ -152,7 +154,7 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
                 appliers);
             Assert.That(factory.GlobalEntityCapacity, Is.EqualTo(100_000));
             Assert.That(factory.ReplicationEntityCapacityPerSeat, Is.EqualTo(512));
-            bridges[i] = factory.Create(sessionEpoch: 7);
+            bridges[i] = factory.Create(in clientSeat, sessionEpoch: 7);
         }
 
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;

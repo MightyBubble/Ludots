@@ -21,14 +21,19 @@ namespace Ludots.Core.Networking.Replication
 
     public readonly struct ReplicationProjectedState
     {
-        public ReplicationProjectedState(uint revision, in ReplicationStateVector values)
+        public ReplicationProjectedState(
+            uint revision,
+            in ReplicationStateVector values,
+            in ReplicationControlOwnership ownership)
         {
             Revision = revision;
             Values = values;
+            Ownership = ownership;
         }
 
         public uint Revision { get; }
         public ReplicationStateVector Values { get; }
+        public ReplicationControlOwnership Ownership { get; }
     }
 
     public interface IReplicationSchemaProjector

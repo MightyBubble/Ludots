@@ -18,11 +18,19 @@ public struct Physics3DNetworkReplicatedBody
 {
     public NetworkEntityHandle Handle;
     public Physics3DBodyKind AuthoritativeKind;
+    public ReplicationControlOwnership Ownership;
+}
+
+public static class Physics3DNetworkControlKinds
+{
+    public const uint PlayerBody = 1;
+    public const uint Vehicle = 2;
 }
 
 public struct Physics3DNetworkClientMirror
 {
     public Physics3DBodyKind AuthoritativeKind;
+    public bool IsLocallyControlled;
     public ulong SessionEpoch;
     public uint LastCommittedTick;
 }

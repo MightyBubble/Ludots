@@ -396,7 +396,10 @@ namespace Ludots.Tests.Architecture
                     return false;
                 }
 
-                state = new ReplicationProjectedState(data.Revision, new ReplicationStateVector(data.Value, 0, 0, 0));
+                state = new ReplicationProjectedState(
+                    data.Revision,
+                    new ReplicationStateVector(data.Value, 0, 0, 0),
+                    ReplicationControlOwnership.Unowned);
                 return true;
             }
         }

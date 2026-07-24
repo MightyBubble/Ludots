@@ -170,6 +170,16 @@ public sealed class LoadClientNetworkObserver : INetworkRuntimeObserver
     public void OnClientResyncRequired(in NetworkResyncRequired message)
     {
     }
+
+    public void OnClientReplicationCommitted(
+        in SessionSeatBinding seat,
+        in ReplicationPacketHeader header)
+    {
+    }
+
+    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch)
+    {
+    }
 }
 
 public sealed class Physics3DLoadClientFixedInputPayloadSource : IFixedInputPayloadSource

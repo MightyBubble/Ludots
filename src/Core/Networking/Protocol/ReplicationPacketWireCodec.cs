@@ -9,7 +9,7 @@ namespace Ludots.Core.Networking.Protocol
     public static class ReplicationPacketWireCodec
     {
         public const int HeaderSizeInBytes = 1 + 3 + 8 + 4 + 8 + 8 + 2 + 2 + 2 + 2;
-        public const int UpsertSizeInBytes = 4 + 4 + 4 + 4 + 8 + 8 + 8 + 8;
+        public const int UpsertSizeInBytes = 4 + 4 + 4 + 4 + 8 + 8 + 8 + 8 + 4 + 4 + 4;
         public const int RemovalSizeInBytes = 4 + 4;
         public const int DisclosureChangeSizeInBytes = 8 + 8 + 4 + 4 + 1 + 3;
 
@@ -265,13 +265,17 @@ namespace Ludots.Core.Networking.Protocol
             in ReplicatedEntityState state)
         {
             ReplicationStateVector values = state.Values;
+            ReplicationControlOwnership ownership = state.Ownership;
             if (!NetworkWireBinary.TryWriteHandle(destination, ref offset, state.Entity) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, state.SchemaId) ||
                 !NetworkWireBinary.TryWriteUInt32(destination, ref offset, state.Revision) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, unchecked((ulong)values.Value0)) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, unchecked((ulong)values.Value1)) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, unchecked((ulong)values.Value2)) ||
-                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, unchecked((ulong)values.Value3)))
+                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, unchecked((ulong)values.Value3)) ||
+                !NetworkWireBinary.TryWriteInt32(destination, ref offset, ownership.SeatSlot) ||
+                !NetworkWireBinary.TryWriteUInt32(destination, ref offset, ownership.SeatGeneration) ||
+                !NetworkWireBinary.TryWriteUInt32(destination, ref offset, ownership.ControlKind))
             {
                 return NetworkWireCodecStatus.BufferTooSmall;
             }
@@ -296,7 +300,10 @@ namespace Ludots.Core.Networking.Protocol
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong v0) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong v1) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong v2) ||
-                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong v3))
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong v3) ||
+                !NetworkWireBinary.TryReadInt32(source, ref offset, out int ownerSeatSlot) ||
+                !NetworkWireBinary.TryReadUInt32(source, ref offset, out uint ownerSeatGeneration) ||
+                !NetworkWireBinary.TryReadUInt32(source, ref offset, out uint controlKind))
             {
                 return NetworkWireCodecStatus.MalformedLength;
             }
@@ -311,7 +318,21 @@ namespace Ludots.Core.Networking.Protocol
                 unchecked((long)v1),
                 unchecked((long)v2),
                 unchecked((long)v3));
-            state = new ReplicatedEntityState(entity, schemaId, revision, in values);
+            ReplicationControlOwnership ownership;
+            if (ownerSeatSlot == -1 && ownerSeatGeneration == 0 && controlKind == 0)
+            {
+                ownership = ReplicationControlOwnership.Unowned;
+            }
+            else if (ownerSeatSlot >= 0 && ownerSeatSlot < int.MaxValue && ownerSeatGeneration != 0 && controlKind != 0)
+            {
+                ownership = new ReplicationControlOwnership(ownerSeatSlot, ownerSeatGeneration, controlKind);
+            }
+            else
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
+            state = new ReplicatedEntityState(entity, schemaId, revision, in values, in ownership);
             return NetworkWireCodecStatus.Success;
         }
 

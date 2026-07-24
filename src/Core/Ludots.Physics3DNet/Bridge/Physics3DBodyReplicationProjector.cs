@@ -49,6 +49,18 @@ public sealed class Physics3DBodyReplicationProjector : IReplicationSchemaProjec
         }
 
         Physics3DBodyState bodyState = _physics.GetBodyState(body.Id);
+        if (world.TryGet(entity, out Physics3DNetworkPlayer player) &&
+            (player.SeatSlot < 0 ||
+             player.SeatGeneration == 0 ||
+             player.PlayerId <= 0 ||
+             !replicated.Ownership.IsOwned ||
+             replicated.Ownership.SeatSlot != player.SeatSlot ||
+             replicated.Ownership.SeatGeneration != player.SeatGeneration ||
+             replicated.Ownership.ControlKind != Physics3DNetworkControlKinds.PlayerBody))
+        {
+            return false;
+        }
+
         if (!Physics3DReplicationStateCodec.TryEncode(
                 in bodyState,
                 body.Kind,
@@ -60,7 +72,8 @@ public sealed class Physics3DBodyReplicationProjector : IReplicationSchemaProjec
 
         state = new ReplicationProjectedState(
             Physics3DReplicationStateCodec.ComputeRevision(in values, disclosure.Revision),
-            in values);
+            in values,
+            replicated.Ownership);
         return true;
     }
 }

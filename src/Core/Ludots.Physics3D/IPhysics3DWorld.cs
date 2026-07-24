@@ -6,6 +6,7 @@ namespace Ludots.Core.Physics3D;
 
 public interface IPhysics3DWorld : IDisposable
 {
+    int MobileBodyCapacity { get; }
     int ActiveBodyCount { get; }
     int ActiveMobileBodyCount { get; }
     int ActiveStaticBodyCount { get; }

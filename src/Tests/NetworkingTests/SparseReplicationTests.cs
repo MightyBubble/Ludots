@@ -327,7 +327,12 @@ public sealed class SparseReplicationTests
     }
 
     private static ReplicatedEntityState State(NetworkEntityHandle entity, uint revision, long value) =>
-        new(entity, schemaId: 1, revision, new ReplicationStateVector(value, 0, 0, 0));
+        new(
+            entity,
+            schemaId: 1,
+            revision,
+            new ReplicationStateVector(value, 0, 0, 0),
+            ReplicationControlOwnership.Unowned);
 
     private static ReplicationDisclosureInput Visible(NetworkEntityHandle entity) =>
         new(entity, KnowledgePresence.LiveVisible);
@@ -378,7 +383,8 @@ public sealed class SparseReplicationTests
 
             state = new ReplicationProjectedState(
                 data.Revision,
-                new ReplicationStateVector(data.Value, 0, 0, 0));
+                new ReplicationStateVector(data.Value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
             return true;
         }
     }

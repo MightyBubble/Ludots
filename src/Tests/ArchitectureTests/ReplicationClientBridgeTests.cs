@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Session;
 using NUnit.Framework;
 using System.Runtime.CompilerServices;
 
@@ -271,10 +272,12 @@ namespace Ludots.Tests.Architecture
             using World world = World.Create();
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             appliers.Freeze();
+            SessionSeatBinding clientSeat = Seat();
             var bridge = new ClientWorldReplicationBridge(
                 world,
                 globalEntityCapacity: 1,
                 activeMirrorCapacity: 1,
+                in clientSeat,
                 sessionEpoch: 7,
                 appliers);
             var handle = new NetworkEntityHandle(0, 1);
@@ -358,10 +361,12 @@ namespace Ludots.Tests.Architecture
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(activeCapacity * 4));
             var packet = new ReplicationPacketBuffer(activeCapacity);
+            SessionSeatBinding clientSeat = Seat();
             var bridge = new ClientWorldReplicationBridge(
                 world,
                 globalCapacity,
                 activeCapacity,
+                in clientSeat,
                 sessionEpoch: 7,
                 CreateAppliers());
 
@@ -491,10 +496,12 @@ namespace Ludots.Tests.Architecture
                 activeCapacity,
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(activeCapacity * 4));
+            SessionSeatBinding clientSeat = Seat();
             var bridge = new ClientWorldReplicationBridge(
                 world,
                 globalCapacity,
                 activeCapacity,
+                in clientSeat,
                 sessionEpoch: 7,
                 CreateAppliers());
             var handle = new NetworkEntityHandle(slot: 99_999, generation: 1);
@@ -549,6 +556,7 @@ namespace Ludots.Tests.Architecture
             var appliers = CreateAppliers();
             var worlds = new World[bridgeCount];
             var bridges = new ClientWorldReplicationBridge[bridgeCount];
+            SessionSeatBinding clientSeat = Seat();
 
             _ = GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
@@ -559,6 +567,7 @@ namespace Ludots.Tests.Architecture
                     worlds[i],
                     globalCapacity,
                     activeCapacity,
+                    in clientSeat,
                     sessionEpoch: 7,
                     appliers);
             }
@@ -618,16 +627,25 @@ namespace Ludots.Tests.Architecture
             ulong sessionEpoch,
             TrackingSchemaApplier? tracking = null)
         {
+            SessionSeatBinding clientSeat = Seat();
             return new ClientWorldReplicationBridge(
                 world,
                 globalEntityCapacity: entityCapacity,
                 activeMirrorCapacity: entityCapacity,
+                in clientSeat,
                 sessionEpoch,
                 CreateAppliers(tracking));
         }
 
         private static ReplicatedEntityState State(NetworkEntityHandle handle, uint revision, long value)
-            => new(handle, schemaId: 1, revision, new ReplicationStateVector(value, 0, 0, 0));
+            => new(
+                handle,
+                schemaId: 1,
+                revision,
+                new ReplicationStateVector(value, 0, 0, 0),
+                ReplicationControlOwnership.Unowned);
+
+        private static SessionSeatBinding Seat() => new(0, 1, new PlayerId(1));
 
         private readonly struct AuthoredMapEntity
         {

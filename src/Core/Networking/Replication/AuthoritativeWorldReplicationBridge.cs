@@ -190,7 +190,12 @@ namespace Ludots.Core.Networking.Replication
                     return Fail(output, ReplicationBridgeResult.ProjectionFailed);
                 }
 
-                var state = new ReplicatedEntityState(handle, schema.SchemaId, projected.Revision, projected.Values);
+                var state = new ReplicatedEntityState(
+                    handle,
+                    schema.SchemaId,
+                    projected.Revision,
+                    projected.Values,
+                    projected.Ownership);
                 if (!output.TryAddState(in state))
                 {
                     return Fail(output, ReplicationBridgeResult.CapacityContractViolated);

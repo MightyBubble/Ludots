@@ -83,6 +83,12 @@ namespace Ludots.Core.Networking.Runtime
         void OnClientAdmission(in Commands.NetworkCommandAdmissionOutcome outcome);
 
         void OnClientResyncRequired(in NetworkResyncRequired message);
+
+        void OnClientReplicationCommitted(
+            in SessionSeatBinding seat,
+            in ReplicationPacketHeader header);
+
+        void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch);
     }
 
     /// <summary>
@@ -176,7 +182,7 @@ namespace Ludots.Core.Networking.Runtime
 
         int ReplicationEntityCapacityPerSeat { get; }
 
-        ClientWorldReplicationBridge Create(ulong sessionEpoch);
+        ClientWorldReplicationBridge Create(in SessionSeatBinding clientSeat, ulong sessionEpoch);
     }
 
     public enum ClientConnectionControlState : byte

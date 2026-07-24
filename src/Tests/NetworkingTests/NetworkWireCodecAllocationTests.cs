@@ -55,7 +55,8 @@ public sealed class NetworkWireCodecAllocationTests
                 new NetworkEntityHandle(0, 1),
                 schemaId: 1,
                 revision: 1,
-                new ReplicationStateVector(1, 2, 3, 4)),
+                new ReplicationStateVector(1, 2, 3, 4),
+                new ReplicationControlOwnership(seatSlot: 0, seatGeneration: 1, controlKind: 1)),
         };
         var disclosures = new[]
         {

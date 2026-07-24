@@ -13,12 +13,14 @@ namespace Ludots.Core.Networking.Replication
         private readonly int[] _currentSchemaIds;
         private readonly uint[] _currentRevisions;
         private readonly ReplicationStateVector[] _currentValues;
+        private readonly ReplicationControlOwnership[] _currentOwnership;
         private int _currentCount;
 
         private readonly NetworkEntityHandle[] _baselineEntities;
         private readonly int[] _baselineSchemaIds;
         private readonly uint[] _baselineRevisions;
         private readonly ReplicationStateVector[] _baselineValues;
+        private readonly ReplicationControlOwnership[] _baselineOwnership;
         private readonly int[] _baselineCounts;
         private readonly ulong[] _baselineIds;
         private int _nextBaselineSlot;
@@ -57,11 +59,13 @@ namespace Ludots.Core.Networking.Replication
             _currentSchemaIds = new int[replicationEntityCapacityPerSeat];
             _currentRevisions = new uint[replicationEntityCapacityPerSeat];
             _currentValues = new ReplicationStateVector[replicationEntityCapacityPerSeat];
+            _currentOwnership = new ReplicationControlOwnership[replicationEntityCapacityPerSeat];
             int baselineStateCapacity = checked(replicationEntityCapacityPerSeat * baselineCapacity);
             _baselineEntities = new NetworkEntityHandle[baselineStateCapacity];
             _baselineSchemaIds = new int[baselineStateCapacity];
             _baselineRevisions = new uint[baselineStateCapacity];
             _baselineValues = new ReplicationStateVector[baselineStateCapacity];
+            _baselineOwnership = new ReplicationControlOwnership[baselineStateCapacity];
             _baselineCounts = new int[baselineCapacity];
             _baselineIds = new ulong[baselineCapacity];
         }
@@ -325,6 +329,7 @@ namespace Ludots.Core.Networking.Replication
                 _currentSchemaIds[write] = state.SchemaId;
                 _currentRevisions[write] = state.Revision;
                 _currentValues[write] = state.Values;
+                _currentOwnership[write] = state.Ownership;
             }
 
             return ReplicationBuildResult.Success;
@@ -505,7 +510,8 @@ namespace Ludots.Core.Networking.Replication
         {
             return _baselineSchemaIds[baselineStorageIndex] == _currentSchemaIds[currentIndex] &&
                    _baselineRevisions[baselineStorageIndex] == _currentRevisions[currentIndex] &&
-                   _baselineValues[baselineStorageIndex] == _currentValues[currentIndex];
+                   _baselineValues[baselineStorageIndex] == _currentValues[currentIndex] &&
+                   _baselineOwnership[baselineStorageIndex] == _currentOwnership[currentIndex];
         }
 
         private ReplicatedEntityState GetCurrentState(int index)
@@ -514,7 +520,8 @@ namespace Ludots.Core.Networking.Replication
                 _currentEntities[index],
                 _currentSchemaIds[index],
                 _currentRevisions[index],
-                _currentValues[index]);
+                _currentValues[index],
+                _currentOwnership[index]);
         }
 
         private ReplicationBuildResult ValidateHeader(ulong sessionEpoch, ulong snapshotId)
@@ -545,6 +552,7 @@ namespace Ludots.Core.Networking.Replication
             _currentSchemaIds.AsSpan(0, _currentCount).CopyTo(_baselineSchemaIds.AsSpan(offset));
             _currentRevisions.AsSpan(0, _currentCount).CopyTo(_baselineRevisions.AsSpan(offset));
             _currentValues.AsSpan(0, _currentCount).CopyTo(_baselineValues.AsSpan(offset));
+            _currentOwnership.AsSpan(0, _currentCount).CopyTo(_baselineOwnership.AsSpan(offset));
             _baselineCounts[baselineSlot] = _currentCount;
             _baselineIds[baselineSlot] = snapshotId;
             _nextBaselineSlot = (baselineSlot + 1) % _baselineCapacity;
