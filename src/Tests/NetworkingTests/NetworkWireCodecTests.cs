@@ -172,12 +172,35 @@ public sealed class NetworkWireCodecTests
             isReplay: false);
 
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
-        Assert.That(CommandAdmissionWireCodec.TryEncode(in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
-        Assert.That(CommandAdmissionWireCodec.TryDecode(buffer, out NetworkCommandAdmissionOutcome decoded), Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decoded.PlayerId, Is.EqualTo(9));
         Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Queued));
         Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
         Assert.That(decoded.IsReplay, Is.False);
+    }
+
+    [Test]
+    public void CommandAdmissionOutcome_RejectsDifferentSessionEpoch()
+    {
+        var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 4,
+            targetTick: 50,
+            actorCount: 2,
+            orderId: 12,
+            admissionBatchId: 3,
+            OrderSubmitResult.Queued,
+            isReplay: false);
+
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 8, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
     }
 
     [Test]
