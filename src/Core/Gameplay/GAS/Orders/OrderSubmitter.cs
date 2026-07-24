@@ -46,7 +46,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (activeOrderTypeId == 0 || CanInterrupt(activeOrderTypeId, in order, in config, orderRuleRegistry))
             {
-                return OrderSubmitResult.Activated;
+                OrderTypeConfig? activeConfig = preview.HasActive
+                    ? registry.Get(preview.ActiveOrder.Order.OrderTypeId)
+                    : null;
+                OrderSubmitResult preparationResult = TryPrepareActivationBlackboard(
+                    world,
+                    entity,
+                    in order,
+                    in config,
+                    activeConfig,
+                    out _);
+                return preparationResult == OrderSubmitResult.Activated
+                    ? OrderSubmitResult.Activated
+                    : preparationResult;
             }
 
             return PreviewSameTypePolicy(ref preview, in order, in config, currentStep, stepRateHz);
@@ -160,7 +172,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
                 if (config.ClearQueueOnActivate)
                 {
-                    ReleaseQueuedOrders(world, ref buffer);
+                    ReleaseQueuedOrders(world, ref buffer, registry);
                 }
 
                 buffer.SetActiveDirect(in order, config.Priority);
@@ -168,7 +180,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.Activated;
             }
 
-            return HandleSameTypePolicy(world, ref buffer, in order, in config, currentStep, stepRateHz);
+            return HandleSameTypePolicy(world, ref buffer, in order, in config, registry, currentStep, stepRateHz);
         }
 
         private static OrderSubmitResult HandleSameTypePolicy(
@@ -176,6 +188,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ref OrderBuffer buffer,
             in Order order,
             in OrderTypeConfig config,
+            OrderTypeRegistry registry,
             int currentStep,
             int stepRateHz)
         {
@@ -190,7 +203,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     {
                         if (config.QueueFullPolicy == QueueFullPolicy.DropOldest)
                         {
-                            ReleaseOldestQueuedOrderOfType(world, ref buffer, order.OrderTypeId);
+                            ReleaseOldestQueuedOrderOfType(world, ref buffer, registry, order.OrderTypeId);
                         }
                         else
                         {
@@ -203,7 +216,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                         : OrderSubmitResult.RejectedQueueFull;
                 }
                 case SameTypePolicy.Replace:
-                    ReleaseAllQueuedOrdersOfType(world, ref buffer, order.OrderTypeId);
+                    ReleaseAllQueuedOrdersOfType(world, ref buffer, registry, order.OrderTypeId);
                     return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                         ? OrderSubmitResult.Queued
                         : OrderSubmitResult.RejectedQueueFull;
@@ -503,13 +516,40 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static bool TryPromoteNextQueuedToActive(World world, Entity entity, OrderTypeRegistry registry)
         {
+            return TryPromoteNextQueuedToActive(
+                world,
+                entity,
+                registry,
+                out _,
+                out _,
+                out _);
+        }
+
+        public static bool TryPromoteNextQueuedToActive(
+            World world,
+            Entity entity,
+            OrderTypeRegistry registry,
+            out OrderSubmitResult failureResult,
+            out int failedOrderId,
+            out int failedOrderTypeId)
+        {
+            failureResult = OrderSubmitResult.Activated;
+            failedOrderId = 0;
+            failedOrderTypeId = 0;
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
                 return false;
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
-            return TryPromoteNextQueuedToActive(world, entity, ref buffer, registry);
+            return TryPromoteNextQueuedToActive(
+                world,
+                entity,
+                ref buffer,
+                registry,
+                out failureResult,
+                out failedOrderId,
+                out failedOrderTypeId);
         }
 
         public static bool TryPromoteNextQueuedToActive(
@@ -518,6 +558,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ref OrderBuffer buffer,
             OrderTypeRegistry registry)
         {
+            return TryPromoteNextQueuedToActive(
+                world,
+                entity,
+                ref buffer,
+                registry,
+                out _,
+                out _,
+                out _);
+        }
+
+        public static bool TryPromoteNextQueuedToActive(
+            World world,
+            Entity entity,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
+            out OrderSubmitResult failureResult,
+            out int failedOrderId,
+            out int failedOrderTypeId)
+        {
+            failureResult = OrderSubmitResult.Activated;
+            failedOrderId = 0;
+            failedOrderTypeId = 0;
             if (buffer.HasActive || !buffer.HasQueued)
             {
                 return false;
@@ -534,8 +596,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 out PreparedActivationBlackboard preparedBlackboard);
             if (preparationResult != OrderSubmitResult.Activated)
             {
-                throw new InvalidOperationException(
-                    $"ORDER.ACTIVATION.ERR.QueuedRequirementsRejected: orderId={nextOrder.OrderId}, result={preparationResult}.");
+                failedOrderId = nextOrder.OrderId;
+                failedOrderTypeId = nextOrder.OrderTypeId;
+                failureResult = preparationResult;
+                FailQueuedOrderAtFront(world, ref buffer, registry, preparationResult);
+                return false;
             }
 
             if (!buffer.PromoteNext())
@@ -567,8 +632,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 OrderTerminalState.Cancelled,
                 OrderFailureReason.None,
                 promoteNext: false);
-            ReleaseQueuedOrders(world, ref buffer);
-            ReleasePendingOrder(world, ref buffer);
+            ReleaseQueuedOrders(world, ref buffer, registry);
+            ReleasePendingOrder(world, ref buffer, registry);
             buffer.Clear();
         }
 
@@ -592,6 +657,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             bool hasPreparedPromotion = false;
             PreparedActivationBlackboard preparedPromotion = default;
+            OrderSubmitResult promotionFailure = OrderSubmitResult.Activated;
             if (promoteNext && buffer.HasQueued)
             {
                 Order nextOrder = buffer.GetQueued(0).Order;
@@ -604,12 +670,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     in nextConfig,
                     activeConfig,
                     out preparedPromotion);
-                if (preparationResult != OrderSubmitResult.Activated)
+                if (preparationResult == OrderSubmitResult.Activated)
                 {
-                    throw new InvalidOperationException(
-                        $"ORDER.ACTIVATION.ERR.QueuedRequirementsRejected: orderId={nextOrder.OrderId}, result={preparationResult}.");
+                    hasPreparedPromotion = true;
                 }
-                hasPreparedPromotion = true;
+                else
+                {
+                    promotionFailure = preparationResult;
+                }
             }
 
             DeactivateCurrentOrder(world, entity, ref buffer, registry);
@@ -618,7 +686,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (world.Has<OrderContinuationBuffer>(entity) && state != OrderTerminalState.Completed)
             {
                 ref var continuation = ref world.Get<OrderContinuationBuffer>(entity);
-                ReleaseContinuationsByTrigger(world, ref continuation, terminalOrder.OrderId);
+                ReleaseContinuationsByTrigger(world, ref continuation, registry, terminalOrder.OrderId);
             }
 
             var outcome = new OrderTerminalOutcome(
@@ -633,6 +701,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 CommitPreparedBlackboard(world, entity, in preparedPromotion);
             }
+            else if (promotionFailure != OrderSubmitResult.Activated)
+            {
+                FailQueuedOrderAtFront(world, ref buffer, registry, promotionFailure);
+            }
 
             return true;
         }
@@ -640,50 +712,132 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private static void ReleaseContinuationsByTrigger(
             World world,
             ref OrderContinuationBuffer continuation,
+            OrderTypeRegistry registry,
             int triggerOrderId)
         {
             Span<Order> removed = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
             int count = continuation.Extract(triggerOrderId, removed);
+            int terminalCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (removed[i].OrderId > 0)
+                {
+                    terminalCount++;
+                }
+            }
+
+            if (terminalCount > 0)
+            {
+                registry.EnsureTerminalResultCapacity(terminalCount);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 Order order = removed[i];
-                OrderSpatialPayloadOps.Release(world, in order);
+                if (order.OrderId <= 0)
+                {
+                    OrderSpatialPayloadOps.Release(world, in order);
+                    continue;
+                }
+
+                PublishReleasedTerminal(
+                    world,
+                    registry,
+                    in order,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
             }
         }
 
         public static void ReplacePending(
             World world,
             ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
             in Order order,
             int priority,
             int expireStep,
             int insertStep)
         {
-            ReleasePendingOrder(world, ref buffer);
+            ReleasePendingOrder(world, ref buffer, registry);
             buffer.SetPending(in order, priority, expireStep, insertStep);
         }
 
-        public static void ReleasePendingOrder(World world, ref OrderBuffer buffer)
+        public static void ReleasePendingOrder(World world, ref OrderBuffer buffer, OrderTypeRegistry registry)
         {
             if (!buffer.HasPending)
             {
                 return;
             }
 
-            OrderSpatialPayloadOps.Release(world, in buffer.PendingOrder.Order);
+            Order pending = buffer.PendingOrder.Order;
             buffer.ClearPendingTransferred();
+            registry.EnsureTerminalResultCapacity();
+            PublishReleasedTerminal(
+                world,
+                registry,
+                in pending,
+                OrderTerminalState.Cancelled,
+                OrderFailureReason.None);
         }
 
-        public static void ReleaseQueuedOrders(World world, ref OrderBuffer buffer)
+        public static void ReleaseQueuedOrders(World world, ref OrderBuffer buffer, OrderTypeRegistry registry)
         {
+            int count = buffer.QueuedCount;
+            if (count > 0)
+            {
+                registry.EnsureTerminalResultCapacity(count);
+            }
+
             while (buffer.QueuedCount > 0)
             {
                 QueuedOrder removed = buffer.RemoveAtTransferred(buffer.QueuedCount - 1);
-                OrderSpatialPayloadOps.Release(world, in removed.Order);
+                PublishReleasedTerminal(
+                    world,
+                    registry,
+                    in removed.Order,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
             }
         }
 
-        private static void ReleaseOldestQueuedOrderOfType(World world, ref OrderBuffer buffer, int orderTypeId)
+        public static void ReleaseQueuedOrderAt(
+            World world,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
+            int index,
+            OrderTerminalState state,
+            OrderFailureReason failureReason)
+        {
+            QueuedOrder removed = buffer.RemoveAtTransferred(index);
+            registry.EnsureTerminalResultCapacity();
+            PublishReleasedTerminal(world, registry, in removed.Order, state, failureReason);
+        }
+
+        private static void FailQueuedOrderAtFront(
+            World world,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
+            OrderSubmitResult failureResult)
+        {
+            if (!buffer.HasQueued)
+            {
+                return;
+            }
+
+            ReleaseQueuedOrderAt(
+                world,
+                ref buffer,
+                registry,
+                index: 0,
+                OrderTerminalState.Failed,
+                OrderSubmitResultSemantics.ToFailureReason(failureResult));
+        }
+
+        private static void ReleaseOldestQueuedOrderOfType(
+            World world,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
+            int orderTypeId)
         {
             for (int i = buffer.QueuedCount - 1; i >= 0; i--)
             {
@@ -692,8 +846,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     continue;
                 }
 
-                QueuedOrder removed = buffer.RemoveAtTransferred(i);
-                OrderSpatialPayloadOps.Release(world, in removed.Order);
+                ReleaseQueuedOrderAt(
+                    world,
+                    ref buffer,
+                    registry,
+                    i,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
                 return;
             }
         }
@@ -712,7 +871,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private static void ReleaseAllQueuedOrdersOfType(World world, ref OrderBuffer buffer, int orderTypeId)
+        private static void ReleaseAllQueuedOrdersOfType(
+            World world,
+            ref OrderBuffer buffer,
+            OrderTypeRegistry registry,
+            int orderTypeId)
         {
             for (int i = buffer.QueuedCount - 1; i >= 0; i--)
             {
@@ -721,8 +884,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     continue;
                 }
 
-                QueuedOrder removed = buffer.RemoveAtTransferred(i);
-                OrderSpatialPayloadOps.Release(world, in removed.Order);
+                ReleaseQueuedOrderAt(
+                    world,
+                    ref buffer,
+                    registry,
+                    i,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
             }
         }
 
@@ -737,6 +905,24 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
                 buffer.RemoveAtTransferred(i);
             }
+        }
+
+        private static void PublishReleasedTerminal(
+            World world,
+            OrderTypeRegistry registry,
+            in Order order,
+            OrderTerminalState state,
+            OrderFailureReason failureReason)
+        {
+            ValidateTerminalOutcome(in order, state, failureReason);
+            OrderSpatialPayloadOps.Release(world, in order);
+            var outcome = new OrderTerminalOutcome(
+                order.OrderId,
+                order.OrderTypeId,
+                state,
+                failureReason,
+                order.Actor);
+            registry.PublishTerminalResult(in outcome);
         }
 
         private static void ValidateTerminalOutcome(

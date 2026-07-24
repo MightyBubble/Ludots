@@ -1,58 +1,64 @@
-## GAS Composition Gate — Self Review
+﻿## GAS Composition Gate 鈥?Self Review
 
 Current closeouts and prior issue reviews follow.
 
-## Lane: RoadNetwork order admission and payload safety - 2026-07-24
+## PR #660 Final Cursor Repair Lanes - 2026-07-24
 
-- **Task / Issue**: PR #660 — typed RoadNetwork single-order admission + shared-batch route payload release
+- **Task / Issue**: Final PR #660 repair pass for RoadNetwork order admission and core order lifecycle ownership.
 - **Date**: 2026-07-24
-- **Agent / Author**: Cursor Agent (roadnetwork lane)
+- **Agent / Author**: Codex supervising Cursor Agent lanes.
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A** — reuse existing `OrderSubmitResult` + `OrderSpatialPayloadOps.Release` (no new enum/profile DSL).
+Primary delivery: A. Tighten existing order/admission/lifecycle code paths using existing queues, registries, payload ownership helpers, and terminal-result buffers.
 
-结论: **PASS**
+Result: PASS.
 
-一句话理由: Stop collapsing planning/validation failures into `RejectedQueueFull`; release already-built route payloads on mid-batch rejection.
+Reason: The repair reuses `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderSubmitter`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderSpatialPayloadOps`, and RoadNetwork showcase order plumbing. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel order runtime.
 
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| Typed single submit result | 1 | `RoadMoveOrderExpander.TrySubmit` → `OrderSubmitResult` |
-| Mid-batch payload rollback | 1 | `OrderSpatialPayloadOps.Release` before `RejectedValidation` |
-| Local order source propagation | 2 (Mod) | `RoadNetworkLocalOrderSourceSystem` returns expander result as-is |
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| RoadNetwork typed single submit result | 1 | `RoadMoveOrderExpander.TrySubmit` returns `OrderSubmitResult` |
+| RoadNetwork mid-batch payload rollback | 1 | `OrderSpatialPayloadOps.Release` on rejected route batch |
+| GlobalIntake cross-frame visibility | 1 | `OrderAdmissionResultBuffer` carry-forward |
+| Batch preview / submit alignment | 1 | `OrderSubmitter.Preview` blackboard preparation checks |
+| Queue cleanup terminal outcomes | 1 | `OrderSubmitter` release/cancel helpers publish terminal results |
+| Queued promotion typed failure | 1 | `TryPromoteNextQueuedToActive` failure output plus EntityIntake admission |
+| Continuation/incoming ownership | 1 | `OrderContinuationSystem` restore path and `OrderBufferSystem` process-before-dequeue |
 
 ### 3. Reuse list
 
-- Handlers: none new
-- Queues / Systems: `OrderQueue`, `RoadNetworkLocalOrderSourceSystem`
-- Resolvers / Registries: `OrderSubmitResultSemantics`, `OrderSpatialPayloadOps`, `RoadRoutePlanningService`
-- Existing presets / graphs: N/A
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, RoadNetwork local order source.
+- Resolvers / Registries: `OrderTypeRegistry`, `OrderRuleRegistry`, `OrderSubmitter`, `OrderSubmitResultSemantics`, `OrderSpatialPayloadOps`, `RoadRoutePlanningService`.
+- Existing presets / graphs: unchanged.
 
-### 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops
 
-N/A
+N/A.
 
 ### 5. Transaction boundary
 
-Shared-batch planning is all-or-nothing for built route spatial payloads: any mid-batch road-move planning failure releases every previously allocated payload before returning `RejectedValidation`.
+RoadNetwork shared-batch planning is all-or-nothing for built route payloads. Shared/clustered order preview must reject known blackboard preparation failures before mutating any actor. Queue cleanup and promotion failure must leave explicit terminal/admission results. Continuation and incoming paths must not lose order ownership when expected submit-preparation failures occur.
 
 ### 6. Config SSOT
 
-是否新增 JSON schema: **NO**
+Behavior remains in the existing order type catalog, input mapping data, RoadNetwork route planning services, and runtime capacity values.
+
+New JSON schema: NO.
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（禁止 validation → queue-full 压缩）
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, spawn, effect, or lifecycle runtime added
+- [x] No placement validation moved into lifecycle operations
+- [x] No fallback or queue-full reason compression added
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤（本 lane 不改 Core enum）
+A new command or RoadNetwork variant changes input mapping, effect/graph wiring, or route planning data and continues through the same admission, payload ownership, and terminal-result contract.
 
 ## PR #660 Order Admission Follow-up Repair - 2026-07-24
 
@@ -218,17 +224,16 @@ Verification on this worktree:
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A
 
-结论: PASS
+缁撹: PASS
 
-一句话理由: 本轮修复沿现有 BoardConfig/Map merge、GAS queue、ResponseChain、Effect side-effect transaction、Graph blackboard 写入管线补齐失败语义；不新增 profile enum、preset 开关、loader、registry、parallel runtime 或 fallback。
-
+涓€鍙ヨ瘽鐞嗙敱: 鏈疆淇娌跨幇鏈?BoardConfig/Map merge銆丟AS queue銆丷esponseChain銆丒ffect side-effect transaction銆丟raph blackboard 鍐欏叆绠＄嚎琛ラ綈澶辫触璇箟锛涗笉鏂板 profile enum銆乸reset 寮€鍏炽€乴oader銆乺egistry銆乸arallel runtime 鎴?fallback銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
-| 地图 loaded chunk 容量契约 | N/A | existing `BoardConfig`, map JSON assets, `BoardFactory`/board constructors |
+| 鍦板浘 loaded chunk 瀹归噺濂戠害 | N/A | existing `BoardConfig`, map JSON assets, `BoardFactory`/board constructors |
 | Ability input gate enqueue failure | N/A | existing `AbilityExecSystem`, `InputRequestQueue` |
 | ResponseChain create/depth/queue overflow | Layer 2 execution repair | existing `EffectProposalProcessingSystem`, `EffectProposalWindow`, `ProposalResponseQueue` |
 | Response prompt order request enqueue failure | N/A | existing `OrderRequestQueue` |
@@ -251,20 +256,19 @@ ResponseChain overflow and prompt enqueue failures must stop the active response
 
 ### 6. Config SSOT
 
-行为配置落在: existing map board JSON (`LoadedChunkCapacity`) and existing GAS graph/effect runtime contracts.
+琛屼负閰嶇疆钀藉湪: existing map board JSON (`LoadedChunkCapacity`) and existing GAS graph/effect runtime contracts.
 
-是否新增 JSON schema: NO.
+鏄惁鏂板 JSON schema: NO.
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn 骞宠鐨勭墿鍖栫绾?- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犮€岃涓嶆竻鐨勩€嶉粯璁?fallback
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / map runtime capacity data.
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: graph 杩炵嚎 / effect 姝ラ / map runtime capacity data.
 
 ---
 
@@ -334,15 +338,13 @@ The next Mod variant changes effect chains, graph wiring, or configured runtime 
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（沿现有 Order/GAS、Knowledge、UI Surface、Input 与 Physics2D 管线修复合并落后问题）
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A锛堟部鐜版湁 Order/GAS銆並nowledge銆乁I Surface銆両nput 涓?Physics2D 绠＄嚎淇鍚堝苟钀藉悗闂锛?
+缁撹: PASS
 
-结论: PASS
-
-一句话理由: 本轮只修正现有 showcase、验收宿主和热路径使用方式；没有新增 graph op、effect preset enum、profile 字段、loader、registry、fallback 或平行运行时。
-
+涓€鍙ヨ瘽鐞嗙敱: 鏈疆鍙慨姝ｇ幇鏈?showcase銆侀獙鏀跺涓诲拰鐑矾寰勪娇鐢ㄦ柟寮忥紱娌℃湁鏂板 graph op銆乪ffect preset enum銆乸rofile 瀛楁銆乴oader銆乺egistry銆乫allback 鎴栧钩琛岃繍琛屾椂銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
 | Interaction stress order pressure | N/A | existing `gasRuntimeCapacity` budget and existing stress fireball effect templates |
 | Relationship frontend mount | N/A | existing `AcceptanceUiHostInstaller` + `UiSurfaceHost` |
@@ -363,54 +365,46 @@ N/A. No atomic op, graph operation, effect handler, preset, registry, schema, or
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；本轮不改 mutation transaction。Order 压力修复只对齐现有入队/接单结果容量；UI 修复只补齐验收 composition root；Physics2D 修复只缓存稳定相机输入承载实体并使用 inline-query 读取统计。
-
+蹇呴』鍘熷瓙 rollback 鐨勬楠? N/A锛涙湰杞笉鏀?mutation transaction銆侽rder 鍘嬪姏淇鍙榻愮幇鏈夊叆闃?鎺ュ崟缁撴灉瀹归噺锛沀I 淇鍙ˉ榻愰獙鏀?composition root锛汸hysics2D 淇鍙紦瀛樼ǔ瀹氱浉鏈鸿緭鍏ユ壙杞藉疄浣撳苟浣跨敤 inline-query 璇诲彇缁熻銆?
 ### 6. Config SSOT
 
-行为配置落在:
+琛屼负閰嶇疆钀藉湪:
 
-- `mods/showcases/interaction/InteractionShowcaseMod/assets/game.json`：showcase 专属 Order admission / rejection capacity。
-- `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json`：stress-only fireball response-chain participation。
-- 其他修复复用现有 runtime services，不新增配置文件。
-
-是否新增 JSON schema: NO
+- `mods/showcases/interaction/InteractionShowcaseMod/assets/game.json`锛歴howcase 涓撳睘 Order admission / rejection capacity銆?- `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json`锛歴tress-only fireball response-chain participation銆?- 鍏朵粬淇澶嶇敤鐜版湁 runtime services锛屼笉鏂板閰嶇疆鏂囦欢銆?
+鏄惁鏂板 JSON schema: NO
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn/effect/order/UI/physics 平行的运行时管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加默认 fallback、兼容旁路或静默容量放过
-- [x] 未新增 registry、preset、loader 或 schema
-- [x] 热路径修复不新增 ECS 结构变更或托管集合增长
-
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn/effect/order/UI/physics 骞宠鐨勮繍琛屾椂绠＄嚎
+- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犻粯璁?fallback銆佸吋瀹规梺璺垨闈欓粯瀹归噺鏀捐繃
+- [x] 鏈柊澧?registry銆乸reset銆乴oader 鎴?schema
+- [x] 鐑矾寰勪慨澶嶄笉鏂板 ECS 缁撴瀯鍙樻洿鎴栨墭绠￠泦鍚堝闀?
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / showcase 数据预算。输入、知识可见性、UI 挂载和 Physics2D 统计继续走现有服务与系统，不修改 Core gameplay enum。
-
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: graph 杩炵嚎 / effect 姝ラ / showcase 鏁版嵁棰勭畻銆傝緭鍏ャ€佺煡璇嗗彲瑙佹€с€乁I 鎸傝浇鍜?Physics2D 缁熻缁х画璧扮幇鏈夋湇鍔′笌绯荤粺锛屼笉淇敼 Core gameplay enum銆?
 ---
 
 ## GAS Composition Gate - PR #660 Spawn Relationship Test Repair
 
-- **Task / Issue**: PR #660 merge repair for runtime spawn Team → MemberOf relationship contract
+- **Task / Issue**: PR #660 merge repair for runtime spawn Team 鈫?MemberOf relationship contract
 - **Date**: 2026-07-23
 - **Agent / Author**: Codex
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（测试装配复用现有 spawn 与 relationship 基建）
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A锛堟祴璇曡閰嶅鐢ㄧ幇鏈?spawn 涓?relationship 鍩哄缓锛?
+缁撹: PASS
 
-结论: PASS
-
-一句话理由: 本轮只让 runtime spawn 测试显式注入正式 `RelationshipRuntime`、`RelationshipTypeRegistry` 与 `TeamEntityLookup`，不新增 graph op、preset、profile 字段、loader、registry 或平行物化管线。
-
+涓€鍙ヨ瘽鐞嗙敱: 鏈疆鍙 runtime spawn 娴嬭瘯鏄惧紡娉ㄥ叆姝ｅ紡 `RelationshipRuntime`銆乣RelationshipTypeRegistry` 涓?`TeamEntityLookup`锛屼笉鏂板 graph op銆乸reset銆乸rofile 瀛楁銆乴oader銆乺egistry 鎴栧钩琛岀墿鍖栫绾裤€?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
-| Team 代表实体装配 | N/A | `TeamIdentity` + `TeamEntityLookup` |
-| MemberOf 类型注册 | N/A | `RelationshipTypeRegistry` |
-| Spawn 后队伍归属关系 | N/A | existing `RuntimeEntitySpawnSystem` + `RelationshipRuntime` |
+| Team 浠ｈ〃瀹炰綋瑁呴厤 | N/A | `TeamIdentity` + `TeamEntityLookup` |
+| MemberOf 绫诲瀷娉ㄥ唽 | N/A | `RelationshipTypeRegistry` |
+| Spawn 鍚庨槦浼嶅綊灞炲叧绯?| N/A | existing `RuntimeEntitySpawnSystem` + `RelationshipRuntime` |
 
 ### 3. Reuse list
 
@@ -425,26 +419,22 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；本轮不改生产事务，只补测试 composition root。spawn 系统继续在入队消费前显式校验 Team 代表和 MemberOf 类型，缺失即 hard failure。
-
+蹇呴』鍘熷瓙 rollback 鐨勬楠? N/A锛涙湰杞笉鏀圭敓浜т簨鍔★紝鍙ˉ娴嬭瘯 composition root銆俿pawn 绯荤粺缁х画鍦ㄥ叆闃熸秷璐瑰墠鏄惧紡鏍￠獙 Team 浠ｈ〃鍜?MemberOf 绫诲瀷锛岀己澶卞嵆 hard failure銆?
 ### 6. Config SSOT
 
-行为配置落在: existing spawn request and relationship runtime registration.
+琛屼负閰嶇疆钀藉湪: existing spawn request and relationship runtime registration.
 
-是否新增 JSON schema: NO
+鏄惁鏂板 JSON schema: NO
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加默认 fallback 或兼容旁路
-- [x] 未新增 registry、preset 或 schema
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn 骞宠鐨勭墿鍖栫绾?- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犻粯璁?fallback 鎴栧吋瀹规梺璺?- [x] 鏈柊澧?registry銆乸reset 鎴?schema
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: effect 步骤 / graph 连线。需要队伍归属时继续通过正式 relationship runtime 和 Team 代表实体表达。
-
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: effect 姝ラ / graph 杩炵嚎銆傞渶瑕侀槦浼嶅綊灞炴椂缁х画閫氳繃姝ｅ紡 relationship runtime 鍜?Team 浠ｈ〃瀹炰綋琛ㄨ揪銆?
 ---
 
 ## GAS Composition Gate - PR #660 main merge repair
@@ -580,25 +570,23 @@ Future order variants publish through the same finalizer and terminal-result buf
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（沿现有 Order/Input 管线扩展类型化结果合同；不新增 gameplay 变体）
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A锛堟部鐜版湁 Order/Input 绠＄嚎鎵╁睍绫诲瀷鍖栫粨鏋滃悎鍚岋紱涓嶆柊澧?gameplay 鍙樹綋锛?
+缁撹: PASS
 
-结论: PASS
-
-一句话理由: 修改限于现有订单接入、订单终态和输入激活入口，不新增 profile、preset、graph、lifecycle op 或平行管线。
-
+涓€鍙ヨ瘽鐞嗙敱: 淇敼闄愪簬鐜版湁璁㈠崟鎺ュ叆銆佽鍗曠粓鎬佸拰杈撳叆婵€娲诲叆鍙ｏ紝涓嶆柊澧?profile銆乸reset銆乬raph銆乴ifecycle op 鎴栧钩琛岀绾裤€?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
-| 订单接入结果 | N/A | 现有 OrderQueue、OrderSubmitter、OrderBufferSystem |
-| 订单唯一终态 | N/A | 现有 OrderSubmitter、AbilityExecSystem、OrderContinuationSystem |
-| 角色隔离激活 | N/A | 现有 InputOrderMappingSystem、EntityCommandPanelMod |
+| 璁㈠崟鎺ュ叆缁撴灉 | N/A | 鐜版湁 OrderQueue銆丱rderSubmitter銆丱rderBufferSystem |
+| 璁㈠崟鍞竴缁堟€?| N/A | 鐜版湁 OrderSubmitter銆丄bilityExecSystem銆丱rderContinuationSystem |
+| 瑙掕壊闅旂婵€娲?| N/A | 鐜版湁 InputOrderMappingSystem銆丒ntityCommandPanelMod |
 
 ### 3. Reuse list
 
-- Handlers: 现有 InputOrderMappingSystem.OrderSubmitHandler
-- Queues / Systems: OrderQueue、OrderBufferSystem、AbilityExecSystem、OrderContinuationSystem
-- Resolvers / Registries: OrderTypeRegistry、AbilityDefinitionRegistry、现有 actor/mapping 解析
+- Handlers: 鐜版湁 InputOrderMappingSystem.OrderSubmitHandler
+- Queues / Systems: OrderQueue銆丱rderBufferSystem銆丄bilityExecSystem銆丱rderContinuationSystem
+- Resolvers / Registries: OrderTypeRegistry銆丄bilityDefinitionRegistry銆佺幇鏈?actor/mapping 瑙ｆ瀽
 - Existing presets / graphs: N/A
 
 ### 4. New Layer 0 ops (if any)
@@ -607,28 +595,24 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；订单 finalize 通过单一入口保证每个 active order 只结束一次。
-
+蹇呴』鍘熷瓙 rollback 鐨勬楠? N/A锛涜鍗?finalize 閫氳繃鍗曚竴鍏ュ彛淇濊瘉姣忎釜 active order 鍙粨鏉熶竴娆°€?
 ### 6. Config SSOT
 
-行为配置落在: 现有 order type catalog 与 OrderBuffer 正式容量。
-
-是否新增 JSON schema: NO
+琛屼负閰嶇疆钀藉湪: 鐜版湁 order type catalog 涓?OrderBuffer 姝ｅ紡瀹归噺銆?
+鏄惁鏂板 JSON schema: NO
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn 骞宠鐨勭墿鍖栫绾?- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犮€岃涓嶆竻鐨勩€嶉粯璁?fallback
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: effect 步骤（本任务本身不引入 Mod gameplay 变体）
-
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: effect 姝ラ锛堟湰浠诲姟鏈韩涓嶅紩鍏?Mod gameplay 鍙樹綋锛?
 ---
 
-## GAS Composition Gate — #646 Self Review
+## GAS Composition Gate 鈥?#646 Self Review
 
 - **Task / Issue**: #646
 - **Date**: 2026-07-12
@@ -636,18 +620,16 @@ N/A
 
 ### 1. Core judgment
 
-主要交付物为 A：沿现有 Effect Phase、BuiltinHandler、EffectRequestQueue 与时间切片合同重组执行路径，不新增 profile 字段、preset 枚举、Graph VM 或平行管线。
-
-结论：PASS。
-
+涓昏浜や粯鐗╀负 A锛氭部鐜版湁 Effect Phase銆丅uiltinHandler銆丒ffectRequestQueue 涓庢椂闂村垏鐗囧悎鍚岄噸缁勬墽琛岃矾寰勶紝涓嶆柊澧?profile 瀛楁銆乸reset 鏋氫妇銆丟raph VM 鎴栧钩琛岀绾裤€?
+缁撹锛歅ASS銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer | 瀹炵幇杞戒綋 |
 |---|---:|---|
-| 瞬时效果阶段组合 | 2 | 现有 `EffectPhaseExecutor` + effect template phase bindings |
-| 预设主行为 | 0 | 现有 `BuiltinHandlerRegistry` / `BuiltinHandlers` |
-| 生命周期切片 | N/A | 现有 `EffectLifetimeSystem` + `ITimeSlicedSystem` |
-| 后续效果发布 | N/A | 现有 `EffectRequestQueue` |
+| 鐬椂鏁堟灉闃舵缁勫悎 | 2 | 鐜版湁 `EffectPhaseExecutor` + effect template phase bindings |
+| 棰勮涓昏涓?| 0 | 鐜版湁 `BuiltinHandlerRegistry` / `BuiltinHandlers` |
+| 鐢熷懡鍛ㄦ湡鍒囩墖 | N/A | 鐜版湁 `EffectLifetimeSystem` + `ITimeSlicedSystem` |
+| 鍚庣画鏁堟灉鍙戝竷 | N/A | 鐜版湁 `EffectRequestQueue` |
 
 ### 3. Reuse list
 
@@ -658,30 +640,26 @@ N/A
 
 ### 4. New Layer 0 ops
 
-N/A。
-
+N/A銆?
 ### 5. Transaction boundary
 
-瞬时效果必须在同一次正式阶段执行中完成 OnResolve、OnHit、OnApply，并在结束时清理配置上下文和扇出暂存；需要跨帧监听器所有权的效果不得进入瞬时路径。
-
+鐬椂鏁堟灉蹇呴』鍦ㄥ悓涓€娆℃寮忛樁娈垫墽琛屼腑瀹屾垚 OnResolve銆丱nHit銆丱nApply锛屽苟鍦ㄧ粨鏉熸椂娓呯悊閰嶇疆涓婁笅鏂囧拰鎵囧嚭鏆傚瓨锛涢渶瑕佽法甯х洃鍚櫒鎵€鏈夋潈鐨勬晥鏋滀笉寰楄繘鍏ョ灛鏃惰矾寰勩€?
 ### 6. Config SSOT
 
-行为仍由现有 effect template、preset catalog 和 graph 配置表达。新增的仅是 `game.json` 中启动期 GAS 快照容量；没有新增玩法 DSL。
-
+琛屼负浠嶇敱鐜版湁 effect template銆乸reset catalog 鍜?graph 閰嶇疆琛ㄨ揪銆傛柊澧炵殑浠呮槸 `game.json` 涓惎鍔ㄦ湡 GAS 蹇収瀹归噺锛涙病鏈夋柊澧炵帺娉?DSL銆?
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建平行瞬时运行时、Graph VM 或 loader
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 容量不足明确失败，预算不足明确延后，无 fallback/静默截断
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤哄钩琛岀灛鏃惰繍琛屾椂銆丟raph VM 鎴?loader
+- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 瀹归噺涓嶈冻鏄庣‘澶辫触锛岄绠椾笉瓒虫槑纭欢鍚庯紝鏃?fallback/闈欓粯鎴柇
 
 ### 8. Next variant test
 
-下一个 Mod 变体只调整 graph 连线或 effect 步骤，不修改 Core enum。
-
+涓嬩竴涓?Mod 鍙樹綋鍙皟鏁?graph 杩炵嚎鎴?effect 姝ラ锛屼笉淇敼 Core enum銆?
 ---
 
-## GAS Composition Gate — #647 Self Review
+## GAS Composition Gate 鈥?#647 Self Review
 
 - **Task / Issue**: #647
 - **Date**: 2026-07-12
@@ -689,18 +667,16 @@ N/A。
 
 ### 1. Core judgment
 
-主要交付物为 A：统一现有生产 Graph API 的服务装配和生命周期/诊断接线；没有新增 graph op、preset 字段、玩法枚举或平行运行时。
-
-结论：PASS。
-
+涓昏浜や粯鐗╀负 A锛氱粺涓€鐜版湁鐢熶骇 Graph API 鐨勬湇鍔¤閰嶅拰鐢熷懡鍛ㄦ湡/璇婃柇鎺ョ嚎锛涙病鏈夋柊澧?graph op銆乸reset 瀛楁銆佺帺娉曟灇涓炬垨骞宠杩愯鏃躲€?
+缁撹锛歅ASS銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer | 瀹炵幇杞戒綋 |
 |---|---:|---|
-| 生产图服务装配 | N/A | `GasGraphRuntimeApi.CreateProduction` + `GasGraphRuntimeProductionServices` |
-| 派生属性图执行 | 2 | 现有 `GraphProgramRegistry` + `AttributeAggregatorSystem` |
-| 输出生命周期 | N/A | 现有 `GraphOutputValueStore` + Cleanup system |
-| GAS 告警出口 | N/A | 现有 `GasBudget` / `OrderAdmissionResultBuffer` + 固定容量结构化事件缓冲 |
+| 鐢熶骇鍥炬湇鍔¤閰?| N/A | `GasGraphRuntimeApi.CreateProduction` + `GasGraphRuntimeProductionServices` |
+| 娲剧敓灞炴€у浘鎵ц | 2 | 鐜版湁 `GraphProgramRegistry` + `AttributeAggregatorSystem` |
+| 杈撳嚭鐢熷懡鍛ㄦ湡 | N/A | 鐜版湁 `GraphOutputValueStore` + Cleanup system |
+| GAS 鍛婅鍑哄彛 | N/A | 鐜版湁 `GasBudget` / `OrderAdmissionResultBuffer` + 鍥哄畾瀹归噺缁撴瀯鍖栦簨浠剁紦鍐?|
 
 ### 3. Reuse list
 
@@ -711,30 +687,25 @@ N/A。
 
 ### 4. New Layer 0 ops
 
-N/A。
-
+N/A銆?
 ### 5. Transaction boundary
 
-生产 Graph API 构造要求完整服务集合，缺失任一正式依赖立即失败；owner 版本退役时，输出槽位、哈希索引和旧句柄在同一 Cleanup 更新中一起失效。
-
+鐢熶骇 Graph API 鏋勯€犺姹傚畬鏁存湇鍔￠泦鍚堬紝缂哄け浠讳竴姝ｅ紡渚濊禆绔嬪嵆澶辫触锛沷wner 鐗堟湰閫€褰规椂锛岃緭鍑烘Ы浣嶃€佸搱甯岀储寮曞拰鏃у彞鏌勫湪鍚屼竴 Cleanup 鏇存柊涓竴璧峰け鏁堛€?
 ### 6. Config SSOT
 
-没有新增玩法配置 schema。生产服务来自引擎唯一强类型服务集合；诊断指标来自 `GasBudget` 与订单接入结果。
-
+娌℃湁鏂板鐜╂硶閰嶇疆 schema銆傜敓浜ф湇鍔℃潵鑷紩鎿庡敮涓€寮虹被鍨嬫湇鍔￠泦鍚堬紱璇婃柇鎸囨爣鏉ヨ嚜 `GasBudget` 涓庤鍗曟帴鍏ョ粨鏋溿€?
 ### 7. Red flag scan
 
-- [x] 未新增 profile enum 或 graph op
-- [x] 未建立第二套 Graph API 运行时
-- [x] 未用全 ECS 表扫描或定期全清实现输出回收
-- [x] 缺服务、诊断缓冲溢出和计数器回退均 hard-stop
+- [x] 鏈柊澧?profile enum 鎴?graph op
+- [x] 鏈缓绔嬬浜屽 Graph API 杩愯鏃?- [x] 鏈敤鍏?ECS 琛ㄦ壂鎻忔垨瀹氭湡鍏ㄦ竻瀹炵幇杈撳嚭鍥炴敹
+- [x] 缂烘湇鍔°€佽瘖鏂紦鍐叉孩鍑哄拰璁℃暟鍣ㄥ洖閫€鍧?hard-stop
 
 ### 8. Next variant test
 
-下一个 Mod 变体继续通过现有 graph 连线和服务集合接入，不修改 Core enum。
-
+涓嬩竴涓?Mod 鍙樹綋缁х画閫氳繃鐜版湁 graph 杩炵嚎鍜屾湇鍔￠泦鍚堟帴鍏ワ紝涓嶄慨鏀?Core enum銆?
 ---
 
-## GAS Composition Gate — #653 Self Review
+## GAS Composition Gate 鈥?#653 Self Review
 
 - **Task / Issue**: #653
 - **Date**: 2026-07-12
@@ -742,17 +713,15 @@ N/A。
 
 ### 1. Core judgment
 
-主要交付物为 A：收口现有有效技能槽位解析与输入/展示接线；没有新增 ability profile、preset、graph op 或第二套优先级规则。
-
-结论：PASS。
-
+涓昏浜や粯鐗╀负 A锛氭敹鍙ｇ幇鏈夋湁鏁堟妧鑳芥Ы浣嶈В鏋愪笌杈撳叆/灞曠ず鎺ョ嚎锛涙病鏈夋柊澧?ability profile銆乸reset銆乬raph op 鎴栫浜屽浼樺厛绾ц鍒欍€?
+缁撹锛歅ASS銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer | 瀹炵幇杞戒綋 |
 |---|---:|---|
-| 有效技能槽位解析 | N/A | 唯一 `AbilitySlotResolver.Resolve` |
-| 输入覆盖 | N/A | `SkillMappingOverrideResolver` |
-| 面板与实体信息展示 | N/A | 现有 EntityCommandPanel / EntityInfo 消费者 |
+| 鏈夋晥鎶€鑳芥Ы浣嶈В鏋?| N/A | 鍞竴 `AbilitySlotResolver.Resolve` |
+| 杈撳叆瑕嗙洊 | N/A | `SkillMappingOverrideResolver` |
+| 闈㈡澘涓庡疄浣撲俊鎭睍绀?| N/A | 鐜版湁 EntityCommandPanel / EntityInfo 娑堣垂鑰?|
 
 ### 3. Reuse list
 
@@ -763,30 +732,24 @@ N/A。
 
 ### 4. New Layer 0 ops
 
-N/A。
-
+N/A銆?
 ### 5. Transaction boundary
 
-同一 actor/slot 的 base、form、item、granted 来源必须一起参与一次确定性解析；不完整重载被删除，生产调用无法再省略 item 层。
-
+鍚屼竴 actor/slot 鐨?base銆乫orm銆乮tem銆乬ranted 鏉ユ簮蹇呴』涓€璧峰弬涓庝竴娆＄‘瀹氭€цВ鏋愶紱涓嶅畬鏁撮噸杞借鍒犻櫎锛岀敓浜ц皟鐢ㄦ棤娉曞啀鐪佺暐 item 灞傘€?
 ### 6. Config SSOT
 
-没有新增配置 schema。优先级 SSOT 固定为 `granted > item > form > base`，输入覆盖继续来自有效 `AbilityDefinition.InputBindingOverride`。
-
+娌℃湁鏂板閰嶇疆 schema銆備紭鍏堢骇 SSOT 鍥哄畾涓?`granted > item > form > base`锛岃緭鍏ヨ鐩栫户缁潵鑷湁鏁?`AbilityDefinition.InputBindingOverride`銆?
 ### 7. Red flag scan
 
-- [x] 未新增 profile enum 或输入 fallback
-- [x] 未在消费者复制第二套优先级梯子
-- [x] 不完整 resolver 重载已删除
-- [x] 预热后的输入覆盖解析 0 分配
+- [x] 鏈柊澧?profile enum 鎴栬緭鍏?fallback
+- [x] 鏈湪娑堣垂鑰呭鍒剁浜屽浼樺厛绾ф瀛?- [x] 涓嶅畬鏁?resolver 閲嶈浇宸插垹闄?- [x] 棰勭儹鍚庣殑杈撳叆瑕嗙洊瑙ｆ瀽 0 鍒嗛厤
 
 ### 8. Next variant test
 
-新增技能来源必须扩展唯一 resolver 合同和全链路一致性测试，不得只改单个消费者。
-
+鏂板鎶€鑳芥潵婧愬繀椤绘墿灞曞敮涓€ resolver 鍚堝悓鍜屽叏閾捐矾涓€鑷存€ф祴璇曪紝涓嶅緱鍙敼鍗曚釜娑堣垂鑰呫€?
 ---
 
-## GAS Composition Gate — #651 Production Closeout
+## GAS Composition Gate 鈥?#651 Production Closeout
 
 - **Task / Issue**: #651
 - **Date**: 2026-07-12
@@ -794,17 +757,15 @@ N/A。
 
 ### 1. Core judgment
 
-主要交付物为 A：沿现有 InputOrderMapping / OrderQueue 管线贯穿 actor context 与类型化接单结果；没有新增面板专用 order 管线。
-
-结论：PASS。
-
+涓昏浜や粯鐗╀负 A锛氭部鐜版湁 InputOrderMapping / OrderQueue 绠＄嚎璐┛ actor context 涓庣被鍨嬪寲鎺ュ崟缁撴灉锛涙病鏈夋柊澧為潰鏉夸笓鐢?order 绠＄嚎銆?
+缁撹锛歅ASS銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer | 瀹炵幇杞戒綋 |
 |---|---:|---|
-| 程序化激活 | N/A | `InputOrderMappingSystem.ActivateMappedAction` |
-| 接单结果 | N/A | `OrderSubmitResult` + `OrderQueue.Submit` |
-| 瞄准主体固定 | N/A | 现有 aiming state + `InputOrderActivationContext` |
+| 绋嬪簭鍖栨縺娲?| N/A | `InputOrderMappingSystem.ActivateMappedAction` |
+| 鎺ュ崟缁撴灉 | N/A | `OrderSubmitResult` + `OrderQueue.Submit` |
+| 鐬勫噯涓讳綋鍥哄畾 | N/A | 鐜版湁 aiming state + `InputOrderActivationContext` |
 
 ### 3. Reuse list
 
@@ -815,27 +776,21 @@ N/A。
 
 ### 4. New Layer 0 ops
 
-N/A。
-
+N/A銆?
 ### 5. Transaction boundary
 
-一次激活固定 actor/player；进入瞄准后确认、取消和拒绝继续使用该上下文。提交结果携带 actor、orderId 和共享 `OrderSubmitResult`。
-
+涓€娆℃縺娲诲浐瀹?actor/player锛涜繘鍏ョ瀯鍑嗗悗纭銆佸彇娑堝拰鎷掔粷缁х画浣跨敤璇ヤ笂涓嬫枃銆傛彁浜ょ粨鏋滄惡甯?actor銆乷rderId 鍜屽叡浜?`OrderSubmitResult`銆?
 ### 6. Config SSOT
 
-没有新增配置 schema；mapping、order type 和 actor source 继续来自现有正式配置与服务。
-
+娌℃湁鏂板閰嶇疆 schema锛沵apping銆乷rder type 鍜?actor source 缁х画鏉ヨ嚜鐜版湁姝ｅ紡閰嶇疆涓庢湇鍔°€?
 ### 7. Red flag scan
 
-- [x] 无 actor 的程序化入口已删除
-- [x] `void OrderSubmitHandler` 已删除
-- [x] 显式 actor 不回退 provider 或 collection fan-out
-- [x] aiming actor 失效返回 `RejectedInvalidActor`
+- [x] 鏃?actor 鐨勭▼搴忓寲鍏ュ彛宸插垹闄?- [x] `void OrderSubmitHandler` 宸插垹闄?- [x] 鏄惧紡 actor 涓嶅洖閫€ provider 鎴?collection fan-out
+- [x] aiming actor 澶辨晥杩斿洖 `RejectedInvalidActor`
 
 ### 8. Next variant test
 
-新入口必须返回共享接单结果，不得恢复 bool/void 或临时替换 actor provider。
-
+鏂板叆鍙ｅ繀椤昏繑鍥炲叡浜帴鍗曠粨鏋滐紝涓嶅緱鎭㈠ bool/void 鎴栦复鏃舵浛鎹?actor provider銆?
 ---
 
 ## GAS Composition Gate - #667 Tag Transaction Closeout
@@ -1085,53 +1040,46 @@ A new Mod fan-out variant changes an effect step or graph connection and continu
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（修复现有 effect transaction 与 Order continuation 管线的校验、预装和 rollback/ownership 合同；不新增玩法变体）
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A锛堜慨澶嶇幇鏈?effect transaction 涓?Order continuation 绠＄嚎鐨勬牎楠屻€侀瑁呭拰 rollback/ownership 鍚堝悓锛涗笉鏂板鐜╂硶鍙樹綋锛?
+缁撹: PASS
 
-结论: PASS
-
-一句话理由: 修改仅收紧现有 `EffectPhaseSideEffectTransaction`、`EntityRuntimeStatePlan`、`CompositeOrderPlanner`、`OrderSubmitter` 和 `OrderContinuationSystem`，不新增 graph op、preset、profile、registry、loader 或平行运行时。
-
+涓€鍙ヨ瘽鐞嗙敱: 淇敼浠呮敹绱х幇鏈?`EffectPhaseSideEffectTransaction`銆乣EntityRuntimeStatePlan`銆乣CompositeOrderPlanner`銆乣OrderSubmitter` 鍜?`OrderContinuationSystem`锛屼笉鏂板 graph op銆乸reset銆乸rofile銆乺egistry銆乴oader 鎴栧钩琛岃繍琛屾椂銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
-| persistent effect side-effect rollback | 1 | 现有 `EffectPhaseSideEffectTransaction` + `EffectApplicationSystem` |
-| order runtime-state assembly | N/A | 现有 `EntityRuntimeStatePlan`、scalar/batch/runtime spawn |
-| continuation payload ownership | N/A | 现有 `OrderContinuationBuffer`、`OrderSubmitter`、`OrderContinuationSystem`、`CompositeOrderPlanner` |
+| persistent effect side-effect rollback | 1 | 鐜版湁 `EffectPhaseSideEffectTransaction` + `EffectApplicationSystem` |
+| order runtime-state assembly | N/A | 鐜版湁 `EntityRuntimeStatePlan`銆乻calar/batch/runtime spawn |
+| continuation payload ownership | N/A | 鐜版湁 `OrderContinuationBuffer`銆乣OrderSubmitter`銆乣OrderContinuationSystem`銆乣CompositeOrderPlanner` |
 
 ### 3. Reuse list
 
-- Handlers: 现有 Graph `ModifyAttributeAdd` / `ModifyAttributeSet` 入口
-- Queues / Systems: `EffectApplicationSystem`、`OrderQueue`、`OrderContinuationSystem`
-- Resolvers / Registries: `EntityRuntimeStatePlan`、`OrderTypeRegistry`
-- Existing presets / graphs: 不变
+- Handlers: 鐜版湁 Graph `ModifyAttributeAdd` / `ModifyAttributeSet` 鍏ュ彛
+- Queues / Systems: `EffectApplicationSystem`銆乣OrderQueue`銆乣OrderContinuationSystem`
+- Resolvers / Registries: `EntityRuntimeStatePlan`銆乣OrderTypeRegistry`
+- Existing presets / graphs: 涓嶅彉
 
 ### 4. New Layer 0 ops (if any)
 
-N/A。没有新增 handler、graph op 或生命周期原子操作。
-
+N/A銆傛病鏈夋柊澧?handler銆乬raph op 鎴栫敓鍛藉懆鏈熷師瀛愭搷浣溿€?
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: persistent effect 的全部 staged 属性、标签、fan-out、listener、presentation/event side effects；任一无效属性目标必须在 commit 前失败并由现有 application rollback 撤销。Order continuation 在注册后持有 follow-up payload；Failed/Cancelled、registration failure 或 primary admission failure必须释放一次，Completed 仅把所有权转移到正式 Order submission 链。
-
+蹇呴』鍘熷瓙 rollback 鐨勬楠? persistent effect 鐨勫叏閮?staged 灞炴€с€佹爣绛俱€乫an-out銆乴istener銆乸resentation/event side effects锛涗换涓€鏃犳晥灞炴€х洰鏍囧繀椤诲湪 commit 鍓嶅け璐ュ苟鐢辩幇鏈?application rollback 鎾ら攢銆侽rder continuation 鍦ㄦ敞鍐屽悗鎸佹湁 follow-up payload锛汧ailed/Cancelled銆乺egistration failure 鎴?primary admission failure蹇呴』閲婃斁涓€娆★紝Completed 浠呮妸鎵€鏈夋潈杞Щ鍒版寮?Order submission 閾俱€?
 ### 6. Config SSOT
 
-行为配置仍位于现有 effect template/graph 与 order type catalog。
-
-是否新增 JSON schema: NO
+琛屼负閰嶇疆浠嶄綅浜庣幇鏈?effect template/graph 涓?order type catalog銆?
+鏄惁鏂板 JSON schema: NO
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn/effect/order 平行的运行时管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加默认 fallback 或兼容旁路
-- [x] 未新增 registry、preset 或 schema
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn/effect/order 骞宠鐨勮繍琛屾椂绠＄嚎
+- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犻粯璁?fallback 鎴栧吋瀹规梺璺?- [x] 鏈柊澧?registry銆乸reset 鎴?schema
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤；Order 变体继续使用同一 runtime-state installer、continuation buffer 和 terminal-result 管线，不修改 Core gameplay enum。
-
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: graph 杩炵嚎 / effect 姝ラ锛汷rder 鍙樹綋缁х画浣跨敤鍚屼竴 runtime-state installer銆乧ontinuation buffer 鍜?terminal-result 绠＄嚎锛屼笉淇敼 Core gameplay enum銆?
 ---
 
 ## GAS Composition Gate - PR #660 Lifetime Phase Atomicity
@@ -1262,18 +1210,16 @@ A new Mod collection highlight variant changes performer definition rules or col
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（收紧现有 GAS 测试的 registry / attribute SSOT 使用；不新增 gameplay 变体）
+鏂板彉浣撲富瑕佷氦浠樼墿鏄紙A/B/C/D锛? A锛堟敹绱х幇鏈?GAS 娴嬭瘯鐨?registry / attribute SSOT 浣跨敤锛涗笉鏂板 gameplay 鍙樹綋锛?
+缁撹: PASS
 
-结论: PASS
-
-一句话理由: 修改只让 PR 新增/改过的 GAS 测试显式隔离全局 id registry，并通过 `AttributeRegistry` 使用测试专属属性 id；没有新增 graph op、effect preset、profile 字段、loader、registry 或平行运行时。
-
+涓€鍙ヨ瘽鐞嗙敱: 淇敼鍙 PR 鏂板/鏀硅繃鐨?GAS 娴嬭瘯鏄惧紡闅旂鍏ㄥ眬 id registry锛屽苟閫氳繃 `AttributeRegistry` 浣跨敤娴嬭瘯涓撳睘灞炴€?id锛涙病鏈夋柊澧?graph op銆乪ffect preset銆乸rofile 瀛楁銆乴oader銆乺egistry 鎴栧钩琛岃繍琛屾椂銆?
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+| 姝ラ/鑳藉姏 | Layer (0/1/2/3) | 瀹炵幇杞戒綋 |
 |-----------|-----------------|----------|
-| Ability form set 测试隔离 | N/A | `TagStateInstallationContractTests` fixture setup/teardown |
-| Mud demo 测试属性 SSOT | N/A | `AttributeRegistry` + `AttributeBuffer.SetBase` |
+| Ability form set 娴嬭瘯闅旂 | N/A | `TagStateInstallationContractTests` fixture setup/teardown |
+| Mud demo 娴嬭瘯灞炴€?SSOT | N/A | `AttributeRegistry` + `AttributeBuffer.SetBase` |
 
 ### 3. Reuse list
 
@@ -1288,22 +1234,20 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；本次不改生产 mutation transaction。测试只消除跨用例全局状态污染，避免 full suite 中 registry freeze 和 attribute constraints 影响后续用例。
-
+蹇呴』鍘熷瓙 rollback 鐨勬楠? N/A锛涙湰娆′笉鏀圭敓浜?mutation transaction銆傛祴璇曞彧娑堥櫎璺ㄧ敤渚嬪叏灞€鐘舵€佹薄鏌擄紝閬垮厤 full suite 涓?registry freeze 鍜?attribute constraints 褰卞搷鍚庣画鐢ㄤ緥銆?
 ### 6. Config SSOT
 
-行为配置落在: existing test graph instructions and registry ids.
+琛屼负閰嶇疆钀藉湪: existing test graph instructions and registry ids.
 
-是否新增 JSON schema: NO
+鏄惁鏂板 JSON schema: NO
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn/effect/order 平行的运行时管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加默认 fallback 或兼容旁路
-- [x] 未新增 registry、preset 或 schema
+- [x] 鏈柊澧?profile inherit/placement enum
+- [x] 鏈柊寤轰笌 spawn/effect/order 骞宠鐨勮繍琛屾椂绠＄嚎
+- [x] 鏈妸 placement 鏍￠獙濉炶繘 lifecycle op
+- [x] 鏈坊鍔犻粯璁?fallback 鎴栧吋瀹规梺璺?- [x] 鏈柊澧?registry銆乸reset 鎴?schema
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤。测试若需要属性或 form set id，继续从正式 registry 取 id，不硬编码共享全局槽位。
+銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: graph 杩炵嚎 / effect 姝ラ銆傛祴璇曡嫢闇€瑕佸睘鎬ф垨 form set id锛岀户缁粠姝ｅ紡 registry 鍙?id锛屼笉纭紪鐮佸叡浜叏灞€妲戒綅銆?
