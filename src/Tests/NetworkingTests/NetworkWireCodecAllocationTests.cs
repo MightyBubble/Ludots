@@ -46,7 +46,7 @@ public sealed class NetworkWireCodecAllocationTests
         var resync = new NetworkResyncRequired(1, NetworkResyncReason.BaselineExpired, 11, 2);
 
         var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 4);
-        var channel = new AuthoritativeReplicationChannel(4, 2, disclosureLog);
+        var channel = new AuthoritativeReplicationChannel(new NetworkEntityTable(4), 4, 2, disclosureLog);
         var packet = new ReplicationPacketBuffer(4);
         var decodePacket = new ReplicationPacketBuffer(4);
         var states = new[]

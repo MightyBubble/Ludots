@@ -207,7 +207,23 @@ namespace Ludots.Tests.Architecture
         }
 
         private static AuthoritativeReplicationChannel Channel(int capacity)
-            => new(capacity, baselineCapacity: 2, new ReplicationDisclosureChangeLog(capacity * 4));
+        {
+            using World world = World.Create();
+            var entities = new NetworkEntityTable(capacity);
+            for (int i = 0; i < capacity; i++)
+            {
+                if (!entities.TryAllocate(world.Create(), out NetworkEntityHandle handle) || handle.Slot != i)
+                {
+                    throw new InvalidOperationException("Failed to seed the authoritative entity table for replication tests.");
+                }
+            }
+
+            return new AuthoritativeReplicationChannel(
+                entities,
+                capacity,
+                baselineCapacity: 2,
+                new ReplicationDisclosureChangeLog(capacity * 4));
+        }
 
         private static ClientWorldReplicationBridge Bridge(World world, int entityCapacity, ulong sessionEpoch)
         {

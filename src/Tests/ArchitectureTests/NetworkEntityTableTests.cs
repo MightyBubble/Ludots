@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Networking.Replication;
 using NUnit.Framework;
@@ -127,6 +128,31 @@ namespace Ludots.Tests.Architecture
             Assert.That(allocated, Is.EqualTo(0));
             Assert.That(table.Count, Is.EqualTo(0));
             Assert.That(table.AvailableCapacity, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Access_FromAnotherThreadFailsInsteadOfPretendingToBeThreadSafe()
+        {
+            using World world = World.Create();
+            Entity entity = world.Create();
+            var table = new NetworkEntityTable(capacity: 1);
+            Assert.That(table.TryAllocate(entity, out NetworkEntityHandle handle), Is.True);
+            Exception? observed = null;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    table.TryResolve(handle, out _);
+                }
+                catch (Exception exception)
+                {
+                    observed = exception;
+                }
+            }).GetAwaiter().GetResult();
+
+            Assert.That(observed, Is.TypeOf<InvalidOperationException>());
+            Assert.That(observed!.Message, Does.Contain("authoritative fixed-frame thread"));
         }
     }
 }

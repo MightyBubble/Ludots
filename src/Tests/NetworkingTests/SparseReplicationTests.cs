@@ -37,6 +37,7 @@ public sealed class SparseReplicationTests
             commandChannel: new ChannelId(1),
             stateChannel: new ChannelId(2));
         var channel = new AuthoritativeReplicationChannel(
+            new NetworkEntityTable(capacity.GlobalEntityCapacity),
             perSeatCapacity,
             baselineCapacity: 32,
             new ReplicationDisclosureChangeLog(perSeatCapacity));
@@ -55,21 +56,28 @@ public sealed class SparseReplicationTests
     public void Delta_WhenEntireFiveHundredTwelveEntityAreaChanges_EmitsAllConcealsAndReveals()
     {
         const int perSeatCapacity = 512;
+        using World world = World.Create();
+        var entities = new NetworkEntityTable(capacity: perSeatCapacity * 2);
         var initialStates = new ReplicatedEntityState[perSeatCapacity];
         var initialDisclosures = new ReplicationDisclosureInput[perSeatCapacity];
         var nextStates = new ReplicatedEntityState[perSeatCapacity];
         var nextDisclosures = new ReplicationDisclosureInput[perSeatCapacity];
         for (int i = 0; i < perSeatCapacity; i++)
         {
-            var initial = new NetworkEntityHandle(slot: i, generation: 1);
-            var next = new NetworkEntityHandle(slot: perSeatCapacity + i, generation: 1);
+            Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle initial), Is.True);
             initialStates[i] = State(initial, revision: 1, value: i);
             initialDisclosures[i] = Visible(initial);
+        }
+
+        for (int i = 0; i < perSeatCapacity; i++)
+        {
+            Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle next), Is.True);
             nextStates[i] = State(next, revision: 1, value: perSeatCapacity + i);
             nextDisclosures[i] = Visible(next);
         }
 
         var channel = new AuthoritativeReplicationChannel(
+            entities,
             perSeatCapacity,
             baselineCapacity: 2,
             new ReplicationDisclosureChangeLog(capacity: perSeatCapacity * 3));
@@ -119,10 +127,13 @@ public sealed class SparseReplicationTests
     [Test]
     public void CompactMerge_PreservesGenerationRevealConcealRemovalAndResyncSemantics()
     {
-        var replaced = new NetworkEntityHandle(slot: 99_998, generation: 1);
-        var replacement = new NetworkEntityHandle(slot: 99_998, generation: 2);
-        var concealed = new NetworkEntityHandle(slot: 99_999, generation: 1);
+        using World world = World.Create();
+        var entities = new NetworkEntityTable(capacity: 512);
+        Entity replacedEntity = world.Create();
+        Assert.That(entities.TryAllocate(replacedEntity, out NetworkEntityHandle replaced), Is.True);
+        Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle concealed), Is.True);
         var channel = new AuthoritativeReplicationChannel(
+            entities,
             replicationEntityCapacityPerSeat: 512,
             baselineCapacity: 2,
             new ReplicationDisclosureChangeLog(capacity: 16));
@@ -148,6 +159,9 @@ public sealed class SparseReplicationTests
                 Has.All.Property(nameof(ReplicationDisclosureChange.Kind)).EqualTo(ReplicationDisclosureChangeKind.Reveal));
         });
 
+        Assert.That(entities.TryRelease(replaced), Is.True);
+        world.Destroy(replacedEntity);
+        Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle replacement), Is.True);
         var nextStates = new[] { State(replacement, revision: 1, value: 30) };
         var nextDisclosures = new[]
         {
@@ -175,8 +189,16 @@ public sealed class SparseReplicationTests
             Is.EqualTo(ReplicationBuildResult.BaselineUnavailable));
         Assert.That(packet.Upserts.Length, Is.Zero);
 
+        Assert.That(entities.TryRelease(replacement), Is.True);
         Assert.That(
-            channel.BuildDelta(7, 106, 3, 2, ReadOnlySpan<ReplicatedEntityState>.Empty, nextDisclosures, packet),
+            channel.BuildDelta(
+                7,
+                106,
+                3,
+                2,
+                ReadOnlySpan<ReplicatedEntityState>.Empty,
+                ReadOnlySpan<ReplicationDisclosureInput>.Empty,
+                packet),
             Is.EqualTo(ReplicationBuildResult.Success));
         Assert.Multiple(() =>
         {
@@ -192,6 +214,7 @@ public sealed class SparseReplicationTests
         var first = new NetworkEntityHandle(slot: 1, generation: 1);
         var second = new NetworkEntityHandle(slot: 2, generation: 1);
         var channel = new AuthoritativeReplicationChannel(
+            new NetworkEntityTable(capacity: 3),
             replicationEntityCapacityPerSeat: 2,
             baselineCapacity: 1,
             new ReplicationDisclosureChangeLog(capacity: 2));
@@ -220,6 +243,7 @@ public sealed class SparseReplicationTests
 
         Assert.That(
             new AuthoritativeReplicationChannel(
+                    new NetworkEntityTable(capacity: 3),
                     replicationEntityCapacityPerSeat: 1,
                     baselineCapacity: 1,
                     new ReplicationDisclosureChangeLog(capacity: 2))
@@ -234,17 +258,22 @@ public sealed class SparseReplicationTests
     }
 
     [Test]
-    public void Bridge_GlobalOneHundredThousand_ProjectsOnlyOrderedInterestWithoutGlobalTrackingArray()
+    public void Bridge_GlobalOneHundredThousand_BuildsSnapshotForOnlyFiveHundredTwelveOrderedInterest()
     {
+        const int interestCount = 512;
         using World world = World.Create();
         Entity viewer = world.Create();
-        Entity target = world.Create(
-            new ReplicationSchemaRef(schemaId: 1),
-            new TestReplicatedData(revision: 1, value: 42));
         var entities = new NetworkEntityTable(capacity: 100_000);
-        Assert.That(entities.TryAllocate(target, out NetworkEntityHandle handle), Is.True);
-        var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
-        knowledge.Upsert(viewer, target, VisibleDisclosure());
+        var handles = new NetworkEntityHandle[interestCount];
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: interestCount);
+        for (int i = 0; i < interestCount; i++)
+        {
+            Entity target = world.Create(
+                new ReplicationSchemaRef(schemaId: 1),
+                new TestReplicatedData(revision: 1, value: i));
+            Assert.That(entities.TryAllocate(target, out handles[i]), Is.True);
+            knowledge.Upsert(viewer, target, VisibleDisclosure());
+        }
         var projector = new CountingProjector();
         var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
         Assert.That(projectors.Register(1, projector), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
@@ -256,10 +285,16 @@ public sealed class SparseReplicationTests
             viewer,
             projectors,
             replicationEntityCapacityPerSeat: 512);
+        var channel = new AuthoritativeReplicationChannel(
+            entities,
+            replicationEntityCapacityPerSeat: 512,
+            baselineCapacity: 2,
+            new ReplicationDisclosureChangeLog(capacity: 1024));
         var output = new ReplicationProjectionBuffer(entityCapacity: 512);
+        var packet = new ReplicationPacketBuffer(entityCapacity: 512);
 
         Assert.That(
-            bridge.Project(new[] { handle }, currentTick: 1, output),
+            bridge.BuildFull(channel, 7, 1, 1, handles, output, packet),
             Is.EqualTo(ReplicationBridgeResult.Success));
 
         FieldInfo[] fields = typeof(AuthoritativeWorldReplicationBridge).GetFields(
@@ -268,8 +303,9 @@ public sealed class SparseReplicationTests
         {
             Assert.That(bridge.GlobalEntityCapacity, Is.EqualTo(100_000));
             Assert.That(bridge.ReplicationEntityCapacityPerSeat, Is.EqualTo(512));
-            Assert.That(output.States.Length, Is.EqualTo(1));
-            Assert.That(projector.ProjectCalls, Is.EqualTo(1));
+            Assert.That(output.States.Length, Is.EqualTo(interestCount));
+            Assert.That(packet.Upserts.Length, Is.EqualTo(interestCount));
+            Assert.That(projector.ProjectCalls, Is.EqualTo(interestCount));
             Assert.That(fields, Has.None.Matches<FieldInfo>(field => field.FieldType.IsArray));
         });
     }

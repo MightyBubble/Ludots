@@ -24,6 +24,7 @@ namespace Ludots.Tests.Architecture
             };
             var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 4);
             var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 4),
                 replicationEntityCapacityPerSeat: 4,
                 baselineCapacity: 2,
                 disclosureLog);
@@ -59,7 +60,7 @@ namespace Ludots.Tests.Architecture
             var despawned = new NetworkEntityHandle(slot: 1, generation: 1);
             var spawned = new NetworkEntityHandle(slot: 2, generation: 1);
             var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 16);
-            var channel = new AuthoritativeReplicationChannel(4, 3, disclosureLog);
+            var channel = new AuthoritativeReplicationChannel(new NetworkEntityTable(4), 4, 3, disclosureLog);
             var packet = new ReplicationPacketBuffer(entityCapacity: 4);
             var mirror = new ClientReplicationMirror(entityCapacity: 4, sessionEpoch: 7);
             var initialStates = new[]
@@ -123,6 +124,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 10) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 2),
                 replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(capacity: 8));
@@ -145,9 +147,16 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void Delta_LostVisionConcealsKnownEntityWithoutLeakingUndisclosedEnemy()
         {
+            using Arch.Core.World world = Arch.Core.World.Create();
             var previouslyVisible = new NetworkEntityHandle(slot: 0, generation: 1);
             var neverDisclosed = new NetworkEntityHandle(slot: 1, generation: 1);
+            var entities = new NetworkEntityTable(capacity: 3);
+            Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle allocatedVisible), Is.True);
+            Assert.That(entities.TryAllocate(world.Create(), out NetworkEntityHandle allocatedHidden), Is.True);
+            Assert.That(allocatedVisible, Is.EqualTo(previouslyVisible));
+            Assert.That(allocatedHidden, Is.EqualTo(neverDisclosed));
             var channel = new AuthoritativeReplicationChannel(
+                entities,
                 replicationEntityCapacityPerSeat: 3,
                 baselineCapacity: 3,
                 new ReplicationDisclosureChangeLog(capacity: 8));
@@ -210,6 +219,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 10) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 2),
                 replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 3,
                 new ReplicationDisclosureChangeLog(capacity: 8));
@@ -221,6 +231,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(channel.BuildDelta(7, 106, 3, 1, states, disclosures, laterDeltaFromOne), Is.EqualTo(ReplicationBuildResult.Success));
 
             var wrongEpochChannel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 2),
                 replicationEntityCapacityPerSeat: 2,
                 baselineCapacity: 1,
                 new ReplicationDisclosureChangeLog(capacity: 2));
@@ -254,7 +265,7 @@ namespace Ludots.Tests.Architecture
             };
             var disclosures = new[] { Visible(first), Visible(second) };
             var log = new ReplicationDisclosureChangeLog(capacity: 1);
-            var channel = new AuthoritativeReplicationChannel(2, 1, log);
+            var channel = new AuthoritativeReplicationChannel(new NetworkEntityTable(2), 2, 1, log);
             var packet = new ReplicationPacketBuffer(entityCapacity: 2);
 
             Assert.That(
@@ -272,6 +283,7 @@ namespace Ludots.Tests.Architecture
             var states = new[] { State(entity, revision: 1, value: 1) };
             var disclosures = new[] { Visible(entity) };
             var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 1),
                 replicationEntityCapacityPerSeat: 1,
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(capacity: 1));
