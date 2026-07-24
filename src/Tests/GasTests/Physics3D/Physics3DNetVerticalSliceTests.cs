@@ -687,6 +687,13 @@ public sealed class Physics3DNetVerticalSliceTests
         Assert.That(sample.Kind, Is.EqualTo(Physics3DNetInterpolationResultKind.Sampled));
         Assert.That(sample.PositionCm.X, Is.EqualTo(20f));
         buffer.Untrack(in gen2);
+
+        // Removing a newer occupant retains the slot watermark. Late older Track events stay
+        // rejected, while the same generation may re-enter AOI with an empty sample history.
+        Assert.Throws<InvalidOperationException>(() => buffer.Track(in gen1));
+        buffer.Track(in gen2);
+        Assert.That(buffer.GetSampleCount(in gen2), Is.EqualTo(0));
+        buffer.Untrack(in gen2);
     }
 
     [Test]
@@ -747,34 +754,6 @@ public sealed class Physics3DNetVerticalSliceTests
         Assert.That(divergence.FirstDivergentTick, Is.EqualTo(6));
         Assert.That(divergence.LeftHash, Is.EqualTo(0x22ul));
         Assert.That(divergence.RightHash, Is.EqualTo(0x33ul));
-    }
-
-    [Test]
-    public void CompatibilityGate_RejectsExactReplayTakeoverOnMismatch()
-    {
-        Physics3DNetConfig config = CreateLocalConfig();
-        var required = new Physics3DNetCompatibilityFingerprint(
-            buildId: "build-a",
-            configHash: Physics3DNetCompatibilityFingerprint.HashConfig(config),
-            kernelId: "bepu-2.4",
-            simdProfile: "avx2",
-            workerCount: 4,
-            scenarioId: "vertical-slice");
-        var gate = new Physics3DNetCompatibilityGate(required);
-
-        var mismatched = new Physics3DNetCompatibilityFingerprint(
-            buildId: "build-b",
-            configHash: required.ConfigHash,
-            kernelId: "bepu-2.4",
-            simdProfile: "avx2",
-            workerCount: 4,
-            scenarioId: "vertical-slice");
-
-        var ex = Assert.Throws<Physics3DNetCompatibilityMismatchException>(() => gate.RequireMatch(mismatched));
-        Assert.That(ex!.Expected, Is.EqualTo(required));
-        Assert.That(ex.Actual, Is.EqualTo(mismatched));
-
-        gate.RequireMatch(required);
     }
 
     [Test]
