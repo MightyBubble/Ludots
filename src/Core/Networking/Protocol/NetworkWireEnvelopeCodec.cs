@@ -101,6 +101,6 @@ namespace Ludots.Core.Networking.Protocol
 
         private static bool IsKnownKindByte(byte kind) =>
             kind is >= (byte)NetworkWireKind.SessionHandshakeRequest
-                and <= (byte)NetworkWireKind.CommandFragment;
+                and <= (byte)NetworkWireKind.FixedInputAcknowledgement;
     }
 }

@@ -17,6 +17,10 @@ namespace Ludots.Core.Networking.Session
             Empty = 0,
             Connected = 1,
             AwaitingReconnect = 2,
+            /// <summary>
+            /// Generation reached <see cref="uint.MaxValue"/>; seat is never reissued in this epoch.
+            /// </summary>
+            Retired = 3,
         }
 
         private readonly SessionEpoch _sessionEpoch;
@@ -215,27 +219,34 @@ namespace Ludots.Core.Networking.Session
 
         private bool TryInitialJoin(ConnectionId connectionId, out SessionHandshakeResponse response)
         {
-            if (!TryFindEmptySeat(out int seat))
+            // Skip exhausted seats and admit into the next free empty seat; fail only when none remain.
+            while (TryFindEmptySeat(out int seat))
             {
-                response = Reject(HandshakeRejectReason.SessionFull);
-                return false;
+                if (_seatGenerations[seat] == uint.MaxValue)
+                {
+                    _states[seat] = SeatState.Retired;
+                    continue;
+                }
+
+                ReconnectToken token = IssueToken();
+                _seatGenerations[seat] = NextGeneration(_seatGenerations[seat]);
+                _states[seat] = SeatState.Connected;
+                _connectionValues[seat] = connectionId.Value;
+                _tokenLow[seat] = token.Low;
+                _tokenHigh[seat] = token.High;
+                _disconnectTicks[seat] = 0;
+
+                response = SessionHandshakeResponse.Accept(
+                    GetSeatBinding(seat),
+                    token,
+                    _requiredProtocolVersion,
+                    _requiredContentFingerprint,
+                    _sessionEpoch);
+                return true;
             }
 
-            ReconnectToken token = IssueToken();
-            _seatGenerations[seat] = NextGeneration(_seatGenerations[seat]);
-            _states[seat] = SeatState.Connected;
-            _connectionValues[seat] = connectionId.Value;
-            _tokenLow[seat] = token.Low;
-            _tokenHigh[seat] = token.High;
-            _disconnectTicks[seat] = 0;
-
-            response = SessionHandshakeResponse.Accept(
-                GetSeatBinding(seat),
-                token,
-                _requiredProtocolVersion,
-                _requiredContentFingerprint,
-                _sessionEpoch);
-            return true;
+            response = Reject(HandshakeRejectReason.SessionFull);
+            return false;
         }
 
         private bool TryReconnect(
@@ -279,6 +290,7 @@ namespace Ludots.Core.Networking.Session
         {
             for (int i = 0; i < _states.Length; i++)
             {
+                // Retired seats keep generation == uint.MaxValue and are never reissued.
                 if (_states[i] == SeatState.Empty)
                 {
                     seat = i;
@@ -309,7 +321,7 @@ namespace Ludots.Core.Networking.Session
         {
             for (int i = 0; i < _states.Length; i++)
             {
-                if (_states[i] == SeatState.Empty)
+                if (_states[i] is SeatState.Empty or SeatState.Retired)
                 {
                     continue;
                 }
@@ -333,7 +345,10 @@ namespace Ludots.Core.Networking.Session
 
         private void ClearSeat(int seat)
         {
-            _states[seat] = SeatState.Empty;
+            // Exhausted generation must never wrap or be reissued in this SessionEpoch.
+            _states[seat] = _seatGenerations[seat] == uint.MaxValue
+                ? SeatState.Retired
+                : SeatState.Empty;
             _connectionValues[seat] = 0;
             _tokenLow[seat] = 0;
             _tokenHigh[seat] = 0;
@@ -343,7 +358,16 @@ namespace Ludots.Core.Networking.Session
         private SessionSeatBinding GetSeatBinding(int seat) =>
             new(seat, _seatGenerations[seat], new PlayerId(_playerValues[seat]));
 
-        private static uint NextGeneration(uint current) => current == uint.MaxValue ? 1u : current + 1u;
+        private static uint NextGeneration(uint current)
+        {
+            if (current == uint.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "Seat generation is exhausted; the seat is retired and cannot be reissued.");
+            }
+
+            return current + 1u;
+        }
 
         private ReconnectToken IssueToken()
         {
