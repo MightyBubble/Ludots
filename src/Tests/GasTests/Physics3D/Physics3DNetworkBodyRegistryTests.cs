@@ -291,6 +291,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
         ApplySingleRegistration(registry, ticks, target, tick: 1);
         using var aoi = new Physics3DNetworkAoiInterestPort(
             ecs,
+            physics,
             entities,
             players,
             knowledge,
@@ -306,7 +307,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
         Assert.That(farCount, Is.EqualTo(1));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.False);
 
-        SetPose(ecs, target, new Vector3(100f, 0f, 0f));
+        SetPose(ecs, physics, target, new Vector3(100f, 0f, 0f));
         Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int nearCount), Is.True);
         Assert.That(nearCount, Is.EqualTo(2));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out KnowledgeDisclosureRecord entered), Is.True);
@@ -317,18 +318,18 @@ public sealed class Physics3DNetworkBodyRegistryTests
             Assert.That(entered.Source, Is.EqualTo(firstViewer));
         });
 
-        SetPose(ecs, target, new Vector3(150f, 0f, 0f));
+        SetPose(ecs, physics, target, new Vector3(150f, 0f, 0f));
         Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int updatedCount), Is.True);
         Assert.That(updatedCount, Is.EqualTo(2));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out KnowledgeDisclosureRecord updated), Is.True);
         Assert.That(updated.Revision, Is.EqualTo(entered.Revision));
 
-        SetPose(ecs, target, new Vector3(1_000f, 0f, 0f));
+        SetPose(ecs, physics, target, new Vector3(1_000f, 0f, 0f));
         Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int exitedCount), Is.True);
         Assert.That(exitedCount, Is.EqualTo(1));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.False);
 
-        SetPose(ecs, target, new Vector3(100f, 0f, 0f));
+        SetPose(ecs, physics, target, new Vector3(100f, 0f, 0f));
         Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out _), Is.True);
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.True);
         Assert.That(players.TryRelease(in firstSeat), Is.True);
@@ -383,14 +384,21 @@ public sealed class Physics3DNetworkBodyRegistryTests
             Assert.That(allocated, Is.Zero, $"Warmed Physics3D AOI knowledge path allocated {allocated} bytes.");
         });
 
-        aoi.Dispose();
-        Assert.That(players.TryRelease(in thirdSeat), Is.True);
         ecs.Remove<ReplicationSchemaRef>(target);
         Assert.That(registry.TryGetHandle(target, out NetworkEntityHandle targetHandle), Is.True);
         Assert.That(registry.TryQueueRelease(targetHandle), Is.True);
         ticks.Begin(2);
         Assert.That(registry.TryApplyPendingStructuralChanges(), Is.True);
         ticks.Commit(2);
+        Assert.That(aoi.TryCopyInterest(in thirdSeat, interest, out int afterReleaseCount), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterReleaseCount, Is.EqualTo(1));
+            Assert.That(knowledge.TryGet(thirdViewer, target, 0, out _), Is.False);
+        });
+
+        aoi.Dispose();
+        Assert.That(players.TryRelease(in thirdSeat), Is.True);
     }
 
     private static void AssertFailure(
@@ -500,10 +508,18 @@ public sealed class Physics3DNetworkBodyRegistryTests
         Orientation = Quaternion.Identity,
     };
 
-    private static void SetPose(World world, Entity entity, Vector3 position)
+    private static void SetPose(
+        World world,
+        IPhysics3DWorld physics,
+        Entity entity,
+        Vector3 position)
     {
         Physics3DPoseCm pose = world.Get<Physics3DPoseCm>(entity);
         pose.Position = position;
         world.Set(entity, pose);
+        Physics3DBodyCm body = world.Get<Physics3DBodyCm>(entity);
+        Physics3DBodyState state = physics.GetBodyState(body.Id);
+        state.PositionCm = position;
+        physics.SetBodyState(body.Id, in state);
     }
 }

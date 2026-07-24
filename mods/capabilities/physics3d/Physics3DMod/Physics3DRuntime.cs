@@ -140,6 +140,7 @@ internal sealed class Physics3DRuntime : IDisposable
                     network.DisclosureChangeLogCapacity);
                 interest = new Physics3DNetworkAoiInterestPort(
                     engine.World,
+                    world,
                     entities,
                     players,
                     knowledge,
