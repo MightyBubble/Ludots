@@ -15,6 +15,7 @@ namespace Ludots.Core.Networking.Protocol
         SnapshotAcknowledgement = 6,
         ResyncRequired = 7,
         SnapshotFragment = 8,
+        CommandFragment = 9,
     }
 
     /// <summary>
@@ -72,6 +73,32 @@ namespace Ludots.Core.Networking.Protocol
     /// Completed payloads require an explicit <c>Reset</c> before a new snapshot may begin.
     /// </summary>
     public enum SnapshotReassemblyPhase : byte
+    {
+        Empty = 0,
+        Assembling = 1,
+        Completed = 2,
+    }
+
+    /// <summary>
+    /// Explicit outcomes for fixed-capacity command-batch fragment reassembly.
+    /// Rejected fragments never mutate assembler state.
+    /// </summary>
+    public enum CommandReassemblyStatus : byte
+    {
+        Incomplete = 0,
+        Completed = 1,
+        CapacityExceeded = 2,
+        InvalidFragment = 3,
+        Duplicate = 4,
+        StaleOrOutOfOrder = 5,
+        MixedMetadata = 6,
+    }
+
+    /// <summary>
+    /// Lifecycle phase of <see cref="CommandFragmentReassembler"/>.
+    /// Completed payloads require an explicit <c>Reset</c> before a new batch may begin.
+    /// </summary>
+    public enum CommandReassemblyPhase : byte
     {
         Empty = 0,
         Assembling = 1,
@@ -145,6 +172,41 @@ namespace Ludots.Core.Networking.Protocol
 
         public ulong SessionEpoch { get; }
         public ulong SnapshotId { get; }
+        public ushort FragmentIndex { get; }
+        public ushort FragmentCount { get; }
+        public uint TotalPayloadLength { get; }
+        public ushort FragmentPayloadLength { get; }
+    }
+
+    /// <summary>
+    /// Fixed little-endian header for one command-batch datagram fragment.
+    /// Target tick stays inside the reassembled <see cref="NetworkCommandBatchHeader"/> payload, not here.
+    /// Layout (28 bytes): sessionEpoch u64 (nonzero) | clientBatchSequence u64 (nonzero) |
+    /// fragmentIndex u16 | fragmentCount u16 | totalPayloadLength u32 | fragmentPayloadLength u16 |
+    /// reserved u16 (must be 0).
+    /// </summary>
+    public readonly struct NetworkCommandFragmentHeader
+    {
+        public const int SizeInBytes = 8 + 8 + 2 + 2 + 4 + 2 + 2;
+
+        public NetworkCommandFragmentHeader(
+            ulong sessionEpoch,
+            ulong clientBatchSequence,
+            ushort fragmentIndex,
+            ushort fragmentCount,
+            uint totalPayloadLength,
+            ushort fragmentPayloadLength)
+        {
+            SessionEpoch = sessionEpoch;
+            ClientBatchSequence = clientBatchSequence;
+            FragmentIndex = fragmentIndex;
+            FragmentCount = fragmentCount;
+            TotalPayloadLength = totalPayloadLength;
+            FragmentPayloadLength = fragmentPayloadLength;
+        }
+
+        public ulong SessionEpoch { get; }
+        public ulong ClientBatchSequence { get; }
         public ushort FragmentIndex { get; }
         public ushort FragmentCount { get; }
         public uint TotalPayloadLength { get; }
