@@ -74,6 +74,12 @@ public sealed class LiteNetLibClientDatagramPort :
         }
     }
 
+    /// <summary>
+    /// Local UDP port bound by this LiteNetLib client endpoint after construction.
+    /// Distinct instances must bind distinct ports; used as load-host uniqueness evidence.
+    /// </summary>
+    public int BoundPort => _manager.LocalPort;
+
     public ClientConnectionControlState State
     {
         get
