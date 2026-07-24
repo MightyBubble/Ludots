@@ -378,8 +378,22 @@ namespace Ludots.Core.Networking.Protocol
     /// Layout: sessionEpoch u64 | schemaId u16 | reserved u16 (must be 0) |
     /// committedThroughTick u32 | latestReceivedTick u32 | receivedMask u64 |
     /// latestMissingInputTick u32.
-    /// Bit 0 of <see cref="ReceivedMask"/> represents <see cref="LatestReceivedTick"/>.
     /// </summary>
+    /// <remarks>
+    /// ACK-mask invariant (SSOT, enforced by <see cref="FixedInputWireCodec"/>):
+    /// bit <c>i</c> of <see cref="ReceivedMask"/> means tick
+    /// <c>LatestReceivedTick - i</c> is present in the receiver ring.
+    /// Therefore:
+    /// <list type="bullet">
+    /// <item>when <see cref="LatestReceivedTick"/> is 0, <see cref="ReceivedMask"/> must be 0;</item>
+    /// <item>when <see cref="LatestReceivedTick"/> is nonzero, bit 0 must be set
+    /// (the latest received tick itself is present).</item>
+    /// </list>
+    /// Tick fields are domain-aligned with <c>AuthoritativeSimulationTickState</c>
+    /// (<c>&lt;= int.MaxValue</c>). Target input frames separately forbid tick 0.
+    /// <see cref="CommittedThroughTick"/> may exceed <see cref="LatestReceivedTick"/>
+    /// after deadline misses.
+    /// </remarks>
     public readonly struct NetworkFixedInputAcknowledgement
     {
         public const int SizeInBytes = 8 + 2 + 2 + 4 + 4 + 8 + 4;
@@ -428,6 +442,11 @@ namespace Ludots.Core.Networking.Protocol
         BatchRejected = 13,
         ReservedNonZero = 14,
         InvalidFrameOrder = 15,
+        /// <summary>
+        /// Target tick is 0 or exceeds <see cref="int.MaxValue"/> (AuthoritativeSimulationTickState domain).
+        /// Hard batch reject; no frames are applied.
+        /// </summary>
+        TickOutOfRange = 16,
     }
 
     /// <summary>
@@ -463,5 +482,17 @@ namespace Ludots.Core.Networking.Protocol
         TickNotIncreasing = 2,
         PayloadMismatch = 3,
         InvalidInput = 4,
+    }
+
+    /// <summary>
+    /// Explicit outcomes for client fixed-input outbox batch building.
+    /// <see cref="NoData"/> means nothing needs sending; it is not a successful encode path.
+    /// </summary>
+    public enum FixedInputBatchBuildStatus : byte
+    {
+        Built = 0,
+        NoData = 1,
+        InvalidInput = 2,
+        CapacityExceeded = 3,
     }
 }

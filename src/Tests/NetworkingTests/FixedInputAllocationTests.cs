@@ -36,8 +36,11 @@ public sealed class FixedInputAllocationTests
         var encodePayloads = new byte[PayloadBytes * 8];
         var decodeTicks = new uint[8];
         var decodePayloads = new byte[PayloadBytes * 8];
+        var outboxTicks = new uint[8];
+        var outboxPayloads = new byte[PayloadBytes * 8];
         var dispositions = new FixedInputAdmissionDisposition[8];
         var batchBuffer = new byte[FixedInputWireCodec.GetBatchPayloadSize(PayloadBytes, 8)];
+        var outboxBatchBuffer = new byte[FixedInputWireCodec.GetBatchPayloadSize(PayloadBytes, 8)];
         var ackBuffer = new byte[NetworkFixedInputAcknowledgement.SizeInBytes];
         var framed = new byte[NetworkWireEnvelope.SizeInBytes + batchBuffer.Length];
         var lookup = new byte[PayloadBytes];
@@ -45,6 +48,7 @@ public sealed class FixedInputAllocationTests
 
         int acceptedWrites = 0;
         int ringReuses = 0;
+        int outboxBuilds = 0;
 
         // Warmup / JIT — exercise the same progression path as the measured loop.
         for (int i = 0; i < 128; i++)
@@ -58,8 +62,11 @@ public sealed class FixedInputAllocationTests
                 encodePayloads,
                 decodeTicks,
                 decodePayloads,
+                outboxTicks,
+                outboxPayloads,
                 dispositions,
                 batchBuffer,
+                outboxBatchBuffer,
                 ackBuffer,
                 framed,
                 lookup,
@@ -67,14 +74,17 @@ public sealed class FixedInputAllocationTests
                 stepIndex: i,
                 ref acceptedWrites,
                 ref ringReuses,
+                ref outboxBuilds,
                 trackEvidence: true);
         }
 
         Assert.That(acceptedWrites, Is.GreaterThan(0), "Warmup must exercise successful accepted writes.");
         Assert.That(ringReuses, Is.GreaterThan(0), "Warmup must exercise safe committed ring reuse.");
+        Assert.That(outboxBuilds, Is.GreaterThan(0), "Warmup must exercise non-empty outbox batch construction/encode.");
 
         acceptedWrites = 0;
         ringReuses = 0;
+        outboxBuilds = 0;
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -92,8 +102,11 @@ public sealed class FixedInputAllocationTests
                 encodePayloads,
                 decodeTicks,
                 decodePayloads,
+                outboxTicks,
+                outboxPayloads,
                 dispositions,
                 batchBuffer,
+                outboxBatchBuffer,
                 ackBuffer,
                 framed,
                 lookup,
@@ -101,6 +114,7 @@ public sealed class FixedInputAllocationTests
                 stepIndex: 128 + i,
                 ref acceptedWrites,
                 ref ringReuses,
+                ref outboxBuilds,
                 trackEvidence: true);
         }
 
@@ -108,6 +122,7 @@ public sealed class FixedInputAllocationTests
         Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B managed allocation over 10,000 steady-state fixed-input ops; observed {allocated} B.");
         Assert.That(acceptedWrites, Is.EqualTo(10_000), "Measured loop must perform successful accepted writes each iteration.");
         Assert.That(ringReuses, Is.GreaterThan(0), "Measured loop must perform safe committed ring reuse.");
+        Assert.That(outboxBuilds, Is.EqualTo(10_000), "Measured loop must build and encode a non-empty outbox batch each iteration.");
     }
 
     private static void RunOnce(
@@ -119,8 +134,11 @@ public sealed class FixedInputAllocationTests
         byte[] encodePayloads,
         uint[] decodeTicks,
         byte[] decodePayloads,
+        uint[] outboxTicks,
+        byte[] outboxPayloads,
         FixedInputAdmissionDisposition[] dispositions,
         byte[] batchBuffer,
+        byte[] outboxBatchBuffer,
         byte[] ackBuffer,
         byte[] framed,
         byte[] lookup,
@@ -128,6 +146,7 @@ public sealed class FixedInputAllocationTests
         int stepIndex,
         ref int acceptedWrites,
         ref int ringReuses,
+        ref int outboxBuilds,
         bool trackEvidence)
     {
         // Advance the authoritative timeline so committed cells become safely reusable.
@@ -146,20 +165,49 @@ public sealed class FixedInputAllocationTests
         enqueuePayload.AsSpan().Clear();
         enqueuePayload[0] = encodePayloads[0];
         uint outboxTick = (uint)(stepIndex + 1);
-        if (outbox.TryEnqueue(outboxTick, enqueuePayload) == FixedInputOutboxEnqueueStatus.Enqueued)
+        if (outbox.TryEnqueue(outboxTick, enqueuePayload) != FixedInputOutboxEnqueueStatus.Enqueued)
         {
-            var drainAck = new NetworkFixedInputAcknowledgement(
-                1,
-                SchemaId,
-                outboxTick,
-                outboxTick,
-                1UL,
-                0);
-            FixedInputAckApplyStatus ackStatus = outbox.TryApplyAcknowledgement(in drainAck);
-            if (ackStatus != FixedInputAckApplyStatus.Applied)
-            {
-                FailStatus("outbox ack", (int)ackStatus);
-            }
+            FailStatus("outbox-enqueue", (int)outboxTick);
+        }
+
+        FixedInputBatchBuildStatus buildStatus = outbox.TryBuildBatch(
+            (uint)tickState.CommittedTick,
+            outboxTicks,
+            outboxPayloads,
+            out NetworkFixedInputBatchHeader outboxHeader,
+            out int outboxFrameCount);
+        if (buildStatus != FixedInputBatchBuildStatus.Built || outboxFrameCount <= 0 || outboxHeader.FrameCount == 0)
+        {
+            FailStatus("outbox-build", (int)buildStatus);
+        }
+
+        RequireSuccess(FixedInputWireCodec.TryEncodeBatch(
+            in outboxHeader,
+            outboxTicks.AsSpan(0, outboxFrameCount),
+            outboxPayloads.AsSpan(0, outboxFrameCount * PayloadBytes),
+            outboxBatchBuffer,
+            out int outboxWritten));
+        if (outboxWritten <= 0)
+        {
+            FailStatus("outbox-encode-empty", outboxWritten);
+        }
+
+        if (trackEvidence)
+        {
+            outboxBuilds++;
+        }
+
+        var drainAck = new NetworkFixedInputAcknowledgement(
+            1,
+            SchemaId,
+            outboxTick,
+            outboxTick,
+            1UL,
+            0);
+        FixedInputAckApplyStatus ackStatus = outbox.TryApplyAcknowledgement(in drainAck);
+        if (ackStatus != FixedInputAckApplyStatus.Applied)
+        {
+            FailStatus("outbox ack", (int)ackStatus);
         }
 
         var header = new NetworkFixedInputBatchHeader(
@@ -217,7 +265,6 @@ public sealed class FixedInputAllocationTests
 
         RequireSuccess(FixedInputWireCodec.TryEncodeAcknowledgement(in ack, ackBuffer, out int ackBytes));
         RequireSuccess(FixedInputWireCodec.TryDecodeAcknowledgement(ackBuffer.AsSpan(0, ackBytes), out _));
-        RequireSuccess(outbox.TryBuildBatch((uint)tickState.CommittedTick, encodeTicks, encodePayloads, out _, out _));
 
         RequireSuccess(NetworkWireEnvelopeCodec.TryEncode(
             NetworkWireKind.FixedInputBatch,

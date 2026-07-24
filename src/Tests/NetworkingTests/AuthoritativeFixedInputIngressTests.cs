@@ -340,21 +340,105 @@ public sealed class AuthoritativeFixedInputIngressTests
     }
 
     [Test]
-    public void Supports150SeatsWithoutWaitingForFullPopulation()
+    public void DefaultConfig_FailsImmediatelyAtConstruction()
     {
         var ticks = new AuthoritativeSimulationTickState();
-        FixedInputProtocolConfig config = FixedInputProtocolConfig.CreatePhysics3DDefaultFloor(
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new AuthoritativeFixedInputIngress(default, ticks));
+    }
+
+    [Test]
+    public void Admit_RejectsTickZeroAndOverIntMax_Atomically_AndAcceptsIntMax()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        ticks.RestoreCommittedTick(int.MaxValue - 2);
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(history: 8, maxFuture: 8), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        Assert.That(
+            AdmitOne(ingress, in seat, 0, 1, out FixedInputAdmissionDisposition zero),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
+        Assert.That(zero, Is.EqualTo(FixedInputAdmissionDisposition.TickOutOfRange));
+
+        Assert.That(
+            AdmitOne(ingress, in seat, (uint)int.MaxValue + 1u, 2, out FixedInputAdmissionDisposition over),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
+        Assert.That(over, Is.EqualTo(FixedInputAdmissionDisposition.TickOutOfRange));
+
+        Span<uint> mix = stackalloc uint[2] { (uint)int.MaxValue - 1, (uint)int.MaxValue + 1u };
+        Span<byte> payloads = stackalloc byte[PayloadBytes * 2];
+        payloads.Clear();
+        payloads[0] = 9;
+        payloads[PayloadBytes] = 8;
+        Span<FixedInputAdmissionDisposition> dispositions = stackalloc FixedInputAdmissionDisposition[2];
+        var header = new NetworkFixedInputBatchHeader(1, SchemaId, PayloadBytes, (uint)(int.MaxValue - 2), 2);
+        Assert.That(
+            ingress.TryAdmitBatch(in seat, in header, mix, payloads, dispositions),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Rejected));
+        Assert.That(dispositions[0], Is.EqualTo(FixedInputAdmissionDisposition.TickOutOfRange));
+        Assert.That(dispositions[1], Is.EqualTo(FixedInputAdmissionDisposition.TickOutOfRange));
+
+        Span<byte> missing = stackalloc byte[PayloadBytes];
+        Assert.That(
+            ingress.TryGet(in seat, (uint)int.MaxValue - 1, missing, out _),
+            Is.EqualTo(FixedInputLookupResult.Missing));
+
+        Assert.That(
+            AdmitOne(ingress, in seat, (uint)int.MaxValue - 1, 3, out FixedInputAdmissionDisposition accepted),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(accepted, Is.EqualTo(FixedInputAdmissionDisposition.Accepted));
+        Assert.That(
+            AdmitOne(ingress, in seat, (uint)int.MaxValue, 4, out FixedInputAdmissionDisposition maxAccepted),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+        Assert.That(maxAccepted, Is.EqualTo(FixedInputAdmissionDisposition.Accepted));
+
+        Span<byte> destination = stackalloc byte[PayloadBytes];
+        Assert.That(
+            ingress.TryGet(in seat, (uint)int.MaxValue, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.Present));
+        Assert.That(destination[0], Is.EqualTo(4));
+    }
+
+    [Test]
+    public void Capacity150x64x12_BindsWritesAndReadsAllSeatsWithDistinctInput()
+    {
+        const int seatCapacity = 150;
+        const int history = 64;
+        var ticks = new AuthoritativeSimulationTickState();
+        var config = new FixedInputProtocolConfig(
+            seatCapacity,
+            history,
             SchemaId,
-            sessionEpoch: 1,
+            PayloadBytes,
             maxFutureTicks: 8,
             maxFramesPerBatch: 8,
-            maxDatagramPayloadBytes: 1200);
+            maxDatagramPayloadBytes: 1200,
+            sessionEpoch: 1);
         var ingress = new AuthoritativeFixedInputIngress(config, ticks);
-        SessionSeatBinding only = Seat();
-        ingress.BindSeat(in only);
-        Assert.That(AdmitOne(ingress, in only, 1, 1, out _), Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
-        ticks.Begin(1);
+
         Span<byte> destination = stackalloc byte[PayloadBytes];
-        Assert.That(ingress.TryGet(in only, 1, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
+        for (int slot = 0; slot < seatCapacity; slot++)
+        {
+            var seat = new SessionSeatBinding(slot, 1, new PlayerId(slot + 1));
+            ingress.BindSeat(in seat);
+            byte marker = (byte)((slot * 17) & 0xFF);
+            Assert.That(
+                AdmitOne(ingress, in seat, 1, marker, out FixedInputAdmissionDisposition disposition),
+                Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+            Assert.That(disposition, Is.EqualTo(FixedInputAdmissionDisposition.Accepted));
+        }
+
+        ticks.Begin(1);
+        for (int slot = 0; slot < seatCapacity; slot++)
+        {
+            var seat = new SessionSeatBinding(slot, 1, new PlayerId(slot + 1));
+            byte expected = (byte)((slot * 17) & 0xFF);
+            Assert.That(
+                ingress.TryGet(in seat, 1, destination, out int written),
+                Is.EqualTo(FixedInputLookupResult.Present));
+            Assert.That(written, Is.EqualTo(PayloadBytes));
+            Assert.That(destination[0], Is.EqualTo(expected), $"Seat {slot} payload mismatch.");
+        }
     }
 }

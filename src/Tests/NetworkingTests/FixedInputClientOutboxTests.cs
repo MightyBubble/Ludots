@@ -42,7 +42,7 @@ public sealed class FixedInputClientOutboxTests
         Span<byte> payloads = stackalloc byte[PayloadBytes * 4];
         Assert.That(
             outbox.TryBuildBatch(0, ticks, payloads, out NetworkFixedInputBatchHeader header, out int count),
-            Is.EqualTo(NetworkWireCodecStatus.Success));
+            Is.EqualTo(FixedInputBatchBuildStatus.Built));
         Assert.That(count, Is.EqualTo(4));
         Assert.That(header.FrameCount, Is.EqualTo(4));
         Assert.That(ticks[0], Is.EqualTo(1u));
@@ -60,9 +60,24 @@ public sealed class FixedInputClientOutboxTests
 
         Assert.That(
             outbox.TryBuildBatch(1, ticks, payloads, out _, out int remaining),
-            Is.EqualTo(NetworkWireCodecStatus.Success));
+            Is.EqualTo(FixedInputBatchBuildStatus.Built));
         Assert.That(remaining, Is.EqualTo(1));
         Assert.That(ticks[0], Is.EqualTo(4u));
+    }
+
+    [Test]
+    public void Outbox_NoPendingInput_ReturnsNoData_NotSuccessfulEmptyBatch()
+    {
+        var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);
+        Span<uint> ticks = stackalloc uint[4];
+        Span<byte> payloads = stackalloc byte[PayloadBytes * 4];
+
+        Assert.That(
+            outbox.TryBuildBatch(0, ticks, payloads, out NetworkFixedInputBatchHeader header, out int count),
+            Is.EqualTo(FixedInputBatchBuildStatus.NoData));
+        Assert.That(count, Is.EqualTo(0));
+        Assert.That(header.FrameCount, Is.EqualTo(0));
+        Assert.That(header.SessionEpoch, Is.EqualTo(0UL));
     }
 
     [Test]
@@ -128,6 +143,19 @@ public sealed class FixedInputClientOutboxTests
     }
 
     [Test]
+    public void Outbox_RejectsAckWhenLatestReceivedZeroButMaskNonZero_WithoutMutation()
+    {
+        var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);
+        Span<byte> payload = stackalloc byte[PayloadBytes];
+        Fill(payload, 1);
+        Assert.That(outbox.TryEnqueue(1, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+
+        var invalid = new NetworkFixedInputAcknowledgement(1, SchemaId, 0, 0, 1UL, 0);
+        Assert.That(outbox.TryApplyAcknowledgement(in invalid), Is.EqualTo(FixedInputAckApplyStatus.InvalidInput));
+        Assert.That(outbox.PendingCount, Is.EqualTo(1));
+    }
+
+    [Test]
     public void Outbox_EnqueueRejectsNonIncreasingAndCapacityExceeded()
     {
         var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 2);
@@ -138,5 +166,9 @@ public sealed class FixedInputClientOutboxTests
         Assert.That(outbox.TryEnqueue(3, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
         Assert.That(outbox.TryEnqueue(4, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.CapacityExceeded));
         Assert.That(outbox.TryEnqueue(5, stackalloc byte[3]), Is.EqualTo(FixedInputOutboxEnqueueStatus.PayloadMismatch));
+        Assert.That(outbox.TryEnqueue(0, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.InvalidInput));
+        Assert.That(
+            outbox.TryEnqueue(unchecked((uint)int.MaxValue) + 1u, payload),
+            Is.EqualTo(FixedInputOutboxEnqueueStatus.InvalidInput));
     }
 }

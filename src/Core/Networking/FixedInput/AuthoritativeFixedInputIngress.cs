@@ -32,6 +32,8 @@ namespace Ludots.Core.Networking.FixedInput
         private readonly uint[] _latestReceivedTickBySeat;
         private readonly uint[] _latestMissingAtDeadlineBySeat;
 
+        // Single-writer runtime-owned scratch for all-or-nothing batch classification.
+        // Callers must not share one ingress across concurrent writers.
         private readonly FixedInputAdmissionDisposition[] _scratchDispositions;
 
         public AuthoritativeFixedInputIngress(
@@ -39,6 +41,7 @@ namespace Ludots.Core.Networking.FixedInput
             AuthoritativeSimulationTickState ticks)
         {
             _ticks = ticks ?? throw new ArgumentNullException(nameof(ticks));
+            config.EnsureValid();
             _config = config;
             _historyTicks = config.HistoryTicksPerSeat;
             _payloadBytes = config.FramePayloadBytes;
@@ -193,8 +196,18 @@ namespace Ludots.Core.Networking.FixedInput
                 return RejectBatch(dispositions, 0, FixedInputAdmissionDisposition.BatchRejected);
             }
 
+            if (!FixedInputWireCodec.IsValidSimulationTickField(header.AcknowledgedCommittedTick))
+            {
+                return RejectBatch(dispositions, header.FrameCount, FixedInputAdmissionDisposition.TickOutOfRange);
+            }
+
             for (int i = 0; i < header.FrameCount; i++)
             {
+                if (!FixedInputWireCodec.IsValidInputTargetTick(targetTicks[i]))
+                {
+                    return RejectBatch(dispositions, header.FrameCount, FixedInputAdmissionDisposition.TickOutOfRange);
+                }
+
                 if (i > 0 && targetTicks[i] <= targetTicks[i - 1])
                 {
                     return RejectBatch(dispositions, header.FrameCount, FixedInputAdmissionDisposition.InvalidFrameOrder);
@@ -337,6 +350,11 @@ namespace Ludots.Core.Networking.FixedInput
             uint tick,
             ReadOnlySpan<byte> payload)
         {
+            if (!FixedInputWireCodec.IsValidInputTargetTick(tick))
+            {
+                return FixedInputAdmissionDisposition.TickOutOfRange;
+            }
+
             if (_ticks.IsExecuting && (uint)_ticks.ExecutingTick == tick)
             {
                 return FixedInputAdmissionDisposition.RejectedAtExecutionCutoff;
@@ -468,6 +486,7 @@ namespace Ludots.Core.Networking.FixedInput
                 or FixedInputAdmissionDisposition.Conflict
                 or FixedInputAdmissionDisposition.ReservedNonZero
                 or FixedInputAdmissionDisposition.InvalidFrameOrder
+                or FixedInputAdmissionDisposition.TickOutOfRange
                 or FixedInputAdmissionDisposition.BatchRejected;
 
         private bool PayloadEquals(int cell, ReadOnlySpan<byte> payload)
