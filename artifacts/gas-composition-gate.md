@@ -2,6 +2,95 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 Final Status - 2026-07-24
+
+This is the current status for the PR #660 worktree. Older sections below are historical evidence and must not be treated as alternate live branches.
+
+- Worktree: `C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415`.
+- Branch: `codex/issues-649-651-ordering`.
+- Starting PR head before this repair: `086d3f4f35079eaab417bfea166335e5ba9c9b9d`.
+- Main merge base used here: `5712a4eef4cdb1011cc0694d52e77de95bfe4aaa`.
+- Related issues #649 / #650 / #651 remain the original order/input work history for this PR. They are not separate active branches; current acceptance status is this section.
+
+Current blockers repaired:
+
+- Grid/NodeGraph map assets now declare positive `LoadedChunkCapacity`; legacy `WidthInTiles` / `HeightInTiles` map fields are rejected by regression coverage.
+- Ability input and target-collection gates fail the active order when the input request queue is missing/full instead of entering a permanent fake wait.
+- Response-chain window depth overflow, response queue overflow, prompt input queue failure, and prompt order request queue failure are explicit failures instead of silent drops.
+- Graph blackboard writes fail on dead entities or missing pre-added blackboard buffers instead of silently returning.
+
+Verification on this worktree:
+
+- `dotnet test src\Tests\GasTests\GasTests.csproj --filter "FullyQualifiedName~ResponseWindowRobustnessTests|FullyQualifiedName~GraphFailFastAndCapacityTests|FullyQualifiedName~EffectPhaseArchitectureTests|FullyQualifiedName~InteractionSelectionConvergenceTests" -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 80/80.
+- `dotnet test src\Tests\GasTests\GasTests.csproj --filter FullyQualifiedName~MapAssets_GridAndNodeGraphBoards_DeclarePositiveLoadedChunkCapacity -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 1/1.
+- `dotnet test src\Tests\PresentationTests\PresentationTests.csproj --filter FullyQualifiedName~Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 1/1.
+- `dotnet build` for every `src\Tests\**\*.csproj`, then `dotnet build src\Tools\ModdingSmoke\ModdingTest.csproj -c Debug`: PASS.
+- `solution-verify.yml` architecture guard slice: PASS, 80/80.
+- `solution-verify.yml` MassNavigation PR acceptance slice: PASS, 11/11.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" --logger "console;verbosity=minimal"`: PASS, 166/166 after an initial local Fog benchmark throughput-noise rerun.
+- `dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj -c Debug --no-build --filter "TestCategory=raylib-field" --logger "console;verbosity=minimal"`: PASS, 4/4.
+- `git diff --check`: PASS.
+- `rg -n "WidthInTiles|HeightInTiles" mods assets src -g "*.json"`: no matches.
+- CI audit gate artifacts: `artifacts/ci-audit/pr660/result.md` and `artifacts/ci-audit/pr660/result.json`.
+
+## GAS Composition Gate - PR #660 Final Mergeability Repair
+
+- **Task / Issue**: PR #660 final mergeability repair after strict audit found CI map-load failure and remaining silent-drop paths
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本轮修复沿现有 BoardConfig/Map merge、GAS queue、ResponseChain、Effect side-effect transaction、Graph blackboard 写入管线补齐失败语义；不新增 profile enum、preset 开关、loader、registry、parallel runtime 或 fallback。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 地图 loaded chunk 容量契约 | N/A | existing `BoardConfig`, map JSON assets, `BoardFactory`/board constructors |
+| Ability input gate enqueue failure | N/A | existing `AbilityExecSystem`, `InputRequestQueue` |
+| ResponseChain create/depth/queue overflow | Layer 2 execution repair | existing `EffectProposalProcessingSystem`, `EffectProposalWindow`, `ProposalResponseQueue` |
+| Response prompt order request enqueue failure | N/A | existing `OrderRequestQueue` |
+| Blackboard write dead/missing component failure | Layer 2/graph runtime guard | existing `GasGraphRuntimeApi`, `EffectPhaseSideEffectTransaction` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `InputRequestQueue`, `OrderRequestQueue`, `EffectProposalProcessingSystem`, `AbilityExecSystem`.
+- Resolvers / Registries: `BoardConfig`, `MapManager`, existing graph blackboard buffers and `EffectPhaseSideEffectTransaction`.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops (if any)
+
+N/A.
+
+### 5. Transaction boundary
+
+ResponseChain overflow and prompt enqueue failures must stop the active response window instead of continuing with missing responses/prompts. Blackboard side effects staged through `EffectPhaseSideEffectTransaction` must reject dead or missing target storage before commit-visible state can pretend success.
+
+### 6. Config SSOT
+
+行为配置落在: existing map board JSON (`LoadedChunkCapacity`) and existing GAS graph/effect runtime contracts.
+
+是否新增 JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / map runtime capacity data.
+
+---
+
 ## GAS Composition Gate - PR #660 Capacity Fail-Fast Repair
 
 - **Task / Issue**: PR #660 merge readiness repair for GAS capacity overflow audit findings

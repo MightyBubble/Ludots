@@ -152,6 +152,63 @@ namespace Ludots.Tests.GAS
             Assert.That(values.TryGet(rejected, "graph.output.test", out _), Is.False);
         }
 
+        [Test]
+        public void GasGraphRuntimeApi_WriteBlackboardFloat_WithoutBuffer_Throws()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+
+            var error = Throws<InvalidOperationException>(() => api.WriteBlackboardFloat(entity, 7, 1f));
+
+            That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
+            That(error.Message, Does.Contain(nameof(BlackboardFloatBuffer)));
+            That(world.Has<BlackboardFloatBuffer>(entity), Is.False);
+        }
+
+        [Test]
+        public void GasGraphRuntimeApi_WriteBlackboardInt_WithoutBuffer_Throws()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+
+            var error = Throws<InvalidOperationException>(() => api.WriteBlackboardInt(entity, 7, 1));
+
+            That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
+            That(error.Message, Does.Contain(nameof(BlackboardIntBuffer)));
+            That(world.Has<BlackboardIntBuffer>(entity), Is.False);
+        }
+
+        [Test]
+        public void GasGraphRuntimeApi_WriteBlackboardEntity_WithoutBuffer_Throws()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+            var value = world.Create();
+            var api = new GasGraphRuntimeApi(world);
+
+            var error = Throws<InvalidOperationException>(() => api.WriteBlackboardEntity(entity, 7, value));
+
+            That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
+            That(error.Message, Does.Contain(nameof(BlackboardEntityBuffer)));
+            That(world.Has<BlackboardEntityBuffer>(entity), Is.False);
+        }
+
+        [Test]
+        public void GasGraphRuntimeApi_WriteBlackboardFloat_DeadEntity_Throws()
+        {
+            using var world = World.Create();
+            var entity = world.Create(new BlackboardFloatBuffer());
+            world.Destroy(entity);
+            var api = new GasGraphRuntimeApi(world);
+
+            var error = Throws<InvalidOperationException>(() => api.WriteBlackboardFloat(entity, 7, 1f));
+
+            That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
+            That(error.Message, Does.Contain(nameof(BlackboardFloatBuffer)));
+        }
+
         private sealed class RecordingSpatialQueries : ISpatialQueryService
         {
             public WorldCmInt2 LastRadiusCenter { get; private set; }

@@ -5,7 +5,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "DataFile": "level_1.bin"
+      "DataFile": "level_1.bin",
+      "LoadedChunkCapacity": 256
     }
   ],
   "TriggerTypes": [

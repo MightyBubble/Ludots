@@ -55,6 +55,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
     public sealed class EffectProposalProcessingSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
+        public const string WindowDepthExceededError = "GAS.RESPONSE_CHAIN.ERR.WindowDepthExceeded";
+        public const string CreateCapacityExceededError = "GAS.RESPONSE_CHAIN.ERR.CreateCapacityExceeded";
+        public const string ResponseQueueOverflowError = "GAS.RESPONSE_CHAIN.ERR.ResponseQueueOverflow";
+        public const string InputRequestQueueMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueMissing";
+        public const string InputRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueFull";
+        public const string InputRequestTagMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestTagMissing";
+        public const string OrderRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.OrderRequestQueueFull";
+
         private readonly EffectRequestQueue _queue;
         private readonly GasBudget _budget;
         private readonly EffectTemplateRegistry _templates;
@@ -415,10 +423,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     };
                     if (!_window.TryAdd(root))
                     {
-                        if (_budget != null) _budget.ResponseDepthDropped++;
-                        _phase = WindowPhase.None;
-                        ConsumeWork(ref workUnits);
-                        continue;
+                        ThrowWindowDepthExceeded(req.RootId, req.TemplateId, "Root");
                     }
  
                     if (_telemetry != null && _emitTelemetry)
@@ -483,8 +488,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     case ResponseType.Chain:
                                         if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
                                         {
-                                            if (_budget != null) _budget.ResponseCreatesDropped++;
-                                            break;
+                                            ThrowCreateCapacityExceeded(_activeReq.RootId, response.EffectTemplateId, "Collect");
                                         }
                                         if (_templates == null || response.EffectTemplateId <= 0 || !_templates.TryGetRef(response.EffectTemplateId, out int tplIdx))
                                         {
@@ -510,8 +514,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         int newIndex = _window.Count;
                                         if (!_window.TryAdd(chained))
                                         {
-                                            if (_budget != null) _budget.ResponseDepthDropped++;
-                                            break;
+                                            ThrowWindowDepthExceeded(_activeReq.RootId, response.EffectTemplateId, "Collect");
                                         }
                                         _creates++;
                                         if (_budget != null) _budget.ResponseCreates++;
@@ -551,10 +554,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (_phase == WindowPhase.WaitInput)
                 {
-                    if (!_inputRequestSent && _inputRequests != null && _inputRequestTagId > 0 && _window.Count > 0)
+                    if (!_inputRequestSent)
                     {
+                        if (_inputRequestTagId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestTagMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                        }
+                        if (_window.Count <= 0)
+                        {
+                            ThrowWindowDepthExceeded(_activeReq.RootId, _activeReq.TemplateId, "WaitInput");
+                        }
+                        if (_inputRequests == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}.");
+                        }
                         var windowId = _nextWindowId++;
-                        _inputRequests.TryEnqueue(new InputRequest
+                        var inputRequest = new InputRequest
                         {
                             RequestId = windowId,
                             RequestTagId = _inputRequestTagId,
@@ -563,7 +580,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             Context = _window[0].TargetContext,
                             PayloadA = 0,
                             PayloadB = 0
-                        });
+                        };
+                        if (!_inputRequests.TryEnqueue(in inputRequest))
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
+                        }
                         _inputRequestSent = true;
  
                         if (_telemetry != null && _emitTelemetry)
@@ -605,7 +627,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             req.AddAllowed(_responseChainOrderTypes.ChainPass);
                             req.AddAllowed(_responseChainOrderTypes.ChainNegate);
                             if (_inputRequestTagId > 0) req.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
-                            _orderRequests.TryEnqueue(req);
+                            if (!_orderRequests.TryEnqueue(req))
+                            {
+                                throw new InvalidOperationException(
+                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                            }
                         }
                     }
 
@@ -687,9 +713,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }
                                 if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
                                 {
-                                    if (_budget != null) _budget.ResponseCreatesDropped++;
-                                    ConsumeWork(ref workUnits);
-                                    continue;
+                                    ThrowCreateCapacityExceeded(_activeReq.RootId, order.Args.I0, "WaitInput");
                                 }
                                 if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
                                 {
@@ -716,9 +740,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 int newIndex = _window.Count;
                                 if (!_window.TryAdd(chained))
                                 {
-                                    if (_budget != null) _budget.ResponseDepthDropped++;
-                                    ConsumeWork(ref workUnits);
-                                    continue;
+                                    ThrowWindowDepthExceeded(_activeReq.RootId, order.Args.I0, "WaitInput");
                                 }
                                 _creates++;
                                 if (_budget != null) _budget.ResponseCreates++;
@@ -1022,9 +1044,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }))
                                 {
                                     if (_budget != null) _budget.ResponseQueueOverflowDropped++;
+                                    throw new InvalidOperationException(
+                                        $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
                                 }
                 }
             }
+        }
+
+        private void ThrowWindowDepthExceeded(int rootId, int templateId, string phase)
+        {
+            if (_budget != null) _budget.ResponseDepthDropped++;
+            throw new InvalidOperationException(
+                $"{WindowDepthExceededError}: rootId={rootId}, templateId={templateId}, phase={phase}, capacity={GasConstants.MAX_DEPTH}.");
+        }
+
+        private void ThrowCreateCapacityExceeded(int rootId, int templateId, string phase)
+        {
+            if (_budget != null) _budget.ResponseCreatesDropped++;
+            throw new InvalidOperationException(
+                $"{CreateCapacityExceededError}: rootId={rootId}, templateId={templateId}, phase={phase}, capacity={GasConstants.MAX_CREATES_PER_ROOT}.");
         }
 
         private static void ApplyPresetModifiers(ref EffectModifiers modifiers, in EffectTemplateData tpl, in EffectRequest req)

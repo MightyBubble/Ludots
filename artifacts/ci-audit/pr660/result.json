@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "subject": "pr660",
+  "date": "2026-07-24",
+  "worktree": "C:\\001_AI\\_codex_audit\\Ludots-pr660-086d3f4-exact-20260724-1415",
+  "branch": "codex/issues-649-651-ordering",
+  "base": {
+    "ref": "origin/main",
+    "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
+  },
+  "pr_head_before_local_repair": "086d3f4f35079eaab417bfea166335e5ba9c9b9d",
+  "verdict": "pass_local_pending_remote_checks",
+  "remote_checks": {
+    "status": "pending_push",
+    "source_of_truth": "gh pr checks 660"
+  },
+  "scope": [
+    "map board runtime capacity data and legacy map field removal",
+    "ability input and target-collection gate enqueue failures",
+    "response-chain capacity and prompt queue fail-fast behavior",
+    "GAS graph blackboard write fail-fast behavior",
+    "local solution-verify slices runnable before push"
+  ],
+  "packets": {
+    "required_present": [
+      "artifacts/gas-composition-gate.md",
+      "artifacts/ci-audit/pr660/result.md",
+      "artifacts/ci-audit/pr660/result.json"
+    ],
+    "blocked_packets": [],
+    "missing_packets": [],
+    "scoped_out": [
+      {
+        "name": "visual review packets",
+        "reason": "current repair is headless engine/data validation"
+      },
+      {
+        "name": "handoff packet",
+        "reason": "current repair is direct branch consolidation; this audit result is the reviewer-ready evidence packet"
+      },
+      {
+        "name": "PR #660 hook packet",
+        "reason": "not present for this direct branch repair; current-scope evidence is captured in this audit artifact"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj --filter \"FullyQualifiedName~ResponseWindowRobustnessTests|FullyQualifiedName~GraphFailFastAndCapacityTests|FullyQualifiedName~EffectPhaseArchitectureTests|FullyQualifiedName~InteractionSelectionConvergenceTests\" -c Debug --no-restore --logger \"console;verbosity=minimal\" -clp:ErrorsOnly -m:1",
+      "result": "pass",
+      "passed": 80,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj --filter FullyQualifiedName~MapAssets_GridAndNodeGraphBoards_DeclarePositiveLoadedChunkCapacity -c Debug --no-restore --logger \"console;verbosity=minimal\" -clp:ErrorsOnly -m:1",
+      "result": "pass",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\PresentationTests\\PresentationTests.csproj --filter FullyQualifiedName~Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution -c Debug --no-restore --logger \"console;verbosity=minimal\" -clp:ErrorsOnly -m:1",
+      "result": "pass",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "command": "dotnet build all src\\Tests projects and src\\Tools\\ModdingSmoke\\ModdingTest.csproj -c Debug",
+      "result": "pass"
+    },
+    {
+      "command": "solution-verify architecture guard slice",
+      "result": "pass",
+      "passed": 80,
+      "failed": 0
+    },
+    {
+      "command": "solution-verify MassNavigation PR acceptance slice",
+      "result": "pass",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-build --filter \"TestCategory=ci-gate\" --logger \"console;verbosity=minimal\"",
+      "result": "pass",
+      "passed": 166,
+      "failed": 0,
+      "note": "Initial full ci-gate attempt failed four Fog throughput thresholds; isolated Fog rerun passed 4/4 and full ci-gate rerun passed 166/166."
+    },
+    {
+      "command": "dotnet test src\\Tests\\RaylibAdapterTests\\RaylibAdapterTests.csproj -c Debug --no-build --filter \"TestCategory=raylib-field\" --logger \"console;verbosity=minimal\"",
+      "result": "pass",
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    },
+    {
+      "command": "rg -n \"WidthInTiles|HeightInTiles\" mods assets src -g \"*.json\"",
+      "result": "pass_no_matches"
+    }
+  ],
+  "emitted_hook": "ci.audit.completed"
+}

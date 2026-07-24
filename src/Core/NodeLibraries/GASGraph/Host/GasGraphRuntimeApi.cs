@@ -86,6 +86,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
     {
+        public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
+
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
         private readonly ISpatialCoordinateConverter? _coords;
@@ -1126,8 +1128,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _effectSideEffects.StageBlackboardFloat(entity, keyId, value);
                 return;
             }
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardFloatBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RequireBlackboard<BlackboardFloatBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardFloatBuffer>(entity);
             bb.Set(keyId, value);
         }
@@ -1140,8 +1141,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _effectSideEffects.StageBlackboardInt(entity, keyId, value);
                 return;
             }
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardIntBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RequireBlackboard<BlackboardIntBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardIntBuffer>(entity);
             bb.Set(keyId, value);
         }
@@ -1154,10 +1154,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _effectSideEffects.StageBlackboardEntity(entity, keyId, value);
                 return;
             }
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardEntityBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RequireBlackboard<BlackboardEntityBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardEntityBuffer>(entity);
             bb.Set(keyId, value);
+        }
+
+        private void RequireBlackboard<T>(Entity entity)
+        {
+            if (!_world.IsAlive(entity) || !_world.Has<T>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"{MissingBlackboardError}: entity={entity.Id}, component={typeof(T).Name}.");
+            }
         }
 
         // ── Config parameter reading ──

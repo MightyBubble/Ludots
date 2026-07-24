@@ -832,6 +832,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
 
+        private void MarkActiveExecutionFailed(
+            Entity actor,
+            ref AbilityExecInstance instance,
+            AbilityCastFailReason presentationReason,
+            OrderFailureReason orderReason)
+        {
+            instance.State = AbilityExecRunState.Failed;
+            instance.TerminalFailureReason = orderReason;
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.CastFailed,
+                Actor = actor,
+                Target = instance.Target,
+                AbilitySlot = instance.AbilitySlot,
+                AbilityId = instance.AbilityId,
+                FailReason = presentationReason
+            });
+        }
+
         // Item processing
 
         private void AdvanceItems(Entity actor, ref AbilityExecSpec spec,
@@ -916,7 +935,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     case ExecItemKind.InputGate:
                     case ExecItemKind.EventGate:
                     case ExecItemKind.TargetCollectionGate:
-                        EnterGate(actor, ref spec, idx, ref inst);
+                        if (!EnterGate(actor, ref spec, idx, ref inst))
+                        {
+                            return;
+                        }
                         // Attempt immediate resolution if response already available
                         if (inst.State == AbilityExecRunState.GateWaiting)
                             ProcessGate(actor, ref spec, ref inst);
@@ -1114,7 +1136,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         // Gate enter / process
 
-        private void EnterGate(Entity actor, ref AbilityExecSpec spec, int idx,
+        private bool EnterGate(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
         {
             var kind = spec.GetKind(idx);
@@ -1126,14 +1148,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
                     inst.WaitRequestId = requestId;
-                    _inputRequests?.TryEnqueue(new InputRequest
+                    var request = new InputRequest
                     {
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
                         Source = actor,
                         Target = inst.Target,
                         Context = inst.TargetContext,
-                    });
+                    };
+                    if (_inputRequests == null)
+                    {
+                        MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
+                        return false;
+                    }
+                    if (!_inputRequests.TryEnqueue(in request))
+                    {
+                        MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
+                        return false;
+                    }
                     break;
                 }
 
@@ -1141,14 +1173,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
                     inst.WaitRequestId = requestId;
-                    _inputRequests?.TryEnqueue(new InputRequest
+                    var request = new InputRequest
                     {
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
                         Source = actor,
                         Target = inst.Target,
                         Context = inst.TargetContext,
-                    });
+                    };
+                    if (_inputRequests == null)
+                    {
+                        MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
+                        return false;
+                    }
+                    if (!_inputRequests.TryEnqueue(in request))
+                    {
+                        MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
+                        return false;
+                    }
                     break;
                 }
 
@@ -1163,6 +1205,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     break;
                 }
             }
+
+            return true;
         }
 
         private void ProcessGate(Entity actor, ref AbilityExecSpec spec, ref AbilityExecInstance inst)

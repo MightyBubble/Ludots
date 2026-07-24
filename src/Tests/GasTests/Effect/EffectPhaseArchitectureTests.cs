@@ -729,7 +729,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                // Entity WITHOUT BB component — write should be a no-op (no archetype migration in hot path)
+                // Entity WITHOUT BB component must fail without archetype migration in the hot path.
                 var entityNoBB = world.Create();
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -740,11 +740,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                 };
 
-                ExecuteProgram(world, api, entityNoBB, entityNoBB, program);
+                var error = Throws<InvalidOperationException>(() =>
+                    ExecuteProgram(world, api, entityNoBB, entityNoBB, program));
 
                 // BB component should NOT be auto-added (archetype migration removed for hot-path safety)
+                That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
                 That(world.Has<BlackboardFloatBuffer>(entityNoBB), Is.False,
-                    "WriteBlackboardFloat should not auto-add BB component");
+                    "WriteBlackboardFloat must not auto-add BB component");
 
                 // Entity WITH pre-added BB component — write should succeed
                 var entityWithBB = world.Create(new BlackboardFloatBuffer());

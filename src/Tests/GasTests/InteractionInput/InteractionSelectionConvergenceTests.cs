@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
@@ -145,6 +146,94 @@ namespace Ludots.Tests.GAS
             That(exec.State, Is.EqualTo(AbilityExecRunState.Running));
             That(exec.Target, Is.EqualTo(enemy));
             That(exec.TargetContext, Is.EqualTo(targetContext));
+        }
+
+        [Test]
+        public void AbilityExecSystem_TargetCollectionGate_WhenInputQueueFull_FailsOrderAndDoesNotWait()
+        {
+            using var world = World.Create();
+            const int castOrderTypeId = 100;
+            const int abilityId = 9001;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new AbilityStateBuffer());
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            var order = new Order
+            {
+                OrderId = 17,
+                Actor = actor,
+                OrderTypeId = castOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+
+            ref var blackboard = ref world.Get<BlackboardIntBuffer>(actor);
+            blackboard.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
+
+            var definitions = new AbilityDefinitionRegistry();
+            var definition = new AbilityDefinition { ExecSpec = spec };
+            definitions.Register(abilityId, in definition);
+
+            var inputRequests = new InputRequestQueue(capacity: 16);
+            for (int i = 0; i < inputRequests.Capacity; i++)
+            {
+                var request = new InputRequest { RequestId = 1000 + i, RequestTagId = 77 };
+                That(inputRequests.TryEnqueue(in request), Is.True);
+            }
+
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                inputRequests,
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                snapshotCapacity: 16,
+                definitions,
+                castAbilityOrderTypeId: castOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            system.Update(0f);
+
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(inputRequests.Count, Is.EqualTo(inputRequests.Capacity));
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(17));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
+
+            bool castFailed = false;
+            foreach (ref readonly var evt in presentationEvents.Events)
+            {
+                if (evt.Kind != GasPresentationEventKind.CastFailed) continue;
+                castFailed = true;
+                That(evt.FailReason, Is.EqualTo(AbilityCastFailReason.PreconditionFailed));
+            }
+            That(castFailed, Is.True);
         }
 
         [Test]

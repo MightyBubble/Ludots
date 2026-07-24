@@ -16,7 +16,8 @@
       "SpatialType": "Grid",
       "WidthInMacroTiles": 2,
       "HeightInMacroTiles": 2,
-      "GridCellSizeCm": 100
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 64
     }
   ],
   "DefaultCamera": {

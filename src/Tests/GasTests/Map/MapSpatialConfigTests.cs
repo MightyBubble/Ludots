@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using NUnit.Framework;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Spatial;
@@ -147,6 +152,56 @@ namespace GasTests
         }
 
         [Test]
+        public void MapAssets_GridAndNodeGraphBoards_DeclarePositiveLoadedChunkCapacity()
+        {
+            string repoRoot = FindRepoRoot();
+            var violations = new List<string>();
+
+            foreach (string file in EnumerateMapJsonFiles(repoRoot))
+            {
+                JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
+                if (node is not JsonObject root ||
+                    !TryGetPropertyCaseInsensitive(root, "boards", out JsonNode? boardsNode) ||
+                    boardsNode is not JsonArray boards)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < boards.Count; i++)
+                {
+                    if (boards[i] is not JsonObject board)
+                    {
+                        continue;
+                    }
+
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthInMacroTiles", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightInMacroTiles", violations);
+
+                    string spatialType = TryGetString(board, "SpatialType") ?? "Grid";
+                    if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
+                        !spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (!TryGetPropertyCaseInsensitive(board, "LoadedChunkCapacity", out JsonNode? capacityNode) ||
+                        !TryGetPositiveInt(capacityNode, out int _))
+                    {
+                        string relativePath = Path.GetRelativePath(repoRoot, file);
+                        string boardName = TryGetString(board, "Name") ?? "default";
+                        violations.Add($"{relativePath}:boards[{i}] '{boardName}' {spatialType} requires positive LoadedChunkCapacity.");
+                    }
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "Grid/NodeGraph boards construct WorldGridLoadedChunks, so map data must declare capacity explicitly:\n" +
+                string.Join("\n", violations));
+        }
+
+        [Test]
         public void WorldExtentSpec_ConvertsMacroTilesIntoWorldSizeSpec()
         {
             var extent = new WorldExtentSpec(widthInMacroTiles: 2, heightInMacroTiles: 3, cellCm: 100);
@@ -158,6 +213,109 @@ namespace GasTests
             Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(worldSize.Bounds.Width, Is.EqualTo(51_200));
             Assert.That(worldSize.Bounds.Height, Is.EqualTo(76_800));
+        }
+
+        private static IEnumerable<string> EnumerateMapJsonFiles(string repoRoot)
+        {
+            foreach (string root in new[]
+            {
+                Path.Combine(repoRoot, "mods"),
+                Path.Combine(repoRoot, "assets"),
+                Path.Combine(repoRoot, "src", "Platforms", "Web", "wwwroot", "Configs", "Maps")
+            })
+            {
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+                {
+                    string normalized = file.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                    if (normalized.Contains($"{Path.DirectorySeparatorChar}Maps{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                        normalized.Contains($"{Path.DirectorySeparatorChar}maps{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                    {
+                        yield return file;
+                    }
+                }
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            var current = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (current != null)
+            {
+                string gitPath = Path.Combine(current.FullName, ".git");
+                if ((Directory.Exists(gitPath) || File.Exists(gitPath)) &&
+                    File.Exists(Path.Combine(current.FullName, "gitbook", "contributing", "ai-assisted-development.md")))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new InvalidOperationException("Could not locate Ludots repository root.");
+        }
+
+        private static void RejectLegacyKey(
+            string repoRoot,
+            string file,
+            int boardIndex,
+            JsonObject board,
+            string legacyName,
+            string replacementName,
+            List<string> violations)
+        {
+            if (!TryGetPropertyCaseInsensitive(board, legacyName, out JsonNode? _))
+            {
+                return;
+            }
+
+            string relativePath = Path.GetRelativePath(repoRoot, file);
+            violations.Add($"{relativePath}:boards[{boardIndex}] uses legacy {legacyName}; use {replacementName}.");
+        }
+
+        private static string? TryGetString(JsonObject obj, string name)
+        {
+            return TryGetPropertyCaseInsensitive(obj, name, out JsonNode? node)
+                ? node?.GetValue<string>()
+                : null;
+        }
+
+        private static bool TryGetPositiveInt(JsonNode? node, out int value)
+        {
+            value = 0;
+            if (node == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                value = node.GetValue<int>();
+                return value > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryGetPropertyCaseInsensitive(JsonObject obj, string name, out JsonNode? node)
+        {
+            foreach (var kvp in obj)
+            {
+                if (string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    node = kvp.Value;
+                    return true;
+                }
+            }
+
+            node = null;
+            return false;
         }
     }
 }
