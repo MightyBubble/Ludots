@@ -155,6 +155,13 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
             return;
         }
 
+        if (handle.Generation < _generation[slot])
+        {
+            throw new InvalidOperationException(
+                $"Remote interpolation slot {slot} rejects stale Track generation {handle.Generation}; " +
+                $"generation watermark {_generation[slot]}.");
+        }
+
         _generation[slot] = handle.Generation;
         _entityActive[slot] = true;
         _sampleCount[slot] = 0;
@@ -178,7 +185,6 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
 
         ClearEntitySamples(slot);
         _entityActive[slot] = false;
-        _generation[slot] = 0;
     }
 
     public void Push(in NetworkEntityHandle handle, in Physics3DNetRemoteSample sample)

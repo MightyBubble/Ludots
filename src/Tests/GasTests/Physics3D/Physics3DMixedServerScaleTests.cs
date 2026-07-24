@@ -1112,17 +1112,10 @@ public sealed class Physics3DMixedServerScaleTests
                 ticks,
                 _inputPayloadScratch,
                 dispositions);
-            if (status != FixedInputBatchAdmissionStatus.Success &&
-                dispositions[0] is not (FixedInputAdmissionDisposition.Conflict
-                    or FixedInputAdmissionDisposition.RingWrap
-                    or FixedInputAdmissionDisposition.BatchRejected))
-            {
-                // Soft outcomes still return Success; hard rejects return Rejected.
-            }
-
             if (status == FixedInputBatchAdmissionStatus.Rejected)
             {
-                return dispositions[0];
+                throw new InvalidOperationException(
+                    $"Fixed-input batch for player {playerSlot} tick {tick} was rejected as {dispositions[0]}.");
             }
 
             return dispositions[0];
@@ -1278,7 +1271,9 @@ public sealed class Physics3DMixedServerScaleTests
                     _acknowledgedBaselines[client] = snapshotId;
                 }
 
-                minimumWrites = Math.Min(minimumWrites, Math.Max(1, packet.UpsertCount + packet.RemovalCount + packet.DisclosureChangeCount));
+                minimumWrites = Math.Min(
+                    minimumWrites,
+                    packet.UpsertCount + packet.RemovalCount + packet.DisclosureChangeCount);
                 if (ContainsSelf(client))
                 {
                     clientsContainingSelf++;
