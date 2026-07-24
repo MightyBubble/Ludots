@@ -132,6 +132,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(client.LastCommittedTick, Is.EqualTo(12));
         Assert.That(clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out Entity mirroredFirst), Is.True);
         Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
+        ClientWorldReplicationBridge bridgeBeforeReconnect = clientFactory.Bridge;
 
         var firstTarget = NetworkCommandTargetPayload.FromWorldPositionCm(100, 0, 0);
         var secondTarget = NetworkCommandTargetPayload.FromWorldPositionCm(200, 0, 0);
@@ -186,6 +187,9 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
             Assert.That(observer.SeatReconnections, Is.EqualTo(1));
             Assert.That(client.Seat.Generation, Is.EqualTo(1));
+            Assert.That(clientFactory.CreateCount, Is.EqualTo(1));
+            Assert.That(clientFactory.Bridge, Is.SameAs(bridgeBeforeReconnect));
+            Assert.That(clientFactory.Applier.ReleaseCalls, Is.Zero);
         });
 
         server.BeforeAuthoritativeTick(18);
@@ -938,7 +942,22 @@ public sealed class NetworkRuntimeEndToEndTests
         ReplicatedEntityState[] states,
         ReplicationDisclosureInput[] disclosures)
     {
+        using World authoritativeWorld = World.Create();
+        var entities = new NetworkEntityTable(capacity.GlobalEntityCapacity);
+        int maximumSlot = -1;
+        for (int i = 0; i < states.Length; i++)
+        {
+            maximumSlot = Math.Max(maximumSlot, states[i].Entity.Slot);
+        }
+
+        for (int slot = 0; slot <= maximumSlot; slot++)
+        {
+            Assert.That(entities.TryAllocate(authoritativeWorld.Create(), out NetworkEntityHandle allocated), Is.True);
+            Assert.That(allocated, Is.EqualTo(new NetworkEntityHandle(slot, generation: 1)));
+        }
+
         var channel = new AuthoritativeReplicationChannel(
+            entities,
             capacity.ReplicationEntityCapacityPerSeat,
             baselineCapacity: 2,
             new ReplicationDisclosureChangeLog(capacity.ReplicationEntityCapacityPerSeat * 4));
