@@ -119,6 +119,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "rts_multiplayer_frontline_raylib",
+      "name": "RTS Frontline Standalone Practice",
+      "selectors": [
+        "$rts_multiplayer_frontline"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_multiplayer_frontline_networked_raylib",
+      "name": "RTS Frontline Network Client",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_participant_views_raylib",
       "name": "Capability Standard Participant Views Raylib",
       "selectors": [

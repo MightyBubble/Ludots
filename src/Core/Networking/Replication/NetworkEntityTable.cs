@@ -1,10 +1,11 @@
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Networking.Runtime;
 
 namespace Ludots.Core.Networking.Replication
 {
-    public sealed class NetworkEntityTable
+    public sealed class NetworkEntityTable : IAuthoritativeReplicationInputPort
     {
         private const byte EmptyBucket = 0;
         private const byte OccupiedBucket = 1;
@@ -65,6 +66,31 @@ namespace Ludots.Core.Networking.Replication
         public int Count => _count;
 
         public int AvailableCapacity => _freeCount;
+
+        public bool TryCopyActiveHandles(Span<NetworkEntityHandle> destination, out int count)
+        {
+            count = _count;
+            if (destination.Length < count)
+            {
+                return false;
+            }
+
+            int writeIndex = 0;
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot])
+                {
+                    destination[writeIndex++] = new NetworkEntityHandle(slot, _generations[slot]);
+                }
+            }
+
+            if (writeIndex != count)
+            {
+                throw new InvalidOperationException("Network entity active count does not match the slot table.");
+            }
+
+            return true;
+        }
 
         public bool TryAllocate(Entity entity, out NetworkEntityHandle handle)
         {

@@ -29,7 +29,10 @@ namespace Ludots.Adapter.Raylib
 
     internal static class RaylibHostComposer
     {
-        public static RaylibHostSetup Compose(string baseDir, string? gameConfigFile = null)
+        public static RaylibHostSetup Compose(
+            string baseDir,
+            string? gameConfigFile = null,
+            Action<GameBootstrapResult>? configure = null)
         {
             // Initialize log with colored console backend before anything else
             var consoleBackend = new RaylibConsoleLogBackend();
@@ -39,6 +42,7 @@ namespace Ludots.Adapter.Raylib
             Log.Initialize(effectiveBackend);
 
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            configure?.Invoke(result);
             var engine = result.Engine;
             var config = result.Config;
             IBrowserRuntime? browserRuntime = RaylibBrowserRuntimeInstaller.InstallIfConfigured(engine, config, baseDir);

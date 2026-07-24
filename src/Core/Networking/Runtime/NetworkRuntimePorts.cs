@@ -76,11 +76,19 @@ namespace Ludots.Core.Networking.Runtime
 
         void OnServerSeatReleased(in SessionSeatBinding seat);
 
+        void OnServerRoomSnapshot(
+            in NetworkRoomSnapshotHeader snapshot,
+            ReadOnlySpan<NetworkRoomSeatSnapshot> seats);
+
         void OnClientHandshake(in SessionHandshakeResponse response);
 
         void OnClientAdmission(in Commands.NetworkCommandAdmissionOutcome outcome);
 
         void OnClientResyncRequired(in NetworkResyncRequired message);
+
+        void OnClientRoomSnapshot(
+            in NetworkRoomSnapshotHeader snapshot,
+            ReadOnlySpan<NetworkRoomSeatSnapshot> seats);
     }
 
     /// <summary>
@@ -166,28 +174,57 @@ namespace Ludots.Core.Networking.Runtime
         void Disconnect();
     }
 
+    public interface IReplicatedClientRoomControlPort
+    {
+        bool TrySetRoomReady(bool ready);
+    }
+
     public sealed class AuthoritativeReplicationSeatRuntime
     {
         public AuthoritativeReplicationSeatRuntime(
+            int seatSlot,
+            PlayerId playerId,
             AuthoritativeWorldReplicationBridge bridge,
             AuthoritativeReplicationChannel channel,
             ReplicationDisclosureChangeLog disclosureLog,
             ReplicationProjectionBuffer projection,
             ReplicationPacketBuffer packet)
         {
+            if (seatSlot < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seatSlot));
+            }
+
+            if (playerId.Value <= 0)
+            {
+                throw new ArgumentException("Replication seat requires a positive player id.", nameof(playerId));
+            }
+
             Bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
             Channel = channel ?? throw new ArgumentNullException(nameof(channel));
             DisclosureLog = disclosureLog ?? throw new ArgumentNullException(nameof(disclosureLog));
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             Packet = packet ?? throw new ArgumentNullException(nameof(packet));
 
+            if (!ReferenceEquals(channel.DisclosureLog, disclosureLog))
+            {
+                throw new ArgumentException(
+                    "Replication seat channel and acknowledgement path must share one disclosure log.",
+                    nameof(disclosureLog));
+            }
+
             int capacity = bridge.EntityCapacity;
-            if (projection.EntityCapacity != capacity || packet.EntityCapacity != capacity)
+            if (projection.EntityCapacity != capacity || packet.EntityCapacity < capacity)
             {
                 throw new ArgumentException("Replication seat capacities must match its world bridge.");
             }
+
+            SeatSlot = seatSlot;
+            PlayerId = playerId;
         }
 
+        public int SeatSlot { get; }
+        public PlayerId PlayerId { get; }
         public AuthoritativeWorldReplicationBridge Bridge { get; }
         public AuthoritativeReplicationChannel Channel { get; }
         public ReplicationDisclosureChangeLog DisclosureLog { get; }

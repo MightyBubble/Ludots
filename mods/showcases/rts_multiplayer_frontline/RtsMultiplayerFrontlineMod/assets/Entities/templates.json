@@ -1,0 +1,168 @@
+[
+  {
+    "id": "rts_frontline_team_representative",
+    "components": {
+      "Name": { "Value": "Frontline Team" },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "rts_frontline_player_representative",
+    "components": {
+      "Name": { "Value": "Frontline Player" },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "rts_frontline_match_state",
+    "components": {
+      "Name": { "Value": "Frontline Match State" },
+      "ReplicationSchemaRef": { "SchemaId": 705 },
+      "FrontlineMatchStateEntity": {},
+      "FrontlineMatchStateProjection": {
+        "CommittedTick": 0,
+        "Phase": 0,
+        "CountdownRemainingTicks": 0,
+        "Outcome": 0,
+        "WinningSideIndex": -1,
+        "SideOneReady": 0,
+        "SideTwoReady": 0,
+        "SideOneConnected": 1,
+        "SideTwoConnected": 1
+      }
+    }
+  },
+  {
+    "id": "rts_frontline_core",
+    "components": {
+      "Name": { "Value": "Command Core" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "ReplicationSchemaRef": { "SchemaId": 701 },
+      "VisionEmitterCm": {
+        "ScopeKeyId": 1,
+        "LayerMask": 1,
+        "Polarity": 0,
+        "Aperture": { "Kind": 0, "RangeCm": 4500, "HalfAngleDeg": 0, "HalfWidthCm": 0 },
+        "AltitudeBand": 0,
+        "Priority": 0,
+        "TargetScopeSelectorId": 0,
+        "UpdatePolicyId": 0,
+        "DetectionStrength": 0,
+        "TrueSightStrength": 0
+      },
+      "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+      "AttributeBuffer": { "base": { "Health": 1000, "Crystals": 40 } },
+      "AbilityStateBuffer": { "abilityIds": ["Ability.Rts.Frontline.TrainInfantry"] },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineCore": {},
+      "FrontlineCoreState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_harvester",
+    "components": {
+      "Name": { "Value": "Crystal Harvester" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "ReplicationSchemaRef": { "SchemaId": 702 },
+      "VisionEmitterCm": {
+        "ScopeKeyId": 1,
+        "LayerMask": 1,
+        "Polarity": 0,
+        "Aperture": { "Kind": 0, "RangeCm": 2600, "HalfAngleDeg": 0, "HalfWidthCm": 0 },
+        "AltitudeBand": 0,
+        "Priority": 0,
+        "TargetScopeSelectorId": 0,
+        "UpdatePolicyId": 0,
+        "DetectionStrength": 0,
+        "TrueSightStrength": 0
+      },
+      "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+      "AttributeBuffer": { "base": { "Health": 120, "MoveSpeed": 700 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineHarvester": {},
+      "FrontlineHarvestState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_infantry",
+    "components": {
+      "Name": { "Value": "Frontline Infantry" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "ReplicationSchemaRef": { "SchemaId": 703 },
+      "VisionEmitterCm": {
+        "ScopeKeyId": 1,
+        "LayerMask": 1,
+        "Polarity": 0,
+        "Aperture": { "Kind": 0, "RangeCm": 3200, "HalfAngleDeg": 0, "HalfWidthCm": 0 },
+        "AltitudeBand": 0,
+        "Priority": 0,
+        "TargetScopeSelectorId": 0,
+        "UpdatePolicyId": 0,
+        "DetectionStrength": 0,
+        "TrueSightStrength": 0
+      },
+      "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 800 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineInfantry": {},
+      "FrontlineAttackState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_crystal_node",
+    "components": {
+      "Name": { "Value": "Crystal Field" },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "ReplicationSchemaRef": { "SchemaId": 704 },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "FrontlineCrystalNode": {},
+      "FrontlineTagBindingState": {}
+    }
+  }
+]

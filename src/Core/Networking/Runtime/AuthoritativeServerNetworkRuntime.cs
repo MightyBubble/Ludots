@@ -17,8 +17,10 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkRuntimeCapacity _capacity;
         private readonly IServerConnectionEventPort _connectionEvents;
         private readonly IServerDatagramPort _datagrams;
+        private readonly IServerConnectionControlPort _connectionControl;
         private readonly AuthoritativeSessionRegistry _sessions;
         private readonly NetworkCommandIngress _commands;
+        private readonly NetworkGameplayCommandGate _gameplayCommandGate;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInputPort _replicationInput;
@@ -28,6 +30,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly FixedServerDatagramSendQueue _outbound;
 
         private readonly int[] _transportConnections;
+        private readonly bool[] _disconnectAfterFlush;
         private readonly byte[] _seatStates;
         private readonly int[] _seatConnections;
         private readonly uint[] _seatGenerations;
@@ -44,6 +47,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandWireEntry[] _commandEntries;
         private readonly NetworkEntityHandle[] _activeHandles;
         private readonly SessionSeatBinding[] _expiredSeats;
+        private readonly NetworkRoomSeatSnapshot[] _roomSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
 
@@ -55,6 +59,7 @@ namespace Ludots.Core.Networking.Runtime
         private uint _currentTick;
         private uint _lastCommittedTick;
         private ulong _nextSnapshotId;
+        private ulong _lastPublishedRoomRevision;
         private bool _disposed;
         private bool _faulted;
         private NetworkRuntimeFault _lastFault;
@@ -63,8 +68,10 @@ namespace Ludots.Core.Networking.Runtime
             in NetworkRuntimeCapacity capacity,
             IServerConnectionEventPort connectionEvents,
             IServerDatagramPort datagrams,
+            IServerConnectionControlPort connectionControl,
             AuthoritativeSessionRegistry sessions,
             NetworkCommandIngress commands,
+            NetworkGameplayCommandGate gameplayCommandGate,
             NetworkCommandAdmissionResultBuffer commandResults,
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInputPort replicationInput,
@@ -74,8 +81,10 @@ namespace Ludots.Core.Networking.Runtime
             _capacity = capacity;
             _connectionEvents = connectionEvents ?? throw new ArgumentNullException(nameof(connectionEvents));
             _datagrams = datagrams ?? throw new ArgumentNullException(nameof(datagrams));
+            _connectionControl = connectionControl ?? throw new ArgumentNullException(nameof(connectionControl));
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+            _gameplayCommandGate = gameplayCommandGate ?? throw new ArgumentNullException(nameof(gameplayCommandGate));
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInput = replicationInput ?? throw new ArgumentNullException(nameof(replicationInput));
@@ -87,11 +96,24 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentException("Session, replication-seat, and connection capacities must agree.");
             }
 
+            if (NetworkWireEnvelope.SizeInBytes + RoomControlWireCodec.GetSnapshotPayloadSize(sessions.SeatCapacity) >
+                capacity.MaxDatagramPayloadBytes)
+            {
+                throw new ArgumentException(
+                    "Configured datagram capacity cannot carry one complete authoritative room snapshot.",
+                    nameof(capacity));
+            }
+
             for (int i = 0; i < replicationSeats.Length; i++)
             {
-                if (replicationSeats[i] == null || replicationSeats[i].Bridge.EntityCapacity != capacity.EntityCapacity)
+                if (replicationSeats[i] == null ||
+                    replicationSeats[i].SeatSlot != i ||
+                    replicationSeats[i].PlayerId.Value != i + 1 ||
+                    replicationSeats[i].Bridge.EntityCapacity != capacity.EntityCapacity)
                 {
-                    throw new ArgumentException("Every authoritative seat requires a matching replication runtime.", nameof(replicationSeats));
+                    throw new ArgumentException(
+                        "Every authoritative seat requires a slot-ordered, player-bound replication runtime with matching capacity.",
+                        nameof(replicationSeats));
                 }
             }
 
@@ -102,6 +124,7 @@ namespace Ludots.Core.Networking.Runtime
             _outbound = new FixedServerDatagramSendQueue(capacity.OutboundQueueCapacity, capacity.MaxDatagramPayloadBytes);
 
             _transportConnections = new int[capacity.ConnectionCapacity];
+            _disconnectAfterFlush = new bool[capacity.ConnectionCapacity];
             int seats = sessions.SeatCapacity;
             _seatStates = new byte[seats];
             _seatConnections = new int[seats];
@@ -126,8 +149,10 @@ namespace Ludots.Core.Networking.Runtime
             _commandEntries = new NetworkCommandWireEntry[capacity.MaxCommandEntries];
             _activeHandles = new NetworkEntityHandle[capacity.EntityCapacity];
             _expiredSeats = new SessionSeatBinding[seats];
-            _pendingAdmissions = new NetworkCommandAdmissionOutcome[commandResults.Capacity];
-            _pendingAdmissionActive = new bool[commandResults.Capacity];
+            _roomSeats = new NetworkRoomSeatSnapshot[seats];
+            int pendingAdmissionCapacity = checked(commandResults.Capacity * sessions.SeatCapacity);
+            _pendingAdmissions = new NetworkCommandAdmissionOutcome[pendingAdmissionCapacity];
+            _pendingAdmissionActive = new bool[pendingAdmissionCapacity];
             _receiveBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.ResponseSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
@@ -161,6 +186,7 @@ namespace Ludots.Core.Networking.Runtime
 
             FlushPendingAdmissions();
             FlushOutbound();
+            FlushRejectedConnections();
         }
 
         public void BeforeAuthoritativeTick(uint executingTick)
@@ -173,6 +199,7 @@ namespace Ludots.Core.Networking.Runtime
 
             _currentTick = executingTick;
             ExpireDisconnectedSeats(executingTick);
+            PublishRoomSnapshotIfChanged();
             _commands.DrainScheduled(checked((int)executingTick));
             FlushAdmissionResults();
             FlushPendingAdmissions();
@@ -187,6 +214,17 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _lastCommittedTick = committedTick;
+            _sessions.AdvanceRoomCountdown(committedTick);
+            if (_sessions.RoomPhase == NetworkRoomPhase.Started)
+            {
+                _gameplayCommandGate.StartMatch();
+            }
+            PublishRoomSnapshotIfChanged();
+            if (committedTick % (uint)_capacity.StatePublishIntervalTicks != 0)
+            {
+                return;
+            }
+
             bool anyConnected = false;
             for (int i = 0; i < _seatStates.Length; i++)
             {
@@ -226,7 +264,31 @@ namespace Ludots.Core.Networking.Runtime
 
         public void Dispose()
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             _disposed = true;
+            object events = _connectionEvents;
+            object datagrams = _datagrams;
+            object control = _connectionControl;
+            if (events is IDisposable disposableEvents)
+            {
+                disposableEvents.Dispose();
+            }
+
+            if (!ReferenceEquals(datagrams, events) && datagrams is IDisposable disposableDatagrams)
+            {
+                disposableDatagrams.Dispose();
+            }
+
+            if (!ReferenceEquals(control, events) &&
+                !ReferenceEquals(control, datagrams) &&
+                control is IDisposable disposableControl)
+            {
+                disposableControl.Dispose();
+            }
         }
 
         private void ProcessConnectionEvent(in ServerConnectionEvent connectionEvent)
@@ -277,6 +339,7 @@ namespace Ludots.Core.Networking.Runtime
             _seatDisconnectTicks[seat] = _currentTick;
             _commandReassemblers[seat].Reset();
             _observer.OnServerSeatDisconnected(in binding, connectionEvent.DisconnectReason);
+            PublishRoomSnapshotIfChanged();
         }
 
         private void ProcessDatagram(ConnectionId connection, ChannelId channel, ReadOnlySpan<byte> datagram)
@@ -318,6 +381,9 @@ namespace Ludots.Core.Networking.Runtime
                 case NetworkWireKind.ResyncRequired:
                     ProcessClientResyncRequest(connection, payload);
                     return;
+                case NetworkWireKind.RoomReadyIntent:
+                    ProcessRoomReadyIntent(connection, payload);
+                    return;
                 default:
                     ProtocolFault(NetworkRuntimeFaultCode.UnexpectedWireKind, connection.Value, envelope.Kind);
                     return;
@@ -355,6 +421,46 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             SendHandshakeResponse(connection, in response);
+            if (response.Accepted)
+            {
+                PublishRoomSnapshotIfChanged();
+            }
+
+            if (!response.Accepted)
+            {
+                int transportSlot = FindTransportConnection(connection.Value);
+                if (transportSlot < 0)
+                {
+                    Fail(NetworkRuntimeFaultCode.UnknownConnection, connection.Value);
+                }
+
+                _disconnectAfterFlush[transportSlot] = true;
+            }
+        }
+
+        private void FlushRejectedConnections()
+        {
+            if (_outbound.Count != 0)
+            {
+                return;
+            }
+
+            for (int slot = 0; slot < _disconnectAfterFlush.Length; slot++)
+            {
+                if (!_disconnectAfterFlush[slot])
+                {
+                    continue;
+                }
+
+                int connectionValue = _transportConnections[slot];
+                if (connectionValue == 0)
+                {
+                    Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: slot);
+                }
+
+                _disconnectAfterFlush[slot] = false;
+                _connectionControl.Disconnect(new ConnectionId(connectionValue));
+            }
         }
 
         private void BindAcceptedSeat(ConnectionId connection, in SessionSeatBinding binding)
@@ -362,6 +468,8 @@ namespace Ludots.Core.Networking.Runtime
             int seat = binding.Slot;
             Arch.Core.Entity controller = default;
             if ((uint)seat >= (uint)_seatStates.Length ||
+                _replicationSeats[seat].SeatSlot != seat ||
+                _replicationSeats[seat].PlayerId != binding.PlayerId ||
                 !_controllers.TryResolveController(in binding, out controller))
             {
                 Fail(NetworkRuntimeFaultCode.SeatControllerUnavailable, connection.Value, detail: seat);
@@ -446,11 +554,72 @@ namespace Ludots.Core.Networking.Runtime
 
             SessionSeatBinding binding = GetSeatBinding(seat);
             NetworkCommandSeat commandSeat = ToCommandSeat(in binding);
-            _commands.Schedule(
+            NetworkCommandAdmissionOutcome outcome = _commands.Schedule(
                 in commandSeat,
                 in header,
                 checked((int)_currentTick),
                 _commandEntries.AsSpan(0, entryCount));
+            if (outcome.Result == Ludots.Core.Gameplay.GAS.Orders.OrderSubmitResult.NetworkAdmissionBackpressured)
+            {
+                SendAdmissionOutcome(connection, in outcome);
+            }
+        }
+
+        private void ProcessRoomReadyIntent(ConnectionId connection, ReadOnlySpan<byte> payload)
+        {
+            int seat = FindSeatByConnection(connection.Value);
+            if (seat < 0)
+            {
+                ProtocolFault(NetworkRuntimeFaultCode.UnauthenticatedMessage, connection.Value, NetworkWireKind.RoomReadyIntent);
+                return;
+            }
+
+            NetworkWireCodecStatus decoded = RoomControlWireCodec.TryDecodeReadyIntent(
+                payload,
+                out NetworkRoomReadyIntent intent);
+            if (decoded != NetworkWireCodecStatus.Success)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.MalformedDatagram,
+                    connection.Value,
+                    NetworkWireKind.RoomReadyIntent,
+                    decoded);
+                return;
+            }
+
+            if (intent.SessionEpoch != _sessions.SessionEpoch)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    connection.Value,
+                    NetworkWireKind.RoomReadyIntent);
+                return;
+            }
+
+            RoomReadyIntentApplyResult applied = _sessions.ApplyRoomReadyIntent(
+                connection,
+                intent.ReadyState,
+                _lastCommittedTick);
+            if (applied == RoomReadyIntentApplyResult.Unauthenticated)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    connection.Value,
+                    NetworkWireKind.RoomReadyIntent,
+                    detail: seat);
+            }
+
+            if (applied == RoomReadyIntentApplyResult.MatchAlreadyStarted)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    connection.Value,
+                    NetworkWireKind.RoomReadyIntent,
+                    detail: (int)applied);
+                return;
+            }
+
+            PublishRoomSnapshotIfChanged();
         }
 
         private void ProcessAcknowledgement(ConnectionId connection, ReadOnlySpan<byte> payload)
@@ -634,6 +803,51 @@ namespace Ludots.Core.Networking.Runtime
             SendFramed(connection, _capacity.ControlChannel, NetworkWireKind.SessionHandshakeResponse, _payloadBuffer.AsSpan(0, payloadBytes));
         }
 
+        private void PublishRoomSnapshotIfChanged()
+        {
+            if (_lastPublishedRoomRevision == _sessions.RoomRevision)
+            {
+                return;
+            }
+
+            if (!_sessions.TryCopyRoomSnapshot(_roomSeats, out NetworkRoomSnapshotHeader snapshot, out int seatCount) ||
+                seatCount != _roomSeats.Length)
+            {
+                Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seatCount);
+            }
+
+            NetworkWireCodecStatus encoded = RoomControlWireCodec.TryEncodeSnapshot(
+                in snapshot,
+                _roomSeats,
+                _payloadBuffer,
+                out int payloadBytes);
+            if (encoded != NetworkWireCodecStatus.Success)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    wireKind: NetworkWireKind.RoomSnapshot,
+                    codecStatus: encoded);
+            }
+
+            _observer.OnServerRoomSnapshot(in snapshot, _roomSeats.AsSpan(0, seatCount));
+
+            for (int seat = 0; seat < _seatStates.Length; seat++)
+            {
+                if (_seatStates[seat] != SeatConnected)
+                {
+                    continue;
+                }
+
+                SendFramed(
+                    new ConnectionId(_seatConnections[seat]),
+                    _capacity.ControlChannel,
+                    NetworkWireKind.RoomSnapshot,
+                    _payloadBuffer.AsSpan(0, payloadBytes));
+            }
+
+            _lastPublishedRoomRevision = snapshot.Revision;
+        }
+
         private void SendResyncRequired(int seat, NetworkResyncReason reason)
         {
             var message = new NetworkResyncRequired(
@@ -712,23 +926,30 @@ namespace Ludots.Core.Networking.Runtime
                     continue;
                 }
 
-                NetworkWireCodecStatus encoded = CommandAdmissionWireCodec.TryEncode(
-                    _sessions.SessionEpoch.Value,
-                    in outcome,
-                    _payloadBuffer,
-                    out int payloadBytes);
-                if (encoded != NetworkWireCodecStatus.Success)
-                {
-                    Fail(NetworkRuntimeFaultCode.CommandBatchRejected, _seatConnections[seat], codecStatus: encoded);
-                }
-
-                SendFramed(
-                    new ConnectionId(_seatConnections[seat]),
-                    _capacity.CommandChannel,
-                    NetworkWireKind.CommandAdmissionResult,
-                    _payloadBuffer.AsSpan(0, payloadBytes));
+                SendAdmissionOutcome(new ConnectionId(_seatConnections[seat]), in outcome);
                 _pendingAdmissionActive[i] = false;
             }
+        }
+
+        private void SendAdmissionOutcome(
+            ConnectionId connection,
+            in NetworkCommandAdmissionOutcome outcome)
+        {
+            NetworkWireCodecStatus encoded = CommandAdmissionWireCodec.TryEncode(
+                _sessions.SessionEpoch.Value,
+                in outcome,
+                _payloadBuffer,
+                out int payloadBytes);
+            if (encoded != NetworkWireCodecStatus.Success)
+            {
+                Fail(NetworkRuntimeFaultCode.CommandBatchRejected, connection.Value, codecStatus: encoded);
+            }
+
+            SendFramed(
+                connection,
+                _capacity.CommandChannel,
+                NetworkWireKind.CommandAdmissionResult,
+                _payloadBuffer.AsSpan(0, payloadBytes));
         }
 
         private void ExpireDisconnectedSeats(uint currentTick)
@@ -870,7 +1091,8 @@ namespace Ludots.Core.Networking.Runtime
                 NetworkWireKind.CommandFragment => _capacity.CommandChannel,
                 NetworkWireKind.SessionHandshakeRequest or
                 NetworkWireKind.SnapshotAcknowledgement or
-                NetworkWireKind.ResyncRequired => _capacity.ControlChannel,
+                NetworkWireKind.ResyncRequired or
+                NetworkWireKind.RoomReadyIntent => _capacity.ControlChannel,
                 _ => default,
             };
         }

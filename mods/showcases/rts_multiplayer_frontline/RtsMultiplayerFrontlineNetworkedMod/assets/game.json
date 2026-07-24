@@ -1,0 +1,93 @@
+{
+  "networking": {
+    "profileId": "rts_duel_v1",
+    "referenceTransport": "LiteNetLib/2.1.4",
+    "protocolMajor": 1,
+    "protocolMinor": 0,
+    "playerCapacity": 2,
+    "simulationTickRateHz": 30,
+    "statePublishRateHz": 10,
+    "networkEntityCapacity": 256,
+    "orderQueueCapacity": 4096,
+    "maxCommandBatchesPerSecondPerPlayer": 32,
+    "commandBurstBatchCapacity": 64,
+    "maxActorsPerCommandBatch": 128,
+    "commandSequenceHistoryCapacity": 128,
+    "maxPastTargetTicks": 6,
+    "maxFutureTargetTicks": 6,
+    "networkAdmissionResultCapacity": 128,
+    "entityAdmissionResultCapacity": 4096,
+    "reconnectWindowSeconds": 30,
+    "readyCountdownTicks": 90,
+    "clientReconnectRetryMilliseconds": 500,
+    "baselineCapacity": 32,
+    "replicationPacketEntityCapacity": 256,
+    "replicationSchemaCapacity": 705,
+    "disclosureChangeLogCapacity": 512,
+    "datagramQueueCapacity": 2048,
+    "connectionEventCapacity": 64,
+    "maxDatagramPayloadBytes": 1200,
+    "transportChannelCount": 3,
+    "controlChannelId": 0,
+    "commandChannelId": 1,
+    "stateChannelId": 2,
+    "snapshotChunkCapacity": 32,
+    "maxServerOutboundBytesPerSecondPerClient": 262144,
+    "tickP95BudgetMicroseconds": 26700,
+    "tickP99BudgetMicroseconds": 31000,
+    "commandSchemas": [
+      {
+        "orderTypeKey": "moveTo",
+        "targetKind": "WorldPositionCm",
+        "allowArg0": false,
+        "allowArg1": false,
+        "submitMode": "Queued",
+        "requiredTargetPositionAccess": "None"
+      },
+      {
+        "orderTypeKey": "attackTarget",
+        "targetKind": "NetworkEntity",
+        "allowArg0": false,
+        "allowArg1": false,
+        "submitMode": "Queued",
+        "requiredTargetPositionAccess": "Live"
+      },
+      {
+        "orderTypeKey": "frontlineGather",
+        "targetKind": "NetworkEntity",
+        "allowArg0": false,
+        "allowArg1": false,
+        "submitMode": "Immediate",
+        "requiredTargetPositionAccess": "Live"
+      },
+      {
+        "orderTypeKey": "castAbility",
+        "targetKind": "None",
+        "allowArg0": true,
+        "allowArg1": false,
+        "submitMode": "Immediate",
+        "requiredTargetPositionAccess": "None"
+      },
+      {
+        "orderTypeKey": "stop",
+        "targetKind": "None",
+        "allowArg0": false,
+        "allowArg1": false,
+        "submitMode": "Immediate",
+        "requiredTargetPositionAccess": "None"
+      }
+    ],
+    "normalConnection": {
+      "roundTripLatencyMs": 0,
+      "jitterMs": 0,
+      "packetLossPermille": 0,
+      "reorderPermille": 0
+    },
+    "unstableConnection": {
+      "roundTripLatencyMs": 180,
+      "jitterMs": 30,
+      "packetLossPermille": 50,
+      "reorderPermille": 20
+    }
+  }
+}

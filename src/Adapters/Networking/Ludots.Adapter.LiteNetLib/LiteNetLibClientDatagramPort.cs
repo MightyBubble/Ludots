@@ -1,5 +1,6 @@
 using System;
 using global::LiteNetLib;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Transport;
 
 namespace Ludots.Adapter.LiteNetLib;
@@ -7,12 +8,17 @@ namespace Ludots.Adapter.LiteNetLib;
 public sealed class LiteNetLibClientDatagramPort :
     IClientDatagramPort,
     IClientConnectionEventPort,
+    IClientConnectionControlPort,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;
     private readonly NetManager _manager;
     private readonly FixedDatagramQueue _inbound;
     private readonly FixedClientConnectionEventQueue _connectionEvents;
+    private readonly byte _stateChannelId;
+    private readonly string _host;
+    private readonly int _port;
+    private readonly string _connectionKey;
     private NetPeer? _serverPeer;
     private bool _disposed;
 
@@ -23,13 +29,19 @@ public sealed class LiteNetLibClientDatagramPort :
         int datagramCapacity,
         int connectionEventCapacity,
         int maxPayloadBytes,
-        int channelCount)
+        int channelCount,
+        int stateChannelId)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if ((uint)port > ushort.MaxValue || port == 0) throw new ArgumentOutOfRangeException(nameof(port));
         if (string.IsNullOrWhiteSpace(connectionKey)) throw new ArgumentException("Connection key is required.", nameof(connectionKey));
         if ((uint)(channelCount - 1) >= 64u) throw new ArgumentOutOfRangeException(nameof(channelCount));
+        if ((uint)stateChannelId >= (uint)channelCount) throw new ArgumentOutOfRangeException(nameof(stateChannelId));
 
+        _host = host;
+        _port = port;
+        _connectionKey = connectionKey;
+        _stateChannelId = (byte)stateChannelId;
         _inbound = new FixedDatagramQueue(datagramCapacity, maxPayloadBytes);
         _connectionEvents = new FixedClientConnectionEventQueue(connectionEventCapacity);
         _listener = new EventBasedNetListener();
@@ -50,8 +62,38 @@ public sealed class LiteNetLibClientDatagramPort :
             throw new InvalidOperationException("LiteNetLib client failed to start its UDP endpoint.");
         }
 
-        _serverPeer = _manager.Connect(host, port, connectionKey)
-            ?? throw new InvalidOperationException($"LiteNetLib client failed to start connection to {host}:{port}.");
+    }
+
+    public ClientConnectionControlState State
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _serverPeer?.ConnectionState switch
+            {
+                ConnectionState.Connected => ClientConnectionControlState.Connected,
+                ConnectionState.Outgoing => ClientConnectionControlState.Connecting,
+                _ => ClientConnectionControlState.Disconnected,
+            };
+        }
+    }
+
+    public bool TryConnect()
+    {
+        ThrowIfDisposed();
+        if (State != ClientConnectionControlState.Disconnected)
+        {
+            return false;
+        }
+
+        _serverPeer = _manager.Connect(_host, _port, _connectionKey);
+        return _serverPeer != null;
+    }
+
+    public void Disconnect()
+    {
+        ThrowIfDisposed();
+        _serverPeer?.Disconnect();
     }
 
     public void Pump()
@@ -89,7 +131,7 @@ public sealed class LiteNetLibClientDatagramPort :
                 : DatagramSendStatus.NotReady;
         }
 
-        _serverPeer.Send(payload, channelId.Value, DeliveryMethod.ReliableOrdered);
+        _serverPeer.Send(payload, channelId.Value, ResolveDeliveryMethod(channelId.Value));
         return DatagramSendStatus.Sent;
     }
 
@@ -115,13 +157,20 @@ public sealed class LiteNetLibClientDatagramPort :
         byte channelNumber,
         DeliveryMethod deliveryMethod)
     {
-        if (deliveryMethod != DeliveryMethod.ReliableOrdered)
+        DeliveryMethod expected = ResolveDeliveryMethod(channelNumber);
+        if (deliveryMethod != expected)
         {
-            throw new InvalidOperationException($"Unexpected delivery method {deliveryMethod}; reliable ordered is required.");
+            throw new InvalidOperationException(
+                $"Unexpected delivery method {deliveryMethod} on channel {channelNumber}; expected {expected}.");
         }
 
         _inbound.Enqueue(connectionValue: 0, channelNumber, reader.GetRemainingBytesSpan());
     }
+
+    private DeliveryMethod ResolveDeliveryMethod(byte channelNumber)
+        => channelNumber == _stateChannelId
+            ? DeliveryMethod.Sequenced
+            : DeliveryMethod.ReliableOrdered;
 
     private static TransportDisconnectReason MapDisconnectReason(DisconnectReason reason) => reason switch
     {

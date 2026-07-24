@@ -20,6 +20,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -36,6 +37,7 @@ namespace CoreInputMod.Systems
 
         public const string LastGroundWorldDebugKey = "CoreInputMod.Debug.LastGroundWorldCm";
         public const string LastOrderDebugKey = "CoreInputMod.Debug.LastOrder";
+        public const string LastNetworkSubmitResultDebugKey = "CoreInputMod.Debug.LastNetworkSubmitResult";
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
@@ -158,9 +160,19 @@ namespace CoreInputMod.Systems
                     return;
                 }
 
-                bool accepted = _planner != null
-                    ? _planner.TrySubmit(in order)
-                    : _orders.TryEnqueue(order);
+                bool accepted;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(in order);
+                    _globals[LastNetworkSubmitResultDebugKey] = result;
+                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                }
+                else
+                {
+                    accepted = _planner != null
+                        ? _planner.TrySubmit(in order)
+                        : _orders.TryEnqueue(order);
+                }
                 if (accepted)
                 {
                     AfterOrderAccepted?.Invoke(in order);
@@ -182,9 +194,19 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                bool accepted = _planner != null
-                    ? _planner.TrySubmitSharedBatch(orders)
-                    : _orders.TryEnqueueSharedBatch(orders);
+                bool accepted;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = result;
+                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                }
+                else
+                {
+                    accepted = _planner != null
+                        ? _planner.TrySubmitSharedBatch(orders)
+                        : _orders.TryEnqueueSharedBatch(orders);
+                }
                 if (accepted)
                 {
                     for (int i = 0; i < orders.Length; i++)
@@ -211,9 +233,19 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                bool accepted = _planner != null
-                    ? _planner.TrySubmitClusteredBatch(orders)
-                    : _orders.TryEnqueueClusteredBatch(orders);
+                bool accepted;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = result;
+                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                }
+                else
+                {
+                    accepted = _planner != null
+                        ? _planner.TrySubmitClusteredBatch(orders)
+                        : _orders.TryEnqueueClusteredBatch(orders);
+                }
                 if (accepted)
                 {
                     for (int i = 0; i < orders.Length; i++)
@@ -253,6 +285,27 @@ namespace CoreInputMod.Systems
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
             return mapping;
+        }
+
+        private bool TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort port)
+        {
+            port = null!;
+            if (!_globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) ||
+                roleValue is not NetworkProcessRole role ||
+                role != NetworkProcessRole.ReplicatedClient)
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                portValue is not IReplicatedClientCommandPort configured)
+            {
+                throw new InvalidOperationException(
+                    "Replicated client input requires the platform-neutral client command port before accepting orders.");
+            }
+
+            port = configured;
+            return true;
         }
 
         private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)

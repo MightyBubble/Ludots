@@ -277,11 +277,18 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NetworkRuntimeConfig> NetworkRuntimeConfig = new("NetworkRuntimeConfig");
         public static readonly ServiceKey<NetworkProcessRole> NetworkProcessRole = new("NetworkProcessRole");
         public static readonly ServiceKey<INetworkRuntimePort> NetworkRuntimePort = new("NetworkRuntimePort");
+        public static readonly ServiceKey<IReplicatedClientCommandPort> ReplicatedClientCommandPort = new("ReplicatedClientCommandPort");
+        public static readonly ServiceKey<IReplicatedClientRoomControlPort> ReplicatedClientRoomControlPort = new("ReplicatedClientRoomControlPort");
         public static readonly ServiceKey<NetworkCommandIngress> NetworkCommandIngress = new("NetworkCommandIngress");
+        public static readonly ServiceKey<NetworkGameplayCommandGate> NetworkGameplayCommandGate = new("NetworkGameplayCommandGate");
         public static readonly ServiceKey<NetworkCommandSchemaRegistry> NetworkCommandSchemaRegistry = new("NetworkCommandSchemaRegistry");
         public static readonly ServiceKey<NetworkCommandAdmissionResultBuffer> NetworkCommandAdmissionResults = new("NetworkCommandAdmissionResults");
         public static readonly ServiceKey<OrderAdmissionResultBuffer> EntityOrderAdmissionResults = new("EntityOrderAdmissionResults");
         public static readonly ServiceKey<NetworkEntityTable> NetworkEntityTable = new("NetworkEntityTable");
+        public static readonly ServiceKey<AuthoritativeSeatControllerRegistry> AuthoritativeSeatControllers = new("AuthoritativeSeatControllers");
+        public static readonly ServiceKey<NetworkRuntimeStateObserver> NetworkRuntimeStateObserver = new("NetworkRuntimeStateObserver");
+        public static readonly ServiceKey<ReplicationSchemaProjectorRegistry> ReplicationSchemaProjectors = new("ReplicationSchemaProjectors");
+        public static readonly ServiceKey<ClientReplicationSchemaApplierRegistry> ClientReplicationSchemaAppliers = new("ClientReplicationSchemaAppliers");
         public static readonly ServiceKey<IEntityCommandPanelCollectionQueryConfigRegistry> EntityCommandPanelCollectionQueryConfigRegistry =
             new("EntityCommandPanelCollectionQueryConfigRegistry");
 

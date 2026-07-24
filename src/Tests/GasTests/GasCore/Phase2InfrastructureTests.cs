@@ -229,6 +229,20 @@ namespace GasTests
             Assert.That(called, Is.EqualTo(1));
         }
 
+        [Test]
+        public async Task RegisterEventHandler_SynchronousFailure_IsRecorded()
+        {
+            var tm = new TriggerManager();
+            tm.RegisterEventHandler(GameEvents.GameStart, _ =>
+                throw new InvalidOperationException("startup failed"));
+
+            await tm.FireEventAsync(GameEvents.GameStart, new ScriptContext());
+
+            Assert.That(tm.Errors, Has.Count.EqualTo(1));
+            Assert.That(tm.Errors[0].EventKey, Is.EqualTo(GameEvents.GameStart));
+            Assert.That(tm.Errors[0].Exception.Message, Is.EqualTo("startup failed"));
+        }
+
         // ────────────────────────────────────────────────────────
         // SystemFactoryRegistry
         // ────────────────────────────────────────────────────────

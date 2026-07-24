@@ -23,6 +23,7 @@ namespace Ludots.Core.Networking.Commands
         private readonly KnowledgeProjectionResolver _knowledge;
         private readonly OrderTypeRegistry _orderTypes;
         private readonly NetworkCommandSchemaRegistry _schemas;
+        private readonly NetworkGameplayCommandGate _gameplayGate;
         private readonly OrderQueue _orders;
         private readonly NetworkCommandAdmissionResultBuffer _results;
 
@@ -57,6 +58,7 @@ namespace Ludots.Core.Networking.Commands
             KnowledgeProjectionResolver knowledge,
             OrderTypeRegistry orderTypes,
             NetworkCommandSchemaRegistry schemas,
+            NetworkGameplayCommandGate gameplayGate,
             OrderQueue orders,
             NetworkCommandAdmissionResultBuffer results)
         {
@@ -66,6 +68,7 @@ namespace Ludots.Core.Networking.Commands
             _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
             _schemas = schemas ?? throw new ArgumentNullException(nameof(schemas));
+            _gameplayGate = gameplayGate ?? throw new ArgumentNullException(nameof(gameplayGate));
             _orders = orders ?? throw new ArgumentNullException(nameof(orders));
             _results = results ?? throw new ArgumentNullException(nameof(results));
             if (!schemas.IsFrozen)
@@ -297,6 +300,15 @@ namespace Ludots.Core.Networking.Commands
                     header.TargetTick,
                     entries.Length,
                     OrderSubmitResult.NetworkSequenceGap);
+            }
+
+            if (!_gameplayGate.TryAdmit(out OrderSubmitResult phaseRejection))
+            {
+                return CompleteRejected(
+                    in seat,
+                    in header,
+                    entries.Length,
+                    phaseRejection);
             }
 
             long targetDelta = (long)header.TargetTick - serverTick;

@@ -34,7 +34,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         NetworkInvalidTargetHandle = 23,
         NetworkStaleTargetGeneration = 24,
         NetworkTargetNotKnown = 25,
-        NetworkCommandSchemaMismatch = 26
+        NetworkCommandSchemaMismatch = 26,
+        NetworkMatchNotStarted = 27,
+        NetworkMatchCompleted = 28
     }
 
     public static class OrderSubmitter

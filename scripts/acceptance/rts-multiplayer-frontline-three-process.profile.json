@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "preset": "rts_multiplayer_frontline_networked_raylib",
+  "adapterId": "raylib",
+  "buildMode": "auto",
+  "host": "127.0.0.1",
+  "port": 27777,
+  "connectionKey": "rts-frontline-local-uat",
+  "clientInstanceIds": [
+    1,
+    2
+  ],
+  "interProcessDelayMilliseconds": 1000,
+  "credentialTimeoutSeconds": 20,
+  "runSeconds": 10,
+  "monitorIntervalMilliseconds": 250,
+  "artifactRoot": "artifacts/acceptance/rts-multiplayer-frontline-three-process",
+  "launcherCliProject": "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj",
+  "dedicatedServerProject": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
+  "dedicatedServerAssembly": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net8.0/Ludots.App.DedicatedServer.dll"
+}

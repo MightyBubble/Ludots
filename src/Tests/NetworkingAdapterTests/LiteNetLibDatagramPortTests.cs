@@ -106,6 +106,50 @@ public sealed class LiteNetLibDatagramPortTests
             Throws.InvalidOperationException.With.Message.Contains("Datagram receive capacity"));
     }
 
+    [Test]
+    public void ReconnectedPeer_ReceivesANewOpaqueConnectionGeneration()
+    {
+        using var server = CreateServer(datagramCapacity: 8);
+        ConnectionId firstConnection;
+        using (var firstClient = CreateClient(server.BoundPort, "rts-duel-test", datagramCapacity: 4))
+        {
+            ServerConnectionEvent connected = default;
+            PumpUntil(
+                server,
+                firstClient,
+                () => server.TryReceiveConnectionEvent(out connected) &&
+                    connected.Kind == TransportConnectionEventKind.Connected &&
+                    firstClient.TryReceiveConnectionEvent(out _));
+            firstConnection = connected.ConnectionId;
+        }
+
+        using var secondClient = CreateClient(server.BoundPort, "rts-duel-test", datagramCapacity: 4);
+        ServerConnectionEvent secondConnected = default;
+        bool sawSecondConnected = false;
+        PumpUntil(
+            server,
+            secondClient,
+            () =>
+            {
+                while (server.TryReceiveConnectionEvent(out ServerConnectionEvent connectionEvent))
+                {
+                    if (connectionEvent.Kind == TransportConnectionEventKind.Connected)
+                    {
+                        secondConnected = connectionEvent;
+                        sawSecondConnected = true;
+                    }
+                }
+
+                return sawSecondConnected &&
+                    secondClient.TryReceiveConnectionEvent(out _);
+            });
+
+        Assert.That(secondConnected.ConnectionId, Is.Not.EqualTo(firstConnection));
+        Assert.That(
+            server.TrySend(firstConnection, new ChannelId(0), new byte[] { 1 }),
+            Is.EqualTo(DatagramSendStatus.Closed));
+    }
+
     private static LiteNetLibServerDatagramPort CreateServer(int datagramCapacity) =>
         new(
             listenPort: 0,
@@ -114,20 +158,31 @@ public sealed class LiteNetLibDatagramPortTests
             datagramCapacity,
             connectionEventCapacity: 8,
             maxPayloadBytes: 1200,
-            channelCount: 8);
+            channelCount: 8,
+            stateChannelId: 2);
 
     private static LiteNetLibClientDatagramPort CreateClient(
         int port,
         string key,
-        int datagramCapacity) =>
-        new(
+        int datagramCapacity)
+    {
+        var client = new LiteNetLibClientDatagramPort(
             "127.0.0.1",
             port,
             key,
             datagramCapacity,
             connectionEventCapacity: 8,
             maxPayloadBytes: 1200,
-            channelCount: 8);
+            channelCount: 8,
+            stateChannelId: 2);
+        if (!client.TryConnect())
+        {
+            client.Dispose();
+            throw new InvalidOperationException("Test client failed to start its explicit connection attempt.");
+        }
+
+        return client;
+    }
 
     private static void PumpUntil(
         LiteNetLibServerDatagramPort server,

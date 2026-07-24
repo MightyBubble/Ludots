@@ -75,6 +75,15 @@ namespace Ludots.Core.Networking.Transport
         bool TryReceiveConnectionEvent(out ServerConnectionEvent connectionEvent);
     }
 
+    /// <summary>
+    /// Server-side, transport-neutral connection control. Core uses this only after a response
+    /// has been handed to the transport, so rejected peers cannot retain scarce connection slots.
+    /// </summary>
+    public interface IServerConnectionControlPort
+    {
+        void Disconnect(ConnectionId connectionId);
+    }
+
     public interface IClientConnectionEventPort
     {
         void Pump();

@@ -26,8 +26,11 @@ namespace Ludots.Core.Networking.Configuration
         public int NetworkAdmissionResultCapacity { get; set; }
         public int EntityAdmissionResultCapacity { get; set; }
         public int ReconnectWindowSeconds { get; set; }
+        public int ReadyCountdownTicks { get; set; }
+        public int ClientReconnectRetryMilliseconds { get; set; }
         public int BaselineCapacity { get; set; }
         public int ReplicationPacketEntityCapacity { get; set; }
+        public int ReplicationSchemaCapacity { get; set; }
         public int DisclosureChangeLogCapacity { get; set; }
         public int DatagramQueueCapacity { get; set; }
         public int ConnectionEventCapacity { get; set; }
@@ -88,6 +91,8 @@ namespace Ludots.Core.Networking.Configuration
 
             RequirePositive(EntityAdmissionResultCapacity, nameof(EntityAdmissionResultCapacity));
             RequirePositive(ReconnectWindowSeconds, nameof(ReconnectWindowSeconds));
+            RequirePositive(ReadyCountdownTicks, nameof(ReadyCountdownTicks));
+            RequirePositive(ClientReconnectRetryMilliseconds, nameof(ClientReconnectRetryMilliseconds));
             RequirePositive(BaselineCapacity, nameof(BaselineCapacity));
             RequirePositive(ReplicationPacketEntityCapacity, nameof(ReplicationPacketEntityCapacity));
             if (ReplicationPacketEntityCapacity < NetworkEntityCapacity)
@@ -96,6 +101,7 @@ namespace Ludots.Core.Networking.Configuration
                     $"Replication packet entity capacity {ReplicationPacketEntityCapacity} is below network entity capacity {NetworkEntityCapacity}.");
             }
 
+            RequirePositive(ReplicationSchemaCapacity, nameof(ReplicationSchemaCapacity));
             RequirePositive(DisclosureChangeLogCapacity, nameof(DisclosureChangeLogCapacity));
             RequirePositive(DatagramQueueCapacity, nameof(DatagramQueueCapacity));
             RequirePositive(ConnectionEventCapacity, nameof(ConnectionEventCapacity));
@@ -104,6 +110,14 @@ namespace Ludots.Core.Networking.Configuration
             {
                 throw new InvalidOperationException(
                     $"Configured datagram payload {MaxDatagramPayloadBytes} exceeds the IPv6-safe 1200 byte contract.");
+            }
+
+            int roomSnapshotBytes = checked(
+                NetworkWireEnvelope.SizeInBytes + RoomControlWireCodec.GetSnapshotPayloadSize(PlayerCapacity));
+            if (roomSnapshotBytes > MaxDatagramPayloadBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Configured datagram payload {MaxDatagramPayloadBytes} cannot carry the {roomSnapshotBytes}-byte room snapshot.");
             }
 
             if ((uint)(TransportChannelCount - 1) >= 64u)

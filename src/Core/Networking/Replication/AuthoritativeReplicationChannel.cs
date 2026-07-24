@@ -47,6 +47,8 @@ namespace Ludots.Core.Networking.Replication
             _baselineIds = new ulong[baselineCapacity];
         }
 
+        public ReplicationDisclosureChangeLog DisclosureLog => _disclosureLog;
+
         public ReplicationBuildResult BuildFull(
             ulong sessionEpoch,
             uint tick,

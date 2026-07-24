@@ -30,6 +30,7 @@ namespace Ludots.Core.Networking.Replication
         }
 
         public int SchemaCapacity => _registry.SchemaCapacity;
+        public int Count => _registry.Count;
         public bool IsFrozen => _registry.IsFrozen;
 
         public ReplicationSchemaRegistrationResult Register(int schemaId, IClientReplicationSchemaApplier applier)

@@ -216,7 +216,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
-            OrderSubmitResult.NetworkCommandSchemaMismatch,
+            OrderSubmitResult.NetworkMatchCompleted,
             isReplay: false);
 
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
@@ -226,11 +226,11 @@ public sealed class NetworkWireCodecTests
         Assert.That(
             CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
             Is.EqualTo(NetworkWireCodecStatus.Success));
-        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.NetworkCommandSchemaMismatch));
+        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
         Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.NetworkIntake));
 
         buffer[CommandAdmissionWireCodec.SizeInBytes - 3] =
-            checked((byte)((byte)OrderSubmitResult.NetworkCommandSchemaMismatch + 1));
+            checked((byte)((byte)OrderSubmitResult.NetworkMatchCompleted + 1));
         Assert.That(
             CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));

@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Transport;
 
@@ -19,7 +20,8 @@ namespace Ludots.Core.Networking.Runtime
             int acknowledgementHistoryCapacity,
             ChannelId controlChannel,
             ChannelId commandChannel,
-            ChannelId stateChannel)
+            ChannelId stateChannel,
+            int statePublishIntervalTicks = 1)
         {
             if (maxDatagramPayloadBytes <= NetworkWireEnvelope.SizeInBytes)
             {
@@ -29,7 +31,8 @@ namespace Ludots.Core.Networking.Runtime
             if (connectionCapacity <= 0 || entityCapacity <= 0 || maxCommandEntries <= 0 ||
                 maxCommandPayloadBytes < CommandBatchWireCodec.GetPayloadSize(maxCommandEntries) ||
                 maxCommandFragments <= 0 || maxSnapshotBytes <= 0 || maxSnapshotFragments <= 0 ||
-                outboundQueueCapacity <= 0 || acknowledgementHistoryCapacity <= 0)
+                outboundQueueCapacity <= 0 || acknowledgementHistoryCapacity <= 0 ||
+                statePublishIntervalTicks <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(connectionCapacity), "All runtime capacities must cover their declared payloads.");
             }
@@ -60,6 +63,7 @@ namespace Ludots.Core.Networking.Runtime
             ControlChannel = controlChannel;
             CommandChannel = commandChannel;
             StateChannel = stateChannel;
+            StatePublishIntervalTicks = statePublishIntervalTicks;
         }
 
         public int MaxDatagramPayloadBytes { get; }
@@ -75,5 +79,42 @@ namespace Ludots.Core.Networking.Runtime
         public ChannelId ControlChannel { get; }
         public ChannelId CommandChannel { get; }
         public ChannelId StateChannel { get; }
+        public int StatePublishIntervalTicks { get; }
+
+        public static NetworkRuntimeCapacity FromConfig(NetworkRuntimeConfig config)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            config.Validate();
+
+            int maxCommandPayloadBytes = CommandBatchWireCodec.GetPayloadSize(config.MaxActorsPerCommandBatch);
+            int commandFragmentBytes = CommandFragmentWireCodec.GetMaxFragmentDataBytes(config.MaxDatagramPayloadBytes);
+            int maxCommandFragments = DivideRoundUp(maxCommandPayloadBytes, commandFragmentBytes);
+
+            int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(
+                config.ReplicationPacketEntityCapacity,
+                config.ReplicationPacketEntityCapacity,
+                config.ReplicationPacketEntityCapacity);
+            int snapshotFragmentBytes = SnapshotFragmentWireCodec.GetMaxFragmentDataBytes(config.MaxDatagramPayloadBytes);
+            int maxSnapshotFragments = DivideRoundUp(maxSnapshotBytes, snapshotFragmentBytes);
+
+            return new NetworkRuntimeCapacity(
+                config.MaxDatagramPayloadBytes,
+                config.PlayerCapacity,
+                config.NetworkEntityCapacity,
+                config.MaxActorsPerCommandBatch,
+                maxCommandPayloadBytes,
+                maxCommandFragments,
+                maxSnapshotBytes,
+                maxSnapshotFragments,
+                config.DatagramQueueCapacity,
+                config.BaselineCapacity,
+                new ChannelId(checked((byte)config.ControlChannelId)),
+                new ChannelId(checked((byte)config.CommandChannelId)),
+                new ChannelId(checked((byte)config.StateChannelId)),
+                config.SimulationTickRateHz / config.StatePublishRateHz);
+        }
+
+        private static int DivideRoundUp(int value, int divisor) =>
+            checked((value + divisor - 1) / divisor);
     }
 }

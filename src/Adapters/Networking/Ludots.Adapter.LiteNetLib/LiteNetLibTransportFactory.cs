@@ -20,7 +20,8 @@ public static class LiteNetLibTransportFactory
             config.DatagramQueueCapacity,
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
-            config.TransportChannelCount);
+            config.TransportChannelCount,
+            config.StateChannelId);
     }
 
     public static LiteNetLibClientDatagramPort CreateClient(
@@ -37,7 +38,8 @@ public static class LiteNetLibTransportFactory
             config.DatagramQueueCapacity,
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
-            config.TransportChannelCount);
+            config.TransportChannelCount,
+            config.StateChannelId);
     }
 
     private static void ValidateTransport(NetworkRuntimeConfig config)

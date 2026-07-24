@@ -1,0 +1,1552 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
+using System.Threading.Tasks;
+using Arch.Buffer;
+using Arch.Core;
+using Arch.Core.Extensions;
+using Arch.System;
+using Ludots.Core.Components;
+using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Map;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.ParticipantVisibility;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Scripting;
+using Ludots.Core.Vision;
+
+namespace RtsMultiplayerFrontlineMod.Runtime;
+
+internal enum FrontlineReplicationKind : byte
+{
+    Core = 0,
+    Harvester = 1,
+    Infantry = 2,
+    CrystalNode = 3,
+    MatchState = 4,
+}
+
+internal readonly record struct FrontlineReplicationSpec(
+    FrontlineReplicationKind Kind,
+    int SchemaId,
+    bool HasHealth,
+    bool HasCrystals,
+    bool HasOwner)
+{
+    public long SupportedValidBits =>
+        FrontlineReplicationPayload.PositionValid |
+        (HasHealth ? FrontlineReplicationPayload.HealthValid : 0L) |
+        (HasCrystals ? FrontlineReplicationPayload.CrystalsValid : 0L) |
+        (HasOwner ? FrontlineReplicationPayload.TeamValid | FrontlineReplicationPayload.PlayerValid : 0L);
+}
+
+internal static class FrontlineReplicationPayload
+{
+    internal const long PositionValid = 1L << 0;
+    internal const long HealthValid = 1L << 1;
+    internal const long CrystalsValid = 1L << 2;
+    internal const long TeamValid = 1L << 3;
+    internal const long PlayerValid = 1L << 4;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool Has(long validBits, long flag) => (validBits & flag) != 0;
+
+    internal static long PackInts(int low, int high) =>
+        (long)(uint)low | ((long)(uint)high << 32);
+
+    internal static int UnpackLowInt(long packed) => unchecked((int)(uint)packed);
+
+    internal static int UnpackHighInt(long packed) => unchecked((int)(uint)(packed >> 32));
+
+    internal static long PackFloats(float low, float high) =>
+        PackInts(BitConverter.SingleToInt32Bits(low), BitConverter.SingleToInt32Bits(high));
+
+    internal static float UnpackLowFloat(long packed) =>
+        BitConverter.Int32BitsToSingle(UnpackLowInt(packed));
+
+    internal static float UnpackHighFloat(long packed) =>
+        BitConverter.Int32BitsToSingle(UnpackHighInt(packed));
+
+    internal static uint ComputeRevision(in ReplicationStateVector values, uint disclosureRevision)
+    {
+        uint hash = 2166136261u;
+        Mix(ref hash, (ulong)values.Value0);
+        Mix(ref hash, (ulong)values.Value1);
+        Mix(ref hash, (ulong)values.Value2);
+        Mix(ref hash, (ulong)values.Value3);
+        hash = (hash ^ disclosureRevision) * 16777619u;
+        return hash;
+    }
+
+    private static void Mix(ref uint hash, ulong value)
+    {
+        hash = (hash ^ (uint)value) * 16777619u;
+        hash = (hash ^ (uint)(value >> 32)) * 16777619u;
+    }
+}
+
+internal abstract class FrontlineReplicationProjector : IReplicationSchemaProjector
+{
+    private readonly FrontlineReplicationSpec _spec;
+    private readonly int _healthAttributeId;
+    private readonly int _crystalAttributeId;
+
+    protected FrontlineReplicationProjector(
+        in FrontlineReplicationSpec spec,
+        int healthAttributeId,
+        int crystalAttributeId)
+    {
+        _spec = spec;
+        _healthAttributeId = healthAttributeId;
+        _crystalAttributeId = crystalAttributeId;
+    }
+
+    public bool TryProject(
+        World world,
+        Entity entity,
+        in KnowledgeDisclosureRecord disclosure,
+        out ReplicationProjectedState state)
+    {
+        state = default;
+        if (world == null ||
+            !world.IsAlive(entity) ||
+            disclosure.Presence != KnowledgePresence.LiveVisible ||
+            !MatchesSchemaEntity(world, entity, in _spec) ||
+            !world.TryGet(entity, out WorldPositionCm position))
+        {
+            return false;
+        }
+
+        AttributeBuffer attributes = default;
+        if ((_spec.HasHealth || _spec.HasCrystals) &&
+            (!world.TryGet(entity, out attributes) ||
+             (_spec.HasHealth && !attributes.HasAttribute(_healthAttributeId)) ||
+             (_spec.HasCrystals && !attributes.HasAttribute(_crystalAttributeId))))
+        {
+            return false;
+        }
+
+        Team team = default;
+        PlayerOwner owner = default;
+        if (_spec.HasOwner &&
+            (!world.TryGet(entity, out team) ||
+             !world.TryGet(entity, out owner) ||
+             team.Id <= 0 ||
+             owner.PlayerId <= 0))
+        {
+            return false;
+        }
+
+        long validBits = 0;
+        long positionValue = 0;
+        if (disclosure.Position == KnowledgePositionAccess.Live)
+        {
+            var positionCm = position.ToWorldCmInt2();
+            positionValue = FrontlineReplicationPayload.PackInts(positionCm.X, positionCm.Y);
+            validBits |= FrontlineReplicationPayload.PositionValid;
+        }
+
+        float health = 0f;
+        if (_spec.HasHealth && disclosure.AttributeMask.ContainsId(_healthAttributeId))
+        {
+            health = attributes.GetCurrent(_healthAttributeId);
+            if (!float.IsFinite(health))
+            {
+                return false;
+            }
+            validBits |= FrontlineReplicationPayload.HealthValid;
+        }
+
+        float crystals = 0f;
+        if (_spec.HasCrystals && disclosure.AttributeMask.ContainsId(_crystalAttributeId))
+        {
+            crystals = attributes.GetCurrent(_crystalAttributeId);
+            if (!float.IsFinite(crystals))
+            {
+                return false;
+            }
+            validBits |= FrontlineReplicationPayload.CrystalsValid;
+        }
+
+        long ownerValue = 0;
+        if (_spec.HasOwner)
+        {
+            ownerValue = FrontlineReplicationPayload.PackInts(team.Id, owner.PlayerId);
+            validBits |= FrontlineReplicationPayload.TeamValid | FrontlineReplicationPayload.PlayerValid;
+        }
+
+        var values = new ReplicationStateVector(
+            positionValue,
+            FrontlineReplicationPayload.PackFloats(health, crystals),
+            ownerValue,
+            validBits);
+        state = new ReplicationProjectedState(
+            FrontlineReplicationPayload.ComputeRevision(in values, disclosure.Revision),
+            in values);
+        return true;
+    }
+
+    internal static bool MatchesSchemaEntity(
+        World world,
+        Entity entity,
+        in FrontlineReplicationSpec spec)
+    {
+        if (!world.TryGet(entity, out ReplicationSchemaRef schema) || schema.SchemaId != spec.SchemaId)
+        {
+            return false;
+        }
+
+        return spec.Kind switch
+        {
+            FrontlineReplicationKind.Core => world.Has<FrontlineCore>(entity),
+            FrontlineReplicationKind.Harvester => world.Has<FrontlineHarvester>(entity),
+            FrontlineReplicationKind.Infantry => world.Has<FrontlineInfantry>(entity),
+            FrontlineReplicationKind.CrystalNode => world.Has<FrontlineCrystalNode>(entity),
+            _ => false,
+        };
+    }
+}
+
+internal sealed class FrontlineCoreReplicationProjector : FrontlineReplicationProjector
+{
+    public FrontlineCoreReplicationProjector(in FrontlineReplicationSpec spec, int healthId, int crystalId)
+        : base(in spec, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineHarvesterReplicationProjector : FrontlineReplicationProjector
+{
+    public FrontlineHarvesterReplicationProjector(in FrontlineReplicationSpec spec, int healthId, int crystalId)
+        : base(in spec, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineInfantryReplicationProjector : FrontlineReplicationProjector
+{
+    public FrontlineInfantryReplicationProjector(in FrontlineReplicationSpec spec, int healthId, int crystalId)
+        : base(in spec, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineCrystalNodeReplicationProjector : FrontlineReplicationProjector
+{
+    public FrontlineCrystalNodeReplicationProjector(in FrontlineReplicationSpec spec, int healthId, int crystalId)
+        : base(in spec, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineClientTemplateFactory
+{
+    private const string ReplicationSchemaComponent = "ReplicationSchemaRef";
+    private const string ReplicationSchemaIdProperty = "SchemaId";
+
+    private readonly Dictionary<string, EntityTemplate> _templates = new(StringComparer.Ordinal);
+    private readonly string[] _templateIds = new string[5];
+    private readonly string[] _entityContexts = new string[5];
+    private readonly World _world;
+    private readonly EntityBuilder _builder;
+
+    public FrontlineClientTemplateFactory(
+        World world,
+        IEnumerable<EntityTemplate> templates,
+        ReadOnlySpan<FrontlineReplicationSpec> specs,
+        int matchStateSchemaId)
+    {
+        _world = world ?? throw new ArgumentNullException(nameof(world));
+        ArgumentNullException.ThrowIfNull(templates);
+        if (specs.Length != 4)
+        {
+            throw new InvalidOperationException("RTS Frontline requires exactly four replication schema specifications.");
+        }
+        if (matchStateSchemaId <= 0)
+        {
+            throw new InvalidOperationException("RTS Frontline requires a positive match-state replication schema id.");
+        }
+
+        foreach (EntityTemplate template in templates)
+        {
+            if (!TryReadSchemaId(template, out int schemaId))
+            {
+                continue;
+            }
+
+            int kindIndex;
+            if (schemaId == matchStateSchemaId)
+            {
+                kindIndex = (int)FrontlineReplicationKind.MatchState;
+                ValidateMatchStateTemplate(template);
+            }
+            else
+            {
+                int specIndex = FindSpec(specs, schemaId);
+                if (specIndex < 0)
+                {
+                    continue;
+                }
+
+                FrontlineReplicationSpec spec = specs[specIndex];
+                kindIndex = (int)spec.Kind;
+                ValidateTemplate(template, in spec);
+            }
+            if (!string.IsNullOrEmpty(_templateIds[kindIndex]))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline schema {schemaId} resolves to more than one entity template.");
+            }
+
+            _templates.Add(template.Id, template);
+            _templateIds[kindIndex] = template.Id;
+            _entityContexts[kindIndex] = $"RTS Frontline replicated {(FrontlineReplicationKind)kindIndex}";
+        }
+
+        for (int i = 0; i < _templateIds.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(_templateIds[i]))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline replication kind {(FrontlineReplicationKind)i} has no formal entity template.");
+            }
+        }
+        _builder = new EntityBuilder(_world, _templates);
+    }
+
+    public Entity Create(World world, FrontlineReplicationKind kind)
+    {
+        if (!ReferenceEquals(world, _world))
+        {
+            throw new InvalidOperationException("RTS Frontline client template factory cannot create into a different world.");
+        }
+
+        int index = (int)kind;
+        if ((uint)index >= (uint)_templateIds.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+
+        return _builder
+            .UseTemplate(_templateIds[index])
+            .WithEntityContext(_entityContexts[index])
+            .Build();
+    }
+
+    private static int FindSpec(ReadOnlySpan<FrontlineReplicationSpec> specs, int schemaId)
+    {
+        for (int i = 0; i < specs.Length; i++)
+        {
+            if (specs[i].SchemaId == schemaId)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static bool TryReadSchemaId(EntityTemplate template, out int schemaId)
+    {
+        schemaId = 0;
+        if (template == null ||
+            string.IsNullOrWhiteSpace(template.Id) ||
+            !template.Components.TryGetValue(ReplicationSchemaComponent, out JsonNode? schemaNode) ||
+            schemaNode is not JsonObject schemaObject ||
+            schemaObject[ReplicationSchemaIdProperty] is not JsonValue schemaValue ||
+            !schemaValue.TryGetValue(out schemaId))
+        {
+            return false;
+        }
+
+        if (schemaId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Entity template '{template.Id}' declares a non-positive replication schema id.");
+        }
+        return true;
+    }
+
+    private static void ValidateTemplate(EntityTemplate template, in FrontlineReplicationSpec spec)
+    {
+        RequireComponent(template, "WorldPositionCm");
+        RequireComponent(template, ReplicationSchemaComponent);
+        if (spec.HasHealth || spec.HasCrystals)
+        {
+            RequireComponent(template, "AttributeBuffer");
+        }
+        if (spec.HasOwner)
+        {
+            RequireComponent(template, "Team");
+            RequireComponent(template, "PlayerOwner");
+            RequireComponent(template, "FrontlineParticipant");
+            RequireComponent(template, "VisionEmitterCm");
+        }
+
+        RequireComponent(template, spec.Kind switch
+        {
+            FrontlineReplicationKind.Core => "FrontlineCore",
+            FrontlineReplicationKind.Harvester => "FrontlineHarvester",
+            FrontlineReplicationKind.Infantry => "FrontlineInfantry",
+            FrontlineReplicationKind.CrystalNode => "FrontlineCrystalNode",
+            _ => throw new InvalidOperationException("Unknown RTS Frontline replication kind."),
+        });
+    }
+
+    private static void ValidateMatchStateTemplate(EntityTemplate template)
+    {
+        RequireComponent(template, ReplicationSchemaComponent);
+        RequireComponent(template, "FrontlineMatchStateEntity");
+        RequireComponent(template, "FrontlineMatchStateProjection");
+    }
+
+    private static void RequireComponent(EntityTemplate template, string componentName)
+    {
+        if (!template.Components.ContainsKey(componentName))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated template '{template.Id}' requires component '{componentName}'.");
+        }
+    }
+}
+
+internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaApplier
+{
+    private readonly FrontlineReplicationSpec _spec;
+    private readonly FrontlineClientTemplateFactory _templates;
+    private readonly FrontlineSideConfig[] _sides;
+    private readonly int _healthAttributeId;
+    private readonly int _crystalAttributeId;
+
+    protected FrontlineReplicationApplier(
+        in FrontlineReplicationSpec spec,
+        FrontlineClientTemplateFactory templates,
+        FrontlineSideConfig[] sides,
+        int healthAttributeId,
+        int crystalAttributeId)
+    {
+        _spec = spec;
+        _templates = templates ?? throw new ArgumentNullException(nameof(templates));
+        _sides = sides ?? throw new ArgumentNullException(nameof(sides));
+        _healthAttributeId = healthAttributeId;
+        _crystalAttributeId = crystalAttributeId;
+    }
+
+    public bool CanCreate(World world, in ReplicatedEntityState state) =>
+        world != null && ValidatePayload(state.Values, state.SchemaId);
+
+    public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) =>
+        world != null &&
+        world.IsAlive(entity) &&
+        ValidatePayload(state.Values, state.SchemaId) &&
+        MatchesFormalEntity(world, entity);
+
+    public bool CanConceal(World world, Entity entity) =>
+        world != null && world.IsAlive(entity) && MatchesFormalEntity(world, entity);
+
+    public Entity Create(
+        World world,
+        in ReplicationMirrorIdentity identity,
+        in ReplicationMirrorState state)
+    {
+        if (world == null)
+        {
+            throw new ArgumentNullException(nameof(world));
+        }
+        if (!ValidatePayload(state.Values, state.SchemaId))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline schema {_spec.SchemaId} rejected replicated create payload.");
+        }
+
+        Entity entity = _templates.Create(world, _spec.Kind);
+        try
+        {
+            if (!MatchesFormalEntity(world, entity))
+            {
+                bool hasSchema = world.TryGet(entity, out ReplicationSchemaRef authoredSchema);
+                throw new InvalidOperationException(
+                    $"RTS Frontline schema {_spec.SchemaId} formal template violated its component contract: " +
+                    $"schemaRef={hasSchema}, schemaId={(hasSchema ? authoredSchema.SchemaId : 0)}, " +
+                    $"kind={MatchesKindComponent(world, entity)}, " +
+                    $"position={world.Has<WorldPositionCm>(entity)}, " +
+                    $"attributes={world.Has<AttributeBuffer>(entity)}, " +
+                    $"team={world.Has<Team>(entity)}, owner={world.Has<PlayerOwner>(entity)}, " +
+                    $"participant={world.Has<FrontlineParticipant>(entity)}, vision={world.Has<VisionEmitterCm>(entity)}.");
+            }
+
+            world.Add(entity, in identity, in state);
+            ApplyPayload(world, entity, state.Values);
+            return entity;
+        }
+        catch
+        {
+            if (world.IsAlive(entity))
+            {
+                world.Destroy(entity);
+            }
+            throw;
+        }
+    }
+
+    public void Apply(World world, Entity entity, in ReplicatedEntityState state)
+    {
+        if (!CanApply(world, entity, in state))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline schema {_spec.SchemaId} rejected replicated update payload.");
+        }
+        ApplyPayload(world, entity, state.Values);
+    }
+
+    public void Conceal(World world, Entity entity)
+    {
+        if (!CanConceal(world, entity))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline schema {_spec.SchemaId} cannot conceal an entity outside its formal template contract.");
+        }
+        ApplyPayload(world, entity, default);
+    }
+
+    private bool ValidatePayload(in ReplicationStateVector values, int schemaId)
+    {
+        if (schemaId != _spec.SchemaId ||
+            (values.Value3 & ~_spec.SupportedValidBits) != 0)
+        {
+            return false;
+        }
+
+        long valid = values.Value3;
+        if (!FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PositionValid) && values.Value0 != 0)
+        {
+            return false;
+        }
+
+        bool healthValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.HealthValid);
+        bool crystalsValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.CrystalsValid);
+        if ((!healthValid && FrontlineReplicationPayload.UnpackLowInt(values.Value1) != 0) ||
+            (!crystalsValid && FrontlineReplicationPayload.UnpackHighInt(values.Value1) != 0) ||
+            (healthValid && !float.IsFinite(FrontlineReplicationPayload.UnpackLowFloat(values.Value1))) ||
+            (crystalsValid && !float.IsFinite(FrontlineReplicationPayload.UnpackHighFloat(values.Value1))))
+        {
+            return false;
+        }
+
+        bool teamValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.TeamValid);
+        bool playerValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PlayerValid);
+        if (teamValid != playerValid ||
+            (!teamValid && values.Value2 != 0))
+        {
+            return false;
+        }
+
+        return !teamValid || TryResolveSide(
+            FrontlineReplicationPayload.UnpackLowInt(values.Value2),
+            FrontlineReplicationPayload.UnpackHighInt(values.Value2),
+            out _);
+    }
+
+    private bool MatchesFormalEntity(World world, Entity entity)
+    {
+        if (!FrontlineReplicationProjector.MatchesSchemaEntity(world, entity, in _spec) ||
+            !world.Has<WorldPositionCm>(entity) ||
+            ((_spec.HasHealth || _spec.HasCrystals) && !world.Has<AttributeBuffer>(entity)) ||
+            (_spec.HasOwner &&
+             (!world.Has<Team>(entity) ||
+              !world.Has<PlayerOwner>(entity) ||
+              !world.Has<FrontlineParticipant>(entity) ||
+              !world.Has<VisionEmitterCm>(entity))))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private bool MatchesKindComponent(World world, Entity entity) => _spec.Kind switch
+    {
+        FrontlineReplicationKind.Core => world.Has<FrontlineCore>(entity),
+        FrontlineReplicationKind.Harvester => world.Has<FrontlineHarvester>(entity),
+        FrontlineReplicationKind.Infantry => world.Has<FrontlineInfantry>(entity),
+        FrontlineReplicationKind.CrystalNode => world.Has<FrontlineCrystalNode>(entity),
+        _ => false,
+    };
+
+    private void ApplyPayload(World world, Entity entity, in ReplicationStateVector values)
+    {
+        long valid = values.Value3;
+        WorldPositionCm position = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PositionValid)
+            ? WorldPositionCm.FromCm(
+                FrontlineReplicationPayload.UnpackLowInt(values.Value0),
+                FrontlineReplicationPayload.UnpackHighInt(values.Value0))
+            : WorldPositionCm.FromCm(0, 0);
+        world.Set(entity, in position);
+
+        if (_spec.HasHealth || _spec.HasCrystals)
+        {
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
+            if (_spec.HasHealth)
+            {
+                float health = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.HealthValid)
+                    ? FrontlineReplicationPayload.UnpackLowFloat(values.Value1)
+                    : 0f;
+                attributes.SetCurrent(_healthAttributeId, health);
+            }
+            if (_spec.HasCrystals)
+            {
+                float crystals = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.CrystalsValid)
+                    ? FrontlineReplicationPayload.UnpackHighFloat(values.Value1)
+                    : 0f;
+                attributes.SetCurrent(_crystalAttributeId, crystals);
+            }
+        }
+
+        if (!_spec.HasOwner)
+        {
+            return;
+        }
+
+        bool hasOwner = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.TeamValid) &&
+            FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PlayerValid);
+        int teamId = hasOwner ? FrontlineReplicationPayload.UnpackLowInt(values.Value2) : 0;
+        int playerId = hasOwner ? FrontlineReplicationPayload.UnpackHighInt(values.Value2) : 0;
+        int sideIndex = hasOwner && TryResolveSide(teamId, playerId, out int resolvedSide) ? resolvedSide : -1;
+
+        var team = new Team { Id = teamId };
+        var owner = new PlayerOwner { PlayerId = playerId };
+        var participant = new FrontlineParticipant { SideIndex = sideIndex };
+        world.Set(entity, in team);
+        world.Set(entity, in owner);
+        world.Set(entity, in participant);
+
+        ref VisionEmitterCm emitter = ref world.Get<VisionEmitterCm>(entity);
+        emitter.ScopeKeyId = sideIndex >= 0 ? _sides[sideIndex].VisionScopeKeyId : 0;
+    }
+
+    private bool TryResolveSide(int teamId, int playerId, out int sideIndex)
+    {
+        for (int i = 0; i < _sides.Length; i++)
+        {
+            if (_sides[i].TeamId == teamId && _sides[i].PlayerId == playerId)
+            {
+                sideIndex = i;
+                return true;
+            }
+        }
+        sideIndex = -1;
+        return false;
+    }
+}
+
+internal sealed class FrontlineCoreReplicationApplier : FrontlineReplicationApplier
+{
+    public FrontlineCoreReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
+        : base(in spec, templates, sides, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineHarvesterReplicationApplier : FrontlineReplicationApplier
+{
+    public FrontlineHarvesterReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
+        : base(in spec, templates, sides, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineInfantryReplicationApplier : FrontlineReplicationApplier
+{
+    public FrontlineInfantryReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
+        : base(in spec, templates, sides, healthId, crystalId) { }
+}
+
+internal sealed class FrontlineCrystalNodeReplicationApplier : FrontlineReplicationApplier
+{
+    public FrontlineCrystalNodeReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
+        : base(in spec, templates, sides, healthId, crystalId) { }
+}
+
+internal static class FrontlineMatchStatePayload
+{
+    internal const long Version = 1;
+
+    internal static ReplicationStateVector Encode(in FrontlineMatchSnapshot snapshot)
+    {
+        int lobbyFlags =
+            (snapshot.SideOneReady ? 1 : 0) |
+            (snapshot.SideTwoReady ? 1 << 1 : 0) |
+            (snapshot.SideOneConnected ? 1 << 2 : 0) |
+            (snapshot.SideTwoConnected ? 1 << 3 : 0);
+        return new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts((int)snapshot.Phase, snapshot.CountdownRemainingTicks),
+            FrontlineReplicationPayload.PackInts(snapshot.CommittedTick, (int)snapshot.Outcome),
+            FrontlineReplicationPayload.PackInts(snapshot.WinningSideIndex, lobbyFlags),
+            Version);
+    }
+
+    internal static bool TryDecode(
+        in ReplicationStateVector values,
+        int readyCountdownTicks,
+        int maxCommittedTick,
+        out FrontlineMatchStateProjection projection)
+    {
+        projection = default;
+        int phaseValue = FrontlineReplicationPayload.UnpackLowInt(values.Value0);
+        int countdownTicks = FrontlineReplicationPayload.UnpackHighInt(values.Value0);
+        int committedTick = FrontlineReplicationPayload.UnpackLowInt(values.Value1);
+        int outcomeValue = FrontlineReplicationPayload.UnpackHighInt(values.Value1);
+        int winningSideIndex = FrontlineReplicationPayload.UnpackLowInt(values.Value2);
+        int lobbyFlags = FrontlineReplicationPayload.UnpackHighInt(values.Value2);
+        if (values.Value3 != Version ||
+            (uint)phaseValue > (uint)FrontlineMatchPhase.Completed ||
+            (uint)outcomeValue > (uint)FrontlineMatchOutcome.Draw ||
+            countdownTicks < 0 || countdownTicks > readyCountdownTicks ||
+            committedTick < 0 || committedTick > maxCommittedTick ||
+            (lobbyFlags & ~0x0f) != 0)
+        {
+            return false;
+        }
+
+        var phase = (FrontlineMatchPhase)phaseValue;
+        var outcome = (FrontlineMatchOutcome)outcomeValue;
+        bool sideOneReady = (lobbyFlags & 1) != 0;
+        bool sideTwoReady = (lobbyFlags & (1 << 1)) != 0;
+        bool sideOneConnected = (lobbyFlags & (1 << 2)) != 0;
+        bool sideTwoConnected = (lobbyFlags & (1 << 3)) != 0;
+        if ((!sideOneConnected && sideOneReady) ||
+            (!sideTwoConnected && sideTwoReady) ||
+            (phase != FrontlineMatchPhase.Countdown && countdownTicks != 0) ||
+            (phase == FrontlineMatchPhase.Countdown &&
+             (!sideOneReady || !sideTwoReady || !sideOneConnected || !sideTwoConnected)) ||
+            (outcome == FrontlineMatchOutcome.InProgress &&
+             (phase == FrontlineMatchPhase.Completed || winningSideIndex != -1)) ||
+            (outcome != FrontlineMatchOutcome.InProgress && phase != FrontlineMatchPhase.Completed) ||
+            (outcome == FrontlineMatchOutcome.SideOneVictory && winningSideIndex != 0) ||
+            (outcome == FrontlineMatchOutcome.SideTwoVictory && winningSideIndex != 1) ||
+            (outcome == FrontlineMatchOutcome.Draw && winningSideIndex != -1))
+        {
+            return false;
+        }
+
+        projection = new FrontlineMatchStateProjection
+        {
+            CommittedTick = committedTick,
+            Phase = phase,
+            CountdownRemainingTicks = countdownTicks,
+            Outcome = outcome,
+            WinningSideIndex = winningSideIndex,
+            SideOneReady = sideOneReady ? (byte)1 : (byte)0,
+            SideTwoReady = sideTwoReady ? (byte)1 : (byte)0,
+            SideOneConnected = sideOneConnected ? (byte)1 : (byte)0,
+            SideTwoConnected = sideTwoConnected ? (byte)1 : (byte)0,
+        };
+        return true;
+    }
+}
+
+internal sealed class FrontlineMatchStateReplicationProjector : IReplicationSchemaProjector
+{
+    private readonly FrontlineRuntime _runtime;
+    private readonly int _schemaId;
+
+    public FrontlineMatchStateReplicationProjector(FrontlineRuntime runtime, int schemaId)
+    {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        _schemaId = schemaId > 0 ? schemaId : throw new ArgumentOutOfRangeException(nameof(schemaId));
+    }
+
+    public bool TryProject(
+        World world,
+        Entity entity,
+        in KnowledgeDisclosureRecord disclosure,
+        out ReplicationProjectedState state)
+    {
+        state = default;
+        if (world == null ||
+            !world.IsAlive(entity) ||
+            disclosure.Presence != KnowledgePresence.LiveVisible ||
+            !world.Has<FrontlineMatchStateEntity>(entity) ||
+            !world.TryGet(entity, out ReplicationSchemaRef schema) ||
+            schema.SchemaId != _schemaId)
+        {
+            return false;
+        }
+
+        FrontlineMatchSnapshot snapshot = _runtime.Snapshot;
+        ReplicationStateVector values = FrontlineMatchStatePayload.Encode(in snapshot);
+        state = new ReplicationProjectedState(
+            FrontlineReplicationPayload.ComputeRevision(in values, disclosure.Revision),
+            in values);
+        return true;
+    }
+}
+
+internal sealed class FrontlineMatchStateReplicationApplier : IClientReplicationSchemaApplier
+{
+    private readonly int _schemaId;
+    private readonly int _readyCountdownTicks;
+    private readonly int _maxCommittedTick;
+    private readonly FrontlineClientTemplateFactory _templates;
+
+    public FrontlineMatchStateReplicationApplier(
+        int schemaId,
+        int readyCountdownTicks,
+        int matchDurationTicks,
+        int disconnectGraceTicks,
+        FrontlineClientTemplateFactory templates)
+    {
+        _schemaId = schemaId > 0 ? schemaId : throw new ArgumentOutOfRangeException(nameof(schemaId));
+        _readyCountdownTicks = readyCountdownTicks > 0
+            ? readyCountdownTicks
+            : throw new ArgumentOutOfRangeException(nameof(readyCountdownTicks));
+        if (matchDurationTicks <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(matchDurationTicks));
+        }
+        if (disconnectGraceTicks <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(disconnectGraceTicks));
+        }
+        _maxCommittedTick = checked(matchDurationTicks + disconnectGraceTicks);
+        _templates = templates ?? throw new ArgumentNullException(nameof(templates));
+    }
+
+    public bool CanCreate(World world, in ReplicatedEntityState state) =>
+        world != null && Validate(state.SchemaId, state.Values, out _);
+
+    public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) =>
+        world != null &&
+        world.IsAlive(entity) &&
+        MatchesFormalEntity(world, entity) &&
+        Validate(state.SchemaId, state.Values, out _);
+
+    public bool CanConceal(World world, Entity entity) =>
+        world != null && world.IsAlive(entity) && MatchesFormalEntity(world, entity);
+
+    public Entity Create(
+        World world,
+        in ReplicationMirrorIdentity identity,
+        in ReplicationMirrorState state)
+    {
+        if (world == null)
+        {
+            throw new ArgumentNullException(nameof(world));
+        }
+        if (!Validate(state.SchemaId, state.Values, out FrontlineMatchStateProjection projection))
+        {
+            throw new InvalidOperationException("RTS Frontline rejected a replicated match-state create payload.");
+        }
+
+        Entity entity = _templates.Create(world, FrontlineReplicationKind.MatchState);
+        try
+        {
+            if (!MatchesFormalEntity(world, entity))
+            {
+                throw new InvalidOperationException("RTS Frontline match-state template violated its formal component contract.");
+            }
+            world.Add(entity, in identity, in state);
+            world.Set(entity, in projection);
+            return entity;
+        }
+        catch
+        {
+            if (world.IsAlive(entity))
+            {
+                world.Destroy(entity);
+            }
+            throw;
+        }
+    }
+
+    public void Apply(World world, Entity entity, in ReplicatedEntityState state)
+    {
+        if (!CanApply(world, entity, in state) ||
+            !Validate(state.SchemaId, state.Values, out FrontlineMatchStateProjection projection))
+        {
+            throw new InvalidOperationException("RTS Frontline rejected a replicated match-state update payload.");
+        }
+        world.Set(entity, in projection);
+    }
+
+    public void Conceal(World world, Entity entity)
+    {
+        if (!CanConceal(world, entity))
+        {
+            throw new InvalidOperationException("RTS Frontline cannot conceal an invalid match-state mirror.");
+        }
+        var projection = default(FrontlineMatchStateProjection);
+        projection.WinningSideIndex = -1;
+        world.Set(entity, in projection);
+    }
+
+    private bool Validate(
+        int schemaId,
+        in ReplicationStateVector values,
+        out FrontlineMatchStateProjection projection)
+    {
+        projection = default;
+        return schemaId == _schemaId &&
+            FrontlineMatchStatePayload.TryDecode(
+                in values,
+                _readyCountdownTicks,
+                _maxCommittedTick,
+                out projection);
+    }
+
+    private bool MatchesFormalEntity(World world, Entity entity) =>
+        world.Has<FrontlineMatchStateEntity, FrontlineMatchStateProjection>(entity) &&
+        world.TryGet(entity, out ReplicationSchemaRef schema) &&
+        schema.SchemaId == _schemaId;
+}
+
+internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, float>
+{
+    private static readonly QueryDescription ReplicatedQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef>();
+    private static readonly QueryDescription PendingDestroyQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef, PresentationDestroyPending>();
+
+    private readonly NetworkEntityTable _entities;
+    private readonly CommandBuffer _commandBuffer = new();
+
+    public FrontlineNetworkEntityBindingSystem(World world, NetworkEntityTable entities)
+        : base(world)
+    {
+        _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+    }
+
+    public override void Update(in float dt)
+    {
+        foreach (ref Chunk chunk in World.Query(in ReplicatedQuery))
+        {
+            ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref first, index);
+                if (schemas[index].SchemaId <= 0)
+                {
+                    throw new InvalidOperationException("RTS Frontline found a replicated entity with a non-positive schema id.");
+                }
+                if (!_entities.TryResolve(entity, out _) && !_entities.TryAllocate(entity, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"RTS Frontline could not allocate a network entity handle for schema {schemas[index].SchemaId}; " +
+                        $"capacity {_entities.Capacity} is exhausted or the reverse index is inconsistent.");
+                }
+            }
+        }
+
+        foreach (ref Chunk chunk in World.Query(in PendingDestroyQuery))
+        {
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref first, index);
+                if (!_entities.TryResolve(entity, out NetworkEntityHandle handle) ||
+                    !_entities.TryRelease(handle))
+                {
+                    throw new InvalidOperationException(
+                        "RTS Frontline could not release a pending replicated entity from the authoritative network table.");
+                }
+                _commandBuffer.Destroy(in entity);
+            }
+        }
+
+        if (_commandBuffer.Size > 0)
+        {
+            _commandBuffer.Playback(World);
+        }
+    }
+
+    public override void Dispose()
+    {
+        _commandBuffer.Dispose();
+        base.Dispose();
+    }
+}
+
+internal sealed class FrontlineVisionScopeAuthoringSystem : BaseSystem<World, float>
+{
+    private static readonly QueryDescription Query = new QueryDescription()
+        .WithAll<FrontlineParticipant, Team, PlayerOwner, VisionEmitterCm>();
+
+    private readonly FrontlineSideConfig[] _sides;
+
+    public FrontlineVisionScopeAuthoringSystem(World world, FrontlineSideConfig[] sides)
+        : base(world)
+    {
+        _sides = sides ?? throw new ArgumentNullException(nameof(sides));
+    }
+
+    public override void Update(in float dt)
+    {
+        foreach (ref Chunk chunk in World.Query(in Query))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            ReadOnlySpan<Team> teams = chunk.GetSpan<Team>();
+            ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            Span<VisionEmitterCm> emitters = chunk.GetSpan<VisionEmitterCm>();
+            foreach (int index in chunk)
+            {
+                int sideIndex = participants[index].SideIndex;
+                if ((uint)sideIndex >= (uint)_sides.Length ||
+                    teams[index].Id != _sides[sideIndex].TeamId ||
+                    owners[index].PlayerId != _sides[sideIndex].PlayerId)
+                {
+                    throw new InvalidOperationException(
+                        "RTS Frontline participant ownership does not match its data-authored side configuration.");
+                }
+
+                emitters[index].ScopeKeyId = _sides[sideIndex].VisionScopeKeyId;
+            }
+        }
+    }
+}
+
+internal static class FrontlineReplicatedClientMapBoundary
+{
+    private static readonly QueryDescription AuthoredGameplayQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef>()
+        .WithNone<ReplicationMirrorIdentity>();
+
+    internal static int RemoveAuthoredGameplayEntities(GameEngine engine, FrontlineConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        ArgumentNullException.ThrowIfNull(config);
+
+        MapSession session = engine.CurrentMapSession
+            ?? throw new InvalidOperationException("RTS Frontline replicated client requires a focused map session.");
+        if (!string.Equals(session.MapId.Value, config.MapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated client cleanup expected map '{config.MapId}' but focused '{session.MapId.Value}'.");
+        }
+
+        ValidateRepresentatives(engine.World, session, config.Sides);
+
+        int removed = 0;
+        using (var commands = new CommandBuffer())
+        {
+            foreach (ref Chunk chunk in engine.World.Query(in AuthoredGameplayQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    Entity entity = Unsafe.Add(ref first, index);
+                    commands.Destroy(in entity);
+                    removed++;
+                }
+            }
+
+            if (commands.Size > 0)
+            {
+                commands.Playback(engine.World);
+            }
+        }
+
+        int remaining = engine.World.CountEntities(in AuthoredGameplayQuery);
+        if (remaining != 0)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated client retained {remaining} map-authored authoritative gameplay entities after cleanup.");
+        }
+
+        ValidateRepresentatives(engine.World, session, config.Sides);
+        return removed;
+    }
+
+    internal static void ValidateRepresentatives(
+        World world,
+        MapSession session,
+        ReadOnlySpan<FrontlineSideConfig> sides)
+    {
+        if (sides.Length != 2)
+        {
+            throw new InvalidOperationException("RTS Frontline representative validation requires exactly two sides.");
+        }
+
+        Span<Entity> representatives = stackalloc Entity[sides.Length * 2];
+        for (int i = 0; i < sides.Length; i++)
+        {
+            FrontlineSideConfig side = sides[i];
+            if (!session.PlayerEntityLookup.TryGet(side.PlayerId, out Entity player) ||
+                !world.IsAlive(player) ||
+                !world.TryGet(player, out PlayerIdentity playerIdentity) ||
+                playerIdentity.PlayerId != side.PlayerId ||
+                !world.TryGet(player, out PlayerOwner owner) ||
+                owner.PlayerId != side.PlayerId ||
+                !world.TryGet(player, out Team playerTeam) ||
+                playerTeam.Id != side.TeamId ||
+                world.Has<ReplicationSchemaRef>(player))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline requires a live non-replicated player representative for player {side.PlayerId} on team {side.TeamId}.");
+            }
+
+            if (!session.TeamEntityLookup.TryGet(side.TeamId, out Entity team) ||
+                !world.IsAlive(team) ||
+                !world.TryGet(team, out TeamIdentity teamIdentity) ||
+                teamIdentity.TeamId != side.TeamId ||
+                world.Has<ReplicationSchemaRef>(team))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline requires a live non-replicated team representative for team {side.TeamId}.");
+            }
+
+            representatives[i * 2] = player;
+            representatives[(i * 2) + 1] = team;
+        }
+
+        for (int i = 0; i < representatives.Length; i++)
+        {
+            for (int j = i + 1; j < representatives.Length; j++)
+            {
+                if (representatives[i] == representatives[j])
+                {
+                    throw new InvalidOperationException(
+                        "RTS Frontline player and team representatives must be four distinct map-authored entities.");
+                }
+            }
+        }
+    }
+}
+
+internal static class FrontlineAuthoritativeVisibility
+{
+    private static readonly QueryDescription MatchStateQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef, FrontlineMatchStateEntity, MapEntity>();
+    private static readonly QueryDescription ResourceQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef, FrontlineCrystalNode, MapEntity>();
+    private static readonly QueryDescription OwnedGameplayQuery = new QueryDescription()
+        .WithAll<ReplicationSchemaRef, PlayerOwner, MapEntity>();
+
+    internal static DynamicParticipantVisibilityPublisher Install(GameEngine engine, FrontlineConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        ArgumentNullException.ThrowIfNull(config);
+        MapSession session = engine.CurrentMapSession
+            ?? throw new InvalidOperationException("RTS Frontline visibility requires a focused map session.");
+        if (!string.Equals(session.MapId.Value, config.MapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline visibility expected map '{config.MapId}' but focused '{session.MapId.Value}'.");
+        }
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("RTS Frontline visibility requires EntityCollectionStore.");
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("RTS Frontline visibility requires KnowledgeProjectionStore.");
+        RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+            ?? throw new InvalidOperationException("RTS Frontline visibility requires RelationshipTypeRegistry.");
+
+        DynamicParticipantQuerySpec[] specs = CreateSpecs(config);
+        DynamicParticipantVisibilityBinding[] bindings = DynamicParticipantVisibilityCompiler.Compile(
+            session,
+            specs,
+            relationshipTypes);
+        if (bindings.Length != config.Sides.Length * 3)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline visibility compiled {bindings.Length} bindings; expected {config.Sides.Length * 3}.");
+        }
+
+        var publisher = new DynamicParticipantVisibilityPublisher(
+            engine.World,
+            collections,
+            knowledge,
+            bindings,
+            engine.GetService(CoreServiceKeys.TagOps));
+        int currentTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+        publisher.Publish(currentTick);
+        ValidatePublishedKnowledge(engine.World, session, knowledge, config, currentTick);
+        return publisher;
+    }
+
+    internal static DynamicParticipantQuerySpec[] CreateSpecs(FrontlineConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        var specs = new DynamicParticipantQuerySpec[config.Sides.Length * 3];
+        for (int i = 0; i < config.Sides.Length; i++)
+        {
+            string viewerRef = config.Sides[i].PlayerId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            int offset = i * 3;
+            specs[offset] = DynamicParticipantQuerySpec.Create(
+                DynamicParticipantViewerKind.Player,
+                viewerRef,
+                config.Replication.OwnedUnitsCollectionKey,
+                DynamicParticipantQueryClause.Create(
+                    ["ReplicationSchemaRef", "PlayerOwner", "MapEntity"],
+                    ["PlayerIdentity", "TeamIdentity"]),
+                DynamicParticipantQueryFlags.RequireMapMatch |
+                    DynamicParticipantQueryFlags.ExcludePlayerIdentity |
+                    DynamicParticipantQueryFlags.ExcludeTeamIdentity,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                attributes: [config.HealthAttribute, config.CrystalAttribute],
+                ownerMatchPolicy: DynamicParticipantOwnerMatchPolicy.MatchViewer);
+            specs[offset + 1] = DynamicParticipantQuerySpec.Create(
+                DynamicParticipantViewerKind.Player,
+                viewerRef,
+                config.Replication.PublicResourcesCollectionKey,
+                DynamicParticipantQueryClause.Create(
+                    ["ReplicationSchemaRef", "FrontlineCrystalNode", "MapEntity"]),
+                DynamicParticipantQueryFlags.RequireMapMatch,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                ownerMatchPolicy: DynamicParticipantOwnerMatchPolicy.Public);
+            specs[offset + 2] = DynamicParticipantQuerySpec.Create(
+                DynamicParticipantViewerKind.Player,
+                viewerRef,
+                config.Replication.PublicMatchStateCollectionKey,
+                DynamicParticipantQueryClause.Create(
+                    ["ReplicationSchemaRef", "FrontlineMatchStateEntity", "MapEntity"]),
+                DynamicParticipantQueryFlags.RequireMapMatch,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.None,
+                ownerMatchPolicy: DynamicParticipantOwnerMatchPolicy.Public);
+        }
+        return specs;
+    }
+
+    private static void ValidatePublishedKnowledge(
+        World world,
+        MapSession session,
+        KnowledgeProjectionStore knowledge,
+        FrontlineConfig config,
+        int currentTick)
+    {
+        Span<Entity> viewers = stackalloc Entity[config.Sides.Length];
+        for (int i = 0; i < config.Sides.Length; i++)
+        {
+            if (!session.PlayerEntityLookup.TryGet(config.Sides[i].PlayerId, out viewers[i]) ||
+                !world.IsAlive(viewers[i]))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline visibility cannot resolve player {config.Sides[i].PlayerId}.");
+            }
+        }
+
+        int matchStateCount = 0;
+        foreach (ref Chunk chunk in world.Query(in MatchStateQuery))
+        {
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity target = Unsafe.Add(ref first, index);
+                matchStateCount++;
+                for (int viewerIndex = 0; viewerIndex < viewers.Length; viewerIndex++)
+                {
+                    if (!knowledge.TryGet(viewers[viewerIndex], target, currentTick, out KnowledgeDisclosureRecord record) ||
+                        record.Presence != KnowledgePresence.LiveVisible ||
+                        record.Position != KnowledgePositionAccess.None)
+                    {
+                        throw new InvalidOperationException(
+                            "RTS Frontline match state must be live-visible without position data to every player.");
+                    }
+                }
+            }
+        }
+        if (matchStateCount != 1)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline requires exactly one authoritative match-state entity; found {matchStateCount}.");
+        }
+
+        int resourceCount = 0;
+        foreach (ref Chunk chunk in world.Query(in ResourceQuery))
+        {
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity target = Unsafe.Add(ref first, index);
+                resourceCount++;
+                for (int viewerIndex = 0; viewerIndex < viewers.Length; viewerIndex++)
+                {
+                    if (!knowledge.TryGet(viewers[viewerIndex], target, currentTick, out KnowledgeDisclosureRecord record) ||
+                        record.Presence != KnowledgePresence.LiveVisible ||
+                        record.Position != KnowledgePositionAccess.Live)
+                    {
+                        throw new InvalidOperationException(
+                            "RTS Frontline crystal nodes must be live-visible to every player.");
+                    }
+                }
+            }
+        }
+        if (resourceCount == 0)
+        {
+            throw new InvalidOperationException("RTS Frontline requires at least one public crystal node.");
+        }
+
+        Span<int> ownedCounts = stackalloc int[config.Sides.Length];
+        foreach (ref Chunk chunk in world.Query(in OwnedGameplayQuery))
+        {
+            ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                int sideIndex = config.ResolveSideIndex(world.TryGet(Unsafe.Add(ref first, index), out Team team)
+                    ? team.Id
+                    : throw new InvalidOperationException("RTS Frontline owned replicated entity requires Team."));
+                if (owners[index].PlayerId != config.Sides[sideIndex].PlayerId ||
+                    !knowledge.TryGet(viewers[sideIndex], Unsafe.Add(ref first, index), currentTick, out _))
+                {
+                    throw new InvalidOperationException(
+                        "RTS Frontline owned replicated entity is not disclosed to its configured player.");
+                }
+                ownedCounts[sideIndex]++;
+            }
+        }
+        for (int i = 0; i < ownedCounts.Length; i++)
+        {
+            if (ownedCounts[i] == 0)
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline player {config.Sides[i].PlayerId} has no owned replicated gameplay entities.");
+            }
+        }
+    }
+}
+
+internal sealed class FrontlineReplicationLifecycle
+{
+    private readonly FrontlineRuntime _runtime;
+    private DynamicParticipantVisibilityPublisher? _visibilityPublisher;
+    private bool _visibilitySystemInstalled;
+
+    public FrontlineReplicationLifecycle(FrontlineRuntime runtime)
+    {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+    }
+
+    public Task HandleGameStartAsync(ScriptContext context) => Execute(() =>
+    {
+        GameEngine engine = RequireEngine(context, "GameStart");
+        FrontlineReplication.Install(engine, _runtime);
+        if (engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+        {
+            if (_visibilitySystemInstalled)
+            {
+                throw new InvalidOperationException("RTS Frontline visibility system was registered more than once.");
+            }
+            IClock clock = engine.GetService(CoreServiceKeys.Clock)
+                ?? throw new InvalidOperationException("RTS Frontline visibility requires Clock.");
+            engine.RegisterSystem(
+                new DynamicParticipantVisibilitySystem(engine.World, () => _visibilityPublisher, clock),
+                SystemGroup.RuntimeEntityBinding);
+            _visibilitySystemInstalled = true;
+        }
+    });
+
+    public Task HandleMapLoadedAsync(ScriptContext context) => Execute(() =>
+    {
+        GameEngine engine = RequireEngine(context, "MapLoaded");
+        if (!string.Equals(engine.CurrentMapSession?.MapId.Value, _runtime.Config.MapId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        NetworkProcessRole role = engine.GetService(CoreServiceKeys.NetworkProcessRole);
+        if (role == NetworkProcessRole.ReplicatedClient)
+        {
+            int removed = FrontlineReplicatedClientMapBoundary.RemoveAuthoredGameplayEntities(engine, _runtime.Config);
+            if (removed <= 0)
+            {
+                throw new InvalidOperationException(
+                    "RTS Frontline replicated client MapLoaded found no map-authored authoritative gameplay entities to remove.");
+            }
+        }
+        else if (role == NetworkProcessRole.AuthoritativeServer)
+        {
+            ReplaceVisibilityPublisher(engine);
+        }
+    });
+
+    public Task HandleMapResumedAsync(ScriptContext context) => Execute(() =>
+    {
+        GameEngine engine = RequireEngine(context, "MapResumed");
+        if (!string.Equals(engine.CurrentMapSession?.MapId.Value, _runtime.Config.MapId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        NetworkProcessRole role = engine.GetService(CoreServiceKeys.NetworkProcessRole);
+        if (role == NetworkProcessRole.ReplicatedClient)
+        {
+            FrontlineReplicatedClientMapBoundary.RemoveAuthoredGameplayEntities(engine, _runtime.Config);
+        }
+        else if (role == NetworkProcessRole.AuthoritativeServer)
+        {
+            ReplaceVisibilityPublisher(engine);
+        }
+    });
+
+    public Task HandleMapUnloadedAsync(ScriptContext context) => Execute(() =>
+    {
+        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, _runtime.Config.MapId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _visibilityPublisher?.Clear();
+        _visibilityPublisher = null;
+    });
+
+    private void ReplaceVisibilityPublisher(GameEngine engine)
+    {
+        if (!_visibilitySystemInstalled)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline authoritative visibility system must be installed before map focus.");
+        }
+        _visibilityPublisher?.Clear();
+        _visibilityPublisher = FrontlineAuthoritativeVisibility.Install(engine, _runtime.Config);
+    }
+
+    private static GameEngine RequireEngine(ScriptContext context, string eventName)
+    {
+        return context.GetEngine() as GameEngine
+            ?? throw new InvalidOperationException($"RTS Frontline replication requires GameEngine on {eventName}.");
+    }
+
+    private static Task Execute(Action action)
+    {
+        try
+        {
+            action();
+            return Task.CompletedTask;
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException(exception);
+        }
+    }
+}
+
+internal static class FrontlineReplication
+{
+    internal static void Install(GameEngine engine, FrontlineRuntime runtime)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        ArgumentNullException.ThrowIfNull(runtime);
+        FrontlineConfig config = runtime.Config;
+
+        engine.RegisterSystem(
+            new FrontlineVisionScopeAuthoringSystem(engine.World, config.Sides),
+            SystemGroup.SchemaUpdate);
+
+        NetworkProcessRole role = engine.GetService(CoreServiceKeys.NetworkProcessRole);
+        if (role == NetworkProcessRole.Standalone)
+        {
+            return;
+        }
+
+        ReplicationSchemaProjectorRegistry projectors = engine.GetService(CoreServiceKeys.ReplicationSchemaProjectors)
+            ?? throw new InvalidOperationException("RTS Frontline network launch requires the replication projector registry.");
+        ClientReplicationSchemaApplierRegistry appliers = engine.GetService(CoreServiceKeys.ClientReplicationSchemaAppliers)
+            ?? throw new InvalidOperationException("RTS Frontline network launch requires the client replication applier registry.");
+
+        int healthId = AttributeRegistry.GetId(config.HealthAttribute);
+        int crystalId = AttributeRegistry.GetId(config.CrystalAttribute);
+        if (healthId == AttributeRegistry.InvalidId || crystalId == AttributeRegistry.InvalidId)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline replication requires registered Health and Crystals attributes before GameStart registration.");
+        }
+
+        FrontlineReplicationSpec[] specs = CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId);
+        RegisterHandlers(
+            projectors,
+            appliers,
+            templates,
+            runtime,
+            config.Sides,
+            config.Replication.MatchStateSchemaId,
+            specs,
+            healthId,
+            crystalId);
+
+        if (role == NetworkProcessRole.AuthoritativeServer)
+        {
+            NetworkEntityTable entities = engine.GetService(CoreServiceKeys.NetworkEntityTable)
+                ?? throw new InvalidOperationException("RTS Frontline authoritative launch requires NetworkEntityTable.");
+            engine.RegisterSystem(
+                new FrontlineNetworkEntityBindingSystem(engine.World, entities),
+                SystemGroup.Cleanup);
+        }
+    }
+
+    internal static FrontlineReplicationSpec[] CreateSpecs(FrontlineReplicationConfig config)
+    {
+        return new[]
+        {
+            new FrontlineReplicationSpec(FrontlineReplicationKind.Core, config.CoreSchemaId, HasHealth: true, HasCrystals: true, HasOwner: true),
+            new FrontlineReplicationSpec(FrontlineReplicationKind.Harvester, config.HarvesterSchemaId, HasHealth: true, HasCrystals: false, HasOwner: true),
+            new FrontlineReplicationSpec(FrontlineReplicationKind.Infantry, config.InfantrySchemaId, HasHealth: true, HasCrystals: false, HasOwner: true),
+            new FrontlineReplicationSpec(FrontlineReplicationKind.CrystalNode, config.CrystalNodeSchemaId, HasHealth: false, HasCrystals: false, HasOwner: false),
+        };
+    }
+
+    internal static void RegisterHandlers(
+        ReplicationSchemaProjectorRegistry projectors,
+        ClientReplicationSchemaApplierRegistry appliers,
+        FrontlineClientTemplateFactory templates,
+        FrontlineRuntime runtime,
+        FrontlineSideConfig[] sides,
+        int matchStateSchemaId,
+        ReadOnlySpan<FrontlineReplicationSpec> specs,
+        int healthId,
+        int crystalId)
+    {
+        if (specs.Length != 4)
+        {
+            throw new InvalidOperationException("RTS Frontline requires exactly four replication schemas.");
+        }
+
+        RegisterOrThrow(projectors, specs[0].SchemaId, new FrontlineCoreReplicationProjector(in specs[0], healthId, crystalId));
+        RegisterOrThrow(projectors, specs[1].SchemaId, new FrontlineHarvesterReplicationProjector(in specs[1], healthId, crystalId));
+        RegisterOrThrow(projectors, specs[2].SchemaId, new FrontlineInfantryReplicationProjector(in specs[2], healthId, crystalId));
+        RegisterOrThrow(projectors, specs[3].SchemaId, new FrontlineCrystalNodeReplicationProjector(in specs[3], healthId, crystalId));
+        RegisterOrThrow(projectors, matchStateSchemaId, new FrontlineMatchStateReplicationProjector(runtime, matchStateSchemaId));
+
+        RegisterOrThrow(appliers, specs[0].SchemaId, new FrontlineCoreReplicationApplier(in specs[0], templates, sides, healthId, crystalId));
+        RegisterOrThrow(appliers, specs[1].SchemaId, new FrontlineHarvesterReplicationApplier(in specs[1], templates, sides, healthId, crystalId));
+        RegisterOrThrow(appliers, specs[2].SchemaId, new FrontlineInfantryReplicationApplier(in specs[2], templates, sides, healthId, crystalId));
+        RegisterOrThrow(appliers, specs[3].SchemaId, new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, sides, healthId, crystalId));
+        RegisterOrThrow(
+            appliers,
+            matchStateSchemaId,
+            new FrontlineMatchStateReplicationApplier(
+                matchStateSchemaId,
+                runtime.Config.ReadyCountdownTicks,
+                runtime.Config.MatchDurationTicks,
+                runtime.Config.DisconnectGraceTicks,
+                templates));
+    }
+
+    private static void RegisterOrThrow(
+        ReplicationSchemaProjectorRegistry registry,
+        int schemaId,
+        IReplicationSchemaProjector projector)
+    {
+        ReplicationSchemaRegistrationResult result = registry.Register(schemaId, projector);
+        if (result != ReplicationSchemaRegistrationResult.Success)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline projector registration failed for schema {schemaId}: {result}.");
+        }
+    }
+
+    private static void RegisterOrThrow(
+        ClientReplicationSchemaApplierRegistry registry,
+        int schemaId,
+        IClientReplicationSchemaApplier applier)
+    {
+        ReplicationSchemaRegistrationResult result = registry.Register(schemaId, applier);
+        if (result != ReplicationSchemaRegistrationResult.Success)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline client applier registration failed for schema {schemaId}: {result}.");
+        }
+    }
+}

@@ -18,6 +18,7 @@ namespace Ludots.Core.Networking.Replication
         }
 
         public int SchemaCapacity => _handlers.Length - 1;
+        public int Count { get; private set; }
         public bool IsFrozen { get; private set; }
 
         public ReplicationSchemaRegistrationResult Register(int schemaId, THandler handler)
@@ -48,6 +49,7 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _handlers[schemaId] = handler;
+            Count++;
             return ReplicationSchemaRegistrationResult.Success;
         }
 

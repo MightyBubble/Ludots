@@ -28,7 +28,9 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Networking.Replication;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Config
 {
@@ -59,6 +61,9 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
             Register<Ludots.Core.Gameplay.Components.PlayerIdentity>("PlayerIdentity");
+            Register("ReplicationSchemaRef", SetReplicationSchemaRef, null, Component<ReplicationSchemaRef>.ComponentType);
+            Register<VisionEmitterCm>("VisionEmitterCm");
+            Register<FogOccupantCm>("FogOccupantCm");
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
@@ -138,6 +143,20 @@ namespace Ludots.Core.Config
         public static void SetUtilityAiAuthoringCatalog(UtilityAiAuthoringCatalog authoring)
         {
             _utilityAiAuthoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
+        }
+
+        private static void SetReplicationSchemaRef(Entity entity, JsonNode data)
+        {
+            JsonObject obj = data as JsonObject
+                ?? throw new InvalidOperationException("ReplicationSchemaRef authoring must be an object.");
+            ValidateProperties(obj, "ReplicationSchemaRef", "SchemaId");
+            int schemaId = ReadIntProperty(obj, "SchemaId", "ReplicationSchemaRef");
+            if (schemaId <= 0)
+            {
+                throw new InvalidOperationException("ReplicationSchemaRef.SchemaId must be a positive integer.");
+            }
+
+            entity.Add(new ReplicationSchemaRef(schemaId));
         }
 
         public static void Register(string name, ComponentSetter setter, string modId = null)

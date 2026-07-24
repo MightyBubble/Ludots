@@ -2,7 +2,9 @@ using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Vision;
@@ -214,10 +216,14 @@ namespace Ludots.Tests.GAS
             var cellMap = new FogCellMap();
             var resolver = new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap);
             var projector = new FogKnowledgeProjector(knowledge, cellMap);
-            var system = new VisionSystem(world, session, registry, fields, resolver, projector, knowledge);
+            var players = new PlayerEntityLookup();
+            Entity formalPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            players.Register(1, formalPlayer);
+            var system = new VisionSystem(world, session, registry, fields, resolver, projector, knowledge, players);
 
             Entity viewer = world.Create(
                 WorldPositionCm.FromCm(0, 0),
+                new PlayerOwner { PlayerId = 1 },
                 new VisionEmitterCm
                 {
                     ScopeKeyId = 1,
@@ -233,8 +239,45 @@ namespace Ludots.Tests.GAS
 
             Assert.That(fields.TryGet(1, layerId, out FogField field), Is.True);
             Assert.That(field.GetVisibility(new FogCell(0, 0)), Is.EqualTo(CellVisibility.Visible));
-            Assert.That(knowledge.TryGet(viewer, target, session.CurrentTick, out KnowledgeDisclosureRecord record), Is.True);
+            Assert.That(knowledge.TryGet(formalPlayer, target, session.CurrentTick, out KnowledgeDisclosureRecord record), Is.True);
+            Assert.That(knowledge.TryGet(viewer, target, session.CurrentTick, out _), Is.False);
             Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+        }
+
+        [Test]
+        public void VisionSystem_OwnedEmitterWithoutFormalPlayerRepresentative_FailsExplicitly()
+        {
+            using World world = World.Create();
+            var session = new GameSession();
+            var registry = new FogLayerRegistry();
+            FogLayerId layerId = registry.Register("ground", cellSizeCm: 100, updateHz: 10);
+            uint layerMask = registry.ToMask(layerId);
+            var fields = new FogFieldStore();
+            var knowledge = new KnowledgeProjectionStore();
+            var cellMap = new FogCellMap();
+            var system = new VisionSystem(
+                world,
+                session,
+                registry,
+                fields,
+                new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap),
+                new FogKnowledgeProjector(knowledge, cellMap),
+                knowledge,
+                new PlayerEntityLookup());
+            world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PlayerOwner { PlayerId = 1 },
+                new VisionEmitterCm
+                {
+                    ScopeKeyId = 1,
+                    LayerMask = layerMask,
+                    Polarity = VisionPolarity.Reveal,
+                    Aperture = VisionAperture.Disk(100)
+                });
+
+            Assert.That(
+                () => system.Update(1f / 60f),
+                Throws.InvalidOperationException.With.Message.Contains("without a live formal player representative"));
         }
 
         private static RelationshipRuntime CreateRelationshipRuntime(World world, out RelationshipTypeRegistry types)

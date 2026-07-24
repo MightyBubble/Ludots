@@ -122,6 +122,22 @@
       }
     },
     {
+      "name": "rts_multiplayer_frontline",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod",
+        "projectPath": "RtsMultiplayerFrontlineMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline_networked",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineNetworkedMod",
+        "projectPath": "RtsMultiplayerFrontlineNetworkedMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_participant_views",
       "target": {
         "type": "path",

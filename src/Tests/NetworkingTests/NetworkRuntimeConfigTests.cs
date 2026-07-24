@@ -22,10 +22,13 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.SimulationTickRateHz, Is.EqualTo(30));
             Assert.That(config.StatePublishRateHz, Is.EqualTo(10));
             Assert.That(config.NetworkEntityCapacity, Is.EqualTo(256));
+            Assert.That(config.ReplicationSchemaCapacity, Is.EqualTo(8));
             Assert.That(config.MaxCommandBatchesPerSecondPerPlayer, Is.EqualTo(32));
             Assert.That(config.MaxActorsPerCommandBatch, Is.EqualTo(128));
             Assert.That(config.CommandSchemas, Has.Count.EqualTo(3));
             Assert.That(config.ReconnectWindowSeconds, Is.EqualTo(30));
+            Assert.That(config.ReadyCountdownTicks, Is.EqualTo(90));
+            Assert.That(config.ClientReconnectRetryMilliseconds, Is.EqualTo(500));
             Assert.That(config.ControlChannelId, Is.EqualTo(0));
             Assert.That(config.CommandChannelId, Is.EqualTo(1));
             Assert.That(config.StateChannelId, Is.EqualTo(2));
@@ -65,6 +68,17 @@ public sealed class NetworkRuntimeConfigTests
             Throws.InvalidOperationException.With.Message.Contains("duplicated"));
     }
 
+    [Test]
+    public void DatagramCapacityBelowRoomSnapshot_IsRejectedAtStartup()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.MaxDatagramPayloadBytes = 63;
+
+        Assert.That(
+            config.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("cannot carry the 64-byte room snapshot"));
+    }
+
     private static NetworkRuntimeConfig CreateRtsDuelConfig() => new()
     {
         ProfileId = "rts_duel_v1",
@@ -85,8 +99,11 @@ public sealed class NetworkRuntimeConfigTests
         NetworkAdmissionResultCapacity = 512,
         EntityAdmissionResultCapacity = 1024,
         ReconnectWindowSeconds = 30,
+        ReadyCountdownTicks = 90,
+        ClientReconnectRetryMilliseconds = 500,
         BaselineCapacity = 32,
         ReplicationPacketEntityCapacity = 256,
+        ReplicationSchemaCapacity = 8,
         DisclosureChangeLogCapacity = 4096,
         DatagramQueueCapacity = 1024,
         ConnectionEventCapacity = 64,

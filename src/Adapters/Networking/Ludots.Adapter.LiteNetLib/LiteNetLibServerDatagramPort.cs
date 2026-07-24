@@ -7,14 +7,18 @@ namespace Ludots.Adapter.LiteNetLib;
 public sealed class LiteNetLibServerDatagramPort :
     IServerDatagramPort,
     IServerConnectionEventPort,
+    IServerConnectionControlPort,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;
     private readonly NetManager _manager;
     private readonly NetPeer?[] _peers;
+    private readonly int[] _connectionValues;
     private readonly FixedDatagramQueue _inbound;
     private readonly FixedServerConnectionEventQueue _connectionEvents;
     private readonly string _connectionKey;
+    private readonly byte _stateChannelId;
+    private int _nextConnectionValue = 1;
     private bool _disposed;
 
     public LiteNetLibServerDatagramPort(
@@ -24,15 +28,19 @@ public sealed class LiteNetLibServerDatagramPort :
         int datagramCapacity,
         int connectionEventCapacity,
         int maxPayloadBytes,
-        int channelCount)
+        int channelCount,
+        int stateChannelId)
     {
         if ((uint)listenPort > ushort.MaxValue) throw new ArgumentOutOfRangeException(nameof(listenPort));
         if (string.IsNullOrWhiteSpace(connectionKey)) throw new ArgumentException("Connection key is required.", nameof(connectionKey));
         if (connectionCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(connectionCapacity));
         if ((uint)(channelCount - 1) >= 64u) throw new ArgumentOutOfRangeException(nameof(channelCount));
+        if ((uint)stateChannelId >= (uint)channelCount) throw new ArgumentOutOfRangeException(nameof(stateChannelId));
 
         _connectionKey = connectionKey;
+        _stateChannelId = (byte)stateChannelId;
         _peers = new NetPeer[connectionCapacity];
+        _connectionValues = new int[connectionCapacity];
         _inbound = new FixedDatagramQueue(datagramCapacity, maxPayloadBytes);
         _connectionEvents = new FixedServerConnectionEventQueue(connectionEventCapacity);
         _listener = new EventBasedNetListener();
@@ -100,8 +108,8 @@ public sealed class LiteNetLibServerDatagramPort :
     public DatagramSendStatus TrySend(ConnectionId connectionId, ChannelId channelId, ReadOnlySpan<byte> payload)
     {
         ThrowIfDisposed();
-        int peerIndex = connectionId.Value - 1;
-        if ((uint)peerIndex >= (uint)_peers.Length)
+        int peerIndex = FindConnectionSlot(connectionId.Value);
+        if (peerIndex < 0)
         {
             return DatagramSendStatus.Closed;
         }
@@ -112,34 +120,61 @@ public sealed class LiteNetLibServerDatagramPort :
             return DatagramSendStatus.Closed;
         }
 
-        peer.Send(payload, channelId.Value, DeliveryMethod.ReliableOrdered);
+        peer.Send(payload, channelId.Value, ResolveDeliveryMethod(channelId.Value));
         return DatagramSendStatus.Sent;
+    }
+
+    public void Disconnect(ConnectionId connectionId)
+    {
+        ThrowIfDisposed();
+        int peerIndex = FindConnectionSlot(connectionId.Value);
+        if (peerIndex < 0)
+        {
+            throw new InvalidOperationException(
+                $"LiteNetLib cannot disconnect unknown connection {connectionId.Value}.");
+        }
+
+        NetPeer? peer = _peers[peerIndex];
+        if (peer == null || peer.ConnectionState != ConnectionState.Connected)
+        {
+            throw new InvalidOperationException(
+                $"LiteNetLib connection {connectionId.Value} is not connected.");
+        }
+
+        peer.Disconnect();
     }
 
     private void OnPeerConnected(NetPeer peer)
     {
-        if ((uint)peer.Id >= (uint)_peers.Length || _peers[peer.Id] != null)
+        int slot = FindFreePeerSlot();
+        if (slot < 0)
         {
             peer.Disconnect();
-            throw new InvalidOperationException($"LiteNetLib assigned invalid or duplicate peer id {peer.Id}.");
+            throw new InvalidOperationException("LiteNetLib connected beyond the configured connection capacity.");
         }
 
-        _peers[peer.Id] = peer;
+        int connectionValue = AllocateConnectionValue();
+        _peers[slot] = peer;
+        _connectionValues[slot] = connectionValue;
         var connectionEvent = new ServerConnectionEvent(
-            new ConnectionId(peer.Id + 1),
+            new ConnectionId(connectionValue),
             TransportConnectionEventKind.Connected);
         _connectionEvents.Enqueue(in connectionEvent);
     }
 
     private void OnPeerDisconnected(NetPeer peer, DisconnectInfo info)
     {
-        if ((uint)peer.Id < (uint)_peers.Length)
+        int slot = FindPeerSlot(peer);
+        if (slot < 0)
         {
-            _peers[peer.Id] = null;
+            throw new InvalidOperationException("LiteNetLib disconnected a peer that is not in the connection table.");
         }
 
+        int connectionValue = _connectionValues[slot];
+        _peers[slot] = null;
+        _connectionValues[slot] = 0;
         var connectionEvent = new ServerConnectionEvent(
-            new ConnectionId(peer.Id + 1),
+            new ConnectionId(connectionValue),
             TransportConnectionEventKind.Disconnected,
             MapDisconnectReason(info.Reason));
         _connectionEvents.Enqueue(in connectionEvent);
@@ -151,13 +186,80 @@ public sealed class LiteNetLibServerDatagramPort :
         byte channelNumber,
         DeliveryMethod deliveryMethod)
     {
-        if (deliveryMethod != DeliveryMethod.ReliableOrdered)
+        DeliveryMethod expected = ResolveDeliveryMethod(channelNumber);
+        if (deliveryMethod != expected)
         {
-            throw new InvalidOperationException($"Unexpected delivery method {deliveryMethod}; reliable ordered is required.");
+            throw new InvalidOperationException(
+                $"Unexpected delivery method {deliveryMethod} on channel {channelNumber}; expected {expected}.");
         }
 
-        _inbound.Enqueue(peer.Id + 1, channelNumber, reader.GetRemainingBytesSpan());
+        int slot = FindPeerSlot(peer);
+        if (slot < 0)
+        {
+            throw new InvalidOperationException("LiteNetLib received data from a peer that is not in the connection table.");
+        }
+
+        _inbound.Enqueue(_connectionValues[slot], channelNumber, reader.GetRemainingBytesSpan());
     }
+
+    private int FindFreePeerSlot()
+    {
+        for (int i = 0; i < _peers.Length; i++)
+        {
+            if (_peers[i] == null)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int FindPeerSlot(NetPeer peer)
+    {
+        for (int i = 0; i < _peers.Length; i++)
+        {
+            if (ReferenceEquals(_peers[i], peer))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int FindConnectionSlot(int connectionValue)
+    {
+        for (int i = 0; i < _connectionValues.Length; i++)
+        {
+            if (_connectionValues[i] == connectionValue)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int AllocateConnectionValue()
+    {
+        for (int attempt = 0; attempt <= _connectionValues.Length; attempt++)
+        {
+            int candidate = _nextConnectionValue;
+            _nextConnectionValue = candidate == int.MaxValue ? 1 : candidate + 1;
+            if (FindConnectionSlot(candidate) < 0)
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("Unable to allocate a unique transport connection generation.");
+    }
+
+    private DeliveryMethod ResolveDeliveryMethod(byte channelNumber)
+        => channelNumber == _stateChannelId
+            ? DeliveryMethod.Sequenced
+            : DeliveryMethod.ReliableOrdered;
 
     private static TransportDisconnectReason MapDisconnectReason(DisconnectReason reason) => reason switch
     {

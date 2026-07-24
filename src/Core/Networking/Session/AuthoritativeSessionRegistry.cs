@@ -23,6 +23,7 @@ namespace Ludots.Core.Networking.Session
         private readonly ProtocolVersion _requiredProtocolVersion;
         private readonly ContentFingerprint _requiredContentFingerprint;
         private readonly uint _reconnectWindowTicks;
+        private readonly uint _readyCountdownTicks;
 
         private readonly SeatState[] _states;
         private readonly int[] _connectionValues;
@@ -31,17 +32,26 @@ namespace Ludots.Core.Networking.Session
         private readonly ulong[] _tokenLow;
         private readonly ulong[] _tokenHigh;
         private readonly uint[] _disconnectTicks;
+        private readonly bool[] _roomReady;
+
+        private NetworkRoomPhase _roomPhase;
+        private ulong _roomRevision;
+        private uint _roomCommittedTick;
+        private uint _roomCountdownStartTick;
+        private uint _roomCountdownRemainingTicks;
+        private bool _hasRoomCommittedTick;
 
         public AuthoritativeSessionRegistry(
             int seatCapacity,
             SessionEpoch sessionEpoch,
             ProtocolVersion requiredProtocolVersion,
             ContentFingerprint requiredContentFingerprint,
-            uint reconnectWindowTicks)
+            uint reconnectWindowTicks,
+            uint readyCountdownTicks)
         {
-            if (seatCapacity <= 0)
+            if (seatCapacity <= 0 || seatCapacity > ushort.MaxValue)
             {
-                throw new ArgumentOutOfRangeException(nameof(seatCapacity), "Seat capacity must be positive.");
+                throw new ArgumentOutOfRangeException(nameof(seatCapacity), "Seat capacity must fit the room snapshot wire contract.");
             }
 
             if (sessionEpoch.IsEmpty)
@@ -59,10 +69,16 @@ namespace Ludots.Core.Networking.Session
                 throw new ArgumentException("Required content fingerprint must be non-empty.", nameof(requiredContentFingerprint));
             }
 
+            if (readyCountdownTicks == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(readyCountdownTicks), "Ready countdown must be positive.");
+            }
+
             _sessionEpoch = sessionEpoch;
             _requiredProtocolVersion = requiredProtocolVersion;
             _requiredContentFingerprint = requiredContentFingerprint;
             _reconnectWindowTicks = reconnectWindowTicks;
+            _readyCountdownTicks = readyCountdownTicks;
 
             _states = new SeatState[seatCapacity];
             _connectionValues = new int[seatCapacity];
@@ -71,6 +87,9 @@ namespace Ludots.Core.Networking.Session
             _tokenLow = new ulong[seatCapacity];
             _tokenHigh = new ulong[seatCapacity];
             _disconnectTicks = new uint[seatCapacity];
+            _roomReady = new bool[seatCapacity];
+            _roomPhase = NetworkRoomPhase.WaitingForPlayers;
+            _roomRevision = 1;
 
             for (int i = 0; i < seatCapacity; i++)
             {
@@ -87,6 +106,14 @@ namespace Ludots.Core.Networking.Session
         public ContentFingerprint RequiredContentFingerprint => _requiredContentFingerprint;
 
         public uint ReconnectWindowTicks => _reconnectWindowTicks;
+
+        public uint ReadyCountdownTicks => _readyCountdownTicks;
+
+        public ulong RoomRevision => _roomRevision;
+
+        public NetworkRoomPhase RoomPhase => _roomPhase;
+
+        public uint RoomCountdownRemainingTicks => _roomCountdownRemainingTicks;
 
         public bool TryHandshake(
             ConnectionId connectionId,
@@ -148,6 +175,118 @@ namespace Ludots.Core.Networking.Session
             _states[seat] = SeatState.AwaitingReconnect;
             _connectionValues[seat] = 0;
             _disconnectTicks[seat] = currentTick;
+            _roomReady[seat] = false;
+            RefreshRoomPhase();
+            MarkRoomChanged();
+            return true;
+        }
+
+        public RoomReadyIntentApplyResult ApplyRoomReadyIntent(
+            ConnectionId connectionId,
+            NetworkRoomReadyState readyState,
+            uint committedTick)
+        {
+            if (readyState is not NetworkRoomReadyState.Unready and not NetworkRoomReadyState.Ready)
+            {
+                throw new ArgumentOutOfRangeException(nameof(readyState));
+            }
+
+            if (!FindConnectedSeat(connectionId.Value, out int seat))
+            {
+                return RoomReadyIntentApplyResult.Unauthenticated;
+            }
+
+            ObserveCommittedTick(committedTick);
+            if (_roomPhase == NetworkRoomPhase.Started)
+            {
+                return RoomReadyIntentApplyResult.MatchAlreadyStarted;
+            }
+
+            bool ready = readyState == NetworkRoomReadyState.Ready;
+            if (_roomReady[seat] == ready)
+            {
+                return RoomReadyIntentApplyResult.Unchanged;
+            }
+
+            _roomReady[seat] = ready;
+            RefreshRoomPhase();
+            MarkRoomChanged();
+            return RoomReadyIntentApplyResult.Applied;
+        }
+
+        public bool AdvanceRoomCountdown(uint committedTick)
+        {
+            ObserveCommittedTick(committedTick);
+            if (_roomPhase != NetworkRoomPhase.Countdown)
+            {
+                return false;
+            }
+
+            uint elapsed = unchecked(committedTick - _roomCountdownStartTick);
+            uint remaining = elapsed >= _readyCountdownTicks
+                ? 0
+                : _readyCountdownTicks - elapsed;
+            if (remaining == _roomCountdownRemainingTicks)
+            {
+                return false;
+            }
+
+            _roomCountdownRemainingTicks = remaining;
+            if (remaining == 0)
+            {
+                _roomPhase = NetworkRoomPhase.Started;
+            }
+
+            MarkRoomChanged();
+            return true;
+        }
+
+        public bool TryCopyRoomSnapshot(
+            Span<NetworkRoomSeatSnapshot> seats,
+            out NetworkRoomSnapshotHeader header,
+            out int seatCount)
+        {
+            seatCount = _states.Length;
+            if (seats.Length < seatCount)
+            {
+                header = default;
+                return false;
+            }
+
+            int connectedCount = 0;
+            int readyCount = 0;
+            for (int i = 0; i < _states.Length; i++)
+            {
+                NetworkRoomSeatConnectionState connectionState = _states[i] switch
+                {
+                    SeatState.Empty => NetworkRoomSeatConnectionState.Empty,
+                    SeatState.Connected => NetworkRoomSeatConnectionState.Connected,
+                    SeatState.AwaitingReconnect => NetworkRoomSeatConnectionState.AwaitingReconnect,
+                    _ => throw new InvalidOperationException("Authoritative room contains an unknown seat state."),
+                };
+                NetworkRoomReadyState readyState = _roomReady[i]
+                    ? NetworkRoomReadyState.Ready
+                    : NetworkRoomReadyState.Unready;
+                bool occupied = _states[i] != SeatState.Empty;
+                seats[i] = new NetworkRoomSeatSnapshot(
+                    i,
+                    connectionState,
+                    readyState,
+                    occupied ? _seatGenerations[i] : 0,
+                    occupied ? new PlayerId(_playerValues[i]) : default);
+                connectedCount += _states[i] == SeatState.Connected ? 1 : 0;
+                readyCount += _roomReady[i] ? 1 : 0;
+            }
+
+            header = new NetworkRoomSnapshotHeader(
+                _sessionEpoch,
+                _roomRevision,
+                _roomCommittedTick,
+                _roomCountdownRemainingTicks,
+                checked((ushort)_states.Length),
+                checked((ushort)connectedCount),
+                checked((ushort)readyCount),
+                _roomPhase);
             return true;
         }
 
@@ -228,6 +367,9 @@ namespace Ludots.Core.Networking.Session
             _tokenLow[seat] = token.Low;
             _tokenHigh[seat] = token.High;
             _disconnectTicks[seat] = 0;
+            _roomReady[seat] = false;
+            RefreshRoomPhase();
+            MarkRoomChanged();
 
             response = SessionHandshakeResponse.Accept(
                 GetSeatBinding(seat),
@@ -258,6 +400,9 @@ namespace Ludots.Core.Networking.Session
             _tokenLow[seat] = rotated.Low;
             _tokenHigh[seat] = rotated.High;
             _disconnectTicks[seat] = 0;
+            _roomReady[seat] = false;
+            RefreshRoomPhase();
+            MarkRoomChanged();
 
             response = SessionHandshakeResponse.Accept(
                 GetSeatBinding(seat),
@@ -338,7 +483,60 @@ namespace Ludots.Core.Networking.Session
             _tokenLow[seat] = 0;
             _tokenHigh[seat] = 0;
             _disconnectTicks[seat] = 0;
+            _roomReady[seat] = false;
+            RefreshRoomPhase();
+            MarkRoomChanged();
         }
+
+        private void ObserveCommittedTick(uint committedTick)
+        {
+            if (_hasRoomCommittedTick && committedTick < _roomCommittedTick)
+            {
+                throw new InvalidOperationException(
+                    $"Room committed tick regressed from {_roomCommittedTick} to {committedTick}.");
+            }
+
+            _roomCommittedTick = committedTick;
+            _hasRoomCommittedTick = true;
+        }
+
+        private void RefreshRoomPhase()
+        {
+            if (_roomPhase == NetworkRoomPhase.Started)
+            {
+                return;
+            }
+
+            int connectedCount = 0;
+            int readyCount = 0;
+            for (int i = 0; i < _states.Length; i++)
+            {
+                connectedCount += _states[i] == SeatState.Connected ? 1 : 0;
+                readyCount += _roomReady[i] ? 1 : 0;
+            }
+
+            if (connectedCount < _states.Length)
+            {
+                _roomPhase = NetworkRoomPhase.WaitingForPlayers;
+                _roomCountdownRemainingTicks = 0;
+                _roomCountdownStartTick = 0;
+                return;
+            }
+
+            if (readyCount < _states.Length)
+            {
+                _roomPhase = NetworkRoomPhase.WaitingForReady;
+                _roomCountdownRemainingTicks = 0;
+                _roomCountdownStartTick = 0;
+                return;
+            }
+
+            _roomPhase = NetworkRoomPhase.Countdown;
+            _roomCountdownStartTick = _roomCommittedTick;
+            _roomCountdownRemainingTicks = _readyCountdownTicks;
+        }
+
+        private void MarkRoomChanged() => _roomRevision = checked(_roomRevision + 1);
 
         private SessionSeatBinding GetSeatBinding(int seat) =>
             new(seat, _seatGenerations[seat], new PlayerId(_playerValues[seat]));

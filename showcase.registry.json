@@ -5,6 +5,11 @@
       "kind": "csproj",
       "value": "mods/showcases/shared/RoadNetworkShowcaseData",
       "reason": "road_network 共享数据库，非独立 showcase 条目"
+    },
+    {
+      "kind": "binding",
+      "value": "rts_multiplayer_frontline",
+      "reason": "单机练习仅供开发调试；唯一正式 Showcase 条目使用 rts_multiplayer_frontline_networked"
     }
   ],
   "showcases": [
@@ -1355,6 +1360,28 @@
       "status": "active",
       "tags": [
         "rts"
+      ]
+    },
+    {
+      "id": "rts_multiplayer_frontline",
+      "path": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineNetworkedMod",
+      "projectPath": "RtsMultiplayerFrontlineNetworkedMod.csproj",
+      "title": "《双人前线》双人 RTS",
+      "summary": "两名玩家通过独立客户端加入同一权威对局，完成采集、生产、推进、交战与胜负结算的最小 RTS Showcase。",
+      "tier": "T1",
+      "category": "demo",
+      "binding": "rts_multiplayer_frontline_networked",
+      "preset": "rts_multiplayer_frontline_networked_raylib",
+      "docsPath": "gitbook/architecture/rts-multiplayer-showcase.md",
+      "readmePath": "gitbook/architecture/rts-multiplayer-three-process-acceptance.md",
+      "acceptanceTest": "scripts/acceptance/run-rts-multiplayer-frontline-three-process.ps1",
+      "artifactDir": "artifacts/acceptance/rts-multiplayer-frontline-three-process",
+      "screenshot": null,
+      "status": "experimental",
+      "tags": [
+        "rts",
+        "multiplayer",
+        "server-authoritative"
       ]
     },
     {

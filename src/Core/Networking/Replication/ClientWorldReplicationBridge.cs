@@ -191,6 +191,50 @@ namespace Ludots.Core.Networking.Replication
             return true;
         }
 
+        public ReplicationBridgeResult Clear()
+        {
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                Entity entity = _entities[slot];
+                if (!_world.IsAlive(entity) ||
+                    !_world.Has<ReplicationMirrorIdentity>(entity) ||
+                    !_world.Has<ReplicationMirrorState>(entity))
+                {
+                    return ReplicationBridgeResult.EcsStateMismatch;
+                }
+
+                int schemaId = _schemas[slot];
+                if (!_owned[slot] && schemaId > 0)
+                {
+                    if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
+                    {
+                        return ReplicationBridgeResult.SchemaNotRegistered;
+                    }
+
+                    if (!applier.CanConceal(_world, entity))
+                    {
+                        return ReplicationBridgeResult.SchemaApplyRejected;
+                    }
+                }
+            }
+
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot])
+                {
+                    ReleaseSlot(slot);
+                }
+            }
+
+            _batchCount = 0;
+            return ReplicationBridgeResult.Success;
+        }
+
         private ReplicationBridgeResult ValidateLocalStateAndGenerations(ReplicationPacketBuffer packet)
         {
             for (int slot = 0; slot < _active.Length; slot++)
@@ -384,32 +428,7 @@ namespace Ludots.Core.Networking.Replication
                 {
                     case BatchOperationKind.Release:
                     {
-                        Entity entity = _entities[slot];
-                        if (_owned[slot])
-                        {
-                            _world.Destroy(entity);
-                        }
-                        else
-                        {
-                            int schemaId = _schemas[slot];
-                            if (schemaId > 0)
-                            {
-                                if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
-                                {
-                                    throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
-                                }
-
-                                applier.Conceal(_world, entity);
-                            }
-
-                            _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
-                        }
-
-                        _active[slot] = false;
-                        _owned[slot] = false;
-                        _generations[slot] = 0;
-                        _schemas[slot] = 0;
-                        _entities[slot] = Entity.Null;
+                        ReleaseSlot(slot);
                         break;
                     }
                     case BatchOperationKind.Update:
@@ -461,6 +480,36 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _batchCount = 0;
+        }
+
+        private void ReleaseSlot(int slot)
+        {
+            Entity entity = _entities[slot];
+            if (_owned[slot])
+            {
+                _world.Destroy(entity);
+            }
+            else
+            {
+                int schemaId = _schemas[slot];
+                if (schemaId > 0)
+                {
+                    if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
+                    {
+                        throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
+                    }
+
+                    applier.Conceal(_world, entity);
+                }
+
+                _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
+            }
+
+            _active[slot] = false;
+            _owned[slot] = false;
+            _generations[slot] = 0;
+            _schemas[slot] = 0;
+            _entities[slot] = Entity.Null;
         }
 
         private ReplicationBridgeResult ValidateBatchApplications()

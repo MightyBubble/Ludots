@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "Frontline.ToggleReady", "name": "Frontline_ToggleReady", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Frontline.RoomControls",
+      "name": "Frontline Room Controls",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "Frontline.ToggleReady", "path": "<Keyboard>/f5" }
+      ]
+    }
+  ]
+}

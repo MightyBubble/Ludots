@@ -377,6 +377,7 @@ public sealed class NetworkCommandIngressTests
         public required OrderQueue Orders { get; init; }
         public required NetworkCommandAdmissionResultBuffer Results { get; init; }
         public required NetworkCommandIngress Ingress { get; init; }
+        public required NetworkGameplayCommandGate GameplayGate { get; init; }
 
         public static Harness Create(
             World world,
@@ -442,6 +443,8 @@ public sealed class NetworkCommandIngressTests
                 maxPastTargetTicks: 3,
                 maxFutureTargetTicks: 6,
                 scheduledBatchCapacity);
+            var gameplayGate = new NetworkGameplayCommandGate();
+            gameplayGate.StartMatch();
             var ingress = new NetworkCommandIngress(
                 in config,
                 world,
@@ -450,6 +453,7 @@ public sealed class NetworkCommandIngressTests
                 new KnowledgeProjectionResolver(knowledge),
                 orderTypes,
                 schemas,
+                gameplayGate,
                 orders,
                 results);
             return new Harness
@@ -461,11 +465,13 @@ public sealed class NetworkCommandIngressTests
                 Orders = orders,
                 Results = results,
                 Ingress = ingress,
+                GameplayGate = gameplayGate,
             };
         }
 
         public void Dispose()
         {
         }
+
     }
 }

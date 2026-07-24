@@ -21,6 +21,12 @@ namespace Ludots.Core.ParticipantVisibility
         Target = 2,
     }
 
+    public enum DynamicParticipantOwnerMatchPolicy : byte
+    {
+        MatchViewer = 0,
+        Public = 1,
+    }
+
     [Flags]
     public enum DynamicParticipantQueryFlags : byte
     {
@@ -78,6 +84,7 @@ namespace Ludots.Core.ParticipantVisibility
         public EntityCollectionRoleKind CollectionRole { get; set; } = EntityCollectionRoleKind.Display;
         public DynamicParticipantQueryClause Query { get; set; } = new();
         public DynamicParticipantQueryFlags Flags { get; set; }
+        public DynamicParticipantOwnerMatchPolicy OwnerMatchPolicy { get; set; } = DynamicParticipantOwnerMatchPolicy.MatchViewer;
         public string Title { get; set; } = string.Empty;
         public string Summary { get; set; } = string.Empty;
         public KnowledgePresence Presence { get; set; }
@@ -121,7 +128,8 @@ namespace Ludots.Core.ParticipantVisibility
             in KnowledgeIdMask256 relationshipTypeMask = default,
             in KnowledgeIdMask256 tagMask = default,
             int expiryTick = 0,
-            int confidencePermille = 1000)
+            int confidencePermille = 1000,
+            DynamicParticipantOwnerMatchPolicy ownerMatchPolicy = DynamicParticipantOwnerMatchPolicy.MatchViewer)
         {
             if (string.IsNullOrWhiteSpace(viewerRef))
             {
@@ -141,6 +149,7 @@ namespace Ludots.Core.ParticipantVisibility
                 CollectionRole = collectionRole,
                 Query = query,
                 Flags = flags,
+                OwnerMatchPolicy = ownerMatchPolicy,
                 Title = title ?? string.Empty,
                 Summary = summary ?? string.Empty,
                 Presence = presence,
@@ -170,6 +179,7 @@ namespace Ludots.Core.ParticipantVisibility
         EntityCollectionDescriptor CollectionDescriptor,
         QueryDescription Query,
         DynamicParticipantQueryFlags Flags,
+        DynamicParticipantOwnerMatchPolicy OwnerMatchPolicy,
         DynamicParticipantSourceKind SourceKind,
         int RequiredTagId,
         KnowledgePresence Presence,
@@ -196,7 +206,8 @@ namespace Ludots.Core.ParticipantVisibility
             in KnowledgeIdMask256 relationshipTypeMask,
             in KnowledgeIdMask256 tagMask,
             int expiryTick = 0,
-            int confidencePermille = 1000)
+            int confidencePermille = 1000,
+            DynamicParticipantOwnerMatchPolicy ownerMatchPolicy = DynamicParticipantOwnerMatchPolicy.MatchViewer)
         {
             if (viewer == Entity.Null)
             {
@@ -206,6 +217,11 @@ namespace Ludots.Core.ParticipantVisibility
             if ((uint)confidencePermille > 1000u)
             {
                 throw new ArgumentOutOfRangeException(nameof(confidencePermille), "Knowledge confidence must be in permille range 0..1000.");
+            }
+
+            if (ownerMatchPolicy is not DynamicParticipantOwnerMatchPolicy.MatchViewer and not DynamicParticipantOwnerMatchPolicy.Public)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ownerMatchPolicy), "Unknown dynamic participant owner-match policy.");
             }
 
             var query = new QueryDescription(
@@ -218,6 +234,7 @@ namespace Ludots.Core.ParticipantVisibility
                 collectionDescriptor,
                 query,
                 flags,
+                ownerMatchPolicy,
                 sourceKind,
                 requiredTagId,
                 presence,

@@ -212,7 +212,7 @@ public sealed class AuthoritativeSessionRegistryTests
     public void EmptyContentFingerprint_IsRejectedByConstructor()
     {
         Assert.That(
-            () => new AuthoritativeSessionRegistry(2, Epoch, Protocol, ContentFingerprint.Empty, 30),
+            () => new AuthoritativeSessionRegistry(2, Epoch, Protocol, ContentFingerprint.Empty, 30, 90),
             Throws.ArgumentException.With.Property("ParamName").EqualTo("requiredContentFingerprint"));
     }
 
@@ -220,7 +220,7 @@ public sealed class AuthoritativeSessionRegistryTests
     public void EmptySessionEpoch_IsRejectedByConstructor()
     {
         Assert.That(
-            () => new AuthoritativeSessionRegistry(2, SessionEpoch.Empty, Protocol, Content, 30),
+            () => new AuthoritativeSessionRegistry(2, SessionEpoch.Empty, Protocol, Content, 30, 90),
             Throws.ArgumentException.With.Property("ParamName").EqualTo("sessionEpoch"));
     }
 
@@ -331,11 +331,234 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B allocation, observed {allocated} B.");
     }
 
+    [Test]
+    public void TwoSeats_ReadyIntentIsIdempotent_AndStartsConfiguredCountdown()
+    {
+        var registry = CreateRegistry(seatCapacity: 2);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out _), Is.True);
+
+        Assert.That(
+            registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, committedTick: 10),
+            Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        ulong firstRevision = registry.RoomRevision;
+        Assert.That(
+            registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, committedTick: 10),
+            Is.EqualTo(RoomReadyIntentApplyResult.Unchanged));
+        Assert.That(registry.RoomRevision, Is.EqualTo(firstRevision));
+
+        Assert.That(
+            registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, committedTick: 10),
+            Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+
+        var seats = new NetworkRoomSeatSnapshot[2];
+        Assert.That(registry.TryCopyRoomSnapshot(seats, out NetworkRoomSnapshotHeader snapshot, out int seatCount), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(seatCount, Is.EqualTo(2));
+            Assert.That(snapshot.Phase, Is.EqualTo(NetworkRoomPhase.Countdown));
+            Assert.That(snapshot.ConnectedSeatCount, Is.EqualTo(2));
+            Assert.That(snapshot.ReadySeatCount, Is.EqualTo(2));
+            Assert.That(snapshot.CountdownRemainingTicks, Is.EqualTo(90));
+            Assert.That(seats[0].PlayerId.Value, Is.EqualTo(1));
+            Assert.That(seats[1].PlayerId.Value, Is.EqualTo(2));
+            Assert.That(seats[0].ReadyState, Is.EqualTo(NetworkRoomReadyState.Ready));
+            Assert.That(seats[1].ReadyState, Is.EqualTo(NetworkRoomReadyState.Ready));
+        });
+    }
+
+    [Test]
+    public void UnreadyAndDisconnect_CancelCountdown_ReconnectReturnsUnready()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 30);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out SessionHandshakeResponse secondJoin), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.AdvanceRoomCountdown(20), Is.True);
+        Assert.That(registry.RoomCountdownRemainingTicks, Is.EqualTo(80));
+
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Unready, 20), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.Multiple(() =>
+        {
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.WaitingForReady));
+            Assert.That(registry.RoomCountdownRemainingTicks, Is.Zero);
+        });
+
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 20), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Countdown));
+        Assert.That(registry.TryDisconnect(secondConnection, currentTick: 21), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.WaitingForPlayers));
+            Assert.That(registry.RoomCountdownRemainingTicks, Is.Zero);
+        });
+
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(3),
+                ReconnectRequest(secondJoin.ReconnectToken, secondJoin.SessionEpoch),
+                22,
+                out _),
+            Is.True);
+        var seats = new NetworkRoomSeatSnapshot[2];
+        Assert.That(registry.TryCopyRoomSnapshot(seats, out NetworkRoomSnapshotHeader snapshot, out _), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.Phase, Is.EqualTo(NetworkRoomPhase.WaitingForReady));
+            Assert.That(snapshot.ReadySeatCount, Is.EqualTo(1));
+            Assert.That(seats[1].ConnectionState, Is.EqualTo(NetworkRoomSeatConnectionState.Connected));
+            Assert.That(seats[1].ReadyState, Is.EqualTo(NetworkRoomReadyState.Unready));
+        });
+    }
+
+    [Test]
+    public void Countdown_CompletesAfterExactlyNinetyCommittedTicks()
+    {
+        var registry = CreateRegistry(seatCapacity: 2);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+
+        Assert.That(registry.AdvanceRoomCountdown(10), Is.False);
+        Assert.That(registry.AdvanceRoomCountdown(99), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Countdown));
+            Assert.That(registry.RoomCountdownRemainingTicks, Is.EqualTo(1));
+        });
+
+        Assert.That(registry.AdvanceRoomCountdown(100), Is.True);
+        ulong completedRevision = registry.RoomRevision;
+        Assert.Multiple(() =>
+        {
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+            Assert.That(registry.RoomCountdownRemainingTicks, Is.Zero);
+            Assert.That(registry.AdvanceRoomCountdown(100), Is.False);
+            Assert.That(registry.RoomRevision, Is.EqualTo(completedRevision));
+        });
+    }
+
+    [Test]
+    public void StartedRoom_DisconnectReconnectAndReadyIntent_CannotReopenLobby()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 30);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out SessionHandshakeResponse secondJoin), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.AdvanceRoomCountdown(100), Is.True);
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+
+        Assert.That(registry.TryDisconnect(secondConnection, currentTick: 101), Is.True);
+        var seats = new NetworkRoomSeatSnapshot[2];
+        Assert.That(registry.TryCopyRoomSnapshot(seats, out NetworkRoomSnapshotHeader disconnected, out _), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(disconnected.Phase, Is.EqualTo(NetworkRoomPhase.Started));
+            Assert.That(disconnected.ConnectedSeatCount, Is.EqualTo(1));
+            Assert.That(seats[1].ConnectionState, Is.EqualTo(NetworkRoomSeatConnectionState.AwaitingReconnect));
+            Assert.That(seats[1].ReadyState, Is.EqualTo(NetworkRoomReadyState.Unready));
+        });
+
+        var reconnected = new ConnectionId(3);
+        Assert.That(
+            registry.TryHandshake(
+                reconnected,
+                ReconnectRequest(secondJoin.ReconnectToken, secondJoin.SessionEpoch),
+                currentTick: 102,
+                out _),
+            Is.True);
+        ulong revisionAfterReconnect = registry.RoomRevision;
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+        Assert.That(
+            registry.ApplyRoomReadyIntent(reconnected, NetworkRoomReadyState.Ready, committedTick: 102),
+            Is.EqualTo(RoomReadyIntentApplyResult.MatchAlreadyStarted));
+        Assert.That(
+            registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Unready, committedTick: 102),
+            Is.EqualTo(RoomReadyIntentApplyResult.MatchAlreadyStarted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+            Assert.That(registry.RoomRevision, Is.EqualTo(revisionAfterReconnect));
+        });
+
+        Assert.That(registry.TryCopyRoomSnapshot(seats, out NetworkRoomSnapshotHeader afterReconnect, out _), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterReconnect.Phase, Is.EqualTo(NetworkRoomPhase.Started));
+            Assert.That(afterReconnect.ConnectedSeatCount, Is.EqualTo(2));
+            Assert.That(afterReconnect.ReadySeatCount, Is.EqualTo(1));
+            Assert.That(seats[1].ConnectionState, Is.EqualTo(NetworkRoomSeatConnectionState.Connected));
+            Assert.That(seats[1].ReadyState, Is.EqualTo(NetworkRoomReadyState.Unready));
+        });
+    }
+
+    [Test]
+    public void ReadyIntent_FromUnauthenticatedConnection_IsExplicitlyRejected()
+    {
+        var registry = CreateRegistry(seatCapacity: 2);
+
+        Assert.That(
+            registry.ApplyRoomReadyIntent(new ConnectionId(99), NetworkRoomReadyState.Ready, committedTick: 1),
+            Is.EqualTo(RoomReadyIntentApplyResult.Unauthenticated));
+        Assert.That(registry.RoomRevision, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RoomStateSteadyPath_AllocatesZeroBytesAfterWarmup()
+    {
+        var registry = CreateRegistry(seatCapacity: 2);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out _), Is.True);
+        var seats = new NetworkRoomSeatSnapshot[2];
+
+        for (uint tick = 2; tick < 32; tick++)
+        {
+            NetworkRoomReadyState state = (tick & 1) == 0
+                ? NetworkRoomReadyState.Ready
+                : NetworkRoomReadyState.Unready;
+            _ = registry.ApplyRoomReadyIntent(firstConnection, state, tick);
+            _ = registry.ApplyRoomReadyIntent(secondConnection, state, tick);
+            _ = registry.AdvanceRoomCountdown(tick);
+            Assert.That(registry.TryCopyRoomSnapshot(seats, out _, out _), Is.True);
+        }
+
+        bool ok = true;
+        GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (uint tick = 100; tick < 1100; tick++)
+        {
+            NetworkRoomReadyState state = (tick & 1) == 0
+                ? NetworkRoomReadyState.Ready
+                : NetworkRoomReadyState.Unready;
+            ok &= registry.ApplyRoomReadyIntent(firstConnection, state, tick) != RoomReadyIntentApplyResult.Unauthenticated;
+            ok &= registry.ApplyRoomReadyIntent(secondConnection, state, tick) != RoomReadyIntentApplyResult.Unauthenticated;
+            _ = registry.AdvanceRoomCountdown(tick);
+            ok &= registry.TryCopyRoomSnapshot(seats, out _, out _);
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.That(ok, Is.True);
+        Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B allocation, observed {allocated} B.");
+    }
+
     private static AuthoritativeSessionRegistry CreateRegistry(
         int seatCapacity,
         uint reconnectWindowTicks = 30,
         SessionEpoch? sessionEpoch = null) =>
-        new(seatCapacity, sessionEpoch ?? Epoch, Protocol, Content, reconnectWindowTicks);
+        new(seatCapacity, sessionEpoch ?? Epoch, Protocol, Content, reconnectWindowTicks, readyCountdownTicks: 90);
 
     private static SessionHandshakeRequest JoinRequest() => new(Protocol, Content);
 

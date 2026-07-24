@@ -1,0 +1,474 @@
+using System.Numerics;
+using System.Threading.Tasks;
+using Arch.Core;
+using Arch.System;
+using Ludots.Core.Components;
+using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Modding;
+using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
+using RtsMultiplayerFrontlineMod.Systems;
+
+namespace RtsMultiplayerFrontlineMod.Runtime;
+
+public readonly record struct FrontlineMatchSnapshot(
+    int CommittedTick,
+    FrontlineMatchPhase Phase,
+    int CountdownRemainingTicks,
+    FrontlineMatchOutcome Outcome,
+    int WinningSideIndex,
+    bool SideOneReady,
+    bool SideTwoReady,
+    bool SideOneConnected,
+    bool SideTwoConnected);
+
+public sealed class FrontlineRuntime
+{
+    private readonly IModContext _context;
+    private readonly bool[] _connected = { true, true };
+    private readonly bool[] _ready = new bool[2];
+    private readonly int[] _disconnectTicks = new int[2];
+    private FrontlineConfig? _config;
+    private bool _installed;
+    private bool _active;
+    private int _committedTick;
+    private int _countdownRemainingTicks;
+    private FrontlineMatchPhase _phase;
+    private FrontlineMatchOutcome _outcome;
+    private int _winningSideIndex = -1;
+    private NetworkProcessRole _networkRole;
+    private NetworkGameplayCommandGate? _networkGameplayCommandGate;
+    private ulong _networkRoomSessionEpoch;
+    private ulong _lastNetworkRoomRevision;
+    private bool _durationCoreHealthCaptured;
+    private float _durationSideOneCoreHealth;
+    private float _durationSideTwoCoreHealth;
+
+    public FrontlineRuntime(IModContext context)
+    {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+    }
+
+    public bool IsActive => _active;
+    public bool IsNetworked => _networkRole != NetworkProcessRole.Standalone;
+    public bool CanAdvanceGameplay => _active && _phase == FrontlineMatchPhase.InProgress && _outcome == FrontlineMatchOutcome.InProgress;
+    public FrontlineConfig Config => _config
+        ?? throw new InvalidOperationException("RTS Frontline config has not been loaded.");
+    public FrontlineMatchSnapshot Snapshot => new(
+        _committedTick,
+        _phase,
+        _countdownRemainingTicks,
+        _outcome,
+        _winningSideIndex,
+        _ready[0],
+        _ready[1],
+        _connected[0],
+        _connected[1]);
+
+    public Task HandleGameStartAsync(ScriptContext context)
+    {
+        if (context.GetEngine() is not GameEngine engine)
+        {
+            throw new InvalidOperationException("RTS Frontline requires GameEngine on GameStart.");
+        }
+
+        EnsureConfig(engine);
+        _networkRole = engine.GetService(CoreServiceKeys.NetworkProcessRole);
+        if (_networkRole == NetworkProcessRole.AuthoritativeServer)
+        {
+            _networkGameplayCommandGate = engine.GetService(CoreServiceKeys.NetworkGameplayCommandGate)
+                ?? throw new InvalidOperationException("RTS Frontline authoritative server requires the Core network gameplay command gate.");
+        }
+        InstallSystems(engine);
+        engine.GlobalContext["rts.multiplayer.frontline.runtime"] = this;
+        return Task.CompletedTask;
+    }
+
+    public Task HandleMapFocusedAsync(ScriptContext context)
+    {
+        if (context.GetEngine() is not GameEngine engine)
+        {
+            throw new InvalidOperationException("RTS Frontline requires GameEngine on map focus.");
+        }
+
+        EnsureConfig(engine);
+        _active = string.Equals(engine.CurrentMapSession?.MapId.Value, Config.MapId, StringComparison.Ordinal);
+        if (_active)
+        {
+            ResetMatch();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task HandleMapUnloadedAsync(ScriptContext context)
+    {
+        if (string.Equals(context.Get(CoreServiceKeys.MapId).Value, Config.MapId, StringComparison.Ordinal))
+        {
+            _active = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void SetParticipantConnected(int sideIndex, bool connected)
+    {
+        RequireStandaloneRoomControl();
+        if ((uint)sideIndex >= (uint)_connected.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sideIndex));
+        }
+
+        if (_connected[sideIndex] == connected)
+        {
+            return;
+        }
+
+        _connected[sideIndex] = connected;
+        _disconnectTicks[sideIndex] = 0;
+        if (!connected)
+        {
+            _ready[sideIndex] = false;
+            if (_phase != FrontlineMatchPhase.InProgress && _phase != FrontlineMatchPhase.Completed)
+            {
+                CancelCountdown();
+            }
+        }
+    }
+
+    public void SetParticipantReady(int sideIndex, bool ready)
+    {
+        RequireStandaloneRoomControl();
+        ValidateSideIndex(sideIndex);
+        if (ready && !_connected[sideIndex])
+        {
+            throw new InvalidOperationException($"RTS Frontline side {sideIndex} cannot become ready while disconnected.");
+        }
+        if (_phase == FrontlineMatchPhase.InProgress || _phase == FrontlineMatchPhase.Completed)
+        {
+            throw new InvalidOperationException("RTS Frontline readiness cannot change after the battle starts.");
+        }
+
+        _ready[sideIndex] = ready;
+        if (!_ready[0] || !_ready[1] || !_connected[0] || !_connected[1])
+        {
+            CancelCountdown();
+            return;
+        }
+
+        if (_phase != FrontlineMatchPhase.Countdown)
+        {
+            _phase = FrontlineMatchPhase.Countdown;
+            _countdownRemainingTicks = Config.ReadyCountdownTicks;
+        }
+    }
+
+    internal bool AdvanceFixedTick()
+    {
+        if (_networkRole == NetworkProcessRole.ReplicatedClient)
+        {
+            return false;
+        }
+
+        if (_networkRole == NetworkProcessRole.AuthoritativeServer)
+        {
+            if (_phase != FrontlineMatchPhase.InProgress || _outcome != FrontlineMatchOutcome.InProgress)
+            {
+                return false;
+            }
+
+            AdvanceMatchTick();
+            return true;
+        }
+
+        if (_phase == FrontlineMatchPhase.WaitingForPlayers)
+        {
+            return false;
+        }
+
+        if (_phase == FrontlineMatchPhase.Countdown)
+        {
+            if (!_ready[0] || !_ready[1] || !_connected[0] || !_connected[1])
+            {
+                CancelCountdown();
+                return false;
+            }
+
+            _countdownRemainingTicks--;
+            if (_countdownRemainingTicks <= 0)
+            {
+                _countdownRemainingTicks = 0;
+                _phase = FrontlineMatchPhase.InProgress;
+            }
+            return false;
+        }
+
+        if (_phase != FrontlineMatchPhase.InProgress)
+        {
+            return false;
+        }
+
+        AdvanceMatchTick();
+
+        return true;
+    }
+
+    internal bool IsDisconnectedPastGrace(int sideIndex) =>
+        !_connected[sideIndex] && _disconnectTicks[sideIndex] >= Config.DisconnectGraceTicks;
+
+    internal bool HasParticipantAwaitingReconnect => !_connected[0] || !_connected[1];
+
+    internal bool HasDurationCoreHealthSnapshot => _durationCoreHealthCaptured;
+
+    internal void CaptureDurationCoreHealth(float sideOneHealth, float sideTwoHealth)
+    {
+        if (_durationCoreHealthCaptured)
+        {
+            return;
+        }
+
+        if (!float.IsFinite(sideOneHealth) || !float.IsFinite(sideTwoHealth))
+        {
+            throw new InvalidOperationException("RTS Frontline duration snapshot requires finite command-core health.");
+        }
+
+        _durationSideOneCoreHealth = sideOneHealth;
+        _durationSideTwoCoreHealth = sideTwoHealth;
+        _durationCoreHealthCaptured = true;
+    }
+
+    internal void CommitDurationOutcome()
+    {
+        if (!_durationCoreHealthCaptured)
+        {
+            throw new InvalidOperationException("RTS Frontline cannot resolve match duration before core health is captured.");
+        }
+
+        if (_durationSideOneCoreHealth == _durationSideTwoCoreHealth)
+        {
+            CommitOutcome(FrontlineMatchOutcome.Draw, -1);
+        }
+        else if (_durationSideOneCoreHealth > _durationSideTwoCoreHealth)
+        {
+            CommitOutcome(FrontlineMatchOutcome.SideOneVictory, 0);
+        }
+        else
+        {
+            CommitOutcome(FrontlineMatchOutcome.SideTwoVictory, 1);
+        }
+    }
+
+    internal void ApplyNetworkRoomSnapshot(
+        in NetworkRoomSnapshotHeader header,
+        ReadOnlySpan<NetworkRoomSeatSnapshot> seats)
+    {
+        if (_networkRole != NetworkProcessRole.AuthoritativeServer)
+        {
+            throw new InvalidOperationException("Only the authoritative Frontline runtime may consume server room snapshots.");
+        }
+
+        if (header.SeatCount != Config.Sides.Length || seats.Length != Config.Sides.Length)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline requires {Config.Sides.Length} network room seats; received {seats.Length}.");
+        }
+
+        if (_networkRoomSessionEpoch == 0)
+        {
+            _networkRoomSessionEpoch = header.SessionEpoch.Value;
+        }
+        else if (_networkRoomSessionEpoch != header.SessionEpoch.Value)
+        {
+            throw new InvalidOperationException("RTS Frontline room session epoch changed while the map remained active.");
+        }
+
+        if (header.Revision < _lastNetworkRoomRevision)
+        {
+            throw new InvalidOperationException("RTS Frontline room snapshot revision regressed.");
+        }
+
+        if (header.Revision == _lastNetworkRoomRevision)
+        {
+            return;
+        }
+
+        for (int i = 0; i < seats.Length; i++)
+        {
+            ref readonly NetworkRoomSeatSnapshot seat = ref seats[i];
+            if (seat.Slot != i ||
+                (seat.ConnectionState != NetworkRoomSeatConnectionState.Empty &&
+                 seat.PlayerId.Value != Config.Sides[i].PlayerId))
+            {
+                throw new InvalidOperationException($"RTS Frontline room seat {i} does not match its configured player.");
+            }
+
+            bool connected = seat.ConnectionState == NetworkRoomSeatConnectionState.Connected;
+            if (_connected[i] != connected)
+            {
+                _disconnectTicks[i] = 0;
+            }
+
+            _connected[i] = connected;
+            _ready[i] = seat.ReadyState == NetworkRoomReadyState.Ready;
+        }
+
+        if (header.Phase == NetworkRoomPhase.Started)
+        {
+            if (_phase != FrontlineMatchPhase.Completed)
+            {
+                _phase = FrontlineMatchPhase.InProgress;
+                _countdownRemainingTicks = 0;
+            }
+        }
+        else
+        {
+            if (_phase is FrontlineMatchPhase.InProgress or FrontlineMatchPhase.Completed)
+            {
+                throw new InvalidOperationException("RTS Frontline room phase regressed after the battle started.");
+            }
+
+            _phase = header.Phase == NetworkRoomPhase.Countdown
+                ? FrontlineMatchPhase.Countdown
+                : FrontlineMatchPhase.WaitingForPlayers;
+            _countdownRemainingTicks = checked((int)header.CountdownRemainingTicks);
+        }
+
+        _lastNetworkRoomRevision = header.Revision;
+    }
+
+    internal void CommitOutcome(FrontlineMatchOutcome outcome, int winningSideIndex)
+    {
+        if (_outcome != FrontlineMatchOutcome.InProgress)
+        {
+            return;
+        }
+
+        _outcome = outcome;
+        _winningSideIndex = winningSideIndex;
+        _phase = FrontlineMatchPhase.Completed;
+        _networkGameplayCommandGate?.CompleteMatch();
+    }
+
+    private void EnsureConfig(GameEngine engine)
+    {
+        if (_config != null)
+        {
+            return;
+        }
+
+        ConfigPipeline pipeline = engine.ConfigPipeline
+            ?? throw new InvalidOperationException("RTS Frontline requires ConfigPipeline.");
+        _config = new FrontlineConfigLoader(pipeline).Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        float configuredDeltaTime = 1f / _config.SimulationTickRateHz;
+        if (MathF.Abs(Ludots.Core.Engine.Time.FixedDeltaTime - configuredDeltaTime) > 0.000001f)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline requires {_config.SimulationTickRateHz}Hz fixed simulation; " +
+                $"engine is configured for {1f / Ludots.Core.Engine.Time.FixedDeltaTime:0.###}Hz.");
+        }
+    }
+
+    private void InstallSystems(GameEngine engine)
+    {
+        if (_installed)
+        {
+            return;
+        }
+
+        OrderQueue orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("RTS Frontline requires OrderQueue.");
+        OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("RTS Frontline requires OrderTypeRegistry.");
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("RTS Frontline requires TagOps.");
+        EffectRequestQueue effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
+            ?? throw new InvalidOperationException("RTS Frontline requires EffectRequestQueue.");
+        var trainGuard = new FrontlineTrainingAdmissionSystem(engine.World, this, orderTypes);
+        engine.InsertSystemBeforeRequired<AbilitySystem>(trainGuard, SystemGroup.AbilityActivation);
+        engine.InsertSystemBeforeRequired<AbilitySystem>(
+            new FrontlinePreMatchOrderGateSystem(engine.World, this, orderTypes),
+            SystemGroup.AbilityActivation);
+        engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, tagOps), SystemGroup.AbilityActivation);
+        engine.RegisterSystem(new FrontlineHarvestSystem(engine.World, this, orderQueue, orderTypes), SystemGroup.AbilityActivation);
+        engine.RegisterSystem(new FrontlineCombatSystem(engine.World, this, orderQueue, orderTypes, effectRequests), SystemGroup.AbilityActivation);
+        engine.RegisterSystem(new FrontlineDeathAndMatchSystem(engine.World, this), SystemGroup.Cleanup);
+        if (_networkRole == NetworkProcessRole.AuthoritativeServer)
+        {
+            NetworkRuntimeStateObserver observer = engine.GetService(CoreServiceKeys.NetworkRuntimeStateObserver)
+                ?? throw new InvalidOperationException("RTS Frontline authoritative server requires the Core network room observer.");
+            if (observer.SeatCapacity != Config.Sides.Length)
+            {
+                throw new InvalidOperationException("RTS Frontline network room capacity does not match the configured sides.");
+            }
+
+            engine.RegisterSystem(
+                new FrontlineNetworkRoomSynchronizationSystem(this, observer),
+                SystemGroup.SchemaUpdate);
+        }
+        engine.RegisterPresentationSystem(new FrontlinePresentationSystem(engine, this));
+        _installed = true;
+    }
+
+    private void ResetMatch()
+    {
+        _committedTick = 0;
+        _countdownRemainingTicks = 0;
+        _phase = FrontlineMatchPhase.WaitingForPlayers;
+        _outcome = FrontlineMatchOutcome.InProgress;
+        _winningSideIndex = -1;
+        _networkRoomSessionEpoch = 0;
+        _lastNetworkRoomRevision = 0;
+        _durationCoreHealthCaptured = false;
+        _durationSideOneCoreHealth = 0f;
+        _durationSideTwoCoreHealth = 0f;
+        for (int i = 0; i < _connected.Length; i++)
+        {
+            _connected[i] = _networkRole == NetworkProcessRole.Standalone;
+            _ready[i] = false;
+            _disconnectTicks[i] = 0;
+        }
+    }
+
+    private void CancelCountdown()
+    {
+        _phase = FrontlineMatchPhase.WaitingForPlayers;
+        _countdownRemainingTicks = 0;
+    }
+
+    private void AdvanceMatchTick()
+    {
+        _committedTick++;
+        for (int i = 0; i < _connected.Length; i++)
+        {
+            if (!_connected[i])
+            {
+                _disconnectTicks[i]++;
+            }
+        }
+    }
+
+    private void RequireStandaloneRoomControl()
+    {
+        if (_networkRole != NetworkProcessRole.Standalone)
+        {
+            throw new InvalidOperationException("Networked Frontline room state is owned by the Core session registry.");
+        }
+    }
+
+    private static void ValidateSideIndex(int sideIndex)
+    {
+        if ((uint)sideIndex >= 2u)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sideIndex));
+        }
+    }
+}

@@ -16,6 +16,8 @@ namespace Ludots.Core.Networking.Protocol
         ResyncRequired = 7,
         SnapshotFragment = 8,
         CommandFragment = 9,
+        RoomReadyIntent = 10,
+        RoomSnapshot = 11,
     }
 
     /// <summary>

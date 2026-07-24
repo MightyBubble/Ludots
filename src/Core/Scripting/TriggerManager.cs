@@ -294,6 +294,7 @@ namespace Ludots.Core.Scripting
                 }
                 catch (Exception ex)
                 {
+                    RecordError(eventKey, GetEventHandlerName(handlers[i]), ex);
                     Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
                 }
             }
@@ -313,6 +314,7 @@ namespace Ludots.Core.Scripting
                 }
                 catch (Exception ex)
                 {
+                    RecordError(eventKey, GetEventHandlerName(handlers[i]), ex);
                     Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
                     tasks[i] = Task.CompletedTask;
                 }
@@ -332,6 +334,22 @@ namespace Ludots.Core.Scripting
             }
         }
 
+        private void RecordError(EventKey eventKey, string triggerName, Exception exception)
+        {
+            lock (_errorsLock)
+            {
+                _errors.Add(new TriggerError(eventKey, triggerName, exception));
+            }
+        }
+
+        private static string GetEventHandlerName(Func<ScriptContext, Task> handler)
+        {
+            Type? declaringType = handler.Method.DeclaringType;
+            return declaringType == null
+                ? handler.Method.Name
+                : $"{declaringType.FullName}.{handler.Method.Name}";
+        }
+
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
         {
             try
@@ -349,10 +367,7 @@ namespace Ludots.Core.Scripting
             }
             catch (Exception ex)
             {
-                lock (_errorsLock)
-                {
-                    _errors.Add(new TriggerError(eventKey, trigger?.Name ?? string.Empty, ex));
-                }
+                RecordError(eventKey, trigger?.Name ?? string.Empty, ex);
                 Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;
             }

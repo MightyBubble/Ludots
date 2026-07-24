@@ -985,6 +985,7 @@ namespace Ludots.Core.Engine
                 ? null
                 : new NetworkCommandAdmissionResultBuffer(networkConfig.NetworkAdmissionResultCapacity);
             NetworkCommandIngress? networkCommandIngress = null;
+            NetworkGameplayCommandGate? networkGameplayCommandGate = null;
             NetworkCommandSchemaRegistry? networkCommandSchemas = null;
             NetworkEntityTable? networkEntityTable = null;
             if (networkConfig != null)
@@ -1335,6 +1336,7 @@ namespace Ludots.Core.Engine
                     networkConfig.MaxPastTargetTicks,
                     networkConfig.MaxFutureTargetTicks,
                     checked(networkConfig.PlayerCapacity * networkConfig.CommandBurstBatchCapacity));
+                networkGameplayCommandGate = new NetworkGameplayCommandGate();
                 networkCommandIngress = new NetworkCommandIngress(
                     in ingressConfig,
                     World,
@@ -1343,6 +1345,7 @@ namespace Ludots.Core.Engine
                     knowledgeProjectionResolver,
                     orderTypeRegistry,
                     networkCommandSchemas,
+                    networkGameplayCommandGate,
                     orderQueue,
                     networkCommandAdmissionResults!);
             }
@@ -1530,6 +1533,7 @@ namespace Ludots.Core.Engine
             {
                 SetService(CoreServiceKeys.NetworkRuntimeConfig, networkConfig);
                 SetService(CoreServiceKeys.NetworkCommandIngress, networkCommandIngress!);
+                SetService(CoreServiceKeys.NetworkGameplayCommandGate, networkGameplayCommandGate);
                 SetService(CoreServiceKeys.NetworkCommandSchemaRegistry, networkCommandSchemas!);
                 SetService(CoreServiceKeys.NetworkCommandAdmissionResults, networkCommandAdmissionResults!);
                 SetService(CoreServiceKeys.EntityOrderAdmissionResults, entityOrderAdmissionResults!);
@@ -1696,7 +1700,8 @@ namespace Ludots.Core.Engine
                     visionFogFieldStore,
                     visionResolver,
                     fogKnowledgeProjector,
-                    knowledgeProjectionStore),
+                    knowledgeProjectionStore,
+                    playerEntityLookup),
                 SystemGroup.PostMovement);
             RegisterSystem(
                 new UtilityAiDecisionSystem(
