@@ -30,8 +30,29 @@ namespace Ludots.Core.Networking.Replication
 
         public int EntityCapacity => _active.Length;
         public ulong LastSnapshotId => _lastSnapshotId;
+        public ulong SessionEpoch => _sessionEpoch;
+
+        public void Clear()
+        {
+            Array.Clear(_active);
+            Array.Clear(_seen);
+            Array.Clear(_states);
+            _lastSnapshotId = 0;
+        }
 
         public ReplicationApplyResult Apply(ReplicationPacketBuffer packet)
+        {
+            ReplicationApplyResult validation = Validate(packet);
+            if (validation != ReplicationApplyResult.Success)
+            {
+                return validation;
+            }
+
+            CommitValidated(packet);
+            return ReplicationApplyResult.Success;
+        }
+
+        public ReplicationApplyResult Validate(ReplicationPacketBuffer packet)
         {
             if (packet == null)
             {
@@ -130,6 +151,16 @@ namespace Ludots.Core.Networking.Replication
                 }
             }
 
+            return ReplicationApplyResult.Success;
+        }
+
+        internal void CommitValidated(ReplicationPacketBuffer packet)
+        {
+            ReplicationPacketHeader header = packet.Header;
+            ReadOnlySpan<ReplicatedEntityState> upserts = packet.Upserts;
+            ReadOnlySpan<NetworkEntityHandle> removals = packet.Removals;
+            ReadOnlySpan<ReplicationDisclosureChange> disclosureChanges = packet.DisclosureChanges;
+
             if (header.Kind == ReplicationPacketKind.Full)
             {
                 Array.Clear(_active);
@@ -161,7 +192,6 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _lastSnapshotId = header.SnapshotId;
-            return ReplicationApplyResult.Success;
         }
 
         public bool TryGet(NetworkEntityHandle entity, out ReplicatedEntityState state)

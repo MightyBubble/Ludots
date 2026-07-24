@@ -31,7 +31,7 @@ namespace Ludots.Core.Networking.Replication
     {
         private enum BatchOperationKind : byte
         {
-            Release = 1,
+            Leave = 1,
             Update = 2,
             Create = 3,
         }
@@ -49,9 +49,13 @@ namespace Ludots.Core.Networking.Replication
         private readonly int[] _plannedSchemas;
         private readonly Entity[] _entities;
         private readonly BatchOperationKind[] _batchKinds;
+        private readonly ReplicationMirrorLeaveKind[] _batchLeaveKinds;
         private readonly int[] _batchSlots;
         private readonly ReplicatedEntityState[] _batchStates;
         private int _batchCount;
+        private ReplicationApplyContext _pendingContext;
+        private ReplicationApplyContext _lastAppliedContext;
+        private bool _tornDown;
 
         public ClientWorldReplicationBridge(
             World world,
@@ -83,15 +87,23 @@ namespace Ludots.Core.Networking.Replication
             _entities = new Entity[entityCapacity];
             int batchCapacity = checked(entityCapacity * 2);
             _batchKinds = new BatchOperationKind[batchCapacity];
+            _batchLeaveKinds = new ReplicationMirrorLeaveKind[batchCapacity];
             _batchSlots = new int[batchCapacity];
             _batchStates = new ReplicatedEntityState[batchCapacity];
         }
 
         public int EntityCapacity => _active.Length;
+        public ulong SessionEpoch => _mirror.SessionEpoch;
         public ulong LastSnapshotId => _mirror.LastSnapshotId;
+        public bool IsTornDown => _tornDown;
 
         public ReplicationBridgeResult BindExisting(NetworkEntityHandle handle, Entity entity)
         {
+            if (_tornDown)
+            {
+                return ReplicationBridgeResult.TornDown;
+            }
+
             int slot = handle.Slot;
             if (_mirror.LastSnapshotId != 0 ||
                 !handle.IsValid ||
@@ -126,6 +138,11 @@ namespace Ludots.Core.Networking.Replication
 
         public ReplicationBridgeResult Apply(ReplicationPacketBuffer packet)
         {
+            if (_tornDown)
+            {
+                return ReplicationBridgeResult.TornDown;
+            }
+
             if (packet == null)
             {
                 return ReplicationBridgeResult.InvalidPacket;
@@ -134,6 +151,12 @@ namespace Ludots.Core.Networking.Replication
             if (packet.EntityCapacity > _active.Length)
             {
                 return ReplicationBridgeResult.CapacityContractViolated;
+            }
+
+            ReplicationApplyResult mirrorValidation = _mirror.Validate(packet);
+            if (mirrorValidation != ReplicationApplyResult.Success)
+            {
+                return ReplicationBridgeResultMapper.FromApply(mirrorValidation);
             }
 
             ReplicationBridgeResult localValidation = ValidateLocalStateAndGenerations(packet);
@@ -146,6 +169,11 @@ namespace Ludots.Core.Networking.Replication
             Array.Copy(_generations, _plannedGenerations, _generations.Length);
             Array.Copy(_schemas, _plannedSchemas, _schemas.Length);
             _batchCount = 0;
+            _pendingContext = new ReplicationApplyContext(
+                packet.Header.SessionEpoch,
+                packet.Header.Tick,
+                packet.Header.SnapshotId,
+                packet.Header.Kind);
 
             if (packet.Header.Kind == ReplicationPacketKind.Full)
             {
@@ -163,21 +191,67 @@ namespace Ludots.Core.Networking.Replication
                 return schemaValidation;
             }
 
-            ReplicationApplyResult applied = _mirror.Apply(packet);
-            if (applied != ReplicationApplyResult.Success)
+            _mirror.CommitValidated(packet);
+            CommitBatch();
+            _lastAppliedContext = _pendingContext;
+            return ReplicationBridgeResult.Success;
+        }
+
+        /// <summary>
+        /// Idempotent epoch teardown: releases every active mirror resource, destroys owned ECS
+        /// entities, unbinds borrowed entities, and clears the mirror table.
+        /// </summary>
+        public ReplicationBridgeResult Teardown()
+        {
+            if (_tornDown)
             {
-                _batchCount = 0;
-                return ReplicationBridgeResultMapper.FromApply(applied);
+                return ReplicationBridgeResult.Success;
             }
 
-            CommitBatch();
+            ReplicationApplyContext context = _mirror.LastSnapshotId == 0
+                ? new ReplicationApplyContext(
+                    _mirror.SessionEpoch,
+                    committedTick: 0,
+                    snapshotId: 0,
+                    packetKind: default)
+                : _lastAppliedContext;
+
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                ReplicationBridgeResult validation = ValidateLeave(
+                    slot,
+                    ReplicationMirrorLeaveKind.Teardown,
+                    in context);
+                if (validation != ReplicationBridgeResult.Success)
+                {
+                    return validation;
+                }
+            }
+
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot])
+                {
+                    CommitLeave(slot, ReplicationMirrorLeaveKind.Teardown, in context);
+                }
+            }
+
+            _mirror.Clear();
+            _batchCount = 0;
+            _tornDown = true;
             return ReplicationBridgeResult.Success;
         }
 
         public bool TryResolve(NetworkEntityHandle handle, out Entity entity)
         {
             int slot = handle.Slot;
-            if (!handle.IsValid ||
+            if (_tornDown ||
+                !handle.IsValid ||
                 (uint)slot >= (uint)_active.Length ||
                 !_active[slot] ||
                 _generations[slot] != handle.Generation ||
@@ -237,7 +311,7 @@ namespace Ludots.Core.Networking.Replication
                 if (packet.Header.Kind == ReplicationPacketKind.Delta &&
                     _active[slot] &&
                     state.Entity.Generation != _generations[slot] &&
-                    !ContainsRelease(packet, new NetworkEntityHandle(slot, _generations[slot])))
+                    !ContainsVisibleLeave(packet, new NetworkEntityHandle(slot, _generations[slot])))
                 {
                     return ReplicationBridgeResult.InvalidPacket;
                 }
@@ -291,9 +365,15 @@ namespace Ludots.Core.Networking.Replication
                 }
 
                 int upsertIndex = FindUpsert(upserts, slot);
-                if (upsertIndex < 0 || upserts[upsertIndex].Entity.Generation != _plannedGenerations[slot])
+                if (upsertIndex < 0)
                 {
-                    QueueRelease(slot);
+                    // Full pages describe the current visible set only.
+                    QueueLeave(slot, ReplicationMirrorLeaveKind.Conceal);
+                }
+                else if (upserts[upsertIndex].Entity.Generation != _plannedGenerations[slot])
+                {
+                    // A new generation permanently retires the prior network identity.
+                    QueueLeave(slot, ReplicationMirrorLeaveKind.Removal);
                 }
             }
 
@@ -308,7 +388,7 @@ namespace Ludots.Core.Networking.Replication
             ReadOnlySpan<NetworkEntityHandle> removals = packet.Removals;
             for (int i = 0; i < removals.Length; i++)
             {
-                QueueRelease(removals[i].Slot);
+                QueueLeave(removals[i].Slot, ReplicationMirrorLeaveKind.Removal);
             }
 
             ReadOnlySpan<ReplicationDisclosureChange> changes = packet.DisclosureChanges;
@@ -316,7 +396,7 @@ namespace Ludots.Core.Networking.Replication
             {
                 if (changes[i].Kind == ReplicationDisclosureChangeKind.Conceal)
                 {
-                    QueueRelease(changes[i].Entity.Slot);
+                    QueueLeave(changes[i].Entity.Slot, ReplicationMirrorLeaveKind.Conceal);
                 }
             }
 
@@ -327,14 +407,14 @@ namespace Ludots.Core.Networking.Replication
             }
         }
 
-        private void QueueRelease(int slot)
+        private void QueueLeave(int slot, ReplicationMirrorLeaveKind leaveKind)
         {
             if (!_plannedActive[slot])
             {
                 return;
             }
 
-            AddBatchOperation(BatchOperationKind.Release, slot, default);
+            AddBatchOperation(BatchOperationKind.Leave, leaveKind, slot, default);
             _plannedActive[slot] = false;
             _plannedGenerations[slot] = 0;
             _plannedSchemas[slot] = 0;
@@ -345,23 +425,28 @@ namespace Ludots.Core.Networking.Replication
             int slot = state.Entity.Slot;
             if (_plannedActive[slot] && _plannedGenerations[slot] == state.Entity.Generation)
             {
-                AddBatchOperation(BatchOperationKind.Update, slot, in state);
+                AddBatchOperation(BatchOperationKind.Update, default, slot, in state);
                 _plannedSchemas[slot] = state.SchemaId;
                 return;
             }
 
             if (_plannedActive[slot])
             {
-                QueueRelease(slot);
+                // Generation replacement permanently retires the prior mirror.
+                QueueLeave(slot, ReplicationMirrorLeaveKind.Removal);
             }
 
-            AddBatchOperation(BatchOperationKind.Create, slot, in state);
+            AddBatchOperation(BatchOperationKind.Create, default, slot, in state);
             _plannedActive[slot] = true;
             _plannedGenerations[slot] = state.Entity.Generation;
             _plannedSchemas[slot] = state.SchemaId;
         }
 
-        private void AddBatchOperation(BatchOperationKind kind, int slot, in ReplicatedEntityState state)
+        private void AddBatchOperation(
+            BatchOperationKind kind,
+            ReplicationMirrorLeaveKind leaveKind,
+            int slot,
+            in ReplicatedEntityState state)
         {
             if (_batchCount == _batchKinds.Length)
             {
@@ -369,6 +454,7 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _batchKinds[_batchCount] = kind;
+            _batchLeaveKinds[_batchCount] = leaveKind;
             _batchSlots[_batchCount] = slot;
             _batchStates[_batchCount] = state;
             _batchCount++;
@@ -382,36 +468,9 @@ namespace Ludots.Core.Networking.Replication
                 int slot = _batchSlots[i];
                 switch (_batchKinds[i])
                 {
-                    case BatchOperationKind.Release:
-                    {
-                        Entity entity = _entities[slot];
-                        if (_owned[slot])
-                        {
-                            _world.Destroy(entity);
-                        }
-                        else
-                        {
-                            int schemaId = _schemas[slot];
-                            if (schemaId > 0)
-                            {
-                                if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
-                                {
-                                    throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
-                                }
-
-                                applier.Conceal(_world, entity);
-                            }
-
-                            _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
-                        }
-
-                        _active[slot] = false;
-                        _owned[slot] = false;
-                        _generations[slot] = 0;
-                        _schemas[slot] = 0;
-                        _entities[slot] = Entity.Null;
+                    case BatchOperationKind.Leave:
+                        CommitLeave(slot, _batchLeaveKinds[i], in _pendingContext);
                         break;
-                    }
                     case BatchOperationKind.Update:
                     {
                         ReplicatedEntityState state = _batchStates[i];
@@ -423,7 +482,7 @@ namespace Ludots.Core.Networking.Replication
                             throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
                         }
 
-                        applier.Apply(_world, entity, in state);
+                        applier.Apply(_world, entity, in state, in _pendingContext);
                         _world.Set(entity, in identity);
                         _world.Set(entity, in mirrorState);
                         _schemas[slot] = state.SchemaId;
@@ -439,7 +498,7 @@ namespace Ludots.Core.Networking.Replication
                             throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
                         }
 
-                        Entity entity = applier.Create(_world, in identity, in mirrorState);
+                        Entity entity = applier.Create(_world, in identity, in mirrorState, in _pendingContext);
                         if (entity == Entity.Null ||
                             !_world.IsAlive(entity) ||
                             !_world.Has<ReplicationMirrorIdentity>(entity) ||
@@ -463,6 +522,42 @@ namespace Ludots.Core.Networking.Replication
             _batchCount = 0;
         }
 
+        private void CommitLeave(
+            int slot,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context)
+        {
+            Entity entity = _entities[slot];
+            int schemaId = _schemas[slot];
+            bool owned = _owned[slot];
+
+            if (schemaId > 0)
+            {
+                if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
+                {
+                    throw new InvalidOperationException("Validated client replication schema applier is unavailable.");
+                }
+
+                // Owned and borrowed mirrors both receive exactly one release callback.
+                applier.Release(_world, entity, leaveKind, in context);
+            }
+
+            if (owned)
+            {
+                _world.Destroy(entity);
+            }
+            else if (_world.IsAlive(entity))
+            {
+                _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
+            }
+
+            _active[slot] = false;
+            _owned[slot] = false;
+            _generations[slot] = 0;
+            _schemas[slot] = 0;
+            _entities[slot] = Entity.Null;
+        }
+
         private ReplicationBridgeResult ValidateBatchApplications()
         {
             for (int i = 0; i < _batchCount; i++)
@@ -470,20 +565,15 @@ namespace Ludots.Core.Networking.Replication
                 int slot = _batchSlots[i];
                 switch (_batchKinds[i])
                 {
-                    case BatchOperationKind.Release:
+                    case BatchOperationKind.Leave:
                     {
-                        int schemaId = _schemas[slot];
-                        if (!_owned[slot] && schemaId > 0)
+                        ReplicationBridgeResult validation = ValidateLeave(
+                            slot,
+                            _batchLeaveKinds[i],
+                            in _pendingContext);
+                        if (validation != ReplicationBridgeResult.Success)
                         {
-                            if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
-                            {
-                                return ReplicationBridgeResult.SchemaNotRegistered;
-                            }
-
-                            if (!applier.CanConceal(_world, _entities[slot]))
-                            {
-                                return ReplicationBridgeResult.SchemaApplyRejected;
-                            }
+                            return validation;
                         }
 
                         break;
@@ -496,7 +586,7 @@ namespace Ludots.Core.Networking.Replication
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
-                        if (!applier.CanApply(_world, _entities[slot], in state))
+                        if (!applier.CanApply(_world, _entities[slot], in state, in _pendingContext))
                         {
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
@@ -511,7 +601,7 @@ namespace Ludots.Core.Networking.Replication
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
-                        if (!applier.CanCreate(_world, in state))
+                        if (!applier.CanCreate(_world, in state, in _pendingContext))
                         {
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
@@ -526,6 +616,28 @@ namespace Ludots.Core.Networking.Replication
             return ReplicationBridgeResult.Success;
         }
 
+        private ReplicationBridgeResult ValidateLeave(
+            int slot,
+            ReplicationMirrorLeaveKind leaveKind,
+            in ReplicationApplyContext context)
+        {
+            int schemaId = _schemas[slot];
+            if (schemaId == 0)
+            {
+                // A borrowed binding can be torn down before its first replicated schema arrives.
+                return ReplicationBridgeResult.Success;
+            }
+
+            if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
+            {
+                return ReplicationBridgeResult.SchemaNotRegistered;
+            }
+
+            return applier.CanRelease(_world, _entities[slot], leaveKind, in context)
+                ? ReplicationBridgeResult.Success
+                : ReplicationBridgeResult.SchemaApplyRejected;
+        }
+
         private void CommitExistingBinding(
             Entity entity,
             in ReplicationMirrorIdentity identity,
@@ -535,7 +647,7 @@ namespace Ludots.Core.Networking.Replication
             _world.Add(entity, in identity, in state);
         }
 
-        private static bool ContainsRelease(ReplicationPacketBuffer packet, NetworkEntityHandle entity)
+        private static bool ContainsVisibleLeave(ReplicationPacketBuffer packet, NetworkEntityHandle entity)
         {
             ReadOnlySpan<NetworkEntityHandle> removals = packet.Removals;
             for (int i = 0; i < removals.Length; i++)
