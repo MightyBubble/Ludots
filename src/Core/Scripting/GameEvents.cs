@@ -6,6 +6,13 @@ namespace Ludots.Core.Scripting
     public static class GameEvents
     {
         /// <summary>
+        /// Fired exactly once during engine initialization after mods are registered, configuration is merged,
+        /// and the world, core services, and systems are ready, but before <c>GameEngine.Start</c> can run.
+        /// Initialization waits for every handler and aborts if any handler fails.
+        /// </summary>
+        public static readonly EventKey RuntimeComposition = new EventKey("RuntimeComposition");
+
+        /// <summary>
         /// Fired when the game session starts, but before any map is loaded.
         /// </summary>
         public static readonly EventKey GameStart = new EventKey("GameStart");
