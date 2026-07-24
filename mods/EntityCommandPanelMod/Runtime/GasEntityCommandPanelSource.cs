@@ -678,44 +678,49 @@ namespace EntityCommandPanelMod.Runtime
             return durationTicks;
         }
 
-        public bool ActivateSlot(Entity target, int groupIndex, int slotIndex)
+        public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
         {
             if (groupIndex != 0 ||
                 slotIndex < 0 ||
                 !_engine.World.IsAlive(target) ||
                 !_engine.World.Has<AbilityStateBuffer>(target))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidActor);
             }
 
             if (!CanActivateProgressionRequirement(target, slotIndex))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedByRule);
             }
 
             InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
             if (inputMapping == null)
             {
-                return false;
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidOrderType);
             }
 
             if ((uint)slotIndex >= (uint)_skillActionIds.Length)
             {
-                return false;
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedValidation);
             }
 
             inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, slotIndex + 1));
             string actionId = _skillActionIds[slotIndex] ?? string.Empty;
             if (string.IsNullOrWhiteSpace(actionId))
             {
-                return false;
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidOrderType);
             }
 
-            var activation = inputMapping.ActivateMappedAction(
+            int playerId = inputMapping.PlayerId;
+            if (playerId <= 0)
+            {
+                return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            return inputMapping.ActivateMappedAction(
                 actionId,
-                new InputOrderActivationContext(target, inputMapping.PlayerId),
+                new InputOrderActivationContext(target, playerId),
                 preferUiAiming: true);
-            return activation.State != InputOrderActivationState.Rejected;
         }
 
         private bool CanActivateProgressionRequirement(Entity target, int slotIndex)

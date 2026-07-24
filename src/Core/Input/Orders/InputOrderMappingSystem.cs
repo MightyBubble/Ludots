@@ -710,7 +710,7 @@ namespace Ludots.Core.Input.Orders
             switch (mode)
             {
                 case InteractionModeType.SmartCast:
-                    HandleSmartCast(mapping);
+                    HandleSmartCast(mapping, activationActor);
                     break;
 
                 case InteractionModeType.AimCast:
@@ -743,13 +743,19 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>
         /// SmartCast: immediately build and submit through the mapping's declared target source.
+        /// One activation pins <paramref name="actor"/> for target resolution and the submitted order.
         /// </summary>
-        private void HandleSmartCast(InputOrderMapping mapping)
+        private void HandleSmartCast(InputOrderMapping mapping, Entity actor)
         {
-            if (TryBuildOrderSmartCast(mapping, out var order))
+            if (TryBuildOrderSmartCast(mapping, actor, out var order))
             {
                 SubmitOrder(mapping, in order);
+                return;
             }
+
+            RecordRejectedActivation(
+                actor,
+                OrderSubmitResult.RejectedValidation);
         }
 
         /// <summary>
@@ -886,9 +892,16 @@ namespace Ludots.Core.Input.Orders
             {
                 if (_input.ReleasedThisFrame(_aimingActionId))
                 {
-                    if (TryBuildOrderSmartCast(_aimingMapping, out var order))
+                    Entity aimingActor = _aimingContext.Actor != Entity.Null
+                        ? _aimingContext.Actor
+                        : ResolvePrimaryActor(_aimingMapping);
+                    if (TryBuildOrderSmartCast(_aimingMapping, aimingActor, out var order))
                     {
                         SubmitOrder(_aimingMapping, in order);
+                    }
+                    else
+                    {
+                        RecordRejectedActivation(aimingActor, OrderSubmitResult.RejectedValidation);
                     }
                     ExitAimingState();
                     return;
@@ -909,10 +922,17 @@ namespace Ludots.Core.Input.Orders
             // AimCast: confirm through the configured confirm action.
             if (_input.PressedThisFrame(confirmActionId))
             {
-                // Build order using current cursor input.
-                if (TryBuildOrderSmartCast(_aimingMapping, out var order))
+                // Build order using current cursor input; pin the aiming actor for the whole confirm.
+                Entity aimingActor = _aimingContext.Actor != Entity.Null
+                    ? _aimingContext.Actor
+                    : ResolvePrimaryActor(_aimingMapping);
+                if (TryBuildOrderSmartCast(_aimingMapping, aimingActor, out var order))
                 {
                     SubmitOrder(_aimingMapping, in order);
+                }
+                else
+                {
+                    RecordRejectedActivation(aimingActor, OrderSubmitResult.RejectedValidation);
                 }
                 ExitAimingState();
                 return;
@@ -1193,15 +1213,18 @@ namespace Ludots.Core.Input.Orders
         /// Build order for skill/cast SmartCast paths. Target sources are explicit: entity casts
         /// use either an auto-target policy or the hover collection; position/direction casts use
         /// cursor/auto-target policies only when configured. Command intent actions bypass this method.
+        /// <paramref name="actor"/> is fixed for this activation (target resolution + order.Actor).
         /// </summary>
-        private bool TryBuildOrderSmartCast(InputOrderMapping mapping, out Order order)
+        private bool TryBuildOrderSmartCast(InputOrderMapping mapping, Entity actor, out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer()) return false;
+            if (!HasExplicitLocalPlayer() || actor == default)
+            {
+                return false;
+            }
 
             int orderTypeId = RequireOrderTypeId(mapping);
 
-            Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
@@ -2081,6 +2104,20 @@ namespace Ludots.Core.Input.Orders
 
         private bool HasExplicitLocalPlayer()
         {
+            if (_hasExplicitActivationContext &&
+                _explicitActivationActor != Entity.Null &&
+                _explicitActivationPlayerId > 0)
+            {
+                return true;
+            }
+
+            if (_isAiming &&
+                _aimingContext.Actor != Entity.Null &&
+                _aimingContext.PlayerId > 0)
+            {
+                return true;
+            }
+
             return _playerId > 0 && _localPlayer != Entity.Null;
         }
 

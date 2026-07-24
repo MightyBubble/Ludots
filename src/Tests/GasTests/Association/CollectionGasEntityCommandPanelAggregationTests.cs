@@ -159,9 +159,10 @@ namespace Ludots.Tests.GAS
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
             Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId), "displayed cell 1 is the charge family group.");
 
-            bool activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
 
-            Assert.That(activated, Is.True);
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(activated.OrderId, Is.GreaterThan(0));
             Assert.That(submitted.Count, Is.EqualTo(1));
             Assert.That(submitted[0].Args.I0, Is.EqualTo(2),
                 "activation routes to the group's first member (elite marine, charge cannon on slot 2), not a tank's slot 1.");
