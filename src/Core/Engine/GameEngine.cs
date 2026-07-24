@@ -558,6 +558,11 @@ namespace Ludots.Core.Engine
 
                 // 7. Print registration conflict summary
                 ConflictReport?.PrintSummary();
+
+                // 8. Give loaded mods one strict composition point after all runtime dependencies are ready.
+                // This remains separate from GameStart: a composition failure must abort initialization.
+                CompleteLifecycleEvent(
+                    TriggerManager.FireEventStrictAsync(GameEvents.RuntimeComposition, CreateContext()));
             }
             catch
             {

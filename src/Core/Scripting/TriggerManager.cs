@@ -236,7 +236,23 @@ namespace Ludots.Core.Scripting
 
         public Task FireEventAsync(EventKey eventKey, ScriptContext context)
         {
-            var handlerTask = FireEventHandlersAsync(eventKey, context);
+            return FireEventAsync(eventKey, context, propagateSynchronousHandlerExceptions: false);
+        }
+
+        internal Task FireEventStrictAsync(EventKey eventKey, ScriptContext context)
+        {
+            return FireEventAsync(eventKey, context, propagateSynchronousHandlerExceptions: true);
+        }
+
+        private Task FireEventAsync(
+            EventKey eventKey,
+            ScriptContext context,
+            bool propagateSynchronousHandlerExceptions)
+        {
+            var handlerTask = FireEventHandlersAsync(
+                eventKey,
+                context,
+                propagateSynchronousHandlerExceptions);
 
             if (!_triggers.TryGetValue(eventKey, out var triggerList) || triggerList.Count == 0)
             {
@@ -301,6 +317,14 @@ namespace Ludots.Core.Scripting
 
         private Task FireEventHandlersAsync(EventKey eventKey, ScriptContext context)
         {
+            return FireEventHandlersAsync(eventKey, context, propagateSynchronousExceptions: false);
+        }
+
+        private Task FireEventHandlersAsync(
+            EventKey eventKey,
+            ScriptContext context,
+            bool propagateSynchronousExceptions)
+        {
             if (!_eventHandlers.TryGetValue(eventKey, out var handlers) || handlers.Count == 0)
                 return Task.CompletedTask;
 
@@ -314,6 +338,11 @@ namespace Ludots.Core.Scripting
                 catch (Exception ex)
                 {
                     Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
+                    if (propagateSynchronousExceptions)
+                    {
+                        throw;
+                    }
+
                     tasks[i] = Task.CompletedTask;
                 }
             }
