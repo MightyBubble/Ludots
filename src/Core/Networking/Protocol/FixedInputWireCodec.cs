@@ -10,6 +10,23 @@ namespace Ludots.Core.Networking.Protocol
     {
         public const int TargetTickSizeInBytes = 4;
 
+        /// <summary>
+        /// Maximum tick representable by <see cref="Ludots.Core.Networking.Simulation.AuthoritativeSimulationTickState"/>.
+        /// Wire and admission reject values above this bound.
+        /// </summary>
+        public const uint MaxSimulationTick = (uint)int.MaxValue;
+
+        /// <summary>
+        /// Tick fields that may be zero (committed-through / latest-received / missing) but must stay
+        /// inside the authoritative simulation tick domain.
+        /// </summary>
+        public static bool IsValidSimulationTickField(uint tick) => tick <= MaxSimulationTick;
+
+        /// <summary>
+        /// Input target ticks must be nonzero and inside the authoritative simulation tick domain.
+        /// </summary>
+        public static bool IsValidInputTargetTick(uint tick) => tick != 0 && tick <= MaxSimulationTick;
+
         public static int GetFrameSize(int framePayloadBytes)
         {
             if (framePayloadBytes < 0)
@@ -125,6 +142,120 @@ namespace Ludots.Core.Networking.Protocol
             }
         }
 
+        /// <summary>
+        /// Allocation-free SSOT for batch header + frame tick invariants shared by encode and decode.
+        /// Rejects zero epoch/schema/payload/count, target tick 0, ticks above <see cref="MaxSimulationTick"/>,
+        /// and non-strictly-increasing frame ticks.
+        /// </summary>
+        public static bool IsValidBatchSemantics(
+            in NetworkFixedInputBatchHeader header,
+            ReadOnlySpan<uint> targetTicks)
+        {
+            if (header.SessionEpoch == 0 ||
+                header.SchemaId == 0 ||
+                header.FramePayloadBytes == 0 ||
+                header.FrameCount == 0)
+            {
+                return false;
+            }
+
+            if (header.FrameCount != targetTicks.Length)
+            {
+                return false;
+            }
+
+            if (!IsValidSimulationTickField(header.AcknowledgedCommittedTick))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < targetTicks.Length; i++)
+            {
+                uint tick = targetTicks[i];
+                if (!IsValidInputTargetTick(tick))
+                {
+                    return false;
+                }
+
+                if (i > 0 && tick <= targetTicks[i - 1])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static NetworkWireCodecStatus ValidateBatchSemantics(
+            in NetworkFixedInputBatchHeader header,
+            ReadOnlySpan<uint> targetTicks) =>
+            IsValidBatchSemantics(in header, targetTicks)
+                ? NetworkWireCodecStatus.Success
+                : NetworkWireCodecStatus.InvalidInput;
+
+        /// <summary>
+        /// Allocation-free SSOT for acknowledgement invariants shared by encode and decode.
+        /// <para>
+        /// Valid ACK-mask invariant: when <see cref="NetworkFixedInputAcknowledgement.LatestReceivedTick"/> is 0,
+        /// <see cref="NetworkFixedInputAcknowledgement.ReceivedMask"/> must be 0; when LatestReceivedTick is nonzero,
+        /// bit 0 of ReceivedMask must be set (bit 0 represents LatestReceivedTick itself). When LatestReceivedTick
+        /// is 1..63, every bit index &gt;= LatestReceivedTick must be zero (those bits would name tick 0 or a
+        /// negative tick). LatestReceivedTick == 64 with <c>ulong.MaxValue</c> is valid.
+        /// <see cref="NetworkFixedInputAcknowledgement.LatestMissingInputTick"/> must be 0 or
+        /// &lt;= <see cref="NetworkFixedInputAcknowledgement.CommittedThroughTick"/> (ACK is post-commit only).
+        /// LatestReceivedTick may still exceed CommittedThroughTick when future input has already arrived.
+        /// CommittedThroughTick may exceed LatestReceivedTick after observed deadline misses.
+        /// All tick fields must be &lt;= <see cref="MaxSimulationTick"/>. SessionEpoch and SchemaId must be nonzero.
+        /// </para>
+        /// </summary>
+        public static bool IsValidAcknowledgementSemantics(in NetworkFixedInputAcknowledgement acknowledgement)
+        {
+            if (acknowledgement.SessionEpoch == 0 || acknowledgement.SchemaId == 0)
+            {
+                return false;
+            }
+
+            if (!IsValidSimulationTickField(acknowledgement.CommittedThroughTick) ||
+                !IsValidSimulationTickField(acknowledgement.LatestReceivedTick) ||
+                !IsValidSimulationTickField(acknowledgement.LatestMissingInputTick))
+            {
+                return false;
+            }
+
+            if (acknowledgement.LatestMissingInputTick != 0 &&
+                acknowledgement.LatestMissingInputTick > acknowledgement.CommittedThroughTick)
+            {
+                return false;
+            }
+
+            if (acknowledgement.LatestReceivedTick == 0)
+            {
+                return acknowledgement.ReceivedMask == 0UL;
+            }
+
+            if ((acknowledgement.ReceivedMask & 1UL) == 0UL)
+            {
+                return false;
+            }
+
+            if (acknowledgement.LatestReceivedTick < 64)
+            {
+                ulong allowedMask = (1UL << (int)acknowledgement.LatestReceivedTick) - 1UL;
+                if ((acknowledgement.ReceivedMask & ~allowedMask) != 0UL)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static NetworkWireCodecStatus ValidateAcknowledgementSemantics(
+            in NetworkFixedInputAcknowledgement acknowledgement) =>
+            IsValidAcknowledgementSemantics(in acknowledgement)
+                ? NetworkWireCodecStatus.Success
+                : NetworkWireCodecStatus.InvalidInput;
+
         public static NetworkWireCodecStatus TryEncodeBatch(
             in NetworkFixedInputBatchHeader header,
             ReadOnlySpan<uint> targetTicks,
@@ -133,7 +264,7 @@ namespace Ludots.Core.Networking.Protocol
             out int bytesWritten)
         {
             bytesWritten = 0;
-            if (header.FrameCount != targetTicks.Length)
+            if (!IsValidBatchSemantics(in header, targetTicks))
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
@@ -141,11 +272,6 @@ namespace Ludots.Core.Networking.Protocol
             int framePayloadBytes = header.FramePayloadBytes;
             long expectedPayloadBytes = (long)header.FrameCount * framePayloadBytes;
             if (payloads.Length != expectedPayloadBytes)
-            {
-                return NetworkWireCodecStatus.InvalidInput;
-            }
-
-            if (!AreStrictlyIncreasing(targetTicks))
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
@@ -249,6 +375,7 @@ namespace Ludots.Core.Networking.Protocol
                 Span<byte> framePayload = payloads.Slice(i * framePayloadBytes, framePayloadBytes);
                 if (!NetworkWireBinary.TryReadBytes(source, ref offset, framePayload))
                 {
+                    ClearDecodeDestinations(targetTicks, payloads, declaredCount, framePayloadBytes);
                     return NetworkWireCodecStatus.MalformedLength;
                 }
             }
@@ -256,20 +383,23 @@ namespace Ludots.Core.Networking.Protocol
             NetworkWireCodecStatus end = NetworkWireBinary.EnsureExactEnd(source, offset);
             if (end != NetworkWireCodecStatus.Success)
             {
+                ClearDecodeDestinations(targetTicks, payloads, declaredCount, framePayloadBytes);
                 return end;
             }
 
-            if (!AreStrictlyIncreasing(targetTicks.Slice(0, declaredCount)))
-            {
-                return NetworkWireCodecStatus.InvalidInput;
-            }
-
-            header = new NetworkFixedInputBatchHeader(
+            var candidate = new NetworkFixedInputBatchHeader(
                 sessionEpoch,
                 schemaId,
                 framePayloadBytes,
                 acknowledgedCommittedTick,
                 declaredCount);
+            if (!IsValidBatchSemantics(in candidate, targetTicks.Slice(0, declaredCount)))
+            {
+                ClearDecodeDestinations(targetTicks, payloads, declaredCount, framePayloadBytes);
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
+            header = candidate;
             frameCount = declaredCount;
             return NetworkWireCodecStatus.Success;
         }
@@ -280,6 +410,11 @@ namespace Ludots.Core.Networking.Protocol
             out int bytesWritten)
         {
             bytesWritten = 0;
+            if (!IsValidAcknowledgementSemantics(in acknowledgement))
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
             if (destination.Length < NetworkFixedInputAcknowledgement.SizeInBytes)
             {
                 return NetworkWireCodecStatus.BufferTooSmall;
@@ -334,27 +469,39 @@ namespace Ludots.Core.Networking.Protocol
                 return end;
             }
 
-            acknowledgement = new NetworkFixedInputAcknowledgement(
+            var candidate = new NetworkFixedInputAcknowledgement(
                 sessionEpoch,
                 schemaId,
                 committedThroughTick,
                 latestReceivedTick,
                 receivedMask,
                 latestMissingInputTick);
+            if (!IsValidAcknowledgementSemantics(in candidate))
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
+            acknowledgement = candidate;
             return NetworkWireCodecStatus.Success;
         }
 
-        private static bool AreStrictlyIncreasing(ReadOnlySpan<uint> ticks)
+        private static void ClearDecodeDestinations(
+            Span<uint> targetTicks,
+            Span<byte> payloads,
+            int frameCount,
+            int framePayloadBytes)
         {
-            for (int i = 1; i < ticks.Length; i++)
+            if (frameCount <= 0)
             {
-                if (ticks[i] <= ticks[i - 1])
-                {
-                    return false;
-                }
+                return;
             }
 
-            return true;
+            targetTicks.Slice(0, frameCount).Clear();
+            long payloadBytes = (long)frameCount * framePayloadBytes;
+            if (payloadBytes > 0 && payloadBytes <= payloads.Length)
+            {
+                payloads.Slice(0, (int)payloadBytes).Clear();
+            }
         }
     }
 }

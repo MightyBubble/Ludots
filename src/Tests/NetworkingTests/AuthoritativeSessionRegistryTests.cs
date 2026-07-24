@@ -331,6 +331,60 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B allocation, observed {allocated} B.");
     }
 
+    [Test]
+    public void ExhaustedSeatGeneration_RetiresSeat_AndAdmissionMovesOrReportsSessionFull()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 5);
+        Assert.That(registry.TryHandshake(new ConnectionId(1), JoinRequest(), currentTick: 1, out SessionHandshakeResponse first), Is.True);
+        Assert.That(first.Seat.Slot, Is.EqualTo(0));
+        Assert.That(first.Seat.Generation, Is.EqualTo(1u));
+
+        SeedSeatGeneration(registry, seat: 0, generation: uint.MaxValue);
+        Assert.That(registry.TryDisconnect(new ConnectionId(1), currentTick: 2), Is.True);
+        Span<SessionSeatBinding> expired = stackalloc SessionSeatBinding[2];
+        Assert.That(registry.TryExpireAwaitingSeats(8, expired, out int expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+        Assert.That(expired[0].Generation, Is.EqualTo(uint.MaxValue));
+
+        // Retired seat 0 is skipped; seat 1 is still usable.
+        Assert.That(registry.TryHandshake(new ConnectionId(2), JoinRequest(), currentTick: 9, out SessionHandshakeResponse second), Is.True);
+        Assert.That(second.Seat.Slot, Is.EqualTo(1));
+        Assert.That(second.Seat.Generation, Is.EqualTo(1u));
+
+        SeedSeatGeneration(registry, seat: 1, generation: uint.MaxValue);
+        Assert.That(registry.TryDisconnect(new ConnectionId(2), currentTick: 10), Is.True);
+        Assert.That(registry.TryExpireAwaitingSeats(16, expired, out expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+
+        Assert.That(
+            registry.TryHandshake(new ConnectionId(3), JoinRequest(), currentTick: 17, out SessionHandshakeResponse full),
+            Is.False);
+        Assert.That(full.RejectReason, Is.EqualTo(HandshakeRejectReason.SessionFull));
+    }
+
+    [Test]
+    public void NextGeneration_NeverWrapsMaxValueToOne()
+    {
+        MethodInfo? nextGeneration = typeof(AuthoritativeSessionRegistry).GetMethod(
+            "NextGeneration",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.That(nextGeneration, Is.Not.Null);
+        TargetInvocationException? ex = Assert.Throws<TargetInvocationException>(() =>
+            nextGeneration!.Invoke(null, new object[] { uint.MaxValue }));
+        Assert.That(ex!.InnerException, Is.TypeOf<InvalidOperationException>());
+        Assert.That(nextGeneration!.Invoke(null, new object[] { uint.MaxValue - 1u }), Is.EqualTo(uint.MaxValue));
+    }
+
+    private static void SeedSeatGeneration(AuthoritativeSessionRegistry registry, int seat, uint generation)
+    {
+        FieldInfo generations = typeof(AuthoritativeSessionRegistry).GetField(
+            "_seatGenerations",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Missing _seatGenerations field.");
+        var values = (uint[])generations.GetValue(registry)!;
+        values[seat] = generation;
+    }
+
     private static AuthoritativeSessionRegistry CreateRegistry(
         int seatCapacity,
         uint reconnectWindowTicks = 30,

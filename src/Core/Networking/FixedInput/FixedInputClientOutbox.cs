@@ -27,6 +27,7 @@ namespace Ludots.Core.Networking.FixedInput
 
         public FixedInputClientOutbox(in FixedInputProtocolConfig config, int pendingFrameCapacity)
         {
+            config.EnsureValid();
             if (pendingFrameCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(pendingFrameCapacity));
@@ -53,7 +54,7 @@ namespace Ludots.Core.Networking.FixedInput
                 return FixedInputOutboxEnqueueStatus.PayloadMismatch;
             }
 
-            if (targetTick == 0)
+            if (!FixedInputWireCodec.IsValidInputTargetTick(targetTick))
             {
                 return FixedInputOutboxEnqueueStatus.InvalidInput;
             }
@@ -91,6 +92,11 @@ namespace Ludots.Core.Networking.FixedInput
                 return FixedInputAckApplyStatus.SchemaMismatch;
             }
 
+            if (!FixedInputWireCodec.IsValidAcknowledgementSemantics(in acknowledgement))
+            {
+                return FixedInputAckApplyStatus.InvalidInput;
+            }
+
             if (_hasAppliedAck)
             {
                 if (acknowledgement.CommittedThroughTick < _appliedCommittedThrough)
@@ -103,12 +109,6 @@ namespace Ludots.Core.Networking.FixedInput
                 {
                     return FixedInputAckApplyStatus.RejectedRegression;
                 }
-            }
-
-            if (acknowledgement.LatestReceivedTick != 0 &&
-                (acknowledgement.ReceivedMask & 1UL) == 0UL)
-            {
-                return FixedInputAckApplyStatus.InvalidInput;
             }
 
             // Mark received-but-not-committed frames so they stop resending.
@@ -162,8 +162,10 @@ namespace Ludots.Core.Networking.FixedInput
 
         /// <summary>
         /// Builds one redundant strictly ordered batch from frames that still need send.
+        /// Returns <see cref="FixedInputBatchBuildStatus.NoData"/> when nothing needs sending;
+        /// that is not a successful encode path.
         /// </summary>
-        public NetworkWireCodecStatus TryBuildBatch(
+        public FixedInputBatchBuildStatus TryBuildBatch(
             uint acknowledgedCommittedTick,
             Span<uint> targetTicks,
             Span<byte> payloads,
@@ -172,16 +174,21 @@ namespace Ludots.Core.Networking.FixedInput
         {
             header = default;
             frameCount = 0;
+            if (!FixedInputWireCodec.IsValidSimulationTickField(acknowledgedCommittedTick))
+            {
+                return FixedInputBatchBuildStatus.InvalidInput;
+            }
+
             int maxFrames = Math.Min(_config.MaxFramesPerBatch, targetTicks.Length);
             if (maxFrames <= 0)
             {
-                return NetworkWireCodecStatus.InvalidInput;
+                return FixedInputBatchBuildStatus.InvalidInput;
             }
 
             long payloadCapacity = (long)maxFrames * _payloadBytes;
             if (payloads.Length < payloadCapacity)
             {
-                return NetworkWireCodecStatus.CapacityExhausted;
+                return FixedInputBatchBuildStatus.CapacityExceeded;
             }
 
             // Collect needing-send slots sorted by tick without allocating.
@@ -218,6 +225,11 @@ namespace Ludots.Core.Networking.FixedInput
                 orderedSlots[selected++] = slot;
             }
 
+            if (selected == 0)
+            {
+                return FixedInputBatchBuildStatus.NoData;
+            }
+
             // Insertion-sort selected slots by tick ascending.
             for (int i = 1; i < selected; i++)
             {
@@ -247,7 +259,7 @@ namespace Ludots.Core.Networking.FixedInput
                 (ushort)_payloadBytes,
                 acknowledgedCommittedTick,
                 (ushort)selected);
-            return NetworkWireCodecStatus.Success;
+            return FixedInputBatchBuildStatus.Built;
         }
 
         private int FindFreeSlot()
