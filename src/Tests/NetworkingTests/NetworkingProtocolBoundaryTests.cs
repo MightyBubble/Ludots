@@ -59,6 +59,8 @@ public sealed class NetworkingProtocolBoundaryTests
             "SnapshotControlWireCodec.cs",
             "SnapshotFragmentWireCodec.cs",
             "SnapshotFragmentReassembler.cs",
+            "CommandFragmentWireCodec.cs",
+            "CommandFragmentReassembler.cs",
         };
 
         foreach (string name in required)
