@@ -1,0 +1,28 @@
+{
+  "MobileBodyCapacity": 50000,
+  "StaticBodyCapacity": 10000,
+  "ShapeCapacity": 4096,
+  "InactiveIslandCapacity": 50000,
+  "ConstraintCapacity": 100000,
+  "ConstraintsPerTypeBatchCapacity": 32768,
+  "ConstraintCountPerBodyEstimate": 8,
+  "ContactPairCapacityPerWorker": 65536,
+  "WorkerCount": 8,
+  "FixedStepHz": 30,
+  "MaximumPhysicsStepsPerSourceTick": 1,
+  "SolverSubstepCount": 1,
+  "SolverVelocityIterationCount": 8,
+  "GravityCmPerSecondSquared": {
+    "X": 0.0,
+    "Y": -981.0,
+    "Z": 0.0
+  },
+  "LinearDamping": 0.03,
+  "AngularDamping": 0.03,
+  "MaximumSpeculativeMarginCm": 10.0,
+  "SleepThreshold": 0.01,
+  "MinimumTimestepCountUnderSleepThreshold": 32,
+  "ContinuousMinimumSweepTimestep": 0.001,
+  "ContinuousSweepConvergenceThreshold": 0.001,
+  "MaterialCombineMode": "GeometricMean"
+}

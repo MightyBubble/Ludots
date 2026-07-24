@@ -26,6 +26,7 @@
   <ItemGroup>
     <Compile Remove="Ludots.Physics2D\**\*.cs" />
     <Compile Remove="Ludots.Physics.Broadphase\**\*.cs" />
+    <Compile Remove="Ludots.Physics3D\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

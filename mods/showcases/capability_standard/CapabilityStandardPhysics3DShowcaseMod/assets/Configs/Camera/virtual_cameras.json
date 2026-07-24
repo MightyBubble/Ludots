@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Camera.Profile.Physics3DLab",
+    "displayName": "Physics3D Sample Lab Camera",
+    "priority": 200,
+    "rigKind": "Orbit",
+    "distanceCm": 7000,
+    "pitch": 48,
+    "fovYDeg": 48,
+    "yaw": 205,
+    "minDistanceCm": 4500,
+    "maxDistanceCm": 14000,
+    "minPitchDeg": 35,
+    "maxPitchDeg": 72,
+    "panMode": "Keyboard",
+    "panCmPerSecond": 5000,
+    "enableGrabDrag": true,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 1200,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]
