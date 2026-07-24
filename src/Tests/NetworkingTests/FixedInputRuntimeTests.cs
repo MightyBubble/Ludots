@@ -277,6 +277,7 @@ public sealed class FixedInputRuntimeTests
     {
         using FixedInputHarness harness = CreateHarness(reconnectWindowTicks: 8);
         Handshake(harness);
+        AuthoritativeReplicationSeatRuntime? runtimeBefore = harness.ReplicationFactory.LastAcquiredRuntime;
 
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0x22);
@@ -302,6 +303,9 @@ public sealed class FixedInputRuntimeTests
             Assert.That(harness.Client.Seat, Is.EqualTo(seatBefore));
             Assert.That(harness.Client.FixedInputPendingCount, Is.EqualTo(pendingBefore));
             Assert.That(harness.Observer.SeatReconnections, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.ReleaseCount, Is.Zero);
+            Assert.That(harness.ReplicationFactory.LastAcquiredRuntime, Is.SameAs(runtimeBefore));
         });
 
         Span<byte> lookup = stackalloc byte[PayloadBytes];
@@ -315,6 +319,7 @@ public sealed class FixedInputRuntimeTests
     {
         using FixedInputHarness harness = CreateHarness(reconnectWindowTicks: 1);
         Handshake(harness);
+        AuthoritativeReplicationSeatRuntime? firstRuntime = harness.ReplicationFactory.LastAcquiredRuntime;
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0x33);
         Assert.That(harness.Client.TrySubmitFixedInput(2, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
@@ -329,6 +334,8 @@ public sealed class FixedInputRuntimeTests
         harness.TickState.Commit(2);
         harness.Server.AfterAuthoritativeCommit(2);
         Assert.That(harness.Observer.SeatReleases, Is.EqualTo(1));
+        Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+        Assert.That(harness.ReplicationFactory.LastReleasedRuntime, Is.SameAs(firstRuntime));
 
         // Stale reconnect token after release clears credentials and outbox once.
         Assert.That(harness.Client.TryConnectNow(), Is.True);
@@ -346,6 +353,8 @@ public sealed class FixedInputRuntimeTests
         Assert.That(harness.Client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
         Assert.That(harness.Client.Seat.Generation, Is.EqualTo(2));
         Assert.That(harness.Client.FixedInputPendingCount, Is.Zero);
+        Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(2));
+        Assert.That(harness.ReplicationFactory.LastAcquiredRuntime, Is.Not.SameAs(firstRuntime));
 
         Assert.That(harness.Client.TrySubmitFixedInput(3, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
         Assert.That(harness.Client.FixedInputPendingCount, Is.EqualTo(1));
@@ -373,6 +382,105 @@ public sealed class FixedInputRuntimeTests
         // Second clear path is idempotent.
         harness.Client.PumpTransport();
         Assert.That(harness.Client.FixedInputPendingCount, Is.Zero);
+    }
+
+    [Test]
+    public void ServerDispose_ReleasesConnectedReplicationRuntimeExactlyOnce()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+        AuthoritativeReplicationSeatRuntime? acquired = harness.ReplicationFactory.LastAcquiredRuntime;
+
+        harness.Server.Dispose();
+        harness.Server.Dispose();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.LastReleasedRuntime, Is.SameAs(acquired));
+        });
+    }
+
+    [TestCase(1, 0, 0)]
+    [TestCase(0, 1, 0)]
+    [TestCase(0, 0, 1)]
+    public void ReplicationFactoryCapacityMismatch_FailsAtServerConstruction(
+        int seatAdjustment,
+        int globalAdjustment,
+        int perSeatAdjustment)
+    {
+        Assert.That(
+            () => CreateHarness(
+                replicationFactorySeatCapacityAdjustment: seatAdjustment,
+                replicationFactoryGlobalCapacityAdjustment: globalAdjustment,
+                replicationFactoryPerSeatCapacityAdjustment: perSeatAdjustment),
+            Throws.ArgumentException.With.Property("ParamName").EqualTo("replicationSeatFactory"));
+    }
+
+    [Test]
+    public void ReplicationFactoryAcquireFailure_FaultsAuthenticatedBinding()
+    {
+        using FixedInputHarness harness = CreateHarness(replicationAcquireSucceeds: false);
+
+        Assert.That(() => Handshake(harness), Throws.TypeOf<NetworkRuntimeException>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Server.IsFaulted, Is.True);
+            Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected));
+            Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.ReleaseCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void ReplicationFactoryDirtyRuntime_IsReleasedAndRejectedBeforeSeatBinding()
+    {
+        using FixedInputHarness harness = CreateHarness(dirtyReplicationRuntime: true);
+
+        Assert.That(() => Handshake(harness), Throws.TypeOf<NetworkRuntimeException>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected));
+            Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void ReplicationFactoryReleaseFailure_FaultsAndDoesNotReleaseTwiceOnDispose()
+    {
+        using FixedInputHarness harness = CreateHarness(
+            reconnectWindowTicks: 1,
+            replicationReleaseSucceeds: false);
+        Handshake(harness);
+        harness.Transport.Disconnect();
+        harness.Server.PumpTransport();
+        harness.Client.PumpTransport();
+        RunAuthoritativeFrame(harness, 1);
+
+        Assert.That(() => RunAuthoritativeFrame(harness, 2), Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected));
+        Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+
+        harness.Server.Dispose();
+        Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void BindingFailureAfterAcquire_ReleasesReplicationRuntimeBeforeFaulting()
+    {
+        var conflictingSeat = new SessionSeatBinding(0, 99, new PlayerId(1));
+        using FixedInputHarness harness = CreateHarness(fixedInputPrebind: conflictingSeat);
+
+        Assert.That(() => Handshake(harness), Throws.TypeOf<NetworkRuntimeException>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected));
+            Assert.That(harness.ReplicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.ReleaseCount, Is.EqualTo(1));
+            Assert.That(harness.ReplicationFactory.LastReleasedRuntime, Is.SameAs(harness.ReplicationFactory.LastAcquiredRuntime));
+        });
     }
 
     [Test]
@@ -502,7 +610,14 @@ public sealed class FixedInputRuntimeTests
         int statePublishRateHz = 30,
         int reconnectWindowTicks = 4,
         int connectionCapacity = 1,
-        int seatCapacity = 1)
+        int seatCapacity = 1,
+        int replicationFactorySeatCapacityAdjustment = 0,
+        int replicationFactoryGlobalCapacityAdjustment = 0,
+        int replicationFactoryPerSeatCapacityAdjustment = 0,
+        bool replicationAcquireSucceeds = true,
+        bool replicationReleaseSucceeds = true,
+        bool dirtyReplicationRuntime = false,
+        SessionSeatBinding? fixedInputPrebind = null)
     {
         World serverWorld = World.Create();
         World clientWorld = World.Create();
@@ -564,18 +679,6 @@ public sealed class FixedInputRuntimeTests
         var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
         Assert.That(projectors.Register(1, new TestProjector()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         projectors.Freeze();
-        var bridge = new AuthoritativeWorldReplicationBridge(
-            serverWorld,
-            entities,
-            knowledge,
-            player,
-            projectors,
-            replicationEntityCapacityPerSeat: 1);
-        var serverSeat = new AuthoritativeReplicationSeatRuntime(
-            bridge,
-            new AuthoritativeReplicationChannel(entities, 1, baselineCapacity: 2, new ReplicationDisclosureChangeLog(4)),
-            new ReplicationProjectionBuffer(1),
-            new ReplicationPacketBuffer(1));
 
         NetworkRuntimeCapacity capacity = CreateCapacity(connectionCapacity, statePublishRateHz);
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 9, 9, 9 });
@@ -592,23 +695,69 @@ public sealed class FixedInputRuntimeTests
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
             tickState);
-        AuthoritativeReplicationSeatRuntime[] seats = seatCapacity == 1
-            ? new[] { serverSeat }
-            : CreateSeats(serverWorld, entities, knowledge, player, projectors, seatCapacity, serverSeat);
-        var server = new AuthoritativeServerNetworkRuntime(
-            in capacity,
-            NetworkTransportPortOwnership.Borrowed,
-            transport,
-            transport,
-            transport,
-            sessions,
-            commandIngress,
-            results,
-            new FixedControllerResolver(player),
-            new FixedReplicationInterest(handle),
-            seats,
-            fixedInput,
-            observer);
+        if (fixedInputPrebind.HasValue)
+        {
+            SessionSeatBinding prebound = fixedInputPrebind.Value;
+            fixedInput.BindSeat(in prebound);
+        }
+
+        var replicationFactory = new TrackingAuthoritativeReplicationSeatRuntimeFactory(
+            checked(seatCapacity + replicationFactorySeatCapacityAdjustment),
+            checked(capacity.GlobalEntityCapacity + replicationFactoryGlobalCapacityAdjustment),
+            checked(capacity.ReplicationEntityCapacityPerSeat + replicationFactoryPerSeatCapacityAdjustment),
+            (_, viewer) =>
+            {
+                if (!replicationAcquireSucceeds)
+                {
+                    return null;
+                }
+
+                AuthoritativeReplicationSeatRuntime runtime = CreateSeatRuntime(
+                    serverWorld,
+                    entities,
+                    knowledge,
+                    viewer,
+                    projectors);
+                if (dirtyReplicationRuntime)
+                {
+                    Assert.That(
+                        runtime.Channel.BuildFull(
+                            sessions.SessionEpoch.Value,
+                            tick: 1,
+                            snapshotId: 1,
+                            ReadOnlySpan<ReplicatedEntityState>.Empty,
+                            ReadOnlySpan<ReplicationDisclosureInput>.Empty,
+                            runtime.Packet),
+                        Is.EqualTo(ReplicationBuildResult.Success));
+                }
+
+                return runtime;
+            },
+            (_, _) => replicationReleaseSucceeds);
+        AuthoritativeServerNetworkRuntime server;
+        try
+        {
+            server = new AuthoritativeServerNetworkRuntime(
+                in capacity,
+                NetworkTransportPortOwnership.Borrowed,
+                transport,
+                transport,
+                transport,
+                sessions,
+                commandIngress,
+                results,
+                new FixedControllerResolver(player),
+                new FixedReplicationInterest(handle),
+                replicationFactory,
+                fixedInput,
+                observer);
+        }
+        catch
+        {
+            clientWorld.Dispose();
+            serverWorld.Dispose();
+            throw;
+        }
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
@@ -629,6 +778,7 @@ public sealed class FixedInputRuntimeTests
             capacity,
             transport,
             observer,
+            replicationFactory,
             tickState,
             server,
             client,
@@ -636,34 +786,25 @@ public sealed class FixedInputRuntimeTests
             fingerprint);
     }
 
-    private static AuthoritativeReplicationSeatRuntime[] CreateSeats(
+    private static AuthoritativeReplicationSeatRuntime CreateSeatRuntime(
         World world,
         NetworkEntityTable entities,
         KnowledgeProjectionStore knowledge,
-        Entity player,
-        ReplicationSchemaProjectorRegistry projectors,
-        int seatCapacity,
-        AuthoritativeReplicationSeatRuntime first)
+        Entity viewer,
+        ReplicationSchemaProjectorRegistry projectors)
     {
-        var seats = new AuthoritativeReplicationSeatRuntime[seatCapacity];
-        seats[0] = first;
-        for (int i = 1; i < seatCapacity; i++)
-        {
-            var bridge = new AuthoritativeWorldReplicationBridge(
-                world,
-                entities,
-                knowledge,
-                player,
-                projectors,
-                replicationEntityCapacityPerSeat: 1);
-            seats[i] = new AuthoritativeReplicationSeatRuntime(
-                bridge,
-                new AuthoritativeReplicationChannel(entities, 1, baselineCapacity: 2, new ReplicationDisclosureChangeLog(4)),
-                new ReplicationProjectionBuffer(1),
-                new ReplicationPacketBuffer(1));
-        }
-
-        return seats;
+        var bridge = new AuthoritativeWorldReplicationBridge(
+            world,
+            entities,
+            knowledge,
+            viewer,
+            projectors,
+            replicationEntityCapacityPerSeat: 1);
+        return new AuthoritativeReplicationSeatRuntime(
+            bridge,
+            new AuthoritativeReplicationChannel(entities, 1, baselineCapacity: 2, new ReplicationDisclosureChangeLog(4)),
+            new ReplicationProjectionBuffer(1),
+            new ReplicationPacketBuffer(1));
     }
 
     private static NetworkRuntimeCapacity CreateCapacity(int connectionCapacity, int statePublishRateHz) => new(
@@ -768,6 +909,7 @@ public sealed class FixedInputRuntimeTests
             NetworkRuntimeCapacity capacity,
             TrackingTransport transport,
             RecordingObserver observer,
+            TrackingAuthoritativeReplicationSeatRuntimeFactory replicationFactory,
             AuthoritativeSimulationTickState tickState,
             AuthoritativeServerNetworkRuntime server,
             ReplicatedClientNetworkRuntime client,
@@ -779,6 +921,7 @@ public sealed class FixedInputRuntimeTests
             Capacity = capacity;
             Transport = transport;
             Observer = observer;
+            ReplicationFactory = replicationFactory;
             TickState = tickState;
             Server = server;
             Client = client;
@@ -791,6 +934,7 @@ public sealed class FixedInputRuntimeTests
         public NetworkRuntimeCapacity Capacity { get; }
         public TrackingTransport Transport { get; }
         public RecordingObserver Observer { get; }
+        public TrackingAuthoritativeReplicationSeatRuntimeFactory ReplicationFactory { get; }
         public AuthoritativeSimulationTickState TickState { get; }
         public AuthoritativeServerNetworkRuntime Server { get; }
         public ReplicatedClientNetworkRuntime Client { get; }

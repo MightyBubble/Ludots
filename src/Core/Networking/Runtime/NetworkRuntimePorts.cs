@@ -39,6 +39,7 @@ namespace Ludots.Core.Networking.Runtime
         SessionContractViolation = 22,
         ConnectionAttemptRejected = 23,
         FixedInputRejected = 24,
+        ReplicationSeatRuntimeRejected = 25,
     }
 
     public readonly struct NetworkRuntimeFault
@@ -103,6 +104,29 @@ namespace Ludots.Core.Networking.Runtime
             in SessionSeatBinding seat,
             Span<NetworkEntityHandle> destination,
             out int count);
+    }
+
+    /// <summary>
+    /// Owns lazily-created replication state for authenticated authoritative seats.
+    /// A successful acquire must return a pristine runtime exclusively leased to the exact
+    /// seat generation and viewer until the matching release call.
+    /// </summary>
+    public interface IAuthoritativeReplicationSeatRuntimeFactory
+    {
+        int SeatCapacity { get; }
+
+        int GlobalEntityCapacity { get; }
+
+        int ReplicationEntityCapacityPerSeat { get; }
+
+        bool TryAcquire(
+            in SessionSeatBinding seat,
+            Entity viewer,
+            [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out AuthoritativeReplicationSeatRuntime? runtime);
+
+        bool TryRelease(
+            in SessionSeatBinding seat,
+            AuthoritativeReplicationSeatRuntime runtime);
     }
 
     public enum ClientCredentialLoadStatus : byte
@@ -218,6 +242,12 @@ namespace Ludots.Core.Networking.Runtime
     {
         public NetworkRuntimeException(in NetworkRuntimeFault fault)
             : base($"Network runtime contract failed: {fault.Code} ({fault.Detail}).")
+        {
+            Fault = fault;
+        }
+
+        public NetworkRuntimeException(in NetworkRuntimeFault fault, Exception innerException)
+            : base($"Network runtime contract failed: {fault.Code} ({fault.Detail}).", innerException)
         {
             Fault = fault;
         }
