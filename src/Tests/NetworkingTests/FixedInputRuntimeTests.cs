@@ -273,7 +273,7 @@ public sealed class FixedInputRuntimeTests
     }
 
     [Test]
-    public void SameGenerationReconnect_PreservesIngressHistoryAndClientOutbox()
+    public void SameGenerationReconnect_ClearsIngressHistoryAndPreservesClientOutboxForResend()
     {
         using FixedInputHarness harness = CreateHarness(reconnectWindowTicks: 8);
         Handshake(harness);
@@ -309,6 +309,12 @@ public sealed class FixedInputRuntimeTests
         });
 
         Span<byte> lookup = stackalloc byte[PayloadBytes];
+        Assert.That(
+            harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
+            Is.EqualTo(FixedInputLookupResult.Missing));
+
+        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        harness.Server.PumpTransport();
         Assert.That(
             harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
             Is.EqualTo(FixedInputLookupResult.Present));

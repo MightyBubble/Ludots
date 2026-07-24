@@ -5,6 +5,13 @@ using Ludots.Core.Networking.Simulation;
 
 namespace Ludots.Core.Networking.FixedInput
 {
+    public enum FixedInputSeatActivationState : byte
+    {
+        InvalidSeat = 0,
+        AwaitingFirstInput = 1,
+        Active = 2,
+    }
+
     /// <summary>
     /// Fixed-capacity SoA authoritative fixed-input ingress keyed by authenticated
     /// <see cref="SessionSeatBinding"/>. Reads <see cref="AuthoritativeSimulationTickState"/>
@@ -29,6 +36,7 @@ namespace Ludots.Core.Networking.FixedInput
         private readonly byte[] _payloads;
 
         private readonly bool[] _hasAcceptedBySeat;
+        private readonly uint[] _activationTicksBySeat;
         private readonly uint[] _lastAcceptedTickBySeat;
         private readonly uint[] _latestReceivedTickBySeat;
         private readonly uint[] _latestMissingAtDeadlineBySeat;
@@ -58,6 +66,7 @@ namespace Ludots.Core.Networking.FixedInput
             _payloads = new byte[checked(cellCount * _payloadBytes)];
 
             _hasAcceptedBySeat = new bool[_seatCapacity];
+            _activationTicksBySeat = new uint[_seatCapacity];
             _lastAcceptedTickBySeat = new uint[_seatCapacity];
             _latestReceivedTickBySeat = new uint[_seatCapacity];
             _latestMissingAtDeadlineBySeat = new uint[_seatCapacity];
@@ -111,6 +120,17 @@ namespace Ludots.Core.Networking.FixedInput
             ClearSeatHistory(slot);
         }
 
+        public void RebindSeat(in SessionSeatBinding seat)
+        {
+            if (!MatchesSeat(in seat))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot rebind fixed-input seat {seat.Slot}:{seat.Generation} because its current binding differs.");
+            }
+
+            ClearSeatHistory(seat.Slot);
+        }
+
         public bool TryReleaseSeat(in SessionSeatBinding seat)
         {
             if (!MatchesSeat(in seat))
@@ -135,6 +155,26 @@ namespace Ludots.Core.Networking.FixedInput
 
             seat = new SessionSeatBinding(slot, _seatGenerations[slot], new PlayerId(_seatPlayerIds[slot]));
             return true;
+        }
+
+        public FixedInputSeatActivationState GetSeatActivationState(
+            in SessionSeatBinding seat,
+            out uint activationTick)
+        {
+            if (!MatchesSeat(in seat))
+            {
+                activationTick = 0;
+                return FixedInputSeatActivationState.InvalidSeat;
+            }
+
+            if (!_hasAcceptedBySeat[seat.Slot])
+            {
+                activationTick = 0;
+                return FixedInputSeatActivationState.AwaitingFirstInput;
+            }
+
+            activationTick = _activationTicksBySeat[seat.Slot];
+            return FixedInputSeatActivationState.Active;
         }
 
         /// <summary>
@@ -427,6 +467,11 @@ namespace Ludots.Core.Networking.FixedInput
             _cellOccupied[cell] = true;
             payload.CopyTo(_payloads.AsSpan(cell * _payloadBytes, _payloadBytes));
 
+            if (!_hasAcceptedBySeat[seatSlot])
+            {
+                _activationTicksBySeat[seatSlot] = tick;
+            }
+
             if (!_hasAcceptedBySeat[seatSlot] || tick > _lastAcceptedTickBySeat[seatSlot])
             {
                 _lastAcceptedTickBySeat[seatSlot] = tick;
@@ -524,6 +569,7 @@ namespace Ludots.Core.Networking.FixedInput
             }
 
             _hasAcceptedBySeat[seatSlot] = false;
+            _activationTicksBySeat[seatSlot] = 0;
             _lastAcceptedTickBySeat[seatSlot] = 0;
             _latestReceivedTickBySeat[seatSlot] = 0;
             _latestMissingAtDeadlineBySeat[seatSlot] = 0;
