@@ -1,4 +1,5 @@
 using Arch.Core;
+using System.Numerics;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
@@ -6,6 +7,7 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Transport;
+using Ludots.Core.Physics3DNet.Input;
 
 namespace Ludots.App.LoadClients;
 
@@ -170,128 +172,36 @@ public sealed class LoadClientNetworkObserver : INetworkRuntimeObserver
     }
 }
 
-public sealed class DeterministicFixedInputPayloadSource : IFixedInputPayloadSource
+public sealed class Physics3DLoadClientFixedInputPayloadSource : IFixedInputPayloadSource
 {
-    private readonly int _clientIndex;
+    private readonly Vector2 _movement;
 
-    public DeterministicFixedInputPayloadSource(int clientIndex)
+    public Physics3DLoadClientFixedInputPayloadSource(Vector2 movement)
     {
-        if (clientIndex < 0)
+        Span<byte> validation = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes];
+        if (!Physics3DFixedInputFrameCodec.TryEncode(movement, validation))
         {
-            throw new ArgumentOutOfRangeException(nameof(clientIndex));
+            throw new ArgumentOutOfRangeException(nameof(movement));
         }
 
-        _clientIndex = clientIndex;
+        _movement = movement;
     }
 
     public FixedInputPayloadSampleStatus TrySample(uint targetTick, Span<byte> destination)
     {
-        if (destination.Length == 0)
-        {
-            return FixedInputPayloadSampleStatus.Failed;
-        }
-
-        destination.Clear();
-        // Deterministic synthetic payload: client index + target tick, little-endian where space allows.
-        if (destination.Length >= 4)
-        {
-            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(destination, _clientIndex);
-        }
-
-        if (destination.Length >= 8)
-        {
-            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(destination[4..], targetTick);
-        }
-
-        return FixedInputPayloadSampleStatus.Sampled;
-    }
-}
-
-/// <summary>
-/// Load-host owned bridge factory. Mirrors host-branch ClientReplicationBridgeFactory composition
-/// without pulling authoritative-server composition services into this worktree.
-/// </summary>
-public sealed class LoadClientReplicationBridgeFactory : IClientReplicationBridgeFactory
-{
-    private readonly World _world;
-    private readonly ClientReplicationSchemaApplierRegistry _appliers;
-
-    public LoadClientReplicationBridgeFactory(
-        World world,
-        int globalEntityCapacity,
-        ClientReplicationSchemaApplierRegistry appliers)
-    {
-        _world = world ?? throw new ArgumentNullException(nameof(world));
-        if (globalEntityCapacity <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(globalEntityCapacity));
-        }
-
-        _appliers = appliers ?? throw new ArgumentNullException(nameof(appliers));
-        if (!appliers.IsFrozen)
-        {
-            throw new InvalidOperationException(
-                "Client replication applier registry must be frozen before load-client bridge composition.");
-        }
-
-        GlobalEntityCapacity = globalEntityCapacity;
+        return destination.Length == Physics3DFixedInputFrameCodec.PayloadBytes &&
+            Physics3DFixedInputFrameCodec.TryEncode(_movement, destination)
+                ? FixedInputPayloadSampleStatus.Sampled
+                : FixedInputPayloadSampleStatus.Failed;
     }
 
-    public int GlobalEntityCapacity { get; }
-
-    public ClientWorldReplicationBridge Create(ulong sessionEpoch)
+    public FixedInputPayloadCommitStatus TryCommit(uint targetTick, ReadOnlySpan<byte> sentPayload)
     {
-        if (sessionEpoch == 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(sessionEpoch));
-        }
-
-        return new ClientWorldReplicationBridge(
-            _world,
-            GlobalEntityCapacity,
-            sessionEpoch,
-            _appliers);
-    }
-}
-
-/// <summary>
-/// Minimal mirror applier so load clients can absorb configured schema ids without owning Physics3D lifecycle.
-/// Unregistered schema ids still fail snapshot apply (no silent skip).
-/// </summary>
-public sealed class LoadClientMirrorSchemaApplier : IClientReplicationSchemaApplier
-{
-    public bool CanCreate(World world, in ReplicatedEntityState state, in ReplicationApplyContext context) => true;
-
-    public bool CanApply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context) =>
-        world.IsAlive(entity);
-
-    public bool CanRelease(
-        World world,
-        Entity entity,
-        ReplicationMirrorLeaveKind leaveKind,
-        in ReplicationApplyContext context) => world.IsAlive(entity);
-
-    public Entity Create(
-        World world,
-        in ReplicationMirrorIdentity identity,
-        in ReplicationMirrorState state,
-        in ReplicationApplyContext context)
-    {
-        return world.Create(in identity, in state);
-    }
-
-    public void Apply(World world, Entity entity, in ReplicatedEntityState state, in ReplicationApplyContext context)
-    {
-        var mirror = new ReplicationMirrorState(state.SchemaId, state.Revision, state.Values);
-        world.Set(entity, in mirror);
-    }
-
-    public void Release(
-        World world,
-        Entity entity,
-        ReplicationMirrorLeaveKind leaveKind,
-        in ReplicationApplyContext context)
-    {
-        world.Destroy(entity);
+        Span<byte> expected = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes];
+        return sentPayload.Length == Physics3DFixedInputFrameCodec.PayloadBytes &&
+            Physics3DFixedInputFrameCodec.TryEncode(_movement, expected) &&
+            sentPayload.SequenceEqual(expected)
+                ? FixedInputPayloadCommitStatus.Committed
+                : FixedInputPayloadCommitStatus.Failed;
     }
 }

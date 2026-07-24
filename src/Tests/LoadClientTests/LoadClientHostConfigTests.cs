@@ -15,7 +15,8 @@ public sealed class LoadClientHostConfigTests
         string json = CreateValidJson(omitClientCount: true);
         LoadClientHostConfig config = LoadClientHostConfig.ParseJson(json);
         Assert.That(config.ClientCount, Is.EqualTo(149));
-        Assert.That(config.SimulationTickRateHz, Is.EqualTo(30));
+        Assert.That(config.Networking.SimulationTickRateHz, Is.EqualTo(30));
+        Assert.That(config.Physics3DReplication.SchemaId, Is.EqualTo(1));
         Assert.That(config.PlanFingerprint.IsEmpty, Is.False);
     }
 
@@ -40,14 +41,79 @@ public sealed class LoadClientHostConfigTests
     [Test]
     public void ParseJson_NonThirtyHz_FailsExplicitly()
     {
-        string json = CreateValidJson()
-            .Replace("\"simulationTickRateHz\": 30", "\"simulationTickRateHz\": 60", StringComparison.Ordinal)
-            .Replace("\"simulationTickRateHz\": 30", "\"simulationTickRateHz\": 60", StringComparison.Ordinal);
-        // Top-level and networking both need to stay consistent; force top-level 60 with networking 30.
-        json = CreateValidJson(simulationTickRateHz: 60, networkingTickRateHz: 30);
+        string json = CreateValidJson(networkingTickRateHz: 60);
         Assert.That(
             () => LoadClientHostConfig.ParseJson(json),
             Throws.InvalidOperationException.With.Message.Contains("30"));
+    }
+
+    [Test]
+    public void ParseJson_LegacySchemaArrayAndDuplicateTickTruth_AreRejected()
+    {
+        string legacySchema = CreateValidJson().Replace(
+            "\"physics3DReplication\": {",
+            "\"replicationSchemaIds\": [1],\n  \"physics3DReplication\": {",
+            StringComparison.Ordinal);
+        string duplicateTick = CreateValidJson().Replace(
+            "\"durationSeconds\": 2.0,",
+            "\"simulationTickRateHz\": 30,\n  \"durationSeconds\": 2.0,",
+            StringComparison.Ordinal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(legacySchema),
+                Throws.InvalidOperationException.With.Message.Contains("replicationSchemaIds"));
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(duplicateTick),
+                Throws.InvalidOperationException.With.Message.Contains("simulationTickRateHz"));
+        });
+    }
+
+    [Test]
+    public void ParseJson_NonPhysics3DPayloadSizeAndInvalidMovement_AreRejected()
+    {
+        string wrongPayload = CreateValidJson().Replace(
+            "\"fixedInputFramePayloadBytes\": 8",
+            "\"fixedInputFramePayloadBytes\": 12",
+            StringComparison.Ordinal);
+        string invalidMovement = CreateValidJson().Replace(
+            "\"movementInput\": { \"x\": 1.0, \"y\": 0.0 }",
+            "\"movementInput\": { \"x\": 1.0, \"y\": 1.0 }",
+            StringComparison.Ordinal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(wrongPayload),
+                Throws.InvalidOperationException.With.Message.Contains("8"));
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(invalidMovement),
+                Throws.InvalidOperationException.With.Message.Contains("movementInput"));
+        });
+    }
+
+    [Test]
+    public void ParseJson_MissingPhysics3DQuantizationOrMovementAxis_FailsWithoutDefaults()
+    {
+        string missingQuantization = CreateValidJson().Replace(
+            "\"positionResolutionCm\": 0.5,",
+            string.Empty,
+            StringComparison.Ordinal);
+        string missingMovementAxis = CreateValidJson().Replace(
+            "\"movementInput\": { \"x\": 1.0, \"y\": 0.0 }",
+            "\"movementInput\": { \"x\": 1.0 }",
+            StringComparison.Ordinal);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(missingQuantization),
+                Throws.InvalidOperationException.With.Message.Contains("positionResolutionCm"));
+            Assert.That(
+                () => LoadClientHostConfig.ParseJson(missingMovementAxis),
+                Throws.InvalidOperationException.With.Message.Contains("y"));
+        });
     }
 
     [Test]
@@ -105,7 +171,6 @@ public sealed class LoadClientHostConfigTests
         int? clientCount = 2,
         bool omitClientCount = false,
         string planFingerprint = "",
-        int simulationTickRateHz = 30,
         int networkingTickRateHz = 30)
     {
         if (string.IsNullOrEmpty(planFingerprint))
@@ -124,17 +189,23 @@ public sealed class LoadClientHostConfigTests
           "connectionKey": "load-client-test",
           "planFingerprint": "{{planFingerprint}}",
           {{clientCountLine}}
-          "simulationTickRateHz": {{simulationTickRateHz}},
-          "fixedInputLeadTicks": 2,
           "durationSeconds": 2.0,
           "warmUpSeconds": 0.5,
           "credentialDirectory": "credentials",
-          "clientReconnectRetryMilliseconds": 250,
           "maxStepsPerAdvance": 4,
           "maxAccumulatedSteps": 8,
           "connectTimeoutSeconds": 2.0,
           "readyTimeoutSeconds": 2.0,
-          "replicationSchemaIds": [1],
+          "physics3DReplication": {
+            "schemaId": 1,
+            "quantization": {
+              "positionResolutionCm": 0.5,
+              "quaternionResolution": 0.00003051851,
+              "linearVelocityResolutionCmPerSecond": 0.5,
+              "angularVelocityResolutionRadiansPerSecond": 0.001
+            }
+          },
+          "movementInput": { "x": 1.0, "y": 0.0 },
           "networking": {
             "profileId": "load_client_test",
             "referenceTransport": "LiteNetLib/2.1.4",
@@ -155,6 +226,8 @@ public sealed class LoadClientHostConfigTests
             "networkAdmissionResultCapacity": 1200,
             "entityAdmissionResultCapacity": 128,
             "reconnectWindowSeconds": 30,
+            "clientReconnectRetryMilliseconds": 250,
+            "replicationSchemaCapacity": 1,
             "baselineCapacity": 16,
             "disclosureChangeLogCapacity": 256,
             "datagramQueueCapacity": 128,
@@ -170,7 +243,7 @@ public sealed class LoadClientHostConfigTests
             "inputChannelId": 3,
             "fixedInputHistoryTicksPerSeat": 8,
             "fixedInputSchemaId": 1,
-            "fixedInputFramePayloadBytes": 12,
+            "fixedInputFramePayloadBytes": 8,
             "fixedInputMaxFutureTicks": 4,
             "fixedInputLeadTicks": 2,
             "fixedInputMaxFramesPerBatch": 4,

@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using Ludots.App.LoadClients;
 using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
+using Ludots.Core.Physics3DNet.Input;
 using NUnit.Framework;
 
 namespace Ludots.Tests.LoadClients;
@@ -78,15 +80,15 @@ public sealed class LoadClientHostOrchestrationTests
     }
 
     [Test]
-    public void DeterministicPayloadSource_AndClock_HoldThirtyHzOverOneSecond()
+    public void Physics3DPayloadSource_AndClock_HoldThirtyHzOverOneSecond()
     {
         var client = new FakeFixedInputClient();
-        var source = new DeterministicFixedInputPayloadSource(clientIndex: 7);
+        var source = new Physics3DLoadClientFixedInputPayloadSource(new Vector2(0.5f, -0.25f));
         var clock = new ReplicatedClientFixedInputClock(
             client,
             source,
             simulationTickRateHz: 30,
-            payloadBytes: 12,
+            payloadBytes: Physics3DFixedInputFrameCodec.PayloadBytes,
             fixedInputLeadTicks: 1,
             fixedInputMaxFutureTicks: 8,
             maxStepsPerAdvance: 8,
@@ -107,18 +109,44 @@ public sealed class LoadClientHostOrchestrationTests
         Assert.That(emitted, Is.EqualTo(30));
         Assert.That(client.PulseCount, Is.EqualTo(30));
         Assert.That(clock.SimulationTickRateHz, Is.EqualTo(30));
+        Assert.That(
+            Physics3DFixedInputFrameCodec.TryDecode(client.LastPayload, out Physics3DFixedInputFrame decodedFrame),
+            Is.True);
+        Assert.That(decodedFrame.Movement.X, Is.EqualTo(0.5f).Within(0.0001f));
+        Assert.That(decodedFrame.Movement.Y, Is.EqualTo(-0.25f).Within(0.0001f));
+    }
+
+    [Test]
+    public void Physics3DPayloadSource_RequiresExactEightByteFrame()
+    {
+        var source = new Physics3DLoadClientFixedInputPayloadSource(new Vector2(0.25f, 0.75f));
+        Span<byte> exact = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes];
+        Span<byte> shortFrame = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes - 1];
+        Span<byte> longFrame = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes + 1];
+
+        FixedInputPayloadSampleStatus exactStatus = source.TrySample(1, exact);
+        FixedInputPayloadSampleStatus shortStatus = source.TrySample(1, shortFrame);
+        FixedInputPayloadSampleStatus longStatus = source.TrySample(1, longFrame);
+        bool decoded = Physics3DFixedInputFrameCodec.TryDecode(exact, out _);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exactStatus, Is.EqualTo(FixedInputPayloadSampleStatus.Sampled));
+            Assert.That(shortStatus, Is.EqualTo(FixedInputPayloadSampleStatus.Failed));
+            Assert.That(longStatus, Is.EqualTo(FixedInputPayloadSampleStatus.Failed));
+            Assert.That(decoded, Is.True);
+        });
     }
 
     [Test]
     public void FixedInputClockSteadyStateHotLoop_DoesNotAllocateOnCallingThread()
     {
         var client = new FakeFixedInputClient();
-        var source = new DeterministicFixedInputPayloadSource(clientIndex: 0);
+        var source = new Physics3DLoadClientFixedInputPayloadSource(Vector2.UnitX);
         var clock = new ReplicatedClientFixedInputClock(
             client,
             source,
             simulationTickRateHz: 30,
-            payloadBytes: 12,
+            payloadBytes: Physics3DFixedInputFrameCodec.PayloadBytes,
             fixedInputLeadTicks: 1,
             fixedInputMaxFutureTicks: 8,
             maxStepsPerAdvance: 8,
@@ -430,8 +458,10 @@ public sealed class LoadClientHostOrchestrationTests
         private uint _ackTick;
         private uint _lastEnqueued;
         private bool _hasEnqueued;
+        private readonly byte[] _lastPayload = new byte[Physics3DFixedInputFrameCodec.PayloadBytes];
 
         public int PulseCount { get; private set; }
+        public ReadOnlySpan<byte> LastPayload => _lastPayload;
 
         public ReplicatedClientConnectionState State => ReplicatedClientConnectionState.Connected;
         public SessionEpoch SessionEpoch => _epoch;
@@ -448,6 +478,7 @@ public sealed class LoadClientHostOrchestrationTests
 
         public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload)
         {
+            payload.CopyTo(_lastPayload);
             _lastEnqueued = targetTick;
             _hasEnqueued = true;
             return FixedInputOutboxEnqueueStatus.Enqueued;

@@ -1,9 +1,12 @@
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Session;
+using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Input;
 
 namespace Ludots.App.LoadClients;
 
@@ -21,18 +24,16 @@ public sealed class LoadClientHostConfig
     public string ConnectionKey { get; init; } = string.Empty;
     public string PlanFingerprintHex { get; init; } = string.Empty;
     public int ClientCount { get; init; } = DefaultClientCount;
-    public int SimulationTickRateHz { get; init; }
-    public int FixedInputLeadTicks { get; init; }
     public double DurationSeconds { get; init; }
     public double WarmUpSeconds { get; init; }
     public string CredentialDirectory { get; init; } = string.Empty;
-    public int ClientReconnectRetryMilliseconds { get; init; }
     public int MaxStepsPerAdvance { get; init; }
     public int MaxAccumulatedSteps { get; init; }
     public double ConnectTimeoutSeconds { get; init; }
     public double ReadyTimeoutSeconds { get; init; }
-    public int[] ReplicationSchemaIds { get; init; } = Array.Empty<int>();
     public NetworkRuntimeConfig Networking { get; init; } = null!;
+    public Physics3DReplicationSchemaConfig Physics3DReplication { get; init; } = null!;
+    public Physics3DLoadClientMovementConfig MovementInput { get; init; } = null!;
 
     public ContentFingerprint PlanFingerprint { get; private set; }
 
@@ -154,18 +155,6 @@ public sealed class LoadClientHostConfig
                 $"Load-client clientCount must be positive; got {ClientCount}.");
         }
 
-        if (SimulationTickRateHz != RequiredSimulationTickRateHz)
-        {
-            throw new InvalidOperationException(
-                $"Load-client simulationTickRateHz must be exactly {RequiredSimulationTickRateHz}; got {SimulationTickRateHz}.");
-        }
-
-        if (FixedInputLeadTicks < 1)
-        {
-            throw new InvalidOperationException(
-                $"Load-client fixedInputLeadTicks must be >= 1; got {FixedInputLeadTicks}.");
-        }
-
         if (!double.IsFinite(DurationSeconds) || DurationSeconds <= 0d)
         {
             throw new InvalidOperationException(
@@ -187,12 +176,6 @@ public sealed class LoadClientHostConfig
         if (string.IsNullOrWhiteSpace(CredentialDirectory))
         {
             throw new InvalidOperationException("Load-client credentialDirectory is required.");
-        }
-
-        if (ClientReconnectRetryMilliseconds <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Load-client clientReconnectRetryMilliseconds must be positive; got {ClientReconnectRetryMilliseconds}.");
         }
 
         if (MaxStepsPerAdvance <= 0)
@@ -226,16 +209,16 @@ public sealed class LoadClientHostConfig
 
         Networking.Validate();
 
-        if (Networking.SimulationTickRateHz != SimulationTickRateHz)
+        if (Networking.SimulationTickRateHz != RequiredSimulationTickRateHz)
         {
             throw new InvalidOperationException(
-                "Load-client simulationTickRateHz must match networking.simulationTickRateHz.");
+                $"Load-client networking.simulationTickRateHz must be exactly {RequiredSimulationTickRateHz}; got {Networking.SimulationTickRateHz}.");
         }
 
-        if (Networking.FixedInputLeadTicks != FixedInputLeadTicks)
+        if (Networking.FixedInputFramePayloadBytes != Physics3DFixedInputFrameCodec.PayloadBytes)
         {
             throw new InvalidOperationException(
-                "Load-client fixedInputLeadTicks must match networking.fixedInputLeadTicks.");
+                $"Load-client Physics3D input requires exactly {Physics3DFixedInputFrameCodec.PayloadBytes} payload bytes; got {Networking.FixedInputFramePayloadBytes}.");
         }
 
         if (!string.Equals(Networking.ReferenceTransport, "LiteNetLib/2.1.4", StringComparison.Ordinal))
@@ -250,29 +233,10 @@ public sealed class LoadClientHostConfig
                 $"Networking playerCapacity {Networking.PlayerCapacity} is below configured clientCount {ClientCount}.");
         }
 
-        if (ReplicationSchemaIds == null)
-        {
-            throw new InvalidOperationException("Load-client replicationSchemaIds must be present (use [] when empty).");
-        }
-
-        for (int i = 0; i < ReplicationSchemaIds.Length; i++)
-        {
-            int schemaId = ReplicationSchemaIds[i];
-            if (schemaId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Load-client replicationSchemaIds[{i}] must be positive; got {schemaId}.");
-            }
-
-            for (int j = 0; j < i; j++)
-            {
-                if (ReplicationSchemaIds[j] == schemaId)
-                {
-                    throw new InvalidOperationException(
-                        $"Load-client replicationSchemaIds contains duplicate schema id {schemaId}.");
-                }
-            }
-        }
+        ArgumentNullException.ThrowIfNull(Physics3DReplication);
+        Physics3DReplication.Validate(Networking);
+        ArgumentNullException.ThrowIfNull(MovementInput);
+        MovementInput.Validate();
     }
 
     private static LoadClientHostConfig FromDocument(LoadClientHostConfigDocument document)
@@ -295,38 +259,38 @@ public sealed class LoadClientHostConfig
             ConnectionKey = document.ConnectionKey ?? string.Empty,
             PlanFingerprintHex = document.PlanFingerprint ?? string.Empty,
             ClientCount = document.ClientCount ?? DefaultClientCount,
-            SimulationTickRateHz = document.SimulationTickRateHz ?? 0,
-            FixedInputLeadTicks = document.FixedInputLeadTicks ?? 0,
             DurationSeconds = document.DurationSeconds ?? double.NaN,
             WarmUpSeconds = document.WarmUpSeconds ?? double.NaN,
             CredentialDirectory = document.CredentialDirectory ?? string.Empty,
-            ClientReconnectRetryMilliseconds = document.ClientReconnectRetryMilliseconds ?? 0,
             MaxStepsPerAdvance = document.MaxStepsPerAdvance ?? 0,
             MaxAccumulatedSteps = document.MaxAccumulatedSteps ?? 0,
             ConnectTimeoutSeconds = document.ConnectTimeoutSeconds ?? double.NaN,
             ReadyTimeoutSeconds = document.ReadyTimeoutSeconds ?? double.NaN,
-            ReplicationSchemaIds = document.ReplicationSchemaIds ?? Array.Empty<int>(),
             Networking = document.Networking,
+            Physics3DReplication = document.Physics3DReplication!,
+            MovementInput = document.MovementInput!,
         };
 
         RequirePresent(document.Host, "host");
         RequirePresent(document.Port, "port");
         RequirePresent(document.ConnectionKey, "connectionKey");
         RequirePresent(document.PlanFingerprint, "planFingerprint");
-        RequirePresent(document.SimulationTickRateHz, "simulationTickRateHz");
-        RequirePresent(document.FixedInputLeadTicks, "fixedInputLeadTicks");
         RequirePresent(document.DurationSeconds, "durationSeconds");
         RequirePresent(document.WarmUpSeconds, "warmUpSeconds");
         RequirePresent(document.CredentialDirectory, "credentialDirectory");
-        RequirePresent(document.ClientReconnectRetryMilliseconds, "clientReconnectRetryMilliseconds");
         RequirePresent(document.MaxStepsPerAdvance, "maxStepsPerAdvance");
         RequirePresent(document.MaxAccumulatedSteps, "maxAccumulatedSteps");
         RequirePresent(document.ConnectTimeoutSeconds, "connectTimeoutSeconds");
         RequirePresent(document.ReadyTimeoutSeconds, "readyTimeoutSeconds");
-        if (document.ReplicationSchemaIds == null)
+        if (document.Physics3DReplication == null)
         {
             throw new InvalidOperationException(
-                "Load-client replicationSchemaIds is required (use an empty array when no schemas are registered).");
+                "Load-client physics3DReplication is required.");
+        }
+
+        if (document.MovementInput == null)
+        {
+            throw new InvalidOperationException("Load-client movementInput is required.");
         }
 
         config.Validate();
@@ -375,12 +339,6 @@ internal sealed class LoadClientHostConfigDocument
     [JsonPropertyName("clientCount")]
     public int? ClientCount { get; set; }
 
-    [JsonPropertyName("simulationTickRateHz")]
-    public int? SimulationTickRateHz { get; set; }
-
-    [JsonPropertyName("fixedInputLeadTicks")]
-    public int? FixedInputLeadTicks { get; set; }
-
     [JsonPropertyName("durationSeconds")]
     public double? DurationSeconds { get; set; }
 
@@ -389,9 +347,6 @@ internal sealed class LoadClientHostConfigDocument
 
     [JsonPropertyName("credentialDirectory")]
     public string? CredentialDirectory { get; set; }
-
-    [JsonPropertyName("clientReconnectRetryMilliseconds")]
-    public int? ClientReconnectRetryMilliseconds { get; set; }
 
     [JsonPropertyName("maxStepsPerAdvance")]
     public int? MaxStepsPerAdvance { get; set; }
@@ -405,9 +360,32 @@ internal sealed class LoadClientHostConfigDocument
     [JsonPropertyName("readyTimeoutSeconds")]
     public double? ReadyTimeoutSeconds { get; set; }
 
-    [JsonPropertyName("replicationSchemaIds")]
-    public int[]? ReplicationSchemaIds { get; set; }
-
     [JsonPropertyName("networking")]
     public NetworkRuntimeConfig? Networking { get; set; }
+
+    [JsonPropertyName("physics3DReplication")]
+    public Physics3DReplicationSchemaConfig? Physics3DReplication { get; set; }
+
+    [JsonPropertyName("movementInput")]
+    public Physics3DLoadClientMovementConfig? MovementInput { get; set; }
+}
+
+public sealed class Physics3DLoadClientMovementConfig
+{
+    [JsonRequired]
+    public float X { get; init; }
+    [JsonRequired]
+    public float Y { get; init; }
+
+    public Vector2 Value => new(X, Y);
+
+    public void Validate()
+    {
+        Span<byte> payload = stackalloc byte[Physics3DFixedInputFrameCodec.PayloadBytes];
+        if (!Physics3DFixedInputFrameCodec.TryEncode(Value, payload))
+        {
+            throw new InvalidOperationException(
+                $"Load-client movementInput ({X.ToString(CultureInfo.InvariantCulture)}, {Y.ToString(CultureInfo.InvariantCulture)}) is not a finite normalized Physics3D movement vector.");
+        }
+    }
 }
