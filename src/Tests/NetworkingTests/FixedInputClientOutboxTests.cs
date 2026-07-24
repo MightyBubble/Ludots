@@ -66,6 +66,31 @@ public sealed class FixedInputClientOutboxTests
     }
 
     [Test]
+    public void Outbox_WhenRedundancyBatchIsFull_IncludesNewestFrameAndRetainsOldestFrames()
+    {
+        var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);
+        Span<byte> payload = stackalloc byte[PayloadBytes];
+        for (uint tick = 1; tick <= 5; tick++)
+        {
+            Fill(payload, (byte)tick);
+            Assert.That(outbox.TryEnqueue(tick, payload), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        }
+
+        Span<uint> ticks = stackalloc uint[4];
+        Span<byte> payloads = stackalloc byte[PayloadBytes * 4];
+        Assert.That(
+            outbox.TryBuildBatch(0, ticks, payloads, out _, out int count),
+            Is.EqualTo(FixedInputBatchBuildStatus.Built));
+
+        Assert.That(count, Is.EqualTo(4));
+        Assert.That(ticks.ToArray(), Is.EqualTo(new uint[] { 1, 2, 3, 5 }));
+        Assert.That(payloads[0], Is.EqualTo(1));
+        Assert.That(payloads[PayloadBytes], Is.EqualTo(2));
+        Assert.That(payloads[PayloadBytes * 2], Is.EqualTo(3));
+        Assert.That(payloads[PayloadBytes * 3], Is.EqualTo(5));
+    }
+
+    [Test]
     public void Outbox_NoPendingInput_ReturnsNoData_NotSuccessfulEmptyBatch()
     {
         var outbox = new FixedInputClientOutbox(CreateConfig(), pendingFrameCapacity: 8);

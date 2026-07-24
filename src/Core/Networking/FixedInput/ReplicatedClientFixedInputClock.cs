@@ -323,6 +323,14 @@ namespace Ludots.Core.Networking.FixedInput
         private ReplicatedClientFixedInputClockAdvanceResult TryEmitOneFixedStep()
         {
             uint targetTick = SelectNextTargetTickOrThrow();
+            if (IsBeyondAuthoritativeFutureWindow(targetTick))
+            {
+                return new ReplicatedClientFixedInputClockAdvanceResult(
+                    ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement,
+                    stepsEmitted: 0,
+                    lastTargetTick: _lastEmittedTargetTick,
+                    enqueueStatus: FixedInputOutboxEnqueueStatus.InvalidInput);
+            }
 
             Span<byte> payload = _payloadScratch.AsSpan(0, _payloadBytes);
             FixedInputPayloadSampleStatus sampled = _source.TrySample(targetTick, payload);
@@ -345,10 +353,12 @@ namespace Ludots.Core.Networking.FixedInput
                     enqueueStatus: enqueued);
             }
 
-            if (!_client.TryPulseFixedInputSend())
+            FixedInputSendPulseResult pulse = _client.TryPulseFixedInputSend();
+            if (!pulse.IsAccepted || pulse.HighestAcceptedTargetTick != targetTick)
             {
                 // Tick is already owned by the outbox. Never remain in a normal retry state that could
-                // submit the same tick again — this is a permanent local contract fault.
+                // submit the same tick again. An accepted older batch is not proof that this exact tick
+                // reached transport, so every mismatch is a permanent local contract fault.
                 _terminalPulseFault = true;
                 throw new NetworkRuntimeException(
                     new NetworkRuntimeFault(
@@ -397,6 +407,18 @@ namespace Ludots.Core.Networking.FixedInput
             }
 
             return nextTargetTick;
+        }
+
+        private bool IsBeyondAuthoritativeFutureWindow(uint targetTick)
+        {
+            long highestAllowed =
+                (long)_client.FixedInputAcknowledgedCommittedTick + _fixedInputMaxFutureTicks;
+            if (highestAllowed > FixedInputWireCodec.MaxSimulationTick)
+            {
+                highestAllowed = FixedInputWireCodec.MaxSimulationTick;
+            }
+
+            return targetTick > highestAllowed;
         }
 
         private void EnsureArmedForSession(SessionEpoch epoch)

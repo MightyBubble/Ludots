@@ -32,7 +32,9 @@ public sealed class FixedInputRuntimeTests
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0xAB);
         Assert.That(harness.Client.TrySubmitFixedInput(targetTick: 1, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.EqualTo(1));
         Assert.That(harness.Transport.LastClientSendChannel, Is.EqualTo(harness.Capacity.InputChannel));
 
@@ -173,7 +175,9 @@ public sealed class FixedInputRuntimeTests
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0x44);
         Assert.That(harness.Client.TrySubmitFixedInput(3, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         Assert.That(harness.Transport.LastClientBatchHeader.AcknowledgedCommittedTick, Is.EqualTo(2u));
     }
 
@@ -221,7 +225,9 @@ public sealed class FixedInputRuntimeTests
         }
 
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.EqualTo(1));
     }
 
@@ -259,7 +265,9 @@ public sealed class FixedInputRuntimeTests
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0x11);
         Assert.That(harness.Client.TrySubmitFixedInput(3, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         harness.Server.PumpTransport();
 
         var foreignSeat = new SessionSeatBinding(1, 1, new PlayerId(2));
@@ -282,7 +290,9 @@ public sealed class FixedInputRuntimeTests
         Span<byte> frame = stackalloc byte[PayloadBytes];
         frame.Fill(0x22);
         Assert.That(harness.Client.TrySubmitFixedInput(4, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         harness.Server.PumpTransport();
 
         SessionSeatBinding seatBefore = harness.Client.Seat;
@@ -488,10 +498,41 @@ public sealed class FixedInputRuntimeTests
     {
         using FixedInputHarness harness = CreateHarness();
         Handshake(harness);
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.False);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.NoData));
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
         harness.Client.PumpReplicatedClient(1f);
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
+    }
+
+    [Test]
+    public void FullRedundancyBatch_PulseReportsAcceptedRangeIncludingNewestFrame()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        Span<byte> frame = stackalloc byte[PayloadBytes];
+        for (uint tick = 1; tick <= 5; tick++)
+        {
+            frame.Fill((byte)tick);
+            Assert.That(
+                harness.Client.TrySubmitFixedInput(tick, frame),
+                Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        }
+
+        FixedInputSendPulseResult pulse = harness.Client.TryPulseFixedInputSend();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pulse.Status, Is.EqualTo(FixedInputSendPulseStatus.Accepted));
+            Assert.That(pulse.AcceptedFrameCount, Is.EqualTo(4));
+            Assert.That(pulse.FirstAcceptedTargetTick, Is.EqualTo(1u));
+            Assert.That(pulse.HighestAcceptedTargetTick, Is.EqualTo(5u));
+            Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.EqualTo(1));
+            Assert.That(harness.Transport.LastClientBatchFirstTargetTick, Is.EqualTo(1u));
+            Assert.That(harness.Transport.LastClientBatchHighestTargetTick, Is.EqualTo(5u));
+        });
     }
 
     [Test]
@@ -505,7 +546,9 @@ public sealed class FixedInputRuntimeTests
         Assert.That(harness.Client.TrySubmitFixedInput(1, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
         harness.Transport.CloseClientSends = true;
 
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.False);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.TransportRejected));
         Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
         Assert.That(harness.Observer.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.TransportClosed));
     }
@@ -523,7 +566,7 @@ public sealed class FixedInputRuntimeTests
         {
             frame.AsSpan().Fill((byte)(tick & 0xFF));
             FixedInputOutboxEnqueueStatus enqueued = harness.Client.TrySubmitFixedInput(tick, frame);
-            bool pulsed = harness.Client.TryPulseFixedInputSend();
+            FixedInputSendPulseResult pulsed = harness.Client.TryPulseFixedInputSend();
             harness.Server.PumpTransport();
             harness.TickState.Begin(checked((int)tick));
             harness.Server.BeforeAuthoritativeTick(tick);
@@ -538,7 +581,8 @@ public sealed class FixedInputRuntimeTests
             if (assertOutcomes)
             {
                 Assert.That(enqueued, Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-                Assert.That(pulsed, Is.True);
+                Assert.That(pulsed.Status, Is.EqualTo(FixedInputSendPulseStatus.Accepted));
+                Assert.That(pulsed.HighestAcceptedTargetTick, Is.EqualTo(tick));
                 Assert.That(lookupResult, Is.EqualTo(FixedInputLookupResult.Present));
             }
         }
@@ -1200,6 +1244,8 @@ public sealed class FixedInputRuntimeTests
         public bool CloseClientSends { get; set; }
         public NetworkFixedInputAcknowledgement LastServerFixedInputAck { get; private set; }
         public NetworkFixedInputBatchHeader LastClientBatchHeader { get; private set; }
+        public uint LastClientBatchFirstTargetTick { get; private set; }
+        public uint LastClientBatchHighestTargetTick { get; private set; }
 
         public void Connect()
         {
@@ -1328,9 +1374,11 @@ public sealed class FixedInputRuntimeTests
                         _decodeBatchTicks,
                         _decodeBatchPayloads,
                         out NetworkFixedInputBatchHeader header,
-                        out _) == NetworkWireCodecStatus.Success)
+                        out int frameCount) == NetworkWireCodecStatus.Success)
                 {
                     LastClientBatchHeader = header;
+                    LastClientBatchFirstTargetTick = _decodeBatchTicks[0];
+                    LastClientBatchHighestTargetTick = _decodeBatchTicks[frameCount - 1];
                 }
             }
 
