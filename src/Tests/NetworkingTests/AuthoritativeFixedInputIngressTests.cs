@@ -170,9 +170,11 @@ public sealed class AuthoritativeFixedInputIngressTests
         Assert.That(
             ingress.TryGet(in seat, 11, destination, out _),
             Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
+        Assert.Throws<InvalidOperationException>(() => ingress.BuildAcknowledgement(in seat));
+        ticks.Commit(11);
         NetworkFixedInputAcknowledgement afterOneMiss = ingress.BuildAcknowledgement(in seat);
         Assert.That(afterOneMiss.LatestMissingInputTick, Is.EqualTo(11u));
-        ticks.Commit(11);
+        Assert.That(afterOneMiss.CommittedThroughTick, Is.EqualTo(11u));
 
         ticks.Begin(12);
         Assert.That(ingress.TryGet(in seat, 12, destination, out _), Is.EqualTo(FixedInputLookupResult.Present));
@@ -186,9 +188,26 @@ public sealed class AuthoritativeFixedInputIngressTests
         Assert.That(
             ingress.TryGet(in seat, 14, destination, out _),
             Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
+        Assert.Throws<InvalidOperationException>(() => ingress.BuildAcknowledgement(in seat));
+        ticks.Commit(14);
         NetworkFixedInputAcknowledgement afterLaterMiss = ingress.BuildAcknowledgement(in seat);
         Assert.That(afterLaterMiss.LatestMissingInputTick, Is.EqualTo(14u));
+        Assert.That(afterLaterMiss.CommittedThroughTick, Is.EqualTo(14u));
         Assert.That(ingress.MissingAtDeadlineCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void BuildAcknowledgement_FailsFastWhileAuthoritativeTickIsExecuting()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        ticks.Begin(1);
+        Assert.Throws<InvalidOperationException>(() => ingress.BuildAcknowledgement(in seat));
+        ticks.Commit(1);
+        Assert.DoesNotThrow(() => ingress.BuildAcknowledgement(in seat));
     }
 
     [Test]
@@ -202,8 +221,8 @@ public sealed class AuthoritativeFixedInputIngressTests
         ticks.Begin(1);
         Span<byte> destination = stackalloc byte[PayloadBytes];
         Assert.That(ingress.TryGet(in seat, 1, destination, out _), Is.EqualTo(FixedInputLookupResult.MissingAtDeadline));
-        Assert.That(ingress.BuildAcknowledgement(in seat).LatestMissingInputTick, Is.EqualTo(1u));
         ticks.Commit(1);
+        Assert.That(ingress.BuildAcknowledgement(in seat).LatestMissingInputTick, Is.EqualTo(1u));
 
         Assert.That(ingress.TryReleaseSeat(in seat), Is.True);
         SessionSeatBinding next = Seat(generation: 2);
@@ -398,6 +417,32 @@ public sealed class AuthoritativeFixedInputIngressTests
             ingress.TryGet(in seat, (uint)int.MaxValue, destination, out _),
             Is.EqualTo(FixedInputLookupResult.Present));
         Assert.That(destination[0], Is.EqualTo(4));
+    }
+
+    [Test]
+    public void TryGet_RejectsTickZeroAndOverIntMax_AsInvalidTick_AndAcceptsIntMaxDomain()
+    {
+        var ticks = new AuthoritativeSimulationTickState();
+        ticks.RestoreCommittedTick(int.MaxValue - 1);
+        var ingress = new AuthoritativeFixedInputIngress(CreateConfig(history: 8, maxFuture: 8), ticks);
+        SessionSeatBinding seat = Seat();
+        ingress.BindSeat(in seat);
+
+        Assert.That(
+            AdmitOne(ingress, in seat, (uint)int.MaxValue, 7, out _),
+            Is.EqualTo(FixedInputBatchAdmissionStatus.Success));
+
+        Span<byte> destination = stackalloc byte[PayloadBytes];
+        Assert.That(
+            ingress.TryGet(in seat, 0, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.InvalidTick));
+        Assert.That(
+            ingress.TryGet(in seat, (uint)int.MaxValue + 1u, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.InvalidTick));
+        Assert.That(
+            ingress.TryGet(in seat, (uint)int.MaxValue, destination, out _),
+            Is.EqualTo(FixedInputLookupResult.Present));
+        Assert.That(destination[0], Is.EqualTo(7));
     }
 
     [Test]

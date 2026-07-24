@@ -198,10 +198,14 @@ namespace Ludots.Core.Networking.Protocol
         /// <para>
         /// Valid ACK-mask invariant: when <see cref="NetworkFixedInputAcknowledgement.LatestReceivedTick"/> is 0,
         /// <see cref="NetworkFixedInputAcknowledgement.ReceivedMask"/> must be 0; when LatestReceivedTick is nonzero,
-        /// bit 0 of ReceivedMask must be set (bit 0 represents LatestReceivedTick itself).
-        /// <see cref="NetworkFixedInputAcknowledgement.CommittedThroughTick"/> may exceed LatestReceivedTick after
-        /// observed deadline misses. All tick fields must be &lt;= <see cref="MaxSimulationTick"/>.
-        /// SessionEpoch and SchemaId must be nonzero.
+        /// bit 0 of ReceivedMask must be set (bit 0 represents LatestReceivedTick itself). When LatestReceivedTick
+        /// is 1..63, every bit index &gt;= LatestReceivedTick must be zero (those bits would name tick 0 or a
+        /// negative tick). LatestReceivedTick == 64 with <c>ulong.MaxValue</c> is valid.
+        /// <see cref="NetworkFixedInputAcknowledgement.LatestMissingInputTick"/> must be 0 or
+        /// &lt;= <see cref="NetworkFixedInputAcknowledgement.CommittedThroughTick"/> (ACK is post-commit only).
+        /// LatestReceivedTick may still exceed CommittedThroughTick when future input has already arrived.
+        /// CommittedThroughTick may exceed LatestReceivedTick after observed deadline misses.
+        /// All tick fields must be &lt;= <see cref="MaxSimulationTick"/>. SessionEpoch and SchemaId must be nonzero.
         /// </para>
         /// </summary>
         public static bool IsValidAcknowledgementSemantics(in NetworkFixedInputAcknowledgement acknowledgement)
@@ -218,12 +222,32 @@ namespace Ludots.Core.Networking.Protocol
                 return false;
             }
 
+            if (acknowledgement.LatestMissingInputTick != 0 &&
+                acknowledgement.LatestMissingInputTick > acknowledgement.CommittedThroughTick)
+            {
+                return false;
+            }
+
             if (acknowledgement.LatestReceivedTick == 0)
             {
                 return acknowledgement.ReceivedMask == 0UL;
             }
 
-            return (acknowledgement.ReceivedMask & 1UL) != 0UL;
+            if ((acknowledgement.ReceivedMask & 1UL) == 0UL)
+            {
+                return false;
+            }
+
+            if (acknowledgement.LatestReceivedTick < 64)
+            {
+                ulong allowedMask = (1UL << (int)acknowledgement.LatestReceivedTick) - 1UL;
+                if ((acknowledgement.ReceivedMask & ~allowedMask) != 0UL)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static NetworkWireCodecStatus ValidateAcknowledgementSemantics(

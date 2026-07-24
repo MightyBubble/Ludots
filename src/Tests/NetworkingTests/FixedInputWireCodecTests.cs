@@ -89,7 +89,7 @@ public sealed class FixedInputWireCodecTests
             committedThroughTick: 50,
             latestReceivedTick: 55,
             receivedMask: 0b1011UL,
-            latestMissingInputTick: 53);
+            latestMissingInputTick: 48);
         Span<byte> buffer = stackalloc byte[NetworkFixedInputAcknowledgement.SizeInBytes];
         Assert.That(
             FixedInputWireCodec.TryEncodeAcknowledgement(in ack, buffer, out int written),
@@ -102,7 +102,7 @@ public sealed class FixedInputWireCodecTests
             Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decoded.LatestReceivedTick, Is.EqualTo(55u));
         Assert.That(decoded.ReceivedMask & 1UL, Is.EqualTo(1UL));
-        Assert.That(decoded.LatestMissingInputTick, Is.EqualTo(53u));
+        Assert.That(decoded.LatestMissingInputTick, Is.EqualTo(48u));
     }
 
     [Test]
@@ -321,6 +321,102 @@ public sealed class FixedInputWireCodecTests
         BinaryPrimitives.WriteUInt32LittleEndian(overflowLatest.Slice(16, 4), unchecked((uint)int.MaxValue) + 1u);
         Assert.That(
             FixedInputWireCodec.TryDecodeAcknowledgement(overflowLatest, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+    }
+
+    [Test]
+    public void Acknowledgement_EncodeAndDecode_RejectHighBitsWhenLatestIsBelow64_AndAcceptLatest64FullMask()
+    {
+        Span<byte> buffer = stackalloc byte[NetworkFixedInputAcknowledgement.SizeInBytes];
+
+        // latest=1 with a high bit names tick 0 / negative — reject on encode and decode.
+        Assert.That(
+            FixedInputWireCodec.ValidateAcknowledgementSemantics(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 1, 1, 1UL | (1UL << 63), 0)),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 1, 1, 1UL | (1UL << 63), 0),
+                buffer,
+                out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 1, 1, 1UL, 0),
+                buffer,
+                out int writtenLatest1),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Span<byte> highBitLatest1 = stackalloc byte[writtenLatest1];
+        buffer[..writtenLatest1].CopyTo(highBitLatest1);
+        BinaryPrimitives.WriteUInt64LittleEndian(highBitLatest1.Slice(20, 8), 1UL | (1UL << 63));
+        Assert.That(
+            FixedInputWireCodec.TryDecodeAcknowledgement(highBitLatest1, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        // latest=63 with bit63 set names tick 0 — reject.
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 63, 63, 1UL | (1UL << 63), 0),
+                buffer,
+                out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 63, 63, (1UL << 63) - 1UL, 0),
+                buffer,
+                out int writtenLatest63),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Span<byte> bit63Latest63 = stackalloc byte[writtenLatest63];
+        buffer[..writtenLatest63].CopyTo(bit63Latest63);
+        BinaryPrimitives.WriteUInt64LittleEndian(bit63Latest63.Slice(20, 8), ((1UL << 63) - 1UL) | (1UL << 63));
+        Assert.That(
+            FixedInputWireCodec.TryDecodeAcknowledgement(bit63Latest63, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        // latest=64 with ulong.MaxValue is valid (bits name ticks 64..1).
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 64, 64, ulong.MaxValue, 0),
+                buffer,
+                out int writtenLatest64),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            FixedInputWireCodec.TryDecodeAcknowledgement(buffer[..writtenLatest64], out NetworkFixedInputAcknowledgement decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(decoded.LatestReceivedTick, Is.EqualTo(64u));
+        Assert.That(decoded.ReceivedMask, Is.EqualTo(ulong.MaxValue));
+    }
+
+    [Test]
+    public void Acknowledgement_EncodeAndDecode_RejectFutureMissingTickBeyondCommitted()
+    {
+        Span<byte> buffer = stackalloc byte[NetworkFixedInputAcknowledgement.SizeInBytes];
+
+        Assert.That(
+            FixedInputWireCodec.ValidateAcknowledgementSemantics(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 5, 8, 1UL, 6)),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 5, 8, 1UL, 6),
+                buffer,
+                out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        // LatestReceived may exceed CommittedThrough; missing must not.
+        Assert.That(
+            FixedInputWireCodec.TryEncodeAcknowledgement(
+                new NetworkFixedInputAcknowledgement(1, SchemaId, 5, 8, 1UL, 5),
+                buffer,
+                out int written),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+
+        Span<byte> futureMissing = stackalloc byte[written];
+        buffer[..written].CopyTo(futureMissing);
+        BinaryPrimitives.WriteUInt32LittleEndian(futureMissing.Slice(28, 4), 6);
+        Assert.That(
+            FixedInputWireCodec.TryDecodeAcknowledgement(futureMissing, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
     }
 

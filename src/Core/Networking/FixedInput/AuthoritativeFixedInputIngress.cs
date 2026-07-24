@@ -10,6 +10,7 @@ namespace Ludots.Core.Networking.FixedInput
     /// <see cref="SessionSeatBinding"/>. Reads <see cref="AuthoritativeSimulationTickState"/>
     /// as the only Tick truth and never begins, commits, or restores ticks.
     /// Missing input is reported explicitly; zero / last-input is never fabricated.
+    /// Acknowledgements are built only after the authoritative frame commit.
     /// </summary>
     public sealed class AuthoritativeFixedInputIngress
     {
@@ -268,6 +269,11 @@ namespace Ludots.Core.Networking.FixedInput
                 return FixedInputLookupResult.InvalidSeat;
             }
 
+            if (!FixedInputWireCodec.IsValidInputTargetTick(tick))
+            {
+                return FixedInputLookupResult.InvalidTick;
+            }
+
             if (destination.Length < _payloadBytes)
             {
                 throw new ArgumentException(
@@ -298,8 +304,19 @@ namespace Ludots.Core.Networking.FixedInput
             return FixedInputLookupResult.Present;
         }
 
+        /// <summary>
+        /// Builds the post-commit fixed-input acknowledgement for <paramref name="seat"/>.
+        /// Fail-fast while <see cref="AuthoritativeSimulationTickState.IsExecuting"/>:
+        /// ACK is only valid after the authoritative frame commit.
+        /// </summary>
         public NetworkFixedInputAcknowledgement BuildAcknowledgement(in SessionSeatBinding seat)
         {
+            if (_ticks.IsExecuting)
+            {
+                throw new InvalidOperationException(
+                    "Fixed-input acknowledgement may only be built after the authoritative frame commit.");
+            }
+
             if (!MatchesSeat(in seat))
             {
                 throw new InvalidOperationException(

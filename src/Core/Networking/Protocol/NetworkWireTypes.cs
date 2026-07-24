@@ -387,8 +387,14 @@ namespace Ludots.Core.Networking.Protocol
     /// <list type="bullet">
     /// <item>when <see cref="LatestReceivedTick"/> is 0, <see cref="ReceivedMask"/> must be 0;</item>
     /// <item>when <see cref="LatestReceivedTick"/> is nonzero, bit 0 must be set
-    /// (the latest received tick itself is present).</item>
+    /// (the latest received tick itself is present);</item>
+    /// <item>when <see cref="LatestReceivedTick"/> is 1..63, bits at index &gt;= LatestReceivedTick
+    /// must be zero (they would name tick 0 or a negative tick); latest=64 with
+    /// <c>ulong.MaxValue</c> is valid.</item>
     /// </list>
+    /// Runtime contract: fixed-input ACK is built/sent only after the authoritative frame commit.
+    /// Wire rule: <see cref="LatestMissingInputTick"/> is 0 or &lt;= <see cref="CommittedThroughTick"/>.
+    /// <see cref="LatestReceivedTick"/> may still exceed CommittedThroughTick when future input arrived.
     /// Tick fields are domain-aligned with <c>AuthoritativeSimulationTickState</c>
     /// (<c>&lt;= int.MaxValue</c>). Target input frames separately forbid tick 0.
     /// <see cref="CommittedThroughTick"/> may exceed <see cref="LatestReceivedTick"/>
@@ -458,6 +464,11 @@ namespace Ludots.Core.Networking.Protocol
         Missing = 2,
         MissingAtDeadline = 3,
         InvalidSeat = 4,
+        /// <summary>
+        /// Lookup tick is 0 or exceeds <see cref="int.MaxValue"/> (AuthoritativeSimulationTickState domain).
+        /// Distinct from <see cref="Missing"/>; never silently remapped.
+        /// </summary>
+        InvalidTick = 5,
     }
 
     public enum FixedInputBatchAdmissionStatus : byte

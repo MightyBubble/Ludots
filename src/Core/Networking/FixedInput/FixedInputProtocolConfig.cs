@@ -96,6 +96,22 @@ namespace Ludots.Core.Networking.FixedInput
                     "MaxFramesPerBatch must be positive.");
             }
 
+            if (MaxFramesPerBatch > ushort.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(MaxFramesPerBatch),
+                    MaxFramesPerBatch,
+                    "MaxFramesPerBatch must fit in the ushort wire FrameCount field.");
+            }
+
+            if (MaxFramesPerBatch > Array.MaxLength)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(MaxFramesPerBatch),
+                    MaxFramesPerBatch,
+                    "MaxFramesPerBatch exceeds array capacity.");
+            }
+
             if (MaxDatagramPayloadBytes <= 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -107,6 +123,25 @@ namespace Ludots.Core.Networking.FixedInput
             if (SessionEpoch == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(SessionEpoch), "Session epoch must be non-zero.");
+            }
+
+            // Non-overflowing layout bounds: reject impossible SoA arrays before consumers allocate.
+            long cellCount = (long)SeatCapacity * HistoryTicksPerSeat;
+            if (cellCount > Array.MaxLength)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(SeatCapacity),
+                    SeatCapacity,
+                    $"SeatCapacity*HistoryTicksPerSeat cell count {cellCount} exceeds Array.MaxLength {Array.MaxLength}.");
+            }
+
+            long payloadLength = cellCount * FramePayloadBytes;
+            if (payloadLength > Array.MaxLength)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(FramePayloadBytes),
+                    FramePayloadBytes,
+                    $"Payload array length {payloadLength} exceeds Array.MaxLength {Array.MaxLength}.");
             }
 
             FixedInputWireCodec.ValidateAcknowledgementFitsDatagram(MaxDatagramPayloadBytes);
@@ -125,8 +160,6 @@ namespace Ludots.Core.Networking.FixedInput
                     MaxFramesPerBatch,
                     $"MaxFramesPerBatch cannot exceed datagram capacity {datagramMaxFrames} for payload {FramePayloadBytes}.");
             }
-
-            _ = checked((long)SeatCapacity * HistoryTicksPerSeat * FramePayloadBytes);
         }
     }
 }

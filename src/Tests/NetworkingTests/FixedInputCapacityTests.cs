@@ -109,6 +109,36 @@ public sealed class FixedInputCapacityTests
     }
 
     [Test]
+    public void ProtocolConfig_RejectsImpossibleArrayLayouts_InConstructor()
+    {
+        // SeatCapacity * HistoryTicksPerSeat exceeds Array.MaxLength.
+        int overflowingSeats = (Array.MaxLength / 2) + 1;
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FixedInputProtocolConfig(
+                seatCapacity: overflowingSeats,
+                historyTicksPerSeat: 2,
+                schemaId: 1,
+                framePayloadBytes: 1,
+                maxFutureTicks: 1,
+                maxFramesPerBatch: 1,
+                maxDatagramPayloadBytes: 1200,
+                sessionEpoch: 1));
+
+        // Cell count fits, but cellCount * FramePayloadBytes exceeds Array.MaxLength.
+        int largeHistory = (Array.MaxLength / 2) + 1;
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new FixedInputProtocolConfig(
+                seatCapacity: 1,
+                historyTicksPerSeat: largeHistory,
+                schemaId: 1,
+                framePayloadBytes: 3,
+                maxFutureTicks: 1,
+                maxFramesPerBatch: 1,
+                maxDatagramPayloadBytes: 1200,
+                sessionEpoch: 1));
+    }
+
+    [Test]
     public void Acknowledgement_AlwaysFitsStandardDatagram()
     {
         Assert.DoesNotThrow(() => FixedInputWireCodec.ValidateAcknowledgementFitsDatagram(1200));
