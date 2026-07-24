@@ -14,6 +14,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     private const int TickRateHz = 30;
     private const ushort PayloadBytes = 12;
     private const int DefaultLeadTicks = 1;
+    private const int DefaultMaxFutureTicks = 8;
 
     [Test]
     public void SixtyHzRender_OneSecond_EmitsExactlyThirtyStrictlyIncreasingTicks()
@@ -113,6 +114,25 @@ public sealed class ReplicatedClientFixedInputClockTests
         Assert.That(() => harness.Clock.Advance(-0.01f), Throws.TypeOf<ArgumentOutOfRangeException>());
         Assert.That(() => harness.Clock.Advance(float.NaN), Throws.TypeOf<ArgumentOutOfRangeException>());
         Assert.That(() => harness.Clock.Advance(float.PositiveInfinity), Throws.TypeOf<ArgumentOutOfRangeException>());
+    }
+
+    [Test]
+    public void Constructor_RejectsLeadBeyondServerFutureWindow()
+    {
+        var client = new FakeFixedInputClient();
+        var source = new FillPayloadSource(PayloadBytes);
+
+        Assert.That(
+            () => new ReplicatedClientFixedInputClock(
+                client,
+                source,
+                TickRateHz,
+                PayloadBytes,
+                fixedInputLeadTicks: 9,
+                fixedInputMaxFutureTicks: DefaultMaxFutureTicks,
+                maxStepsPerAdvance: 8,
+                maxAccumulatedSteps: 64),
+            Throws.TypeOf<ArgumentOutOfRangeException>());
     }
 
     [Test]
@@ -496,7 +516,8 @@ public sealed class ReplicatedClientFixedInputClockTests
     private static ClockHarness CreateHarness(
         int maxStepsPerAdvance = 8,
         int maxAccumulatedSteps = 64,
-        int leadTicks = DefaultLeadTicks)
+        int leadTicks = DefaultLeadTicks,
+        int maxFutureTicks = DefaultMaxFutureTicks)
     {
         var client = new FakeFixedInputClient();
         var source = new FillPayloadSource(PayloadBytes);
@@ -506,6 +527,7 @@ public sealed class ReplicatedClientFixedInputClockTests
             TickRateHz,
             PayloadBytes,
             leadTicks,
+            maxFutureTicks,
             maxStepsPerAdvance,
             maxAccumulatedSteps);
         return new ClockHarness(client, source, clock);

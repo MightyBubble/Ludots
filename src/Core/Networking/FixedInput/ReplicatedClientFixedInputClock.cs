@@ -63,7 +63,8 @@ namespace Ludots.Core.Networking.FixedInput
         public bool IsSuccess =>
             Status is ReplicatedClientFixedInputClockAdvanceStatus.Idle
                 or ReplicatedClientFixedInputClockAdvanceStatus.Stepped
-                or ReplicatedClientFixedInputClockAdvanceStatus.NotConnected;
+                or ReplicatedClientFixedInputClockAdvanceStatus.NotConnected
+                or ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement;
     }
 
     /// <summary>
@@ -86,6 +87,7 @@ namespace Ludots.Core.Networking.FixedInput
         private readonly int _simulationTickRateHz;
         private readonly int _payloadBytes;
         private readonly int _fixedInputLeadTicks;
+        private readonly int _fixedInputMaxFutureTicks;
         private readonly int _maxStepsPerAdvance;
         private readonly int _maxAccumulatedSteps;
         private readonly double _tickDurationSeconds;
@@ -106,6 +108,7 @@ namespace Ludots.Core.Networking.FixedInput
             int simulationTickRateHz,
             int payloadBytes,
             int fixedInputLeadTicks,
+            int fixedInputMaxFutureTicks,
             int maxStepsPerAdvance,
             int maxAccumulatedSteps)
         {
@@ -121,9 +124,17 @@ namespace Ludots.Core.Networking.FixedInput
                 throw new ArgumentOutOfRangeException(nameof(payloadBytes));
             }
 
-            if (fixedInputLeadTicks < 1)
+            if (fixedInputMaxFutureTicks < 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(fixedInputLeadTicks));
+                throw new ArgumentOutOfRangeException(nameof(fixedInputMaxFutureTicks));
+            }
+
+            if (fixedInputLeadTicks < 1 || fixedInputLeadTicks > fixedInputMaxFutureTicks)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(fixedInputLeadTicks),
+                    fixedInputLeadTicks,
+                    $"Fixed-input lead ticks must satisfy 1 <= lead <= max future ticks ({fixedInputMaxFutureTicks}).");
             }
 
             if (maxStepsPerAdvance <= 0)
@@ -142,6 +153,7 @@ namespace Ludots.Core.Networking.FixedInput
             _simulationTickRateHz = simulationTickRateHz;
             _payloadBytes = payloadBytes;
             _fixedInputLeadTicks = fixedInputLeadTicks;
+            _fixedInputMaxFutureTicks = fixedInputMaxFutureTicks;
             _maxStepsPerAdvance = maxStepsPerAdvance;
             _maxAccumulatedSteps = maxAccumulatedSteps;
             _tickDurationSeconds = 1d / simulationTickRateHz;
@@ -151,6 +163,7 @@ namespace Ludots.Core.Networking.FixedInput
         public int SimulationTickRateHz => _simulationTickRateHz;
         public int PayloadBytes => _payloadBytes;
         public int FixedInputLeadTicks => _fixedInputLeadTicks;
+        public int FixedInputMaxFutureTicks => _fixedInputMaxFutureTicks;
         public int MaxStepsPerAdvance => _maxStepsPerAdvance;
         public int MaxAccumulatedSteps => _maxAccumulatedSteps;
         public double AccumulatedSeconds => _accumulatorSeconds;
