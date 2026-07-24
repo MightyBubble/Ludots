@@ -249,7 +249,11 @@ public sealed class Physics3DNetworkBridgeTests
             CreateBodyConfig());
         Assert.That(appliers.Register(SchemaId, applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
-        var clientFactory = new ClientReplicationBridgeFactory(clientEcs, entities.Capacity, appliers);
+        var clientFactory = new ClientReplicationBridgeFactory(
+            clientEcs,
+            entities.Capacity,
+            entities.Capacity,
+            appliers);
         ClientWorldReplicationBridge client = clientFactory.Create(SessionEpoch);
 
         Assert.That(client.Apply(runtime.Packet), Is.EqualTo(ReplicationBridgeResult.Success));
@@ -265,7 +269,11 @@ public sealed class Physics3DNetworkBridgeTests
             Assert.That(clientPose.Position.Z, Is.EqualTo(-89f).Within(0.001f));
         });
 
-        var wrongEpoch = new ClientReplicationBridgeFactory(clientEcs, entities.Capacity, appliers)
+        var wrongEpoch = new ClientReplicationBridgeFactory(
+                clientEcs,
+                entities.Capacity,
+                entities.Capacity,
+                appliers)
             .Create(SessionEpoch + 1);
         Assert.That(wrongEpoch.Apply(runtime.Packet), Is.EqualTo(ReplicationBridgeResult.EpochMismatch));
 
@@ -376,6 +384,103 @@ public sealed class Physics3DNetworkBridgeTests
             Assert.That(world.Has<ReplicationSchemaRef>(mirrorEntity), Is.False);
         });
     }
+
+    [Test]
+    public void HeadlessReplication_DecodesStaticKinematicDynamic_AllowsSameGenerationKindChange_AndNeverCreatesPhysicsBodies()
+    {
+        var quantization = new Physics3DReplicationQuantizationConfig();
+        using World world = World.Create();
+        var applier = new Physics3DHeadlessReplicationApplier(SchemaId, quantization);
+        var context = new ReplicationApplyContext(
+            SessionEpoch,
+            committedTick: 1,
+            snapshotId: 1,
+            ReplicationPacketKind.Full);
+
+        Entity[] mirrors = new Entity[3];
+        Physics3DBodyKind[] kinds =
+        {
+            Physics3DBodyKind.Static,
+            Physics3DBodyKind.Kinematic,
+            Physics3DBodyKind.Dynamic,
+        };
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            Physics3DBodyState bodyState = CreateBodyState(positionX: 10f * (i + 1));
+            Assert.That(
+                Physics3DReplicationStateCodec.TryEncode(
+                    in bodyState,
+                    kinds[i],
+                    quantization,
+                    out ReplicationStateVector values),
+                Is.True);
+            var kindHandle = new NetworkEntityHandle(slot: i, generation: 1);
+            var state = new ReplicatedEntityState(kindHandle, SchemaId, revision: 1, in values);
+            Assert.That(applier.CanCreate(world, in state, in context), Is.True);
+            var identity = new ReplicationMirrorIdentity(kindHandle);
+            var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values);
+            mirrors[i] = applier.Create(world, in identity, in mirrorState, in context);
+            Physics3DHeadlessClientMirror mirror = world.Get<Physics3DHeadlessClientMirror>(mirrors[i]);
+            Assert.Multiple(() =>
+            {
+                Assert.That(mirror.AuthoritativeKind, Is.EqualTo(kinds[i]));
+                Assert.That(world.Has<Physics3DBodyCm>(mirrors[i]), Is.False);
+            });
+        }
+
+        Physics3DBodyState staticBody = CreateBodyState(positionX: 77f);
+        Assert.That(
+            Physics3DReplicationStateCodec.TryEncode(
+                in staticBody,
+                Physics3DBodyKind.Static,
+                quantization,
+                out ReplicationStateVector staticValues),
+            Is.True);
+        var dynamicHandle = new NetworkEntityHandle(slot: 2, generation: 1);
+        var kindChange = new ReplicatedEntityState(dynamicHandle, SchemaId, revision: 2, in staticValues);
+        var deltaContext = new ReplicationApplyContext(
+            SessionEpoch,
+            committedTick: 2,
+            snapshotId: 2,
+            ReplicationPacketKind.Delta);
+        Assert.That(applier.CanApply(world, mirrors[2], in kindChange, in deltaContext), Is.True);
+        applier.Apply(world, mirrors[2], in kindChange, in deltaContext);
+        Physics3DHeadlessClientMirror updated = world.Get<Physics3DHeadlessClientMirror>(mirrors[2]);
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated.AuthoritativeKind, Is.EqualTo(Physics3DBodyKind.Static));
+            Assert.That(updated.State.PositionCm.X, Is.EqualTo(77f).Within(0.001f));
+            Assert.That(world.Has<Physics3DBodyCm>(mirrors[2]), Is.False);
+        });
+
+        var polluted = new ReplicationStateVector(
+            staticValues.Value0,
+            staticValues.Value1,
+            staticValues.Value2,
+            staticValues.Value3 | long.MinValue);
+        var invalidKind = new ReplicatedEntityState(dynamicHandle, SchemaId, revision: 3, in polluted);
+        Assert.That(applier.CanApply(world, mirrors[2], in invalidKind, in deltaContext), Is.False);
+        Assert.That(applier.CanCreate(world, in invalidKind, in deltaContext), Is.False);
+
+        applier.Release(world, mirrors[0], ReplicationMirrorLeaveKind.Conceal, in deltaContext);
+        applier.Release(world, mirrors[1], ReplicationMirrorLeaveKind.Removal, in deltaContext);
+        applier.Release(world, mirrors[2], ReplicationMirrorLeaveKind.Teardown, in deltaContext);
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Has<Physics3DHeadlessClientMirror>(mirrors[0]), Is.False);
+            Assert.That(world.Has<Physics3DHeadlessClientMirror>(mirrors[1]), Is.False);
+            Assert.That(world.Has<Physics3DHeadlessClientMirror>(mirrors[2]), Is.False);
+        });
+    }
+
+    private static Physics3DBodyState CreateBodyState(float positionX) => new()
+    {
+        PositionCm = new Vector3(positionX, 0f, 0f),
+        Orientation = Quaternion.Identity,
+        LinearVelocityCmPerSecond = Vector3.Zero,
+        AngularVelocityRadiansPerSecond = Vector3.Zero,
+        Awake = true,
+    };
 
     [Test]
     public void AuthoritativeProjector_RejectsUnknownEntityAndOutOfRangeQuantizedState()

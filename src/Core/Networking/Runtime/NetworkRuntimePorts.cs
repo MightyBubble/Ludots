@@ -174,6 +174,8 @@ namespace Ludots.Core.Networking.Runtime
     {
         int GlobalEntityCapacity { get; }
 
+        int ReplicationEntityCapacityPerSeat { get; }
+
         ClientWorldReplicationBridge Create(ulong sessionEpoch);
     }
 

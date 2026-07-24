@@ -28,7 +28,7 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
         context.SessionEpoch != 0 &&
         state.Entity.IsValid &&
         state.SchemaId == _schemaId &&
-        TryDecodeDynamic(state.Values, out _);
+        TryDecode(state.Values, out _, out _);
 
     public bool CanApply(
         World world,
@@ -40,14 +40,14 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
             world.IsAlive(entity) &&
             state.Entity.IsValid &&
             state.SchemaId == _schemaId &&
-            TryDecodeDynamic(state.Values, out _) &&
+            TryDecode(state.Values, out _, out _) &&
             world.TryGet(entity, out ReplicationSchemaRef schema) &&
             schema.SchemaId == _schemaId &&
             world.TryGet(entity, out ReplicationMirrorIdentity identity) &&
             identity.Handle == state.Entity &&
             world.TryGet(entity, out Physics3DHeadlessClientMirror mirror) &&
             mirror.Handle == state.Entity &&
-            mirror.AuthoritativeKind == Physics3DBodyKind.Dynamic &&
+            IsFormalBodyKind(mirror.AuthoritativeKind) &&
             mirror.SessionEpoch == context.SessionEpoch;
     }
 
@@ -65,7 +65,7 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
             identity.Handle.IsValid &&
             world.TryGet(entity, out Physics3DHeadlessClientMirror mirror) &&
             mirror.Handle == identity.Handle &&
-            mirror.AuthoritativeKind == Physics3DBodyKind.Dynamic &&
+            IsFormalBodyKind(mirror.AuthoritativeKind) &&
             mirror.SessionEpoch == context.SessionEpoch;
     }
 
@@ -78,7 +78,7 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
         ArgumentNullException.ThrowIfNull(world);
         if (!identity.Handle.IsValid ||
             state.SchemaId != _schemaId ||
-            !TryDecodeDynamic(state.Values, out Physics3DBodyState decoded))
+            !TryDecode(state.Values, out Physics3DBodyState decoded, out Physics3DBodyKind kind))
         {
             throw new InvalidOperationException($"Physics3D headless schema {_schemaId} rejected replicated create payload.");
         }
@@ -88,7 +88,7 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
         {
             Handle = identity.Handle,
             State = decoded,
-            AuthoritativeKind = Physics3DBodyKind.Dynamic,
+            AuthoritativeKind = kind,
             SessionEpoch = context.SessionEpoch,
             LastCommittedTick = context.CommittedTick,
         };
@@ -102,13 +102,14 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
         in ReplicationApplyContext context)
     {
         if (!CanApply(world, entity, in state, in context) ||
-            !TryDecodeDynamic(state.Values, out Physics3DBodyState decoded))
+            !TryDecode(state.Values, out Physics3DBodyState decoded, out Physics3DBodyKind kind))
         {
             throw new InvalidOperationException($"Physics3D headless schema {_schemaId} rejected replicated update payload.");
         }
 
         Physics3DHeadlessClientMirror mirror = world.Get<Physics3DHeadlessClientMirror>(entity);
         mirror.State = decoded;
+        mirror.AuthoritativeKind = kind;
         mirror.LastCommittedTick = context.CommittedTick;
         world.Set(entity, in mirror);
     }
@@ -128,13 +129,19 @@ public sealed class Physics3DHeadlessReplicationApplier : IClientReplicationSche
         world.Remove<ReplicationSchemaRef>(entity);
     }
 
-    private bool TryDecodeDynamic(ReplicationStateVector values, out Physics3DBodyState decoded)
+    private bool TryDecode(
+        ReplicationStateVector values,
+        out Physics3DBodyState decoded,
+        out Physics3DBodyKind authoritativeKind)
     {
         return Physics3DReplicationStateCodec.TryDecode(
                 in values,
                 _quantization,
                 out decoded,
-                out Physics3DBodyKind authoritativeKind) &&
-            authoritativeKind == Physics3DBodyKind.Dynamic;
+                out authoritativeKind) &&
+            IsFormalBodyKind(authoritativeKind);
     }
+
+    private static bool IsFormalBodyKind(Physics3DBodyKind kind) =>
+        kind is Physics3DBodyKind.Static or Physics3DBodyKind.Kinematic or Physics3DBodyKind.Dynamic;
 }

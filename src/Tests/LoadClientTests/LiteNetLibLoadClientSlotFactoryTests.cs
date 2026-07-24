@@ -94,6 +94,7 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
         var factory = new ClientReplicationBridgeFactory(
             world,
             config.Networking.GlobalNetworkEntityCapacity,
+            config.Networking.ReplicationEntityCapacityPerSeat,
             appliers);
         ClientWorldReplicationBridge bridge = factory.Create(sessionEpoch: 42);
 
@@ -105,8 +106,67 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
                 Is.True);
             Assert.That(applier, Is.TypeOf<Physics3DHeadlessReplicationApplier>());
             Assert.That(appliers.TryGet(config.Physics3DReplication.SchemaId + 1, out _), Is.False);
-            Assert.That(bridge.EntityCapacity, Is.EqualTo(config.Networking.GlobalNetworkEntityCapacity));
+            Assert.That(factory.GlobalEntityCapacity, Is.EqualTo(config.Networking.GlobalNetworkEntityCapacity));
+            Assert.That(
+                factory.ReplicationEntityCapacityPerSeat,
+                Is.EqualTo(config.Networking.ReplicationEntityCapacityPerSeat));
+            Assert.That(bridge.GlobalEntityCapacity, Is.EqualTo(config.Networking.GlobalNetworkEntityCapacity));
+            Assert.That(
+                bridge.ActiveMirrorCapacity,
+                Is.EqualTo(config.Networking.ReplicationEntityCapacityPerSeat));
             Assert.That(bridge.SessionEpoch, Is.EqualTo(42));
         });
+    }
+
+    [Test]
+    public void Factory_ProductionScaleCapacities_CreateOneHundredFortyNineBridgesWithoutGlobalSizedArrays()
+    {
+        LoadClientHostConfig config = LoadClientHostConfig.ParseJson(
+            LoadClientHostConfigTests.CreateValidJson()
+                .Replace("\"globalNetworkEntityCapacity\": 1024", "\"globalNetworkEntityCapacity\": 100000", StringComparison.Ordinal)
+                .Replace("\"replicationEntityCapacityPerSeat\": 64", "\"replicationEntityCapacityPerSeat\": 512", StringComparison.Ordinal)
+                .Replace("\"disclosureChangeLogCapacity\": 256", "\"disclosureChangeLogCapacity\": 1024", StringComparison.Ordinal));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.Networking.GlobalNetworkEntityCapacity, Is.EqualTo(100_000));
+            Assert.That(config.Networking.ReplicationEntityCapacityPerSeat, Is.EqualTo(512));
+        });
+
+        ClientReplicationSchemaApplierRegistry appliers =
+            LiteNetLibLoadClientSlotFactory.CreateFrozenAppliers(config.Physics3DReplication);
+        const int bridgeCount = 149;
+        const long allocationCeilingBytes = 256L * 1024L * 1024L;
+        var worlds = new World[bridgeCount];
+        var bridges = new ClientWorldReplicationBridge[bridgeCount];
+
+        _ = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < bridgeCount; i++)
+        {
+            worlds[i] = World.Create();
+            var factory = new ClientReplicationBridgeFactory(
+                worlds[i],
+                config.Networking.GlobalNetworkEntityCapacity,
+                config.Networking.ReplicationEntityCapacityPerSeat,
+                appliers);
+            Assert.That(factory.GlobalEntityCapacity, Is.EqualTo(100_000));
+            Assert.That(factory.ReplicationEntityCapacityPerSeat, Is.EqualTo(512));
+            bridges[i] = factory.Create(sessionEpoch: 7);
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        TestContext.WriteLine(
+            $"LoadClient measured allocation for {bridgeCount} bridges at global=100000, active=512: {allocated} bytes");
+        Assert.That(allocated, Is.GreaterThan(0));
+        Assert.That(allocated, Is.LessThan(allocationCeilingBytes));
+        Assert.That(bridges[0].GlobalEntityCapacity, Is.EqualTo(100_000));
+        Assert.That(bridges[0].ActiveMirrorCapacity, Is.EqualTo(512));
+        Assert.That(bridges[bridgeCount - 1].ActiveMirrorCapacity, Is.EqualTo(512));
+
+        for (int i = 0; i < bridgeCount; i++)
+        {
+            worlds[i].Dispose();
+        }
     }
 }

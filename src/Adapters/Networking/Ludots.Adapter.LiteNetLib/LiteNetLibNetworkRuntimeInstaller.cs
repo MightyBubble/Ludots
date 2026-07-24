@@ -378,6 +378,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
                 new ClientReplicationBridgeFactory(
                     engine.World,
                     config.GlobalNetworkEntityCapacity,
+                    config.ReplicationEntityCapacityPerSeat,
                     plan.Appliers),
                 plan.Admissions,
                 observer);

@@ -323,7 +323,9 @@ public sealed class FixedInputRuntimeTests
             harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
             Is.EqualTo(FixedInputLookupResult.Missing));
 
-        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.True);
+        Assert.That(
+            harness.Client.TryPulseFixedInputSend().Status,
+            Is.EqualTo(FixedInputSendPulseStatus.Accepted));
         harness.Server.PumpTransport();
         Assert.That(
             harness.Server.TryGetFixedInput(seatBefore, 4, lookup, out _),
@@ -843,7 +845,10 @@ public sealed class FixedInputRuntimeTests
             protocol,
             fingerprint,
             new MemoryCredentials(),
-            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            new ClientBridgeFactory(
+                clientWorld,
+                globalEntityCapacity: 2,
+                replicationEntityCapacityPerSeat: 1),
             new NetworkCommandAdmissionResultBuffer(capacity: 8),
             observer);
 
@@ -1098,22 +1103,34 @@ public sealed class FixedInputRuntimeTests
     private sealed class ClientBridgeFactory : IClientReplicationBridgeFactory
     {
         private readonly World _world;
-        private readonly int _entityCapacity;
+        private readonly int _globalEntityCapacity;
+        private readonly int _replicationEntityCapacityPerSeat;
 
-        public ClientBridgeFactory(World world, int entityCapacity)
+        public ClientBridgeFactory(
+            World world,
+            int globalEntityCapacity,
+            int? replicationEntityCapacityPerSeat = null)
         {
             _world = world;
-            _entityCapacity = entityCapacity;
+            _globalEntityCapacity = globalEntityCapacity;
+            _replicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat ?? globalEntityCapacity;
         }
 
-        public int GlobalEntityCapacity => _entityCapacity;
+        public int GlobalEntityCapacity => _globalEntityCapacity;
+
+        public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
 
         public ClientWorldReplicationBridge Create(ulong sessionEpoch)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, new TestApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            return new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
+            return new ClientWorldReplicationBridge(
+                _world,
+                _globalEntityCapacity,
+                _replicationEntityCapacityPerSeat,
+                sessionEpoch,
+                appliers);
         }
     }
 

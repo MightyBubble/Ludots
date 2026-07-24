@@ -68,6 +68,7 @@ public sealed class LiteNetLibLoadClientSlotFactory : ILoadClientSlotFactory
                 new ClientReplicationBridgeFactory(
                     world,
                     capacity.GlobalEntityCapacity,
+                    capacity.ReplicationEntityCapacityPerSeat,
                     appliers),
                 admissions,
                 observer);
