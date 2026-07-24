@@ -166,6 +166,19 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
+        public bool TryPeekAt(int offset, out RuntimeEntitySpawnRequest request)
+        {
+            if (offset < 0 || offset >= _count)
+            {
+                request = default;
+                return false;
+            }
+
+            int index = (_head + offset) % _items.Length;
+            request = _items[index];
+            return true;
+        }
+
         public int CountForReceiptChannel(int channelId)
         {
             int count = 0;

@@ -2,6 +2,60 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 Final Integration Addendum - Runtime Spawn Batch Preflight - 2026-07-25
+
+- **Task / Issue**: Close the final PR #660 integration residual where template batch spawn could drain multiple requests before verifying receipt/on-spawn success-signal capacity for the whole batch.
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten the existing `RuntimeEntitySpawnQueue` / `RuntimeEntitySpawnSystem` batch transaction boundary.
+
+Result: PASS.
+
+Reason: The repair adds a non-mutating queue peek helper and moves batch success-signal preflight before dequeue. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel spawn pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Non-mutating spawn queue batch inspection | 1 | `RuntimeEntitySpawnQueue.TryPeekAt` |
+| Template batch receipt/on-spawn preflight before dequeue | 1 | `RuntimeEntitySpawnSystem.PreflightTemplateBatchBeforeDrain` |
+| Regression coverage for retryable failed batch spawn | N/A | `RuntimeEntitySpawnSystem_BatchTemplateReceiptCapacity_DoesNotDrainRequests` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: existing `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `RuntimeEntitySpawnReceiptQueue`, `EffectRequestQueue`.
+- Resolvers / Registries: existing `EntityTemplateKeyRegistry`, template registry, performer bootstrap checks.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Template batch spawn now copies the contiguous batch by peek, preflights relationships, receipt capacity, presentation event capacity, and on-spawn effect queue requirements before removing any request from `RuntimeEntitySpawnQueue`. If capacity is insufficient, all spawn requests remain retryable and no entity is materialized.
+
+### 6. Config SSOT
+
+Behavior remains in existing entity templates, runtime spawn requests, receipt queue capacity, and effect request queue capacity.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn/effect runtime added
+- [x] No fallback or silent request drain added
+- [x] No new registry, loader, preset, or schema added
+
+### 8. Next variant test
+
+A new template spawn variant changes template data or request fields and continues through the same preflight-before-dequeue batch path. It does not add an alternate spawn pipeline.
+
 ## PR #660 Final Cursor Repair Lanes - 2026-07-24
 
 - **Task / Issue**: Final PR #660 repair pass for RoadNetwork order admission, core order lifecycle ownership, ResponseChain prompt transactions, and side-effect commit ordering.
