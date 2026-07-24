@@ -198,7 +198,8 @@ namespace RoadNetworkShowcaseMod.Runtime
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
             order.Args.Spatial.WorldCm = targetWorldCm;
-            bool submitted = expander.TrySubmit(in order);
+            OrderSubmitResult submitResult = expander.TrySubmit(in order);
+            bool submitted = OrderSubmitResultSemantics.IsAccepted(submitResult);
             if (submitted)
             {
                 LastSubmitStatus = status;

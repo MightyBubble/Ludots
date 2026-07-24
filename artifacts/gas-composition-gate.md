@@ -2,6 +2,58 @@
 
 Current closeouts and prior issue reviews follow.
 
+## Lane: RoadNetwork order admission and payload safety - 2026-07-24
+
+- **Task / Issue**: PR #660 — typed RoadNetwork single-order admission + shared-batch route payload release
+- **Date**: 2026-07-24
+- **Agent / Author**: Cursor Agent (roadnetwork lane)
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A** — reuse existing `OrderSubmitResult` + `OrderSpatialPayloadOps.Release` (no new enum/profile DSL).
+
+结论: **PASS**
+
+一句话理由: Stop collapsing planning/validation failures into `RejectedQueueFull`; release already-built route payloads on mid-batch rejection.
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Typed single submit result | 1 | `RoadMoveOrderExpander.TrySubmit` → `OrderSubmitResult` |
+| Mid-batch payload rollback | 1 | `OrderSpatialPayloadOps.Release` before `RejectedValidation` |
+| Local order source propagation | 2 (Mod) | `RoadNetworkLocalOrderSourceSystem` returns expander result as-is |
+
+### 3. Reuse list
+
+- Handlers: none new
+- Queues / Systems: `OrderQueue`, `RoadNetworkLocalOrderSourceSystem`
+- Resolvers / Registries: `OrderSubmitResultSemantics`, `OrderSpatialPayloadOps`, `RoadRoutePlanningService`
+- Existing presets / graphs: N/A
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+Shared-batch planning is all-or-nothing for built route spatial payloads: any mid-batch road-move planning failure releases every previously allocated payload before returning `RejectedValidation`.
+
+### 6. Config SSOT
+
+是否新增 JSON schema: **NO**
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（禁止 validation → queue-full 压缩）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤（本 lane 不改 Core enum）
+
 ## PR #660 Order Admission Follow-up Repair - 2026-07-24
 
 This is the current live self-review section for the final order admission follow-up on branch `codex/issues-649-651-ordering`. Older PR #660 sections below are historical context, not alternate active branches.
