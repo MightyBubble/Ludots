@@ -26,6 +26,21 @@ namespace Ludots.Core.Networking.Replication
 
         public bool IsValid => Generation != 0;
 
+        /// <summary>
+        /// Creates a handle from wire or mirror data without throwing on malformed input.
+        /// </summary>
+        public static bool TryCreate(int slot, uint generation, out NetworkEntityHandle handle)
+        {
+            if (slot < 0 || generation == 0)
+            {
+                handle = default;
+                return false;
+            }
+
+            handle = new NetworkEntityHandle(slot, generation);
+            return true;
+        }
+
         public bool Equals(NetworkEntityHandle other)
             => Slot == other.Slot && Generation == other.Generation;
 

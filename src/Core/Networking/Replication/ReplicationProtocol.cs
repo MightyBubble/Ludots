@@ -199,6 +199,9 @@ namespace Ludots.Core.Networking.Replication
 
         public ReplicationPacketHeader Header { get; private set; }
         public int EntityCapacity => _upserts.Length;
+        public int UpsertCount => _upsertCount;
+        public int RemovalCount => _removalCount;
+        public int DisclosureChangeCount => _disclosureChangeCount;
         public ReadOnlySpan<ReplicatedEntityState> Upserts => _upserts.AsSpan(0, _upsertCount);
         public ReadOnlySpan<NetworkEntityHandle> Removals => _removals.AsSpan(0, _removalCount);
         public ReadOnlySpan<ReplicationDisclosureChange> DisclosureChanges => _disclosureChanges.AsSpan(0, _disclosureChangeCount);
@@ -214,5 +217,41 @@ namespace Ludots.Core.Networking.Replication
         internal void AddUpsert(in ReplicatedEntityState state) => _upserts[_upsertCount++] = state;
         internal void AddRemoval(NetworkEntityHandle entity) => _removals[_removalCount++] = entity;
         internal void AddDisclosureChange(in ReplicationDisclosureChange change) => _disclosureChanges[_disclosureChangeCount++] = change;
+
+        /// <summary>
+        /// Capacity-checked write used by wire codecs. Returns false without mutating when full.
+        /// </summary>
+        internal bool TryAddUpsert(in ReplicatedEntityState state)
+        {
+            if (_upsertCount >= _upserts.Length)
+            {
+                return false;
+            }
+
+            _upserts[_upsertCount++] = state;
+            return true;
+        }
+
+        internal bool TryAddRemoval(NetworkEntityHandle entity)
+        {
+            if (_removalCount >= _removals.Length)
+            {
+                return false;
+            }
+
+            _removals[_removalCount++] = entity;
+            return true;
+        }
+
+        internal bool TryAddDisclosureChange(in ReplicationDisclosureChange change)
+        {
+            if (_disclosureChangeCount >= _disclosureChanges.Length)
+            {
+                return false;
+            }
+
+            _disclosureChanges[_disclosureChangeCount++] = change;
+            return true;
+        }
     }
 }
