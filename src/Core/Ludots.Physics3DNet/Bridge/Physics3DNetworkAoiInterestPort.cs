@@ -1,7 +1,6 @@
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Layers;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
@@ -13,26 +12,26 @@ public enum Physics3DNetworkAoiFailure : byte
 {
     None = 0,
     UnknownSeat = 1,
-    ViewerPoseUnavailable = 2,
-    InvalidNetworkHandle = 3,
-    EntityTableMismatch = 4,
-    DuplicateNetworkSlot = 5,
-    DestinationCapacityExceeded = 6,
-    PerSeatCapacityExceeded = 7,
-    KnowledgeCapacityExceeded = 8,
+    ViewerBodyUnavailable = 2,
+    OverlapScratchCapacityExceeded = 3,
+    InvalidNetworkHandle = 4,
+    EntityTableMismatch = 5,
+    DuplicateNetworkSlot = 6,
+    DestinationCapacityExceeded = 7,
+    PerSeatCapacityExceeded = 8,
+    KnowledgeCapacityExceeded = 9,
 }
 
 public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationInterestPort, IDisposable
 {
-    private static readonly QueryDescription ReplicatedBodyQuery = new QueryDescription()
-        .WithAll<Physics3DNetworkReplicatedBody, Physics3DPoseCm>();
-
     private readonly World _world;
+    private readonly IPhysics3DWorld _physics;
     private readonly NetworkEntityTable _networkEntities;
     private readonly Physics3DNetworkPlayerLifecycle _players;
     private readonly KnowledgeProjectionStore _knowledge;
-    private readonly float _radiusSquared;
+    private readonly float _radiusCm;
     private readonly int _perSeatCapacity;
+    private readonly Physics3DOverlapHit[] _overlapHits;
     private readonly int[] _selectionStamps;
     private readonly uint[] _selectionGenerations;
     private readonly Entity[] _selectionEntities;
@@ -48,21 +47,7 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
 
     public Physics3DNetworkAoiInterestPort(
         World world,
-        NetworkEntityTable networkEntities,
-        Physics3DNetworkPlayerLifecycle players,
-        Physics3DNetworkAoiConfig config)
-        : this(
-            world,
-            networkEntities,
-            players,
-            RequirePlayerKnowledge(players),
-            ResolveCompatibilityPerSeatCapacity(networkEntities, players),
-            config)
-    {
-    }
-
-    public Physics3DNetworkAoiInterestPort(
-        World world,
+        IPhysics3DWorld physics,
         NetworkEntityTable networkEntities,
         Physics3DNetworkPlayerLifecycle players,
         KnowledgeProjectionStore knowledge,
@@ -70,6 +55,7 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
         Physics3DNetworkAoiConfig config)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
+        _physics = physics ?? throw new ArgumentNullException(nameof(physics));
         _networkEntities = networkEntities ?? throw new ArgumentNullException(nameof(networkEntities));
         _players = players ?? throw new ArgumentNullException(nameof(players));
         _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
@@ -103,8 +89,9 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
                 nameof(knowledge));
         }
 
-        _radiusSquared = config.RadiusCm * config.RadiusCm;
+        _radiusCm = config.RadiusCm;
         _perSeatCapacity = replicationEntityCapacityPerSeat;
+        _overlapHits = new Physics3DOverlapHit[config.GlobalEntityCapacity];
         _selectionStamps = new int[config.GlobalEntityCapacity];
         _selectionGenerations = new uint[config.GlobalEntityCapacity];
         _selectionEntities = new Entity[config.GlobalEntityCapacity];
@@ -120,6 +107,8 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
 
     public Physics3DNetworkAoiFailure LastFailure { get; private set; }
     public int PerSeatCapacity => _perSeatCapacity;
+    public int OverlapScratchCapacity => _overlapHits.Length;
+    public int LastOverlapHitCount { get; private set; }
 
     public bool TryCopyInterest(
         in SessionSeatBinding seat,
@@ -128,6 +117,7 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         LastFailure = Physics3DNetworkAoiFailure.None;
+        LastOverlapHitCount = 0;
         count = 0;
         if (!_players.TryGetExistingController(in seat, out Entity viewer))
         {
@@ -135,11 +125,13 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
             return false;
         }
 
-        if (!_world.TryGet(viewer, out Physics3DPoseCm viewerPose))
+        if (!_players.TryGetBody(in seat, out Physics3DBodyId viewerBody))
         {
-            LastFailure = Physics3DNetworkAoiFailure.ViewerPoseUnavailable;
+            LastFailure = Physics3DNetworkAoiFailure.ViewerBodyUnavailable;
             return false;
         }
+
+        Physics3DBodyState viewerState = _physics.GetBodyState(viewerBody);
 
         int seatSlot = seat.Slot;
         if (_trackedSeatGenerations[seatSlot] != 0 &&
@@ -152,45 +144,64 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
 
         int stamp = NextQueryStamp();
         int selectedCount = 0;
-        foreach (ref Chunk chunk in _world.Query(in ReplicatedBodyQuery))
+        int overlapCount;
+        try
         {
-            chunk.GetSpan<Physics3DNetworkReplicatedBody, Physics3DPoseCm>(
-                out Span<Physics3DNetworkReplicatedBody> replicated,
-                out Span<Physics3DPoseCm> poses);
-            ref Entity first = ref chunk.Entity(0);
-            foreach (int index in chunk)
+            var filter = new Physics3DQueryFilter(
+                LayerMask.All,
+                ignoredBody: default,
+                includeSensors: true);
+            overlapCount = _physics.OverlapSphere(
+                viewerState.PositionCm,
+                _radiusCm,
+                in filter,
+                _overlapHits);
+        }
+        catch (Physics3DCapacityExceededException)
+        {
+            LastFailure = Physics3DNetworkAoiFailure.OverlapScratchCapacityExceeded;
+            return false;
+        }
+
+        LastOverlapHitCount = overlapCount;
+        for (int index = 0; index < overlapCount; index++)
+        {
+            ref readonly Physics3DOverlapHit hit = ref _overlapHits[index];
+            Entity entity = hit.Entity;
+            if (entity == Entity.Null)
             {
-                if (Vector3.DistanceSquared(viewerPose.Position, poses[index].Position) > _radiusSquared)
-                {
-                    continue;
-                }
-
-                NetworkEntityHandle handle = replicated[index].Handle;
-                if (!handle.IsValid || (uint)handle.Slot >= (uint)_selectionStamps.Length)
-                {
-                    LastFailure = Physics3DNetworkAoiFailure.InvalidNetworkHandle;
-                    return false;
-                }
-
-                Entity entity = Unsafe.Add(ref first, index);
-                if (!_networkEntities.TryResolve(handle, out Entity mapped) || mapped != entity)
-                {
-                    LastFailure = Physics3DNetworkAoiFailure.EntityTableMismatch;
-                    return false;
-                }
-
-                int slot = handle.Slot;
-                if (_selectionStamps[slot] == stamp)
-                {
-                    LastFailure = Physics3DNetworkAoiFailure.DuplicateNetworkSlot;
-                    return false;
-                }
-
-                _selectionStamps[slot] = stamp;
-                _selectionGenerations[slot] = handle.Generation;
-                _selectionEntities[slot] = entity;
-                _selectedSlots[selectedCount++] = slot;
+                continue;
             }
+
+            if (!_world.TryGet(entity, out Physics3DNetworkReplicatedBody replicated))
+            {
+                continue;
+            }
+
+            NetworkEntityHandle handle = replicated.Handle;
+            if (!handle.IsValid || (uint)handle.Slot >= (uint)_selectionStamps.Length)
+            {
+                LastFailure = Physics3DNetworkAoiFailure.InvalidNetworkHandle;
+                return false;
+            }
+
+            if (!_networkEntities.TryResolve(handle, out Entity mapped) || mapped != entity)
+            {
+                LastFailure = Physics3DNetworkAoiFailure.EntityTableMismatch;
+                return false;
+            }
+
+            int slot = handle.Slot;
+            if (_selectionStamps[slot] == stamp)
+            {
+                LastFailure = Physics3DNetworkAoiFailure.DuplicateNetworkSlot;
+                return false;
+            }
+
+            _selectionStamps[slot] = stamp;
+            _selectionGenerations[slot] = handle.Generation;
+            _selectionEntities[slot] = entity;
+            _selectedSlots[selectedCount++] = slot;
         }
 
         count = selectedCount;
@@ -240,6 +251,12 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
         int seatSlot = seat.Slot;
         int laneStart = checked(seatSlot * _perSeatCapacity);
         int oldCount = _trackedCounts[seatSlot];
+        if (oldCount == currentHandles.Length &&
+            _trackedHandles.AsSpan(laneStart, oldCount).SequenceEqual(currentHandles))
+        {
+            return true;
+        }
+
         int oldIndex = 0;
         int currentIndex = 0;
         int exitCount = 0;
@@ -332,11 +349,28 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
         }
 
         KnowledgeDisclosureRecord disclosure = LiveDisclosure(viewer);
+        oldIndex = 0;
         for (int index = 0; index < currentHandles.Length; index++)
         {
             NetworkEntityHandle handle = currentHandles[index];
             Entity target = EntityFor(handle);
-            _knowledge.Upsert(viewer, target, in disclosure);
+            while (oldIndex < oldCount &&
+                   Compare(_trackedHandles[laneStart + oldIndex], handle) < 0)
+            {
+                oldIndex++;
+            }
+
+            bool retained = oldIndex < oldCount &&
+                _trackedHandles[laneStart + oldIndex] == handle;
+            if (!retained)
+            {
+                _knowledge.Upsert(viewer, target, in disclosure);
+            }
+            else
+            {
+                oldIndex++;
+            }
+
             _trackedHandles[laneStart + index] = handle;
             _trackedEntities[laneStart + index] = target;
         }
@@ -420,19 +454,4 @@ public sealed class Physics3DNetworkAoiInterestPort : IAuthoritativeReplicationI
             : left.Generation.CompareTo(right.Generation);
     }
 
-    private static KnowledgeProjectionStore RequirePlayerKnowledge(Physics3DNetworkPlayerLifecycle players)
-    {
-        ArgumentNullException.ThrowIfNull(players);
-        return players.Knowledge;
-    }
-
-    private static int ResolveCompatibilityPerSeatCapacity(
-        NetworkEntityTable networkEntities,
-        Physics3DNetworkPlayerLifecycle players)
-    {
-        ArgumentNullException.ThrowIfNull(networkEntities);
-        ArgumentNullException.ThrowIfNull(players);
-        int reservedPerSeat = players.Knowledge.RecordCapacity / players.SeatCapacity;
-        return Math.Min(networkEntities.Capacity, Math.Max(1, reservedPerSeat));
-    }
 }
