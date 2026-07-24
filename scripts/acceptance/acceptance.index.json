@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 23,
+    "runnable": 24,
     "testOnly": 0,
-    "total": 23
+    "total": 24
   },
   "runnable": [
     {
@@ -82,6 +82,14 @@
       "testFilter": "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests",
       "artifactDir": "artifacts/showcases/capability-standard-physics2d-stress",
       "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_physics3d_showcase",
+      "preset": "capability_standard_physics3d_showcase_raylib",
+      "binding": "capability_standard_physics3d_showcase",
+      "testFilter": "CapabilityStandardPhysics3DShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/physics3d-showcase",
+      "hasScreenshotEvidence": true
     },
     {
       "id": "capability_standard_time_flow_showcase",

@@ -234,6 +234,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_physics3d_showcase_raylib",
+      "name": "Capability Standard Physics3D Playground Raylib",
+      "selectors": [
+        "$capability_standard_physics3d_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_time_flow_showcase_raylib",
       "name": "Capability Standard TimeFlow Raylib",
       "selectors": [
