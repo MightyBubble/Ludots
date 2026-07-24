@@ -561,8 +561,11 @@ public sealed class Physics3DNetVerticalSliceTests
         Assert.That(lifecycle.TryResolveController(in second, out _), Is.True);
         var interest = new Physics3DNetworkAoiInterestPort(
             ecs,
+            physics,
             entities,
             lifecycle,
+            knowledge,
+            replicationEntityCapacityPerSeat: 2,
             new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
 
         var tooSmall = new NetworkEntityHandle[1];
@@ -929,7 +932,12 @@ public sealed class Physics3DNetVerticalSliceTests
     }
 
     private static ReplicatedEntityState State(NetworkEntityHandle handle, uint revision, int value) =>
-        new(handle, ReplicationSchemaId, revision, new ReplicationStateVector(value, 0, 0, 0));
+        new(
+            handle,
+            ReplicationSchemaId,
+            revision,
+            new ReplicationStateVector(value, 0, 0, 0),
+            ReplicationControlOwnership.Unowned);
 
     private static ReplicationDisclosureInput Visible(NetworkEntityHandle handle) =>
         new(handle, KnowledgePresence.LiveVisible);

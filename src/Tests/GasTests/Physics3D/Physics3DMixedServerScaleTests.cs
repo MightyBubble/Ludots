@@ -1318,11 +1318,17 @@ public sealed class Physics3DMixedServerScaleTests
                         $"Failed to encode replication state for player {player}.");
                 }
 
+                SessionSeatBinding ownerSeat = _seats[player];
+                var ownership = new ReplicationControlOwnership(
+                    ownerSeat.Slot,
+                    ownerSeat.Generation,
+                    Physics3DNetworkControlKinds.PlayerBody);
                 _interestStates[interestIndex] = new ReplicatedEntityState(
                     handle,
                     ReplicationSchemaId,
                     Physics3DReplicationStateCodec.ComputeRevision(in values, disclosureRevision: 1),
-                    in values);
+                    in values,
+                    in ownership);
                 _interestDisclosures[interestIndex] = new ReplicationDisclosureInput(
                     handle,
                     KnowledgePresence.LiveVisible);

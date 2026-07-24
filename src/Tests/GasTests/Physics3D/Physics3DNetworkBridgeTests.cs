@@ -298,12 +298,24 @@ public sealed class Physics3DNetworkBridgeTests
         using World serverEcs = World.Create();
         using var serverPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 2);
-        var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: 2);
         using var lifecycle = CreateLifecycle(serverEcs, serverPhysics, entities, knowledge, seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out Entity serverEntity), Is.True);
         MoveEntity(serverEcs, serverPhysics, serverEntity, new Vector3(123.37f, 45.62f, -89.11f));
         Assert.That(lifecycle.TryGetNetworkHandle(in seat, out NetworkEntityHandle handle), Is.True);
+        using var interestPort = new Physics3DNetworkAoiInterestPort(
+            serverEcs,
+            serverPhysics,
+            entities,
+            lifecycle,
+            knowledge,
+            replicationEntityCapacityPerSeat: 2,
+            new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
+        Span<NetworkEntityHandle> interest = stackalloc NetworkEntityHandle[2];
+        Assert.That(interestPort.TryCopyInterest(in seat, interest, out int interestCount), Is.True);
+        Assert.That(interestCount, Is.EqualTo(1));
+        Assert.That(interest[0], Is.EqualTo(handle));
 
         var projectors = CreateProjectors(serverPhysics);
         var factory = new Physics3DAuthoritativeReplicationSeatRuntimeFactory(
@@ -316,14 +328,13 @@ public sealed class Physics3DNetworkBridgeTests
             baselineCapacity: 2,
             disclosureChangeLogCapacity: 4);
         Assert.That(factory.TryAcquire(in seat, serverEntity, out AuthoritativeReplicationSeatRuntime? runtime), Is.True);
-        Span<NetworkEntityHandle> interest = stackalloc NetworkEntityHandle[1] { handle };
         Assert.That(
             runtime!.Bridge.BuildFull(
                 runtime.Channel,
                 SessionEpoch,
                 tick: 1,
                 snapshotId: 1,
-                interest,
+                interest[..interestCount],
                 runtime.Projection,
                 runtime.Packet),
             Is.EqualTo(ReplicationBridgeResult.Success));
@@ -564,15 +575,18 @@ public sealed class Physics3DNetworkBridgeTests
 
         using World world = World.Create();
         var applier = new Physics3DHeadlessReplicationApplier(SchemaId, quantization);
+        SessionSeatBinding clientSeat = Seat(slot: 0, generation: 1);
+        ReplicationControlOwnership ownership = ReplicationControlOwnership.Unowned;
         var firstHandle = new NetworkEntityHandle(slot: 0, generation: 1);
-        var first = new ReplicatedEntityState(firstHandle, SchemaId, revision: 1, in values);
+        var first = new ReplicatedEntityState(firstHandle, SchemaId, revision: 1, in values, in ownership);
         var createContext = new ReplicationApplyContext(
+            in clientSeat,
             SessionEpoch,
             committedTick: 1,
             snapshotId: 1,
             ReplicationPacketKind.Full);
         var identity = new ReplicationMirrorIdentity(firstHandle);
-        var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values);
+        var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values, in ownership);
 
         Assert.That(applier.CanCreate(world, in first, in createContext), Is.True);
         Entity mirrorEntity = applier.Create(world, in identity, in mirrorState, in createContext);
@@ -591,19 +605,22 @@ public sealed class Physics3DNetworkBridgeTests
             values.Value1,
             values.Value2,
             values.Value3 | long.MinValue);
-        var invalid = new ReplicatedEntityState(firstHandle, SchemaId, revision: 2, in polluted);
-        var wrongSchema = new ReplicatedEntityState(firstHandle, SchemaId + 1, revision: 2, in values);
+        var invalid = new ReplicatedEntityState(firstHandle, SchemaId, revision: 2, in polluted, in ownership);
+        var wrongSchema = new ReplicatedEntityState(firstHandle, SchemaId + 1, revision: 2, in values, in ownership);
         var staleGeneration = new ReplicatedEntityState(
             new NetworkEntityHandle(slot: 0, generation: 2),
             SchemaId,
             revision: 2,
-            in values);
+            in values,
+            in ownership);
         var updateContext = new ReplicationApplyContext(
+            in clientSeat,
             SessionEpoch,
             committedTick: 2,
             snapshotId: 2,
             ReplicationPacketKind.Delta);
         var wrongSession = new ReplicationApplyContext(
+            in clientSeat,
             SessionEpoch + 1,
             committedTick: 2,
             snapshotId: 2,
@@ -636,7 +653,10 @@ public sealed class Physics3DNetworkBridgeTests
         var quantization = new Physics3DReplicationQuantizationConfig();
         using World world = World.Create();
         var applier = new Physics3DHeadlessReplicationApplier(SchemaId, quantization);
+        SessionSeatBinding clientSeat = Seat(slot: 0, generation: 1);
+        ReplicationControlOwnership ownership = ReplicationControlOwnership.Unowned;
         var context = new ReplicationApplyContext(
+            in clientSeat,
             SessionEpoch,
             committedTick: 1,
             snapshotId: 1,
@@ -660,10 +680,10 @@ public sealed class Physics3DNetworkBridgeTests
                     out ReplicationStateVector values),
                 Is.True);
             var kindHandle = new NetworkEntityHandle(slot: i, generation: 1);
-            var state = new ReplicatedEntityState(kindHandle, SchemaId, revision: 1, in values);
+            var state = new ReplicatedEntityState(kindHandle, SchemaId, revision: 1, in values, in ownership);
             Assert.That(applier.CanCreate(world, in state, in context), Is.True);
             var identity = new ReplicationMirrorIdentity(kindHandle);
-            var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values);
+            var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values, in ownership);
             mirrors[i] = applier.Create(world, in identity, in mirrorState, in context);
             Physics3DHeadlessClientMirror mirror = world.Get<Physics3DHeadlessClientMirror>(mirrors[i]);
             Assert.Multiple(() =>
@@ -682,8 +702,14 @@ public sealed class Physics3DNetworkBridgeTests
                 out ReplicationStateVector staticValues),
             Is.True);
         var dynamicHandle = new NetworkEntityHandle(slot: 2, generation: 1);
-        var kindChange = new ReplicatedEntityState(dynamicHandle, SchemaId, revision: 2, in staticValues);
+        var kindChange = new ReplicatedEntityState(
+            dynamicHandle,
+            SchemaId,
+            revision: 2,
+            in staticValues,
+            in ownership);
         var deltaContext = new ReplicationApplyContext(
+            in clientSeat,
             SessionEpoch,
             committedTick: 2,
             snapshotId: 2,
@@ -703,7 +729,12 @@ public sealed class Physics3DNetworkBridgeTests
             staticValues.Value1,
             staticValues.Value2,
             staticValues.Value3 | long.MinValue);
-        var invalidKind = new ReplicatedEntityState(dynamicHandle, SchemaId, revision: 3, in polluted);
+        var invalidKind = new ReplicatedEntityState(
+            dynamicHandle,
+            SchemaId,
+            revision: 3,
+            in polluted,
+            in ownership);
         Assert.That(applier.CanApply(world, mirrors[2], in invalidKind, in deltaContext), Is.False);
         Assert.That(applier.CanCreate(world, in invalidKind, in deltaContext), Is.False);
 
@@ -733,10 +764,21 @@ public sealed class Physics3DNetworkBridgeTests
         using World ecs = World.Create();
         using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 2);
-        var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: 2);
         using var lifecycle = CreateLifecycle(ecs, physics, entities, knowledge, seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out Entity player), Is.True);
+        using var interestPort = new Physics3DNetworkAoiInterestPort(
+            ecs,
+            physics,
+            entities,
+            lifecycle,
+            knowledge,
+            replicationEntityCapacityPerSeat: 2,
+            new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
+        Span<NetworkEntityHandle> discovered = stackalloc NetworkEntityHandle[2];
+        Assert.That(interestPort.TryCopyInterest(in seat, discovered, out int discoveredCount), Is.True);
+        Assert.That(discoveredCount, Is.EqualTo(1));
         var projectors = CreateProjectors(physics);
         var bridge = new AuthoritativeWorldReplicationBridge(
             ecs,

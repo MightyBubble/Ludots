@@ -908,7 +908,7 @@ public sealed class NetworkRuntimeEndToEndTests
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 8, 2 });
         var credentials = new MemoryCredentials();
         using World world = World.Create();
-        var factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        var factory = new ClientBridgeFactory(world, globalEntityCapacity: 2);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
