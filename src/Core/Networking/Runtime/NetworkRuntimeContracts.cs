@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Networking.FixedInput;
 
 namespace Ludots.Core.Networking.Runtime
 {
@@ -31,6 +32,14 @@ namespace Ludots.Core.Networking.Runtime
         void AfterAuthoritativeCommit(uint committedTick);
 
         void PumpReplicatedClient(float frameDeltaTime);
+    }
+
+    /// <summary>
+    /// Single composite client runtime port: transport/replication lifecycle plus fixed-input send.
+    /// One runtime object must expose both contracts without duplicated outbox or transport state.
+    /// </summary>
+    public interface IReplicatedClientNetworkRuntimePort : INetworkRuntimePort, IReplicatedClientFixedInputPort
+    {
     }
 
     internal static class NetworkTransportPortLifetime

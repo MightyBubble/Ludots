@@ -1,5 +1,9 @@
+using System;
 using Ludots.Adapter.LiteNetLib;
+using Ludots.Core.Networking.FixedInput;
+using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using NUnit.Framework;
 
 namespace Ludots.Tests.NetworkingAdapter;
@@ -40,7 +44,7 @@ public sealed class DeferredNetworkRuntimePortTests
     [Test]
     public void FactoryRoleMismatch_DisposesRejectedRuntimeAndFailsExplicitly()
     {
-        var inner = new TrackingRuntime(NetworkProcessRole.ReplicatedClient);
+        var inner = new TrackingClientRuntime();
         var deferred = new DeferredNetworkRuntimePort(
             NetworkProcessRole.AuthoritativeServer,
             () => inner);
@@ -55,12 +59,11 @@ public sealed class DeferredNetworkRuntimePortTests
     public void DisposeBeforeFirstUse_DoesNotCreateRuntime()
     {
         int factoryCalls = 0;
-        var deferred = new DeferredNetworkRuntimePort(
-            NetworkProcessRole.ReplicatedClient,
+        var deferred = new DeferredReplicatedClientNetworkRuntimePort(
             () =>
             {
                 factoryCalls++;
-                return new TrackingRuntime(NetworkProcessRole.ReplicatedClient);
+                return new TrackingClientRuntime();
             });
 
         deferred.Dispose();
@@ -70,6 +73,54 @@ public sealed class DeferredNetworkRuntimePortTests
             Assert.That(factoryCalls, Is.Zero);
             Assert.That(deferred.PumpTransport, Throws.InstanceOf<ObjectDisposedException>());
         });
+    }
+
+    [Test]
+    public void ReplicatedClientDeferred_ExposesBothInterfacesThroughOneInnerRuntime()
+    {
+        var inner = new TrackingClientRuntime();
+        int factoryCalls = 0;
+        var deferred = new DeferredReplicatedClientNetworkRuntimePort(
+            () =>
+            {
+                factoryCalls++;
+                return inner;
+            });
+
+        INetworkRuntimePort asTransport = deferred;
+        IReplicatedClientFixedInputPort asFixedInput = deferred;
+        IReplicatedClientNetworkRuntimePort asComposite = deferred;
+
+        asTransport.PumpTransport();
+        asTransport.PumpReplicatedClient(1f / 30f);
+        FixedInputOutboxEnqueueStatus enqueued = asFixedInput.TrySubmitFixedInput(1, new byte[12]);
+        bool pulsed = asFixedInput.TryPulseFixedInputSend();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(factoryCalls, Is.EqualTo(1));
+            Assert.That(ReferenceEquals(asTransport, asFixedInput), Is.True);
+            Assert.That(ReferenceEquals(asComposite, deferred), Is.True);
+            Assert.That(enqueued, Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+            Assert.That(pulsed, Is.True);
+            Assert.That(inner.PumpCount, Is.EqualTo(1));
+            Assert.That(inner.ClientPumpCount, Is.EqualTo(1));
+            Assert.That(inner.SubmitCount, Is.EqualTo(1));
+            Assert.That(inner.PulseCount, Is.EqualTo(1));
+            Assert.That(asFixedInput.LastEnqueuedFixedInputTargetTick, Is.EqualTo(1u));
+        });
+    }
+
+    [Test]
+    public void AuthoritativeDeferred_DoesNotAdvertiseReplicatedClientContract()
+    {
+        var inner = new TrackingRuntime(NetworkProcessRole.AuthoritativeServer);
+        var deferred = new DeferredNetworkRuntimePort(
+            NetworkProcessRole.AuthoritativeServer,
+            () => inner);
+
+        deferred.PumpTransport();
+        Assert.That(deferred, Is.Not.InstanceOf<IReplicatedClientNetworkRuntimePort>());
     }
 
     private sealed class TrackingRuntime : INetworkRuntimePort
@@ -93,6 +144,50 @@ public sealed class DeferredNetworkRuntimePortTests
 
         public void PumpReplicatedClient(float frameDeltaTime)
         {
+        }
+
+        public void Dispose() => DisposeCount++;
+    }
+
+    private sealed class TrackingClientRuntime : IReplicatedClientNetworkRuntimePort
+    {
+        public NetworkProcessRole Role => NetworkProcessRole.ReplicatedClient;
+        public ReplicatedClientConnectionState State => ReplicatedClientConnectionState.Connected;
+        public SessionEpoch SessionEpoch { get; } = new(1);
+        public uint FixedInputAcknowledgedCommittedTick { get; private set; }
+        public ulong FixedInputAcknowledgementObservationVersion { get; private set; }
+        public bool HasEnqueuedFixedInputTargetTick { get; private set; }
+        public uint LastEnqueuedFixedInputTargetTick { get; private set; }
+        public int PumpCount { get; private set; }
+        public int ClientPumpCount { get; private set; }
+        public int SubmitCount { get; private set; }
+        public int PulseCount { get; private set; }
+        public int DisposeCount { get; private set; }
+
+        public void PumpTransport() => PumpCount++;
+
+        public void BeforeAuthoritativeTick(uint executingTick)
+        {
+        }
+
+        public void AfterAuthoritativeCommit(uint committedTick)
+        {
+        }
+
+        public void PumpReplicatedClient(float frameDeltaTime) => ClientPumpCount++;
+
+        public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload)
+        {
+            SubmitCount++;
+            HasEnqueuedFixedInputTargetTick = true;
+            LastEnqueuedFixedInputTargetTick = targetTick;
+            return FixedInputOutboxEnqueueStatus.Enqueued;
+        }
+
+        public bool TryPulseFixedInputSend()
+        {
+            PulseCount++;
+            return true;
         }
 
         public void Dispose() => DisposeCount++;

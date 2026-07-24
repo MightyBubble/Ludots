@@ -56,6 +56,19 @@ namespace Ludots.Core.Networking.Replication
             IsFrozen = true;
         }
 
+        public bool HasAnyHandler()
+        {
+            for (int schemaId = 1; schemaId < _handlers.Length; schemaId++)
+            {
+                if (_handlers[schemaId] != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryGet(int schemaId, out THandler handler)
         {
             if (!IsFrozen ||

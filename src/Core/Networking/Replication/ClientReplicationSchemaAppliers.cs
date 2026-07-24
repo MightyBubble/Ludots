@@ -94,6 +94,8 @@ namespace Ludots.Core.Networking.Replication
             _registry.Freeze();
         }
 
+        public bool HasAnyRegistered() => _registry.HasAnyHandler();
+
         public bool TryGet(int schemaId, out IClientReplicationSchemaApplier applier)
         {
             return _registry.TryGet(schemaId, out applier);
