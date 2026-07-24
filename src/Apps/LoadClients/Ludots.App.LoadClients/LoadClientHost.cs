@@ -419,7 +419,8 @@ public sealed class LoadClientHost
                     {
                         allReady = true;
                         readyAtSeconds = elapsed;
-                        runDeadlineSeconds = readyAtSeconds + _config.DurationSeconds;
+                        // Warm-up begins at readyAt; measurement window is DurationSeconds after warm-up.
+                        runDeadlineSeconds = readyAtSeconds + _config.WarmUpSeconds + _config.DurationSeconds;
                         if (!measurementStarted && _config.WarmUpSeconds <= 0d)
                         {
                             for (int baselineIndex = 0; baselineIndex < constructed; baselineIndex++)
@@ -453,7 +454,7 @@ public sealed class LoadClientHost
                     }
                 }
 
-                // Duration starts only after every client is ready (readyAt).
+                // Completion is readyAt + WarmUpSeconds + DurationSeconds.
                 if (allReady && elapsed >= runDeadlineSeconds)
                 {
                     break;
