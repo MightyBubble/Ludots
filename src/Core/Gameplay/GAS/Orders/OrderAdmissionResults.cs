@@ -549,10 +549,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new System.InvalidOperationException("ORDER.ADMISSION.ERR.OutstandingReservation");
             }
 
-            OrderAdmissionOutcome[] retired = _currentItems;
-            _currentItems = _pendingItems;
-            _pendingItems = retired;
+            OrderAdmissionOutcome[] retiredItems = _currentItems;
+            int retiredCount = _currentCount;
             OrderAdmissionOutcome[] retiredRejections = _currentRejections;
+            int retiredRejectionCount = _currentRejectionCount;
+
+            _currentItems = _pendingItems;
+            _pendingItems = retiredItems;
             _currentRejections = _pendingRejections;
             _pendingRejections = retiredRejections;
             _currentCount = _pendingCount;
@@ -562,6 +565,79 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _logicStepActive = true;
             _entityIntakeOpen = true;
             Generation++;
+
+            // Accepted GlobalIntake must remain queryable until EntityIntake consumes the order.
+            // Orders enqueued during an open intake window after OrderBufferSystem ran would otherwise
+            // lose GlobalIntake at the next BeginLogicStep while still sitting in the queue.
+            CarryForwardUnpairedAcceptedGlobalIntake(retiredItems, retiredCount);
+            CarryForwardUnpairedAcceptedGlobalIntake(retiredRejections, retiredRejectionCount);
+        }
+
+        private void CarryForwardUnpairedAcceptedGlobalIntake(OrderAdmissionOutcome[] retired, int retiredCount)
+        {
+            for (int i = 0; i < retiredCount; i++)
+            {
+                ref readonly OrderAdmissionOutcome outcome = ref retired[i];
+                if (outcome.Stage != OrderAdmissionStage.GlobalIntake ||
+                    !OrderSubmitResultSemantics.IsAccepted(outcome.Result))
+                {
+                    continue;
+                }
+
+                if (HasStage(outcome.OrderId, OrderAdmissionStage.EntityIntake))
+                {
+                    continue;
+                }
+
+                if (_currentCount >= _currentItems.Length)
+                {
+                    OverflowCount++;
+                    EnterTerminalFault(OrderAdmissionStage.GlobalIntake);
+                }
+
+                _currentItems[_currentCount++] = outcome;
+                if (Count > HighWatermark)
+                {
+                    HighWatermark = Count;
+                }
+            }
+        }
+
+        private bool HasStage(int orderId, OrderAdmissionStage stage)
+        {
+            for (int i = _currentCount - 1; i >= 0; i--)
+            {
+                if (_currentItems[i].OrderId == orderId && _currentItems[i].Stage == stage)
+                {
+                    return true;
+                }
+            }
+
+            for (int i = _currentRejectionCount - 1; i >= 0; i--)
+            {
+                if (_currentRejections[i].OrderId == orderId && _currentRejections[i].Stage == stage)
+                {
+                    return true;
+                }
+            }
+
+            for (int i = _pendingCount - 1; i >= 0; i--)
+            {
+                if (_pendingItems[i].OrderId == orderId && _pendingItems[i].Stage == stage)
+                {
+                    return true;
+                }
+            }
+
+            for (int i = _pendingRejectionCount - 1; i >= 0; i--)
+            {
+                if (_pendingRejections[i].OrderId == orderId && _pendingRejections[i].Stage == stage)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void EndEntityIntake()

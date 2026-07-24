@@ -146,7 +146,7 @@ namespace Ludots.Tests.GAS
             var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = CreateMoveOrder(actor, orderTypeId: 77, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
 
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(pathService.Requests.Count, Is.EqualTo(1));
             Assert.That(pathService.Requests[0].AgentTypeId, Is.EqualTo(RoadNetworkShowcaseIds.PathPlannerAgentTypeId));
             Assert.That(pathService.Requests[0].Start.Xcm, Is.EqualTo(0));
@@ -166,6 +166,102 @@ namespace Ludots.Tests.GAS
             Assert.That(finalPoint.X, Is.EqualTo(450f));
             Assert.That(finalPoint.Z, Is.EqualTo(150f));
             Assert.That(pathStore.IsAlive(pathService.LastHandle), Is.False, "Expanded road moves must release temporary path handles after copying.");
+        }
+
+        [Test]
+        public void RoadMoveOrderExpander_TrySubmit_PlanningFailure_ReturnsRejectedValidation_NotQueueFull()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue(capacity: 16, new OrderAdmissionResultBuffer(16, 16));
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId: 77);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+            var order = CreateMoveOrder(actor, orderTypeId: 77, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.RejectedValidation));
+            Assert.That(orderQueue.Count, Is.EqualTo(0));
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Contain("Road command rejected"));
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Not.Contain("queue is full"));
+        }
+
+        [Test]
+        public void RoadMoveOrderExpander_TrySubmit_QueueFull_ReturnsRejectedQueueFull()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue(capacity: 1, new OrderAdmissionResultBuffer(16, 16));
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore, new[]
+            {
+                (0, 0),
+                (200, 0),
+                (450, 150),
+            });
+            var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+
+            var firstOrder = CreateMoveOrder(actor, orderTypeId: 77, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            var secondOrder = CreateMoveOrder(actor, orderTypeId: 77, xcm: 500, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in firstOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(expander.TrySubmit(in secondOrder), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(orderQueue.Count, Is.EqualTo(1));
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Contain("order queue is full"));
+        }
+
+        [Test]
+        public void RoadMoveOrderExpander_TrySubmitSharedBatch_MidPlanningFailure_ReleasesEarlierRoutePayloads()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue(capacity: 16, new OrderAdmissionResultBuffer(16, 16));
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: OrderSpatial.MaxPoints);
+            var points = new (int xcm, int ycm)[OrderSpatial.MaxInlinePoints + 1];
+            for (int i = 0; i < points.Length; i++)
+            {
+                points[i] = (i * 100, 0);
+            }
+
+            var pathService = new FailAfterNSolvesPathService(pathStore, points, succeedCount: 1);
+            var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
+            Entity first = world.Create(
+                new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            Entity second = world.Create(
+                new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(50, 0));
+            var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+
+            for (int attempt = 0; attempt < OrderSpatialPayloadBuffer.SlotCapacity + 2; attempt++)
+            {
+                pathService.ResetSolveBudget();
+                Order[] batch =
+                {
+                    CreateMoveOrder(first, orderTypeId: 77, xcm: 450, ycm: 0, submitMode: OrderSubmitMode.Immediate),
+                    CreateMoveOrder(second, orderTypeId: 77, xcm: 500, ycm: 0, submitMode: OrderSubmitMode.Immediate),
+                };
+
+                Assert.That(
+                    expander.TrySubmitSharedBatch(batch),
+                    Is.EqualTo(OrderSubmitResult.RejectedValidation),
+                    $"Attempt {attempt} must keep typed validation rejection.");
+                Assert.That(orderQueue.Count, Is.EqualTo(0));
+            }
+
+            pathService.ResetSolveBudget(succeedCount: int.MaxValue);
+            var recoveryOrder = CreateMoveOrder(first, orderTypeId: 77, xcm: 450, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(
+                expander.TrySubmit(in recoveryOrder),
+                Is.EqualTo(OrderSubmitResult.Queued),
+                "Earlier rejected batch planning must release OrderSpatial payloads so later admissions do not exhaust capacity.");
+            Assert.That(orderQueue.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -517,7 +613,7 @@ namespace Ludots.Tests.GAS
             var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var followUpOrder = CreateMoveOrder(actor, orderTypeId: 55, xcm: 700, ycm: 100, submitMode: OrderSubmitMode.Queued);
 
-            Assert.That(expander.TrySubmit(in followUpOrder), Is.True);
+            Assert.That(expander.TrySubmit(in followUpOrder), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(pathService.Requests.Count, Is.EqualTo(1));
             Assert.That(pathService.Requests[0].Start.Xcm, Is.EqualTo(500));
             Assert.That(pathService.Requests[0].Start.Ycm, Is.EqualTo(0));
@@ -585,7 +681,7 @@ namespace Ludots.Tests.GAS
             var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = CreateMoveOrder(actor, orderTypeId: 77, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
 
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(loadedChunks.ActiveChunkKeys.Count, Is.GreaterThan(initialChunkCount));
             Assert.That(runtime.CurrentGraph.NodeCount, Is.GreaterThan(100));
             Assert.That(orderQueue.TryDequeue(out var routeOrder), Is.True);
@@ -969,7 +1065,7 @@ namespace Ludots.Tests.GAS
                 statusKey: string.Empty);
 
             var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
-            Assert.That(expander.TrySubmit(in order), Is.True, ReadRoadStatus(engine));
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued), ReadRoadStatus(engine));
             Assert.That(orderQueue.Count, Is.EqualTo(1), "Expanded road move should enter the engine order queue before the next fixed-step drain.");
 
             int furthestXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
@@ -1029,7 +1125,7 @@ namespace Ludots.Tests.GAS
 
             var startPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
             var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 0, ycm: 0, submitMode: OrderSubmitMode.Immediate);
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued));
 
             int minXcm = startPosition.X;
             int maxXcm = startPosition.X;
@@ -1126,7 +1222,7 @@ namespace Ludots.Tests.GAS
                 statusKey: string.Empty);
 
             var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 0, ycm: 0, submitMode: OrderSubmitMode.Immediate);
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued));
 
             var startPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
             int furthestXcm = startPosition.X;
@@ -1635,7 +1731,7 @@ namespace Ludots.Tests.GAS
         private static void SubmitRoadMove(RoadMoveOrderExpander expander, Entity actor, int moveToOrderTypeId, int xcm, int ycm)
         {
             var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm, ycm, OrderSubmitMode.Immediate);
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued));
         }
 
         private static void ActivateExecutionSliceRoute(World world, Entity actor, int roadMoveFollowOrderTypeId, params (int xcm, int ycm)[] points)
@@ -2575,6 +2671,46 @@ namespace Ludots.Tests.GAS
             public Vector2 Resolution { get; }
             public float Fov => 60f;
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+        }
+
+        private sealed class FailAfterNSolvesPathService : IPathService
+        {
+            private readonly RecordingPathService _inner;
+            private int _succeedCount;
+            private int _solveCount;
+
+            public FailAfterNSolvesPathService(PathStore store, (int xcm, int ycm)[] points, int succeedCount)
+            {
+                _inner = new RecordingPathService(store, points);
+                _succeedCount = succeedCount;
+            }
+
+            public void ResetSolveBudget(int? succeedCount = null)
+            {
+                if (succeedCount.HasValue)
+                {
+                    _succeedCount = succeedCount.Value;
+                }
+
+                _solveCount = 0;
+            }
+
+            public bool TrySolve(in PathRequest request, out PathResult result)
+            {
+                if (_solveCount >= _succeedCount)
+                {
+                    result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, 0, 0);
+                    return false;
+                }
+
+                _solveCount++;
+                return _inner.TrySolve(in request, out result);
+            }
+
+            public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
+            {
+                return _inner.TryCopyPath(in handle, xcmOut, ycmOut, out count);
+            }
         }
 
         private sealed class RecordingPathService : IPathService

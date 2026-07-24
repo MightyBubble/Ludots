@@ -283,7 +283,9 @@ namespace Ludots.Tests.GAS.Production
 
             var actions = source as IEntityCommandPanelActionSource
                 ?? throw new InvalidOperationException("UxPrototype command panel source should support activation.");
-            Assert.That(actions.ActivateSlot(target, 0, 2), Is.True);
+            Assert.That(
+                actions.ActivateSlot(target, 0, 2).State,
+                Is.EqualTo(InputOrderActivationState.Submitted));
 
             object state = GetPrototypeState(engine);
             object queueSnapshot = ReadObjectProperty(BuildSnapshot(state, engine), "SelectedQueue");

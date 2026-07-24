@@ -22,7 +22,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             _planning = new RoadRoutePlanningService(world, globals, agentTypeId, statusKey);
         }
 
-        public bool TrySubmit(in Order order)
+        public OrderSubmitResult TrySubmit(in Order order)
         {
             if (!TryBuildFollowOrder(in order, out Order routeOrder))
             {
@@ -31,20 +31,20 @@ namespace RoadNetworkShowcaseMod.Gameplay
                     Order passthrough = order;
                     bool enqueued = _incomingOrders.TryEnqueueAssigned(ref passthrough);
                     WriteStatus(enqueued ? "Passthrough order submitted." : "Passthrough order queue is full.");
-                    return enqueued;
+                    return enqueued ? OrderSubmitResult.Queued : OrderSubmitResult.RejectedQueueFull;
                 }
 
-                return false;
+                return OrderSubmitResult.RejectedValidation;
             }
 
             if (!_incomingOrders.TryEnqueueAssigned(ref routeOrder))
             {
                 OrderSpatialPayloadOps.Release(_planning.World, in routeOrder);
                 WriteStatus("Road command rejected: order queue is full.");
-                return false;
+                return OrderSubmitResult.RejectedQueueFull;
             }
 
-            return true;
+            return OrderSubmitResult.Queued;
         }
 
         public OrderSubmitResult TrySubmitSharedBatch(Span<Order> orders)
@@ -64,6 +64,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
                 if (ShouldExpandRoadMove(in orders[i], out _))
                 {
+                    ReleaseBuiltRoutePayloads(orders.Slice(0, i));
                     return OrderSubmitResult.RejectedValidation;
                 }
             }
@@ -72,10 +73,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 WriteStatus("Road command rejected: order queue is full.");
-                for (int i = 0; i < orders.Length; i++)
-                {
-                    OrderSpatialPayloadOps.Release(_planning.World, in orders[i]);
-                }
+                ReleaseBuiltRoutePayloads(orders);
             }
 
             return result;
@@ -89,6 +87,14 @@ namespace RoadNetworkShowcaseMod.Gameplay
         public bool ShouldExpandRoadMove(in Order order, out int moveToOrderTypeId)
         {
             return _planning.ShouldPlanRoadMove(in order, out moveToOrderTypeId);
+        }
+
+        private void ReleaseBuiltRoutePayloads(ReadOnlySpan<Order> orders)
+        {
+            for (int i = 0; i < orders.Length; i++)
+            {
+                OrderSpatialPayloadOps.Release(_planning.World, in orders[i]);
+            }
         }
 
         private void WriteStatus(string message)

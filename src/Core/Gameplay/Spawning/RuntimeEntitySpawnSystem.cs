@@ -122,13 +122,19 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
                 {
-                    if (!TryDrainTemplateBatch(peek.TemplateId, out int batchCount))
+                    if (!TryCopyTemplateBatch(peek.TemplateId, out int batchCount))
                     {
                         break;
                     }
 
                     if (batchCount > 1)
                     {
+                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                        if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                        {
+                            break;
+                        }
+
                         if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
                         {
                             throw new InvalidOperationException(
@@ -139,6 +145,12 @@ namespace Ludots.Core.Gameplay.Spawning
                         continue;
                     }
 
+                    PreflightSingleSpawnSuccessSignals(in peek);
+                    if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                    {
+                        break;
+                    }
+
                     var singleRequest = _batchRequests[0];
                     var spawnedSingle = SpawnTemplate(singleRequest);
                     PublishSpawnReceipt(in singleRequest, spawnedSingle);
@@ -146,6 +158,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
+                PreflightSingleSpawnSuccessSignals(in peek);
                 if (!_requests.TryDequeue(out var request))
                 {
                     break;
@@ -250,7 +263,7 @@ namespace Ludots.Core.Gameplay.Spawning
             return entity;
         }
 
-        private bool TryDrainTemplateBatch(string templateId, out int count)
+        private bool TryCopyTemplateBatch(string templateId, out int count)
         {
             count = 0;
             if (string.IsNullOrWhiteSpace(templateId))
@@ -259,20 +272,72 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             while (count < _batchRequests.Length &&
-                   _requests.TryPeek(out var next) &&
-                   next.Kind == RuntimeEntitySpawnKind.Template &&
-                   !HasComponentPatches(in next) &&
-                   string.Equals(next.TemplateId, templateId, StringComparison.Ordinal))
+                   _requests.TryPeekAt(count, out var next) &&
+                   IsTemplateBatchMember(templateId, in next))
             {
-                if (!_requests.TryDequeue(out _batchRequests[count]))
-                {
-                    break;
-                }
-
+                _batchRequests[count] = next;
                 count++;
             }
 
             return count > 0;
+        }
+
+        private bool TryDrainCopiedTemplateBatch(string templateId, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (!_requests.TryDequeue(out RuntimeEntitySpawnRequest drained))
+                {
+                    return false;
+                }
+
+                if (!IsTemplateBatchMember(templateId, in drained))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch queue changed during preflight: template='{templateId}', row={i}.");
+                }
+
+                _batchRequests[i] = drained;
+            }
+
+            return true;
+        }
+
+        private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
+        {
+            return request.Kind == RuntimeEntitySpawnKind.Template &&
+                   !HasComponentPatches(in request) &&
+                   !string.IsNullOrWhiteSpace(request.TemplateId) &&
+                   string.Equals(request.TemplateId, templateId, StringComparison.Ordinal);
+        }
+
+        private void PreflightTemplateBatchBeforeDrain(string templateId, EntityTemplate template, int count)
+        {
+            int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
+            bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
+            bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
+            bool hasRequestOnSpawnEffect = false;
+            bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
+
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var request = ref _batchRequests[i];
+                hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
+            }
+
+            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
+            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
+
+            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
+            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + count);
+            }
+            else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' requires EffectRequestQueue for on-spawn effects.");
+            }
         }
 
         private bool TrySpawnTemplateBatch(string templateId, EntityTemplate template, int count)
@@ -318,6 +383,17 @@ namespace Ludots.Core.Gameplay.Spawning
             PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
             PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
 
+            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
+            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + count);
+            }
+            else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' requires EffectRequestQueue for on-spawn effects.");
+            }
+
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
                 TemplateBatchSpawnFeatures.PresentationLifecycleState;
@@ -346,9 +422,9 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             double postSpawnMs = 0d;
-            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
+                // Capacity was reserved before create; keep the post-create reserve for overflow refill safety.
                 _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
             }
 
@@ -889,6 +965,35 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
+        private void PreflightSingleSpawnSuccessSignals(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.EmitReceipt != 0)
+            {
+                if (_receipts == null)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+                }
+
+                if (_receipts.FreeCapacity < 1)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+                }
+            }
+
+            if (!TryResolveOnSpawnEffectTemplateId(in request, cachedTemplateOnSpawnEffectId: 0, out int effectTemplateId, out _))
+            {
+                return;
+            }
+
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
+            }
+
+            _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + 1);
+        }
+
         private int ResolveTemplateFinalTeamId(
             string context,
             in RuntimeEntitySpawnRequest request,
@@ -1214,15 +1319,38 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned, int cachedTemplateOnSpawnEffectId)
         {
-            if (_effectRequests == null)
+            if (!TryResolveOnSpawnEffectTemplateId(in request, cachedTemplateOnSpawnEffectId, out int effectTemplateId, out bool useSpawnedAsSource))
             {
                 return;
             }
 
-            int effectTemplateId = request.OnSpawnEffectTemplateId > 0
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
+            }
+
+            _effectRequests.Publish(new EffectRequest
+            {
+                RootId = 0,
+                Source = useSpawnedAsSource ? spawned : request.Source,
+                Target = spawned,
+                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
+                TemplateId = effectTemplateId,
+            });
+        }
+
+        private bool TryResolveOnSpawnEffectTemplateId(
+            in RuntimeEntitySpawnRequest request,
+            int cachedTemplateOnSpawnEffectId,
+            out int effectTemplateId,
+            out bool useSpawnedAsSource)
+        {
+            effectTemplateId = request.OnSpawnEffectTemplateId > 0
                 ? request.OnSpawnEffectTemplateId
                 : cachedTemplateOnSpawnEffectId;
-            bool useSpawnedAsSource = false;
+            useSpawnedAsSource = false;
+
             if (effectTemplateId <= 0 &&
                 request.Kind == RuntimeEntitySpawnKind.Template &&
                 !string.IsNullOrWhiteSpace(request.TemplateId))
@@ -1241,18 +1369,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (effectTemplateId <= 0)
             {
-                return;
+                return false;
             }
 
             useSpawnedAsSource = request.OnSpawnEffectTemplateId <= 0;
-            _effectRequests.Publish(new EffectRequest
-            {
-                RootId = 0,
-                Source = useSpawnedAsSource ? spawned : request.Source,
-                Target = spawned,
-                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
-                TemplateId = effectTemplateId,
-            });
+            return true;
         }
 
         private void TryBootstrapPerformer(Entity owner, string templateId)

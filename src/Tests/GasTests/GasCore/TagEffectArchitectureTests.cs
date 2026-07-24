@@ -1115,6 +1115,208 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_ReceiptQueueFull_DoesNotLeavePartialSpawnedEntity()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_capacity_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ReceiptCapacity"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 16);
+            for (int i = 0; i < receipts.Capacity; i++)
+            {
+                That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = 1,
+                    ReceiptId = 1000 + i,
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "fill",
+                }), Is.True);
+            }
+
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_receipt_capacity_template",
+                WorldPositionCm = Fix64Vec2.FromInt(9, 11),
+                HasWorldPosition = 1,
+                ReceiptChannelId = 3,
+                ReceiptId = 808,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("RuntimeEntitySpawnReceiptQueue capacity exceeded"));
+            That(requests.Count, Is.EqualTo(1), "Capacity failure must leave the spawn request retryable.");
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Template:ReceiptCapacity", StringComparison.Ordinal))
+                {
+                    spawnedCount++;
+                }
+            });
+            That(spawnedCount, Is.EqualTo(0), "Receipt capacity failure must not leave a partial spawned entity.");
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplateReceiptCapacity_DoesNotDrainRequests()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_capacity_batch_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ReceiptCapacityBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 16);
+            for (int i = 0; i < receipts.Capacity - 1; i++)
+            {
+                That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = 1,
+                    ReceiptId = 2000 + i,
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "fill",
+                }), Is.True);
+            }
+
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_receipt_capacity_batch_template",
+                    WorldPositionCm = Fix64Vec2.FromInt(10 + i, 20 + i),
+                    HasWorldPosition = 1,
+                    ReceiptChannelId = 3,
+                    ReceiptId = 900 + i,
+                    EmitReceipt = 1,
+                }), Is.True);
+            }
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("RuntimeEntitySpawnReceiptQueue capacity exceeded"));
+            That(requests.Count, Is.EqualTo(2), "Batch receipt capacity failure must leave every spawn request retryable.");
+            That(receipts.Count, Is.EqualTo(receipts.Capacity - 1));
+
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Template:ReceiptCapacityBatch", StringComparison.Ordinal))
+                {
+                    spawnedCount++;
+                }
+            });
+            That(spawnedCount, Is.EqualTo(0), "Batch receipt capacity failure must not leave partial spawned entities.");
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_OnSpawnEffectWithoutQueue_DoesNotLeavePartialSpawnedEntity()
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = UnitTypeRegistry.Register("TestWolfNoEffectQueue");
+
+            using var world = World.Create();
+            var source = world.Create(
+                new Team { Id = 7 },
+                new MapEntity { MapId = new Ludots.Core.Map.MapId("runtime_spawn_no_effect_queue") });
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 7);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                effectRequests: null,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.UnitType,
+                Source = source,
+                WorldPositionCm = Fix64Vec2.FromInt(420, 840),
+                UnitTypeId = unitTypeId,
+                OnSpawnEffectTemplateId = 123,
+                CopySourceTeam = 1,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("requires EffectRequestQueue"));
+            That(requests.Count, Is.EqualTo(1));
+            int spawnCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Unit:TestWolfNoEffectQueue", StringComparison.Ordinal))
+                {
+                    spawnCount++;
+                }
+            });
+            That(spawnCount, Is.EqualTo(0));
+            UnitTypeRegistry.Clear();
+        }
+
+        [Test]
         public void RuntimeEntitySpawnReceiptQueue_ChannelOperations_DoNotConsumeOtherChannels()
         {
             var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);

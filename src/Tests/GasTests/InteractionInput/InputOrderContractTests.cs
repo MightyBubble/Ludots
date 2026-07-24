@@ -724,6 +724,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(orders, Is.Empty,
                 "A declared auto-target source must fail closed when it misses; SmartCast must not switch to hover.");
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(actor));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedValidation));
         }
 
         [Test]
@@ -2858,6 +2861,181 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.Actor, Is.EqualTo(actor));
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
+        [Test]
+        public void ActivateMappedAction_ExplicitContext_DoesNotRequireSetLocalPlayer()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Skill1",
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                    },
+                },
+            };
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            // Intentionally no SetLocalPlayer: explicit context alone must authorize the activation.
+            system.SetOrderTypeKeyResolver(_ => 7);
+            system.SetActivationActorValidator((candidate, playerId) =>
+                candidate == actor && playerId == 1 && world.IsAlive(candidate));
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 42);
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            InputOrderActivationResult result = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(actor, 1));
+
+            Assert.That(result.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(result.Actor, Is.EqualTo(actor));
+            Assert.That(result.OrderId, Is.EqualTo(42));
+            Assert.That(submitted.Count, Is.EqualTo(1));
+            Assert.That(submitted[0].Actor, Is.EqualTo(actor));
+            Assert.That(submitted[0].PlayerId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SmartCast_MutableActorProvider_UsesSameActorForTargetAndOrder()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 500
+                    }
+                }
+            };
+            using var world = World.Create();
+            Entity actorA = world.Create();
+            Entity actorB = world.Create();
+            Entity enemy = world.Create();
+            int resolveCount = 0;
+            Entity autoTargetActor = default;
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actorA, 1);
+            system.SetActorProvider((out Entity actor) =>
+            {
+                // First resolve should pin the activation; a second resolve must not be used.
+                actor = resolveCount++ == 0 ? actorA : actorB;
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            {
+                autoTargetActor = resolvedActor;
+                target = enemy;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(autoTargetActor, Is.EqualTo(actorA),
+                "Auto-target resolution must use the same pinned actor as the submitted order.");
+            Assert.That(orders[0].Actor, Is.EqualTo(actorA));
+            Assert.That(orders[0].Target, Is.EqualTo(enemy));
+            Assert.That(resolveCount, Is.EqualTo(1),
+                "One SmartCast activation must resolve the primary actor once.");
+        }
+
+        [Test]
+        public void Update_SmartCastBuildFailure_OverwritesStaleSubmittedActivationResult()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillSelf",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        IsSkillMapping = true
+                    },
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 500
+                    }
+                }
+            };
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(_ => 101);
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 55);
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy __, int ___, out Entity target) =>
+            {
+                target = default;
+                return false;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            input.SetActionState("SkillSelf", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            system.Update(0f);
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(55));
+
+            input.SetActionState("SkillSelf", Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(1), "Failed SmartCast must not submit a second order.");
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(actor));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedValidation));
         }
 
         private static string FindRepoRoot()

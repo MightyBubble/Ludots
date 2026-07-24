@@ -101,11 +101,9 @@ namespace RoadNetworkShowcaseMod.Systems
             {
                 _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
                     $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},submit:{order.SubmitMode}";
-                bool accepted = _expander.TrySubmit(in order);
-                EmitSubmitCue(in order, accepted);
-                return accepted
-                    ? OrderSubmitResult.Queued
-                    : OrderSubmitResult.RejectedQueueFull;
+                OrderSubmitResult result = _expander.TrySubmit(in order);
+                EmitSubmitCue(in order, OrderSubmitResultSemantics.IsAccepted(result));
+                return result;
             });
             _mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
             {

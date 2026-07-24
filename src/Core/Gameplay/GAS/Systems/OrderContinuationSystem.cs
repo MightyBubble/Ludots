@@ -78,23 +78,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 int count;
+                int triggerOrderId = outcome.OrderId;
                 if (outcome.State == OrderTerminalState.Completed)
                 {
-                    int matchingCount = continuation.CountByTrigger(outcome.OrderId);
+                    int matchingCount = continuation.CountByTrigger(triggerOrderId);
                     _orderTypeRegistry.EnsureTerminalResultCapacity(matchingCount);
-                    count = continuation.CopyByTrigger(outcome.OrderId, extracted);
+                    count = continuation.CopyByTrigger(triggerOrderId, extracted);
                     ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
-                    int extractedCount = continuation.Extract(outcome.OrderId, extracted);
+                    int extractedCount = continuation.Extract(triggerOrderId, extracted);
                     if (extractedCount != count)
                     {
                         CancelContinuationAdmissions(reservations, count);
                         throw new InvalidOperationException(
-                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={outcome.OrderId}, expected={count}, actual={extractedCount}.");
+                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
                     }
                 }
                 else
                 {
-                    count = continuation.Extract(outcome.OrderId, extracted);
+                    count = continuation.Extract(triggerOrderId, extracted);
                 }
 
                 _processedCount++;
@@ -118,14 +119,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var order = extracted[i];
                         order.Actor = entity;
 
-                        var result = OrderSubmitter.Submit(
-                            World,
-                            entity,
-                            in order,
-                            _orderTypeRegistry,
-                            _orderRuleRegistry,
-                            currentStep,
-                            _stepRateHz);
+                        OrderSubmitResult result;
+                        try
+                        {
+                            result = OrderSubmitter.Submit(
+                                World,
+                                entity,
+                                in order,
+                                _orderTypeRegistry,
+                                _orderRuleRegistry,
+                                currentStep,
+                                _stepRateHz);
+                        }
+                        catch
+                        {
+                            RestoreContinuationOwnership(
+                                ref continuation,
+                                triggerOrderId,
+                                extracted.Slice(i, count - i),
+                                reservations.Slice(i, count - i));
+                            throw;
+                        }
 
                         if (result == OrderSubmitResult.RejectedByRule)
                         {
@@ -133,7 +147,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             if (config.PendingBufferWindowMs > 0)
                             {
                                 int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                                OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, expireStep, currentStep);
+                                OrderSubmitter.ReplacePending(
+                                    World,
+                                    ref buffer,
+                                    _orderTypeRegistry,
+                                    in order,
+                                    config.Priority,
+                                    expireStep,
+                                    currentStep);
                                 CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
                                 reservations[i] = default;
                                 continue;
@@ -195,6 +216,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _admissionResults.Cancel(in reservations[i]);
                     reservations[i] = default;
                 }
+            }
+        }
+
+        private void RestoreContinuationOwnership(
+            ref OrderContinuationBuffer continuation,
+            int triggerOrderId,
+            Span<Order> orders,
+            Span<OrderAdmissionReservation> reservations)
+        {
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (reservations[i].IsValid)
+                {
+                    _admissionResults.Cancel(in reservations[i]);
+                    reservations[i] = default;
+                }
+
+                if (continuation.TryAdd(triggerOrderId, in orders[i]))
+                {
+                    continue;
+                }
+
+                Order order = orders[i];
+                OrderSpatialPayloadOps.Release(World, in order);
+                _orderTypeRegistry.EnsureTerminalResultCapacity();
+                var failed = new OrderTerminalOutcome(
+                    order.OrderId,
+                    order.OrderTypeId,
+                    OrderTerminalState.Failed,
+                    OrderFailureReason.SubmissionQueueFull,
+                    order.Actor);
+                _orderTypeRegistry.PublishTerminalResult(in failed);
             }
         }
 

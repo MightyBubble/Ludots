@@ -1,5 +1,7 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Orders;
 
 namespace Ludots.Core.UI.EntityCommandPanels
 {
@@ -311,12 +313,12 @@ namespace Ludots.Core.UI.EntityCommandPanels
 
     public interface IEntityCommandPanelActionSource
     {
-        bool ActivateSlot(Entity target, int groupIndex, int slotIndex);
+        InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex);
     }
 
     public interface IEntityCommandPanelContextActionSource : IEntityCommandPanelActionSource
     {
-        bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
+        InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
     }
 
     /// <summary>
@@ -433,7 +435,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             return source is IEntityCommandPanelActionSource or IEntityCommandPanelContextActionSource;
         }
 
-        public static bool ActivateSlot(
+        public static InputOrderActivationResult ActivateSlot(
             IEntityCommandPanelSource source,
             in EntityCommandPanelSourceContext context,
             int groupIndex,
@@ -444,8 +446,14 @@ namespace Ludots.Core.UI.EntityCommandPanels
                 return contextSource.ActivateSlot(in context, groupIndex, slotIndex);
             }
 
-            return source is IEntityCommandPanelActionSource actionSource &&
-                   actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
+            if (source is IEntityCommandPanelActionSource actionSource)
+            {
+                return actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
+            }
+
+            return InputOrderActivationResult.Rejected(
+                context.TargetEntity,
+                OrderSubmitResult.RejectedByRule);
         }
 
         public static bool TryCopyAggregationMembers(
