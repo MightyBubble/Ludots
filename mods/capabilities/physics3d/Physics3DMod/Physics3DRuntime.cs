@@ -20,6 +20,8 @@ internal sealed class Physics3DRuntime : IDisposable
     private Physics3DSimulationSystem? _system;
     private NetworkProcessRole _networkRole;
     private Physics3DNetworkPlayerLifecycle? _players;
+    private Physics3DNetworkBodyRegistry? _bodyRegistry;
+    private Physics3DNetworkBodyRegistrySystem? _bodyRegistrySystem;
     private Physics3DAuthoritativeReplicationSeatRuntimeFactory? _seatFactory;
     private Physics3DNetworkAoiInterestPort? _interest;
     private INetworkRuntimeObserver? _observer;
@@ -90,6 +92,8 @@ internal sealed class Physics3DRuntime : IDisposable
             sourceFixedStepHz,
             worldConfig.MaximumPhysicsStepsPerSourceTick);
         Physics3DNetworkPlayerLifecycle? players = null;
+        Physics3DNetworkBodyRegistry? bodyRegistry = null;
+        Physics3DNetworkBodyRegistrySystem? bodyRegistrySystem = null;
         Physics3DAuthoritativeReplicationSeatRuntimeFactory? seatFactory = null;
         Physics3DNetworkAoiInterestPort? interest = null;
         INetworkRuntimeObserver? observer = null;
@@ -108,6 +112,14 @@ internal sealed class Physics3DRuntime : IDisposable
                 knowledge.ReserveRecords(physicsNetwork.KnowledgeRecordCapacity);
                 projectors = RequireService(engine, CoreServiceKeys.ReplicationSchemaProjectors);
                 RequireMutableSchemaSlot(projectors, physicsNetwork.ReplicationSchemaId);
+                bodyRegistry = new Physics3DNetworkBodyRegistry(
+                    engine.World,
+                    world,
+                    entities,
+                    engine.GameSession.SimulationTicks,
+                    physicsNetwork.ReplicationSchemaId,
+                    physicsNetwork.BodyRegistryCommandCapacity);
+                bodyRegistrySystem = new Physics3DNetworkBodyRegistrySystem(engine.World, bodyRegistry);
                 players = new Physics3DNetworkPlayerLifecycle(
                     engine.World,
                     world,
@@ -130,6 +142,8 @@ internal sealed class Physics3DRuntime : IDisposable
                     engine.World,
                     entities,
                     players,
+                    knowledge,
+                    network.ReplicationEntityCapacityPerSeat,
                     physicsNetwork.Aoi);
                 observer = new Physics3DNetworkPlayerLifecycleObserver(players);
                 var inputSource = new Physics3DLazyAuthoritativeFixedInputSource(
@@ -168,6 +182,7 @@ internal sealed class Physics3DRuntime : IDisposable
         }
 
         bool simulationRegistered = false;
+        bool bodyRegistrySystemRegistered = false;
         bool fixedInputRegistered = false;
         bool worldServiceSet = false;
         bool simulationSystemServiceSet = false;
@@ -175,10 +190,17 @@ internal sealed class Physics3DRuntime : IDisposable
         bool seatFactoryServiceSet = false;
         bool interestServiceSet = false;
         bool observerServiceSet = false;
+        bool bodyRegistryServiceSet = false;
         try
         {
             engine.RegisterSystem(system, SystemGroup.InputCollection);
             simulationRegistered = true;
+            if (bodyRegistrySystem != null)
+            {
+                engine.RegisterSystem(bodyRegistrySystem, SystemGroup.RuntimeEntityBinding);
+                bodyRegistrySystemRegistered = true;
+            }
+
             if (fixedInputSystem != null)
             {
                 engine.InsertSystemBeforeRequired<Physics3DSimulationSystem>(
@@ -194,6 +216,8 @@ internal sealed class Physics3DRuntime : IDisposable
 
             if (role == NetworkProcessRole.AuthoritativeServer)
             {
+                engine.SetService(Physics3DNetworkServiceKeys.BodyRegistry, bodyRegistry!);
+                bodyRegistryServiceSet = true;
                 engine.SetService(
                     CoreServiceKeys.AuthoritativeSeatControllerResolver,
                     (IAuthoritativeSeatControllerResolver)players!);
@@ -234,10 +258,14 @@ internal sealed class Physics3DRuntime : IDisposable
             if (interestServiceSet) engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationInterest);
             if (seatFactoryServiceSet) engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory);
             if (controllerServiceSet) engine.RemoveService(CoreServiceKeys.AuthoritativeSeatControllerResolver);
+            if (bodyRegistryServiceSet) engine.RemoveService(Physics3DNetworkServiceKeys.BodyRegistry);
             if (simulationSystemServiceSet) engine.RemoveService(Physics3DServiceKeys.SimulationSystem);
             if (worldServiceSet) engine.RemoveService(Physics3DServiceKeys.World);
             if (fixedInputRegistered) engine.UnregisterSystem(fixedInputSystem!, SystemGroup.InputCollection);
+            if (bodyRegistrySystemRegistered) engine.UnregisterSystem(bodyRegistrySystem!, SystemGroup.RuntimeEntityBinding);
             if (simulationRegistered) engine.UnregisterSystem(system, SystemGroup.InputCollection);
+            interest?.Dispose();
+            bodyRegistry?.Dispose();
             players?.Dispose();
             world.Dispose();
             throw;
@@ -248,6 +276,8 @@ internal sealed class Physics3DRuntime : IDisposable
         _system = system;
         _networkRole = role;
         _players = players;
+        _bodyRegistry = bodyRegistry;
+        _bodyRegistrySystem = bodyRegistrySystem;
         _seatFactory = seatFactory;
         _interest = interest;
         _observer = observer;
@@ -287,6 +317,10 @@ internal sealed class Physics3DRuntime : IDisposable
                 (IAuthoritativeSeatControllerResolver)_players!);
             RequireOwnedService(
                 _engine,
+                Physics3DNetworkServiceKeys.BodyRegistry,
+                _bodyRegistry!);
+            RequireOwnedService(
+                _engine,
                 CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory,
                 (IAuthoritativeReplicationSeatRuntimeFactory)_seatFactory!);
             RequireOwnedService(
@@ -299,6 +333,12 @@ internal sealed class Physics3DRuntime : IDisposable
             !_engine.UnregisterSystem(_fixedInputSystem, SystemGroup.InputCollection))
         {
             throw new InvalidOperationException("Physics3DMod fixed-input system was not registered during unload.");
+        }
+
+        if (_bodyRegistrySystem != null &&
+            !_engine.UnregisterSystem(_bodyRegistrySystem, SystemGroup.RuntimeEntityBinding))
+        {
+            throw new InvalidOperationException("Physics3DMod network body registry system was not registered during unload.");
         }
 
         if (!_engine.UnregisterSystem(_system, SystemGroup.InputCollection))
@@ -314,7 +354,8 @@ internal sealed class Physics3DRuntime : IDisposable
         if (_networkRole == NetworkProcessRole.AuthoritativeServer &&
             (!_engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationInterest) ||
              !_engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory) ||
-             !_engine.RemoveService(CoreServiceKeys.AuthoritativeSeatControllerResolver)))
+             !_engine.RemoveService(CoreServiceKeys.AuthoritativeSeatControllerResolver) ||
+             !_engine.RemoveService(Physics3DNetworkServiceKeys.BodyRegistry)))
         {
             throw new InvalidOperationException("Physics3DMod authoritative network services were not registered during unload.");
         }
@@ -325,12 +366,16 @@ internal sealed class Physics3DRuntime : IDisposable
             throw new InvalidOperationException("Physics3DMod services were not registered during unload.");
         }
 
+        _interest?.Dispose();
+        _bodyRegistry?.Dispose();
         _players?.Dispose();
         _world.Dispose();
         _fixedInputSystem = null;
         _observer = null;
         _interest = null;
         _seatFactory = null;
+        _bodyRegistrySystem = null;
+        _bodyRegistry = null;
         _players = null;
         _system = null;
         _world = null;
@@ -347,6 +392,7 @@ internal sealed class Physics3DRuntime : IDisposable
         }
 
         RequireServiceAbsent(engine, CoreServiceKeys.AuthoritativeSeatControllerResolver);
+        RequireServiceAbsent(engine, Physics3DNetworkServiceKeys.BodyRegistry);
         RequireServiceAbsent(engine, CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory);
         RequireServiceAbsent(engine, CoreServiceKeys.AuthoritativeReplicationInterest);
     }

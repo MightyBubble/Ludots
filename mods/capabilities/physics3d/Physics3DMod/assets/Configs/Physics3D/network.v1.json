@@ -1,7 +1,8 @@
 {
   "SchemaVersion": 1,
   "ReplicationSchemaId": 1,
-  "KnowledgeRecordCapacity": 32768,
+  "KnowledgeRecordCapacity": 76800,
+  "BodyRegistryCommandCapacity": 100000,
   "Quantization": {
     "PositionResolutionCm": 0.5,
     "QuaternionResolution": 0.00003051851,

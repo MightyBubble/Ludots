@@ -99,6 +99,7 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
     public int ActivePlayerCount { get; private set; }
     public int ConnectedPlayerCount { get; private set; }
     public Physics3DNetworkPlayerLifecycleFailure LastFailure { get; private set; }
+    internal KnowledgeProjectionStore Knowledge => _knowledge;
 
     public bool TryResolveController(in SessionSeatBinding seat, out Entity controller)
     {
@@ -127,13 +128,6 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         if (seat.Generation <= _retiredSeatGenerations[slot])
         {
             LastFailure = Physics3DNetworkPlayerLifecycleFailure.GenerationNotNewer;
-            return false;
-        }
-
-        int requiredKnowledgeRecords = checked((ActivePlayerCount * 2) + 1);
-        if (_knowledge.RecordCount + requiredKnowledgeRecords > _knowledge.RecordCapacity)
-        {
-            LastFailure = Physics3DNetworkPlayerLifecycleFailure.KnowledgeCapacityExceeded;
             return false;
         }
 
@@ -193,7 +187,6 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         _bodies[slot] = bodyId;
         _networkHandles[slot] = handle;
         ActivePlayerCount++;
-        GrantLiveKnowledge(slot);
         controller = entity;
         return true;
     }
@@ -315,7 +308,6 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
             return false;
         }
 
-        RemoveKnowledge(slot);
         _physics.DestroyBody(_bodies[slot]);
         _world.Destroy(_entities[slot]);
         _active[slot] = false;
@@ -367,54 +359,6 @@ public sealed class Physics3DNetworkPlayerLifecycle : IAuthoritativeSeatControll
         _bodyConfig.CollisionLayer,
         _bodyConfig.Material,
         _bodyConfig.ContinuousDetection);
-
-    private void GrantLiveKnowledge(int newSlot)
-    {
-        Entity newcomer = _entities[newSlot];
-        for (int slot = 0; slot < SeatCapacity; slot++)
-        {
-            if (!_active[slot])
-            {
-                continue;
-            }
-
-            Entity existing = _entities[slot];
-            KnowledgeDisclosureRecord newcomerSeesExisting = LiveDisclosure(newcomer);
-            _knowledge.Upsert(newcomer, existing, in newcomerSeesExisting);
-            if (slot == newSlot)
-            {
-                continue;
-            }
-
-            KnowledgeDisclosureRecord existingSeesNewcomer = LiveDisclosure(existing);
-            _knowledge.Upsert(existing, newcomer, in existingSeesNewcomer);
-        }
-    }
-
-    private void RemoveKnowledge(int releasedSlot)
-    {
-        Entity released = _entities[releasedSlot];
-        _knowledge.ClearViewer(released);
-        for (int slot = 0; slot < SeatCapacity; slot++)
-        {
-            if (_active[slot] && slot != releasedSlot)
-            {
-                _knowledge.Remove(_entities[slot], released);
-            }
-        }
-    }
-
-    private static KnowledgeDisclosureRecord LiveDisclosure(Entity source) => new(
-        KnowledgePresence.LiveVisible,
-        KnowledgePositionAccess.Live,
-        default,
-        default,
-        default,
-        source,
-        observedTick: 0,
-        expiryTick: 0,
-        confidencePermille: 1000,
-        revision: 0);
 
     private int RequireExisting(in SessionSeatBinding seat)
     {

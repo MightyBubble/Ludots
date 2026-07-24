@@ -108,8 +108,11 @@ public sealed class Physics3DModTests
         Assert.Multiple(() =>
         {
             Assert.That(knowledge.RecordCapacity, Is.GreaterThanOrEqualTo(32_768));
-            Assert.That(knowledge.RecordCount, Is.EqualTo(22_500));
+            Assert.That(knowledge.RecordCount, Is.Zero);
             Assert.That(resolver.ActivePlayerCount, Is.EqualTo(150));
+            Assert.That(
+                engine.GetService(Physics3DNetworkServiceKeys.BodyRegistry),
+                Is.TypeOf<Physics3DNetworkBodyRegistry>());
             Assert.That(
                 engine.GetService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory),
                 Is.TypeOf<Physics3DAuthoritativeReplicationSeatRuntimeFactory>());
@@ -130,6 +133,7 @@ public sealed class Physics3DModTests
             Assert.That(engine.TryGetService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory, out _), Is.False);
             Assert.That(engine.TryGetService(CoreServiceKeys.AuthoritativeReplicationInterest, out _), Is.False);
             Assert.That(engine.TryGetService(CoreServiceKeys.NetworkRuntimeObserverBridge, out _), Is.False);
+            Assert.That(engine.TryGetService(Physics3DNetworkServiceKeys.BodyRegistry, out _), Is.False);
         });
     }
 
