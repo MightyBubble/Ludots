@@ -15,6 +15,7 @@ public sealed class Physics3DNetworkRuntimeConfig
     public int SchemaVersion { get; init; }
     public int ReplicationSchemaId { get; init; }
     public int KnowledgeRecordCapacity { get; init; }
+    public int BodyRegistryCommandCapacity { get; init; }
     public Physics3DReplicationQuantizationConfig Quantization { get; init; } = null!;
     public Physics3DNetworkPlayerBodyConfig PlayerBody { get; init; } = null!;
     public Physics3DNetworkPlayerSpawnConfig PlayerSpawn { get; init; } = null!;
@@ -37,11 +38,19 @@ public sealed class Physics3DNetworkRuntimeConfig
                 $"Physics3D replication schema {ReplicationSchemaId} is outside configured registry capacity {network.ReplicationSchemaCapacity}.");
         }
 
-        int minimumKnowledgeRecords = checked(network.PlayerCapacity * network.PlayerCapacity);
+        if (BodyRegistryCommandCapacity <= 0 ||
+            BodyRegistryCommandCapacity > network.GlobalNetworkEntityCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Physics3D body registry command capacity {BodyRegistryCommandCapacity} must be in range 1..{network.GlobalNetworkEntityCapacity}.");
+        }
+
+        int minimumKnowledgeRecords = checked(
+            network.PlayerCapacity * network.ReplicationEntityCapacityPerSeat);
         if (KnowledgeRecordCapacity < minimumKnowledgeRecords)
         {
             throw new InvalidOperationException(
-                $"Physics3D knowledge capacity {KnowledgeRecordCapacity} is below the {minimumKnowledgeRecords} records required for {network.PlayerCapacity} mutually visible players.");
+                $"Physics3D knowledge capacity {KnowledgeRecordCapacity} is below the {minimumKnowledgeRecords} records required for {network.PlayerCapacity} seats with {network.ReplicationEntityCapacityPerSeat} AOI entities each.");
         }
 
         ArgumentNullException.ThrowIfNull(Quantization);
@@ -103,6 +112,7 @@ public sealed class Physics3DNetworkRuntimeConfigLoader
             nameof(Physics3DNetworkRuntimeConfig.SchemaVersion),
             nameof(Physics3DNetworkRuntimeConfig.ReplicationSchemaId),
             nameof(Physics3DNetworkRuntimeConfig.KnowledgeRecordCapacity),
+            nameof(Physics3DNetworkRuntimeConfig.BodyRegistryCommandCapacity),
             nameof(Physics3DNetworkRuntimeConfig.Quantization),
             nameof(Physics3DNetworkRuntimeConfig.PlayerBody),
             nameof(Physics3DNetworkRuntimeConfig.PlayerSpawn),

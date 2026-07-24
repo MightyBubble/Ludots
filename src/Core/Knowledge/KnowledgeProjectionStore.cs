@@ -76,6 +76,11 @@ namespace Ludots.Core.Knowledge
             return _records.Compact();
         }
 
+        public int CompactPreservingCapacity()
+        {
+            return _records.CompactPreservingCapacity();
+        }
+
         public KnowledgeProjectionMaintenanceResult RunMaintenance(int currentTick)
         {
             if (currentTick < _lastMaintenanceTick)

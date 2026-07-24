@@ -187,3 +187,95 @@ networking profile data. It does not require a Core gameplay enum.
 | Add Layer 1 | Explicit replication apply context; conceal/removal release contract; epoch teardown; fixed-input admission and acknowledgement |
 | Add Layer 2 | Physics3D network projector/applier and existing Mod configuration |
 | Forbidden | Tombstone registry; second Tick/AOI/baseline/input-ACK truth; silent missing input; implicit keep-last-input; parallel materialization path |
+
+---
+
+# GAS Composition Gate - Physics3D Ordinary Replicated Body Lifecycle
+
+## Task Summary
+
+This change registers already-materialized ordinary Physics3D bodies with the
+existing authoritative network entity table, applies registration and release
+only at the fixed-frame structural binding phase, and makes the existing
+Physics3D AOI port own its per-seat live knowledge projection. It does not
+materialize entities, add a gameplay preset, or create another AOI or snapshot
+pipeline.
+
+## GAS Composition Gate - Self Review
+
+- **Task / Issue**: Physics3D ordinary replicated-body lifecycle and AOI knowledge lanes
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex delegated agent
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: The work extends the existing network identity and committed
+lifecycle boundary; it adds no lifecycle profile switch, preset enum, or
+parallel entity materialization path.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Admit an existing valid Physics3D body for replication | 1 | Fixed-capacity registry command buffer plus `NetworkEntityTable` |
+| Release an ordinary replicated body | 1 | Generation-checked registry transaction at `RuntimeEntityBinding` |
+| Project one seat's current AOI into live knowledge | 1 | Existing `Physics3DNetworkAoiInterestPort` plus `KnowledgeProjectionStore` |
+| Select which bodies are network-authored | 2 | Existing `ReplicationSchemaRef` on ECS entities |
+
+### 3. Reuse list
+
+- Handlers: no GAS handler is added.
+- Queues / Systems: existing fixed-frame phase order and
+  `SystemGroup.RuntimeEntityBinding` structural boundary.
+- Resolvers / Registries: `NetworkEntityTable`, `KnowledgeProjectionStore`,
+  `Physics3DNetworkPlayerLifecycle`, existing replication schema registry.
+- Existing presets / graphs: N/A; gameplay graphs continue to materialize and
+  configure bodies before the network binding phase sees them.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. Network registration and AOI disclosure are infrastructure state
+transitions, not gameplay lifecycle operations.
+
+### 5. Transaction boundary
+
+An ordinary body is published only after its ECS body, pose, Physics3D world
+body, and replication schema all validate. Release validates the registry
+slot, generation, entity table mapping, and ECS component before removing the
+component and releasing the handle. Commands apply only while an authoritative
+simulation tick is executing in `RuntimeEntityBinding`.
+
+### 6. Config SSOT
+
+Networking capacities remain in the existing `Physics3D/network.v1.json` and
+merged networking profile. Gameplay behavior remains in existing effects,
+graphs, and Mod configuration.
+
+New JSON schema: **NO**. Capacity values extend the existing Physics3D network
+configuration object and use the existing config loader.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle operation.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **graph wiring / effect steps** and attaches the
+existing `ReplicationSchemaRef`; it does not require a Core gameplay enum.
+
+## Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | `NetworkEntityTable`; `KnowledgeProjectionStore`; Physics3D body/pose/schema components; fixed-frame phase order; current AOI and replication bridge |
+| Add Layer 0 op | None |
+| Add Layer 1 | Fixed-capacity ordinary-body registration/release transaction; per-seat AOI knowledge lane |
+| Add Layer 2 | Existing `ReplicationSchemaRef` data selects replicated bodies |
+| Forbidden | Second AOI/snapshot builder; hot-path structural change; unbounded body/seat Cartesian knowledge; silent stale/capacity cleanup |

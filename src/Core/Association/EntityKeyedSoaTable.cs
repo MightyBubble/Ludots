@@ -453,6 +453,37 @@ namespace Ludots.Core.Association
             return removed;
         }
 
+        public int CompactPreservingCapacity()
+        {
+            if (_activeCount == _slotCount)
+            {
+                return 0;
+            }
+
+            int write = 0;
+            int removed = _slotCount - _activeCount;
+            for (int read = 0; read < _slotCount; read++)
+            {
+                if (!_active[read])
+                {
+                    continue;
+                }
+
+                if (write != read)
+                {
+                    CopySlot(read, write);
+                }
+
+                write++;
+            }
+
+            ClearSlots(write, _slotCount);
+            _slotCount = write;
+            RebuildEntriesPreservingCapacity();
+            RebuildPrimaryIndexPreservingCapacity();
+            return removed;
+        }
+
         private int GetOrCreateSlot(in EntityKeyedSoaKey key)
         {
             if (TryFindSlot(in key, out int existing))
@@ -641,10 +672,41 @@ namespace Ludots.Core.Association
             }
         }
 
+        private void RebuildEntriesPreservingCapacity()
+        {
+            _entryCount = 0;
+            Array.Fill(_bucketHeads, -1);
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                int entry = _entryCount++;
+                EntityKeyedSoaKey key = CreateKey(slot);
+                _entryKeys[entry] = key;
+                _entrySlots[entry] = slot;
+                int bucket = BucketIndex(in key, _bucketHeads.Length);
+                _entryNext[entry] = _bucketHeads[bucket];
+                _bucketHeads[bucket] = entry;
+            }
+        }
+
         private void RebuildPrimaryIndex()
         {
             int bucketCount = NextPowerOfTwo(Math.Max(16, _slotCount * 2));
             ResizePrimaryBuckets(bucketCount);
+        }
+
+        private void RebuildPrimaryIndexPreservingCapacity()
+        {
+            Array.Fill(_primaryBucketHeads, -1);
+            Array.Fill(_primaryBucketTails, -1);
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                _primarySlotNext[slot] = -1;
+            }
+
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                LinkPrimarySlot(slot, _primaryEntities[slot]);
+            }
         }
 
         private void ResizePrimaryBuckets(int bucketCount)
