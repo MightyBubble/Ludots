@@ -15,7 +15,15 @@ internal sealed class Physics3DScannerRangeShowcaseConfig
     public Physics3DShowcaseQueryKind InitialQueryKind { get; set; }
     public int InitialDistancePresetIndex { get; set; }
     public int InitialLayerFilterIndex { get; set; }
-    public float SweepVisualMaximumSpacingCm { get; set; }
+    public int CapsuleCastStartingOverlapTargetIndex { get; set; }
+    public int CastPlaybackDurationTicks { get; set; }
+    public int OverlapPulseCycleTicks { get; set; }
+    public float OverlapPulseMaximumScale { get; set; }
+    public float ScanPathThicknessCm { get; set; }
+    public float HitMarkerDiameterCm { get; set; }
+    public float HitNumberHeightOffsetCm { get; set; }
+    public float HitNumberHeightCm { get; set; }
+    public float HitNumberThicknessCm { get; set; }
     public float[] DistancePresetsCm { get; set; } = Array.Empty<float>();
     public Physics3DScannerLayerShowcaseConfig[] Layers { get; set; } = Array.Empty<Physics3DScannerLayerShowcaseConfig>();
     public Physics3DScannerLayerFilterShowcaseConfig[] LayerFilters { get; set; } = Array.Empty<Physics3DScannerLayerFilterShowcaseConfig>();
@@ -32,7 +40,31 @@ internal sealed class Physics3DScannerRangeShowcaseConfig
         RequireFinitePositive(TargetSpacingCm, $"{path}.{nameof(TargetSpacingCm)}");
         if (TargetCount < 3) throw new InvalidOperationException($"{path}.{nameof(TargetCount)} must be at least three.");
         if (!Enum.IsDefined(InitialQueryKind)) throw new InvalidOperationException($"{path}.{nameof(InitialQueryKind)} is invalid.");
-        RequireFinitePositive(SweepVisualMaximumSpacingCm, $"{path}.{nameof(SweepVisualMaximumSpacingCm)}");
+        if ((uint)CapsuleCastStartingOverlapTargetIndex >= (uint)TargetCount)
+        {
+            throw new InvalidOperationException(
+                $"{path}.{nameof(CapsuleCastStartingOverlapTargetIndex)} must select one authored target.");
+        }
+        RequirePositive(CastPlaybackDurationTicks, $"{path}.{nameof(CastPlaybackDurationTicks)}");
+        if (OverlapPulseCycleTicks < 2)
+        {
+            throw new InvalidOperationException($"{path}.{nameof(OverlapPulseCycleTicks)} must be at least two fixed ticks.");
+        }
+        RequireFinite(OverlapPulseMaximumScale, $"{path}.{nameof(OverlapPulseMaximumScale)}");
+        if (OverlapPulseMaximumScale <= 1f)
+        {
+            throw new InvalidOperationException($"{path}.{nameof(OverlapPulseMaximumScale)} must exceed one.");
+        }
+        RequireFinitePositive(ScanPathThicknessCm, $"{path}.{nameof(ScanPathThicknessCm)}");
+        RequireFinitePositive(HitMarkerDiameterCm, $"{path}.{nameof(HitMarkerDiameterCm)}");
+        RequireFinitePositive(HitNumberHeightOffsetCm, $"{path}.{nameof(HitNumberHeightOffsetCm)}");
+        RequireFinitePositive(HitNumberHeightCm, $"{path}.{nameof(HitNumberHeightCm)}");
+        RequireFinitePositive(HitNumberThicknessCm, $"{path}.{nameof(HitNumberThicknessCm)}");
+        if (HitNumberThicknessCm >= HitNumberHeightCm * 0.5f)
+        {
+            throw new InvalidOperationException(
+                $"{path}.{nameof(HitNumberThicknessCm)} must remain below half of {nameof(HitNumberHeightCm)}.");
+        }
         if (DistancePresetsCm == null || DistancePresetsCm.Length < 2)
         {
             throw new InvalidOperationException($"{path}.{nameof(DistancePresetsCm)} must define at least two distance choices.");
@@ -117,6 +149,11 @@ internal sealed class Physics3DScannerRangeShowcaseConfig
     {
         RequireFinite(value, path);
         if (value <= 0f) throw new InvalidOperationException($"{path} must be greater than zero.");
+    }
+
+    private static void RequirePositive(int value, string path)
+    {
+        if (value <= 0) throw new InvalidOperationException($"{path} must be greater than zero.");
     }
 }
 

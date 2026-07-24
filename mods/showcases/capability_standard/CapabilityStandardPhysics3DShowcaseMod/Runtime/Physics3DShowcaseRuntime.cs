@@ -84,6 +84,10 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     private int _scannerDistancePresetIndex;
     private int _scannerLayerFilterIndex;
     private int _scannerRunSequence;
+    private int _scannerPlaybackTick;
+    private int _scannerVisibleHitCount;
+    private float _scannerPlaybackDistanceCm;
+    private Physics3DScannerPlaybackStatus _scannerPlaybackStatus;
     private bool _scannerHasResult;
     private bool _scannerQueryFailed;
     private Physics3DShowcaseScene _scene;
@@ -128,6 +132,11 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     internal int ScannerLayerFilterIndex => _scannerLayerFilterIndex;
     internal bool ScannerHasResult => _scannerHasResult;
     internal bool ScannerQueryFailed => _scannerQueryFailed;
+    internal int ScannerRunSequence => _scannerRunSequence;
+    internal int ScannerPlaybackTick => _scannerPlaybackTick;
+    internal int ScannerVisibleHitCount => _scannerVisibleHitCount;
+    internal float ScannerPlaybackDistanceCm => _scannerPlaybackDistanceCm;
+    internal Physics3DScannerPlaybackStatus ScannerPlaybackStatus => _scannerPlaybackStatus;
 
     internal int GetQueryHitCount(int index)
     {
@@ -356,6 +365,11 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             ScannerHasResult: scannerActive && _scannerHasResult,
             ScannerQueryFailed: scannerActive && _scannerQueryFailed,
             ScannerRunSequence: _scannerRunSequence,
+            ScannerPlaybackStatus: scannerActive ? _scannerPlaybackStatus : Physics3DScannerPlaybackStatus.Waiting,
+            ScannerPlaybackTick: scannerActive ? _scannerPlaybackTick : 0,
+            ScannerPlaybackDurationTicks: scannerActive ? scanner.CastPlaybackDurationTicks : 0,
+            ScannerPlaybackDistanceCm: scannerActive ? _scannerPlaybackDistanceCm : 0f,
+            ScannerVisibleHitCount: scannerActive ? _scannerVisibleHitCount : 0,
             WindZone: _windTunnelZone,
             WindDirection: _windTunnelDirection,
             WindLightTravelCm: windLightTravelCm,
@@ -468,6 +482,10 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             _queryDistancesCm[index],
             _querySizesCm[index],
             _queryHitCounts[index],
+            index == ScannerQueryIndex ? _scannerVisibleHitCount : 0,
+            index == ScannerQueryIndex ? _scannerPlaybackTick : 0,
+            index == ScannerQueryIndex ? _scannerPlaybackDistanceCm : 0f,
+            index == ScannerQueryIndex ? ScannerPulseScale() : 1f,
             _queryHasFirstHit[index] != 0,
             _queryFirstHitPositionsCm[index]);
         return true;

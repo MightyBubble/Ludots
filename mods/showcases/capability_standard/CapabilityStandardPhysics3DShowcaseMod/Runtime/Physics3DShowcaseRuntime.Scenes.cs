@@ -84,6 +84,10 @@ internal sealed partial class Physics3DShowcaseRuntime
         _scannerHasResult = false;
         _scannerQueryFailed = false;
         _scannerRunSequence = 0;
+        _scannerPlaybackTick = 0;
+        _scannerVisibleHitCount = 0;
+        _scannerPlaybackDistanceCm = 0f;
+        _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Waiting;
     }
 
     private void BuildScannerRangeScene()
@@ -102,6 +106,11 @@ internal sealed partial class Physics3DShowcaseRuntime
             _queryOriginsCm[lane] = lane < 4
                 ? new Vector3(scanner.CastOriginXCm, scanner.OriginYCm, z)
                 : new Vector3(scanner.OverlapOriginXCm, scanner.OriginYCm, z);
+            if (lane == (int)Physics3DShowcaseQueryKind.CapsuleCast - 1)
+            {
+                _queryOriginsCm[lane].X = scanner.FirstTargetXCm +
+                    (scanner.CapsuleCastStartingOverlapTargetIndex * scanner.TargetSpacingCm);
+            }
             _queryDirections[lane] = Vector3.UnitX;
             _queryDistancesCm[lane] = lane < 4
                 ? scanner.DistancePresetsCm[_scannerDistancePresetIndex]
@@ -376,6 +385,9 @@ internal sealed partial class Physics3DShowcaseRuntime
             case Physics3DShowcaseScene.ScaleCity:
                 RecordScaleCityPerformanceSample(RequireSimulation().MaximumStepMillisecondsLastUpdate);
                 break;
+            case Physics3DShowcaseScene.ScannerRange:
+                AdvanceScannerPlayback();
+                break;
         }
     }
 
@@ -520,14 +532,14 @@ internal sealed partial class Physics3DShowcaseRuntime
             SortQueryHitsByDistance(queryIndex);
             _scannerHasResult = true;
             _scannerRunSequence++;
-            _lastAction = $"{ScannerQueryLabel(_scannerQueryKind)} found {_queryHitCounts[queryIndex]} " +
-                $"{filterConfig.Name} target(s), ordered by distance.";
+            BeginScannerPlayback(queryIndex, filterConfig.Name);
         }
         catch (Physics3DCapacityExceededException exception)
         {
             ClearScannerResult();
             _scannerQueryFailed = true;
             _scannerRunSequence++;
+            _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Failed;
             _lastAction = $"Scan failed: {filterConfig.Name} exceeded the configured {exception.Resource} capacity " +
                 $"of {exception.Capacity}. No result was truncated.";
         }
@@ -544,6 +556,101 @@ internal sealed partial class Physics3DShowcaseRuntime
         Array.Clear(_queryHitStartedOverlapping, 0, _queryHitStartedOverlapping.Length);
         _scannerHasResult = false;
         _scannerQueryFailed = false;
+        _scannerPlaybackTick = 0;
+        _scannerVisibleHitCount = 0;
+        _scannerPlaybackDistanceCm = 0f;
+        _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Waiting;
+    }
+
+    private void BeginScannerPlayback(int queryIndex, string filterName)
+    {
+        _scannerPlaybackTick = 0;
+        _scannerPlaybackDistanceCm = 0f;
+        if (_scannerQueryKind is Physics3DShowcaseQueryKind.BoxOverlap or
+            Physics3DShowcaseQueryKind.SphereOverlap or
+            Physics3DShowcaseQueryKind.CapsuleOverlap)
+        {
+            _scannerVisibleHitCount = _queryHitCounts[queryIndex];
+            _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Pulsing;
+            _lastAction = $"{ScannerQueryLabel(_scannerQueryKind)} found {_queryHitCounts[queryIndex]} " +
+                $"{filterName} target(s). The overlap volume now pulses at its origin.";
+            return;
+        }
+
+        UpdateScannerVisibleHitCount(queryIndex);
+        _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Playing;
+        _lastAction = $"Playing {ScannerQueryLabel(_scannerQueryKind)} over " +
+            $"{ActiveConfig.ScannerRange.CastPlaybackDurationTicks} fixed ticks; hits appear nearest first.";
+    }
+
+    private void AdvanceScannerPlayback()
+    {
+        if (!_scannerHasResult)
+        {
+            return;
+        }
+
+        if (_scannerPlaybackStatus == Physics3DScannerPlaybackStatus.Pulsing)
+        {
+            int cycleTicks = ActiveConfig.ScannerRange.OverlapPulseCycleTicks;
+            _scannerPlaybackTick = _scannerPlaybackTick + 1 == cycleTicks
+                ? 0
+                : _scannerPlaybackTick + 1;
+            return;
+        }
+
+        if (_scannerPlaybackStatus != Physics3DScannerPlaybackStatus.Playing)
+        {
+            return;
+        }
+
+        int durationTicks = ActiveConfig.ScannerRange.CastPlaybackDurationTicks;
+        _scannerPlaybackTick = Math.Min(_scannerPlaybackTick + 1, durationTicks);
+        float fullDistanceCm = _queryDistancesCm[ScannerQueryIndex];
+        _scannerPlaybackDistanceCm = fullDistanceCm * (_scannerPlaybackTick / (float)durationTicks);
+        UpdateScannerVisibleHitCount(ScannerQueryIndex);
+        if (_scannerPlaybackTick == durationTicks)
+        {
+            _scannerPlaybackDistanceCm = fullDistanceCm;
+            _scannerVisibleHitCount = _queryHitCounts[ScannerQueryIndex];
+            _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Complete;
+            _lastAction = $"{ScannerQueryLabel(_scannerQueryKind)} playback complete: " +
+                $"{_scannerVisibleHitCount} ordered hit(s), numbered in the world.";
+        }
+    }
+
+    private void UpdateScannerVisibleHitCount(int queryIndex)
+    {
+        int count = _queryHitCounts[queryIndex];
+        int offset = checked(queryIndex * ActiveConfig.QueryHitCapacity);
+        int visible = 0;
+        while (visible < count)
+        {
+            int hitOffset = offset + visible;
+            if (_queryHitStartedOverlapping[hitOffset] == 0 &&
+                _queryHitDistancesCm[hitOffset] > _scannerPlaybackDistanceCm + 0.001f)
+            {
+                break;
+            }
+
+            visible++;
+        }
+
+        _scannerVisibleHitCount = visible;
+    }
+
+    private float ScannerPulseScale()
+    {
+        if (_scannerPlaybackStatus != Physics3DScannerPlaybackStatus.Pulsing)
+        {
+            return 1f;
+        }
+
+        Physics3DScannerRangeShowcaseConfig scanner = ActiveConfig.ScannerRange;
+        int cycleTick = _scannerPlaybackTick % scanner.OverlapPulseCycleTicks;
+        float normalized = cycleTick / (float)scanner.OverlapPulseCycleTicks;
+        float triangle = 1f - MathF.Abs((normalized * 2f) - 1f);
+        return 1f + ((scanner.OverlapPulseMaximumScale - 1f) * triangle);
     }
 
     private void RequireScannerRangeCommand(string commandName)
