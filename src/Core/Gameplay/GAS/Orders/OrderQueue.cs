@@ -53,8 +53,21 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryEnqueueAssigned(ref Order order)
         {
+            return TryEnqueueAssigned(ref order, out _);
+        }
+
+        public bool TryEnqueueAssigned(ref Order order, out OrderAdmissionOutcome outcome)
+        {
             ValidateOrderTypeId(order.OrderTypeId);
-            if (_count >= _items.Length) return false;
+            if (_count >= _items.Length)
+            {
+                outcome = new OrderAdmissionOutcome(
+                    in order,
+                    OrderAdmissionStage.GlobalIntake,
+                    OrderSubmitResult.QueueFull);
+                return false;
+            }
+
             EnsureOrderId(ref order);
             order.AdmissionBatchId = 0;
             order.AdmissionBatchSize = 0;
@@ -63,6 +76,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _items[_tail] = order;
             _tail = (_tail + 1) % _items.Length;
             _count++;
+            outcome = new OrderAdmissionOutcome(
+                in order,
+                OrderAdmissionStage.GlobalIntake,
+                OrderSubmitResult.Queued);
             return true;
         }
 
@@ -226,19 +243,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public bool TryDequeueBatch(Span<Order> destination, out int count)
         {
             count = 0;
-            if (_count == 0)
+            if (!TryPeekBatchSize(out int batchSize))
             {
                 return false;
             }
 
-            ref readonly Order first = ref _items[_head];
-            int batchSize = first.AdmissionBatchId > 0 ? first.AdmissionBatchSize : 1;
-            if (batchSize <= 0 || batchSize > _count || batchSize > destination.Length)
+            if (batchSize > destination.Length)
             {
                 throw new System.InvalidOperationException(
                     $"OrderQueue admission batch size {batchSize} is invalid for count {_count} and destination capacity {destination.Length}.");
             }
 
+            ref readonly Order first = ref _items[_head];
             int batchId = first.AdmissionBatchId;
             for (int i = 0; i < batchSize; i++)
             {
@@ -259,6 +275,25 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _head = (_head + batchSize) % _items.Length;
             _count -= batchSize;
             count = batchSize;
+            return true;
+        }
+
+        public bool TryPeekBatchSize(out int batchSize)
+        {
+            if (_count == 0)
+            {
+                batchSize = 0;
+                return false;
+            }
+
+            ref readonly Order first = ref _items[_head];
+            batchSize = first.AdmissionBatchId > 0 ? first.AdmissionBatchSize : 1;
+            if (batchSize <= 0 || batchSize > _count)
+            {
+                throw new System.InvalidOperationException(
+                    $"OrderQueue admission batch size {batchSize} is invalid for count {_count}.");
+            }
+
             return true;
         }
 

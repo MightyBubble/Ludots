@@ -1764,7 +1764,8 @@ namespace Ludots.Core.Engine
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
-                presentationTimingDiagnostics);
+                presentationTimingDiagnostics,
+                OnFixedStepStarted);
 
             var responseChainUiState = new ResponseChainUiState();
             SetService(CoreServiceKeys.ResponseChainUiState, responseChainUiState);
@@ -1825,10 +1826,16 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ChunkDebugPanelPresentationSystem(this, chunkDebugPanelRuntime));
         }
 
+        private void OnFixedStepStarted(float fixedDt)
+        {
+            GameSession.BeginSimulationTick();
+        }
+
         private void OnFixedStepCompleted(float fixedDt)
         {
             _physics2DController?.AfterPhysicsFixedTick();
             _gasController?.AfterFixedTick();
+            GameSession.CommitFixedUpdate();
         }
 
         private void ApplyBuiltInTimeFlowScales()

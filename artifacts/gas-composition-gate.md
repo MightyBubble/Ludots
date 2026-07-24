@@ -1,61 +1,98 @@
-# GAS Composition Gate - PR #658 / Issue #690
+# GAS Composition Gate - Issue #709
 
-- Date: 2026-07-19
-- Agent: Codex
-- Result: PASS
+## Task Summary
 
-## Core judgment
+Issue #709 adds a platform-independent, server-authoritative multiplayer Core,
+an RTS command path that reuses the existing GAS order queue, and the
+`rts_duel_v1` two-player showcase. It does not add a gameplay preset, a new
+spawn/morph DSL, or a parallel entity materialization path.
 
-主要交付物：A，复用现有 Command Router、OrderQueue、OrderBuffer、GAS system phase 和 typed MovePlan contract，删除 MassNavigation/Formation 的平行 Order consumer。
+## GAS Composition Gate - Self Review
 
-本次没有新增 effect preset、profile enum、graph op、lifecycle DSL 或平行 loader。`MovePlanExecutionMode` 是中立执行端口的显式类型边界，不是 GAS 玩法变体开关。
+- **Task / Issue**: #709 - RTS multiplayer Core and playable showcase
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex
 
-## Layer assignment
+### 1. Core judgment
 
-| 能力 | Layer | 实现载体 |
-| --- | --- | --- |
-| cluster actor expansion | Input/Command Router extension | `ICommandActorExpander` / `FormationCommandActorExpander` |
-| atomic admission and activation | existing GAS order infrastructure | `OrderQueue` / `OrderBufferSystem` |
-| Order to typed movement | GAS adapter | `MovePlanOrderProjectionSystem` |
-| typed movement execution | MovePlanning port + Mass adapter | `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSystem` |
-| typed result to lifecycle | GAS adapter | `MovePlanOrderLifecycleSystem` |
+New variant primary deliverable (A/B/C/D): **A**
 
-## Reuse list
+Conclusion: **PASS**
 
-- Handlers: existing order type registry and order rules; no new BuiltinHandler.
-- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderSubmitter`, existing `SystemGroup.AbilityActivation`.
-- Resolvers / Registries: `CommandIntentProfileRegistry`, `CastDispatchProfileRegistry`, `OrderTypeRegistry`, `ControlDomainQuery`.
-- Existing contracts: `MovePlanExecutionIntent`, `IMovePlanExecutionSink`, `MassNavigationRuntimeBinding`.
+One-line reason: The showcase composes the existing order and lifecycle
+pipelines; the new work is a reusable networking boundary, not a new GAS
+profile, preset switch, or materialization pipeline.
 
-## New Layer 0 ops
+### 2. Layer assignment
 
-N/A. No entity lifecycle atomic op was added.
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Admit an RTS command batch | 1 | Fixed-capacity networking command admission plus existing `OrderQueue` |
+| Materialize authoritative units | 0/1 | Existing `RuntimeEntitySpawnQueue` and lifecycle transaction path |
+| Compose duel gameplay | 2 | Existing GAS graphs, effects, orders, and Mod configuration |
+| Package the playable duel | 3 | `rts_duel_v1` showcase Mod and launch presets |
 
-## Transaction boundary
+### 3. Reuse list
 
-- Command Router fan-out validates expansion capacity and submits one clustered batch.
-- `OrderBufferSystem` previews every row before activating any row.
-- Mass command-group execution prepares final resolved destination and member targets once, validates binding/focus/route capacity against that exact data, then commits the same prepared targets without recomputation.
-- Route rejection emits typed failure; GAS cancels the matching order and removes its continuation.
+- Handlers: existing GAS order handlers and lifecycle built-in handlers.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`,
+  `RuntimeEntitySpawnQueue`, `RuntimeEntityLifecycleQueue`, Pacemaker fixed
+  simulation boundary.
+- Resolvers / Registries: `ControlDomainQuery`, Entity Association Core,
+  `KnowledgeProjectionResolver`, `KnowledgeProjectionStore`, existing config
+  and Mod registries.
+- Existing presets / graphs: current RTS move, attack, production, spawn, and
+  lifecycle compositions. The showcase may configure them but must not fork
+  their runtime implementation.
 
-## Config SSOT
+### 4. New Layer 0 ops (if any)
 
-- Order catalog: `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json`
-- Formation business data: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json`
-- Input routing: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/`
-- Mass capacities: each Mod's `MassNavigationConfig.json`
+N/A. Network entity handle allocation is a networking identity service, not a
+GAS lifecycle op. It attaches to the existing committed lifecycle boundary.
 
-新增 JSON schema: NO. Renamed dead ingestion capacity fields to typed MovePlan execution capacity fields and removed the unused `orderIdleScanIntervalFrames` property.
+### 5. Transaction boundary
 
-## Red flag scan
+The following operations are all-or-nothing:
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建 spawn/order/MovePlan 平行管线
-- [x] 未添加 fallback 或兼容旁路
-- [x] MassNavigation 不读取或反写 Order
-- [x] Formation 不拥有专用 Order consumer
-- [x] 热路径容量显式，容量不足失败
+1. An inbound command batch is either fully admitted to the fixed-capacity
+   command buffer or rejected with a typed reason.
+2. Network handles for a committed spawn set are capacity-checked before any
+   handle is published.
+3. A client applies a structurally valid snapshot page as one committed unit;
+   malformed or capacity-exceeding pages are rejected explicitly.
 
-## Next variant test
+Existing lifecycle materialization and rollback remain owned by the current
+lifecycle transaction executor.
 
-下一个 Formation Mod 变体应修改 Mod-owned anchor/member 数据和 `ICommandActorExpander` 实现，继续复用同一 Command Router、GAS Order 与 typed MovePlan 链；不得新增 Core Formation enum 或专用 order pipeline。
+### 6. Config SSOT
+
+Behavior configuration lives in the existing effect templates, GAS graphs,
+order definitions, Mod config pipeline, and a versioned networking session
+profile under the normal config pipeline.
+
+New JSON schema: **YES** - a networking session/replication schema is required
+for capacities, protocol rates, and replicated fields. It describes transport
+and replication policy only; it does not encode lifecycle inheritance,
+placement, spawn behavior, or a gameplay preset DSL.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **graph wiring / effect steps and networking
+profile data**. It does not require a Core enum.
+
+## Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Pacemaker fixed tick; `OrderQueue`; `OrderBufferSystem`; Entity Association Core; knowledge projection; runtime spawn/lifecycle queues; config and Mod loading |
+| Add Layer 0 op | None |
+| Add Layer 1 | Networking command-batch admission; snapshot apply transaction |
+| Add Layer 2 | RTS duel composition using existing gameplay capabilities |
+| Forbidden | Networking-specific order queue; spawn/morph profile DSL; browser/socket types in Core; silent capacity truncation |
