@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\..\Adapters\Networking\Ludots.Adapter.LiteNetLib\Ludots.Adapter.LiteNetLib.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LoadClientTests" />
+  </ItemGroup>
 </Project>

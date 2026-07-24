@@ -46,10 +46,10 @@ public interface ILoadClientSlotFactory
 }
 
 /// <summary>
-/// Test seam for deterministic host orchestration. Production slots leave <see cref="LoadClientSlot.TestDriver"/> null.
-/// Does not replace LiteNetLib production wiring or invent a parallel network runtime.
+/// Internal scripted seam for deterministic host-orchestration tests. It bypasses the real runtime and
+/// transport pumps, so results obtained through it are not production networking evidence.
 /// </summary>
-public interface ILoadClientSlotTestDriver
+internal interface ILoadClientSlotTestDriver
 {
     void Pump(float deltaSeconds);
     ReplicatedClientConnectionState ConnectionState { get; }
@@ -108,9 +108,9 @@ public sealed class LoadClientSlot : IDisposable
     public Action? OnDisposed { get; set; }
 
     /// <summary>
-    /// Test seam for deterministic readiness/tick-rate orchestration. Production leaves this null.
+    /// Internal scripted orchestration seam. Production leaves this null and uses the real runtime and clock.
     /// </summary>
-    public ILoadClientSlotTestDriver? TestDriver { get; set; }
+    internal ILoadClientSlotTestDriver? TestDriver { get; set; }
 
     public bool TryConnect() => ConnectOverride?.Invoke() ?? Runtime.TryConnectNow();
 
