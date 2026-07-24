@@ -535,7 +535,7 @@ namespace Ludots.Core.Networking.Runtime
                 try
                 {
                     _commands.RebindSeat(in commandSeat, controller, checked((int)_currentTick));
-                    _fixedInput.BindSeat(in binding);
+                    _fixedInput.RebindSeat(in binding);
                 }
                 catch (Exception exception)
                 {

@@ -1,3 +1,4 @@
 [
-  { "Path": "Physics3D/world.json", "Policy": "DeepObject" }
+  { "Path": "Physics3D/world.json", "Policy": "DeepObject" },
+  { "Path": "Physics3D/network.v1.json", "Policy": "DeepObject" }
 ]

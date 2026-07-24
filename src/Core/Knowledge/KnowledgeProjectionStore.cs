@@ -29,6 +29,11 @@ namespace Ludots.Core.Knowledge
 
         public int RecordCapacity => _records.SlotCapacity;
 
+        public void ReserveRecords(int requiredCapacity)
+        {
+            _records.Reserve(requiredCapacity);
+        }
+
         public uint Upsert(Entity viewer, Entity target, in KnowledgeDisclosureRecord record)
         {
             ValidateViewerAndTarget(viewer, target);

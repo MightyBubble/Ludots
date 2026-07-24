@@ -1,0 +1,47 @@
+{
+  "SchemaVersion": 1,
+  "ReplicationSchemaId": 1,
+  "KnowledgeRecordCapacity": 32768,
+  "Quantization": {
+    "PositionResolutionCm": 0.5,
+    "QuaternionResolution": 0.00003051851,
+    "LinearVelocityResolutionCmPerSecond": 0.5,
+    "AngularVelocityResolutionRadiansPerSecond": 0.001
+  },
+  "PlayerBody": {
+    "RadiusCm": 30.0,
+    "CylinderLengthCm": 100.0,
+    "Mass": 80.0,
+    "CollisionLayer": {
+      "Category": 4294967295,
+      "Mask": 4294967295
+    },
+    "Material": {
+      "FrictionCoefficient": 0.8,
+      "MaximumRecoveryVelocityCmPerSecond": 200.0,
+      "SpringAngularFrequency": 30.0,
+      "SpringTwiceDampingRatio": 1.0
+    },
+    "ContinuousDetection": "Passive"
+  },
+  "PlayerSpawn": {
+    "OriginCm": {
+      "X": 0.0,
+      "Y": 150.0,
+      "Z": 0.0
+    },
+    "ColumnSpacingCm": 250.0,
+    "RowSpacingCm": 250.0,
+    "Columns": 15
+  },
+  "Aoi": {
+    "GlobalEntityCapacity": 100000,
+    "RadiusCm": 5000.0
+  },
+  "Movement": {
+    "SchemaId": 1,
+    "MaximumSpeedCmPerSecond": 600.0,
+    "MaximumAccelerationCmPerSecondSquared": 1800.0,
+    "VelocityResponsePerSecond": 20.0
+  }
+}

@@ -13,5 +13,8 @@
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Physics3D\Ludots.Physics3D.csproj">
       <Private>true</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Physics3DNet\Ludots.Physics3DNet.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>

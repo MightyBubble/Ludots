@@ -177,6 +177,29 @@ namespace Ludots.Core.Association
         public int PhysicalSlotCount => _slotCount;
         public int SlotCapacity => _active.Length;
 
+        public void Reserve(int requiredCapacity)
+        {
+            if (requiredCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(requiredCapacity));
+            }
+
+            EnsureSlotCapacity(requiredCapacity);
+            EnsureEntryCapacity(requiredCapacity);
+            int requiredBuckets = NextPowerOfTwo(Math.Max(
+                16,
+                checked((int)Math.Ceiling(requiredCapacity / (double)LoadFactor))));
+            if (_bucketHeads.Length < requiredBuckets)
+            {
+                Rehash(requiredBuckets);
+            }
+
+            if (_primaryBucketHeads.Length < requiredBuckets)
+            {
+                ResizePrimaryBuckets(requiredBuckets);
+            }
+        }
+
         public int EnsureSlot(in EntityKeyedSoaKey key)
         {
             return GetOrCreateSlot(in key);
