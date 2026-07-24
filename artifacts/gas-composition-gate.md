@@ -2,6 +2,63 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 ResponseChain Prompt / Side-Effect Commit Ordering - 2026-07-24
+
+- **Task / Issue**: PR #660 lane — ResponseChain prompt transaction and side-effect commit ordering (`b822b83` head).
+- **Date**: 2026-07-24
+- **Agent / Author**: Cursor Agent (Grok 4.5)
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（事务边界 / 提交顺序修正，无新 profile DSL）
+
+结论: PASS
+
+一句话理由: 只收紧已有 InputRequest/OrderRequest、Ability toggle effect、Runtime spawn receipt/effect 的原子提交顺序；不新增 enum、preset 开关或平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Prompt + OrderRequest 可见事务 | 1 | `EffectProposalProcessingSystem` 容量预检后双入队 |
+| Ability 终态 vs toggle/effect 提交 | 1 | `AbilityExecSystem` 侧效预检+提交后再 Finalize |
+| Spawn receipt/effect 成功信号 | 1 | `RuntimeEntitySpawnSystem` 创建前预检 |
+
+### 3. Reuse list
+
+- Handlers: 无新增 BuiltinHandler
+- Queues / Systems: `InputRequestQueue`, `OrderRequestQueue`, `EffectRequestQueue`, `RuntimeEntitySpawnReceiptQueue`, `AbilityExecSystem`, `EffectProposalProcessingSystem`, `RuntimeEntitySpawnSystem`
+- Resolvers / Registries: 既有 `AbilityDefinitionRegistry`, `EffectTemplateIdRegistry`, template on-spawn 解析
+- Existing presets / graphs: 无改动
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子预检/提交的步骤:
+1. ResponseChain WaitInput：InputRequest 与 OrderRequest（及 `_inputRequestSent`）同事务；失败不得留下可回答的孤儿 prompt。
+2. Ability Finished：toggle tag + active effect 入队必须在 `OrderTerminalState.Completed` / CastFinished 之前成功或明确失败且可重试。
+3. Runtime spawn：实体创建前预检 receipt / on-spawn effect 队列；失败不得留下“已生成但无 receipt/effect”的半成品。
+
+### 6. Config SSOT
+
+行为配置落在: 既有 ability toggleSpec.activeEffects 与 entity template onSpawnEffect。
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+
 ## PR #660 Order Admission Follow-up Repair - 2026-07-24
 
 This is the current live self-review section for the final order admission follow-up on branch `codex/issues-649-651-ordering`. Older PR #660 sections below are historical context, not alternate active branches.

@@ -25,6 +25,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class AbilityExecSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
         public const string TimedTagCapacityExceededError = "GAS.ABILITY_EXEC.ERR.TimedTagCapacityExceeded";
+        public const string ToggleActiveEffectQueueMissingError = "GAS.ABILITY_EXEC.ERR.ToggleActiveEffectQueueMissing";
+        public const string ToggleActiveEffectQueueFullError = "GAS.ABILITY_EXEC.ERR.ToggleActiveEffectQueueFull";
 
         private readonly IClock _clock;
         private readonly GameplayEventBus _eventBus;
@@ -568,8 +570,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         out OrderTerminalState terminalState,
                         out OrderFailureReason terminalReason);
 
-                    // Finalize first. Capacity or queued-order preparation failures must leave
-                    // both the active order and terminal execution component available to retry.
+                    // Toggle activation is part of the Finished activation transaction. Preflight and
+                    // commit it before publishing Completed / CastFinished so a queue-capacity miss
+                    // cannot leave the player seeing success while follow-up side effects failed.
+                    // Finalize / promote failures still leave AbilityExecInstance for retry; ActivateToggle
+                    // is idempotent once the toggle tag is present.
+                    if (terminalInstance.State == AbilityExecRunState.Finished &&
+                        !terminalInstance.IsToggleDeactivating &&
+                        terminalInstance.AbilityId > 0 &&
+                        _abilityDefinitions != null &&
+                        _abilityDefinitions.TryGet(terminalInstance.AbilityId, out var toggleFinishDef) &&
+                        toggleFinishDef.HasToggleSpec && toggleFinishDef.ToggleSpec.ToggleTagId > 0)
+                    {
+                        ActivateToggle(actor, in toggleFinishDef.ToggleSpec);
+                    }
+
                     if (_orderTypeRegistry != null && terminalInstance.OrderId > 0)
                     {
                         if (!OrderSubmitter.FinalizeCurrent(
@@ -592,18 +607,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ? GasPresentationEventKind.CastInterrupted
                             : GasPresentationEventKind.CastFinished;
                         PublishCastTerminalEvent(actor, in terminalInstance, finishKind);
-                    }
-
-                    // Toggle activation: when the activate timeline (not deactivate) finishes successfully,
-                    // add the toggle tag and apply infinite effects.
-                    if (terminalInstance.State == AbilityExecRunState.Finished &&
-                        !terminalInstance.IsToggleDeactivating &&
-                        terminalInstance.AbilityId > 0 &&
-                        _abilityDefinitions != null &&
-                        _abilityDefinitions.TryGet(terminalInstance.AbilityId, out var toggleFinishDef) &&
-                        toggleFinishDef.HasToggleSpec && toggleFinishDef.ToggleSpec.ToggleTagId > 0)
-                    {
-                        ActivateToggle(actor, in toggleFinishDef.ToggleSpec);
                     }
                 }
                 else
@@ -1299,7 +1302,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         /// <summary>
         /// Activate toggle: add toggle tag and apply infinite active effects.
-        /// Called when the activate timeline completes successfully.
+        /// Called when the activate timeline completes successfully, before terminal finalize.
         /// </summary>
         private void ActivateToggle(Entity actor, in AbilityToggleSpec toggleSpec)
         {
@@ -1309,8 +1312,35 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref var tags = ref World.Get<GameplayTagContainer>(actor);
             if (tags.HasTag(toggleSpec.ToggleTagId)) return;
 
+            int requiredEffectSlots = 0;
+            unsafe
+            {
+                for (int i = 0; i < toggleSpec.ActiveEffectCount && i < 4; i++)
+                {
+                    if (toggleSpec.ActiveEffectTemplateIds[i] > 0)
+                    {
+                        requiredEffectSlots++;
+                    }
+                }
+            }
+
+            if (requiredEffectSlots > 0)
+            {
+                if (_effectRequests == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{ToggleActiveEffectQueueMissingError}: actor={actor.Id}, toggleTagId={toggleSpec.ToggleTagId}, required={requiredEffectSlots}.");
+                }
+
+                if (_effectRequests.AvailableCapacity < requiredEffectSlots)
+                {
+                    throw new InvalidOperationException(
+                        $"{ToggleActiveEffectQueueFullError}: actor={actor.Id}, toggleTagId={toggleSpec.ToggleTagId}, required={requiredEffectSlots}, available={_effectRequests.AvailableCapacity}.");
+                }
+            }
+
             _tagOps.AddTag(World, actor, toggleSpec.ToggleTagId);
-            
+
             // Apply active effects as infinite-duration effects
             unsafe
             {
@@ -1319,7 +1349,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     int tplId = toggleSpec.ActiveEffectTemplateIds[i];
                     if (tplId > 0)
                     {
-                        _effectRequests?.Publish(new EffectRequest
+                        _effectRequests!.Publish(new EffectRequest
                         {
                             RootId = 0,
                             Source = actor,

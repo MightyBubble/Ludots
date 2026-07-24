@@ -307,7 +307,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ProposalProcessing_OrderRequestQueueFull_ThrowsAfterInputRequestIsRecorded()
+        public void ProposalProcessing_OrderRequestQueueFull_ThrowsBeforePublishingPrompt()
         {
             var world = World.Create();
             try
@@ -328,9 +328,10 @@ namespace Ludots.Tests.GAS
                 });
 
                 That(error!.Message, Does.StartWith(EffectProposalProcessingSystem.OrderRequestQueueFullError));
-                That(inputRequests.Count, Is.EqualTo(1));
+                That(inputRequests.Count, Is.EqualTo(0), "OrderRequest queue full must not leave an orphan visible prompt.");
                 That(orderRequests.Count, Is.EqualTo(orderRequests.Capacity));
                 That(queue.Count, Is.EqualTo(1));
+                That(sys.DebugWindowPhase, Is.EqualTo((byte)2), "WaitInput phase must remain retryable without marking the prompt sent.");
             }
             finally
             {
