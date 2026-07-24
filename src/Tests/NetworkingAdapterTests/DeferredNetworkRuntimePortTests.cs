@@ -94,7 +94,7 @@ public sealed class DeferredNetworkRuntimePortTests
         asTransport.PumpTransport();
         asTransport.PumpReplicatedClient(1f / 30f);
         FixedInputOutboxEnqueueStatus enqueued = asFixedInput.TrySubmitFixedInput(1, new byte[12]);
-        bool pulsed = asFixedInput.TryPulseFixedInputSend();
+        FixedInputSendPulseResult pulsed = asFixedInput.TryPulseFixedInputSend();
 
         Assert.Multiple(() =>
         {
@@ -102,7 +102,8 @@ public sealed class DeferredNetworkRuntimePortTests
             Assert.That(ReferenceEquals(asTransport, asFixedInput), Is.True);
             Assert.That(ReferenceEquals(asComposite, deferred), Is.True);
             Assert.That(enqueued, Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
-            Assert.That(pulsed, Is.True);
+            Assert.That(pulsed.Status, Is.EqualTo(FixedInputSendPulseStatus.Accepted));
+            Assert.That(pulsed.HighestAcceptedTargetTick, Is.EqualTo(1u));
             Assert.That(inner.PumpCount, Is.EqualTo(1));
             Assert.That(inner.ClientPumpCount, Is.EqualTo(1));
             Assert.That(inner.SubmitCount, Is.EqualTo(1));
@@ -184,10 +185,14 @@ public sealed class DeferredNetworkRuntimePortTests
             return FixedInputOutboxEnqueueStatus.Enqueued;
         }
 
-        public bool TryPulseFixedInputSend()
+        public FixedInputSendPulseResult TryPulseFixedInputSend()
         {
             PulseCount++;
-            return true;
+            return new FixedInputSendPulseResult(
+                FixedInputSendPulseStatus.Accepted,
+                LastEnqueuedFixedInputTargetTick,
+                LastEnqueuedFixedInputTargetTick,
+                acceptedFrameCount: 1);
         }
 
         public void Dispose() => DisposeCount++;

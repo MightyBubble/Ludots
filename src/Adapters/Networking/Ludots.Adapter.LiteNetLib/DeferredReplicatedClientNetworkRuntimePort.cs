@@ -37,7 +37,7 @@ internal sealed class DeferredReplicatedClientNetworkRuntimePort :
     public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload) =>
         RequireClient().TrySubmitFixedInput(targetTick, payload);
 
-    public bool TryPulseFixedInputSend() => RequireClient().TryPulseFixedInputSend();
+    public FixedInputSendPulseResult TryPulseFixedInputSend() => RequireClient().TryPulseFixedInputSend();
 
     protected override void ValidateRuntime(INetworkRuntimePort runtime)
     {

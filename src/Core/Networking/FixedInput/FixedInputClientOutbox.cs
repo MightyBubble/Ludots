@@ -200,11 +200,17 @@ namespace Ludots.Core.Networking.FixedInput
             // Collect needing-send slots sorted by tick without allocating.
             Span<int> orderedSlots = stackalloc int[maxFrames];
             int selected = 0;
+            int newestSlot = -1;
             for (int slot = 0; slot < _capacity; slot++)
             {
                 if (!_occupied[slot] || !_needsSend[slot])
                 {
                     continue;
+                }
+
+                if (newestSlot < 0 || _ticks[slot] > _ticks[newestSlot])
+                {
+                    newestSlot = slot;
                 }
 
                 if (selected == maxFrames)
@@ -234,6 +240,30 @@ namespace Ludots.Core.Networking.FixedInput
             if (selected == 0)
             {
                 return FixedInputBatchBuildStatus.NoData;
+            }
+
+            bool includesNewest = false;
+            for (int i = 0; i < selected; i++)
+            {
+                if (orderedSlots[i] == newestSlot)
+                {
+                    includesNewest = true;
+                    break;
+                }
+            }
+
+            if (!includesNewest)
+            {
+                int newestSelected = 0;
+                for (int i = 1; i < selected; i++)
+                {
+                    if (_ticks[orderedSlots[i]] > _ticks[orderedSlots[newestSelected]])
+                    {
+                        newestSelected = i;
+                    }
+                }
+
+                orderedSlots[newestSelected] = newestSlot;
             }
 
             // Insertion-sort selected slots by tick ascending.

@@ -621,7 +621,8 @@ public sealed class RuntimeCompositionClientNetworkRuntime : IReplicatedClientNe
     public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload) =>
         FixedInputOutboxEnqueueStatus.InvalidInput;
 
-    public bool TryPulseFixedInputSend() => false;
+    public FixedInputSendPulseResult TryPulseFixedInputSend() =>
+        new(FixedInputSendPulseStatus.NoData, 0, 0, 0);
 
     public void Dispose()
     {

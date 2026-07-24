@@ -5,6 +5,41 @@ using Ludots.Core.Networking.Session;
 
 namespace Ludots.Core.Networking.FixedInput
 {
+    public enum FixedInputSendPulseStatus : byte
+    {
+        Invalid = 0,
+        Accepted = 1,
+        NotConnected = 2,
+        NoData = 3,
+        BatchBuildRejected = 4,
+        TransportRejected = 5,
+    }
+
+    /// <summary>
+    /// Result for one fixed-input send pulse. Accepted bounds describe the exact sorted batch
+    /// accepted by transport or its bounded send queue; non-accepted results carry zero bounds.
+    /// </summary>
+    public readonly struct FixedInputSendPulseResult
+    {
+        public FixedInputSendPulseResult(
+            FixedInputSendPulseStatus status,
+            uint firstAcceptedTargetTick,
+            uint highestAcceptedTargetTick,
+            int acceptedFrameCount)
+        {
+            Status = status;
+            FirstAcceptedTargetTick = firstAcceptedTargetTick;
+            HighestAcceptedTargetTick = highestAcceptedTargetTick;
+            AcceptedFrameCount = acceptedFrameCount;
+        }
+
+        public FixedInputSendPulseStatus Status { get; }
+        public uint FirstAcceptedTargetTick { get; }
+        public uint HighestAcceptedTargetTick { get; }
+        public int AcceptedFrameCount { get; }
+        public bool IsAccepted => Status == FixedInputSendPulseStatus.Accepted;
+    }
+
     /// <summary>
     /// Narrow client port used by <see cref="ReplicatedClientFixedInputClock"/>.
     /// Fixed-input send remains outside <see cref="INetworkRuntimePort.PumpReplicatedClient"/>.
@@ -42,6 +77,6 @@ namespace Ludots.Core.Networking.FixedInput
 
         FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload);
 
-        bool TryPulseFixedInputSend();
+        FixedInputSendPulseResult TryPulseFixedInputSend();
     }
 }

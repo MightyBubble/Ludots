@@ -230,15 +230,19 @@ namespace Ludots.Core.Networking.Runtime
         /// <summary>
         /// Explicit fixed-input send pulse for a fixed-rate caller (for example 30Hz).
         /// Does not run inside <see cref="PumpReplicatedClient"/>; empty outboxes produce no datagram.
-        /// Returns true only when the framed batch was accepted immediately by transport or by the
-        /// bounded outbound send queue. Transport-closed never reports success.
+        /// Reports the exact sorted batch bounds only when the framed batch was accepted immediately
+        /// by transport or by the bounded outbound send queue. Transport-closed never reports success.
         /// </summary>
-        public bool TryPulseFixedInputSend()
+        public FixedInputSendPulseResult TryPulseFixedInputSend()
         {
             EnsureOperational();
             if (_state != ReplicatedClientConnectionState.Connected || _fixedInputOutbox == null)
             {
-                return false;
+                return new FixedInputSendPulseResult(
+                    FixedInputSendPulseStatus.NotConnected,
+                    firstAcceptedTargetTick: 0,
+                    highestAcceptedTargetTick: 0,
+                    acceptedFrameCount: 0);
             }
 
             // Batch header acknowledges the latest fixed-input ACK, not the slower replication tick.
@@ -250,7 +254,11 @@ namespace Ludots.Core.Networking.Runtime
                 out int frameCount);
             if (built == FixedInputBatchBuildStatus.NoData)
             {
-                return false;
+                return new FixedInputSendPulseResult(
+                    FixedInputSendPulseStatus.NoData,
+                    firstAcceptedTargetTick: 0,
+                    highestAcceptedTargetTick: 0,
+                    acceptedFrameCount: 0);
             }
 
             if (built != FixedInputBatchBuildStatus.Built)
@@ -259,7 +267,11 @@ namespace Ludots.Core.Networking.Runtime
                     NetworkRuntimeFaultCode.FixedInputRejected,
                     NetworkWireKind.FixedInputBatch,
                     detail: (int)built);
-                return false;
+                return new FixedInputSendPulseResult(
+                    FixedInputSendPulseStatus.BatchBuildRejected,
+                    firstAcceptedTargetTick: 0,
+                    highestAcceptedTargetTick: 0,
+                    acceptedFrameCount: 0);
             }
 
             NetworkWireCodecStatus encoded = FixedInputWireCodec.TryEncodeBatch(
@@ -273,10 +285,24 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.FixedInputRejected, NetworkWireKind.FixedInputBatch, encoded);
             }
 
-            return TrySendFramed(
+            bool accepted = TrySendFramed(
                 _capacity.InputChannel,
                 NetworkWireKind.FixedInputBatch,
                 _fixedInputBatchBuffer.AsSpan(0, payloadBytes));
+            if (!accepted)
+            {
+                return new FixedInputSendPulseResult(
+                    FixedInputSendPulseStatus.TransportRejected,
+                    firstAcceptedTargetTick: 0,
+                    highestAcceptedTargetTick: 0,
+                    acceptedFrameCount: 0);
+            }
+
+            return new FixedInputSendPulseResult(
+                FixedInputSendPulseStatus.Accepted,
+                _fixedInputTargetTicks[0],
+                _fixedInputTargetTicks[frameCount - 1],
+                frameCount);
         }
 
         public bool TryConnectNow()
