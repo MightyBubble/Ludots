@@ -86,18 +86,12 @@ public readonly struct Physics3DNetCompatibilityFingerprint : IEquatable<Physics
         ArgumentNullException.ThrowIfNull(config);
         config.Validate();
 
-        Span<byte> buffer = stackalloc byte[44];
+        Span<byte> buffer = stackalloc byte[20];
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(0, 4), config.AuthoritativeHz);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), config.SnapshotHz);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(8, 4), config.PlayerCapacity);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(12, 4), config.InputHistoryTicksPerPlayer);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(16, 4), config.MaxFutureInputTicks);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(20, 4), config.SnapshotEntityCapacity);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(24, 4), config.AoiEntityCapacityPerClient);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(28, 4), config.LocalPredictionHistoryTicks);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(32, 4), config.RemoteInterpolationHistoryTicks);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(36, 4), config.ReplayEventCapacity);
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(40, 4), config.ClientCapacity);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(8, 4), config.LocalPredictionHistoryTicks);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(12, 4), config.RemoteInterpolationHistoryTicks);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(16, 4), config.ReplayEventCapacity);
         return Fnv1a64(buffer);
     }
 

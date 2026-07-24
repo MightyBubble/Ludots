@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Networking.Replication;
 
 namespace Ludots.Core.Physics3DNet;
 
@@ -67,14 +68,14 @@ public readonly struct Physics3DNetInterpolationSample
 
 /// <summary>
 /// Bounded remote-body interpolation buffer with explicit underflow/overflow behavior.
-/// Tick jumps/wraps purge all samples older than the retained bounded window.
+/// Lane identity is <see cref="NetworkEntityHandle.Slot"/> with generation checks; no linear scan.
+/// Tick jumps/wraps purge all samples older than the retained bounded window. No extrapolation.
 /// </summary>
 public sealed class Physics3DNetRemoteInterpolationBuffer
 {
     private readonly int _historyCapacity;
     private readonly int _entityCapacity;
-    private readonly int[] _entityId;
-    private readonly int[] _generation;
+    private readonly uint[] _generation;
     private readonly bool[] _entityActive;
     private readonly long[] _sampleTick;
     private readonly float[] _posX;
@@ -104,8 +105,7 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
 
         _historyCapacity = config.RemoteInterpolationHistoryTicks;
         _entityCapacity = remoteEntityCapacity;
-        _entityId = new int[_entityCapacity];
-        _generation = new int[_entityCapacity];
+        _generation = new uint[_entityCapacity];
         _entityActive = new bool[_entityCapacity];
         _sampleCount = new int[_entityCapacity];
 
@@ -130,64 +130,54 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
     public int EntityCapacity => _entityCapacity;
     public int HistoryCapacity => _historyCapacity;
 
-    public void Track(int networkEntityId, int generation)
+    public void Track(in NetworkEntityHandle handle)
     {
-        Physics3DNetValidation.RequireNonNegativeId(networkEntityId, nameof(networkEntityId));
-        Physics3DNetValidation.RequirePositiveGeneration(generation, nameof(generation));
-
-        int slot = FindEntitySlot(networkEntityId);
-        if (slot >= 0)
+        RequireHandleInCapacity(in handle);
+        int slot = handle.Slot;
+        if (_entityActive[slot])
         {
-            if (_generation[slot] != generation)
+            if (_generation[slot] != handle.Generation)
             {
                 ClearEntitySamples(slot);
-                _generation[slot] = generation;
+                _generation[slot] = handle.Generation;
             }
 
-            _entityActive[slot] = true;
             return;
         }
 
-        slot = AllocateEntitySlot(tick: 0);
-        _entityId[slot] = networkEntityId;
-        _generation[slot] = generation;
+        _generation[slot] = handle.Generation;
         _entityActive[slot] = true;
         _sampleCount[slot] = 0;
     }
 
-    public void Untrack(int networkEntityId)
+    public void Untrack(in NetworkEntityHandle handle)
     {
-        int slot = FindEntitySlot(networkEntityId);
-        if (slot < 0)
+        RequireHandleInCapacity(in handle);
+        int slot = handle.Slot;
+        if (!_entityActive[slot])
         {
-            return;
+            throw new InvalidOperationException(
+                $"Remote interpolation slot {slot} is not tracked; stale untrack is rejected.");
+        }
+
+        if (_generation[slot] != handle.Generation)
+        {
+            throw new InvalidOperationException(
+                $"Remote interpolation slot {slot} generation mismatch on untrack. Tracked {_generation[slot]}, got {handle.Generation}.");
         }
 
         ClearEntitySamples(slot);
         _entityActive[slot] = false;
-        _entityId[slot] = 0;
         _generation[slot] = 0;
     }
 
-    public void Push(int networkEntityId, int generation, in Physics3DNetRemoteSample sample)
+    public void Push(in NetworkEntityHandle handle, in Physics3DNetRemoteSample sample)
     {
-        int slot = FindEntitySlot(networkEntityId);
-        if (slot < 0 || !_entityActive[slot])
-        {
-            throw new InvalidOperationException(
-                $"Remote entity {networkEntityId} is not tracked for interpolation.");
-        }
-
-        if (_generation[slot] != generation)
-        {
-            throw new InvalidOperationException(
-                $"Remote entity {networkEntityId} generation mismatch. Tracked {_generation[slot]}, got {generation}.");
-        }
-
+        int slot = RequireActiveMatchingSlot(in handle);
         long newest = FindNewestTick(slot);
         if (newest > 0 && sample.Tick <= newest)
         {
-            throw new Physics3DNetTemporalOrderException(networkEntityId, newest, sample.Tick);
+            throw new Physics3DNetTemporalOrderException(handle.Slot, newest, sample.Tick);
         }
 
         // Purge samples older than the retained bounded window relative to the new newest tick.
@@ -224,11 +214,12 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
 
     /// <summary>
     /// Samples at a render tick. Underflow = before oldest sample. Overflow = after newest sample.
+    /// Never extrapolates past the newest sample.
     /// </summary>
-    public Physics3DNetInterpolationSample Sample(int networkEntityId, float renderTick)
+    public Physics3DNetInterpolationSample Sample(in NetworkEntityHandle handle, float renderTick)
     {
-        int slot = FindEntitySlot(networkEntityId);
-        if (slot < 0 || !_entityActive[slot] || _sampleCount[slot] == 0)
+        int slot = RequireActiveMatchingSlot(in handle);
+        if (_sampleCount[slot] == 0)
         {
             return new Physics3DNetInterpolationSample(
                 Physics3DNetInterpolationResultKind.Underflow,
@@ -305,21 +296,16 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
             Quaternion.Slerp(lowerOrient, upperOrient, alpha));
     }
 
-    public int GetSampleCount(int networkEntityId)
+    public int GetSampleCount(in NetworkEntityHandle handle)
     {
-        int slot = FindEntitySlot(networkEntityId);
-        return slot < 0 ? 0 : _sampleCount[slot];
+        int slot = RequireActiveMatchingSlot(in handle);
+        return _sampleCount[slot];
     }
 
-    public bool TryGetSampleTick(int networkEntityId, long tick, out Physics3DNetRemoteSample sample)
+    public bool TryGetSampleTick(in NetworkEntityHandle handle, long tick, out Physics3DNetRemoteSample sample)
     {
         sample = default;
-        int slot = FindEntitySlot(networkEntityId);
-        if (slot < 0)
-        {
-            return false;
-        }
-
+        int slot = RequireActiveMatchingSlot(in handle);
         int index = SampleIndex(slot, tick);
         if (!_sampleOccupied[index] || _sampleTick[index] != tick)
         {
@@ -376,30 +362,39 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
         _sampleCount[slot] = remaining;
     }
 
-    private int FindEntitySlot(int networkEntityId)
+    private void RequireHandleInCapacity(in NetworkEntityHandle handle)
     {
-        for (int i = 0; i < _entityCapacity; i++)
+        if (!handle.IsValid)
         {
-            if (_entityActive[i] && _entityId[i] == networkEntityId)
-            {
-                return i;
-            }
+            throw new ArgumentOutOfRangeException(nameof(handle), "Network entity handle must be valid.");
         }
 
-        return -1;
+        if ((uint)handle.Slot >= (uint)_entityCapacity)
+        {
+            throw new Physics3DNetCapacityExceededException(
+                "remote interpolation entities",
+                _entityCapacity,
+                tick: 0);
+        }
     }
 
-    private int AllocateEntitySlot(long tick)
+    private int RequireActiveMatchingSlot(in NetworkEntityHandle handle)
     {
-        for (int i = 0; i < _entityCapacity; i++)
+        RequireHandleInCapacity(in handle);
+        int slot = handle.Slot;
+        if (!_entityActive[slot])
         {
-            if (!_entityActive[i])
-            {
-                return i;
-            }
+            throw new InvalidOperationException(
+                $"Remote entity slot {slot} is not tracked for interpolation.");
         }
 
-        throw new Physics3DNetCapacityExceededException("remote interpolation entities", _entityCapacity, tick);
+        if (_generation[slot] != handle.Generation)
+        {
+            throw new InvalidOperationException(
+                $"Remote entity slot {slot} generation mismatch. Tracked {_generation[slot]}, got {handle.Generation}.");
+        }
+
+        return slot;
     }
 
     private void ClearEntitySamples(int slot)

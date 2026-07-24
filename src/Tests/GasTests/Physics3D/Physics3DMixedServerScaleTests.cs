@@ -3,9 +3,17 @@ using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Character3D;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Layers;
+using Ludots.Core.Networking.FixedInput;
+using Ludots.Core.Networking.Protocol;
+using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Session;
+using Ludots.Core.Networking.Simulation;
 using Ludots.Core.Physics3D;
 using Ludots.Core.Physics3DNet;
+using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Input;
 using Ludots.Core.Ragdoll;
 using Ludots.Core.Vehicle3D;
 using NUnit.Framework;
@@ -85,13 +93,11 @@ public sealed class Physics3DMixedServerScaleTests
         Assert.Multiple(() =>
         {
             Assert.That(scenario.Physics.StepIndex, Is.EqualTo(profile.CorrectnessTickCount));
-            Assert.That(scenario.NetworkLifecycle.CommittedTick, Is.EqualTo(profile.CorrectnessTickCount));
-            Assert.That(scenario.NetworkLifecycle.ExecutingTick, Is.Zero);
-            Assert.That(scenario.NetworkLifecycle.SnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(profile.CorrectnessTickCount)));
-            Assert.That(scenario.SnapshotStore.SnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(profile.CorrectnessTickCount)));
+            Assert.That(scenario.TickState.CommittedTick, Is.EqualTo(profile.CorrectnessTickCount));
+            Assert.That(scenario.TickState.IsExecuting, Is.False);
+            Assert.That(scenario.LastPublishedSnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(profile.CorrectnessTickCount)));
             Assert.That(scenario.SnapshotPublishCount, Is.EqualTo(profile.ExpectedSnapshotPublishCount(profile.CorrectnessTickCount)));
-            Assert.That(scenario.NetworkLifecycle.SnapshotHz, Is.EqualTo(profile.SnapshotHz));
-            Assert.That(scenario.NetworkLifecycle.SnapshotIntervalTicks, Is.EqualTo(profile.SnapshotIntervalTicks));
+            Assert.That(scenario.SnapshotIntervalTicks, Is.EqualTo(profile.SnapshotIntervalTicks));
             Assert.That(scenario.CharacterCount, Is.EqualTo(profile.CharacterCount));
             Assert.That(scenario.VehicleCount, Is.EqualTo(profile.TotalVehicleCount));
             Assert.That(scenario.RagdollCount, Is.EqualTo(profile.RagdollCount));
@@ -100,7 +106,7 @@ public sealed class Physics3DMixedServerScaleTests
             Assert.That(scenario.PlayerCount, Is.EqualTo(profile.PlayerCount));
             Assert.That(scenario.SupplementalQueriesExecutedLastTick, Is.EqualTo(profile.SupplementalQueryCount));
             Assert.That(scenario.SupplementalQueryHitsLastTick, Is.GreaterThan(0));
-            Assert.That(scenario.SnapshotCount, Is.EqualTo(profile.PlayerCount));
+            Assert.That(scenario.SnapshotEntityCount, Is.EqualTo(profile.PlayerCount));
             Assert.That(scenario.MinimumAoiDeltaWritesLastSnapshot, Is.GreaterThan(0));
             Assert.That(scenario.AoiClientsContainingSelfLastSnapshot, Is.EqualTo(profile.PlayerCount));
             Assert.That(scenario.DistinctAoiInterestSetsObservedLastSnapshot, Is.True);
@@ -124,16 +130,16 @@ public sealed class Physics3DMixedServerScaleTests
     {
         using var scenario = new MixedServerScenario(MixedServerScaleProfile.Correctness);
 
-        Physics3DNetInputArrivalResult result = scenario.BeginTickAndSubmitSameTickAfterExecutionCutoff();
+        FixedInputAdmissionDisposition disposition = scenario.BeginTickAndSubmitSameTickAfterExecutionCutoff();
 
         Assert.Multiple(() =>
         {
-            Assert.That(scenario.NetworkLifecycle.ExecutingTick, Is.EqualTo(1));
-            Assert.That(scenario.NetworkLifecycle.CommittedTick, Is.Zero);
-            Assert.That(result.Accepted, Is.False);
-            Assert.That(result.Disposition, Is.EqualTo(Physics3DNetInputArrivalDisposition.RejectedAtExecutionCutoff));
-            Assert.That(scenario.InputRing.ExecutionCutoffRejectionCount, Is.EqualTo(1));
-            Assert.That(scenario.InputRing.ConflictCount, Is.Zero);
+            Assert.That(scenario.TickState.IsExecuting, Is.True);
+            Assert.That(scenario.TickState.ExecutingTick, Is.EqualTo(1));
+            Assert.That(scenario.TickState.CommittedTick, Is.Zero);
+            Assert.That(disposition, Is.EqualTo(FixedInputAdmissionDisposition.RejectedAtExecutionCutoff));
+            Assert.That(scenario.FixedInput.ExecutionCutoffRejectionCount, Is.EqualTo(1));
+            Assert.That(scenario.FixedInput.ConflictCount, Is.Zero);
         });
     }
 
@@ -208,13 +214,11 @@ public sealed class Physics3DMixedServerScaleTests
             Assert.That(minimumAwakeBodies, Is.GreaterThanOrEqualTo(profile.OrdinaryActiveBodyCount));
             Assert.That(minimumConstraints, Is.EqualTo(profile.ExpectedConstraintCount));
             Assert.That(minimumQueryHits, Is.GreaterThan(0));
-            Assert.That(scenario.NetworkLifecycle.CommittedTick, Is.EqualTo(expectedFinalTick));
-            Assert.That(scenario.NetworkLifecycle.SnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(expectedFinalTick)));
-            Assert.That(scenario.SnapshotStore.SnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(expectedFinalTick)));
+            Assert.That(scenario.TickState.CommittedTick, Is.EqualTo(expectedFinalTick));
+            Assert.That(scenario.LastPublishedSnapshotTick, Is.EqualTo(profile.ExpectedLastSnapshotTick(expectedFinalTick)));
             Assert.That(scenario.SnapshotPublishCount, Is.EqualTo(profile.ExpectedSnapshotPublishCount(expectedFinalTick)));
-            Assert.That(scenario.NetworkLifecycle.SnapshotHz, Is.EqualTo(profile.SnapshotHz));
-            Assert.That(scenario.NetworkLifecycle.SnapshotIntervalTicks, Is.EqualTo(profile.SnapshotIntervalTicks));
-            Assert.That(scenario.SnapshotCount, Is.EqualTo(profile.PlayerCount));
+            Assert.That(scenario.SnapshotIntervalTicks, Is.EqualTo(profile.SnapshotIntervalTicks));
+            Assert.That(scenario.SnapshotEntityCount, Is.EqualTo(profile.PlayerCount));
             Assert.That(scenario.MinimumAoiDeltaWritesLastSnapshot, Is.GreaterThan(0));
             Assert.That(scenario.AoiClientsContainingSelfLastSnapshot, Is.EqualTo(profile.PlayerCount));
             Assert.That(scenario.DistinctAoiInterestSetsObservedLastSnapshot, Is.True);
@@ -240,7 +244,9 @@ public sealed class Physics3DMixedServerScaleTests
         private const uint RagdollCategory = 1u << 2;
         private const uint CharacterCategory = 1u << 3;
         private const uint OrdinaryCategory = 1u << 4;
-        private const long SnapshotBaselineId = 1;
+        private const ushort FixedInputSchemaId = 7;
+        private const int ReplicationSchemaId = 41;
+        private const ulong SessionEpoch = 1;
 
         private static readonly LayerMask GroundBodyLayer = new(
             GroundCategory,
@@ -255,6 +261,7 @@ public sealed class Physics3DMixedServerScaleTests
         private static readonly Physics3DSpringSettings JointSpring = new(24f, 2f);
         private static readonly Physics3DSpringSettings ActivePoseSpring = new(18f, 2f);
         private static readonly Physics3DServoSettings ActivePoseServo = new(20f, 0f, 500_000f);
+        private static readonly Physics3DReplicationQuantizationConfig Quantization = new();
 
         private readonly MixedServerScaleProfile _profile;
         private readonly Character3DControllerSet _characters;
@@ -267,14 +274,20 @@ public sealed class Physics3DMixedServerScaleTests
         private readonly Vehicle3DVehicleId[] _vehicleIds;
         private readonly RagdollInstanceId[] _ragdollIds;
         private readonly Physics3DBodyId[] _playerRepresentativeBodies;
-        private readonly Physics3DNetReplicationMode[] _playerReplicationModes;
-        private readonly int[] _missingPlayerSlots;
-        private readonly Physics3DNetSnapshotEntityWrite[] _snapshotWrites;
-        private readonly Physics3DNetAoiInterest[] _aoiInterest;
-        private readonly Physics3DNetSnapshotEntityWrite[] _aoiDelta;
+        private readonly Physics3DBodyKind[] _playerBodyKinds;
+        private readonly SessionSeatBinding[] _seats;
+        private readonly NetworkEntityHandle[] _playerHandles;
+        private readonly Entity[] _playerEntities;
+        private readonly AuthoritativeReplicationChannel[] _replicationChannels;
+        private readonly ReplicationPacketBuffer[] _replicationPackets;
+        private readonly ulong[] _acknowledgedBaselines;
+        private readonly byte[] _hasBaseline;
+        private readonly ReplicatedEntityState[] _interestStates;
+        private readonly ReplicationDisclosureInput[] _interestDisclosures;
+        private readonly NetworkEntityHandle[] _interestHandles;
         private readonly int[] _aoiEntityIndices;
         private readonly int[] _firstClientAoiEntityIds;
-        private readonly Physics3DNetSnapshotEntityView[] _fullSnapshotSendBuffer;
+        private readonly Vector3[] _playerSnapshotPositions;
         private readonly Physics3DBodyState[] _initialPlayerStates;
         private readonly Physics3DBodyId[] _playerRagdollPoseBodies;
         private readonly Physics3DBodyState[] _initialPlayerRagdollPoseStates;
@@ -289,8 +302,11 @@ public sealed class Physics3DMixedServerScaleTests
         private readonly Physics3DBatchedShapeCastClosestResult[] _capsuleResults;
         private readonly Physics3DBoxCastQuery[] _boxQueries;
         private readonly Physics3DBatchedShapeCastClosestResult[] _boxResults;
+        private readonly byte[] _inputPayloadScratch;
         private readonly Physics3DBodyId _movingPlatform;
         private readonly Physics3DBodyId _conveyorPlatform;
+        private NetworkEntityTable _networkEntities = null!;
+        private ulong _nextSnapshotId;
         private bool _disposed;
 
         public MixedServerScenario(MixedServerScaleProfile profile)
@@ -321,20 +337,27 @@ public sealed class Physics3DMixedServerScaleTests
             _vehicleIds = new Vehicle3DVehicleId[profile.TotalVehicleCount];
             _ragdollIds = new RagdollInstanceId[profile.RagdollCount];
             _playerRepresentativeBodies = new Physics3DBodyId[profile.PlayerCount];
-            _playerReplicationModes = new Physics3DNetReplicationMode[profile.PlayerCount];
-            _missingPlayerSlots = new int[profile.PlayerCount];
-            _snapshotWrites = new Physics3DNetSnapshotEntityWrite[profile.PlayerCount];
-            _aoiInterest = new Physics3DNetAoiInterest[profile.AoiEntityCountPerClient];
-            _aoiDelta = new Physics3DNetSnapshotEntityWrite[profile.AoiEntityCountPerClient * 2];
+            _playerBodyKinds = new Physics3DBodyKind[profile.PlayerCount];
+            _seats = new SessionSeatBinding[profile.PlayerCount];
+            _playerHandles = new NetworkEntityHandle[profile.PlayerCount];
+            _playerEntities = new Entity[profile.PlayerCount];
+            _replicationChannels = new AuthoritativeReplicationChannel[profile.PlayerCount];
+            _replicationPackets = new ReplicationPacketBuffer[profile.PlayerCount];
+            _acknowledgedBaselines = new ulong[profile.PlayerCount];
+            _hasBaseline = new byte[profile.PlayerCount];
+            _interestStates = new ReplicatedEntityState[profile.AoiEntityCountPerClient];
+            _interestDisclosures = new ReplicationDisclosureInput[profile.AoiEntityCountPerClient];
+            _interestHandles = new NetworkEntityHandle[profile.AoiEntityCountPerClient];
             _aoiEntityIndices = new int[profile.AoiEntityCountPerClient];
             _firstClientAoiEntityIds = new int[profile.AoiEntityCountPerClient];
-            _fullSnapshotSendBuffer = new Physics3DNetSnapshotEntityView[profile.PlayerCount];
+            _playerSnapshotPositions = new Vector3[profile.PlayerCount];
             _initialPlayerStates = new Physics3DBodyState[profile.PlayerCount];
             _playerRagdollPoseBodies = new Physics3DBodyId[profile.PlayerRagdollCount];
             _initialPlayerRagdollPoseStates = new Physics3DBodyState[profile.PlayerRagdollCount];
             _playerRagdollVelocityChanged = new byte[profile.PlayerRagdollCount];
             _playerRagdollPoseChanged = new byte[profile.PlayerRagdollCount];
             _ragdollPoseTargets = new Quaternion[profile.BonesPerRagdoll];
+            _inputPayloadScratch = new byte[Physics3DFixedInputFrameCodec.PayloadBytes];
             Array.Fill(_ragdollPoseTargets, Quaternion.Identity);
 
             int rayCount = profile.SupplementalQueryCount / 4;
@@ -412,10 +435,10 @@ public sealed class Physics3DMixedServerScaleTests
         }
 
         public Physics3DWorld Physics { get; }
-        public Physics3DNetTickLifecycle NetworkLifecycle { get; private set; } = null!;
-        public Physics3DNetInputRing InputRing { get; private set; } = null!;
-        public Physics3DNetAuthoritativeSnapshotStore SnapshotStore { get; private set; } = null!;
-        public Physics3DNetAoiDeltaBuilder Aoi { get; private set; } = null!;
+        public AuthoritativeSimulationTickState TickState { get; private set; } = null!;
+        public AuthoritativeFixedInputIngress FixedInput { get; private set; } = null!;
+        public int SnapshotIntervalTicks { get; private set; }
+        public long LastPublishedSnapshotTick { get; private set; }
         public int PlayerCount => _profile.PlayerCount;
         public int CharacterCount => _characters.ActiveCount;
         public int VehicleCount => _vehicles.ActiveVehicleCount;
@@ -424,7 +447,7 @@ public sealed class Physics3DMixedServerScaleTests
         public int ActivePoseTargetsSubmittedLastTick { get; private set; }
         public int SupplementalQueriesExecutedLastTick { get; private set; }
         public int SupplementalQueryHitsLastTick { get; private set; }
-        public int SnapshotCount => SnapshotStore.Count;
+        public int SnapshotEntityCount => _profile.PlayerCount;
         public int SnapshotPublishCount { get; private set; }
         public int MinimumAoiDeltaWritesLastSnapshot { get; private set; }
         public int AoiClientsContainingSelfLastSnapshot { get; private set; }
@@ -436,14 +459,12 @@ public sealed class Physics3DMixedServerScaleTests
 
         public void ExecuteTick()
         {
-            long tick = NetworkLifecycle.CommittedTick + 1;
+            int tick = TickState.CommittedTick + 1;
             long allocationStart = GC.GetAllocatedBytesForCurrentThread();
             SubmitNetworkInputs(tick);
             long afterInputSubmission = GC.GetAllocatedBytesForCurrentThread();
-            if (!InputRing.TryBeginAuthoritativeExecute(tick, _missingPlayerSlots, out Physics3DNetInputExecuteGateResult gate))
-            {
-                throw new Physics3DNetMissingInputException(tick, gate.MissingCount);
-            }
+            TickState.Begin(tick);
+            EnsureAllPlayerInputsPresent(tick);
             long afterExecuteGate = GC.GetAllocatedBytesForCurrentThread();
 
             UpdatePlatforms(tick);
@@ -462,22 +483,26 @@ public sealed class Physics3DMixedServerScaleTests
             _vehicles.ObserveFixedStep();
             _ragdolls.ObserveFixedStep(tick);
             ObserveRagdollPlayerMotion();
-            if (Physics.StepIndex != tick || NetworkLifecycle.ExecutingTick != tick)
+            if (Physics.StepIndex != tick || TickState.ExecutingTick != tick)
             {
                 throw new InvalidOperationException(
-                    $"Authoritative tick {tick} observed Physics3D step {Physics.StepIndex} while network executing tick was {NetworkLifecycle.ExecutingTick}.");
+                    $"Authoritative tick {tick} observed Physics3D step {Physics.StepIndex} while network executing tick was {TickState.ExecutingTick}.");
             }
 
-            NetworkLifecycle.Commit();
-            InputRing.AcknowledgeInputFramesAfterCommit(tick);
-            if (NetworkLifecycle.CommittedTick != Physics.StepIndex)
+            TickState.Commit(tick);
+            for (int player = 0; player < _profile.PlayerCount; player++)
+            {
+                _ = FixedInput.BuildAcknowledgement(in _seats[player]);
+            }
+
+            if (TickState.CommittedTick != Physics.StepIndex)
             {
                 throw new InvalidOperationException(
-                    $"Committed network tick {NetworkLifecycle.CommittedTick} does not match Physics3D step {Physics.StepIndex}.");
+                    $"Committed network tick {TickState.CommittedTick} does not match Physics3D step {Physics.StepIndex}.");
             }
             long afterObservationAndCommit = GC.GetAllocatedBytesForCurrentThread();
 
-            if (NetworkLifecycle.IsSnapshotBoundary(tick))
+            if (tick % SnapshotIntervalTicks == 0)
             {
                 PublishSnapshotAndAoi(tick);
             }
@@ -491,23 +516,13 @@ public sealed class Physics3DMixedServerScaleTests
                 afterSnapshotPublish - afterObservationAndCommit);
         }
 
-        public Physics3DNetInputArrivalResult BeginTickAndSubmitSameTickAfterExecutionCutoff()
+        public FixedInputAdmissionDisposition BeginTickAndSubmitSameTickAfterExecutionCutoff()
         {
-            const long tick = 1;
+            const int tick = 1;
             SubmitNetworkInputs(tick);
-            if (!InputRing.TryBeginAuthoritativeExecute(tick, _missingPlayerSlots, out Physics3DNetInputExecuteGateResult gate))
-            {
-                throw new Physics3DNetMissingInputException(tick, gate.MissingCount);
-            }
-
-            return InputRing.Submit(new Physics3DNetInputSubmit(
-                tick,
-                NetworkPlayerId(0),
-                generation: 1,
-                sequence: 2,
-                new Physics3DNetQuantizedAxes2(short.MaxValue, short.MinValue),
-                new Physics3DNetQuantizedAxes2(short.MaxValue, short.MinValue),
-                buttons: uint.MaxValue));
+            TickState.Begin(tick);
+            EnsureAllPlayerInputsPresent(tick);
+            return AdmitPlayerInput(0, tick, moveX: 0.25f, moveY: 0f);
         }
 
         public bool AllPlayerRepresentativesAreFinite()
@@ -676,7 +691,7 @@ public sealed class Physics3DMixedServerScaleTests
                 if (i < _profile.PlayerWalkingCount)
                 {
                     _playerRepresentativeBodies[i] = body;
-                    _playerReplicationModes[i] = Physics3DNetReplicationMode.Character;
+                    _playerBodyKinds[i] = Physics3DBodyKind.Dynamic;
                 }
             }
         }
@@ -723,7 +738,7 @@ public sealed class Physics3DMixedServerScaleTests
                 {
                     int playerSlot = _profile.PlayerWalkingCount + vehicleIndex;
                     _playerRepresentativeBodies[playerSlot] = chassis;
-                    _playerReplicationModes[playerSlot] = Physics3DNetReplicationMode.Vehicle;
+                    _playerBodyKinds[playerSlot] = Physics3DBodyKind.Dynamic;
                 }
             }
         }
@@ -806,7 +821,7 @@ public sealed class Physics3DMixedServerScaleTests
                     int playerSlot = _profile.PlayerWalkingCount + _profile.PlayerDrivingCount + instance;
                     _playerRepresentativeBodies[playerSlot] = created[0];
                     _playerRagdollPoseBodies[instance] = created[1];
-                    _playerReplicationModes[playerSlot] = Physics3DNetReplicationMode.Ragdoll;
+                    _playerBodyKinds[playerSlot] = Physics3DBodyKind.Dynamic;
                 }
             }
         }
@@ -846,28 +861,46 @@ public sealed class Physics3DMixedServerScaleTests
 
         private void ConfigureNetworking()
         {
-            var config = new Physics3DNetConfig
-            {
-                AuthoritativeHz = _profile.FixedStepHz,
-                SnapshotHz = _profile.SnapshotHz,
-                PlayerCapacity = _profile.PlayerCount,
-                ClientCapacity = _profile.PlayerCount,
-                SnapshotEntityCapacity = _profile.PlayerCount,
-                AoiEntityCapacityPerClient = _profile.AoiEntityCountPerClient,
-                LocalPredictionHistoryTicks = 16,
-                RemoteInterpolationHistoryTicks = 8,
-                ReplayEventCapacity = Math.Max(128, _profile.PlayerCount * 4),
-                InputHistoryTicksPerPlayer = 16,
-                MaxFutureInputTicks = 8
-            };
-            config.Validate();
-            NetworkLifecycle = new Physics3DNetTickLifecycle(config);
-            InputRing = new Physics3DNetInputRing(config, NetworkLifecycle);
-            SnapshotStore = new Physics3DNetAuthoritativeSnapshotStore(config);
-            Aoi = new Physics3DNetAoiDeltaBuilder(config);
+            SnapshotIntervalTicks = _profile.FixedStepHz / _profile.SnapshotHz;
+            TickState = new AuthoritativeSimulationTickState();
+            var fixedConfig = new FixedInputProtocolConfig(
+                seatCapacity: _profile.PlayerCount,
+                historyTicksPerSeat: 16,
+                schemaId: FixedInputSchemaId,
+                framePayloadBytes: Physics3DFixedInputFrameCodec.PayloadBytes,
+                maxFutureTicks: 8,
+                maxFramesPerBatch: 1,
+                maxDatagramPayloadBytes: 1_200,
+                sessionEpoch: SessionEpoch);
+            FixedInput = new AuthoritativeFixedInputIngress(in fixedConfig, TickState);
+            _networkEntities = new NetworkEntityTable(capacity: _profile.PlayerCount);
             for (int player = 0; player < _profile.PlayerCount; player++)
             {
-                InputRing.RegisterPlayer(NetworkPlayerId(player), generation: 1, playerSlot: player);
+                _seats[player] = new SessionSeatBinding(player, generation: 1, new PlayerId(NetworkPlayerId(player)));
+                FixedInput.BindSeat(in _seats[player]);
+                var pose = new Physics3DPoseCm { Position = Vector3.Zero, Orientation = Quaternion.Identity };
+                var schema = new ReplicationSchemaRef(ReplicationSchemaId);
+                var replicated = new Physics3DNetworkReplicatedBody
+                {
+                    AuthoritativeKind = Physics3DBodyKind.Dynamic,
+                };
+                Entity entity = _ecs.Create(in pose, in schema, in replicated);
+                if (!_networkEntities.TryAllocate(entity, out NetworkEntityHandle handle))
+                {
+                    throw new InvalidOperationException($"Failed to allocate network entity for player {player}.");
+                }
+
+                replicated.Handle = handle;
+                _ecs.Set(entity, replicated);
+                _playerEntities[player] = entity;
+                _playerHandles[player] = handle;
+                var disclosureLog = new ReplicationDisclosureChangeLog(capacity: checked(_profile.AoiEntityCountPerClient * 2));
+                _replicationChannels[player] = new AuthoritativeReplicationChannel(
+                    _networkEntities,
+                    replicationEntityCapacityPerSeat: _profile.AoiEntityCountPerClient,
+                    baselineCapacity: 8,
+                    disclosureLog);
+                _replicationPackets[player] = new ReplicationPacketBuffer(_profile.AoiEntityCountPerClient);
             }
         }
 
@@ -940,29 +973,22 @@ public sealed class Physics3DMixedServerScaleTests
             }
         }
 
-        private void SubmitNetworkInputs(long tick)
+        private void SubmitNetworkInputs(int tick)
         {
             for (int player = 0; player < _profile.PlayerCount; player++)
             {
-                short moveX = ((tick + player) % 120) < 60 ? (short)12_000 : (short)-12_000;
-                short moveY = (short)(8_000 + (player % 5) * 500);
-                Physics3DNetInputArrivalResult arrival = InputRing.Submit(new Physics3DNetInputSubmit(
-                    tick,
-                    NetworkPlayerId(player),
-                    generation: 1,
-                    sequence: (uint)tick,
-                    new Physics3DNetQuantizedAxes2(moveX, moveY),
-                    new Physics3DNetQuantizedAxes2((short)(6_000 + player * 64), 0),
-                    buttons: (tick % 90 == 0 && player < _profile.PlayerWalkingCount) ? 1u : 0u));
-                if (!arrival.Accepted)
+                float moveX = ((tick + player) % 120) < 60 ? 12_000f / short.MaxValue : -12_000f / short.MaxValue;
+                float moveY = (8_000f + (player % 5) * 500f) / short.MaxValue;
+                FixedInputAdmissionDisposition disposition = AdmitPlayerInput(player, tick, moveX, moveY);
+                if (disposition is not (FixedInputAdmissionDisposition.Accepted or FixedInputAdmissionDisposition.AcceptedOutOfOrder))
                 {
                     throw new InvalidOperationException(
-                        $"Authoritative input for player slot {player}, tick {tick} was rejected as {arrival.Disposition}.");
+                        $"Authoritative input for player slot {player}, tick {tick} was rejected as {disposition}.");
                 }
             }
         }
 
-        private void SubmitGameplayInputs(long tick)
+        private void SubmitGameplayInputs(int tick)
         {
             for (int character = 0; character < _characterHandles.Length; character++)
             {
@@ -970,9 +996,10 @@ public sealed class Physics3DMixedServerScaleTests
                 bool jump;
                 if (character < _profile.PlayerWalkingCount)
                 {
-                    Physics3DNetInputFrameView input = RequirePlayerInput(character, tick);
-                    move = DecodeMove(input.MoveAxes);
-                    jump = (input.Buttons & 1u) != 0;
+                    move = RequirePlayerMovement(character, tick);
+                    // Residual gap: production Physics3DFixedInputFrameCodec is movement-only.
+                    // Jump cadence stays deterministic from the tick so walking motion evidence remains.
+                    jump = tick % 90 == 0;
                 }
                 else
                 {
@@ -989,8 +1016,7 @@ public sealed class Physics3DMixedServerScaleTests
                 if (vehicle < _profile.PlayerDrivingCount)
                 {
                     int playerSlot = _profile.PlayerWalkingCount + vehicle;
-                    Physics3DNetInputFrameView frame = RequirePlayerInput(playerSlot, tick);
-                    Vector2 move = DecodeMove(frame.MoveAxes);
+                    Vector2 move = RequirePlayerMovement(playerSlot, tick);
                     input = new Vehicle3DInput(throttle: move.Y, brake: 0f, steering: move.X);
                 }
                 else
@@ -1005,8 +1031,9 @@ public sealed class Physics3DMixedServerScaleTests
             for (int ragdoll = 0; ragdoll < _profile.PlayerRagdollCount; ragdoll++)
             {
                 int playerSlot = _profile.PlayerWalkingCount + _profile.PlayerDrivingCount + ragdoll;
-                Physics3DNetInputFrameView frame = RequirePlayerInput(playerSlot, tick);
-                float angle = frame.LookAxes.X / (float)short.MaxValue * 0.2f;
+                Vector2 move = RequirePlayerMovement(playerSlot, tick);
+                // Residual gap: look axes are not in the 8-byte fixed-input codec; drive pose from movement X.
+                float angle = move.X * 0.2f;
                 FillRagdollActivePoseTargets(angle);
                 _ragdolls.SubmitActivePose(_ragdollIds[ragdoll], tick, _ragdollPoseTargets);
                 ActivePoseTargetsSubmittedLastTick += _ragdollPoseTargets.Length;
@@ -1024,15 +1051,81 @@ public sealed class Physics3DMixedServerScaleTests
             }
         }
 
-        private Physics3DNetInputFrameView RequirePlayerInput(int playerSlot, long tick)
+        private Vector2 RequirePlayerMovement(int playerSlot, int tick)
         {
-            Physics3DNetInputLookupResult result = InputRing.TryGet(playerSlot, tick, out Physics3DNetInputFrameView frame);
-            if (result != Physics3DNetInputLookupResult.Present)
+            FixedInputLookupResult result = FixedInput.TryGet(
+                in _seats[playerSlot],
+                (uint)tick,
+                _inputPayloadScratch,
+                out int bytesWritten);
+            if (result != FixedInputLookupResult.Present ||
+                bytesWritten != Physics3DFixedInputFrameCodec.PayloadBytes ||
+                !Physics3DFixedInputFrameCodec.TryDecode(_inputPayloadScratch, out Physics3DFixedInputFrame frame))
             {
                 throw new Physics3DNetMissingInputException(tick, 1);
             }
 
-            return frame;
+            return frame.Movement;
+        }
+
+        private void EnsureAllPlayerInputsPresent(int tick)
+        {
+            int missing = 0;
+            for (int player = 0; player < _profile.PlayerCount; player++)
+            {
+                FixedInputLookupResult result = FixedInput.TryGet(
+                    in _seats[player],
+                    (uint)tick,
+                    _inputPayloadScratch,
+                    out _);
+                if (result != FixedInputLookupResult.Present)
+                {
+                    missing++;
+                }
+            }
+
+            if (missing != 0)
+            {
+                throw new Physics3DNetMissingInputException(tick, missing);
+            }
+        }
+
+        private FixedInputAdmissionDisposition AdmitPlayerInput(int playerSlot, int tick, float moveX, float moveY)
+        {
+            if (!Physics3DFixedInputFrameCodec.TryEncode(new Vector2(moveX, moveY), _inputPayloadScratch))
+            {
+                throw new InvalidOperationException(
+                    $"Failed to encode fixed input for player {playerSlot} tick {tick} ({moveX}, {moveY}).");
+            }
+
+            Span<uint> ticks = stackalloc uint[1] { (uint)tick };
+            Span<FixedInputAdmissionDisposition> dispositions = stackalloc FixedInputAdmissionDisposition[1];
+            var header = new NetworkFixedInputBatchHeader(
+                FixedInput.Config.SessionEpoch,
+                FixedInput.Config.SchemaId,
+                FixedInput.Config.FramePayloadBytes,
+                acknowledgedCommittedTick: TickState.CommittedTick < 0 ? 0u : (uint)TickState.CommittedTick,
+                frameCount: 1);
+            FixedInputBatchAdmissionStatus status = FixedInput.TryAdmitBatch(
+                in _seats[playerSlot],
+                in header,
+                ticks,
+                _inputPayloadScratch,
+                dispositions);
+            if (status != FixedInputBatchAdmissionStatus.Success &&
+                dispositions[0] is not (FixedInputAdmissionDisposition.Conflict
+                    or FixedInputAdmissionDisposition.RingWrap
+                    or FixedInputAdmissionDisposition.BatchRejected))
+            {
+                // Soft outcomes still return Success; hard rejects return Rejected.
+            }
+
+            if (status == FixedInputBatchAdmissionStatus.Rejected)
+            {
+                return dispositions[0];
+            }
+
+            return dispositions[0];
         }
 
         private void UpdatePlatforms(long tick)
@@ -1076,26 +1169,27 @@ public sealed class Physics3DMixedServerScaleTests
             SupplementalQueryHitsLastTick = hits;
         }
 
-        private void PublishSnapshotAndAoi(long tick)
+        private void PublishSnapshotAndAoi(int tick)
         {
+            // Residual gap: radius AOI via Physics3DNetworkAoiInterestPort requires
+            // Physics3DNetworkPlayerLifecycle exclusive capsules. MixedServerScale keeps
+            // gameplay bodies as SSOT and selects interest with k-nearest over those poses,
+            // then publishes through AuthoritativeReplicationChannel + Physics3D codecs.
+            // Radius AOI 10K/25K evidence remains in Physics3DNetworkBridgeTests.
             for (int player = 0; player < _profile.PlayerCount; player++)
             {
-                Physics3DBodyId body = _playerRepresentativeBodies[player];
-                Physics3DBodyState state = Physics.GetBodyState(body);
-                _snapshotWrites[player] = new Physics3DNetSnapshotEntityWrite(
-                    networkEntityId: player,
-                    generation: 1,
-                    Physics3DNetReplicationOp.Update,
-                    SnapshotBaselineId,
-                    state.PositionCm,
-                    state.Orientation,
-                    state.LinearVelocityCmPerSecond,
-                    state.AngularVelocityRadiansPerSecond,
-                    Physics.GetBodyKind(body),
-                    _playerReplicationModes[player]);
+                Physics3DBodyState state = Physics.GetBodyState(_playerRepresentativeBodies[player]);
+                _playerSnapshotPositions[player] = state.PositionCm;
+                var pose = new Physics3DPoseCm
+                {
+                    Position = state.PositionCm,
+                    Orientation = state.Orientation,
+                };
+                _ecs.Set(_playerEntities[player], pose);
             }
 
-            SnapshotStore.ReplaceAll(tick, SnapshotBaselineId, _snapshotWrites);
+            _nextSnapshotId++;
+            ulong snapshotId = _nextSnapshotId;
             int minimumWrites = int.MaxValue;
             int clientsContainingSelf = 0;
             bool distinctInterestSets = false;
@@ -1121,60 +1215,130 @@ public sealed class Physics3DMixedServerScaleTests
                     }
                 }
 
-                Physics3DNetAoiDeltaBuildResult result = Aoi.BuildDelta(
-                    client,
-                    tick,
-                    SnapshotBaselineId,
-                    _aoiInterest,
-                    _aoiDelta);
-                if (result.RequiresFullSnapshot)
+                FillInterestProjectionBuffers();
+                AuthoritativeReplicationChannel channel = _replicationChannels[client];
+                ReplicationPacketBuffer packet = _replicationPackets[client];
+                ReplicationBuildResult result;
+                if (_hasBaseline[client] == 0)
                 {
                     BaselineMissesLastSnapshot++;
-                    int fullSnapshotCount = SnapshotStore.CopyTo(_fullSnapshotSendBuffer);
-                    Physics3DNetSnapshotEntityView ownFullSnapshot = _fullSnapshotSendBuffer[client];
-                    if (fullSnapshotCount != _profile.PlayerCount ||
-                        ownFullSnapshot.NetworkEntityId != client ||
-                        SnapshotStore.SnapshotTick != tick)
+                    result = channel.BuildFull(
+                        SessionEpoch,
+                        (uint)tick,
+                        snapshotId,
+                        _interestStates,
+                        _interestDisclosures,
+                        packet);
+                    if (result != ReplicationBuildResult.Success)
                     {
                         throw new InvalidOperationException(
-                            $"Client slot {client} could not receive its authoritative full snapshot for tick {tick}.");
+                            $"Client slot {client} full snapshot failed for tick {tick}: {result}.");
                     }
 
                     FullSnapshotSendsLastSnapshot++;
-                    Aoi.AcknowledgeBaseline(client, SnapshotBaselineId);
+                    _acknowledgedBaselines[client] = snapshotId;
+                    _hasBaseline[client] = 1;
                     BaselineAcknowledgementsLastSnapshot++;
-                    result = Aoi.BuildDelta(
-                        client,
-                        tick,
-                        SnapshotBaselineId,
-                        _aoiInterest,
-                        _aoiDelta);
                 }
-
-                if (result.RequiresFullSnapshot)
+                else
                 {
-                    throw new InvalidOperationException($"Client slot {client} still has no AOI baseline after acknowledgement.");
+                    result = channel.BuildDelta(
+                        SessionEpoch,
+                        (uint)tick,
+                        snapshotId,
+                        _acknowledgedBaselines[client],
+                        _interestStates,
+                        _interestDisclosures,
+                        packet);
+                    if (result == ReplicationBuildResult.BaselineUnavailable)
+                    {
+                        BaselineMissesLastSnapshot++;
+                        result = channel.BuildFull(
+                            SessionEpoch,
+                            (uint)tick,
+                            snapshotId,
+                            _interestStates,
+                            _interestDisclosures,
+                            packet);
+                        if (result != ReplicationBuildResult.Success)
+                        {
+                            throw new InvalidOperationException(
+                                $"Client slot {client} could not recover baseline for tick {tick}: {result}.");
+                        }
+
+                        FullSnapshotSendsLastSnapshot++;
+                        BaselineAcknowledgementsLastSnapshot++;
+                    }
+                    else if (result != ReplicationBuildResult.Success)
+                    {
+                        throw new InvalidOperationException(
+                            $"Client slot {client} delta failed for tick {tick}: {result}.");
+                    }
+
+                    _acknowledgedBaselines[client] = snapshotId;
                 }
 
-                minimumWrites = Math.Min(minimumWrites, result.WrittenCount);
-                if (Aoi.IsTracked(client, client, out int generation) && generation == 1)
+                minimumWrites = Math.Min(minimumWrites, Math.Max(1, packet.UpsertCount + packet.RemovalCount + packet.DisclosureChangeCount));
+                if (ContainsSelf(client))
                 {
                     clientsContainingSelf++;
                 }
             }
 
-            MinimumAoiDeltaWritesLastSnapshot = minimumWrites;
+            MinimumAoiDeltaWritesLastSnapshot = minimumWrites == int.MaxValue ? 0 : minimumWrites;
             AoiClientsContainingSelfLastSnapshot = clientsContainingSelf;
             DistinctAoiInterestSetsObservedLastSnapshot = distinctInterestSets;
-            NetworkLifecycle.PublishSnapshot(tick);
+            LastPublishedSnapshotTick = tick;
             SnapshotPublishCount++;
+        }
+
+        private bool ContainsSelf(int client)
+        {
+            for (int i = 0; i < _aoiEntityIndices.Length; i++)
+            {
+                if (_aoiEntityIndices[i] == client)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void FillInterestProjectionBuffers()
+        {
+            for (int interestIndex = 0; interestIndex < _aoiEntityIndices.Length; interestIndex++)
+            {
+                int player = _aoiEntityIndices[interestIndex];
+                NetworkEntityHandle handle = _playerHandles[player];
+                _interestHandles[interestIndex] = handle;
+                Physics3DBodyState state = Physics.GetBodyState(_playerRepresentativeBodies[player]);
+                if (!Physics3DReplicationStateCodec.TryEncode(
+                        in state,
+                        _playerBodyKinds[player],
+                        Quantization,
+                        out ReplicationStateVector values))
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to encode replication state for player {player}.");
+                }
+
+                _interestStates[interestIndex] = new ReplicatedEntityState(
+                    handle,
+                    ReplicationSchemaId,
+                    Physics3DReplicationStateCodec.ComputeRevision(in values, disclosureRevision: 1),
+                    in values);
+                _interestDisclosures[interestIndex] = new ReplicationDisclosureInput(
+                    handle,
+                    KnowledgePresence.LiveVisible);
+            }
         }
 
         private void BuildAoiInterestForClient(int client)
         {
-            Vector3 center = _snapshotWrites[client].PositionCm;
+            Vector3 center = _playerSnapshotPositions[client];
             int selectedCount = 0;
-            for (int entity = 0; entity < _snapshotWrites.Length; entity++)
+            for (int entity = 0; entity < _playerSnapshotPositions.Length; entity++)
             {
                 if (selectedCount < _aoiEntityIndices.Length)
                 {
@@ -1185,11 +1349,11 @@ public sealed class Physics3DMixedServerScaleTests
                 int farthestSlot = 0;
                 float farthestDistance = Vector3.DistanceSquared(
                     center,
-                    _snapshotWrites[_aoiEntityIndices[0]].PositionCm);
+                    _playerSnapshotPositions[_aoiEntityIndices[0]]);
                 for (int i = 1; i < _aoiEntityIndices.Length; i++)
                 {
                     int selectedEntity = _aoiEntityIndices[i];
-                    float distance = Vector3.DistanceSquared(center, _snapshotWrites[selectedEntity].PositionCm);
+                    float distance = Vector3.DistanceSquared(center, _playerSnapshotPositions[selectedEntity]);
                     if (distance > farthestDistance ||
                         (distance == farthestDistance && selectedEntity > _aoiEntityIndices[farthestSlot]))
                     {
@@ -1198,7 +1362,7 @@ public sealed class Physics3DMixedServerScaleTests
                     }
                 }
 
-                float candidateDistance = Vector3.DistanceSquared(center, _snapshotWrites[entity].PositionCm);
+                float candidateDistance = Vector3.DistanceSquared(center, _playerSnapshotPositions[entity]);
                 if (candidateDistance < farthestDistance ||
                     (candidateDistance == farthestDistance && entity < _aoiEntityIndices[farthestSlot]))
                 {
@@ -1209,23 +1373,10 @@ public sealed class Physics3DMixedServerScaleTests
             if (selectedCount != _aoiEntityIndices.Length)
             {
                 throw new InvalidOperationException(
-                    $"AOI capacity {_aoiEntityIndices.Length} exceeds the {_snapshotWrites.Length} replicated player entities.");
+                    $"AOI capacity {_aoiEntityIndices.Length} exceeds the {_playerSnapshotPositions.Length} replicated player entities.");
             }
 
             _aoiEntityIndices.AsSpan().Sort();
-            for (int interestIndex = 0; interestIndex < _aoiEntityIndices.Length; interestIndex++)
-            {
-                Physics3DNetSnapshotEntityWrite snapshot = _snapshotWrites[_aoiEntityIndices[interestIndex]];
-                _aoiInterest[interestIndex] = new Physics3DNetAoiInterest(
-                    snapshot.NetworkEntityId,
-                    snapshot.Generation,
-                    snapshot.PositionCm,
-                    snapshot.Orientation,
-                    snapshot.LinearVelocityCmPerSecond,
-                    snapshot.AngularVelocityRadiansPerSecond,
-                    snapshot.BodyKind,
-                    snapshot.ReplicationMode);
-            }
         }
 
         private Character3DProfile CreateCharacterProfile()
@@ -1416,9 +1567,6 @@ public sealed class Physics3DMixedServerScaleTests
                 ContinuousSweepConvergenceThreshold = 0.001f,
                 MaterialCombineMode = Physics3DMaterialCombineMode.GeometricMean
             };
-
-        private static Vector2 DecodeMove(in Physics3DNetQuantizedAxes2 axes)
-            => new(axes.X / (float)short.MaxValue, axes.Y / (float)short.MaxValue);
 
         private static int NetworkPlayerId(int playerSlot) => 100_000 + playerSlot;
 

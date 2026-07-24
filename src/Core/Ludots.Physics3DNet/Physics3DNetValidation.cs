@@ -40,14 +40,6 @@ public static class Physics3DNetValidation
         }
     }
 
-    public static void RequireNonNegativeBaselineId(long baselineId, string paramName)
-    {
-        if (baselineId < 0)
-        {
-            throw new ArgumentOutOfRangeException(paramName, baselineId, "Baseline id must be non-negative.");
-        }
-    }
-
     public static void RequireFinite(Vector3 value, string paramName)
     {
         if (!IsFinite(value))
@@ -79,16 +71,6 @@ public static class Physics3DNetValidation
         }
     }
 
-    public static void RequireValidReplicationOp(Physics3DNetReplicationOp op, string paramName)
-    {
-        if (op is not (Physics3DNetReplicationOp.Spawn
-            or Physics3DNetReplicationOp.Update
-            or Physics3DNetReplicationOp.Despawn))
-        {
-            throw new ArgumentOutOfRangeException(paramName, op, "Invalid replication op.");
-        }
-    }
-
     public static void RequireValidBodyKind(Physics3DBodyKind bodyKind, string paramName)
     {
         if (bodyKind is not (Physics3DBodyKind.Dynamic
@@ -96,17 +78,6 @@ public static class Physics3DNetValidation
             or Physics3DBodyKind.Static))
         {
             throw new ArgumentOutOfRangeException(paramName, bodyKind, "Invalid body kind.");
-        }
-    }
-
-    public static void RequireValidReplicationMode(Physics3DNetReplicationMode replicationMode, string paramName)
-    {
-        if (replicationMode is not (Physics3DNetReplicationMode.RigidBody
-            or Physics3DNetReplicationMode.Character
-            or Physics3DNetReplicationMode.Vehicle
-            or Physics3DNetReplicationMode.Ragdoll))
-        {
-            throw new ArgumentOutOfRangeException(paramName, replicationMode, "Invalid replication mode.");
         }
     }
 
