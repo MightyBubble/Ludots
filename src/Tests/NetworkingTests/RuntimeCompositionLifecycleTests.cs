@@ -140,6 +140,26 @@ public sealed class RuntimeCompositionLifecycleTests
         Assert.That(RuntimeCompositionProbeState.InstalledNetworkRuntime!.DisposeCount, Is.EqualTo(1));
     }
 
+    [Test]
+    public void RuntimeCompositionFailure_DisposesRuntimeInstalledByAnEarlierCompositionStep()
+    {
+        RuntimeCompositionProbeState.Reset(
+            failureMode: RuntimeCompositionFailureMode.Asynchronous,
+            installNetworkRuntime: true);
+        using var fixture = RuntimeCompositionModFixture.Create(includeNetworking: true);
+        using GameEngine engine = new();
+
+        Assert.Throws<InvalidOperationException>(() => fixture.Initialize(engine));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(RuntimeCompositionProbeState.InstalledNetworkRuntime, Is.Not.Null);
+            Assert.That(RuntimeCompositionProbeState.InstalledNetworkRuntime!.DisposeCount, Is.EqualTo(1));
+            Assert.That(engine.TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort _), Is.False);
+            Assert.That(engine.GetService(CoreServiceKeys.NetworkProcessRole), Is.EqualTo(NetworkProcessRole.Standalone));
+        });
+    }
+
     private sealed class RuntimeCompositionModFixture : IDisposable
     {
         private const string ModName = "NetworkingTests";
@@ -263,10 +283,17 @@ public sealed class RuntimeCompositionLifecycleTests
                 "transportMaxConnectAttempts": 3,
                 "transportDisconnectTimeoutMilliseconds": 5000,
                 "reliableDisconnectFlushTimeoutMilliseconds": 4000,
-                "transportChannelCount": 3,
+                "transportChannelCount": 4,
                 "controlChannelId": 0,
                 "commandChannelId": 1,
                 "stateChannelId": 2,
+                "inputChannelId": 3,
+                "fixedInputHistoryTicksPerSeat": 8,
+                "fixedInputSchemaId": 1,
+                "fixedInputFramePayloadBytes": 12,
+                "fixedInputMaxFutureTicks": 4,
+                "fixedInputMaxFramesPerBatch": 4,
+                "fixedInputPendingFrameCapacity": 8,
                 "snapshotChunkCapacity": 32,
                 "maxServerOutboundBytesPerSecondPerClient": 262144,
                 "tickP95BudgetMicroseconds": 26700,
@@ -439,6 +466,13 @@ public sealed class RuntimeCompositionProbeMod : IMod
         RuntimeCompositionProbeState.CoreSystemVisible =
             context.Get(CoreServiceKeys.PresentationFrameSetup) != null;
 
+        if (RuntimeCompositionProbeState.InstallNetworkRuntime)
+        {
+            var runtime = new RuntimeCompositionNetworkRuntime();
+            engine.ConfigureNetworkRuntime(NetworkProcessRole.AuthoritativeServer, runtime);
+            RuntimeCompositionProbeState.InstalledNetworkRuntime = runtime;
+        }
+
         if (RuntimeCompositionProbeState.FailureMode == RuntimeCompositionFailureMode.Synchronous)
         {
             throw new InvalidOperationException(RuntimeCompositionProbeState.FailureMessage);
@@ -454,13 +488,6 @@ public sealed class RuntimeCompositionProbeMod : IMod
         if (RuntimeCompositionProbeState.FailureMode == RuntimeCompositionFailureMode.Asynchronous)
         {
             throw new InvalidOperationException(RuntimeCompositionProbeState.FailureMessage);
-        }
-
-        if (RuntimeCompositionProbeState.InstallNetworkRuntime)
-        {
-            var runtime = new RuntimeCompositionNetworkRuntime();
-            engine.ConfigureNetworkRuntime(NetworkProcessRole.AuthoritativeServer, runtime);
-            RuntimeCompositionProbeState.InstalledNetworkRuntime = runtime;
         }
 
         RuntimeCompositionProbeState.CompositionCompletedCount++;

@@ -420,6 +420,23 @@ namespace Ludots.Core.Engine
 
             void RestoreInitializationFailureState()
             {
+                if (TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort networkRuntime))
+                {
+                    try
+                    {
+                        networkRuntime.Dispose();
+                    }
+                    catch (Exception disposeEx)
+                    {
+                        Diagnostics.Log.Error(
+                            in LogChannels.Engine,
+                            $"Failed to dispose network runtime after initialization failure: {disposeEx}");
+                    }
+
+                    RemoveService(CoreServiceKeys.NetworkRuntimePort);
+                    SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.Standalone);
+                }
+
                 try
                 {
                     ModLoader?.UnloadAll();
