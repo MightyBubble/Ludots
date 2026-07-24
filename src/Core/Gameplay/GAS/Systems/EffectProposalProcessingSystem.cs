@@ -570,6 +570,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             throw new InvalidOperationException(
                                 $"{InputRequestQueueMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}.");
                         }
+
+                        // Prompt + optional OrderRequest are one visible transaction: preflight both
+                        // capacities before publishing either, so a full OrderRequest queue cannot
+                        // leave an orphan prompt the player cannot answer.
+                        if (_inputRequests.Count >= _inputRequests.Capacity)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
+                        }
+
+                        int playerId = 0;
+                        var src = _window[0].Source;
+                        OrderRequest orderRequest = default;
+                        if (_orderRequests != null)
+                        {
+                            if (_orderRequests.Count >= _orderRequests.Capacity)
+                            {
+                                throw new InvalidOperationException(
+                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                            }
+
+                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
+                            {
+                                playerId = World.Get<PlayerOwner>(src).PlayerId;
+                            }
+
+                            orderRequest = new OrderRequest
+                            {
+                                RequestId = _activeReq.RootId,
+                                PromptTagId = _inputRequestTagId,
+                                PlayerId = playerId,
+                                Actor = src,
+                                Target = _window[0].Target,
+                                TargetContext = _window[0].TargetContext,
+                                AllowedCount = 0
+                            };
+                            orderRequest.AddAllowed(_responseChainOrderTypes.ChainPass);
+                            orderRequest.AddAllowed(_responseChainOrderTypes.ChainNegate);
+                            if (_inputRequestTagId > 0) orderRequest.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
+                        }
+
                         var windowId = _nextWindowId++;
                         var inputRequest = new InputRequest
                         {
@@ -586,8 +627,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             throw new InvalidOperationException(
                                 $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
                         }
+
+                        if (_orderRequests != null && !_orderRequests.TryEnqueue(in orderRequest))
+                        {
+                            throw new InvalidOperationException(
+                                $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                        }
+
                         _inputRequestSent = true;
- 
+
                         if (_telemetry != null && _emitTelemetry)
                         {
                             _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -602,36 +650,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 Target = _window[0].Target,
                                 Context = _window[0].TargetContext
                             });
-                        }
- 
-                        if (_orderRequests != null)
-                        {
-                            // Resolve PlayerId from source entity's PlayerOwner component
-                            int playerId = 0;
-                            var src = _window[0].Source;
-                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
-                            {
-                                playerId = World.Get<PlayerOwner>(src).PlayerId;
-                            }
-
-                            var req = new OrderRequest
-                            {
-                                RequestId = _activeReq.RootId,
-                                PromptTagId = _inputRequestTagId,
-                                PlayerId = playerId,
-                                Actor = src,
-                                Target = _window[0].Target,
-                                TargetContext = _window[0].TargetContext,
-                                AllowedCount = 0
-                            };
-                            req.AddAllowed(_responseChainOrderTypes.ChainPass);
-                            req.AddAllowed(_responseChainOrderTypes.ChainNegate);
-                            if (_inputRequestTagId > 0) req.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
-                            if (!_orderRequests.TryEnqueue(req))
-                            {
-                                throw new InvalidOperationException(
-                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
-                            }
                         }
                     }
 

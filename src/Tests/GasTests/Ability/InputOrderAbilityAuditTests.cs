@@ -2108,6 +2108,188 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
+        [Test]
+        public void AbilityExecSystem_ToggleActivate_DoesNotCompleteWhenActiveEffectQueueMissing()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9006;
+            const int toggleTagId = 44;
+            const int activeEffectTemplateId = 77001;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new TimedTagBuffer(),
+                new DirtyFlags());
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+            var order = new Order { OrderId = 21, Actor = actor, OrderTypeId = castAbilityOrderTypeId };
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(in order, priority: 100);
+            ref var blackboard = ref world.Get<BlackboardIntBuffer>(actor);
+            blackboard.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var activateSpec = default(AbilityExecSpec);
+            activateSpec.ClockId = GasClockId.Step;
+            activateSpec.SetItem(0, ExecItemKind.End, tick: 0);
+
+            var toggleSpec = new AbilityToggleSpec
+            {
+                ToggleTagId = toggleTagId,
+                ActiveEffectCount = 1,
+            };
+            unsafe
+            {
+                toggleSpec.ActiveEffectTemplateIds[0] = activeEffectTemplateId;
+            }
+
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition
+            {
+                ExecSpec = activateSpec,
+                HasToggleSpec = true,
+                ToggleSpec = toggleSpec,
+            });
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 32);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests: null,
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: tagOps);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.StartWith(AbilityExecSystem.ToggleActiveEffectQueueMissingError));
+            That(world.Has<AbilityExecInstance>(actor), Is.True, "Terminal exec must remain for retry when toggle side effects cannot commit.");
+            That(world.Get<AbilityExecInstance>(actor).State, Is.EqualTo(AbilityExecRunState.Finished));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True, "Order must stay active until the whole activation transaction can succeed.");
+            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False, "Toggle tag must not land without required active effects.");
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(0), "Completed must not publish before toggle side effects succeed.");
+            int finishedCount = 0;
+            foreach (ref readonly var evt in presentationEvents.Events)
+            {
+                if (evt.Kind == GasPresentationEventKind.CastFinished)
+                {
+                    finishedCount++;
+                }
+            }
+            That(finishedCount, Is.Zero);
+        }
+
+        [Test]
+        public void AbilityExecSystem_ToggleActivate_DoesNotCompleteWhenActiveEffectQueueFull()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9007;
+            const int toggleTagId = 45;
+            const int activeEffectTemplateId = 77002;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new TimedTagBuffer(),
+                new DirtyFlags());
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+            var order = new Order { OrderId = 22, Actor = actor, OrderTypeId = castAbilityOrderTypeId };
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(in order, priority: 100);
+            world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var activateSpec = default(AbilityExecSpec);
+            activateSpec.ClockId = GasClockId.Step;
+            activateSpec.SetItem(0, ExecItemKind.End, tick: 0);
+
+            var toggleSpec = new AbilityToggleSpec
+            {
+                ToggleTagId = toggleTagId,
+                ActiveEffectCount = 1,
+            };
+            unsafe
+            {
+                toggleSpec.ActiveEffectTemplateIds[0] = activeEffectTemplateId;
+            }
+
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition
+            {
+                ExecSpec = activateSpec,
+                HasToggleSpec = true,
+                ToggleSpec = toggleSpec,
+            });
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = -1,
+                SpatialBlackboardKey = -1,
+            });
+            var effectRequests = new EffectRequestQueue();
+            while (effectRequests.AvailableCapacity > 0)
+            {
+                effectRequests.Publish(new EffectRequest { TemplateId = 1 });
+            }
+
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 32);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: tagOps);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.StartWith(AbilityExecSystem.ToggleActiveEffectQueueFullError));
+            That(world.Has<AbilityExecInstance>(actor), Is.True);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
+            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(0));
+            int finishedCount = 0;
+            foreach (ref readonly var evt in presentationEvents.Events)
+            {
+                if (evt.Kind == GasPresentationEventKind.CastFinished)
+                {
+                    finishedCount++;
+                }
+            }
+            That(finishedCount, Is.Zero);
+        }
+
         [TestCase(true)]
         [TestCase(false)]
         public void AbilityExecSystem_ActivationTagsRejectCast_AndFailOrder(bool requiredAllMissing)

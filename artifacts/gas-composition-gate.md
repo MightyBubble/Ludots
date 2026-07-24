@@ -4,17 +4,17 @@ Current closeouts and prior issue reviews follow.
 
 ## PR #660 Final Cursor Repair Lanes - 2026-07-24
 
-- **Task / Issue**: Final PR #660 repair pass for RoadNetwork order admission and core order lifecycle ownership.
+- **Task / Issue**: Final PR #660 repair pass for RoadNetwork order admission, core order lifecycle ownership, ResponseChain prompt transactions, and side-effect commit ordering.
 - **Date**: 2026-07-24
 - **Agent / Author**: Codex supervising Cursor Agent lanes.
 
 ### 1. Core judgment
 
-Primary delivery: A. Tighten existing order/admission/lifecycle code paths using existing queues, registries, payload ownership helpers, and terminal-result buffers.
+Primary delivery: A. Tighten existing order/admission/lifecycle/effect code paths using existing queues, registries, payload ownership helpers, and terminal-result buffers.
 
 Result: PASS.
 
-Reason: The repair reuses `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderSubmitter`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderSpatialPayloadOps`, and RoadNetwork showcase order plumbing. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel order runtime.
+Reason: The repair reuses `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderSubmitter`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderSpatialPayloadOps`, `InputRequestQueue`, `OrderRequestQueue`, `EffectRequestQueue`, `RuntimeEntitySpawnReceiptQueue`, `AbilityExecSystem`, `EffectProposalProcessingSystem`, `RuntimeEntitySpawnSystem`, and RoadNetwork showcase order plumbing. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel order/runtime pipeline.
 
 ### 2. Layer assignment
 
@@ -27,12 +27,15 @@ Reason: The repair reuses `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderSubm
 | Queue cleanup terminal outcomes | 1 | `OrderSubmitter` release/cancel helpers publish terminal results |
 | Queued promotion typed failure | 1 | `TryPromoteNextQueuedToActive` failure output plus EntityIntake admission |
 | Continuation/incoming ownership | 1 | `OrderContinuationSystem` restore path and `OrderBufferSystem` process-before-dequeue |
+| Response prompt visible transaction | 1 | `EffectProposalProcessingSystem` preflights InputRequest + OrderRequest before either is visible |
+| Ability terminal vs toggle/effect commit | 1 | `AbilityExecSystem` preflights/commits side effects before terminal success |
+| Spawn receipt/effect success signal | 1 | `RuntimeEntitySpawnSystem` preflights success signals before create/dequeue |
 
 ### 3. Reuse list
 
 - Handlers: no new BuiltinHandler.
-- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, RoadNetwork local order source.
-- Resolvers / Registries: `OrderTypeRegistry`, `OrderRuleRegistry`, `OrderSubmitter`, `OrderSubmitResultSemantics`, `OrderSpatialPayloadOps`, `RoadRoutePlanningService`.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, `InputRequestQueue`, `OrderRequestQueue`, `EffectRequestQueue`, `RuntimeEntitySpawnReceiptQueue`, RoadNetwork local order source.
+- Resolvers / Registries: `OrderTypeRegistry`, `OrderRuleRegistry`, `OrderSubmitter`, `OrderSubmitResultSemantics`, `OrderSpatialPayloadOps`, `RoadRoutePlanningService`, `AbilityDefinitionRegistry`, `EffectTemplateIdRegistry`.
 - Existing presets / graphs: unchanged.
 
 ### 4. New Layer 0 ops
@@ -41,11 +44,11 @@ N/A.
 
 ### 5. Transaction boundary
 
-RoadNetwork shared-batch planning is all-or-nothing for built route payloads. Shared/clustered order preview must reject known blackboard preparation failures before mutating any actor. Queue cleanup and promotion failure must leave explicit terminal/admission results. Continuation and incoming paths must not lose order ownership when expected submit-preparation failures occur.
+RoadNetwork shared-batch planning is all-or-nothing for built route payloads. Shared/clustered order preview must reject known blackboard preparation failures before mutating any actor. Queue cleanup and promotion failure must leave explicit terminal/admission results. Continuation and incoming paths must not lose order ownership when expected submit-preparation failures occur. ResponseChain WaitInput publishes InputRequest and OrderRequest as one visible transaction. Ability and spawn success signals must not be published before required side effects, receipts, or on-spawn effect requests can succeed.
 
 ### 6. Config SSOT
 
-Behavior remains in the existing order type catalog, input mapping data, RoadNetwork route planning services, and runtime capacity values.
+Behavior remains in the existing order type catalog, input mapping data, RoadNetwork route planning services, ability toggle specs, entity template onSpawnEffect data, and runtime capacity values.
 
 New JSON schema: NO.
 
@@ -58,7 +61,7 @@ New JSON schema: NO.
 
 ### 8. Next variant test
 
-A new command or RoadNetwork variant changes input mapping, effect/graph wiring, or route planning data and continues through the same admission, payload ownership, and terminal-result contract.
+A new command, RoadNetwork, ability, or spawn variant changes input mapping, effect/graph wiring, route planning data, or template data and continues through the same admission, payload ownership, side-effect, and terminal-result contract.
 
 ## PR #660 Order Admission Follow-up Repair - 2026-07-24
 
