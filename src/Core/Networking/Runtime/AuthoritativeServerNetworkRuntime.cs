@@ -25,7 +25,8 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInterestPort _replicationInterest;
-        private readonly AuthoritativeReplicationSeatRuntime[] _replicationSeats;
+        private readonly IAuthoritativeReplicationSeatRuntimeFactory _replicationSeatFactory;
+        private readonly AuthoritativeReplicationSeatRuntime?[] _replicationSeats;
         private readonly AuthoritativeFixedInputIngress _fixedInput;
         private readonly INetworkRuntimeObserver _observer;
         private readonly SnapshotFragmentEncoder _snapshotEncoder;
@@ -36,6 +37,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly int[] _seatConnections;
         private readonly uint[] _seatGenerations;
         private readonly int[] _seatPlayerIds;
+        private readonly Arch.Core.Entity[] _seatControllers;
         private readonly uint[] _seatDisconnectTicks;
         private readonly bool[] _seatNeedsFull;
         private readonly ulong[] _seatAcknowledgedSnapshots;
@@ -80,7 +82,7 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandAdmissionResultBuffer commandResults,
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInterestPort replicationInterest,
-            AuthoritativeReplicationSeatRuntime[] replicationSeats,
+            IAuthoritativeReplicationSeatRuntimeFactory replicationSeatFactory,
             AuthoritativeFixedInputIngress fixedInput,
             INetworkRuntimeObserver observer)
         {
@@ -99,26 +101,21 @@ namespace Ludots.Core.Networking.Runtime
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInterest = replicationInterest ?? throw new ArgumentNullException(nameof(replicationInterest));
-            _replicationSeats = replicationSeats ?? throw new ArgumentNullException(nameof(replicationSeats));
+            _replicationSeatFactory = replicationSeatFactory ?? throw new ArgumentNullException(nameof(replicationSeatFactory));
             _fixedInput = fixedInput ?? throw new ArgumentNullException(nameof(fixedInput));
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
-            if (sessions.SeatCapacity != replicationSeats.Length || sessions.SeatCapacity > capacity.ConnectionCapacity)
+            if (sessions.SeatCapacity != replicationSeatFactory.SeatCapacity ||
+                sessions.SeatCapacity > capacity.ConnectionCapacity ||
+                replicationSeatFactory.GlobalEntityCapacity != capacity.GlobalEntityCapacity ||
+                replicationSeatFactory.ReplicationEntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat)
             {
-                throw new ArgumentException("Session, replication-seat, and connection capacities must agree.");
+                throw new ArgumentException(
+                    "Session, replication-seat factory, connection, global entity, and per-seat capacities must agree.",
+                    nameof(replicationSeatFactory));
             }
 
             ValidateFixedInputIngress(in capacity, sessions, fixedInput);
-
-            for (int i = 0; i < replicationSeats.Length; i++)
-            {
-                if (replicationSeats[i] == null ||
-                    replicationSeats[i].Bridge.GlobalEntityCapacity != capacity.GlobalEntityCapacity ||
-                    replicationSeats[i].Bridge.ReplicationEntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat)
-                {
-                    throw new ArgumentException("Every authoritative seat requires a matching replication runtime.", nameof(replicationSeats));
-                }
-            }
 
             _snapshotEncoder = new SnapshotFragmentEncoder(
                 capacity.MaxDatagramPayloadBytes,
@@ -132,6 +129,8 @@ namespace Ludots.Core.Networking.Runtime
             _seatConnections = new int[seats];
             _seatGenerations = new uint[seats];
             _seatPlayerIds = new int[seats];
+            _seatControllers = new Arch.Core.Entity[seats];
+            _replicationSeats = new AuthoritativeReplicationSeatRuntime?[seats];
             _seatDisconnectTicks = new uint[seats];
             _seatNeedsFull = new bool[seats];
             _seatAcknowledgedSnapshots = new ulong[seats];
@@ -329,11 +328,49 @@ namespace Ludots.Core.Networking.Runtime
         {
             if (_disposed) return;
             _disposed = true;
+
+            Exception? releaseException = null;
+            int failedSeat = -1;
+            for (int seat = 0; seat < _replicationSeats.Length; seat++)
+            {
+                AuthoritativeReplicationSeatRuntime? runtime = _replicationSeats[seat];
+                if (runtime == null)
+                {
+                    continue;
+                }
+
+                SessionSeatBinding binding = GetSeatBinding(seat);
+                _replicationSeats[seat] = null;
+                try
+                {
+                    if (!_replicationSeatFactory.TryRelease(in binding, runtime) && failedSeat < 0)
+                    {
+                        failedSeat = seat;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    if (failedSeat < 0)
+                    {
+                        failedSeat = seat;
+                        releaseException = exception;
+                    }
+                }
+            }
+
             NetworkTransportPortLifetime.DisposeOwned(
                 _transportOwnership,
                 _connectionEvents,
                 _datagrams,
                 _connectionControl);
+
+            if (failedSeat >= 0)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                    detail: failedSeat,
+                    innerException: releaseException);
+            }
         }
 
         private void ProcessConnectionEvent(in ServerConnectionEvent connectionEvent)
@@ -478,7 +515,8 @@ namespace Ludots.Core.Networking.Runtime
             int seat = binding.Slot;
             Arch.Core.Entity controller = default;
             if ((uint)seat >= (uint)_seatStates.Length ||
-                !_controllers.TryResolveController(in binding, out controller))
+                !_controllers.TryResolveController(in binding, out controller) ||
+                controller == Arch.Core.Entity.Null)
             {
                 Fail(NetworkRuntimeFaultCode.SeatControllerUnavailable, connection.Value, detail: seat);
             }
@@ -489,27 +527,66 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandSeat commandSeat = ToCommandSeat(in binding);
             if (reconnect)
             {
-                _commands.RebindSeat(in commandSeat, controller, checked((int)_currentTick));
+                if (_replicationSeats[seat] == null || _seatControllers[seat] != controller)
+                {
+                    Fail(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected, connection.Value, detail: seat);
+                }
+
+                try
+                {
+                    _commands.RebindSeat(in commandSeat, controller, checked((int)_currentTick));
+                    _fixedInput.BindSeat(in binding);
+                }
+                catch (Exception exception)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.SessionContractViolation,
+                        connection.Value,
+                        detail: seat,
+                        innerException: exception);
+                }
             }
             else
             {
-                if (_seatStates[seat] != SeatEmpty)
+                if (_seatStates[seat] != SeatEmpty || _replicationSeats[seat] != null)
                 {
                     Fail(NetworkRuntimeFaultCode.SessionContractViolation, connection.Value, detail: seat);
                 }
 
-                _commands.BindSeat(in commandSeat, controller, checked((int)_currentTick));
+                AuthoritativeReplicationSeatRuntime runtime = AcquireReplicationRuntime(
+                    connection,
+                    in binding,
+                    controller);
+                bool commandBound = false;
+                try
+                {
+                    _commands.BindSeat(in commandSeat, controller, checked((int)_currentTick));
+                    commandBound = true;
+                    _fixedInput.BindSeat(in binding);
+                }
+                catch (Exception exception)
+                {
+                    bool commandReleased = !commandBound || _commands.TryReleaseSeat(in commandSeat);
+                    bool runtimeReleased = TryReleaseAcquiredRuntime(in binding, runtime, out Exception? releaseException);
+                    Fail(
+                        NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                        connection.Value,
+                        detail: commandReleased && runtimeReleased ? seat : ~seat,
+                        innerException: releaseException ?? exception);
+                }
+
+                _replicationSeats[seat] = runtime;
             }
 
             _seatStates[seat] = SeatConnected;
             _seatConnections[seat] = connection.Value;
             _seatGenerations[seat] = binding.Generation;
             _seatPlayerIds[seat] = binding.PlayerId.Value;
+            _seatControllers[seat] = controller;
             _seatDisconnectTicks[seat] = 0;
             PrepareFullSnapshot(seat);
             _commandReassemblers[seat].Reset();
             ClearPendingFixedInputAcknowledgement(seat);
-            _fixedInput.BindSeat(in binding);
             _observer.OnServerSeatConnected(in binding, reconnect);
         }
 
@@ -633,7 +710,7 @@ namespace Ludots.Core.Networking.Runtime
             _seatAcknowledgedSnapshots[seat] = ack.SnapshotId;
             if (disclosureSequence != 0)
             {
-                _replicationSeats[seat].Channel.TryAcknowledgeDisclosureChangesThrough(disclosureSequence);
+                GetReplicationRuntime(seat).Channel.TryAcknowledgeDisclosureChangesThrough(disclosureSequence);
             }
         }
 
@@ -652,7 +729,7 @@ namespace Ludots.Core.Networking.Runtime
 
         private void BuildAndSendReplication(int seat, uint committedTick, ReadOnlySpan<NetworkEntityHandle> interestHandles)
         {
-            AuthoritativeReplicationSeatRuntime runtime = _replicationSeats[seat];
+            AuthoritativeReplicationSeatRuntime runtime = GetReplicationRuntime(seat);
             ulong snapshotId = checked(++_nextSnapshotId);
             ReplicationBridgeResult built;
             if (_seatNeedsFull[seat] || _seatAcknowledgedSnapshots[seat] == 0)
@@ -738,7 +815,7 @@ namespace Ludots.Core.Networking.Runtime
             ulong disclosureSequence = _seatLastDisclosureSequences[seat];
             if (disclosureSequence != 0)
             {
-                _replicationSeats[seat].Channel.TryAcknowledgeDisclosureChangesThrough(disclosureSequence);
+                GetReplicationRuntime(seat).Channel.TryAcknowledgeDisclosureChangesThrough(disclosureSequence);
                 _seatLastDisclosureSequences[seat] = 0;
             }
 
@@ -918,17 +995,41 @@ namespace Ludots.Core.Networking.Runtime
                     Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seat);
                 }
 
-                if (_seatLastDisclosureSequences[seat] != 0)
+                AuthoritativeReplicationSeatRuntime? runtime = _replicationSeats[seat];
+                if (runtime == null)
                 {
-                    _replicationSeats[seat].Channel.TryAcknowledgeDisclosureChangesThrough(
-                        _seatLastDisclosureSequences[seat]);
+                    Fail(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected, detail: seat);
+                }
+
+                _replicationSeats[seat] = null;
+                try
+                {
+                    if (!_replicationSeatFactory.TryRelease(in binding, runtime))
+                    {
+                        Fail(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected, detail: seat);
+                    }
+                }
+                catch (NetworkRuntimeException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                        detail: seat,
+                        innerException: exception);
                 }
 
                 _seatStates[seat] = SeatEmpty;
                 _seatConnections[seat] = 0;
+                _seatGenerations[seat] = 0;
+                _seatPlayerIds[seat] = 0;
+                _seatControllers[seat] = default;
                 _seatDisconnectTicks[seat] = 0;
                 _seatNeedsFull[seat] = false;
                 _seatAcknowledgedSnapshots[seat] = 0;
+                _seatLastSentSnapshots[seat] = 0;
                 _seatLastDisclosureSequences[seat] = 0;
                 ClearAcknowledgementHistory(seat);
                 ClearPendingFixedInputAcknowledgement(seat);
@@ -1129,6 +1230,88 @@ namespace Ludots.Core.Networking.Runtime
                 NetworkFixedInputAcknowledgement.SizeInBytes).Clear();
         }
 
+        private AuthoritativeReplicationSeatRuntime AcquireReplicationRuntime(
+            ConnectionId connection,
+            in SessionSeatBinding binding,
+            Arch.Core.Entity viewer)
+        {
+            AuthoritativeReplicationSeatRuntime? runtime = null;
+            bool acquired;
+            try
+            {
+                acquired = _replicationSeatFactory.TryAcquire(in binding, viewer, out runtime);
+            }
+            catch (Exception exception)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                    connection.Value,
+                    detail: binding.Slot,
+                    innerException: exception);
+                throw;
+            }
+
+            if (!acquired || runtime == null)
+            {
+                Exception? releaseException = null;
+                bool released = runtime == null ||
+                    TryReleaseAcquiredRuntime(in binding, runtime, out releaseException);
+                Fail(
+                    NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                    connection.Value,
+                    detail: released ? binding.Slot : ~binding.Slot,
+                    innerException: releaseException);
+            }
+
+            bool valid = runtime.Bridge.GlobalEntityCapacity == _capacity.GlobalEntityCapacity &&
+                runtime.Bridge.ReplicationEntityCapacityPerSeat == _capacity.ReplicationEntityCapacityPerSeat &&
+                runtime.Channel.IsPristine;
+            for (int i = 0; valid && i < _replicationSeats.Length; i++)
+            {
+                valid = !ReferenceEquals(runtime, _replicationSeats[i]);
+            }
+
+            if (!valid)
+            {
+                bool released = TryReleaseAcquiredRuntime(in binding, runtime, out Exception? releaseException);
+                Fail(
+                    NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected,
+                    connection.Value,
+                    detail: released ? binding.Slot : ~binding.Slot,
+                    innerException: releaseException);
+            }
+
+            return runtime;
+        }
+
+        private bool TryReleaseAcquiredRuntime(
+            in SessionSeatBinding binding,
+            AuthoritativeReplicationSeatRuntime runtime,
+            out Exception? exception)
+        {
+            try
+            {
+                exception = null;
+                return _replicationSeatFactory.TryRelease(in binding, runtime);
+            }
+            catch (Exception caught)
+            {
+                exception = caught;
+                return false;
+            }
+        }
+
+        private AuthoritativeReplicationSeatRuntime GetReplicationRuntime(int seat)
+        {
+            AuthoritativeReplicationSeatRuntime? runtime = _replicationSeats[seat];
+            if (runtime == null)
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationSeatRuntimeRejected, detail: seat);
+            }
+
+            return runtime;
+        }
+
         private static void ValidateFixedInputIngress(
             in NetworkRuntimeCapacity capacity,
             AuthoritativeSessionRegistry sessions,
@@ -1209,7 +1392,8 @@ namespace Ludots.Core.Networking.Runtime
             int connectionValue = 0,
             NetworkWireKind wireKind = default,
             NetworkWireCodecStatus codecStatus = default,
-            int detail = 0)
+            int detail = 0,
+            Exception? innerException = null)
         {
             _lastFault = new NetworkRuntimeFault(
                 NetworkRuntimeFaultSeverity.LocalContractViolation,
@@ -1220,7 +1404,12 @@ namespace Ludots.Core.Networking.Runtime
                 detail);
             _faulted = true;
             _observer.OnFault(in _lastFault);
-            throw new NetworkRuntimeException(in _lastFault);
+            if (innerException == null)
+            {
+                throw new NetworkRuntimeException(in _lastFault);
+            }
+
+            throw new NetworkRuntimeException(in _lastFault, innerException);
         }
 
         private void EnsureOperational()

@@ -72,6 +72,30 @@ namespace Ludots.Core.Networking.Replication
         public int ReservedCurrentStateCapacity => _currentEntities.Length;
         public int ReservedBaselineStateCapacity => _baselineEntities.Length;
         internal NetworkEntityTable EntityTable => _entities;
+        internal bool IsPristine
+        {
+            get
+            {
+                if (_currentCount != 0 ||
+                    _nextBaselineSlot != 0 ||
+                    _sessionEpoch != 0 ||
+                    _lastSnapshotId != 0 ||
+                    _disclosureLog.Count != 0)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < _baselineIds.Length; i++)
+                {
+                    if (_baselineIds[i] != 0 || _baselineCounts[i] != 0)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
 
         public bool TryAcknowledgeDisclosureChangesThrough(ulong sequence) =>
             _disclosureLog.TryAcknowledgeThrough(sequence);

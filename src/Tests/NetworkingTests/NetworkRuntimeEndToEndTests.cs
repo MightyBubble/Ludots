@@ -72,6 +72,11 @@ public sealed class NetworkRuntimeEndToEndTests
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
             tickState);
+        var replicationFactory = new TrackingAuthoritativeReplicationSeatRuntimeFactory(
+            seatCapacity: 1,
+            capacity.GlobalEntityCapacity,
+            capacity.ReplicationEntityCapacityPerSeat,
+            (_, _) => serverSeat);
         var server = new AuthoritativeServerNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Owned,
@@ -83,9 +88,10 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Results,
             new FixedControllerResolver(player),
             interest,
-            new[] { serverSeat },
+            replicationFactory,
             fixedInput,
             observer);
+        Assert.That(replicationFactory.AcquireCount, Is.Zero, "Server construction must not prebuild a seat runtime.");
 
         var credentials = new MemoryCredentials();
         var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
@@ -115,6 +121,8 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(client.Seat.PlayerId.Value, Is.EqualTo(1));
             Assert.That(observer.InitialSeatConnections, Is.EqualTo(1));
             Assert.That(observer.Faults, Is.Zero);
+            Assert.That(replicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(replicationFactory.LastViewer, Is.EqualTo(player));
         });
 
         RunAuthoritativeFrame(server, tickState, 10);
@@ -194,6 +202,8 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(clientFactory.CreateCount, Is.EqualTo(1));
             Assert.That(clientFactory.Bridge, Is.SameAs(bridgeBeforeReconnect));
             Assert.That(clientFactory.Applier.ReleaseCalls, Is.Zero);
+            Assert.That(replicationFactory.AcquireCount, Is.EqualTo(1));
+            Assert.That(replicationFactory.ReleaseCount, Is.Zero);
         });
 
         RunAuthoritativeFrame(server, tickState, 18);
@@ -209,6 +219,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.SeatReleases, Is.EqualTo(1));
+            Assert.That(replicationFactory.ReleaseCount, Is.EqualTo(1));
+            Assert.That(replicationFactory.LastReleasedRuntime, Is.SameAs(serverSeat));
             Assert.That(observer.Faults, Is.Zero);
             Assert.That(server.IsFaulted, Is.False);
             Assert.That(client.IsFaulted, Is.False);
@@ -245,6 +257,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(transport.DisposeCalls, Is.Zero);
         server.Dispose();
         server.Dispose();
+        Assert.That(replicationFactory.ReleaseCount, Is.EqualTo(1));
         Assert.That(transport.DisposeCalls, Is.EqualTo(1));
     }
 
@@ -316,6 +329,11 @@ public sealed class NetworkRuntimeEndToEndTests
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
             tickState);
+        var replicationFactory = new TrackingAuthoritativeReplicationSeatRuntimeFactory(
+            seatCapacity: 1,
+            capacity.GlobalEntityCapacity,
+            capacity.ReplicationEntityCapacityPerSeat,
+            (_, _) => serverSeat);
         var server = new AuthoritativeServerNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
@@ -327,7 +345,7 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Results,
             new FixedControllerResolver(player),
             interest,
-            new[] { serverSeat },
+            replicationFactory,
             fixedInput,
             observer);
         var client = new ReplicatedClientNetworkRuntime(
