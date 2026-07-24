@@ -85,7 +85,19 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
         EmitWheelLabDebug();
         float refreshInterval = 1f / _runtime.ActiveConfig.PanelRefreshHz;
         _panelRefreshAccumulator += t;
-        if (!_hasPanelState || _panelRefreshAccumulator >= refreshInterval)
+        bool sceneChanged = _hasPanelState && _panelState.Scene != _runtime.ActiveScene;
+        bool scannerStateChanged = _runtime.ActiveScene == Physics3DShowcaseScene.ScannerRange &&
+            (!_hasPanelState ||
+             _panelState.ScannerQueryKind != _runtime.ScannerQueryKind ||
+             _panelState.ScannerDistancePresetIndex != _runtime.ScannerDistancePresetIndex ||
+             _panelState.ScannerLayerFilterIndex != _runtime.ScannerLayerFilterIndex ||
+             _panelState.ScannerRunSequence != _runtime.ScannerRunSequence ||
+             _panelState.ScannerPlaybackStatus != _runtime.ScannerPlaybackStatus ||
+             _panelState.ScannerPlaybackTick != _runtime.ScannerPlaybackTick ||
+             _panelState.ScannerVisibleHitCount != _runtime.ScannerVisibleHitCount ||
+             _panelState.ScannerHasResult != _runtime.ScannerHasResult ||
+             _panelState.ScannerQueryFailed != _runtime.ScannerQueryFailed);
+        if (!_hasPanelState || sceneChanged || scannerStateChanged || _panelRefreshAccumulator >= refreshInterval)
         {
             _panelState = _runtime.CapturePanelState();
             _panelRefreshAccumulator %= refreshInterval;
@@ -295,15 +307,20 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
             throw new InvalidOperationException($"Selected Physics3D query visual {queryIndex} is unavailable in Scanner Range.");
         }
 
-        Vector4 color = _runtime.ScannerQueryFailed
-            ? new Vector4(0.96f, 0.30f, 0.30f, 0.42f)
-            : _runtime.ScannerHasResult
-                ? new Vector4(0.20f, 0.90f, 0.62f, 0.38f)
-                : new Vector4(1.00f, 0.72f, 0.18f, 0.38f);
+        Vector4 color = _runtime.ScannerPlaybackStatus switch
+        {
+            Physics3DScannerPlaybackStatus.Failed => new Vector4(0.96f, 0.30f, 0.30f, 0.42f),
+            Physics3DScannerPlaybackStatus.Playing => new Vector4(0.18f, 0.72f, 0.96f, 0.44f),
+            Physics3DScannerPlaybackStatus.Pulsing => new Vector4(0.18f, 0.72f, 0.96f, 0.36f),
+            Physics3DScannerPlaybackStatus.Complete => new Vector4(0.20f, 0.90f, 0.62f, 0.38f),
+            Physics3DScannerPlaybackStatus.Waiting => new Vector4(1.00f, 0.72f, 0.18f, 0.38f),
+            _ => throw new InvalidOperationException(
+                $"Unknown Scanner Range playback status '{_runtime.ScannerPlaybackStatus}'.")
+        };
         const int stableId = 940_000;
         EmitSelectedQueryVolume(in query, color, stableId);
 
-        for (int hitIndex = 0; hitIndex < query.HitCount; hitIndex++)
+        for (int hitIndex = 0; hitIndex < query.VisibleHitCount; hitIndex++)
         {
             if (!_runtime.TryGetQueryHitVisual(queryIndex, hitIndex, out Physics3DShowcaseQueryHitVisual hit))
             {
@@ -315,12 +332,13 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                 : hitIndex == 0
                     ? new Vector4(1f, 0.92f, 0.35f, 1f)
                     : new Vector4(0.28f, 0.78f, 1f, 0.9f);
-            int hitStableId = 950_000 + (hitIndex * 2);
+            Physics3DScannerRangeShowcaseConfig scanner = _runtime.ActiveConfig.ScannerRange;
+            int hitStableId = checked(1_100_000 + (hitIndex * 100));
             AddPrimitive(
                 _sphereMeshId,
                 ToMeters(hit.PositionCm),
                 Quaternion.Identity,
-                new Vector3(hitIndex == 0 ? 0.18f : 0.12f),
+                ToMeters(new Vector3(scanner.HitMarkerDiameterCm)),
                 hitColor,
                 hitStableId);
             if (hit.Normal.LengthSquared() > 1e-8f)
@@ -332,6 +350,27 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                     new Vector4(0.34f, 1f, 0.52f, 0.95f),
                     hitStableId + 1);
             }
+
+            Vector3 numberCenterCm = hit.PositionCm + (Vector3.UnitY * scanner.HitNumberHeightOffsetCm);
+            EmitHitNumber(hitIndex + 1, numberCenterCm, scanner, hitColor, hitStableId + 10);
+            if (hit.StartedOverlapping)
+            {
+                float crossHalfSpanCm = scanner.HitNumberHeightCm * 0.65f;
+                Vector3 diagonal = new(crossHalfSpanCm, crossHalfSpanCm, 0f);
+                AddLinePrimitive(
+                    numberCenterCm - diagonal,
+                    numberCenterCm + diagonal,
+                    scanner.HitNumberThicknessCm,
+                    hitColor,
+                    hitStableId + 2);
+                diagonal.X = -diagonal.X;
+                AddLinePrimitive(
+                    numberCenterCm - diagonal,
+                    numberCenterCm + diagonal,
+                    scanner.HitNumberThicknessCm,
+                    hitColor,
+                    hitStableId + 3);
+            }
         }
     }
 
@@ -342,60 +381,135 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
     {
         if (query.IsOverlap)
         {
-            EmitQueryVolume(in query, query.OriginCm, color, stableId);
+            EmitQueryVolume(in query, query.OriginCm, color, stableId, query.PulseScale);
             return;
         }
 
         Vector3 direction = Vector3.Normalize(query.Direction);
-        Vector3 midpointCm = query.OriginCm + (direction * query.DistanceCm * 0.5f);
+        Vector3 playbackPositionCm = query.OriginCm + (direction * query.PlaybackDistanceCm);
+        Physics3DScannerRangeShowcaseConfig scanner = _runtime.ActiveConfig.ScannerRange;
         switch (query.Kind)
         {
             case Physics3DShowcaseQueryKind.Ray:
-                AddLinePrimitive(
-                    query.OriginCm,
-                    query.OriginCm + (direction * query.DistanceCm),
-                    MathF.Max(2f, _runtime.ActiveConfig.BodySizeCm * 0.04f),
-                    color,
-                    stableId);
-                break;
-            case Physics3DShowcaseQueryKind.BoxCast:
-                AddPrimitive(
-                    _cubeMeshId,
-                    ToMeters(midpointCm),
-                    RotationFromUnitX(direction),
-                    ToMeters(new Vector3(
-                        query.DistanceCm + query.SizeCm.X,
-                        query.SizeCm.Y,
-                        query.SizeCm.Z)),
-                    color,
-                    stableId);
-                break;
-            case Physics3DShowcaseQueryKind.SphereCast:
-                EmitCapsule(
-                    midpointCm,
-                    RotationFromUnitY(direction),
-                    query.SizeCm.X,
-                    query.DistanceCm,
-                    color,
-                    stableId);
-                break;
-            case Physics3DShowcaseQueryKind.CapsuleCast:
-            {
-                float maximumSpacingCm = _runtime.ActiveConfig.ScannerRange.SweepVisualMaximumSpacingCm;
-                int segmentCount = Math.Max(1, (int)MathF.Ceiling(query.DistanceCm / maximumSpacingCm));
-                for (int sample = 0; sample <= segmentCount; sample++)
+                if (query.PlaybackDistanceCm <= 0.001f)
                 {
-                    float distanceCm = query.DistanceCm * (sample / (float)segmentCount);
-                    EmitQueryVolume(
-                        in query,
-                        query.OriginCm + (direction * distanceCm),
+                    EmitQueryVolume(in query, query.OriginCm, color, stableId);
+                }
+                else
+                {
+                    AddLinePrimitive(
+                        query.OriginCm,
+                        playbackPositionCm,
+                        scanner.ScanPathThicknessCm,
                         color,
-                        stableId + (sample * 3));
+                        stableId);
                 }
                 break;
-            }
+            case Physics3DShowcaseQueryKind.BoxCast:
+            case Physics3DShowcaseQueryKind.SphereCast:
+            case Physics3DShowcaseQueryKind.CapsuleCast:
+                if (query.PlaybackDistanceCm > 0.001f)
+                {
+                    AddLinePrimitive(
+                        query.OriginCm,
+                        playbackPositionCm,
+                        scanner.ScanPathThicknessCm,
+                        color,
+                        stableId);
+                }
+                EmitQueryVolume(in query, playbackPositionCm, color, stableId + 1);
+                break;
             default:
                 throw new InvalidOperationException($"Unsupported Scanner Range cast visual '{query.Kind}'.");
+        }
+    }
+
+    private void EmitHitNumber(
+        int number,
+        Vector3 centerCm,
+        Physics3DScannerRangeShowcaseConfig scanner,
+        Vector4 color,
+        int stableId)
+    {
+        if (number <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(number), number, "Scanner hit numbers must be positive.");
+        }
+
+        int digitCount = 1;
+        int divisor = 1;
+        while (number / divisor >= 10)
+        {
+            divisor *= 10;
+            digitCount++;
+        }
+
+        float digitWidthCm = scanner.HitNumberHeightCm * 0.58f;
+        float digitAdvanceCm = digitWidthCm * 1.35f;
+        float firstDigitXCm = centerCm.X - (((digitCount - 1) * digitAdvanceCm) * 0.5f);
+        for (int digitIndex = 0; digitIndex < digitCount; digitIndex++)
+        {
+            int digit = (number / divisor) % 10;
+            EmitSevenSegmentDigit(
+                digit,
+                new Vector3(firstDigitXCm + (digitIndex * digitAdvanceCm), centerCm.Y, centerCm.Z),
+                scanner.HitNumberHeightCm,
+                digitWidthCm,
+                scanner.HitNumberThicknessCm,
+                color,
+                stableId + (digitIndex * 7));
+            divisor /= 10;
+        }
+    }
+
+    private void EmitSevenSegmentDigit(
+        int digit,
+        Vector3 centerCm,
+        float heightCm,
+        float widthCm,
+        float thicknessCm,
+        Vector4 color,
+        int stableId)
+    {
+        byte segments = digit switch
+        {
+            0 => 0b011_1111,
+            1 => 0b000_0110,
+            2 => 0b101_1011,
+            3 => 0b100_1111,
+            4 => 0b110_0110,
+            5 => 0b110_1101,
+            6 => 0b111_1101,
+            7 => 0b000_0111,
+            8 => 0b111_1111,
+            9 => 0b110_1111,
+            _ => throw new ArgumentOutOfRangeException(nameof(digit), digit, "A decimal digit must be inside [0, 9].")
+        };
+
+        float halfWidthCm = widthCm * 0.5f;
+        float halfHeightCm = heightCm * 0.5f;
+        float innerHalfHeightCm = heightCm * 0.08f;
+        EmitDigitSegment(segments, 0, centerCm + new Vector3(-halfWidthCm, halfHeightCm, 0f), centerCm + new Vector3(halfWidthCm, halfHeightCm, 0f), thicknessCm, color, stableId);
+        EmitDigitSegment(segments, 1, centerCm + new Vector3(halfWidthCm, innerHalfHeightCm, 0f), centerCm + new Vector3(halfWidthCm, halfHeightCm, 0f), thicknessCm, color, stableId + 1);
+        EmitDigitSegment(segments, 2, centerCm + new Vector3(halfWidthCm, -halfHeightCm, 0f), centerCm + new Vector3(halfWidthCm, -innerHalfHeightCm, 0f), thicknessCm, color, stableId + 2);
+        EmitDigitSegment(segments, 3, centerCm + new Vector3(-halfWidthCm, -halfHeightCm, 0f), centerCm + new Vector3(halfWidthCm, -halfHeightCm, 0f), thicknessCm, color, stableId + 3);
+        EmitDigitSegment(segments, 4, centerCm + new Vector3(-halfWidthCm, -halfHeightCm, 0f), centerCm + new Vector3(-halfWidthCm, -innerHalfHeightCm, 0f), thicknessCm, color, stableId + 4);
+        EmitDigitSegment(segments, 5, centerCm + new Vector3(-halfWidthCm, innerHalfHeightCm, 0f), centerCm + new Vector3(-halfWidthCm, halfHeightCm, 0f), thicknessCm, color, stableId + 5);
+        EmitDigitSegment(segments, 6, centerCm + new Vector3(-halfWidthCm, 0f, 0f), centerCm + new Vector3(halfWidthCm, 0f, 0f), thicknessCm, color, stableId + 6);
+    }
+
+    private void EmitDigitSegment(
+        byte segments,
+        int bit,
+        Vector3 startCm,
+        Vector3 endCm,
+        float thicknessCm,
+        Vector4 color,
+        int stableId)
+    {
+        if ((segments & (1 << bit)) != 0)
+        {
+            AddLinePrimitive(startCm, endCm, thicknessCm, color, stableId);
         }
     }
 
@@ -528,7 +642,8 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
         in Physics3DShowcaseQueryVisual query,
         Vector3 positionCm,
         Vector4 color,
-        int stableId)
+        int stableId,
+        float sizeScale = 1f)
     {
         switch (query.Kind)
         {
@@ -547,7 +662,7 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                     _cubeMeshId,
                     ToMeters(positionCm),
                     Quaternion.Identity,
-                    ToMeters(query.SizeCm),
+                    ToMeters(query.SizeCm * sizeScale),
                     color,
                     stableId);
                 break;
@@ -557,7 +672,7 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                     _sphereMeshId,
                     ToMeters(positionCm),
                     Quaternion.Identity,
-                    ToMeters(query.SizeCm),
+                    ToMeters(query.SizeCm * sizeScale),
                     color,
                     stableId);
                 break;
@@ -566,8 +681,8 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                 EmitCapsule(
                     positionCm,
                     Quaternion.Identity,
-                    query.SizeCm.X,
-                    query.SizeCm.Y - query.SizeCm.X,
+                    query.SizeCm.X * sizeScale,
+                    (query.SizeCm.Y - query.SizeCm.X) * sizeScale,
                     color,
                     stableId);
                 break;

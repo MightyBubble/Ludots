@@ -340,7 +340,8 @@ internal sealed class Physics3DShowcasePanelController
     {
         int queryIndex = (int)state.ScannerQueryKind - 1;
         int hitCount = _runtime.GetQueryHitCount(queryIndex);
-        UiElementBuilder[] children = new UiElementBuilder[hitCount + 2];
+        int visibleHitCount = state.ScannerVisibleHitCount;
+        UiElementBuilder[] children = new UiElementBuilder[visibleHitCount + 3];
         children[0] = Metric(
             "selection",
             $"{ScannerQueryLabel(state.ScannerQueryKind)} | {state.ScannerDistanceCm:0} cm | {state.ScannerLayerFilterName}");
@@ -349,9 +350,14 @@ internal sealed class Physics3DShowcasePanelController
             state.ScannerQueryFailed
                 ? "FAILED | result capacity exceeded; nothing was truncated"
                 : state.ScannerHasResult
-                    ? $"{hitCount} hit(s), nearest first"
-                    : "Ready | choose settings, then Run Scan");
-        for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
+                    ? $"{ScannerPlaybackLabel(state.ScannerPlaybackStatus)} | {visibleHitCount}/{hitCount} numbered hit(s) visible"
+                    : "READY | choose settings, then Play Scan");
+        children[2] = Metric(
+            "playhead",
+            state.ScannerPlaybackStatus == Physics3DScannerPlaybackStatus.Pulsing
+                ? $"fixed tick {state.ScannerPlaybackTick} | overlap stays at the origin"
+                : $"fixed tick {state.ScannerPlaybackTick}/{state.ScannerPlaybackDurationTicks} | {state.ScannerPlaybackDistanceCm:0}/{state.ScannerDistanceCm:0} cm");
+        for (int hitIndex = 0; hitIndex < visibleHitCount; hitIndex++)
         {
             if (!_runtime.TryGetQueryHitVisual(queryIndex, hitIndex, out Physics3DShowcaseQueryHitVisual hit))
             {
@@ -361,8 +367,8 @@ internal sealed class Physics3DShowcasePanelController
             string normal = hit.Normal.LengthSquared() <= 1e-8f
                 ? "normal n/a"
                 : $"normal ({hit.Normal.X:0.00}, {hit.Normal.Y:0.00}, {hit.Normal.Z:0.00})";
-            children[hitIndex + 2] = Metric(
-                $"hit {hitIndex + 1}",
+            children[hitIndex + 3] = Metric(
+                $"#{hitIndex + 1}",
                 $"{hit.DistanceCm:0.0} cm | {normal} | start overlap {(hit.StartedOverlapping ? "YES" : "NO")}");
         }
 
@@ -375,7 +381,7 @@ internal sealed class Physics3DShowcasePanelController
         {
             Physics3DShowcaseScene.ScannerRange => Section(
                 "Goal",
-                Ui.Text("Choose one scan shape, distance, and target layer. Run it, then inspect every ordered hit in the lane.")
+                Ui.Text("Play a scan, pause its 30 Hz motion, and use Single Step to reveal numbered hits in order. A red crossed number means the cast started inside that target.")
                     .FontSize(11f).Color("#D7E2ED").WhiteSpace(UiWhiteSpace.Normal)),
             Physics3DShowcaseScene.WindTunnel => Section(
                 "Goal",
@@ -545,7 +551,12 @@ internal sealed class Physics3DShowcasePanelController
             Ui.Row(kindButtons).Wrap().Gap(7f),
             Ui.Row(distanceButtons).Wrap().Gap(7f),
             Ui.Row(filterButtons).Wrap().Gap(7f),
-            ActionButton("Run Scan", false, "#315944", "physics3d-scanner-run", _ => Enqueue(Physics3DShowcaseCommandKind.RunScannerQuery)));
+            ActionButton(
+                state.ScannerHasResult ? "Replay Scan" : "Play Scan",
+                false,
+                "#315944",
+                "physics3d-scanner-run",
+                _ => Enqueue(Physics3DShowcaseCommandKind.RunScannerQuery)));
     }
 
     private UiElementBuilder BuildWindTunnelControls(Physics3DShowcasePanelState state)
@@ -603,6 +614,16 @@ internal sealed class Physics3DShowcasePanelController
         Physics3DShowcaseQueryKind.SphereOverlap => "Sphere Overlap",
         Physics3DShowcaseQueryKind.CapsuleOverlap => "Capsule Overlap",
         _ => throw new InvalidOperationException($"Unknown Scanner Range query kind '{kind}'.")
+    };
+
+    private static string ScannerPlaybackLabel(Physics3DScannerPlaybackStatus status) => status switch
+    {
+        Physics3DScannerPlaybackStatus.Waiting => "READY",
+        Physics3DScannerPlaybackStatus.Playing => "PLAYING",
+        Physics3DScannerPlaybackStatus.Pulsing => "PULSING",
+        Physics3DScannerPlaybackStatus.Complete => "COMPLETE",
+        Physics3DScannerPlaybackStatus.Failed => "FAILED",
+        _ => throw new InvalidOperationException($"Unknown Scanner Range playback status '{status}'.")
     };
 
     private static UiElementBuilder BuildWheelLabEvidence(Physics3DShowcasePanelState state)

@@ -89,6 +89,15 @@ internal enum Physics3DShowcaseWindZone : byte
     Vortex = 2
 }
 
+internal enum Physics3DScannerPlaybackStatus : byte
+{
+    Waiting = 0,
+    Playing = 1,
+    Pulsing = 2,
+    Complete = 3,
+    Failed = 4
+}
+
 internal enum Physics3DShowcaseDriveDirection : sbyte
 {
     Reverse = -1,
@@ -104,6 +113,10 @@ internal readonly struct Physics3DShowcaseQueryVisual
         float distanceCm,
         Vector3 sizeCm,
         int hitCount,
+        int visibleHitCount,
+        int playbackTick,
+        float playbackDistanceCm,
+        float pulseScale,
         bool hasFirstHit,
         Vector3 firstHitPositionCm)
     {
@@ -113,6 +126,10 @@ internal readonly struct Physics3DShowcaseQueryVisual
         DistanceCm = distanceCm;
         SizeCm = sizeCm;
         HitCount = hitCount;
+        VisibleHitCount = visibleHitCount;
+        PlaybackTick = playbackTick;
+        PlaybackDistanceCm = playbackDistanceCm;
+        PulseScale = pulseScale;
         HasFirstHit = hasFirstHit;
         FirstHitPositionCm = firstHitPositionCm;
     }
@@ -123,6 +140,10 @@ internal readonly struct Physics3DShowcaseQueryVisual
     public float DistanceCm { get; }
     public Vector3 SizeCm { get; }
     public int HitCount { get; }
+    public int VisibleHitCount { get; }
+    public int PlaybackTick { get; }
+    public float PlaybackDistanceCm { get; }
+    public float PulseScale { get; }
     public bool HasFirstHit { get; }
     public Vector3 FirstHitPositionCm { get; }
     public bool IsOverlap => Kind is Physics3DShowcaseQueryKind.BoxOverlap or

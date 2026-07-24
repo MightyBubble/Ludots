@@ -122,9 +122,9 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
     }
 
     [Test]
-    public void Feature_ScannerRange_Scenario_PlayerRunsOneFilteredScanAndResetClearsIt()
+    public void Feature_ScannerRange_Scenario_PlayerPausesSingleStepsCapsuleSweepAndResetsIt()
     {
-        // Given a new player sees Scanner Range waiting for an explicit scan.
+        // Given a new player sees Scanner Range waiting for an explicit scan and pauses the 30 Hz world.
         string repoRoot = FindRepoRoot();
         LauncherLaunchPlan plan = ResolveLaunchPlan(repoRoot);
         using GameEngine engine = CreateEngine(repoRoot, plan, out _);
@@ -135,28 +135,61 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
             ?? throw new InvalidOperationException("Acceptance UI surface host is missing.");
         Assert.That(runtime.ScannerHasResult, Is.False);
+        ClickWhenPresent(engine, surfaceHost, "physics3d-action-pause");
+        TickUntil(engine, () => runtime.CapturePanelState().Paused, maximumFrames: 128);
 
-        // When the player picks Box Cast, maximum distance, Amber only, and presses Run Scan.
-        ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-kind-boxcast");
+        // When the player picks Capsule Cast, maximum distance, All targets, and presses Play Scan.
+        ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-kind-capsulecast");
         ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-distance-2");
-        ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-layer-0");
+        ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-layer-2");
         ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-run");
         TickUntil(engine, () => runtime.ScannerHasResult, maximumFrames: 128);
         Physics3DShowcasePanelState scanned = runtime.CapturePanelState();
+        int queryIndex = (int)Physics3DShowcaseQueryKind.CapsuleCast - 1;
 
-        // Then only that scan reports every matching hit in order.
+        // Then the paused sweep remains at its origin and exposes the red crossed #1 starting-overlap marker.
         Assert.Multiple(() =>
         {
-            Assert.That(scanned.ScannerQueryKind, Is.EqualTo(Physics3DShowcaseQueryKind.BoxCast));
-            Assert.That(scanned.ScannerLayerFilterName, Is.EqualTo("Amber only"));
-            Assert.That(scanned.ScannerQueries.BoxCastHits, Is.EqualTo(2));
+            Assert.That(scanned.ScannerQueryKind, Is.EqualTo(Physics3DShowcaseQueryKind.CapsuleCast));
+            Assert.That(scanned.ScannerLayerFilterName, Is.EqualTo("All targets"));
+            Assert.That(scanned.ScannerQueries.CapsuleCastHits, Is.EqualTo(runtime.ActiveConfig.ScannerRange.TargetCount));
             Assert.That(scanned.ScannerQueryFailed, Is.False);
-            Assert.That(runtime.TryGetQueryHitVisual(1, 0, out Physics3DShowcaseQueryHitVisual first), Is.True);
-            Assert.That(runtime.TryGetQueryHitVisual(1, 1, out Physics3DShowcaseQueryHitVisual second), Is.True);
-            Assert.That(first.DistanceCm, Is.LessThan(second.DistanceCm));
+            Assert.That(scanned.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Playing));
+            Assert.That(scanned.ScannerPlaybackTick, Is.Zero);
+            Assert.That(scanned.ScannerVisibleHitCount, Is.EqualTo(1));
+        });
+        Assert.That(runtime.TryGetQueryHitVisual(queryIndex, 0, out Physics3DShowcaseQueryHitVisual first), Is.True);
+        Assert.That(first.StartedOverlapping, Is.True);
+        Assert.That(first.DistanceCm, Is.Zero.Within(0.001f));
+
+        // When Single Step is pressed, then exactly one fixed playback frame advances while the world remains paused.
+        ClickWhenPresent(engine, surfaceHost, "physics3d-action-single-step");
+        TickUntil(engine, () => runtime.ScannerPlaybackTick == 1, maximumFrames: 128);
+        Physics3DShowcasePanelState oneStep = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(oneStep.Paused, Is.True);
+            Assert.That(oneStep.ScannerPlaybackTick, Is.EqualTo(1));
+            Assert.That(oneStep.ScannerPlaybackDistanceCm, Is.GreaterThan(0f));
         });
 
-        // When Reset Station is pressed, then Scanner Range returns to its authored waiting state.
+        // When playback resumes, then all #1..#N markers become visible nearest first.
+        ClickWhenPresent(engine, surfaceHost, "physics3d-action-pause");
+        TickUntil(
+            engine,
+            () => runtime.ScannerPlaybackStatus == Physics3DScannerPlaybackStatus.Complete,
+            maximumFrames: runtime.ActiveConfig.ScannerRange.CastPlaybackDurationTicks * 16);
+        Physics3DShowcasePanelState completed = runtime.CapturePanelState();
+        Assert.That(completed.ScannerVisibleHitCount, Is.EqualTo(completed.ScannerQueries.CapsuleCastHits));
+        float previousDistanceCm = float.NegativeInfinity;
+        for (int hitIndex = 0; hitIndex < completed.ScannerVisibleHitCount; hitIndex++)
+        {
+            Assert.That(runtime.TryGetQueryHitVisual(queryIndex, hitIndex, out Physics3DShowcaseQueryHitVisual hit), Is.True);
+            Assert.That(hit.DistanceCm, Is.GreaterThanOrEqualTo(previousDistanceCm));
+            previousDistanceCm = hit.DistanceCm;
+        }
+
+        // When Reset Station is pressed, then the playhead, hit numbers, and result return to the authored waiting state.
         long revision = runtime.SceneRevision;
         ClickWhenPresent(engine, surfaceHost, "physics3d-action-reset");
         TickUntil(engine, () => runtime.SceneRevision > revision, maximumFrames: 128);
@@ -165,6 +198,9 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         {
             Assert.That(reset.ScannerHasResult, Is.False);
             Assert.That(reset.ScannerRunSequence, Is.Zero);
+            Assert.That(reset.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Waiting));
+            Assert.That(reset.ScannerPlaybackTick, Is.Zero);
+            Assert.That(reset.ScannerVisibleHitCount, Is.Zero);
             Assert.That(reset.LastAction, Does.Contain("Reset Scanner Range"));
         });
     }
@@ -1611,7 +1647,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         report.AppendLine();
         report.AppendLine("## 4. 场景");
         report.AppendLine();
-        report.AppendLine("- Scanner Range：玩家看到七条扫描路径的命中结果。");
+        report.AppendLine("- Scanner Range：玩家播放射线和三种体积扫描，暂停后可按 30Hz 单步观察；命中按 1..N 出现在世界中，红色交叉编号表示扫描从目标内部开始；三种重叠查询留在原点脉冲。");
         report.AppendLine("- Material Hill：玩家点击推箱，比较冰/木/橡胶坡上的滑动距离。");
         report.AppendLine("- Platform Station：玩家依次通过移动台、转台、传送带和单向终点台；面板持续显示下一目标、剩余时间和完成或失败结果。");
         report.AppendLine("- Wind Tunnel：玩家比较稳风、阵风、涡旋下轻重物体的位移。");
@@ -1643,6 +1679,17 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         report.AppendLine("    并且 玩家依次点击 Scanner Range、Material Hill、Platform Station、Wind Tunnel、Traversal Course、Wheel Lab、Ragdoll Lab、Constraint Forge、Deterministic Rebuild Lab、Scale City");
         report.AppendLine("    那么 每次点击都切换到有可见物理内容的新站点");
         report.AppendLine("    并且 若某站点按钮缺失或切换失败，验收直接报错而不是跳过");
+        report.AppendLine();
+        report.AppendLine("  场景: 玩家暂停并单步观察胶囊扫描的命中顺序");
+        report.AppendLine("    假如 玩家在 Scanner Range 暂停世界，并选择 Capsule Cast、最远距离和 All targets");
+        report.AppendLine("    当 玩家点击 Play Scan");
+        report.AppendLine("    那么 扫描头停在起点，红色交叉的 #1 明确表示胶囊从目标内部开始");
+        report.AppendLine("    当 玩家点击一次 Single Step");
+        report.AppendLine("    那么 扫描只前进一个 30Hz 固定帧，并且世界继续保持暂停");
+        report.AppendLine("    当 玩家恢复播放直到扫描结束");
+        report.AppendLine("    那么 全部命中按距离以 #1 到 #N 依次出现在世界和面板中");
+        report.AppendLine("    当 玩家点击 Reset Station");
+        report.AppendLine("    那么 播放游标、命中编号、结果和扫描选择一起回到初始状态");
         report.AppendLine();
         report.AppendLine("  场景: 玩家在 Material Hill 比较三种地面");
         report.AppendLine("    假如 玩家进入 Material Hill 并看到三道坡和三只相同箱子");
