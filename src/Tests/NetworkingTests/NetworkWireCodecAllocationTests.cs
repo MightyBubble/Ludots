@@ -19,8 +19,9 @@ public sealed class NetworkWireCodecAllocationTests
     public void SteadyStateEncodeDecode_10000Operations_AllocatesZeroManagedBytes()
     {
         var request = new SessionHandshakeRequest(Protocol, Content, new ReconnectToken(1, 2), Epoch);
+        var responseSeat = new SessionSeatBinding(0, 1, new PlayerId(1));
         SessionHandshakeResponse response = SessionHandshakeResponse.Accept(
-            new PlayerId(1),
+            in responseSeat,
             new ReconnectToken(3, 4),
             Protocol,
             Content,

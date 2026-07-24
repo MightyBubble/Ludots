@@ -95,8 +95,9 @@ public sealed class NetworkWireCodecTests
     [Test]
     public void HandshakeResponse_AcceptAndReject_RoundTrip()
     {
+        var acceptedSeat = new SessionSeatBinding(1, 3, new PlayerId(7));
         SessionHandshakeResponse accept = SessionHandshakeResponse.Accept(
-            new PlayerId(7),
+            in acceptedSeat,
             new ReconnectToken(9, 11),
             Protocol,
             Content,
@@ -106,6 +107,7 @@ public sealed class NetworkWireCodecTests
         Assert.That(HandshakeWireCodec.TryDecodeResponse(buffer, out SessionHandshakeResponse decodedAccept), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decodedAccept.Accepted, Is.True);
         Assert.That(decodedAccept.PlayerId, Is.EqualTo(new PlayerId(7)));
+        Assert.That(decodedAccept.Seat, Is.EqualTo(acceptedSeat));
 
         SessionHandshakeResponse reject = SessionHandshakeResponse.Reject(
             HandshakeRejectReason.ContentMismatch,

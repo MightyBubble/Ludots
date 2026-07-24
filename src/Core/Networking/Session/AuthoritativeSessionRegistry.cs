@@ -27,6 +27,7 @@ namespace Ludots.Core.Networking.Session
         private readonly SeatState[] _states;
         private readonly int[] _connectionValues;
         private readonly int[] _playerValues;
+        private readonly uint[] _seatGenerations;
         private readonly ulong[] _tokenLow;
         private readonly ulong[] _tokenHigh;
         private readonly uint[] _disconnectTicks;
@@ -66,6 +67,7 @@ namespace Ludots.Core.Networking.Session
             _states = new SeatState[seatCapacity];
             _connectionValues = new int[seatCapacity];
             _playerValues = new int[seatCapacity];
+            _seatGenerations = new uint[seatCapacity];
             _tokenLow = new ulong[seatCapacity];
             _tokenHigh = new ulong[seatCapacity];
             _disconnectTicks = new uint[seatCapacity];
@@ -165,6 +167,18 @@ namespace Ludots.Core.Networking.Session
             return true;
         }
 
+        public bool TryGetSeatBinding(ConnectionId connectionId, out SessionSeatBinding binding)
+        {
+            if (!FindConnectedSeat(connectionId.Value, out int seat))
+            {
+                binding = default;
+                return false;
+            }
+
+            binding = GetSeatBinding(seat);
+            return true;
+        }
+
         public void ExpireAwaitingSeats(uint currentTick)
         {
             for (int i = 0; i < _states.Length; i++)
@@ -190,6 +204,7 @@ namespace Ludots.Core.Networking.Session
             }
 
             ReconnectToken token = IssueToken();
+            _seatGenerations[seat] = NextGeneration(_seatGenerations[seat]);
             _states[seat] = SeatState.Connected;
             _connectionValues[seat] = connectionId.Value;
             _tokenLow[seat] = token.Low;
@@ -197,7 +212,7 @@ namespace Ludots.Core.Networking.Session
             _disconnectTicks[seat] = 0;
 
             response = SessionHandshakeResponse.Accept(
-                new PlayerId(_playerValues[seat]),
+                GetSeatBinding(seat),
                 token,
                 _requiredProtocolVersion,
                 _requiredContentFingerprint,
@@ -234,7 +249,7 @@ namespace Ludots.Core.Networking.Session
             _disconnectTicks[seat] = 0;
 
             response = SessionHandshakeResponse.Accept(
-                new PlayerId(_playerValues[seat]),
+                GetSeatBinding(seat),
                 rotated,
                 _requiredProtocolVersion,
                 _requiredContentFingerprint,
@@ -313,6 +328,11 @@ namespace Ludots.Core.Networking.Session
             _tokenHigh[seat] = 0;
             _disconnectTicks[seat] = 0;
         }
+
+        private SessionSeatBinding GetSeatBinding(int seat) =>
+            new(seat, _seatGenerations[seat], new PlayerId(_playerValues[seat]));
+
+        private static uint NextGeneration(uint current) => current == uint.MaxValue ? 1u : current + 1u;
 
         private ReconnectToken IssueToken()
         {
