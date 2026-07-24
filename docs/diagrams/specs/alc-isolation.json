@@ -1,0 +1,64 @@
+{
+  "name": "alc-isolation",
+  "title": "ALC Isolation Architecture",
+  "subtitle": "AssemblyLoadContext isCollectible: true",
+  "canvas": { "width": 1900, "height": 1560 },
+
+  "groups": [
+    { "id": "g-host", "title": "Host Application (Default ALC)",
+      "x": 100, "y": 120, "w": 1700, "h": 420,
+      "tint": "clay", "border_style": "dashed" },
+    { "id": "g-mod", "title": "ModLoadContext (isCollectible: true)",
+      "x": 280, "y": 610, "w": 1340, "h": 390,
+      "tint": "stone", "border_style": "dashed" },
+    { "id": "g-types", "title": "Mod Assembly Types",
+      "x": 380, "y": 1080, "w": 1140, "h": 350,
+      "tint": "steel", "border_style": "dashed", "title_anchor": "top-center" }
+  ],
+
+  "nodes": [
+    { "id": "hostapp", "title": "Host App", "tint": "clay", "border_w": 1.6,
+      "x": 720, "y": 230, "w": 460, "h": 130,
+      "items": ["Default AssemblyLoadContext"] },
+
+    { "id": "procshared", "title": "Process Shared", "tint": "sand",
+      "x": 520, "y": 700, "w": 360, "h": 110,
+      "items": ["System / .NET Runtime"] },
+    { "id": "hostshared", "title": "Host Shared", "tint": "sand",
+      "x": 1020, "y": 700, "w": 360, "h": 110,
+      "items": ["LudotsCore / Common libs"] },
+    { "id": "modprivate", "title": "Mod Private", "tint": "sand", "border_w": 1.6,
+      "x": 770, "y": 850, "w": 360, "h": 110,
+      "items": ["Mod-specific Assembly"] },
+
+    { "id": "imod", "title": "IMod", "tint": "steel",
+      "x": 470, "y": 1180, "w": 230, "h": 130,
+      "items": ["Entry point"] },
+    { "id": "isystem", "title": "ISystem", "tint": "steel",
+      "x": 720, "y": 1180, "w": 230, "h": 130,
+      "items": ["System factory"] },
+    { "id": "icomponent", "title": "IComponent", "tint": "steel",
+      "x": 970, "y": 1180, "w": 230, "h": 130,
+      "items": ["ECS component"] },
+    { "id": "ability", "title": "Ability", "tint": "steel",
+      "x": 1220, "y": 1180, "w": 230, "h": 130,
+      "items": ["GAS ability"] }
+  ],
+
+  "edges": [
+    { "from": "hostapp", "to": "procshared" },
+    { "from": "hostapp", "to": "hostshared" },
+    { "from": "hostapp", "to": "modprivate" },
+    { "from": "modprivate", "to": "g-types" },
+
+    { "from": "imod", "to": "g-mod" },
+    { "from": "isystem", "to": "g-mod" },
+    { "from": "icomponent", "to": "g-mod" },
+    { "from": "ability", "to": "g-mod" }
+  ],
+
+  "notes": [
+    { "text": "ALC isolation ensures Mod assemblies can be unloaded without leaking into the Host App domain.", "x": 100, "y": 1480, "ha": "left" },
+    { "text": "isCollectible: true — Enables hot reload & memory reclaim", "x": 1230, "y": 1480, "ha": "left" }
+  ]
+}

@@ -416,6 +416,11 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static int ComputeDirection(World world, in EffectContext ctx, in EffectConfigParams mergedParams)
         {
+            if (TryResolveExplicitVectorDirection(world, in ctx, in mergedParams, out int explicitVectorDirectionDeg))
+            {
+                return explicitVectorDirectionDeg;
+            }
+
             if (TryResolveBlackboardFacing(world, ctx.Source, out int blackboardFacingDeg))
             {
                 return blackboardFacingDeg;
@@ -439,6 +444,76 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
             return 0;
+        }
+
+        private static bool TryResolveExplicitVectorDirection(
+            World world,
+            in EffectContext ctx,
+            in EffectConfigParams mergedParams,
+            out int directionDeg)
+        {
+            directionDeg = 0;
+            if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTarget))
+            {
+                if (EffectTargetPointResolver.TryResolvePreservedTargetOrigin(in mergedParams, out Fix64Vec2 preservedOrigin) &&
+                    TryComputeDirection(in preservedOrigin, in preservedTarget, out directionDeg))
+                {
+                    return true;
+                }
+
+                if (TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
+                    TryComputeDirection(in sourceOrigin, in preservedTarget, out directionDeg))
+                {
+                    return true;
+                }
+            }
+
+            if (world.IsAlive(ctx.Source) && world.Has<AbilityExecInstance>(ctx.Source))
+            {
+                ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
+                if (exec.HasTargetPos != 0)
+                {
+                    if (exec.HasTargetOriginPos != 0 &&
+                        TryComputeDirection(in exec.TargetOriginPosCm, in exec.TargetPosCm, out directionDeg))
+                    {
+                        return true;
+                    }
+
+                    if (TryResolveSourceOrigin(world, in ctx, out Fix64Vec2 sourceOrigin) &&
+                        TryComputeDirection(in sourceOrigin, in exec.TargetPosCm, out directionDeg))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveSourceOrigin(World world, in EffectContext ctx, out Fix64Vec2 origin)
+        {
+            if (world.IsAlive(ctx.Source) && world.Has<WorldPositionCm>(ctx.Source))
+            {
+                origin = world.Get<WorldPositionCm>(ctx.Source).Value;
+                return true;
+            }
+
+            origin = default;
+            return false;
+        }
+
+        private static bool TryComputeDirection(in Fix64Vec2 origin, in Fix64Vec2 target, out int directionDeg)
+        {
+            var dx = target.X - origin.X;
+            var dy = target.Y - origin.Y;
+            if (dx == Fix64.Zero && dy == Fix64.Zero)
+            {
+                directionDeg = 0;
+                return false;
+            }
+
+            directionDeg = WorldPlane2D.FacingDegreesPositiveFromDirection(dx.ToInt(), dy.ToInt());
+            return true;
         }
 
         private static bool TryResolveBlackboardFacing(World world, Entity source, out int facingDeg)

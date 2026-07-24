@@ -1,7 +1,5 @@
 {
-  "orderBlackboardKeys": {
-    "MassNavigation.FormationMode": true
-  },
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "massNavigationMove": {
       "orderTypeId": "massNavigationMove",
@@ -18,7 +16,7 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "MassNavigation.FormationMode",
+      "intArg0BlackboardKey": "none",
       "validationGraph": "none",
       "instantComplete": false
     }

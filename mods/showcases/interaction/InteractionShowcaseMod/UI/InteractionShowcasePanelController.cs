@@ -83,9 +83,46 @@ namespace InteractionShowcaseMod.UI
 
         private UiElementBuilder BuildMainPanel(InteractionShowcasePanelState state)
         {
+            return state.IsStressMap
+                ? BuildStressMainPanel(state)
+                : BuildHubMainPanel(state);
+        }
+
+        private UiElementBuilder BuildHubMainPanel(InteractionShowcasePanelState state)
+        {
             return Ui.Column(
+                    Ui.Text("Ludots Interaction Showcase")
+                        .FontSize(26f)
+                        .Bold()
+                        .Color("#F5F7FA"),
+                    Ui.Text("Try the same heroes through target-first, smart-cast, aim-confirm, and action-command controls.")
+                        .FontSize(12f)
+                        .Color("#B8C4D4")
+                        .WhiteSpace(UiWhiteSpace.Normal),
                     BuildHeroStrip(state),
                     BuildWorkflowCard(state),
+                    BuildDispatchCard(state))
+                .Width(430f)
+                .Padding(14f)
+                .Gap(8f)
+                .Radius(8f)
+                .Background("#071019")
+                .Absolute(16f, 16f)
+                .ZIndex(30);
+        }
+
+        private UiElementBuilder BuildStressMainPanel(InteractionShowcasePanelState state)
+        {
+            return Ui.Column(
+                    Ui.Text("Ludots Interaction Showcase")
+                        .FontSize(26f)
+                        .Bold()
+                        .Color("#F5F7FA"),
+                    Ui.Text(state.MapDescription)
+                        .FontSize(12f)
+                        .Color("#B8C4D4")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    BuildStressCard(state),
                     BuildDispatchCard(state))
                 .Width(430f)
                 .Padding(14f)

@@ -1,0 +1,218 @@
+name: ci-acceptance
+
+on:
+  schedule:
+    # 每天 UTC 17:23（非整点非半点，避开队列高峰）
+    - cron: '23 17 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ci-acceptance.yml'
+      - 'scripts/build-acceptance-index.py'
+      - 'scripts/acceptance/**'
+      - 'showcase.registry.json'
+
+jobs:
+  acceptance:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Pin acceptance SDK
+        shell: pwsh
+        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
+
+      - name: Check acceptance index is in sync with registry
+        shell: pwsh
+        run: |
+          python scripts/build-acceptance-index.py --check
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Build acceptance test projects
+        shell: pwsh
+        run: |
+          $projects = @(
+            'src/Tests/GasTests/GasTests.csproj',
+            'src/Tests/PresentationTests/PresentationTests.csproj',
+            'src/Tests/UiShowcaseTests/UiShowcaseTests.csproj'
+          )
+
+          foreach ($project in $projects) {
+            Write-Host "Building $project ..."
+            dotnet build $project -c Debug -v minimal
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+
+      # 单条失败/超时不阻断后续条目；结果写入 ci-acceptance-results.json，最后由 Gate 步骤统一判定。
+      - name: Run runnable acceptance entries
+        shell: pwsh
+        run: |
+          $index = Get-Content 'scripts/acceptance/acceptance.index.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+          $results = New-Object System.Collections.Generic.List[object]
+          $timeoutSeconds = 600
+
+          foreach ($entry in @($index.runnable)) {
+            $startedAt = Get-Date
+            $artifactDir = $entry.artifactDir
+            if ([string]::IsNullOrWhiteSpace($artifactDir)) {
+              $artifactDir = "artifacts/acceptance/ci/$($entry.id)"
+            }
+            New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+            $selector = $entry.binding
+            if ([string]::IsNullOrWhiteSpace($selector)) {
+              $selector = $entry.preset
+            }
+
+            Write-Host "=== [$($entry.id)] cli launch $selector --adapter raylib --record $artifactDir"
+            $outLog = Join-Path $artifactDir 'ci-launch.out.log'
+            $errLog = Join-Path $artifactDir 'ci-launch.err.log'
+
+            $proc = Start-Process -FilePath 'cmd.exe' `
+              -ArgumentList @('/c', 'scripts\run-mod-launcher.cmd', 'cli', 'launch', $selector, '--adapter', 'raylib', '--record', $artifactDir) `
+              -WorkingDirectory (Get-Location).Path `
+              -NoNewWindow -PassThru `
+              -RedirectStandardOutput $outLog `
+              -RedirectStandardError $errLog
+
+            $status = 'ok'
+            $exitCode = $null
+            $exited = $proc.WaitForExit($timeoutSeconds * 1000)
+            if (-not $exited) {
+              try { $proc.Kill() } catch {}
+              $proc.WaitForExit()
+              $status = "timeout(>${timeoutSeconds}s)"
+            }
+            else {
+              $exitCode = $proc.ExitCode
+              if ($exitCode -ne 0) {
+                $status = "fail(exit $exitCode)"
+                # mod 未注册录制场景属能力缺口而非回归：标记 unsupported，不计入门禁失败
+                if ((Test-Path $errLog) -and (Select-String -Path $errLog -Pattern 'No recording scenario is registered' -Quiet)) {
+                  $status = 'unsupported(no-recording-scenario)'
+                }
+              }
+            }
+            $proc.Dispose()
+
+            # 录制产物带 summary.json 时，success=false 同样判失败
+            $summaryPath = Join-Path $artifactDir 'summary.json'
+            if ($status -eq 'ok' -and (Test-Path $summaryPath)) {
+              try {
+                $runSummary = Get-Content $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if (($runSummary.PSObject.Properties.Name -contains 'success') -and (-not $runSummary.success)) {
+                  $status = 'fail(summary.success=false)'
+                }
+              }
+              catch {
+              }
+            }
+
+            $elapsed = [int]((Get-Date) - $startedAt).TotalSeconds
+            Write-Host "=== [$($entry.id)] $status (${elapsed}s)"
+            $results.Add([pscustomobject]@{
+              id              = $entry.id
+              binding         = $selector
+              artifactDir     = $artifactDir
+              status          = $status
+              exitCode        = $exitCode
+              durationSeconds = $elapsed
+            })
+          }
+
+          New-Item -ItemType Directory -Force -Path 'artifacts/acceptance' | Out-Null
+          $results | ConvertTo-Json | Set-Content 'artifacts/acceptance/ci-acceptance-results.json' -Encoding UTF8
+          if ($results.Count -eq 0) {
+            Write-Host 'acceptance.index.json 中没有 runnable 条目。'
+          }
+
+      - name: Upload acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-artifacts
+          path: artifacts/acceptance/
+          if-no-files-found: warn
+
+      - name: Write job summary
+        if: always()
+        shell: pwsh
+        run: |
+          $lines = New-Object System.Collections.Generic.List[string]
+          $lines.Add('# 验收套件运行结果')
+          $lines.Add('')
+
+          $indexPath = 'scripts/acceptance/acceptance.index.json'
+          if (Test-Path $indexPath) {
+            $index = Get-Content $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $lines.Add("- runnable 条目: $($index.counts.runnable)；test-only 条目: $($index.counts.testOnly)")
+            $lines.Add('')
+          }
+
+          $resultsPath = 'artifacts/acceptance/ci-acceptance-results.json'
+          if (Test-Path $resultsPath) {
+            $results = @(Get-Content $resultsPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+            $lines.Add('| 条目 | binding | 状态 | 耗时 | 产物目录 |')
+            $lines.Add('|---|---|---|---|---|')
+            foreach ($r in $results) {
+              $lines.Add("| $($r.id) | $($r.binding) | $($r.status) | $($r.durationSeconds)s | $($r.artifactDir) |")
+            }
+            $okCount = @($results | Where-Object { $_.status -eq 'ok' }).Count
+            $unsupportedCount = @($results | Where-Object { $_.status -like 'unsupported*' }).Count
+            $lines.Add('')
+            $lines.Add("通过 $okCount / $($results.Count)（另有 $unsupportedCount 条未注册录制场景，标记 unsupported）")
+          }
+          else {
+            $lines.Add('> 未生成 ci-acceptance-results.json（运行步骤可能在执行条目前失败）。')
+          }
+
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+      - name: Gate on runnable results
+        if: always()
+        shell: pwsh
+        run: |
+          $resultsPath = 'artifacts/acceptance/ci-acceptance-results.json'
+          if (-not (Test-Path $resultsPath)) {
+            Write-Host '[FAIL] ci-acceptance-results.json 不存在，运行步骤未完成。'
+            exit 1
+          }
+
+          $results = @(Get-Content $resultsPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+          # unsupported（mod 未注册录制场景）不计入门禁失败，仅报告
+          $unsupported = @($results | Where-Object { $_.status -like 'unsupported*' })
+          if ($unsupported.Count -gt 0) {
+            Write-Host "[WARN] $($unsupported.Count) 条 runnable 未注册录制场景（能力缺口，非门禁失败）:"
+            foreach ($u in $unsupported) {
+              Write-Host " - $($u.id)"
+            }
+          }
+          $failed = @($results | Where-Object { ($_.status -ne 'ok') -and ($_.status -notlike 'unsupported*') })
+          if ($failed.Count -gt 0) {
+            Write-Host "[FAIL] $($failed.Count) 条 runnable 验收未通过:"
+            foreach ($f in $failed) {
+              Write-Host " - $($f.id): $($f.status)"
+            }
+            exit 1
+          }
+
+          $okCount = @($results | Where-Object { $_.status -eq 'ok' }).Count
+          Write-Host "[OK] 门禁通过：$okCount 条 runnable 验收成功，$($unsupported.Count) 条 unsupported。"

@@ -28,11 +28,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public int InsertStep;
 
-        /// <summary>
-        /// Runtime-owned integer slot for execution cursors or other transient state.
-        /// Must not be used to rewrite authored order payload.
-        /// </summary>
-        public int RuntimeInt0;
     }
     
     /// <summary>
@@ -70,6 +65,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// The currently active order (if ActiveIndex >= 0).
         /// </summary>
         public QueuedOrder ActiveOrder;
+
+        /// <summary>
+        /// Runtime-owned integer slot for the active order's execution cursor.
+        /// Must not be used to rewrite authored order payload.
+        /// </summary>
+        public int ActiveRuntimeInt0;
         
         /// <summary>
         /// Pending order slot - stores a blocked order for automatic retry when the
@@ -271,6 +272,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
             
             ActiveOrder = RemoveAtTransferred(0);
             ActiveIndex = 0;
+            ActiveRuntimeInt0 = 0;
             return true;
         }
         
@@ -294,6 +296,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 InsertStep = 0
             };
             ActiveIndex = 0;
+            ActiveRuntimeInt0 = 0;
         }
         
         /// <summary>
@@ -314,6 +317,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         {
             ActiveIndex = -1;
             ActiveOrder = default;
+            ActiveRuntimeInt0 = 0;
         }
         
         /// <summary>

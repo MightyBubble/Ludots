@@ -8,6 +8,50 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 {
     public static class OrderSubmitter
     {
+        public static OrderSubmitResult Preview(
+            World world,
+            Entity entity,
+            in Order order,
+            OrderTypeRegistry registry,
+            OrderRuleRegistry? orderRuleRegistry,
+            int currentStep,
+            int stepRateHz)
+        {
+            if (stepRateHz <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
+            }
+
+            if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
+            {
+                return OrderSubmitResult.RejectedInvalidActor;
+            }
+
+            OrderBuffer preview = world.Get<OrderBuffer>(entity);
+            OrderTypeConfig config = registry.Get(order.OrderTypeId);
+            if (order.SubmitMode == OrderSubmitMode.Queued)
+            {
+                return HandleQueuedMode(ref preview, in order, in config, currentStep, stepRateHz);
+            }
+
+            int activeOrderTypeId = preview.HasActive ? preview.ActiveOrder.Order.OrderTypeId : 0;
+            if (orderRuleRegistry != null && orderRuleRegistry.HasRule(order.OrderTypeId))
+            {
+                ref readonly var rules = ref orderRuleRegistry.Get(order.OrderTypeId);
+                if (rules.Blocks(activeOrderTypeId))
+                {
+                    return OrderSubmitResult.RejectedByRule;
+                }
+            }
+
+            if (activeOrderTypeId == 0 || CanInterrupt(activeOrderTypeId, in order, in config, orderRuleRegistry))
+            {
+                return OrderSubmitResult.Activated;
+            }
+
+            return PreviewSameTypePolicy(ref preview, in order, in config, currentStep, stepRateHz);
+        }
+
         public static OrderSubmitResult Submit(
             World world,
             Entity entity,
@@ -160,6 +204,47 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
                 case SameTypePolicy.Replace:
                     ReleaseAllQueuedOrdersOfType(world, ref buffer, order.OrderTypeId);
+                    return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedQueueFull;
+                case SameTypePolicy.Ignore:
+                default:
+                    return OrderSubmitResult.RejectedByRule;
+            }
+        }
+
+        private static OrderSubmitResult PreviewSameTypePolicy(
+            ref OrderBuffer buffer,
+            in Order order,
+            in OrderTypeConfig config,
+            int currentStep,
+            int stepRateHz)
+        {
+            int expireStep = CalculateExpireStep(config, currentStep, stepRateHz);
+
+            switch (config.SameTypePolicy)
+            {
+                case SameTypePolicy.Queue:
+                {
+                    int countOfType = buffer.CountOfType(order.OrderTypeId);
+                    if (countOfType >= config.MaxQueueSize)
+                    {
+                        if (config.QueueFullPolicy == QueueFullPolicy.DropOldest)
+                        {
+                            RemoveOldestQueuedOrderOfTypeForPreview(ref buffer, order.OrderTypeId);
+                        }
+                        else
+                        {
+                            return OrderSubmitResult.RejectedQueueFull;
+                        }
+                    }
+
+                    return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedQueueFull;
+                }
+                case SameTypePolicy.Replace:
+                    RemoveAllQueuedOrdersOfTypeForPreview(ref buffer, order.OrderTypeId);
                     return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                         ? OrderSubmitResult.Queued
                         : OrderSubmitResult.RejectedQueueFull;
@@ -613,6 +698,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        private static void RemoveOldestQueuedOrderOfTypeForPreview(ref OrderBuffer buffer, int orderTypeId)
+        {
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
+            {
+                if (buffer.GetQueued(i).Order.OrderTypeId != orderTypeId)
+                {
+                    continue;
+                }
+
+                buffer.RemoveAtTransferred(i);
+                return;
+            }
+        }
+
         private static void ReleaseAllQueuedOrdersOfType(World world, ref OrderBuffer buffer, int orderTypeId)
         {
             for (int i = buffer.QueuedCount - 1; i >= 0; i--)
@@ -624,6 +723,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
                 QueuedOrder removed = buffer.RemoveAtTransferred(i);
                 OrderSpatialPayloadOps.Release(world, in removed.Order);
+            }
+        }
+
+        private static void RemoveAllQueuedOrdersOfTypeForPreview(ref OrderBuffer buffer, int orderTypeId)
+        {
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
+            {
+                if (buffer.GetQueued(i).Order.OrderTypeId != orderTypeId)
+                {
+                    continue;
+                }
+
+                buffer.RemoveAtTransferred(i);
             }
         }
 

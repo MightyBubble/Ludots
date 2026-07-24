@@ -4,7 +4,7 @@
 
 - 不可裁剪的后端真相实体
 - 可裁剪、可降频、仍有行为逻辑的预算实体
-- 少量高价值方阵与大量 crowd 的双车道避障
+- 少量高价值 authority entity 与大量 crowd 的分层避障
 - 可切换 board 语义的 AOI / LOD
 - performer 与 gameplay entity 的职责分离
 
@@ -34,7 +34,7 @@
 - 不新增平行实体体系，一切通过组件组合表达
 - 不让视觉裁剪状态直接充当逻辑裁剪真相
 - 不让同一个 entity 同时被两条热路径双写位置
-- 少量高价值实体与大量 crowd 必须分车道求解
+- 少量高价值实体与大量 crowd 可以按明确车道求解，但未落地的车道不得写成现有能力
 - AOI 服务依赖 `ILoadedChunks`，不把引擎主语义绑定到单一 hex board
 
 ## 3 正式组件轴
@@ -56,8 +56,8 @@
 
 解释如下：
 
-- 方阵本体、英雄、后端战斗单元挂 `SimulationAuthority + AlwaysResident`
-- 路人、羊群、方阵内演员、非关键 crowd 挂 `BudgetedResident`
+- 控制单位、英雄、后端战斗单元挂 `SimulationAuthority + AlwaysResident`
+- 路人、羊群、业务编队内演员、非关键 crowd 挂 `BudgetedResident`
 - `Streamable` 只用于极大世界中的远距离可重建实体，不用于后端真相
 
 ### 3.2 碰撞与避障参与
@@ -70,7 +70,6 @@
   - `Physics2D`
   - `Physics2DAndCrowd`
 - `AvoidanceLane`
-  - `FormationPhysics`
   - `MassNavigation`
 
 解释如下：
@@ -78,29 +77,20 @@
 - `CollisionParticipation` 决定 entity 参加哪种碰撞配对与求解
 - `AvoidanceLane` 决定 entity 被哪条仿真热路径消费
 - `EntityLayer + LayerMask` 继续作为统一层级过滤真相，不再新造一套 collision matrix 类型
+- 历史 `FormationPhysics` 枚举与解析入口已删除；当前正式 `AvoidanceLane` 只有 `MassNavigation`
 
-### 3.3 编队本体与跟随成员
+### 3.3 Showcase-owned Formation 集群转发
 
-建议新增以下正式组件：
-
-- `FormationAnchor`
-  - 当前 entity 是后端方阵本体
-- `FormationFootprint`
-  - 方阵级碰撞体、宽度、深度、间距、朝向
-- `FormationCommandState`
-  - 阵型命令、目标点、旋转、速度策略
-- `FormationFollower`
-  - `AnchorEntity`
-  - `SlotIndex`
-  - `LocalOffset`
-- `FollowerLocomotion`
-  - 跟随阻尼、插值、局部扰动、slot 重分配参数
+Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapabilityShowcaseMod` 拥有 anchor/member/slot 状态和初始布局；MassNavigation 只看到最终 member actor 与 typed MovePlan command group。
 
 解释如下：
 
-- 方阵本体承载真相
-- 跟随成员只是普通 entity 的一种组件组合
-- 跟随成员仍可拥有行为逻辑、碰撞、预算、LOD，不等于 performer
+- Formation anchor 是 selectable、health、outline 等业务/表现锚点，不是 navigation actor，也没有 `OrderBuffer`；
+- Formation member 才是普通 MassNavigation agent 和 order actor；
+- Command Router 在 `CommandIntentProfile -> CastDispatch` 后调用 showcase-owned `FormationCommandActorExpander`；
+- expander 按稳定 slot 顺序把 anchor 展开为 members，随后通过 clustered atomic batch 提交通用 `massNavigationMove`；
+- GAS 把 member active order 投影为 `MovePlanExecutionIntent(CommandGroup)`，MassNavigation 返回 typed result，GAS 完成或取消 order；
+- 不存在 Core Formation、Formation 专用 order、Q/E 旋转 consumer 或逐成员私有执行管线。
 
 ### 3.4 AOI 与仿真 LOD
 
@@ -137,19 +127,17 @@
 - `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
 - 256x256 大世界展示 authored performer marker；不做名称推断、战略热力图或缺信号 fallback
 
-## 4 双车道仿真口径
+## 4 仿真车道口径
 
-### 4.1 FormationPhysics 车道
+### 4.1 精确物理车道候选（#643，尚未承诺）
 
-适用对象：
+历史 `FormationPhysics` 已从运行时代码删除，也没有可作为正式验收入口的 `FormationPhysicsPlaygroundMod`。[#643](https://github.com/MightyBubble/Ludots/issues/643) 只继续治理中性的精确物理车道是否值得新增：
 
-- 数量少
-- 高价值
-- 承载战斗与阵型真相
+- 若有真实业务消费者，再定义面向少量高价值 authority entity 的精确物理车道，并补齐调度和 UAT；
+- 不恢复 Formation 专用 lane 名称，也不把 Formation Showcase 当作精确物理能力证据。
 
-正式口径：
+在 #643 完成前，下列内容只能作为候选设计，不能作为 Core 已交付合同：
 
-- `AvoidanceLane = FormationPhysics`
 - `NavPhysicsMode = FullPhysics2D`
 - `NavSolverMode = PreciseOrca` 或 `Hybrid`
 - 使用 `Collider2D.Box` 或其他正式 OBB 表达
@@ -157,7 +145,7 @@
 
 目标：
 
-- 方阵本体之间做完整碰撞
+- 少量高价值 authority entity 做完整碰撞
 - 少量权威单位走 ORCA / Hybrid
 - 允许更高成本的近距离精确避障
 
@@ -177,11 +165,12 @@
 - `NavSolverMode = CrowdFlow`
 - 不把全量 crowd 强塞进 `FullPhysics2D`
 - 热路径优先用 SoA crowd sim
+- 上层业务可以持续提交明确逐成员目标，但 MassNavigation 不理解 formation、slot 或 follower 语义
 
 目标：
 
 - 屏幕内万级 crowd 仍可运行
-- 跟随成员之间能彼此碰撞或分离
+- crowd 成员之间能彼此碰撞或分离
 - 远距离能进入降频或 dormancy
 
 ## 5 单写真相规则

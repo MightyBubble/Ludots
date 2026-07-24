@@ -266,7 +266,11 @@ namespace Ludots.Tests.GAS.Production
 
                 float beforeTicks = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
                 sb.AppendLine("[TCG] 等待 DoT 跳动...");
-                Tick(engine, 60);
+                TickUntil(
+                    engine,
+                    () => world.Get<AttributeBuffer>(enemy).GetCurrent(healthId) < beforeTicks,
+                    maxFrames: 240,
+                    because: "PoisonCounter stacks should deal damage within one bounded fixed-clock period.");
                 float afterTicks = world.Get<AttributeBuffer>(enemy).GetCurrent(healthId);
                 LogEntityState(sb, "[TCG]", "DoT 跳动后", world, enemy, "TcgEnemy", new[] { healthId }, new[] { "Health" });
                 sb.AppendLine($"[TCG] 毒素累计伤害 = {beforeTicks - afterTicks:F1} (3 层叠加 AddDuration)。");

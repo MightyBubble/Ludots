@@ -113,9 +113,6 @@ namespace Ludots.Core.Config
             Register("SimulationResidencyPolicy", SetSimulationResidencyPolicy, null, Component<SimulationResidencyPolicy>.ComponentType);
             Register("CollisionParticipation", SetCollisionParticipation, null, Component<CollisionParticipation>.ComponentType);
             Register("AvoidanceLane", SetAvoidanceLane, null, Component<AvoidanceLane>.ComponentType);
-            Register("MassNavigationFormationAnchor", SetMassNavigationFormationAnchor, null, Component<MassNavigationFormationAnchor>.ComponentType);
-            Register("MassNavigationFormationFollower", SetMassNavigationFormationFollower, null, Component<MassNavigationFormationFollower>.ComponentType);
-            Register("MassNavigationFollowerLocomotion", SetMassNavigationFollowerLocomotion, null, Component<MassNavigationFollowerLocomotion>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -1400,80 +1397,6 @@ namespace Ludots.Core.Config
             });
         }
 
-        private static void SetMassNavigationFormationAnchor(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("MassNavigationFormationAnchor requires an object payload.");
-            }
-
-            ValidateProperties(obj, "MassNavigationFormationAnchor", "formationId", "slotCount");
-            string formationId = RequireStringProperty(obj, "formationId", "MassNavigationFormationAnchor");
-            int slotCount = ReadIntProperty(obj, "slotCount", "MassNavigationFormationAnchor");
-            if (slotCount <= 0)
-            {
-                throw new InvalidOperationException("MassNavigationFormationAnchor.slotCount must be > 0.");
-            }
-
-            entity.Add(new MassNavigationFormationAnchor
-            {
-                FormationId = MassNavigationFormationRegistry.Register(formationId),
-                SlotCount = slotCount,
-            });
-        }
-
-        private static void SetMassNavigationFormationFollower(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("MassNavigationFormationFollower requires an object payload.");
-            }
-
-            ValidateProperties(obj, "MassNavigationFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
-            string formationId = RequireStringProperty(obj, "formationId", "MassNavigationFormationFollower");
-            int slotIndex = ReadIntProperty(obj, "slotIndex", "MassNavigationFormationFollower");
-            if (slotIndex < 0)
-            {
-                throw new InvalidOperationException("MassNavigationFormationFollower.slotIndex must be >= 0.");
-            }
-
-            entity.Add(new MassNavigationFormationFollower
-            {
-                FormationId = MassNavigationFormationRegistry.Register(formationId),
-                Anchor = Entity.Null,
-                SlotIndex = slotIndex,
-                LocalOffsetXCm = ReadFloatProperty(obj, "localOffsetXCm", "MassNavigationFormationFollower"),
-                LocalOffsetYCm = ReadFloatProperty(obj, "localOffsetYCm", "MassNavigationFormationFollower"),
-            });
-        }
-
-        private static void SetMassNavigationFollowerLocomotion(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("MassNavigationFollowerLocomotion requires an object payload.");
-            }
-
-            ValidateProperties(obj, "MassNavigationFollowerLocomotion", "targetChangeEpsilonCm", "facingChangeEpsilonRadians");
-            float targetChangeEpsilonCm = ReadFloatProperty(obj, "targetChangeEpsilonCm", "MassNavigationFollowerLocomotion");
-            float facingChangeEpsilonRadians = ReadFloatProperty(obj, "facingChangeEpsilonRadians", "MassNavigationFollowerLocomotion");
-            if (!(targetChangeEpsilonCm > 0f))
-            {
-                throw new InvalidOperationException("MassNavigationFollowerLocomotion.targetChangeEpsilonCm must be > 0.");
-            }
-
-            if (!(facingChangeEpsilonRadians > 0f))
-            {
-                throw new InvalidOperationException("MassNavigationFollowerLocomotion.facingChangeEpsilonRadians must be > 0.");
-            }
-
-            entity.Add(new MassNavigationFollowerLocomotion
-            {
-                TargetChangeEpsilonCm = targetChangeEpsilonCm,
-                FacingChangeEpsilonRadians = facingChangeEpsilonRadians,
-            });
-        }
-
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)
         {
             return ParseManifestationObstacleShape(raw, "ManifestationObstacleIntent2D");
@@ -1552,7 +1475,6 @@ namespace Ludots.Core.Config
 
             return raw switch
             {
-                "FormationPhysics" => AvoidanceLaneKind.FormationPhysics,
                 "MassNavigation" => AvoidanceLaneKind.MassNavigation,
                 _ => throw new InvalidOperationException($"Unsupported AvoidanceLane kind '{raw}'.")
             };

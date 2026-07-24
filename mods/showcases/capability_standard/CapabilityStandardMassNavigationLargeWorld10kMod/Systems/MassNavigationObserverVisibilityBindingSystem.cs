@@ -18,7 +18,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
     private const int LiveKnowledgeConfidencePermille = 1000;
 
     private static readonly QueryDescription AgentQuery = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team>()
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex>()
         .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
@@ -37,7 +37,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
     {
         if (!CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(_engine) ||
             !MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine) ||
-            _engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation ||
+            _engine.GetService(MassNavigationKeys.RuntimeBinding) is not { IsReady: true, Current: { } simulation } ||
             _engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is not KnowledgeProjectionStore knowledge ||
             _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry) is not PerformerDefinitionRegistry performers ||
             !TryResolveViewer(out Entity viewer))
@@ -46,7 +46,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
         }
 
         int expectedAgentCount = ResolveExpectedAgentCount(simulation);
-        if (expectedAgentCount <= 0 || simulation.AgentState.TotalAgents < expectedAgentCount)
+        if (expectedAgentCount <= 0 || simulation.NavigationAgentCount < expectedAgentCount)
         {
             return;
         }

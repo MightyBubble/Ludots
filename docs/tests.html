@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试与验收 — Ludots</title>
+<meta name="description" content="Ludots 测试分层 L0–L5、showcase T1–T4 分层、分层门禁矩阵与验收六件套证据档案。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  /* ===== 测试页专属样式 ===== */
+  .layer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .layer-card { padding: 22px; }
+  .layer-card .lv {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; height: 30px; padding: 0 10px; border-radius: var(--radius-sm);
+    font-weight: 800; font-size: 14px; margin-bottom: 12px;
+  }
+  .layer-card h3 { margin: 0 0 8px; font-size: 16px; }
+  .layer-card p { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
+  .layer-card code { font-size: 12px; word-break: break-all; }
+
+  .six-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .six-card { padding: 20px 22px; }
+  .six-card .fname { font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--accent); margin-bottom: 8px; word-break: break-all; }
+  .six-card p { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+  /* 证据卡 */
+  .ev-card { margin-bottom: 34px; overflow: hidden; }
+  .ev-head { padding: 20px 26px; border-bottom: 1px solid var(--bg-hairline);
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    background: var(--bg-soft); }
+  .ev-head h3 { margin: 0; font-size: 17px; font-family: var(--mono); }
+  .ev-head .files { font-size: 12.5px; color: var(--faint); }
+  .ev-body { padding: 26px; }
+  .ev-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+
+  /* summary 关键字段 */
+  .kv { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .kv th, .kv td { border-bottom: 1px solid var(--border); padding: 6px 10px;
+    text-align: left; vertical-align: top; }
+  .kv th { color: var(--muted); font-weight: 600; white-space: nowrap; width: 40%;
+    font-family: var(--mono); font-size: 12px; }
+  .kv td { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .kv tr:last-child th, .kv tr:last-child td { border-bottom: none; }
+
+  /* 截图轮播 */
+  .carousel { position: relative; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-soft); }
+  .carousel .stage { position: relative; height: 300px; display: flex;
+    align-items: center; justify-content: center; cursor: zoom-in; }
+  .carousel .stage img { max-width: 100%; max-height: 100%; display: block; }
+  .carousel .bar { display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; border-top: 1px solid var(--bg-hairline); background: var(--card);
+    font-size: 12.5px; color: var(--muted); }
+  .carousel .bar button {
+    border: 1px solid var(--border-strong); background: var(--card);
+    border-radius: 4px; padding: 3px 12px; cursor: pointer; color: var(--muted);
+  }
+  .carousel .bar button:hover { border-color: var(--accent); color: var(--accent); }
+  .carousel .cap { font-family: var(--mono); }
+
+  /* battle-report 渲染 */
+  .report-body { font-size: 14px; }
+  .report-body h1 { font-size: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  .report-body h2 { font-size: 16.5px; margin-top: 24px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+  .report-body h3 { font-size: 15px; margin-top: 20px; }
+  .report-body ul, .report-body ol { padding-left: 22px; }
+  .report-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  .report-body th, .report-body td { border: 1px solid var(--border); padding: 6px 10px; }
+  .report-body th { background: var(--bg-soft); }
+
+  .mmd-box { border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card); padding: 16px; overflow-x: auto; }
+  .mmd-box .mermaid { display: flex; justify-content: center; }
+  details.ev-extra { margin-top: 18px; }
+  details.ev-extra summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 600; }
+
+  .anchor-target { scroll-margin-top: 84px; }
+
+  @media (max-width: 1080px) {
+    .layer-grid, .six-grid { grid-template-columns: repeat(2, 1fr); }
+    .ev-cols { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .layer-grid, .six-grid { grid-template-columns: 1fr; }
+    .ev-body { padding: 18px; }
+  }
+</style>
+</head>
+<body data-page="tests">
+<header id="topbar"></header>
+
+<main class="page">
+  <div class="section-head" style="margin-top: 8px;">
+    <div class="kicker">TESTS &amp; ACCEPTANCE</div>
+    <h2>测试与验收</h2>
+    <p>Ludots 的质量保障分两条线：<strong>NUnit 测试分层（L0–L5）</strong>守护代码，
+      <strong>Showcase 分层（T1–T4）</strong>治理可玩场景，两者通过「验收六件套」证据闭环。</p>
+  </div>
+
+  <!-- ============ 关键数字 ============ -->
+  <!-- 数据来源（治理调研结论，2026-07 基线）：
+       12 个 NUnit 项目 = src/Tests/ 下 csproj 计数（ModdingTest 为手工冒烟工具，已迁至 src/Tools/ModdingSmoke）；
+       2765 测试 = src/Tests 下 [Test] 属性计数（grep -c '[Test]' -r src/Tests --include='*.cs'）；
+       验收证据目录 = artifacts/acceptance/ 实扫（见下方证据专区，由 build-site.py 注入） -->
+  <div class="grid cols-4">
+    <div class="card stat-card" style="padding: 22px;">
+      <div class="value" style="font-size: 32px;">12</div>
+      <div class="label">个 NUnit 测试项目</div>
+      <div class="note">src/Tests/ 下 csproj 计数</div>
+    </div>
+    <div class="card stat-card" style="padding: 22px;">
+      <div class="value" style="font-size: 32px;">2765</div>
+      <div class="label">个测试用例</div>
+      <div class="note">[Test] 属性计数</div>
+    </div>
+    <div class="card stat-card" style="padding: 22px;">
+      <div class="value" style="font-size: 32px;">6</div>
+      <div class="label">件套验收证据</div>
+      <div class="note">battle-report / summary / trace / path / screens / checklist</div>
+    </div>
+    <div class="card stat-card" style="padding: 22px;">
+      <div class="value" style="font-size: 32px;" id="ev-count">–</div>
+      <div class="label">组已归档验收证据</div>
+      <div class="note">artifacts/acceptance/ 实扫</div>
+    </div>
+  </div>
+
+  <!-- ============ L0–L5 测试分层 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">TEST PYRAMID</div>
+      <h2>测试分层 L0–L5</h2>
+      <p>从静态架构守护到端到端证据录制，每层有明确的职责与运行时机。</p>
+    </div>
+    <div class="layer-grid">
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--accent-light); color: var(--accent);">L0</span>
+        <h3>架构守护</h3>
+        <p>依赖方向、分层约束、命名与注册契约的静态守护。最快失败，守门第一关。</p>
+        <code>ArchitectureTests · *ArchitectureGuardTests</code>
+      </div>
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--accent-light); color: var(--accent);">L1</span>
+        <h3>核心单元</h3>
+        <p>无 World 依赖的纯逻辑单元测试：时间流、数学、容器、规则集。</p>
+        <code>TimeFlowCoreTests · GasTests（纯逻辑部分）</code>
+      </div>
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--green-light); color: var(--green);">L2</span>
+        <h3>子系统集成</h3>
+        <p>单 World 内的子系统级集成：GAS 战斗、3C、存档、Mod 加载。</p>
+        <code>GasTests · ThreeCTests · PersistenceTests</code>
+      </div>
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--green-light); color: var(--green);">L3</span>
+        <h3>表现与适配器契约</h3>
+        <p>表现层与平台适配器契约：Performer 管线、Raylib/Web/CEF 适配、Web UI 数据面。</p>
+        <code>PresentationTests · RaylibAdapterTests · WebUi*Tests · Ui*Tests · BrowserCefTests</code>
+      </div>
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--amber-light); color: var(--amber);">L4</span>
+        <h3>Showcase 验收</h3>
+        <p>与注册表 <code>acceptanceTest</code> 字段一一配对的场景验收测试，验证 showcase 行为契约。</p>
+        <code>*AcceptanceTests（GasTests/Production 等）</code>
+      </div>
+      <div class="card layer-card">
+        <span class="lv" style="background: var(--amber-light); color: var(--amber);">L5</span>
+        <h3>端到端证据</h3>
+        <p>真实 launcher 启动 + 确定性回放录制，产出六件套证据归档到仓库。</p>
+        <code>cli launch &lt;binding&gt; --record artifacts/acceptance/&lt;dir&gt;</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 分层门禁矩阵 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">GATE MATRIX</div>
+      <h2>分层门禁矩阵</h2>
+      <p>「现状」列反映 <code>.github/workflows/solution-verify.yml</code> 当前实跑范围（PR 与 main 推送触发）；
+        「约定」列为治理目标门禁，随 CI 治理分阶段收紧。</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>层级</th><th>范围</th><th>PR 门禁（现状）</th><th>PR 门禁（约定目标）</th><th>全量回归</th><th>发布基线</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>L0</strong></td>
+            <td>架构守护</td>
+            <td>✅ 实跑<br><code>ArchitectureGuardTests + GraphRuntimeArchitectureGuardTests</code></td>
+            <td>✅ 必过</td>
+            <td>每次</td>
+            <td>必须全绿</td>
+          </tr>
+          <tr>
+            <td><strong>L1</strong></td>
+            <td>核心单元</td>
+            <td>⚪ 本地运行</td>
+            <td>✅ 必过</td>
+            <td>每次</td>
+            <td>必须全绿</td>
+          </tr>
+          <tr>
+            <td><strong>L2</strong></td>
+            <td>子系统集成</td>
+            <td>🟡 关联核心切片实跑<br><code>EntityKeyedSoaTable / KnowledgeProjection* / Exchange* 等 25 个过滤器</code></td>
+            <td>受影响子系统必过</td>
+            <td>夜间</td>
+            <td>必须全绿</td>
+          </tr>
+          <tr>
+            <td><strong>L3</strong></td>
+            <td>表现与适配器契约</td>
+            <td>🟡 Raylib 字段渲染切片实跑<br><code>RaylibFieldRenderPerformerTests</code></td>
+            <td>受影响适配器必过</td>
+            <td>夜间</td>
+            <td>必须全绿</td>
+          </tr>
+          <tr>
+            <td><strong>L4</strong></td>
+            <td>Showcase 验收</td>
+            <td>🟡 12 个验收类随关联切片实跑<br><code>AssociationStress / FogOfWar / FourXAssociation 等</code></td>
+            <td>变更 showcase 的配对验收必过</td>
+            <td>夜间</td>
+            <td>T1 全绿</td>
+          </tr>
+          <tr>
+            <td><strong>L5</strong></td>
+            <td>端到端证据</td>
+            <td>⚪ 验收流程手动录制</td>
+            <td>新增/变更验收场景必录</td>
+            <td>发布前</td>
+            <td>证据齐全且签名一致</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size: 13px; color: var(--faint); margin-top: 12px;">
+      注：现状列摘自 solution-verify.yml 注释——完整 GasTests 与 PresentationTests 在 main 上尚有历史红灯，
+      当前门禁只卡住「已通过切片」以保持门禁诚实，治理分期收敛。
+    </p>
+  </section>
+
+  <!-- ============ 12 个测试项目 + 1 个手工工具 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">PROJECTS</div>
+      <h2>12 个 NUnit 测试项目</h2>
+      <p>全部位于 <code>src/Tests/</code>。另有 1 个手工冒烟工具 <code>ModdingTest</code>（OutputType=Exe，非 NUnit），
+        已迁至 <code>src/Tools/ModdingSmoke/</code>。常用命令：
+        <code>dotnet test src/Tests/GasTests/GasTests.csproj</code></p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>项目</th><th>主要职责</th><th>分层</th></tr></thead>
+        <tbody>
+          <tr><td><code>ArchitectureTests</code></td><td>架构守护：依赖方向与分层约束</td><td>L0</td></tr>
+          <tr><td><code>TimeFlowCoreTests</code></td><td>时间流核心纯逻辑</td><td>L1</td></tr>
+          <tr><td><code>GasTests</code></td><td>GAS 战斗/属性/Tag 与通用运行时；<code>Production/</code> 下承载 showcase 验收（L4）</td><td>L1/L2/L4</td></tr>
+          <tr><td><code>ThreeCTests</code></td><td>3C：相机 / 角色 / 控制</td><td>L2</td></tr>
+          <tr><td><code>PersistenceTests</code></td><td>通用存档系统</td><td>L2</td></tr>
+          <tr><td><code>PresentationTests</code></td><td>表现层与 Performer 渲染管线</td><td>L3</td></tr>
+          <tr><td><code>RaylibAdapterTests</code></td><td>Raylib 平台适配器契约</td><td>L3</td></tr>
+          <tr><td><code>BrowserCefTests</code></td><td>CEF 浏览器壳</td><td>L3</td></tr>
+          <tr><td><code>UiBrowserTests</code></td><td>浏览器 UI 运行时</td><td>L3</td></tr>
+          <tr><td><code>UiShowcaseTests</code></td><td>UI showcase 契约</td><td>L3</td></tr>
+          <tr><td><code>WebUiDataPlaneTests</code></td><td>Web UI 数据面</td><td>L3</td></tr>
+          <tr><td><code>WebUiPanelKitTests</code></td><td>Web UI 面板套件</td><td>L3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size: 13px; color: var(--faint); margin-top: 12px;">
+      注：<code>ModdingTest</code>（覆盖 Mod 加载、ALC 隔离、依赖解析，原 L2）是 OutputType=Exe 的手工冒烟工具而非 NUnit 测试，
+      已迁至 <code>src/Tools/ModdingSmoke/</code>；其编译由 solution-verify.yml 显式 <code>dotnet build</code> 步骤保留。
+    </p>
+  </section>
+
+  <!-- ============ 目录治理现状 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">DIRECTORY GOVERNANCE</div>
+      <h2>目录治理现状</h2>
+      <p>测试目录已按子系统域簇化重组：用例归属按域入簇、一眼可定位，新增用例不再平铺堆在工程根。</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>工程</th><th>目录结构</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GasTests</code></td>
+            <td>14 个域簇 + <code>Production/</code> 验收区</td>
+            <td>AI / Ability / Association / Config / Effect / GasCore / Graph / Integration / InteractionInput /
+              Map / Physics2D / Presentation / Spatial / Vision 共 14 个域簇；<code>Production/</code> 单独承载
+              showcase 验收（L4），与注册表 <code>acceptanceTest</code> 字段配对。</td>
+          </tr>
+          <tr>
+            <td><code>PresentationTests</code></td>
+            <td>8 个域簇</td>
+            <td>Animation / Camera / Core / MassNavigation / Panels / Performer / Rendering / Showcases。</td>
+          </tr>
+          <tr>
+            <td><code>TestCommon</code></td>
+            <td>共享链接源（<code>src/Tests/TestCommon/</code>）</td>
+            <td>GasTests / PersistenceTests / PresentationTests / ThreeCTests 以
+              <code>&lt;Compile Include="..\TestCommon\*.cs" Link="*.cs" /&gt;</code> 相对路径链接其源码，
+              因此 TestCommon <strong>不可下沉工程层级</strong>，必须保持在 <code>src/Tests/</code> 顶层。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ Showcase T1–T4 分层 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">SHOWCASE TIERS</div>
+      <h2>Showcase 分层 T1–T4</h2>
+      <p>注册表（<code>showcase.registry.json</code>）对每个 showcase 标注分层，治理强度随层递减。完整清单见
+        <a href="gallery.html">Showcase 画廊</a>。</p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>分层</th><th>定义</th><th>治理要求</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge t1">T1</span></td><td>标准能力验收</td><td>注册表登记 + README + 配对验收测试（L4）+ 截图证据（L5）四件齐全</td></tr>
+          <tr><td><span class="badge t2">T2</span></td><td>可玩演示</td><td>注册表登记 + 可启动 binding/preset</td></tr>
+          <tr><td><span class="badge t3">T3</span></td><td>实验 / 压测</td><td>注册表登记，允许不完整证据，标注 experimental</td></tr>
+          <tr><td><span class="badge t4">T4</span></td><td>退役</td><td>保留登记以便追溯，画廊中降权展示</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 验收六件套 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="kicker">EVIDENCE KIT</div>
+      <h2>验收六件套</h2>
+      <p>一次 <code>--record</code> 录制产出一组确定性证据，人读战报、机读签名、眼见截图。</p>
+    </div>
+    <div class="six-grid">
+      <div class="card six-card">
+        <div class="fname">battle-report.md</div>
+        <p>战报：场景意图、确定性输入、动作脚本、预期结果、逐帧时间线与结论裁决。</p>
+      </div>
+      <div class="card six-card">
+        <div class="fname">summary.json</div>
+        <p>机器可读摘要：场景、适配器、root mods、关键计数与 <code>normalized_signature</code> 跨适配器一致性签名。</p>
+      </div>
+      <div class="card six-card">
+        <div class="fname">trace.jsonl</div>
+        <p>逐 tick 轨迹：固定时钟 1/60s 下的确定性回放记录，用于差异定位。</p>
+      </div>
+      <div class="card six-card">
+        <div class="fname">path.mmd</div>
+        <p>Mermaid 流程图：场景动作脚本的分支路径（成功 / 失败分支）。</p>
+      </div>
+      <div class="card six-card">
+        <div class="fname">screens/*.png</div>
+        <p>关键帧截图：start、after_click、marker_live、marker_expired 与 timeline 拼图。</p>
+      </div>
+      <div class="card six-card">
+        <div class="fname">visible-checklist.md</div>
+        <p>可见性核对单：每个关键帧「应该看到什么」的人工核对清单。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 证据专区 ============ -->
+  <section class="section" id="evidence">
+    <div class="section-head">
+      <div class="kicker">EVIDENCE ARCHIVE</div>
+      <h2>验收证据档案</h2>
+      <p>以下为 <code>artifacts/acceptance/</code> 实扫结果（由 build-site.py 注入
+        <code>evidence-data.js</code>）。点击截图可全屏查看。</p>
+    </div>
+    <div id="ev-list">
+      <div class="empty-state" style="text-align:center;color:var(--faint);padding:60px 0;">证据数据加载中…</div>
+    </div>
+  </section>
+</main>
+
+<!-- 全屏看图浮层 -->
+<div class="overlay" id="overlay">
+  <span class="close-btn" id="overlay-close">&times;</span>
+  <img id="overlay-img" alt="全屏截图">
+</div>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots 测试与验收 · 证据目录 artifacts/acceptance/</span>
+    <span>录制：<code>scripts/run-mod-launcher.cmd cli launch &lt;binding&gt; --adapter &lt;adapter&gt; --record artifacts/acceptance/&lt;dir&gt;</code></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="site-assets/site.js"></script>
+<script src="site-assets/evidence-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+  var BASE = "artifacts/acceptance/";
+
+  /* ---------- 全屏浮层 ---------- */
+  var overlay = document.getElementById("overlay");
+  var overlayImg = document.getElementById("overlay-img");
+  function openOverlay(src) { overlayImg.src = src; overlay.classList.add("active"); }
+  function closeOverlay() { overlay.classList.remove("active"); overlayImg.src = ""; }
+  document.getElementById("overlay-close").addEventListener("click", closeOverlay);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeOverlay(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeOverlay(); });
+
+  /* ---------- summary.json 关键字段 ---------- */
+  function kvTable(summary) {
+    if (!summary) return '<p style="color: var(--faint); font-size: 13px;">无 summary.json</p>';
+    var rows = "";
+    Object.keys(summary).forEach(function (k) {
+      var v = summary[k];
+      var text;
+      if (v == null) text = "null";
+      else if (Array.isArray(v)) text = v.join(", ");
+      else if (typeof v === "object") text = JSON.stringify(v);
+      else text = String(v);
+      rows += "<tr><th>" + esc(k) + "</th><td>" + esc(text) + "</td></tr>";
+    });
+    return '<table class="kv">' + rows + "</table>";
+  }
+
+  /* ---------- 截图轮播 ---------- */
+  function carouselHtml(ev, idx) {
+    var id = "car-" + idx;
+    var html = '<div class="carousel" id="' + id + '" data-idx="0">';
+    html += '<div class="stage"><img alt="截图"></div>';
+    html += '<div class="bar"><button class="prev">‹ 上一张</button>' +
+      '<span class="cap"></span><button class="next">下一张 ›</button></div></div>';
+    return html;
+  }
+  function bindCarousel(el, ev) {
+    var screens = ev.screens || [];
+    if (!screens.length) return;
+    var img = el.querySelector("img");
+    var cap = el.querySelector(".cap");
+    function show(i) {
+      var idx = (i + screens.length) % screens.length;
+      el.setAttribute("data-idx", idx);
+      var rel = BASE + ev.name + "/" + screens[idx];
+      img.src = rel;
+      cap.textContent = screens[idx] + "（" + (idx + 1) + "/" + screens.length + "）";
+    }
+    el.querySelector(".prev").addEventListener("click", function () { show(+el.getAttribute("data-idx") - 1); });
+    el.querySelector(".next").addEventListener("click", function () { show(+el.getAttribute("data-idx") + 1); });
+    el.querySelector(".stage").addEventListener("click", function () { openOverlay(img.src); });
+    show(0);
+  }
+
+  /* ---------- 证据卡 ---------- */
+  function evidenceCard(ev, idx) {
+    var anchor = "evidence-" + ev.name;
+    var files = [];
+    if (ev.hasBattleReport) files.push("battle-report");
+    if (ev.summary) files.push("summary");
+    if (ev.hasTrace) files.push("trace");
+    if (ev.hasPathMmd) files.push("path");
+    if (ev.screens && ev.screens.length) files.push("screens×" + ev.screens.length);
+    if (ev.hasChecklist) files.push("checklist");
+
+    var html = '<div class="card ev-card anchor-target" id="' + esc(anchor) + '">';
+    html += '<div class="ev-head"><h3>' + esc(ev.name) + "</h3>" +
+      '<span class="files">' + esc(files.join(" · ") || "散装报告") + "</span></div>";
+    html += '<div class="ev-body">';
+
+    if (ev.kind === "report") {
+      // 散装 md 报告（直接位于 acceptance/ 根下的单文件）
+      html += '<div class="report-body" data-report="' + esc(BASE + ev.file) + '">加载中…</div>';
+    } else {
+      html += '<div class="ev-cols">';
+      html += "<div>";
+      if (ev.summary) {
+        html += '<h4 style="margin:0 0 10px;font-size:14px;">summary.json 关键字段</h4>' + kvTable(ev.summary);
+      }
+      if (ev.hasPathMmd) {
+        html += '<h4 style="margin:22px 0 10px;font-size:14px;">path.mmd 流程</h4>' +
+          '<div class="mmd-box" data-mmd="' + esc(BASE + ev.name + '/path.mmd') + '">加载中…</div>';
+      }
+      html += "</div><div>";
+      if (ev.screens && ev.screens.length) {
+        html += '<h4 style="margin:0 0 10px;font-size:14px;">关键帧截图</h4>' + carouselHtml(ev, idx);
+      }
+      html += "</div></div>";
+
+      if (ev.hasBattleReport) {
+        html += '<details class="ev-extra" open><summary>battle-report.md 战报</summary>' +
+          '<div class="report-body" data-report="' + esc(BASE + ev.name + '/battle-report.md') +
+          '" style="margin-top:14px;">加载中…</div></details>';
+      }
+      if (ev.hasChecklist) {
+        html += '<details class="ev-extra"><summary>visible-checklist.md 可见性核对单</summary>' +
+          '<div class="report-body" data-report="' + esc(BASE + ev.name + '/visible-checklist.md') +
+          '" style="margin-top:14px;">加载中…</div></details>';
+      }
+      (ev.extraReports || []).forEach(function (f) {
+        html += '<details class="ev-extra"><summary>' + esc(f) + '</summary>' +
+          '<div class="report-body" data-report="' + esc(BASE + ev.name + "/" + f) +
+          '" style="margin-top:14px;">加载中…</div></details>';
+      });
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  /* ---------- 渲染 ---------- */
+  function renderAll() {
+    var host = document.getElementById("ev-list");
+    var list = (window.EVIDENCE_DATA && EVIDENCE_DATA.entries) || [];
+    document.getElementById("ev-count").textContent =
+      String(list.filter(function (e) { return e.kind === "dir"; }).length);
+
+    if (!list.length) {
+      host.innerHTML = '<div class="empty-state" style="text-align:center;color:var(--faint);padding:60px 0;">' +
+        "未发现验收证据<br><span style=\"font-size:13px;\">请先运行 <code>python scripts/build-site.py</code></span></div>";
+      return;
+    }
+    host.innerHTML = list.map(evidenceCard).join("");
+
+    // 绑定轮播（carousel 元素 id 与 list 下标一一对应）
+    list.forEach(function (ev) {
+      if (ev.kind === "dir" && ev.screens && ev.screens.length) {
+        var el = document.getElementById("car-" + list.indexOf(ev));
+        if (el) bindCarousel(el, ev);
+      }
+    });
+
+    // 渲染 markdown 报告
+    host.querySelectorAll("[data-report]").forEach(function (el) {
+      LudotsSite.fetchText(el.getAttribute("data-report")).then(function (md) {
+        el.innerHTML = marked.parse(md);
+        el.querySelectorAll("img[src]").forEach(function (img) {
+          var src = img.getAttribute("src");
+          if (src && !/^(https?:|data:|\/)/i.test(src)) {
+            var base = el.getAttribute("data-report").split("/").slice(0, -1).join("/");
+            img.src = base + "/" + src;
+          }
+        });
+      }).catch(function () {
+        el.innerHTML = '<p style="color: var(--faint);">报告加载失败（请确认从 _site/ 通过 HTTP 访问）</p>';
+      });
+    });
+
+    // mermaid 流程图
+    var mmdBoxes = host.querySelectorAll("[data-mmd]");
+    if (mmdBoxes.length && window.mermaid) {
+      try {
+        mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral" });
+      } catch (e) { /* ignore */ }
+    }
+    mmdBoxes.forEach(function (el, i) {
+      LudotsSite.fetchText(el.getAttribute("data-mmd")).then(function (src) {
+        if (window.mermaid && mermaid.render) {
+          mermaid.render("mmd-" + i, src).then(function (out) {
+            el.innerHTML = '<div class="mermaid">' + out.svg + "</div>";
+          }).catch(function () {
+            el.innerHTML = "<pre><code>" + esc(src) + "</code></pre>";
+          });
+        } else {
+          el.innerHTML = "<pre><code>" + esc(src) + "</code></pre>";
+        }
+      }).catch(function () {
+        el.innerHTML = '<p style="color: var(--faint); font-size: 13px;">path.mmd 加载失败</p>';
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", renderAll);
+})();
+</script>
+</body>
+</html>

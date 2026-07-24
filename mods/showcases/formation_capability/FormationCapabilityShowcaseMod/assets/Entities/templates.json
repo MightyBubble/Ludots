@@ -1,10 +1,10 @@
 [
   {
-    "id": "formation_capability_showcase_formation_agent",
+    "id": "formation_capability_showcase_formation_anchor",
     "onSpawnEffect": "Effect.MassNavigation.Agent.HealthDrift",
     "components": {
       "Name": {
-        "Value": "MassNavigation.FormationCapabilityShowcase.FormationAgent"
+        "Value": "MassNavigation.FormationCapabilityShowcase.FormationAnchor"
       },
       "WorldPositionCm": {
         "Value": {
@@ -16,7 +16,6 @@
       "FacingDirection": {
         "AngleRad": 0
       },
-      "OrderBuffer": {},
       "CommandSourceSelectableTag": {},
       "CommandSourceSelectableState": {
         "IsEnabled": true
@@ -33,18 +32,11 @@
       "TagCountContainer": {},
       "EntityLayer": {
         "category": [
-          "massNavigation.formation.agent"
+          "formationCapabilityShowcase.formationAnchor"
         ],
         "mask": [
-          "massNavigation.formation.agent"
+          "formationCapabilityShowcase.formationAnchor"
         ]
-      },
-      "MassNavigationAgent": {
-        "profileId": "formation"
-      },
-      "MassNavigationFollowerLocomotion": {
-        "targetChangeEpsilonCm": 12.0,
-        "facingChangeEpsilonRadians": 0.035
       }
     }
   },
@@ -54,6 +46,7 @@
       "Name": {
         "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Azure.Light"
       },
+      "OrderBuffer": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -66,10 +59,10 @@
       },
       "EntityLayer": {
         "category": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ],
         "mask": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ]
       },
       "MassNavigationAgent": {
@@ -83,6 +76,7 @@
       "Name": {
         "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Azure.Heavy"
       },
+      "OrderBuffer": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -95,10 +89,10 @@
       },
       "EntityLayer": {
         "category": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ],
         "mask": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ]
       },
       "MassNavigationAgent": {
@@ -112,6 +106,7 @@
       "Name": {
         "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Crimson.Light"
       },
+      "OrderBuffer": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -124,10 +119,10 @@
       },
       "EntityLayer": {
         "category": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ],
         "mask": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ]
       },
       "MassNavigationAgent": {
@@ -141,6 +136,7 @@
       "Name": {
         "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Crimson.Heavy"
       },
+      "OrderBuffer": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -153,10 +149,10 @@
       },
       "EntityLayer": {
         "category": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ],
         "mask": [
-          "massNavigation.formation.soldierAgent"
+          "formationCapabilityShowcase.formationSoldier"
         ]
       },
       "MassNavigationAgent": {

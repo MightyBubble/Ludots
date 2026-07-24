@@ -1,0 +1,87 @@
+{
+  "name": "graph-compiler-flow",
+  "title": "GraphCompiler 编译流程",
+  "subtitle": "GraphCompiler Pipeline — Node → Opcode → Bytecode → Program",
+  "canvas": { "width": 1720, "height": 1420 },
+
+  "groups": [
+    {
+      "id": "outputstruct",
+      "title": "GraphInstruction[] 编译输出结构",
+      "x": 1180, "y": 640, "w": 420, "h": 420,
+      "tint": "clay",
+      "border_style": "dashed"
+    }
+  ],
+
+  "nodes": [
+    { "id": "config", "title": "GraphConfig (JSON)", "tint": "mauve",
+      "x": 380, "y": 130, "w": 340, "h": 70 },
+
+    { "id": "validate", "title": "1 · GraphValidator.Validate", "tint": "teal",
+      "x": 380, "y": 260, "w": 340, "h": 70 },
+
+    { "id": "compile", "title": "2 · GraphCompiler.CompileWithOutputs", "tint": "clay",
+      "x": 330, "y": 390, "w": 440, "h": 70 },
+
+    { "id": "topo", "title": "拓扑排序", "tint": "steel",
+      "x": 90, "y": 560, "w": 240, "h": 90,
+      "items": ["Entry → Next 链"] },
+    { "id": "regalloc", "title": "寄存器分配", "tint": "steel",
+      "x": 370, "y": 560, "w": 240, "h": 90,
+      "items": ["Float/Int/Bool/Entity 各 32"] },
+    { "id": "symtab", "title": "符号表 Intern", "tint": "steel",
+      "x": 650, "y": 560, "w": 240, "h": 90,
+      "items": ["name → index"] },
+    { "id": "instructions", "title": "GraphInstruction[]", "tint": "steel",
+      "x": 930, "y": 560, "w": 240, "h": 90,
+      "items": ["字节码生成"] },
+
+    { "id": "package", "title": "3 · GraphProgramPackage", "tint": "graphite",
+      "x": 380, "y": 740, "w": 340, "h": 70 },
+
+    { "id": "register", "title": "4 · GraphProgramRegistry.Register", "tint": "sage",
+      "x": 350, "y": 870, "w": 400, "h": 70 },
+
+    { "id": "program", "title": "运行时可用 Program", "tint": "clay",
+      "x": 380, "y": 1000, "w": 340, "h": 70 },
+
+    { "id": "regmodel", "title": "寄存器模型", "tint": "steel",
+      "x": 1250, "y": 130, "w": 280, "h": 300,
+      "valign": "top",
+      "items": ["Int — 32", "Bool — 32", "Entity — 32",
+                "Max Targets — 256", "Max Instructions — 4096", "Handler Table — 512"] },
+
+    { "id": "graphname", "title": "GraphName", "tint": "clay",
+      "x": 1230, "y": 720, "w": 320, "h": 70 },
+    { "id": "symbols", "title": "Symbols", "tint": "clay",
+      "x": 1230, "y": 830, "w": 320, "h": 70 },
+    { "id": "progins", "title": "Program (Instructions)", "tint": "clay",
+      "x": 1230, "y": 940, "w": 320, "h": 70 }
+  ],
+
+  "edges": [
+    { "from": "config", "to": "validate", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "validate", "to": "compile", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "compile", "to": "topo", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "compile", "to": "regalloc", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "compile", "to": "symtab", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "compile", "to": "instructions", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "topo", "to": "package", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "regalloc", "to": "package", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "symtab", "to": "package", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "instructions", "to": "package", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "package", "to": "register", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "register", "to": "program", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "instructions", "to": "outputstruct", "route": "elbow", "from_side": "right", "to_side": "top", "style": "dashed" }
+  ],
+
+  "notes": [
+    { "text": "⚠ 维护热点： GraphCompiler.cs 第 91-457 行包含单个 switch 处理 60+ opcode。", "x": 90, "y": 1180, "ha": "left" },
+    { "text": "⚠ 当前 opcode 已用到 396，HandlerTableSize=512 的预留空间有限。", "x": 90, "y": 1210, "ha": "left" }
+  ]
+}

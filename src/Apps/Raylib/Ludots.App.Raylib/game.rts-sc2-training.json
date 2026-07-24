@@ -7,7 +7,7 @@
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/EntityCommandPanelMod",
-    "../../../../../../../mods/RtsDemoMod",
+    "../../../../../../../mods/showcases/rts_demo/RtsDemoMod",
     "../../../../../../../mods/showcases/rts_training_sc2/RtsSc2TrainingShowcaseMod"
   ]
 }

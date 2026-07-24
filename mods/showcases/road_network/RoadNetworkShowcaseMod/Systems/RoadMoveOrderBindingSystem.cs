@@ -13,19 +13,20 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveOrderBindingSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>()
+            .WithNone<SuspendedTag>();
 
         private readonly int _roadMoveFollowOrderTypeId;
         private readonly MovePlanStore _plans;
         private readonly MovePlanRuntimeService _runtime;
-        private readonly IMovePlanExecutionSink _executionSink;
+        private readonly RoadNetworkMassNavigationRuntimeAccessor _navigation;
 
-        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation) : base(world)
+        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationRuntimeBinding binding) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _executionSink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            _navigation = new RoadNetworkMassNavigationRuntimeAccessor(binding);
         }
 
         public override void Update(in float dt)
@@ -39,13 +40,15 @@ namespace RoadNetworkShowcaseMod.Systems
             {
                 Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
                 ref Entity entityFirst = ref chunk.Entity(0);
+                MassNavigationMovePlanExecutionSink? executionSink = null;
                 foreach (int index in chunk)
                 {
                     Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                     ref var buffer = ref buffers[index];
                     if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _roadMoveFollowOrderTypeId)
                     {
-                        _executionSink.Clear(World, entity);
+                        executionSink ??= _navigation.RequireExecutionSink(nameof(RoadMoveOrderBindingSystem));
+                        executionSink.Clear(World, entity);
                         _runtime.Clear(entity);
                         continue;
                     }

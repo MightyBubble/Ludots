@@ -23,6 +23,7 @@ namespace Ludots.Tests.GAS.Production
 {
     [NonParallelizable]
     [TestFixture]
+    [Category("acceptance")]
     public sealed class CapabilityStandardVirtualCameraShowcaseAcceptanceTests
     {
         private const int BlendSettleFrames = 30;

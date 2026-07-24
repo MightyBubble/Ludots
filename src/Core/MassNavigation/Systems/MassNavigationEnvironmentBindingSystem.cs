@@ -17,22 +17,21 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
 {
     private static readonly QueryDescription BlockersQuery = new QueryDescription()
         .WithAll<MassNavigationFlowObstacleProjection, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private static readonly QueryDescription MarkersQuery = new QueryDescription()
         .WithAll<MassNavigationHotspotMarker, WorldPositionCm>()
-        .WithNone<PresentationDestroyPending>();
+        .WithNone<PresentationDestroyPending, SuspendedTag>();
 
     private readonly GameEngine _engine;
-    private readonly MassNavigationSimulationRuntime _simulation;
     private readonly List<MassNavigationObstacleSnapshot> _blockerObstacles = new();
     private readonly CommandBuffer _commandBuffer = new();
+    private MassNavigationSimulationRuntime? _lastSimulation;
     private long _lastSignature;
 
-    public MassNavigationEnvironmentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationEnvironmentBindingSystem(GameEngine engine)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
     }
 
     public void Initialize() { }
@@ -45,24 +44,38 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        if (!MassNavigationIds.TryGetActiveNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
             return;
+        }
+
+        if (!ReferenceEquals(_lastSimulation, simulation))
+        {
+            _lastSimulation = simulation;
+            _lastSignature = 0L;
         }
 
         MassNavigationEnvironmentSignature environment = ComputeSignature();
         if (environment.Hash == _lastSignature &&
-            _simulation.AgentState.BlockerCount == environment.BlockerCount &&
-            _simulation.AgentState.WorldMarkerCount == environment.MarkerCount)
+            simulation.AgentState.BlockerCount == environment.BlockerCount &&
+            simulation.AgentState.WorldMarkerCount == environment.MarkerCount)
         {
+            CompleteEnvironmentBindingPass(simulation);
             return;
         }
 
-        _simulation.AgentState.ClearEnvironmentCounts();
-        BindBlockers();
-        BindMarkers();
+        simulation.AgentState.ClearEnvironmentCounts();
+        BindBlockers(simulation);
+        BindMarkers(simulation);
         _lastSignature = environment.Hash;
-        _simulation.MarkStructuralChange();
+        simulation.MarkStructuralChange();
+        CompleteEnvironmentBindingPass(simulation);
+    }
+
+    private void CompleteEnvironmentBindingPass(MassNavigationSimulationRuntime simulation)
+    {
+        simulation.MarkEnvironmentBindingPassComplete();
+        MassNavigationIds.PublishPreparedWhenBindingComplete(_engine, simulation);
     }
 
     private MassNavigationEnvironmentSignature ComputeSignature()
@@ -115,7 +128,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
         return new MassNavigationEnvironmentSignature(hash, blockerCount, markerCount);
     }
 
-    private void BindBlockers()
+    private void BindBlockers(MassNavigationSimulationRuntime simulation)
     {
         _blockerObstacles.Clear();
         foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
@@ -162,7 +175,7 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
                     _commandBuffer.Add(entity, profile);
                 }
 
-                _simulation.AgentState.RegisterBlocker(entity);
+                simulation.AgentState.RegisterBlocker(entity);
             }
         }
 
@@ -171,17 +184,17 @@ internal sealed class MassNavigationEnvironmentBindingSystem : ISystem<float>
             _commandBuffer.Playback(_engine.World);
         }
 
-        _simulation.RebuildRuntimeObstacles(CollectionsMarshal.AsSpan(_blockerObstacles));
+        simulation.RebuildRuntimeObstacles(CollectionsMarshal.AsSpan(_blockerObstacles));
     }
 
-    private void BindMarkers()
+    private void BindMarkers(MassNavigationSimulationRuntime simulation)
     {
         foreach (ref var chunk in _engine.World.Query(in MarkersQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
-                _simulation.AgentState.RegisterWorldMarker(Unsafe.Add(ref entityFirst, index));
+                simulation.AgentState.RegisterWorldMarker(Unsafe.Add(ref entityFirst, index));
             }
         }
     }

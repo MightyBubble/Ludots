@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Showcase 画廊 — Ludots</title>
+<meta name="description" content="Ludots Showcase 画廊：可玩演示与能力验收场景，按分层与类别筛选，一键复制启动命令。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  /* ===== 画廊专属样式 ===== */
+  .gallery-meta { color: var(--faint); font-size: 13px; margin: -14px 0 24px; }
+  .tier-legend { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 26px;
+    padding: 16px 20px; }
+  .tier-legend .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+
+  .sc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .sc-card { display: flex; flex-direction: column; overflow: hidden;
+    transition: box-shadow 0.18s, transform 0.18s; }
+  .sc-card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
+  .sc-card.retired { opacity: 0.62; }
+  .sc-shot { position: relative; height: 168px; background: var(--bg-soft);
+    border-bottom: 1px solid var(--bg-hairline); overflow: hidden; }
+  .sc-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sc-shot .placeholder {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    color: var(--faint); font-size: 13px;
+  }
+  .sc-shot .placeholder .glyph { font-size: 30px; opacity: 0.6; }
+  .sc-shot .tier-tag { position: absolute; top: 10px; left: 10px; }
+  .sc-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .sc-body h3 { margin: 0; font-size: 16.5px; line-height: 1.4; }
+  .sc-body .sum { margin: 0; font-size: 13.5px; color: var(--muted); flex: 1; }
+  .sc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sc-cmd { margin-top: 4px; }
+  .sc-cmd .cmdline { font-size: 12px; padding: 8px 12px; }
+  .sc-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px;
+    border-top: 1px dashed var(--border); padding-top: 12px; }
+  .sc-links a { color: var(--steel); font-weight: 500; }
+  .sc-links a:hover { color: var(--accent); }
+  .empty-state { text-align: center; color: var(--faint); padding: 80px 20px; }
+  .empty-state .glyph { font-size: 40px; display: block; margin-bottom: 12px; opacity: 0.6; }
+
+  @media (max-width: 1080px) { .sc-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px) { .sc-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body data-page="gallery">
+<header id="topbar"></header>
+
+<main class="page">
+  <div class="section-head" style="margin-top: 8px;">
+    <div class="kicker">SHOWCASE GALLERY</div>
+    <h2>Showcase 画廊</h2>
+    <p>每一个 Showcase 都是一个可启动、可验收的引擎能力切片。数据来自仓库根部的
+      <code>showcase.registry.json</code> 注册表，由构建脚本注入本页。</p>
+  </div>
+
+  <!-- T1–T4 分层说明 -->
+  <div class="card tier-legend">
+    <span class="item"><span class="badge t1">T1</span> 标准能力验收（注册 + README + 配对验收测试 + 截图证据齐全）</span>
+    <span class="item"><span class="badge t2">T2</span> 可玩演示</span>
+    <span class="item"><span class="badge t3">T3</span> 实验 / 压测</span>
+    <span class="item"><span class="badge t4">T4</span> 退役</span>
+  </div>
+
+  <!-- 筛选条 -->
+  <div class="filterbar">
+    <div class="search">
+      <span style="color: var(--faint);">🔍</span>
+      <input id="q" type="search" placeholder="搜索标题、简介、标签或 id…">
+    </div>
+    <div class="chip-group" id="tier-chips"></div>
+    <div class="chip-group" id="cat-chips"></div>
+  </div>
+
+  <div class="gallery-meta" id="gallery-meta">数据加载中…</div>
+  <div class="sc-grid" id="sc-grid"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots Showcase 画廊 · 数据源 showcase.registry.json</span>
+    <span>启动方式：<code>scripts/run-mod-launcher.cmd cli launch &lt;binding&gt; --adapter raylib</code></span>
+  </div>
+</footer>
+
+<script src="site-assets/site.js"></script>
+<script src="site-assets/gallery-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+
+  var TIER_ORDER = { T1: 0, T2: 1, T3: 2, T4: 3 };
+  var CATEGORY_LABEL = {
+    capability: "能力验收", genre: "品类演示", panel: "面板",
+    stress: "压测", fixture: "测试夹具", demo: "演示",
+    tool: "工具", example: "示例"
+  };
+  var STATUS_LABEL = { active: "active", experimental: "experimental", retired: "retired" };
+
+  var state = { q: "", tier: null, category: null };
+  var GD = window.GALLERY_DATA || { showcases: [] };
+  var data = GD.showcases || [];
+
+  /* ---------- 启动命令 ---------- */
+  function launchCmd(sc) {
+    if (sc.binding) {
+      return "scripts/run-mod-launcher.cmd cli launch " + sc.binding + " --adapter raylib";
+    }
+    if (sc.preset) {
+      return "scripts/run-mod-launcher.cmd cli launch preset:" + sc.preset;
+    }
+    return null;
+  }
+
+  /* ---------- 卡片 ---------- */
+  function cardHtml(sc) {
+    var retired = sc.status === "retired";
+    var tier = (sc.tier || "T4").toUpperCase();
+    var catLabel = CATEGORY_LABEL[sc.category] || sc.category || "未分类";
+
+    var shot = '<div class="placeholder"><span class="glyph">🖼️</span><span>暂无截图证据</span></div>';
+    if (sc.screenshot) {
+      shot = '<img loading="lazy" src="' + esc(sc.screenshot) + '" alt="' + esc(sc.title) + ' 截图" ' +
+        'onerror="this.parentNode.innerHTML=\'<div class=&quot;placeholder&quot;><span class=&quot;glyph&quot;>🖼️</span><span>截图不可用</span></div>\'">';
+    }
+
+    var html = '<div class="card sc-card' + (retired ? " retired" : "") + '">';
+    html += '<div class="sc-shot">' + shot +
+      '<span class="tier-tag badge ' + tier.toLowerCase() + '">' + esc(tier) + "</span></div>";
+    html += '<div class="sc-body">';
+    html += "<h3>" + esc(sc.title || sc.id) + "</h3>";
+    html += '<p class="sum">' + esc(sc.summary || "") + "</p>";
+    html += '<div class="sc-tags">' +
+      '<span class="badge info">' + esc(catLabel) + "</span>" +
+      (sc.status && sc.status !== "active"
+        ? '<span class="badge status-' + esc(sc.status) + '">' + esc(STATUS_LABEL[sc.status] || sc.status) + "</span>"
+        : "");
+    (sc.tags || []).forEach(function (t) {
+      html += '<span class="badge" style="background: var(--bg-soft); color: var(--muted); border: 1px solid var(--bg-hairline);">' + esc(t) + "</span>";
+    });
+    html += "</div>";
+
+    var cmd = launchCmd(sc);
+    if (cmd) {
+      html += '<div class="sc-cmd">' + LudotsSite.cmdlineHtml(cmd) + "</div>";
+    } else {
+      html += '<div class="sc-cmd" style="font-size: 12.5px; color: var(--faint);">无直接启动入口，见文档</div>';
+    }
+
+    html += '<div class="sc-links">';
+    if (sc.docsPath) {
+      html += '<a href="index.html#docs/' + esc(sc.docsPath) + '">📖 文档</a>';
+    }
+    if (sc.readmePath) {
+      html += '<a href="https://github.com/mightybubble/ludots/blob/main/' + esc(sc.readmePath) +
+        '" target="_blank" rel="noopener">README ↗</a>';
+    }
+    if (sc.artifactDir) {
+      var dirName = sc.artifactDir.replace(/\/+$/, "").split("/").pop();
+      html += '<a href="tests.html#evidence-' + esc(dirName) + '">🧪 验收证据</a>';
+    }
+    if (sc.acceptanceTest) {
+      html += '<a href="https://github.com/mightybubble/ludots/search?q=' + encodeURIComponent(sc.acceptanceTest) +
+        '" target="_blank" rel="noopener" title="验收测试类">' + esc(sc.acceptanceTest) + " ↗</a>";
+    }
+    if (sc.path) {
+      html += '<a href="https://github.com/mightybubble/ludots/tree/main/' + esc(sc.path) +
+        '" target="_blank" rel="noopener" title="Mod 目录">源码 ↗</a>';
+    }
+    html += "</div></div></div>";
+    return html;
+  }
+
+  /* ---------- 筛选 ---------- */
+  function match(sc) {
+    if (state.tier && (sc.tier || "").toUpperCase() !== state.tier) return false;
+    if (state.category && sc.category !== state.category) return false;
+    if (state.q) {
+      var hay = [sc.id, sc.title, sc.summary, (sc.tags || []).join(" ")].join(" ").toLowerCase();
+      if (hay.indexOf(state.q.toLowerCase()) < 0) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    var grid = document.getElementById("sc-grid");
+    var meta = document.getElementById("gallery-meta");
+
+    var list = data.filter(match).sort(function (a, b) {
+      var ta = TIER_ORDER[(a.tier || "T4").toUpperCase()];
+      var tb = TIER_ORDER[(b.tier || "T4").toUpperCase()];
+      if (ta !== tb) return ta - tb;
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    meta.textContent = "共 " + data.length + " 个注册 Showcase，当前显示 " + list.length + " 个" +
+      (GD.generatedAt ? " · 数据生成于 " + GD.generatedAt : "");
+
+    if (!data.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">' +
+        '<span class="glyph">🗂️</span>注册表为空或尚未生成<br>' +
+        '<span style="font-size: 13px;">请先由主控生成 <code>showcase.registry.json</code>，再运行 <code>python scripts/build-site.py</code></span></div>';
+      return;
+    }
+    if (!list.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">' +
+        '<span class="glyph">🔍</span>没有匹配的 Showcase，试试放宽筛选条件</div>';
+      return;
+    }
+    grid.innerHTML = list.map(cardHtml).join("");
+    LudotsSite.bindCopyButtons(grid);
+  }
+
+  /* ---------- 筛选条 ---------- */
+  function buildChips(hostId, values, labelFn, key) {
+    var host = document.getElementById(hostId);
+    var html = "";
+    values.forEach(function (v) {
+      html += '<button class="chip" data-v="' + esc(v) + '">' + esc(labelFn(v)) + "</button>";
+    });
+    host.innerHTML = html;
+    host.addEventListener("click", function (e) {
+      var chip = e.target.closest(".chip");
+      if (!chip) return;
+      var v = chip.getAttribute("data-v");
+      if (state[key] === v) {
+        state[key] = null;
+        chip.classList.remove("on");
+      } else {
+        state[key] = v;
+        host.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("on"); });
+        chip.classList.add("on");
+      }
+      render();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var tiers = ["T1", "T2", "T3", "T4"].filter(function (t) {
+      return data.some(function (sc) { return (sc.tier || "").toUpperCase() === t; });
+    });
+    var cats = [];
+    data.forEach(function (sc) {
+      if (sc.category && cats.indexOf(sc.category) < 0) cats.push(sc.category);
+    });
+    cats.sort();
+
+    buildChips("tier-chips", tiers, function (t) { return t; }, "tier");
+    buildChips("cat-chips", cats, function (c) { return CATEGORY_LABEL[c] || c; }, "category");
+
+    var q = document.getElementById("q");
+    q.addEventListener("input", function () {
+      state.q = q.value.trim();
+      render();
+    });
+
+    render();
+  });
+})();
+</script>
+</body>
+</html>

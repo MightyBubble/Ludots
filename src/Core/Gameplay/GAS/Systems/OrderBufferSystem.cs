@@ -20,9 +20,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
         private readonly OrderAdmissionResultBuffer _admissionResults;
+        private readonly Order[] _incomingBatchScratch;
+        private readonly OrderSubmitResult[] _incomingBatchResultsScratch;
+        private readonly OrderAdmissionReservation[] _entityAdmissionReservationsScratch;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
+
+        public uint IncomingRevision { get; private set; }
 
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
@@ -43,6 +48,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _incomingOrders = incomingOrders;
+            int incomingCapacity = incomingOrders?.Capacity ?? 0;
+            _incomingBatchScratch = incomingCapacity > 0
+                ? new Order[incomingCapacity]
+                : Array.Empty<Order>();
+            _incomingBatchResultsScratch = incomingCapacity > 0
+                ? new OrderSubmitResult[incomingCapacity]
+                : Array.Empty<OrderSubmitResult>();
+            _entityAdmissionReservationsScratch = incomingCapacity > 0
+                ? new OrderAdmissionReservation[incomingCapacity]
+                : Array.Empty<OrderAdmissionReservation>();
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
@@ -110,81 +125,208 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_incomingOrders == null) return;
 
-            while (_incomingOrders.TryPeek(out var order))
+            while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
             {
-                OrderAdmissionReservation reservation = _admissionResults.Reserve(
-                    OrderAdmissionStage.EntityIntake,
-                    order.OrderId,
-                    order.OrderTypeId);
-                bool committed = false;
-                try
+                if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
                 {
-                    if (!_incomingOrders.TryDequeue(out order))
+                    ProcessSingleIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    continue;
+                }
+
+                ProcessIncomingBatch(batchCount, currentStep);
+            }
+        }
+
+        private void ProcessSingleIncomingOrder(ref Order order, int currentStep)
+        {
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                order.OrderId,
+                order.OrderTypeId);
+            bool committed = false;
+            try
+            {
+                DequeueReservedBatch(expectedBatchCount: 1);
+                OrderSubmitResult result = ProcessIncomingOrder(ref order, currentStep);
+                CommitAdmission(in reservation, in order, result);
+                committed = true;
+                if (OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    IncomingRevision++;
+                }
+            }
+            finally
+            {
+                if (!committed && reservation.IsValid)
+                {
+                    _admissionResults.Cancel(in reservation);
+                }
+            }
+        }
+
+        private void ProcessIncomingBatch(int batchCount, int currentStep)
+        {
+            ReserveEntityAdmissions(batchCount);
+            bool committed = false;
+            try
+            {
+                DequeueReservedBatch(batchCount);
+                bool accepted = PreflightIncomingBatch(batchCount, currentStep, out OrderSubmitResult failureResult);
+                if (!accepted)
+                {
+                    for (int i = 0; i < batchCount; i++)
                     {
-                        throw new InvalidOperationException("ORDER.ADMISSION.ERR.IntakeQueueChangedDuringReservation");
+                        if (OrderSubmitResultSemantics.IsAccepted(_incomingBatchResultsScratch[i]))
+                        {
+                            _incomingBatchResultsScratch[i] = failureResult;
+                        }
+
+                        OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        CommitAdmission(
+                            in _entityAdmissionReservationsScratch[i],
+                            in _incomingBatchScratch[i],
+                            _incomingBatchResultsScratch[i]);
                     }
 
-                    OrderSubmitResult result = ProcessIncomingOrder(in order, currentStep);
-                    CommitAdmission(in reservation, in order, result);
                     committed = true;
+                    ClearEntityAdmissionReservations(batchCount);
+                    return;
                 }
-                finally
+
+                for (int i = 0; i < batchCount; i++)
                 {
-                    if (!committed && reservation.IsValid)
+                    ref Order order = ref _incomingBatchScratch[i];
+                    OrderSubmitResult result = OrderSubmitter.Submit(
+                        World,
+                        order.Actor,
+                        in order,
+                        _orderTypeRegistry,
+                        _orderRuleRegistry,
+                        currentStep,
+                        _stepRateHz);
+                    if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                     {
-                        _admissionResults.Cancel(in reservation);
+                        throw new InvalidOperationException(
+                            $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
+                    }
+
+                    CommitAdmission(in _entityAdmissionReservationsScratch[i], in order, result);
+                    IncomingRevision++;
+                }
+
+                committed = true;
+                ClearEntityAdmissionReservations(batchCount);
+            }
+            finally
+            {
+                if (!committed)
+                {
+                    CancelEntityAdmissions(batchCount);
+                    for (int i = 0; i < batchCount; i++)
+                    {
+                        OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
                     }
                 }
             }
         }
 
-        private OrderSubmitResult ProcessIncomingOrder(in Order incomingOrder, int currentStep)
+        private void ReserveEntityAdmissions(int batchCount)
         {
-            Order order = incomingOrder;
-            order.SubmitStep = currentStep;
-
-            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            for (int i = 0; i < batchCount; i++)
             {
-                OrderSpatialPayloadOps.Release(World, in order);
-                return OrderSubmitResult.RejectedInvalidActor;
-            }
-
-            if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out var config))
-            {
-                OrderSpatialPayloadOps.Release(World, in order);
-                return OrderSubmitResult.RejectedInvalidOrderType;
-            }
-
-            if (config.ValidationGraphId > 0)
-            {
-                if (_graphProgramRegistry == null || _graphApi == null)
+                try
                 {
-                    throw new InvalidOperationException(
-                        $"Order type {order.OrderTypeId} requires validation graph {config.ValidationGraphId}, but graph validation services are not configured.");
+                    _entityAdmissionReservationsScratch[i] = _admissionResults.Reserve(
+                        OrderAdmissionStage.EntityIntake,
+                        _incomingBatchScratch[i].OrderId,
+                        _incomingBatchScratch[i].OrderTypeId);
+                }
+                catch
+                {
+                    CancelEntityAdmissions(i);
+                    throw;
+                }
+            }
+        }
+
+        private void DequeueReservedBatch(int expectedBatchCount)
+        {
+            int dequeuedCount = 0;
+            if (_incomingOrders == null ||
+                !_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out dequeuedCount) ||
+                dequeuedCount != expectedBatchCount)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ADMISSION.ERR.IntakeQueueChangedDuringReservation: expected={expectedBatchCount}, actual={dequeuedCount}.");
+            }
+        }
+
+        private void ClearEntityAdmissionReservations(int batchCount)
+        {
+            for (int i = 0; i < batchCount; i++)
+            {
+                _entityAdmissionReservationsScratch[i] = default;
+            }
+        }
+
+        private void CancelEntityAdmissions(int count)
+        {
+            for (int i = count - 1; i >= 0; i--)
+            {
+                if (_entityAdmissionReservationsScratch[i].IsValid)
+                {
+                    _admissionResults.Cancel(in _entityAdmissionReservationsScratch[i]);
+                    _entityAdmissionReservationsScratch[i] = default;
+                }
+            }
+        }
+
+        private bool PreflightIncomingBatch(int batchCount, int currentStep, out OrderSubmitResult failureResult)
+        {
+            failureResult = OrderSubmitResult.Queued;
+            for (int i = 0; i < batchCount; i++)
+            {
+                ref Order order = ref _incomingBatchScratch[i];
+                order.SubmitStep = currentStep;
+                OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out _);
+                if (!OrderSubmitResultSemantics.IsAccepted(validationResult))
+                {
+                    _incomingBatchResultsScratch[i] = validationResult;
+                    failureResult = validationResult;
+                    return false;
                 }
 
-                if (!_graphProgramRegistry.TryGetProgram(config.ValidationGraphId, out var validationProgram))
-                {
-                    throw new InvalidOperationException(
-                        $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
-                }
-
-                var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
-                bool passed = GasGraphExecutor.ExecuteValidation(
+                OrderSubmitResult result = OrderSubmitter.Preview(
                     World,
                     order.Actor,
-                    order.Target,
-                    targetPos,
-                    validationProgram,
-                    _graphApi);
-                if (!passed)
+                    in order,
+                    _orderTypeRegistry,
+                    _orderRuleRegistry,
+                    currentStep,
+                    _stepRateHz);
+                _incomingBatchResultsScratch[i] = result;
+                if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                 {
-                    OrderSpatialPayloadOps.Release(World, in order);
-                    return OrderSubmitResult.RejectedValidation;
+                    failureResult = result;
+                    return false;
                 }
             }
 
-            var result = OrderSubmitter.Submit(
+            return true;
+        }
+
+        private OrderSubmitResult ProcessIncomingOrder(ref Order order, int currentStep)
+        {
+            order.SubmitStep = currentStep;
+
+            OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out OrderTypeConfig config);
+            if (!OrderSubmitResultSemantics.IsAccepted(validationResult))
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+                return validationResult;
+            }
+
+            OrderSubmitResult result = OrderSubmitter.Submit(
                 World,
                 order.Actor,
                 in order,
@@ -206,6 +348,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return result;
+        }
+
+        private OrderSubmitResult ValidateIncomingOrder(in Order order, out OrderTypeConfig config)
+        {
+            config = default;
+            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            {
+                return OrderSubmitResult.RejectedInvalidActor;
+            }
+
+            if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out config))
+            {
+                return OrderSubmitResult.RejectedInvalidOrderType;
+            }
+
+            if (config.ValidationGraphId <= 0)
+            {
+                return OrderSubmitResult.Activated;
+            }
+
+            if (_graphProgramRegistry == null || _graphApi == null)
+            {
+                throw new InvalidOperationException(
+                    $"Order type {order.OrderTypeId} requires validation graph {config.ValidationGraphId}, but graph validation services are not configured.");
+            }
+
+            if (!_graphProgramRegistry.TryGetProgram(config.ValidationGraphId, out var validationProgram))
+            {
+                throw new InvalidOperationException(
+                    $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
+            }
+
+            var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
+            bool passed = GasGraphExecutor.ExecuteValidation(
+                World,
+                order.Actor,
+                order.Target,
+                targetPos,
+                validationProgram,
+                _graphApi);
+            return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
         }
 
         private void CommitAdmission(

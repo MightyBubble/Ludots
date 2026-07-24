@@ -429,12 +429,7 @@ Use centimeter integer coordinates from `NavTile` when possible. If a renderer p
 
 ## UAT Showcase
 
-Target preset: `nav_authoring_toolchain`.
-
-```powershell
-.\scripts\run-mod-launcher.cmd cli launch nav_authoring_toolchain --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch nav_authoring_toolchain --adapter web
-```
+> The `nav_authoring_toolchain` launcher preset is planned but not yet registered in `launcher.config.json`, and no corresponding mod exists under `mods/` yet. Once the UAT mod lands, register the binding and document the launch command here. The operations below describe the expected acceptance behavior.
 
 | Operation | Visible feedback |
 |---|---|

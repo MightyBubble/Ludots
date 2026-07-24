@@ -1,0 +1,303 @@
+{
+  "name": "graph-vm-structure",
+  "title": "GraphRuntime VM 结构图",
+  "subtitle": "GraphRuntime VM Architecture — Instruction → Executor → Handler → Register",
+  "canvas": {
+    "width": 1900,
+    "height": 1330
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 980,
+    "width": 190,
+    "items": [
+      {
+        "label": "GraphExecutor",
+        "tint": "clay"
+      },
+      {
+        "label": "GAS / Handler",
+        "tint": "sage"
+      },
+      {
+        "label": "ExecutionState",
+        "tint": "steel"
+      },
+      {
+        "label": "输入 / 配置",
+        "tint": "mauve"
+      },
+      {
+        "label": "寄存器",
+        "tint": "graphite"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "inputlayer",
+      "title": "输入层",
+      "x": 70,
+      "y": 150,
+      "w": 340,
+      "h": 470,
+      "tint": "mauve",
+      "border_style": "dashed"
+    },
+    {
+      "id": "core",
+      "title": "GraphExecutor 执行核心",
+      "x": 520,
+      "y": 150,
+      "w": 700,
+      "h": 820,
+      "tint": "clay",
+      "border_style": "solid"
+    },
+    {
+      "id": "rtsys",
+      "title": "运行时系统",
+      "x": 1330,
+      "y": 150,
+      "w": 500,
+      "h": 820,
+      "tint": "sage",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "config",
+      "title": "GraphConfig (JSON)",
+      "tint": "mauve",
+      "x": 110,
+      "y": 220,
+      "w": 260,
+      "h": 70
+    },
+    {
+      "id": "package",
+      "title": "GraphProgramPackage",
+      "tint": "mauve",
+      "x": 110,
+      "y": 350,
+      "w": 260,
+      "h": 70
+    },
+    {
+      "id": "instructions",
+      "title": "GraphInstruction[]",
+      "tint": "mauve",
+      "x": 110,
+      "y": 480,
+      "w": 260,
+      "h": 70
+    },
+    {
+      "id": "executor",
+      "title": "GraphExecutor.Execute()",
+      "tint": "clay",
+      "x": 640,
+      "y": 220,
+      "w": 460,
+      "h": 100,
+      "items": [
+        "PC 驱动循环 | 38 行"
+      ]
+    },
+    {
+      "id": "state",
+      "title": "GraphExecutionState",
+      "tint": "steel",
+      "x": 640,
+      "y": 410,
+      "w": 460,
+      "h": 180,
+      "items": [
+        "Api = GasGraphRuntimeApi",
+        "寄存器 span: F/I/B/E 各 32",
+        "目标列表: MaxTargets = 256",
+        "指令上限: 4096"
+      ]
+    },
+    {
+      "id": "handlers",
+      "title": "IOpHandlerTable<TState>",
+      "tint": "sage",
+      "x": 640,
+      "y": 700,
+      "w": 460,
+      "h": 120,
+      "items": [
+        "Handlers[ins.Op] 分派",
+        "Handler Table Size = 512"
+      ]
+    },
+    {
+      "id": "regfloat",
+      "title": "Float[32]",
+      "tint": "graphite",
+      "x": 560,
+      "y": 1060,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "id": "regint",
+      "title": "Int[32]",
+      "tint": "graphite",
+      "x": 760,
+      "y": 1060,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "id": "regbool",
+      "title": "Bool[32]",
+      "tint": "graphite",
+      "x": 960,
+      "y": 1060,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "id": "regentity",
+      "title": "Entity[32]",
+      "tint": "graphite",
+      "x": 1160,
+      "y": 1060,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "id": "api",
+      "title": "GasGraphRuntimeApi",
+      "tint": "sage",
+      "x": 1370,
+      "y": 220,
+      "w": 420,
+      "h": 110,
+      "items": [
+        "空间查询 | 属性读写",
+        "Tag 操作 | Effect 分发"
+      ]
+    },
+    {
+      "id": "builtin",
+      "title": "BuiltinHandlerRegistry",
+      "tint": "sage",
+      "x": 1370,
+      "y": 410,
+      "w": 420,
+      "h": 110,
+      "items": [
+        "64 槽固定数组",
+        "O(1) 索引调用"
+      ]
+    },
+    {
+      "id": "registry",
+      "title": "GraphProgramRegistry",
+      "tint": "sage",
+      "x": 1370,
+      "y": 600,
+      "w": 420,
+      "h": 110,
+      "items": [
+        "graphId → Program"
+      ]
+    },
+    {
+      "id": "spatial",
+      "title": "SpatialQueryService",
+      "tint": "sage",
+      "x": 1370,
+      "y": 790,
+      "w": 420,
+      "h": 110,
+      "items": [
+        "QueryRadius / QueryCone",
+        "QueryLine / QueryHexRange"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "instructions",
+      "to": "executor",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "executor",
+      "to": "state",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top"
+    },
+    {
+      "from": "state",
+      "to": "handlers",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "color": "#b07a5f"
+    },
+    {
+      "from": "handlers",
+      "to": "regfloat",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "width": 0.9
+    },
+    {
+      "from": "handlers",
+      "to": "regint",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "width": 0.9
+    },
+    {
+      "from": "handlers",
+      "to": "regbool",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "width": 0.9
+    },
+    {
+      "from": "handlers",
+      "to": "regentity",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "width": 0.9
+    },
+    {
+      "from": "handlers",
+      "to": "registry",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "handlers",
+      "to": "spatial",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    }
+  ],
+  "notes": [
+    {
+      "text": "GraphExecutor 是通用解释型执行器：PC 逐条读取指令，通过 handlerTable[ins.Op] 分派到对应 handler，超出 4096 指令上限自动终止。",
+      "x": 90,
+      "y": 1230,
+      "ha": "left"
+    }
+  ]
+}

@@ -420,7 +420,9 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return "<unbound>";
             }
 
-            MassNavigationSimulationRuntime? simulation = _engine.GetService(MassNavigationKeys.SimulationRuntime);
+            MassNavigationSimulationRuntime? simulation = _engine.GetService(MassNavigationKeys.RuntimeBinding) is { IsReady: true } binding
+                ? binding.Current
+                : null;
             if (simulation == null ||
                 !simulation.TryGetAgentNavigationTargetWorldCm(index.Value, out float xCm, out float yCm))
             {

@@ -165,11 +165,11 @@ focused map 切换、push/pop、resume 时，Core 必须发布当前 session 的
 
 本契约当前由以下测试覆盖：
 
-- `src/Tests/GasTests/ParticipantBindingContractTests.cs`
-- `src/Tests/GasTests/MapLoadEntityIndexContractTests.cs`
-- `src/Tests/GasTests/MapManagerInheritanceTests.cs`
-- `src/Tests/GasTests/Features/InputRouting/InputOrderContractTests.cs`
-- `src/Tests/GasTests/AuthoritativeInputConvergenceTests.cs`
+- `src/Tests/GasTests/Association/ParticipantBindingContractTests.cs`
+- `src/Tests/GasTests/Map/MapLoadEntityIndexContractTests.cs`
+- `src/Tests/GasTests/Map/MapManagerInheritanceTests.cs`
+- `src/Tests/GasTests/InteractionInput/InputOrderContractTests.cs`
+- `src/Tests/GasTests/InteractionInput/AuthoritativeInputConvergenceTests.cs`
 
 这些测试验证：
 

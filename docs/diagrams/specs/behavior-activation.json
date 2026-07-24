@@ -1,0 +1,70 @@
+{
+  "name": "behavior-activation",
+  "title": "BehaviorSlot Activation Structure",
+  "subtitle": "BehaviorSlot = AssetBinding / Animator / Sound / Material / Spline / Grounding / MinimapMarker",
+  "canvas": { "width": 1720, "height": 1280 },
+
+  "nodes": [
+    { "id": "performer", "title": "PerformerDefinition", "tint": "stone",
+      "x": 710, "y": 160, "w": 300, "h": 90,
+      "items": ["Declarative Definition"] },
+
+    { "id": "slot", "title": "BehaviorSlot", "tint": "core", "border_w": 1.6,
+      "x": 710, "y": 560, "w": 300, "h": 100,
+      "items": ["Behavior Composition Unit"] },
+
+    { "id": "asset", "title": "AssetBinding", "tint": "stone",
+      "x": 130, "y": 330, "w": 290, "h": 90,
+      "items": ["Mesh/Billboard/Procedural"] },
+    { "id": "animator", "title": "Animator", "tint": "stone",
+      "x": 130, "y": 520, "w": 290, "h": 90,
+      "items": ["Animation State Machine"] },
+    { "id": "sound", "title": "Sound", "tint": "stone",
+      "x": 130, "y": 710, "w": 290, "h": 90,
+      "items": ["Audio Trigger"] },
+    { "id": "material", "title": "Material", "tint": "stone",
+      "x": 130, "y": 900, "w": 290, "h": 90,
+      "items": ["Material Param/Swap"] },
+
+    { "id": "spline", "title": "Spline", "tint": "stone",
+      "x": 1300, "y": 330, "w": 290, "h": 90,
+      "items": ["Ribbon/Trail"] },
+    { "id": "grounding", "title": "Grounding", "tint": "stone",
+      "x": 1300, "y": 520, "w": 290, "h": 90,
+      "items": ["Terrain Attachment"] },
+    { "id": "minimap", "title": "MinimapMarker", "tint": "stone",
+      "x": 1300, "y": 710, "w": 290, "h": 90,
+      "items": ["Minimap Marker"] },
+
+    { "id": "paramdefaults", "title": "ParamDefaults", "tint": "steel",
+      "x": 230, "y": 1120, "w": 320, "h": 90,
+      "items": ["Default Param Values"] },
+    { "id": "conditionref", "title": "ConditionRef", "tint": "steel",
+      "x": 700, "y": 1120, "w": 320, "h": 90,
+      "items": ["Rule Conditions"] },
+    { "id": "bindingconfig", "title": "AssetBindingConfig", "tint": "steel",
+      "x": 1170, "y": 1120, "w": 320, "h": 90,
+      "items": ["Asset Binding Config"] }
+  ],
+
+  "edges": [
+    { "from": "performer", "to": "slot", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "asset", "to": "slot", "route": "curve", "rad": 0.12 },
+    { "from": "animator", "to": "slot", "route": "curve", "rad": 0.08 },
+    { "from": "sound", "to": "slot", "route": "curve", "rad": -0.08 },
+    { "from": "material", "to": "slot", "route": "curve", "rad": -0.12 },
+
+    { "from": "slot", "to": "spline", "route": "curve", "rad": 0.12 },
+    { "from": "slot", "to": "grounding", "route": "curve", "rad": -0.08 },
+    { "from": "slot", "to": "minimap", "route": "curve", "rad": -0.12 },
+
+    { "from": "paramdefaults", "to": "material", "route": "elbow", "from_side": "top", "to_side": "bottom" },
+    { "from": "conditionref", "to": "slot", "route": "elbow", "from_side": "top", "to_side": "bottom" },
+    { "from": "bindingconfig", "to": "minimap", "route": "elbow", "from_side": "top", "to_side": "bottom" }
+  ],
+
+  "notes": [
+    { "text": "PerformerDefinition 声明式定义，激活 BehaviorSlot 组合单元", "x": 860, "y": 118, "ha": "center" }
+  ]
+}

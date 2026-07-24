@@ -71,26 +71,6 @@ public sealed class MassNavigationFlowArrivalTuning
         RequireInside(MaxRetryCount, MaxRetryCountMin, MaxRetryCountMax, nameof(MaxRetryCount));
     }
 
-    public void AdjustTimeoutMs(int delta)
-    {
-        TimeoutMs = System.Math.Clamp(TimeoutMs + delta, TimeoutMinMs, TimeoutMaxMs);
-    }
-
-    public void AdjustProgressDistanceCm(int delta)
-    {
-        ProgressDistanceCm = System.Math.Clamp(ProgressDistanceCm + delta, ProgressDistanceMinCm, ProgressDistanceMaxCm);
-    }
-
-    public void AdjustWakePushDistanceCm(int delta)
-    {
-        WakePushDistanceCm = System.Math.Clamp(WakePushDistanceCm + delta, WakePushDistanceMinCm, WakePushDistanceMaxCm);
-    }
-
-    public void AdjustMaxRetryCount(int delta)
-    {
-        MaxRetryCount = System.Math.Clamp(MaxRetryCount + delta, MaxRetryCountMin, MaxRetryCountMax);
-    }
-
     private static void RequirePositive(int value, string name)
     {
         if (value <= 0)

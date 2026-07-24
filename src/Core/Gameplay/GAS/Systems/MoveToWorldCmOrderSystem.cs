@@ -64,11 +64,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    int currentWaypointIndex = SyncMoveRuntime(ref buffer.ActiveOrder);
+                    int currentWaypointIndex = SyncMoveRuntime(ref buffer);
 
                     if (!TryResolveTarget(in buffer.ActiveOrder.Order, currentWaypointIndex, out var target))
                     {
-                        ResetMoveRuntime(ref buffer.ActiveOrder);
+                        ResetMoveRuntime(ref buffer);
                         _completedOrders.Add(entity);
                         continue;
                     }
@@ -85,10 +85,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (TryDrivePhysicsBody(entity, in buffer.ActiveOrder.Order, currentWaypointIndex, speedCmPerSec, out bool physicsCompleted, out int physicsNextWaypointIndex))
                     {
-                        WriteMoveRuntimeIndex(ref buffer.ActiveOrder, physicsNextWaypointIndex);
+                        WriteMoveRuntimeIndex(ref buffer, physicsNextWaypointIndex);
                         if (physicsCompleted)
                         {
-                            ResetMoveRuntime(ref buffer.ActiveOrder);
+                            ResetMoveRuntime(ref buffer);
                             _completedOrders.Add(entity);
                         }
 
@@ -104,10 +104,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         ref current,
                         stepCm,
                         out int nextWaypointIndex);
-                    WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
+                    WriteMoveRuntimeIndex(ref buffer, nextWaypointIndex);
                     if (completed)
                     {
-                        ResetMoveRuntime(ref buffer.ActiveOrder);
+                        ResetMoveRuntime(ref buffer);
                         _completedOrders.Add(entity);
                     }
 
@@ -311,38 +311,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private int SyncMoveRuntime(ref QueuedOrder activeOrder)
+        private int SyncMoveRuntime(ref OrderBuffer buffer)
         {
-            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            if (buffer.ActiveOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
-                activeOrder.RuntimeInt0 = 0;
+                buffer.ActiveRuntimeInt0 = 0;
                 return 0;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in activeOrder.Order);
-            activeOrder.RuntimeInt0 = pointCount > 0
-                ? Math.Clamp(activeOrder.RuntimeInt0, 0, pointCount - 1)
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in buffer.ActiveOrder.Order);
+            buffer.ActiveRuntimeInt0 = pointCount > 0
+                ? Math.Clamp(buffer.ActiveRuntimeInt0, 0, pointCount - 1)
                 : 0;
-            return activeOrder.RuntimeInt0;
+            return buffer.ActiveRuntimeInt0;
         }
 
-        private void WriteMoveRuntimeIndex(ref QueuedOrder activeOrder, int currentWaypointIndex)
+        private void WriteMoveRuntimeIndex(ref OrderBuffer buffer, int currentWaypointIndex)
         {
-            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            if (buffer.ActiveOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
-                activeOrder.RuntimeInt0 = 0;
+                buffer.ActiveRuntimeInt0 = 0;
                 return;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in activeOrder.Order);
-            activeOrder.RuntimeInt0 = pointCount > 0
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in buffer.ActiveOrder.Order);
+            buffer.ActiveRuntimeInt0 = pointCount > 0
                 ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;
         }
 
-        private static void ResetMoveRuntime(ref QueuedOrder activeOrder)
+        private static void ResetMoveRuntime(ref OrderBuffer buffer)
         {
-            activeOrder.RuntimeInt0 = 0;
+            buffer.ActiveRuntimeInt0 = 0;
         }
 
         public override void Dispose() => base.Dispose();

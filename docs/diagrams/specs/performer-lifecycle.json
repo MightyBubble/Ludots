@@ -1,0 +1,58 @@
+{
+  "name": "performer-lifecycle",
+  "title": "Performer Lifecycle",
+  "subtitle": "Definition -> Compile -> Bootstrap -> Create -> Update -> Destroy",
+  "canvas": { "width": 1960, "height": 1150 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40, "y": 940,
+    "items": [
+      { "label": "Presentation System", "tint": "stone" },
+      { "label": "Registry Rebuild (dashed)", "style": "line", "line": "dashed", "color": "#8a94a3" }
+    ]
+  },
+
+  "nodes": [
+    { "id": "def", "title": "1 · PerformerDefinition", "tint": "stone", "border_w": 1.6, "x": 60, "y": 130, "w": 360, "h": 100,
+      "items": ["JSON / C#"] },
+    { "id": "slots", "title": "BehaviorSlots", "tint": "stone", "x": 60, "y": 300, "w": 360, "h": 100,
+      "items": ["AssetBinding / Animator / ..."] },
+    { "id": "rules", "title": "Rules + Conditions", "tint": "stone", "x": 60, "y": 470, "w": 360, "h": 100,
+      "items": ["EntitySpawned / Destroyed"] },
+
+    { "id": "registry", "title": "2 · PerformerDefinitionRegistry", "tint": "stone", "border_w": 1.6, "x": 560, "y": 470, "w": 400, "h": 100,
+      "items": ["String -> Int"] },
+    { "id": "bootstrap", "title": "CompiledPerformerBootstrapRegistry", "tint": "stone", "x": 560, "y": 660, "w": 400, "h": 100,
+      "items": ["Rule Index Rebuild"] },
+
+    { "id": "spawned", "title": "3 · EntitySpawned Event", "tint": "stone", "border_w": 1.6, "x": 1080, "y": 660, "w": 360, "h": 100,
+      "items": ["Match Bootstrap Rule"] },
+    { "id": "create", "title": "CreatePerformer Command", "tint": "stone", "x": 1080, "y": 480, "w": 360, "h": 100 },
+
+    { "id": "runtime", "title": "4 · PerformerEntityRuntime", "tint": "stone", "border_w": 1.6, "x": 1560, "y": 560, "w": 360, "h": 100,
+      "items": ["Tree Instance"] },
+    { "id": "update", "title": "5 · Update Loop", "tint": "stone", "border_w": 1.6, "x": 1560, "y": 330, "w": 360, "h": 130,
+      "items": ["SetParam / ActivateBehavior", "DeactivateBehavior / SyncCull"] },
+    { "id": "destroy", "title": "6 · EntityDestroyed", "tint": "stone", "border_w": 1.6, "x": 1560, "y": 120, "w": 360, "h": 130,
+      "items": ["DestroyPerformer", "DestroyScopedPerformer"] }
+  ],
+
+  "edges": [
+    { "from": "def", "to": "slots" },
+    { "from": "slots", "to": "rules" },
+    { "from": "rules", "to": "registry" },
+    { "from": "registry", "to": "bootstrap" },
+    { "from": "bootstrap", "to": "spawned" },
+    { "from": "spawned", "to": "create" },
+    { "from": "create", "to": "runtime", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 40 },
+    { "from": "runtime", "to": "update" },
+    { "from": "update", "to": "destroy" },
+    { "from": "destroy", "to": "registry", "route": "elbow", "from_side": "top", "to_side": "top", "stub": 50,
+      "style": "dashed", "label": "Rule Index Rebuild" }
+  ],
+
+  "notes": [
+    { "text": "Param Inheritance: Parent -> Child via PerformerFloatParams / IntParams / VectorParams", "x": 400, "y": 1080, "ha": "left" }
+  ]
+}

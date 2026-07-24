@@ -232,7 +232,7 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
-            ValidateGroupMoveFormation(config.GroupMoveFormation, source);
+            ValidateGroupMoveTargetLayout(config.GroupMoveTargetLayout, source);
         }
 
         private static void ValidateOptionalCollectionKey(string key, string path)
@@ -268,9 +268,9 @@ namespace Ludots.Core.Input.Orders
                     mapping.CursorTargetPolicy == AutoTargetPolicy.None);
         }
 
-        private static void ValidateGroupMoveFormation(GroupMoveFormationSettings settings, string source)
+        private static void ValidateGroupMoveTargetLayout(GroupMoveTargetLayoutSettings settings, string source)
         {
-            if (settings.Mode != GroupMoveFormationMode.Grid)
+            if (settings.Mode != GroupMoveTargetLayoutMode.Grid)
             {
                 return;
             }
@@ -278,7 +278,13 @@ namespace Ludots.Core.Input.Orders
             if (settings.OrderTypeKeys == null || settings.OrderTypeKeys.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"{source}.groupMoveFormation.orderTypeKeys must be a non-empty array when mode is Grid.");
+                    $"{source}.groupMoveTargetLayout.orderTypeKeys must be a non-empty array when mode is Grid.");
+            }
+
+            if (settings.SpacingCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{source}.groupMoveTargetLayout.spacingCm must be greater than zero when mode is Grid.");
             }
 
             for (int i = 0; i < settings.OrderTypeKeys.Count; i++)
@@ -287,13 +293,13 @@ namespace Ludots.Core.Input.Orders
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     throw new InvalidOperationException(
-                        $"{source}.groupMoveFormation.orderTypeKeys[{i}] must be a non-empty string.");
+                        $"{source}.groupMoveTargetLayout.orderTypeKeys[{i}] must be a non-empty string.");
                 }
 
                 if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"{source}.groupMoveFormation.orderTypeKeys[{i}] must not contain leading or trailing whitespace.");
+                        $"{source}.groupMoveTargetLayout.orderTypeKeys[{i}] must not contain leading or trailing whitespace.");
                 }
             }
         }

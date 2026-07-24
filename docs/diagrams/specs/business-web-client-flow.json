@@ -1,0 +1,71 @@
+{
+  "name": "business-web-client-flow",
+  "title": "Ludots Web Client Frame Flow",
+  "subtitle": "Connect -> Frame -> Decode -> Render -> Input -> Send",
+  "canvas": { "width": 1800, "height": 1100 },
+
+  "groups": [
+    { "id": "g-connect", "x": 65, "y": 560, "w": 230, "h": 210, "tint": "teal", "border_style": "dashed" },
+    { "id": "g-receive", "x": 305, "y": 560, "w": 230, "h": 210, "tint": "steel", "border_style": "dashed" },
+    { "id": "g-decode", "x": 545, "y": 560, "w": 230, "h": 210, "tint": "clay", "border_style": "dashed" },
+    { "id": "g-ecssync", "x": 785, "y": 560, "w": 230, "h": 210, "tint": "clay", "border_style": "dashed" },
+    { "id": "g-render", "x": 1025, "y": 560, "w": 230, "h": 210, "tint": "sand", "border_style": "dashed" },
+    { "id": "g-input", "x": 1265, "y": 560, "w": 230, "h": 320, "tint": "mauve", "border_style": "dashed" },
+    { "id": "g-send", "x": 1505, "y": 560, "w": 230, "h": 210, "tint": "teal", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "connect", "title": "Connect", "tint": "teal", "border_w": 1.6, "x": 80, "y": 360, "w": 200, "h": 100 },
+    { "id": "receive", "title": "Receive", "tint": "steel", "border_w": 1.6, "x": 320, "y": 360, "w": 200, "h": 100 },
+    { "id": "decode", "title": "Decode", "tint": "clay", "border_w": 1.6, "x": 560, "y": 360, "w": 200, "h": 100 },
+    { "id": "ecssync", "title": "ECS Sync", "tint": "clay", "border_w": 1.6, "x": 800, "y": 360, "w": 200, "h": 100 },
+    { "id": "render", "title": "Render", "tint": "sand", "border_w": 1.6, "x": 1040, "y": 360, "w": 200, "h": 100 },
+    { "id": "input", "title": "Input", "tint": "mauve", "border_w": 1.6, "x": 1280, "y": 360, "w": 200, "h": 100 },
+    { "id": "send", "title": "Send", "tint": "teal", "border_w": 1.6, "x": 1520, "y": 360, "w": 200, "h": 100 },
+
+    { "id": "handshake", "title": "Handshake", "tint": "teal", "x": 85, "y": 610, "w": 190, "h": 56 },
+    { "id": "auth", "title": "Auth", "tint": "teal", "x": 85, "y": 678, "w": 190, "h": 56 },
+
+    { "id": "frameproto", "title": "Frame Protocol", "tint": "steel", "x": 325, "y": 610, "w": 190, "h": 56 },
+    { "id": "checksum", "title": "Checksum", "tint": "steel", "x": 325, "y": 678, "w": 190, "h": 56 },
+
+    { "id": "delta", "title": "Delta Patch", "tint": "clay", "x": 565, "y": 610, "w": 190, "h": 56 },
+    { "id": "bitpack", "title": "BitPack", "tint": "clay", "x": 565, "y": 678, "w": 190, "h": 56 },
+
+    { "id": "compdiff", "title": "Component Diff", "tint": "clay", "x": 805, "y": 610, "w": 190, "h": 56 },
+    { "id": "interp", "title": "Interpolation", "tint": "clay", "x": 805, "y": 678, "w": 190, "h": 56 },
+
+    { "id": "performer", "title": "Performer", "tint": "sand", "x": 1045, "y": 610, "w": 190, "h": 56 },
+    { "id": "cmdbuf-r", "title": "Command Buffer", "tint": "sand", "x": 1045, "y": 678, "w": 190, "h": 56 },
+
+    { "id": "rawinput", "title": "Raw Input", "tint": "mauve", "x": 1285, "y": 610, "w": 190, "h": 56 },
+    { "id": "order", "title": "Order", "tint": "mauve", "x": 1285, "y": 678, "w": 190, "h": 56 },
+    { "id": "command", "title": "Command", "tint": "mauve", "x": 1285, "y": 746, "w": 190, "h": 56 },
+
+    { "id": "cmdbuf-s", "title": "Command Buffer", "tint": "teal", "x": 1525, "y": 610, "w": 190, "h": 56 },
+    { "id": "emit", "title": "Emit", "tint": "teal", "x": 1525, "y": 678, "w": 190, "h": 56 }
+  ],
+
+  "edges": [
+    { "from": "connect", "to": "receive", "label": "1" },
+    { "from": "receive", "to": "decode", "label": "2" },
+    { "from": "decode", "to": "ecssync", "label": "3" },
+    { "from": "ecssync", "to": "render", "label": "4" },
+    { "from": "render", "to": "input", "label": "5" },
+    { "from": "input", "to": "send" },
+    { "from": "send", "to": "connect", "route": "curve", "rad": 0.2, "style": "dashed", "label": "Next Frame (loop)" },
+
+    { "from": "connect", "to": "g-connect", "style": "dashed", "arrow": false },
+    { "from": "receive", "to": "g-receive", "style": "dashed", "arrow": false },
+    { "from": "decode", "to": "g-decode", "style": "dashed", "arrow": false },
+    { "from": "ecssync", "to": "g-ecssync", "style": "dashed", "arrow": false },
+    { "from": "render", "to": "g-render", "style": "dashed", "arrow": false },
+    { "from": "input", "to": "g-input", "style": "dashed", "arrow": false },
+    { "from": "send", "to": "g-send", "style": "dashed", "arrow": false }
+  ],
+
+  "notes": [
+    { "text": "Frame Protocol: [Header(4B) | Entity Delta | Component Mask | Interpolation Key]", "x": 80, "y": 990, "ha": "left" },
+    { "text": "WebSocket binary mode, 60Hz server tick, client-side prediction disabled in streaming mode.", "x": 80, "y": 1022, "ha": "left" }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "packet_id": "issue-690-pr-658-packet-ready",
+  "hook": "pr.packet.ready",
+  "status": "ready",
+  "producer": {
+    "skill": "ludots-pr-issue-orchestration",
+    "agent": "Codex"
+  },
+  "subject": {
+    "kind": "issue",
+    "key": "690",
+    "title": "PR #658 MassNavigation and Formation SSOT closeout",
+    "branch": "codex/fix-pr-658-final",
+    "issue_id": "690",
+    "pr_id": "658"
+  },
+  "created_at_utc": "2026-07-19T12:59:29.2986682Z",
+  "consumes_packets": [],
+  "execution": {
+    "stage": "reviewer_packet_ready",
+    "attempt": 1,
+    "max_attempts": 1,
+    "last_progress_at_utc": "2026-07-19T12:59:29.2986682Z",
+    "observed_progress": "In-scope builds, behavior tests, launcher resolution, JSON validation, documentation path validation, and diff checks completed."
+  },
+  "artifacts": [
+    {
+      "role": "pr_issue_packet",
+      "path": "artifacts/pr/690/packet.md",
+      "media_type": "text/markdown",
+      "description": "Reviewer-ready PR #658 and issue #690 closeout packet."
+    },
+    {
+      "role": "gas_composition_gate",
+      "path": "artifacts/gas-composition-gate.md",
+      "media_type": "text/markdown"
+    },
+    {
+      "role": "documentation_governance",
+      "path": "artifacts/doc-governance-report.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "payload": {
+    "result": "ready",
+    "historical_score": 4.0,
+    "final_score": 9.0,
+    "recommendation": "GO",
+    "related_tests_passed": 68,
+    "architecture_tests_passed": 143,
+    "architecture_tests_external_failures": 4,
+    "ssot_issue": 690,
+    "pull_request": 658
+  },
+  "notes": "Issue #690 is the unique current SSOT. External broken projects are recorded in the packet and were not modified."
+}

@@ -1,0 +1,89 @@
+{
+  "name": "showcase-topology",
+  "title": "Ludots Showcase Topology",
+  "subtitle": "Showcase Suite — Subsystem dependencies & capability validation",
+  "canvas": { "width": 2400, "height": 1780 },
+
+  "nodes": [
+    { "id": "fireball", "title": "FireballDuel", "tint": "sage", "border_w": 1.6,
+      "x": 130, "y": 420, "w": 400, "h": 170, "items": ["GAS Ability Demo"] },
+    { "id": "physics2d", "title": "Physics2D", "tint": "mauve", "border_w": 1.6,
+      "x": 660, "y": 420, "w": 400, "h": 170, "items": ["Physics 2D Demo"] },
+    { "id": "blacksmith", "title": "Blacksmith", "tint": "clay", "border_w": 1.6,
+      "x": 1250, "y": 420, "w": 400, "h": 170, "items": ["Item/Trade/Equip"] },
+    { "id": "roadnetwork", "title": "RoadNetwork", "tint": "steel", "border_w": 1.6,
+      "x": 1060, "y": 860, "w": 400, "h": 170, "items": ["MassNav 10k+ units"] },
+    { "id": "formation", "title": "Formation", "tint": "sage", "border_w": 1.6,
+      "x": 400, "y": 860, "w": 400, "h": 170, "items": ["Formation & Group"] },
+
+    { "id": "c-ability", "title": "Ability", "tint": "sage", "x": 50, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-effect", "title": "Effect", "tint": "sage", "x": 190, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-attribute", "title": "Attribute", "tint": "sage", "x": 370, "y": 650, "w": 130, "h": 60 },
+    { "id": "wp1", "title": "", "fill": "#ffffff", "border": "#ffffff", "x": 326, "y": 1246, "w": 8, "h": 8 },
+    { "id": "wp2", "title": "", "fill": "#ffffff", "border": "#ffffff", "x": 1056, "y": 1246, "w": 8, "h": 8 },
+    { "id": "wp3", "title": "", "fill": "#ffffff", "border": "#ffffff", "x": 1796, "y": 1246, "w": 8, "h": 8 },
+    { "id": "wp4", "title": "", "fill": "#ffffff", "border": "#ffffff", "x": 1716, "y": 976, "w": 8, "h": 8 },
+
+    { "id": "c-physics2d", "title": "Physics2D", "tint": "mauve", "x": 610, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-broadphase", "title": "Broadphase", "tint": "mauve", "x": 750, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-collision", "title": "Collision", "tint": "mauve", "x": 1020, "y": 650, "w": 130, "h": 60 },
+
+    { "id": "c-inventory", "title": "Inventory", "tint": "clay", "x": 1220, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-exchange", "title": "Exchange", "tint": "clay", "x": 1360, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-performer", "title": "Performer", "tint": "clay", "x": 1620, "y": 650, "w": 130, "h": 60 },
+
+    { "id": "c-fmassnav", "title": "MassNav", "tint": "sage", "x": 640, "y": 1090, "w": 130, "h": 60 },
+    { "id": "c-selection", "title": "Selection", "tint": "sage", "x": 780, "y": 1090, "w": 130, "h": 60 },
+    { "id": "c-formation", "title": "Formation", "tint": "sage", "x": 1080, "y": 1090, "w": 130, "h": 60 },
+
+    { "id": "c-rmassnav", "title": "MassNav", "tint": "steel", "x": 1220, "y": 1090, "w": 130, "h": 60 },
+    { "id": "c-pathstore", "title": "PathStore", "tint": "steel", "x": 1360, "y": 1090, "w": 130, "h": 60 },
+    { "id": "c-transport", "title": "Transport", "tint": "steel", "x": 1560, "y": 1090, "w": 130, "h": 60 },
+
+    { "id": "e-ecs", "title": "ECS Core", "tint": "clay", "border_w": 1.6, "x": 80, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-config", "title": "Config", "tint": "mauve", "x": 380, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-modding", "title": "Modding", "tint": "sand", "x": 680, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-gas", "title": "GAS", "tint": "sage", "x": 980, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-spatial", "title": "Spatial", "tint": "sage", "x": 1280, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-nav", "title": "Nav", "tint": "steel", "x": 1580, "y": 1420, "w": 220, "h": 90 },
+    { "id": "e-pres", "title": "Presentation", "tint": "stone", "x": 1880, "y": 1420, "w": 220, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "c-ability", "to": "fireball", "style": "dashed" },
+    { "from": "c-effect", "to": "fireball", "style": "dashed" },
+    { "from": "c-attribute", "to": "fireball", "style": "dashed" },
+    { "from": "c-physics2d", "to": "physics2d", "style": "dashed" },
+    { "from": "c-broadphase", "to": "physics2d", "style": "dashed" },
+    { "from": "c-collision", "to": "physics2d", "style": "dashed" },
+    { "from": "c-inventory", "to": "blacksmith", "style": "dashed" },
+    { "from": "c-exchange", "to": "blacksmith", "style": "dashed" },
+    { "from": "c-performer", "to": "blacksmith", "style": "dashed" },
+    { "from": "c-rmassnav", "to": "roadnetwork", "style": "dashed" },
+    { "from": "c-pathstore", "to": "roadnetwork", "style": "dashed" },
+    { "from": "c-transport", "to": "roadnetwork", "style": "dashed" },
+    { "from": "c-fmassnav", "to": "formation", "style": "dashed" },
+    { "from": "c-selection", "to": "formation", "style": "dashed" },
+    { "from": "c-formation", "to": "formation", "style": "dashed" },
+
+    { "from": "fireball", "to": "wp1", "color": "#7a8b6f", "width": 1.6, "arrow": false },
+    { "from": "wp1", "to": "e-gas", "color": "#7a8b6f", "width": 1.6 },
+    { "from": "physics2d", "to": "wp2", "color": "#8a8296", "width": 1.6, "arrow": false },
+    { "from": "wp2", "to": "e-spatial", "color": "#8a8296", "width": 1.6 },
+    { "from": "blacksmith", "to": "wp3", "color": "#a08574", "width": 1.6, "arrow": false },
+    { "from": "wp3", "to": "e-pres", "color": "#a08574", "width": 1.6 },
+    { "from": "roadnetwork", "to": "wp4", "color": "#7f92a6", "width": 1.6, "arrow": false },
+    { "from": "wp4", "to": "e-nav", "color": "#7f92a6", "width": 1.6 },
+    { "from": "formation", "to": "e-ecs", "color": "#7a8b6f", "width": 1.6 }
+  ],
+
+  "notes": [
+    { "text": "Showcase", "x": 30, "y": 760, "ha": "left" },
+    { "text": "Engine", "x": 30, "y": 1390, "ha": "left" },
+    { "text": "FireballDuel: GAS validation", "x": 100, "y": 1590, "ha": "left" },
+    { "text": "Physics2D: Collision & physics", "x": 100, "y": 1622, "ha": "left" },
+    { "text": "Blacksmith: Economy loop", "x": 100, "y": 1654, "ha": "left" },
+    { "text": "RoadNetwork: 10k+ navigation", "x": 100, "y": 1686, "ha": "left" },
+    { "text": "Formation: Group movement", "x": 100, "y": 1718, "ha": "left" }
+  ]
+}

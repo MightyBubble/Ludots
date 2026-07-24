@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -56,6 +57,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly ComponentAuthoringContext _authoringContext;
         private readonly OwnershipResolver? _ownership;
         private readonly PlayerEntityLookup? _playerLookup;
+        private readonly TeamEntityLookup? _teamLookup;
+        private readonly RelationshipRuntime? _relationships;
+        private readonly int _memberOfTypeId;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -73,7 +77,10 @@ namespace Ludots.Core.Gameplay.Spawning
             PresentationTimingDiagnostics? timingDiagnostics = null,
             ComponentAuthoringContext? authoringContext = null,
             OwnershipResolver? ownership = null,
-            PlayerEntityLookup? playerLookup = null)
+            PlayerEntityLookup? playerLookup = null,
+            TeamEntityLookup? teamLookup = null,
+            RelationshipRuntime? relationships = null,
+            int memberOfTypeId = -1)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -100,6 +107,9 @@ namespace Ludots.Core.Gameplay.Spawning
             _timingDiagnostics = timingDiagnostics;
             _ownership = ownership;
             _playerLookup = playerLookup;
+            _teamLookup = teamLookup;
+            _relationships = relationships;
+            _memberOfTypeId = memberOfTypeId;
         }
 
         public override void Update(in float dt)
@@ -161,6 +171,19 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException("Runtime unit spawn requires a positive UnitTypeId.");
             }
 
+            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
+            }
+
+            PreflightSingleSpawnRelationships(
+                "Runtime unit spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+
             var entity = World.Create(
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
@@ -169,12 +192,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 new AttributeBuffer(),
                 new DirtyFlags());
             EnsurePresentationStableId(entity);
-
-            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
-            if (string.IsNullOrWhiteSpace(typeName))
-            {
-                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
-            }
 
             World.Add(entity, new Name { Value = "Unit:" + typeName });
             TryApplyFacing(in request, entity);
@@ -185,6 +202,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             return entity;
         }
 
@@ -196,6 +214,15 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
+            EntityTemplate template = _cachedTemplates[request.TemplateId];
+            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
+            PreflightSingleSpawnRelationships(
+                $"Runtime template '{request.TemplateId}'",
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
+
             var builder = _builder
                 .UseTemplate(request.TemplateId)
                 .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
@@ -218,6 +245,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             TryBootstrapPerformer(entity, request.TemplateId);
             return entity;
         }
@@ -273,6 +301,9 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
+            bool hasExplicitRelationshipWork = false;
+            bool hasOwnershipEdgeWork = _ownership != null && _playerLookup != null;
+            bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
@@ -281,7 +312,11 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
+                hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
             }
+
+            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
+            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
 
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
@@ -319,8 +354,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
             bool requiresPostSpawnLoop =
                 hasTeamWork ||
+                templateAuthorsTeam ||
                 hasPlayerOwnerWork ||
                 hasParentWork ||
+                hasExplicitRelationshipWork ||
+                hasOwnershipEdgeWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||
@@ -353,6 +391,9 @@ namespace Ludots.Core.Gameplay.Spawning
                         TryApplyParentLink(in request, entity);
                     }
 
+                    TryLinkOwnershipEdge(entity);
+                    TryLinkExplicitRelationships(in request, entity);
+
                     if (publishSpawnedEvent)
                     {
                         PublishSpawnedPresentationEvent(entity);
@@ -367,16 +408,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);
-            }
-
-            if (_ownership != null && _playerLookup != null)
-            {
-                // Template-authored PlayerOwner components bypass the per-request owner work flags,
-                // so ownership edges are linked per created entity regardless of the post-spawn loop.
-                for (int i = 0; i < created.Length; i++)
-                {
-                    OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, created[i]);
-                }
             }
 
             double performerBatchMs = 0d;
@@ -447,6 +478,13 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
         {
+            PreflightSingleSpawnRelationships(
+                "Runtime assembly spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+
             var entity = base.World.Create();
 
             if (request.HasProjectileState != 0)
@@ -467,6 +505,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
+            TryLinkExplicitRelationships(in request, entity);
             return entity;
         }
 
@@ -647,6 +686,339 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
+        }
+
+        private void TryLinkExplicitRelationships(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (request.HasOwnershipSource != 0)
+            {
+                if (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource))
+                {
+                    throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
+                }
+
+                _ownership.EnsureOwnership(request.OwnershipSource, entity);
+            }
+
+            if (request.HasMembershipTarget != 0)
+            {
+                if (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget))
+                {
+                    throw new InvalidOperationException(
+                        "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
+                }
+
+                _relationships.EnsureLink(entity, request.MembershipTarget, _memberOfTypeId);
+                return;
+            }
+
+            if (_relationships != null &&
+                _teamLookup != null &&
+                _memberOfTypeId >= 0 &&
+                World.TryGet(entity, out Team team) &&
+                team.Id > 0 &&
+                !World.Has<PlayerIdentity>(entity) &&
+                !World.Has<TeamIdentity>(entity))
+            {
+                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !IsAliveInCurrentWorld(teamRep))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime spawned entity {entity.Id} authors Team {team.Id}, but no live team relationship representative exists.");
+                }
+
+                _relationships.EnsureLink(entity, teamRep, _memberOfTypeId);
+            }
+        }
+
+        private void PreflightTemplateBatchRelationships(
+            string templateId,
+            bool templateAuthorsTeam,
+            in Team templateTeam,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
+                PreflightExplicitRelationship(in request);
+
+                int teamId = ResolveTemplateFinalTeamId(
+                    $"Runtime template batch '{templateId}'",
+                    in request,
+                    templateAuthorsTeam ? templateTeam.Id : 0);
+                if (request.HasMembershipTarget != 0)
+                {
+                    PreflightMembershipTargetMatchesTeam(templateId, in request, teamId);
+                    continue;
+                }
+
+                if (teamId <= 0)
+                {
+                    continue;
+                }
+
+                PreflightImplicitMemberOfTarget($"Runtime template batch '{templateId}'", teamId);
+            }
+        }
+
+        private void PreflightExplicitRelationship(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.HasOwnershipSource != 0 &&
+                (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource)))
+            {
+                throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
+            }
+
+            if (request.HasMembershipTarget != 0 &&
+                (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget)))
+            {
+                throw new InvalidOperationException(
+                    "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
+            }
+        }
+
+        private void PreflightSingleSpawnRelationships(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            bool templateAuthorsTeam,
+            in Team templateTeam,
+            bool authorsRelationshipDomainIdentity)
+        {
+            PreflightExplicitRelationship(in request);
+            int teamId = ResolveTemplateFinalTeamId(
+                context,
+                in request,
+                templateAuthorsTeam ? templateTeam.Id : 0);
+            if (teamId <= 0)
+            {
+                return;
+            }
+
+            if (request.HasMembershipTarget != 0)
+            {
+                PreflightMembershipTargetMatchesTeam(context, in request, teamId);
+                return;
+            }
+
+            if (authorsRelationshipDomainIdentity)
+            {
+                return;
+            }
+
+            PreflightImplicitMemberOfTarget(context, teamId);
+        }
+
+        private void PreflightImplicitMemberOfTarget(string context, int teamId)
+        {
+            if (_relationships == null || _teamLookup == null || !HasRegisteredMemberOfRelationshipType())
+            {
+                throw new InvalidOperationException(
+                    $"{context} authors Team {teamId}, but implicit MemberOf linking requires RelationshipRuntime, TeamEntityLookup, and a registered MemberOf relationship type.");
+            }
+
+            if (!_teamLookup.TryGet(teamId, out Entity teamRepresentative) || !IsAliveInCurrentWorld(teamRepresentative))
+            {
+                throw new InvalidOperationException(
+                    $"{context} authors Team {teamId}, but no live team relationship representative exists.");
+            }
+        }
+
+        private bool IsAliveInCurrentWorld(Entity entity)
+        {
+            return entity != Entity.Null && entity.WorldId == World.Id && World.IsAlive(entity);
+        }
+
+        private bool HasRegisteredMemberOfRelationshipType()
+        {
+            return _relationships != null &&
+                _memberOfTypeId >= 0 &&
+                _memberOfTypeId < _relationships.TypeRegistry.Count;
+        }
+
+        private void PreflightMembershipTargetMatchesTeam(
+            string templateId,
+            in RuntimeEntitySpawnRequest request,
+            int teamId)
+        {
+            if (teamId <= 0)
+            {
+                return;
+            }
+
+            if (!World.TryGet(request.MembershipTarget, out TeamIdentity targetTeam))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
+            }
+
+            if (targetTeam.TeamId != teamId)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
+            }
+        }
+
+        private void PreflightTemplateBatchSuccessSignals(int count, bool publishSpawnedEvent)
+        {
+            int receiptCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_batchRequests[i].EmitReceipt != 0)
+                {
+                    receiptCount++;
+                }
+            }
+
+            if (receiptCount > 0)
+            {
+                if (_receipts == null)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+                }
+
+                if (receiptCount > _receipts.FreeCapacity)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+                }
+            }
+
+            if (publishSpawnedEvent &&
+                _presentationEvents != null &&
+                count > _presentationEvents.Capacity - _presentationEvents.Count)
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing batch EntitySpawned.");
+            }
+        }
+
+        private int ResolveTemplateFinalTeamId(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            int templateTeamId)
+        {
+            int teamId = 0;
+            AddTeamSource(context, "template Team", templateTeamId, ref teamId);
+
+            if (request.TeamIdOverride > 0)
+            {
+                AddTeamSource(context, "TeamIdOverride", request.TeamIdOverride, ref teamId);
+            }
+
+            if (request.CopySourceTeam != 0 &&
+                World.IsAlive(request.Source) &&
+                World.TryGet(request.Source, out Team sourceTeam))
+            {
+                AddTeamSource(context, "source Team", sourceTeam.Id, ref teamId);
+            }
+
+            if (TryGetRequestPatchedTeam(in request, out Team patchedTeam))
+            {
+                AddTeamSource(context, "component patch Team", patchedTeam.Id, ref teamId);
+            }
+
+            return teamId;
+        }
+
+        private static void AddTeamSource(string context, string sourceName, int sourceTeamId, ref int teamId)
+        {
+            if (sourceTeamId <= 0)
+            {
+                return;
+            }
+
+            if (teamId <= 0)
+            {
+                teamId = sourceTeamId;
+                return;
+            }
+
+            if (teamId != sourceTeamId)
+            {
+                throw new InvalidOperationException(
+                    $"{context} has conflicting Team sources: resolved Team {teamId} conflicts with {sourceName} {sourceTeamId}.");
+            }
+        }
+
+        private static bool TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(
+            EntityTemplate template,
+            in RuntimeEntitySpawnRequest request)
+        {
+            return TemplateAuthorsRelationshipDomainIdentity(template) ||
+                   RequestPatchesAuthorRelationshipDomainIdentity(in request);
+        }
+
+        private static bool TemplateAuthorsRelationshipDomainIdentity(EntityTemplate template)
+        {
+            return template.Components != null &&
+                   (template.Components.ContainsKey("PlayerIdentity") ||
+                    template.Components.ContainsKey("TeamIdentity"));
+        }
+
+        private static bool RequestPatchesAuthorRelationshipDomainIdentity(in RuntimeEntitySpawnRequest request)
+        {
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            if (patches == null || patches.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < patches.Length; i++)
+            {
+                if (string.Equals(patches[i].ComponentName, "PlayerIdentity", StringComparison.Ordinal) ||
+                    string.Equals(patches[i].ComponentName, "TeamIdentity", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryGetTemplateAuthoredTeam(string templateId, EntityTemplate template, out Team team)
+        {
+            if (template.Components != null &&
+                template.Components.TryGetValue("Team", out JsonNode teamNode))
+            {
+                team = ParseTeamComponent($"Entity template '{templateId}' Team", teamNode);
+                return true;
+            }
+
+            team = default;
+            return false;
+        }
+
+        private static bool TryGetRequestPatchedTeam(in RuntimeEntitySpawnRequest request, out Team team)
+        {
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            if (patches != null)
+            {
+                for (int i = 0; i < patches.Length; i++)
+                {
+                    if (string.Equals(patches[i].ComponentName, "Team", StringComparison.Ordinal))
+                    {
+                        team = ParseTeamComponent("Runtime spawn component patch Team", patches[i].Data);
+                        return true;
+                    }
+                }
+            }
+
+            team = default;
+            return false;
+        }
+
+        private static Team ParseTeamComponent(string context, JsonNode node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            if (!obj.TryGetPropertyValue("Id", out JsonNode idNode) ||
+                idNode == null ||
+                !idNode.AsValue().TryGetValue(out int id))
+            {
+                throw new InvalidOperationException($"{context}.Id requires an integer value.");
+            }
+
+            return new Team { Id = id };
         }
 
         private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)

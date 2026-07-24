@@ -6,10 +6,11 @@ import { DetailPanel } from "@/components/DetailPanel";
 import { BuildLog } from "@/components/BuildLog";
 import { CreateModDialog } from "@/components/CreateModDialog";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { ShowcasePanel } from "@/components/ShowcasePanel";
 import { useLauncherStore } from "@/stores/launcherStore";
 
 export default function App() {
-  const { init, loading, bridgeOnline, showCreateDialog, showWorkspace } = useLauncherStore();
+  const { init, loading, bridgeOnline, showCreateDialog, showWorkspace, mainView } = useLauncherStore();
 
   useEffect(() => {
     void init();
@@ -54,10 +55,14 @@ export default function App() {
     <div className="flex h-screen flex-col">
       <TopBar />
       {showWorkspace ? <WorkspacePanel /> : null}
-      <div className="flex min-h-0 flex-1">
-        <ModList />
-        <DetailPanel />
-      </div>
+      {mainView === "showcase" ? (
+        <ShowcasePanel />
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          <ModList />
+          <DetailPanel />
+        </div>
+      )}
       <BuildLog />
       {showCreateDialog ? <CreateModDialog /> : null}
     </div>

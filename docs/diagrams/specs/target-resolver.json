@@ -1,0 +1,492 @@
+{
+  "name": "target-resolver",
+  "title": "Target 三层解析管线",
+  "subtitle": "Query → Filter → Dispatch 的完整解析管线",
+  "canvas": {
+    "width": 1900,
+    "height": 1240
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 190,
+    "items": [
+      {
+        "label": "Query Layer",
+        "tint": "clay"
+      },
+      {
+        "label": "Filter Layer",
+        "tint": "steel"
+      },
+      {
+        "label": "Dispatch Layer",
+        "tint": "stone"
+      },
+      {
+        "label": "Result",
+        "tint": "sage"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "layer1",
+      "title": "Layer 1: Query",
+      "x": 270,
+      "y": 150,
+      "w": 420,
+      "h": 560,
+      "tint": "clay",
+      "border_style": "dashed"
+    },
+    {
+      "id": "layer2",
+      "title": "Layer 2: Filter",
+      "x": 740,
+      "y": 150,
+      "w": 560,
+      "h": 560,
+      "tint": "steel",
+      "border_style": "dashed"
+    },
+    {
+      "id": "layer3",
+      "title": "Layer 3: Dispatch",
+      "x": 1350,
+      "y": 150,
+      "w": 510,
+      "h": 560,
+      "tint": "stone",
+      "border_style": "dashed"
+    },
+    {
+      "id": "components",
+      "title": "TargetResolver 组件说明",
+      "x": 90,
+      "y": 790,
+      "w": 1500,
+      "h": 380,
+      "tint": "sage",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "spec",
+      "title": "Ability / Effect",
+      "tint": "sage",
+      "x": 60,
+      "y": 350,
+      "w": 180,
+      "h": 90,
+      "items": [
+        "Target Spec"
+      ]
+    },
+    {
+      "id": "querysys",
+      "title": "1 · TargetQuerySystem",
+      "tint": "clay",
+      "x": 320,
+      "y": 290,
+      "w": 320,
+      "h": 100,
+      "items": [
+        "空间查询生成"
+      ]
+    },
+    {
+      "id": "aabb",
+      "title": "AABB",
+      "tint": "clay",
+      "x": 400,
+      "y": 450,
+      "w": 160,
+      "h": 56
+    },
+    {
+      "id": "radius",
+      "title": "Radius",
+      "tint": "clay",
+      "x": 400,
+      "y": 540,
+      "w": 160,
+      "h": 56
+    },
+    {
+      "id": "cone",
+      "title": "Cone",
+      "tint": "clay",
+      "x": 400,
+      "y": 630,
+      "w": 160,
+      "h": 56
+    },
+    {
+      "id": "filtersys",
+      "title": "2 · TargetFilterSystem",
+      "tint": "steel",
+      "x": 790,
+      "y": 290,
+      "w": 320,
+      "h": 100,
+      "items": [
+        "条件过滤筛选"
+      ]
+    },
+    {
+      "id": "rectangle",
+      "title": "Rectangle",
+      "tint": "clay",
+      "x": 800,
+      "y": 450,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "line",
+      "title": "Line",
+      "tint": "clay",
+      "x": 800,
+      "y": 540,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "hex",
+      "title": "Hex",
+      "tint": "clay",
+      "x": 800,
+      "y": 630,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "tagfilter",
+      "title": "TagFilter",
+      "tint": "steel",
+      "x": 1110,
+      "y": 450,
+      "w": 150,
+      "h": 56
+    },
+    {
+      "id": "teamfilter",
+      "title": "TeamFilter",
+      "tint": "steel",
+      "x": 1110,
+      "y": 540,
+      "w": 150,
+      "h": 56
+    },
+    {
+      "id": "attrfilter",
+      "title": "AttributeFilter",
+      "tint": "steel",
+      "x": 1110,
+      "y": 630,
+      "w": 150,
+      "h": 56
+    },
+    {
+      "id": "dispatchsys",
+      "title": "3 · TargetDispatchSystem",
+      "tint": "stone",
+      "x": 1390,
+      "y": 290,
+      "w": 300,
+      "h": 100,
+      "items": [
+        "目标分发执行"
+      ]
+    },
+    {
+      "id": "los",
+      "title": "LineOfSight",
+      "tint": "steel",
+      "x": 1390,
+      "y": 450,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "single",
+      "title": "Single",
+      "tint": "stone",
+      "x": 1560,
+      "y": 450,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "doa",
+      "title": "DeadOrAlive",
+      "tint": "steel",
+      "x": 1390,
+      "y": 540,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "multi",
+      "title": "Multi",
+      "tint": "stone",
+      "x": 1560,
+      "y": 540,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "area",
+      "title": "Area",
+      "tint": "stone",
+      "x": 1390,
+      "y": 630,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "chain",
+      "title": "Chain",
+      "tint": "stone",
+      "x": 1560,
+      "y": 630,
+      "w": 140,
+      "h": 56
+    },
+    {
+      "id": "resolved",
+      "title": "Resolved",
+      "tint": "sage",
+      "x": 1705,
+      "y": 300,
+      "w": 150,
+      "h": 80,
+      "items": [
+        "Targets"
+      ]
+    },
+    {
+      "id": "querycomp",
+      "title": "TargetQueryComponent",
+      "tint": "clay",
+      "x": 130,
+      "y": 860,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "定义查询形状和范围"
+      ]
+    },
+    {
+      "id": "filtercomp",
+      "title": "TargetFilterComponent",
+      "tint": "steel",
+      "x": 500,
+      "y": 860,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "定义过滤条件规则"
+      ]
+    },
+    {
+      "id": "dispatchcomp",
+      "title": "TargetDispatchComponent",
+      "tint": "stone",
+      "x": 870,
+      "y": 860,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "定义分发策略"
+      ]
+    },
+    {
+      "id": "resultbuffer",
+      "title": "TargetResultBuffer",
+      "tint": "sage",
+      "x": 1240,
+      "y": 860,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "存储解析结果 (unsafe struct)"
+      ]
+    },
+    {
+      "id": "cache",
+      "title": "TargetResolverCache",
+      "tint": "sand",
+      "x": 130,
+      "y": 1030,
+      "w": 300,
+      "h": 90,
+      "items": [
+        "缓存查询结果 (Spatial Hash)"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "spec",
+      "to": "querysys",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "querysys",
+      "to": "filtersys",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "filtersys",
+      "to": "dispatchsys",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "dispatchsys",
+      "to": "resolved",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "querysys",
+      "to": "aabb",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querysys",
+      "to": "radius",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querysys",
+      "to": "cone",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querysys",
+      "to": "rectangle",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querysys",
+      "to": "line",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querysys",
+      "to": "hex",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "rectangle",
+      "to": "tagfilter",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "width": 0.9
+    },
+    {
+      "from": "line",
+      "to": "teamfilter",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "width": 0.9
+    },
+    {
+      "from": "hex",
+      "to": "attrfilter",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "width": 0.9
+    },
+    {
+      "from": "filtersys",
+      "to": "tagfilter",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "filtersys",
+      "to": "teamfilter",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "filtersys",
+      "to": "attrfilter",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "los",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "single",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "doa",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "multi",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "area",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "dispatchsys",
+      "to": "chain",
+      "width": 0.9,
+      "arrow": false
+    },
+    {
+      "from": "querycomp",
+      "to": "cache",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "style": "dashed"
+    }
+  ],
+  "notes": [
+    {
+      "text": "8 种空间查询模式： AABB / Radius / Cone / Rectangle / Line / Segment / Hex / Point",
+      "x": 1450,
+      "y": 110,
+      "ha": "center"
+    }
+  ]
+}

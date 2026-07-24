@@ -78,9 +78,25 @@
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" }
+    { "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" },
+    { "TeamId": 2, "RepresentativeInstanceId": "interaction-enemy-skirmisher-a" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" }
-  ]
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "interaction-enemy-skirmisher-a" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "InteractionShowcase.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "InteractionShowcase.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "InteractionShowcase.Participant", "Symmetric": false }
+    ]
+  }
 }

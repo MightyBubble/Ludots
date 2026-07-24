@@ -18,8 +18,8 @@
 建议按 4 个阶段推进：
 
 - `M1`：正式 contract 收敛，可让不同 agent 在稳定边界内并行开发
-- `M2`：方阵本体车道可跑，可看到少量高价值单位的 OBB + ORCA 结果
-- `M3`：crowd 车道可跑，可看到大量跟随成员的局部碰撞和表演
+- `M2`：#643 对精确物理车道作出删除或中性化决议；只有中性化后才进入实现
+- `M3`：crowd 车道可跑，可看到大量实体的局部碰撞和表演
 - `M4`：AOI / LOD / 预算接入，可在大地图里看见预算收益
 
 ## 3 Workstream 0：正式 contract 与真相审计
@@ -58,25 +58,23 @@
 - 团队可以开始并行开发
 - 不必等待大集成才知道边界是否正确
 
-## 4 Workstream 1：FormationPhysics 车道
+## 4 Workstream 1：精确物理车道决议（#643）
 
 ### 4.1 目标
 
-为少量高价值实体建立正式的 `FullPhysics2D + OBB + ORCA/Hybrid` 车道。
+历史 `FormationPhysics` 枚举与解析入口已经删除。此 workstream 只评估是否存在真实业务需要，把少量高价值 authority entity 放入中性的 `FullPhysics2D + OBB + ORCA/Hybrid` 车道；它不是已交付运行时承诺。
 
 ### 4.2 范围
 
-- 方阵本体
+- 少量高价值 authority entity
 - 后端战斗载体
-- 低数量高价值实体
+- 真实业务消费者与可玩验收入口
 
 ### 4.3 交付物
 
-- `AvoidanceLane = FormationPhysics` 运行时调度
-- `NavSolverMode` 真正参与 steering 分流
-- `Collider2D.Box` 与 OBB 碰撞在方阵本体上可跑
-- `FullPhysics2D -> WorldPositionCm` 单向同步链稳定
-- 方阵本体之间的碰撞、推挤、相对避让可见
+- #643 明确记录删除或中性化决议
+- 若删除：清理枚举、文档、测试和虚构 UAT 入口
+- 若中性化：另立实现任务，补真实 lane 名称、`NavSolverMode` 分流、`Collider2D.Box` / OBB、`FullPhysics2D -> WorldPositionCm` 单向同步和可玩 UAT
 
 ### 4.4 依赖
 
@@ -84,29 +82,29 @@
 
 ### 4.5 对其他 workstream 的影响
 
-- 为 Workstream 2 提供方阵 anchor 真相
+- 不阻塞 Workstream 2 的通用 MassNavigation 明确目标执行
 - 为 Workstream 4 提供少量高价值单位的正式后端车道
 
 ### 4.6 完成标准
 
-- 100 到 1000 级别的方阵本体可以稳定运行
-- 不使用 crowd SoA 车道写同一批 entity
-- 不要求大规模 crowd 性能最优
+- #643 已作出明确决议
+- 文档不再把不存在的 lane 或 playground 写成现有能力
+- 若选择中性化，实现与 UAT 由后续任务定义，本 workstream 不偷跑
 
 ### 4.7 阶段成果
 
-- 可以在一个独立 demo 中看到“后端方阵真相碰撞”
-- 这是第一个对外可见的大结果，不是纯基建
+- 当前阶段成果是消除虚假承诺
+- 只有 #643 选择中性化并完成后续实现后，才可以声明独立精确物理 demo
 
 ## 5 Workstream 2：MassNavigation 车道
 
 ### 5.1 目标
 
-为大量预算实体建立正式的 `CrowdFlow / SoA` 车道，并支持方阵跟随成员、路人、羊群等场景。
+为大量预算实体建立正式的 `CrowdFlow / SoA` 车道，并支持独立 crowd、路人、羊群，以及由上层业务提交明确成员目标的场景。
 
 ### 5.2 范围
 
-- 方阵跟随成员
+- 接收明确空间目标的普通 MassNavigation agents
 - 大量路人
 - 羊群等装饰性行为体
 
@@ -114,9 +112,11 @@
 
 - `AvoidanceLane = MassNavigation` 运行时调度
 - crowd SoA 热路径与 ECS 同步链
-- 跟随成员的 slot 跟随与局部碰撞
+- `massNavigationMove` 只接收明确空间目标
+- `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` 接收上层已解析的逐实体目标
 - crowd entity 的 `BudgetedResident` 运行态
 - 不依赖 `FullPhysics2D` 承载全量 crowd
+- 不拥有 formation identity、slot layout、facing、rotation 或 follower runtime
 
 ### 5.4 依赖
 
@@ -130,13 +130,13 @@
 
 ### 5.6 完成标准
 
-- 单屏可展示大规模 crowd 跟随与局部碰撞
-- 与方阵本体的后端真相分离
+- 单屏可展示大规模 crowd 移动与局部碰撞
+- 上层 Formation Showcase 可作为明确逐成员目标的一个消费者，但不能改变 Core 合同
 - 不把 performer 混入逻辑实体路径
 
 ### 5.7 阶段成果
 
-- 可以单独演示“大量跟随成员的流动和碰撞”
+- 可以单独演示“大量 crowd 的流动和碰撞”
 - 这是第二个对外可见的大结果，不等待 AOI 才能看效果
 
 ## 6 Workstream 3：AOI / LOD / 预算调度
@@ -180,24 +180,25 @@
 
 ### 7.2 交付物
 
-- 方阵本体车道 + crowd 车道的统一接线
+- 可选精确物理车道 + crowd 车道的统一接线；若 #643 删除前者，则不保留空壳接线
 - 运行时调参与观测面板
 - 统一的 demo map / launcher binding
 - 集成 UAT 记录
 
 ### 7.3 依赖
 
-- 依赖 Workstream 1
+- #643 若选择中性化并进入实现，则依赖对应的 Workstream 1 后续任务；若删除则无此依赖
 - 依赖 Workstream 2
 - 依赖 Workstream 3
 
 ### 7.4 完成标准
 
 - 可以在一个正式入口里看到：
-  - 后端方阵碰撞
-  - 前端成员跟随与局部碰撞
+  - #643 若选择中性化：少量高价值单位的精确物理碰撞
+  - crowd 移动与局部碰撞
+  - Showcase-owned formation 通过明确成员目标接入，而不是进入 Core
   - 镜头离开后成员进入降频或裁剪
-  - 方阵本体保持后端真相
+  - authority entity 保持后端真相
 - 面板里能看到预算、LOD、可见数量、运行态变化
 
 ### 7.5 阶段成果
@@ -210,7 +211,7 @@
 推荐分派方式如下：
 
 - Agent A：Workstream 0
-- Agent B：Workstream 1
+- Agent B：Workstream 1 的 #643 治理；不得在决议前实现虚构车道
 - Agent C：Workstream 2
 - Agent D：Workstream 3
 - Agent E：Workstream 4 在前三条线接近完成后开始集成
@@ -218,7 +219,7 @@
 推荐节奏如下：
 
 - 第 1 周优先完成 Workstream 0
-- Workstream 1 和 Workstream 2 在 contract 稳定后并行
+- Workstream 1 的治理和 Workstream 2 可并行；精确物理实现必须等待 #643 决议
 - Workstream 3 在 contract 稳定后即可启动，但以 crowd 车道的真实运行态为主输入
 - Workstream 4 不提前吞并所有工作，只做集成和验收入口
 
@@ -236,7 +237,7 @@
 推荐最终交付顺序如下：
 
 1. Workstream 0 文档与 contract 落地
-2. Workstream 1 可玩 demo
+2. Workstream 1 完成 #643 决议；只有中性化并另行实现后才加入可玩 demo
 3. Workstream 2 可玩 demo
 4. Workstream 3 大地图预算 demo
 5. Workstream 4 统一 showcase

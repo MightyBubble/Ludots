@@ -1,0 +1,103 @@
+{
+  "name": "chunk-spatial-partition",
+  "title": "ChunkedGrid Spatial Partition - Architecture",
+  "subtitle": "World -> Chunk -> Cell -> Entity 4-Level Hierarchy",
+  "canvas": { "width": 1980, "height": 1560 },
+
+  "groups": [
+    { "id": "g_world", "title": "World (ISpatialPartitionWorld)",
+      "x": 40, "y": 120, "w": 420, "h": 660, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_chunk", "title": "Chunk (ChunkedGrid)",
+      "x": 500, "y": 120, "w": 560, "h": 660, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_cell", "title": "Cell (Grid Cell)",
+      "x": 1100, "y": 120, "w": 420, "h": 660, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_entity", "title": "Entity",
+      "x": 1560, "y": 120, "w": 380, "h": 660, "border_style": "dashed", "title_anchor": "top-left" },
+    { "id": "g_query", "title": "Query Execution Pipeline",
+      "x": 40, "y": 830, "w": 1900, "h": 680, "border_style": "dashed", "title_anchor": "top-left" }
+  ],
+
+  "nodes": [
+    { "id": "world", "title": "World", "tint": "steel",
+      "x": 90, "y": 220, "w": 320, "h": 110,
+      "items": ["ISpatialPartitionWorld"] },
+    { "id": "worldbounds", "title": "WorldBounds", "tint": "steel",
+      "x": 90, "y": 400, "w": 320, "h": 110,
+      "items": ["Min / Max / ChunkSize"] },
+
+    { "id": "c00", "title": "Chunk", "tint": "graphite", "x": 530, "y": 210, "w": 150, "h": 100, "items": ["(0,0)"] },
+    { "id": "c10", "title": "Chunk", "tint": "graphite", "x": 700, "y": 210, "w": 150, "h": 100, "items": ["(1,0)"] },
+    { "id": "c20", "title": "Chunk", "tint": "graphite", "x": 870, "y": 210, "w": 150, "h": 100, "items": ["(2,0)"] },
+    { "id": "c01", "title": "Chunk", "tint": "graphite", "x": 530, "y": 330, "w": 150, "h": 100, "items": ["(0,1)"] },
+    { "id": "c11", "title": "Active", "tint": "steel", "x": 700, "y": 330, "w": 150, "h": 100, "items": ["(1,1)"] },
+    { "id": "c21", "title": "Chunk", "tint": "graphite", "x": 870, "y": 330, "w": 150, "h": 100, "items": ["(2,1)"] },
+    { "id": "c02", "title": "Chunk", "tint": "graphite", "x": 530, "y": 450, "w": 150, "h": 100, "items": ["(0,2)"] },
+    { "id": "c12", "title": "Chunk", "tint": "graphite", "x": 700, "y": 450, "w": 150, "h": 100, "items": ["(1,2)"] },
+    { "id": "c22", "title": "Chunk", "tint": "graphite", "x": 870, "y": 450, "w": 150, "h": 100, "items": ["(2,2)"] },
+    { "id": "chunkindex", "title": "ChunkIndex", "tint": "slate",
+      "x": 530, "y": 590, "w": 490, "h": 100,
+      "items": ["Dictionary<ChunkCoord, Chunk>"] },
+
+    { "id": "cell", "title": "Cell", "tint": "steel",
+      "x": 1180, "y": 240, "w": 140, "h": 90 },
+    { "id": "celldata", "title": "CellData", "tint": "slate",
+      "x": 1140, "y": 420, "w": 340, "h": 110,
+      "items": ["EntityList / Density"] },
+
+    { "id": "entity", "title": "Entity", "tint": "clay",
+      "x": 1600, "y": 240, "w": 300, "h": 120,
+      "items": ["WorldPositionCm", "SpatialBounds"] },
+    { "id": "components", "title": "Components", "tint": "clay",
+      "x": 1600, "y": 430, "w": 300, "h": 120,
+      "items": ["Spatial / Physics / Vision"] },
+
+    { "id": "q1", "title": "1 · QueryRadius", "tint": "steel",
+      "x": 80, "y": 930, "w": 300, "h": 110, "items": ["(center, radius)"] },
+    { "id": "q2", "title": "2 · WorldToChunk", "tint": "steel",
+      "x": 460, "y": 930, "w": 300, "h": 110, "items": ["Coords(center)"] },
+    { "id": "q3", "title": "3 · SelectOverlapping Chunks", "tint": "steel",
+      "x": 840, "y": 930, "w": 300, "h": 110 },
+    { "id": "q4", "title": "4 · CellToEntity Filter", "tint": "steel",
+      "x": 1220, "y": 930, "w": 300, "h": 110 },
+    { "id": "q5", "title": "5 · Return Results", "tint": "clay",
+      "x": 1600, "y": 930, "w": 300, "h": 110 }
+  ],
+
+  "edges": [
+    { "from": "g_world", "to": "g_chunk", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "g_chunk", "to": "g_cell", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "g_cell", "to": "g_entity", "route": "elbow", "from_side": "right", "to_side": "left" },
+
+    { "from": "cell", "to": "celldata", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+
+    { "from": "q1", "to": "q2", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "q2", "to": "q3", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "q3", "to": "q4", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "q4", "to": "q5", "route": "elbow", "from_side": "right", "to_side": "left" }
+  ],
+
+  "notes": [
+    { "text": "1. Accept query params", "x": 80, "y": 1100, "ha": "left" },
+    { "text": "Center + Range/Shape", "x": 80, "y": 1124, "ha": "left" },
+
+    { "text": "2. Coordinate transform", "x": 460, "y": 1100, "ha": "left" },
+    { "text": "World -> Chunk index", "x": 460, "y": 1124, "ha": "left" },
+
+    { "text": "3. Chunk selection", "x": 840, "y": 1100, "ha": "left" },
+    { "text": "AABB overlap test", "x": 840, "y": 1124, "ha": "left" },
+    { "text": "Iterate relevant chunks", "x": 840, "y": 1148, "ha": "left" },
+
+    { "text": "4. Cell filtering", "x": 1220, "y": 1100, "ha": "left" },
+    { "text": "Exact geometry test", "x": 1220, "y": 1124, "ha": "left" },
+    { "text": "Distance/Angle/Boundary", "x": 1220, "y": 1148, "ha": "left" },
+
+    { "text": "5. Return results", "x": 1600, "y": 1100, "ha": "left" },
+    { "text": "EntityId[]", "x": 1600, "y": 1124, "ha": "left" },
+    { "text": "Optional distance sort", "x": 1600, "y": 1148, "ha": "left" },
+
+    { "text": "Key Tech:", "x": 80, "y": 1300, "ha": "left" },
+    { "text": "- Lazy Chunk: empty chunks alloc no memory", "x": 80, "y": 1324, "ha": "left" },
+    { "text": "- Auto split: density threshold triggers cell split", "x": 80, "y": 1348, "ha": "left" },
+    { "text": "- Thread-safe: reads lock-free, writes chunk-locked", "x": 80, "y": 1372, "ha": "left" }
+  ]
+}

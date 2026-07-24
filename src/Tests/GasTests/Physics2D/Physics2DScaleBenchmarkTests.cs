@@ -14,6 +14,7 @@ using NUnit.Framework;
 namespace GasTests.Physics2D
 {
     [TestFixture]
+    [Category("benchmark")]
     public sealed class Physics2DScaleBenchmarkTests
     {
         [Explicit("Hardware-sensitive Physics2D scale benchmark for 30k dynamic + 100k static bodies.")]

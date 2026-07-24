@@ -2,7 +2,7 @@
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
-    "../../../../../../../mods/FourXDemoMod",
+    "../../../../../../../mods/showcases/fourx_demo/FourXDemoMod",
     "../../../../../../../mods/showcases/minimap/MinimapShowcaseMod"
   ]
 }

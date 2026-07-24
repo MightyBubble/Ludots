@@ -110,20 +110,13 @@ public sealed class MassNavigationGroupSemantics
     public float SpawnSpacingCm { get; set; }
     public float SpawnJitterCm { get; set; }
     public float TeamSlotSpacingCm { get; set; }
-    public float FormationLineSpacingCm { get; set; }
-    public float FormationSquareSpacingCm { get; set; }
-    public float FormationCircleSpacingCm { get; set; }
-    public float FormationCircleMinRadiusCm { get; set; }
-    public float FormationWedgeSpacingCm { get; set; }
-    public float FormationRotationEpsilonRadians { get; set; }
-    public float FormationRotationSpeedRadiansPerSecond { get; set; }
     public float PullDeadZoneCm { get; set; }
     public float PullClampCm { get; set; }
     public float ArrivedRadiusCm { get; set; }
-    public float FormationArriveThresholdCm { get; set; }
+    public float GroupedAgentArriveThresholdCm { get; set; }
     public float LooseArriveThresholdCm { get; set; }
     public float UnitTargetStopThresholdCm { get; set; }
-    public float FormationFlowSlowRadiusCm { get; set; }
+    public float GroupedAgentFlowSlowRadiusCm { get; set; }
     public float NearSlotBlend { get; set; }
     public float FarSlotBlend { get; set; }
     public float NearSlotBlendDistanceSq { get; set; }
@@ -134,20 +127,13 @@ public sealed class MassNavigationGroupSemantics
         SpawnSpacingCm = source.SpawnSpacingCm;
         SpawnJitterCm = source.SpawnJitterCm;
         TeamSlotSpacingCm = source.TeamSlotSpacingCm;
-        FormationLineSpacingCm = source.FormationLineSpacingCm;
-        FormationSquareSpacingCm = source.FormationSquareSpacingCm;
-        FormationCircleSpacingCm = source.FormationCircleSpacingCm;
-        FormationCircleMinRadiusCm = source.FormationCircleMinRadiusCm;
-        FormationWedgeSpacingCm = source.FormationWedgeSpacingCm;
-        FormationRotationEpsilonRadians = source.FormationRotationEpsilonRadians;
-        FormationRotationSpeedRadiansPerSecond = source.FormationRotationSpeedRadiansPerSecond;
         PullDeadZoneCm = source.PullDeadZoneCm;
         PullClampCm = source.PullClampCm;
         ArrivedRadiusCm = source.ArrivedRadiusCm;
-        FormationArriveThresholdCm = source.FormationArriveThresholdCm;
+        GroupedAgentArriveThresholdCm = source.GroupedAgentArriveThresholdCm;
         LooseArriveThresholdCm = source.LooseArriveThresholdCm;
         UnitTargetStopThresholdCm = source.UnitTargetStopThresholdCm;
-        FormationFlowSlowRadiusCm = source.FormationFlowSlowRadiusCm;
+        GroupedAgentFlowSlowRadiusCm = source.GroupedAgentFlowSlowRadiusCm;
         NearSlotBlend = source.NearSlotBlend;
         FarSlotBlend = source.FarSlotBlend;
         NearSlotBlendDistanceSq = source.NearSlotBlendDistanceSq;
@@ -158,20 +144,13 @@ public sealed class MassNavigationGroupSemantics
         RequirePositive(SpawnSpacingCm, nameof(SpawnSpacingCm));
         RequireNonNegative(SpawnJitterCm, nameof(SpawnJitterCm));
         RequirePositive(TeamSlotSpacingCm, nameof(TeamSlotSpacingCm));
-        RequirePositive(FormationLineSpacingCm, nameof(FormationLineSpacingCm));
-        RequirePositive(FormationSquareSpacingCm, nameof(FormationSquareSpacingCm));
-        RequirePositive(FormationCircleSpacingCm, nameof(FormationCircleSpacingCm));
-        RequirePositive(FormationCircleMinRadiusCm, nameof(FormationCircleMinRadiusCm));
-        RequirePositive(FormationWedgeSpacingCm, nameof(FormationWedgeSpacingCm));
-        RequireNonNegative(FormationRotationEpsilonRadians, nameof(FormationRotationEpsilonRadians));
-        RequirePositive(FormationRotationSpeedRadiansPerSecond, nameof(FormationRotationSpeedRadiansPerSecond));
         RequireNonNegative(PullDeadZoneCm, nameof(PullDeadZoneCm));
         RequirePositive(PullClampCm, nameof(PullClampCm));
         RequirePositive(ArrivedRadiusCm, nameof(ArrivedRadiusCm));
-        RequirePositive(FormationArriveThresholdCm, nameof(FormationArriveThresholdCm));
+        RequirePositive(GroupedAgentArriveThresholdCm, nameof(GroupedAgentArriveThresholdCm));
         RequirePositive(LooseArriveThresholdCm, nameof(LooseArriveThresholdCm));
         RequirePositive(UnitTargetStopThresholdCm, nameof(UnitTargetStopThresholdCm));
-        RequirePositive(FormationFlowSlowRadiusCm, nameof(FormationFlowSlowRadiusCm));
+        RequirePositive(GroupedAgentFlowSlowRadiusCm, nameof(GroupedAgentFlowSlowRadiusCm));
         RequireBlend(NearSlotBlend, nameof(NearSlotBlend));
         RequireBlend(FarSlotBlend, nameof(FarSlotBlend));
         RequirePositive(NearSlotBlendDistanceSq, nameof(NearSlotBlendDistanceSq));
@@ -207,7 +186,7 @@ public sealed class MassNavigationSteeringSemantics
     public float SeparationRadiusCm { get; set; }
     public float GoalArrivalRadiusCm { get; set; }
     public float FlowObstacleAvoidanceScale { get; set; }
-    public float FormationSeparationScale { get; set; }
+    public float GroupedAgentSeparationScale { get; set; }
     public float LooseSeparationScale { get; set; }
     public float VelocityBlendPerSecond { get; set; }
 
@@ -217,7 +196,7 @@ public sealed class MassNavigationSteeringSemantics
         SeparationRadiusCm = source.SeparationRadiusCm;
         GoalArrivalRadiusCm = source.GoalArrivalRadiusCm;
         FlowObstacleAvoidanceScale = source.FlowObstacleAvoidanceScale;
-        FormationSeparationScale = source.FormationSeparationScale;
+        GroupedAgentSeparationScale = source.GroupedAgentSeparationScale;
         LooseSeparationScale = source.LooseSeparationScale;
         VelocityBlendPerSecond = source.VelocityBlendPerSecond;
     }
@@ -227,7 +206,7 @@ public sealed class MassNavigationSteeringSemantics
         RequirePositive(SeparationRadiusCm, nameof(SeparationRadiusCm));
         RequirePositive(GoalArrivalRadiusCm, nameof(GoalArrivalRadiusCm));
         RequireNonNegative(FlowObstacleAvoidanceScale, nameof(FlowObstacleAvoidanceScale));
-        RequireNonNegative(FormationSeparationScale, nameof(FormationSeparationScale));
+        RequireNonNegative(GroupedAgentSeparationScale, nameof(GroupedAgentSeparationScale));
         RequireNonNegative(LooseSeparationScale, nameof(LooseSeparationScale));
         RequireNonNegative(VelocityBlendPerSecond, nameof(VelocityBlendPerSecond));
     }

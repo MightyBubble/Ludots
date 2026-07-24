@@ -82,7 +82,13 @@ public readonly struct Entity : IEquatable<Entity>, IComparable<Entity>
     /// <returns>A int indicating their order.</returns>
     public int CompareTo(Entity other)
     {
-        return (Version.CompareTo(other.Version) << 8) | Id.CompareTo(other.Id);
+        int versionComparison = Version.CompareTo(other.Version);
+        if (versionComparison != 0)
+        {
+            return versionComparison;
+        }
+
+        return Id.CompareTo(other.Id);
     }
 
     /// <summary>
@@ -229,7 +235,19 @@ public readonly struct Entity : IEquatable<Entity>, IComparable<Entity>
     /// <returns>A int indicating their order.</returns>
     public int CompareTo(Entity other)
     {
-        return (WorldId.CompareTo(other.WorldId) << 16) | (Version.CompareTo(other.Version) << 8) | Id.CompareTo(other.Id);
+        int worldComparison = WorldId.CompareTo(other.WorldId);
+        if (worldComparison != 0)
+        {
+            return worldComparison;
+        }
+
+        int versionComparison = Version.CompareTo(other.Version);
+        if (versionComparison != 0)
+        {
+            return versionComparison;
+        }
+
+        return Id.CompareTo(other.Id);
     }
 
     /// <summary>

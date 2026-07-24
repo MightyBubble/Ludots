@@ -33,6 +33,7 @@ namespace Ludots.Adapter.Web.Streaming
             _frameNumber++;
 
             PrimitiveDrawBuffer? primitives = _engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+            SkinnedVisualBatchBuffer? skinnedVisuals = _engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             GroundOverlayBuffer? groundOverlays = _engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             WorldHudBatchBuffer? worldHud = _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = _engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
@@ -70,7 +71,8 @@ namespace Ludots.Adapter.Web.Streaming
                 worldHudStrings,
                 debugDraw,
                 screenOverlay,
-                fullFrameUiScene);
+                fullFrameUiScene,
+                skinnedVisuals);
             int fullLength = _fullEncoder.EncodedLength;
             EnsureSnapshot(fullLength);
             _fullEncoder.CopyTo(_snapshot);

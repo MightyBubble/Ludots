@@ -1,0 +1,21 @@
+{
+  "Id": "tcg_stack",
+  "Tags": ["tcg_stack"],
+  "Entities": [
+    { "Template": "tcg_hero", "InstanceId": "tcg-stack-hero" },
+    { "Template": "tcg_enemy", "InstanceId": "tcg-stack-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "tcg-stack-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "tcg-stack-enemy" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "TcgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "TcgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "TcgDemo.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
+}

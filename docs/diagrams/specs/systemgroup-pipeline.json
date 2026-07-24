@@ -1,0 +1,60 @@
+{
+  "name": "systemgroup-pipeline",
+  "title": "SystemGroup Pipeline",
+  "subtitle": "10 Phase Execution Order",
+  "canvas": { "width": 1420, "height": 2020 },
+
+  "groups": [
+    { "id": "present", "title": "Presentation Systems (Independent Visual Loop)",
+      "x": 60, "y": 1780, "w": 1300, "h": 190, "tint": "stone" }
+  ],
+
+  "nodes": [
+    { "id": "ph0", "title": "0 · SchemaUpdate", "tint": "clay", "x": 60, "y": 140, "w": 1300, "h": 130,
+      "items": ["Schema 注册 · 属性/Graph 更新"],
+      "chips": ["GasBudgetReset", "AttrSchemaUpdate", "SavePrevPos"], "chip_columns": 6 },
+    { "id": "ph1", "title": "1 · InputCollection", "tint": "mauve", "x": 60, "y": 290, "w": 1300, "h": 190,
+      "items": ["输入与状态收集"],
+      "chips": ["Session", "InputSnapshot", "Narrative", "Camera", "Clock", "TimedTag", "InventorySync", "AbilityFormRouting", "Nav2D", "Physics2D"], "chip_columns": 6 },
+    { "id": "ph2", "title": "2 · PostMovement", "tint": "steel", "x": 60, "y": 500, "w": 1300, "h": 130,
+      "items": ["移动后同步 · 空间更新"],
+      "chips": ["WorldToGridSync", "SpatialPartition", "Physics2DToWorldSync"], "chip_columns": 6 },
+    { "id": "ph3", "title": "3 · AbilityActivation", "tint": "sage", "x": 60, "y": 650, "w": 1300, "h": 190,
+      "items": ["能力激活"],
+      "chips": ["OrderBuffer", "AbilityEnd", "StopOrder", "Reaction", "Ability", "AbilityExec", "MoveToOrder", "Continuation", "Relationship"], "chip_columns": 6 },
+    { "id": "ph4", "title": "4 · EffectProcessing", "tint": "sage", "x": 60, "y": 860, "w": 1300, "h": 130,
+      "items": ["Effect 处理 · 含响应链"],
+      "chips": ["DestroyOnParentEnd", "ManifestMotion", "EffectLoop", "Projectile", "EntitySpawn", "Displacement"], "chip_columns": 6 },
+    { "id": "ph5", "title": "5 · AttributeCalculation", "tint": "sage", "x": 60, "y": 1010, "w": 1300, "h": 130,
+      "items": ["属性计算"],
+      "chips": ["Aggregator", "AttributeBinding"], "chip_columns": 6 },
+    { "id": "ph6", "title": "6 · DeferredTriggerCollection", "tint": "clay", "x": 60, "y": 1160, "w": 1300, "h": 130,
+      "items": ["延迟触发器收集"],
+      "chips": ["DeferredTriggerCollection", "DeferredTriggerProcess"], "chip_columns": 6 },
+    { "id": "ph7", "title": "7 · Cleanup", "tint": "sand", "x": 60, "y": 1310, "w": 1300, "h": 130,
+      "items": ["清理"],
+      "chips": ["—"], "chip_columns": 6 },
+    { "id": "ph8", "title": "8 · EventDispatch", "tint": "stone", "x": 60, "y": 1460, "w": 1300, "h": 130,
+      "items": ["事件分发"],
+      "chips": ["AnimatorRuntime", "GameplayEventDispatch", "GasBudgetReport"], "chip_columns": 6 },
+    { "id": "ph9", "title": "9 · ClearPresentationFlags", "tint": "stone", "x": 60, "y": 1610, "w": 1300, "h": 130,
+      "items": ["表现层标记清理"],
+      "chips": ["PresentationBridge", "ClearPresentationFlags"], "chip_columns": 6 },
+
+    { "id": "pvs", "title": "Presentation Systems", "tint": "stone", "x": 90, "y": 1835, "w": 1240, "h": 120,
+      "chips": ["FrameSetup", "WorldToVisualSync", "TerrainHeightSync", "EntityVisualEmit", "PerformerRule", "PerformerRuntime", "PerformerEmit", "ResponseChainDirector"], "chip_columns": 6 }
+  ],
+
+  "edges": [
+    { "from": "ph0", "to": "ph1" },
+    { "from": "ph1", "to": "ph2" },
+    { "from": "ph2", "to": "ph3" },
+    { "from": "ph3", "to": "ph4" },
+    { "from": "ph4", "to": "ph5" },
+    { "from": "ph5", "to": "ph6" },
+    { "from": "ph6", "to": "ph7" },
+    { "from": "ph7", "to": "ph8" },
+    { "from": "ph8", "to": "ph9" },
+    { "from": "ph9", "to": "present", "style": "dashed" }
+  ]
+}

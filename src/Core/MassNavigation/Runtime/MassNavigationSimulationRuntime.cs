@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
@@ -34,7 +35,6 @@ public readonly record struct MassNavigationAvoidanceAgentSnapshot(
     float WorldYCm,
     int TeamId,
     float BodyRadiusCm,
-    bool CommandActor,
     bool HeavyProfile,
     bool Settled,
     bool InsidePlayArea);
@@ -51,21 +51,6 @@ public readonly record struct MassNavigationAvoidanceSnapshot(
 public readonly record struct MassNavigationArrivalEvent(
     int AgentIndex,
     Entity Agent,
-    float LocalXCm,
-    float LocalYCm,
-    float WorldXCm,
-    float WorldYCm);
-
-public readonly record struct MassNavigationCarriedRangeSyncResult(
-    float CarrierLocalXCm,
-    float CarrierLocalYCm,
-    float CarrierWorldXCm,
-    float CarrierWorldYCm,
-    float DisplacementWorldXCm,
-    float DisplacementWorldYCm,
-    bool AppliedDisplacement);
-
-public readonly record struct MassNavigationCarriedSlotTarget(
     float LocalXCm,
     float LocalYCm,
     float WorldXCm,
@@ -89,7 +74,7 @@ public readonly record struct MassNavigationSolverDiagnostics(
     float GroupSlotClearanceCm,
     float UnitTargetStopThresholdCm,
     float GoalArrivalRadiusCm,
-    float FormationFlowSlowRadiusCm,
+    float GroupedAgentFlowSlowRadiusCm,
     float DominantMassRatio,
     float FriendlyResponseScale,
     float NonFriendlyResponseScale,
@@ -106,31 +91,19 @@ public readonly record struct MassNavigationSolverRuntimeConfigSnapshot(
     float PlayAreaMinXCm,
     float PlayAreaMaxXCm);
 
-public enum MassNavigationMoveCommandResult : byte
-{
-    Submitted = 1,
-    OutsideWorld = 2,
-    EmptyCommandActors = 3,
-    UnauthorizedCommandActors = 4,
-    OrderSubmitRejected = 5,
-}
-
 public sealed class MassNavigationSimulationRuntime
 {
     public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
 
-    private readonly int _initialActiveTeamId;
+    private MassNavigationDomainStanceProjection? _domainStanceProjection;
     private int[] _teamIds = Array.Empty<int>();
-    private Entity[] _commandActorScratch = Array.Empty<Entity>();
-    private Entity[] _commandActors = Array.Empty<Entity>();
-    private int _commandActorCount;
-    private uint _commandActorSnapshotRevision;
-    private bool _sceneResetRequested;
     private int _frameIndex;
-    private int _nextSharedOrderId = 1;
-    private readonly WorldGridLoadedChunks _loadedChunks;
+    private WorldGridLoadedChunks? _loadedChunks;
+    private WorldGridLoadedChunkContributor? _loadedChunkContributor;
     private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
     private readonly List<long> _loadedChunksToEvict;
+    private readonly List<long> _loadedChunksAddedDuringUpdate;
+    private readonly HashSet<Entity> _authoredBindingSeenEntities;
     private readonly int _loadedChunkCapacity;
     private float _streamingClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
@@ -148,7 +121,7 @@ public sealed class MassNavigationSimulationRuntime
     private bool _hasCommandFocus;
     private float _lastCommandFocusXCm;
     private float _lastCommandFocusYCm;
-    private int _lastCommandActorCount;
+    private int _lastOrderMemberCount;
     private float _flowWorkAreaCenterXCm;
     private float _flowWorkAreaCenterYCm;
     private float _flowWorkAreaWidthCm;
@@ -156,9 +129,34 @@ public sealed class MassNavigationSimulationRuntime
     private int _flowWorkAreaRevision;
     private string _flowWorkAreaReason = "initial contact";
     private string _solverWindowDriver = "initial nav area";
+    private readonly string _activeHotZoneId;
+    private readonly string _activeHotZoneLabel;
+    private readonly int _activeHotZoneCenterXCm;
+    private readonly int _activeHotZoneCenterYCm;
+    private readonly int _activeHotZoneWidthCm;
+    private readonly int _activeHotZoneHeightCm;
+    private bool _authoredAgentBindingPassComplete;
+    private bool _environmentBindingPassComplete;
+
+    private struct FocusState
+    {
+        public float SolverCenterX;
+        public float SolverCenterY;
+        public int CommandTicksRemaining;
+        public bool HasCommandFocus;
+        public float CommandFocusX;
+        public float CommandFocusY;
+        public int LastOrderMemberCount;
+        public float WorkAreaCenterX;
+        public float WorkAreaCenterY;
+        public float WorkAreaWidth;
+        public float WorkAreaHeight;
+        public int WorkAreaRevision;
+        public string WorkAreaReason;
+        public string SolverDriver;
+    }
 
     public MassNavigationTelemetry Telemetry { get; } = new();
-    public int CommandActorSnapshotCountFrame => Telemetry.CommandActorSnapshotCountFrame;
     public int CommandCountFrame => Telemetry.CommandCountFrame;
     public int StructuralChangesFrame => Telemetry.StructuralChangesFrame;
     public int StructuralChangeRevision => Telemetry.StructuralChangeRevision;
@@ -167,8 +165,7 @@ public sealed class MassNavigationSimulationRuntime
     public int SolverWindowMovesFrame => Telemetry.SolverWindowMovesFrame;
     public float FrameMs => Telemetry.FrameMs;
     public float Fps => Telemetry.Fps;
-    public float CommandActorSyncMs => Telemetry.CommandActorSyncMs;
-    public float FormationTargetMs => Telemetry.FormationTargetMs;
+    public float GroupTargetUpdateMs => Telemetry.GroupTargetUpdateMs;
     public float FlowFieldRebuildMs => Telemetry.FlowFieldRebuildMs;
     public float StepPrepMs => Telemetry.StepPrepMs;
     public float LocalSteeringMs => Telemetry.LocalSteeringMs;
@@ -176,7 +173,6 @@ public sealed class MassNavigationSimulationRuntime
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
     public float PerformerCommandMs => Telemetry.PerformerCommandMs;
-    public float CommandActorSyncHzObserved => Telemetry.CommandActorSyncHzObserved;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
     public float SimHzObserved => Telemetry.SimHzObserved;
@@ -187,42 +183,36 @@ public sealed class MassNavigationSimulationRuntime
     public int ObstacleSubmittedCount => Telemetry.ObstacleSubmittedCount;
     public int PerformerDroppedCount => Telemetry.PerformerDroppedCount;
     public int StreamingWindowUpdatesFrame => Telemetry.StreamingWindowUpdatesFrame;
-    public int CommandRejectsFrame => Telemetry.CommandRejectsFrame;
-    public int CommandRejectsTotal => Telemetry.CommandRejectsTotal;
     public int FocusBudgetUpdatesTotal => Telemetry.FocusBudgetUpdatesTotal;
     public int SolverWindowMovesTotal => Telemetry.SolverWindowMovesTotal;
     public int ScenarioSpawnCount => Telemetry.ScenarioSpawnCount;
-    public int SceneResetCount => Telemetry.SceneResetCount;
     public int AuthoredRuntimeBindingRevision => Telemetry.AuthoredRuntimeBindingRevision;
-    public float LastRejectedCommandXCm => Telemetry.LastRejectedCommandXCm;
-    public float LastRejectedCommandYCm => Telemetry.LastRejectedCommandYCm;
+    internal bool RuntimeBindingPreparationComplete => _authoredAgentBindingPassComplete && _environmentBindingPassComplete;
     public MassNavigationConfig Config { get; }
-    public MassNavigationAgentState AgentState { get; } = new();
+    internal MassNavigationAgentState AgentState { get; }
     public MassNavigationFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
-    public MassNavigationFormationRuntime FormationRuntime { get; }
-    public MassNavigationGroupRuntime NavGroupRuntime { get; }
+    internal MassNavigationGroupRuntime NavGroupRuntime { get; }
     internal MassNavigationFlowSolverState MassNavigationFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
-    public WorldGridLoadedChunks LoadedChunks => _loadedChunks;
+    public WorldGridLoadedChunks LoadedChunks => RequireLoadedChunks();
     public MassNavigationStreamingConfig Streaming => Config.Streaming;
-    public bool IsReadyForWorldOperations { get; private set; }
 
     public int NavigationAgentCount => MassNavigationFlow.UnitCount;
+    public int GetAgentDomainId(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassNavigationFlow.GetTeam(agentIndex);
+    }
     public int NavigationObstacleCount => MassNavigationFlow.ObstacleCount;
     public int NavigationSettledAgentCount => MassNavigationFlow.SettledUnitCount;
-    public int CommandActorCount => _commandActorCount;
-    public uint CommandActorSnapshotRevision => _commandActorSnapshotRevision;
-    public ReadOnlySpan<Entity> CommandActors => _commandActors.AsSpan(0, _commandActorCount);
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
-    public int AgentsPerTeam { get; private set; }
-    public int ActiveTeamId { get; private set; }
-    public MassNavigationFormationMode FormationMode { get; private set; } = MassNavigationFormationMode.None;
-    public int LoadedChunkCount => _loadedChunks.ActiveChunkKeys.Count;
-    public int StreamingChunkSizeCm => _loadedChunks.ChunkSizeCm;
+    public int AgentsPerTeam => Config.Scenario.AgentsPerTeam;
+    public int LoadedChunkCount => _loadedChunkContributor?.ActiveChunkKeys.Count ?? 0;
+    public int StreamingChunkSizeCm => RequireLoadedChunks().ChunkSizeCm;
     public float SolverWindowCenterXCm => _simWindowCenterXCm;
     public float SolverWindowCenterYCm => _simWindowCenterYCm;
     public float SolverWindowWidthCm => _simWindowWidthCm;
@@ -245,7 +235,7 @@ public sealed class MassNavigationSimulationRuntime
     public bool HasCommandFocus => _hasCommandFocus && _commandFocusTicksRemaining > 0;
     public float CommandFocusXCm => _lastCommandFocusXCm;
     public float CommandFocusYCm => _lastCommandFocusYCm;
-    public int LastCommandActorCount => _lastCommandActorCount;
+    public int LastOrderMemberCount => _lastOrderMemberCount;
     public float HotZoneMinXCm => SolverWindowMinXCm;
     public float HotZoneMinYCm => SolverWindowMinYCm;
     public float HotZoneMaxXCm => SolverWindowMaxXCm;
@@ -254,66 +244,111 @@ public sealed class MassNavigationSimulationRuntime
     public int WorldWidthCm => RequireBoardWorldSize().Bounds.Width;
     public int WorldHeightCm => RequireBoardWorldSize().Bounds.Height;
     public WorldAabbCm WorldBounds => RequireBoardWorldSize().Bounds;
-    public string ActiveHotZoneId => WorldConfig.ActiveHotZoneId;
-    public string ActiveHotZoneLabel => WorldConfig.ActiveHotZoneLabel;
+    public string ActiveHotZoneId => _activeHotZoneId;
+    public string ActiveHotZoneLabel => _activeHotZoneLabel;
+    public int ActiveHotZoneCenterXCm => _activeHotZoneCenterXCm;
+    public int ActiveHotZoneCenterYCm => _activeHotZoneCenterYCm;
+    public int ActiveHotZoneWidthCm => _activeHotZoneWidthCm;
+    public int ActiveHotZoneHeightCm => _activeHotZoneHeightCm;
     public ReadOnlySpan<MassNavigationHotZoneConfig> HotZones => WorldConfig.HotZones;
 
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
+        int membershipCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (membershipCapacity <= 0)
+        {
+            throw new InvalidOperationException(
+                "MassNavigationSimulationRuntime requires scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity > 0.");
+        }
+
+        AgentState = new MassNavigationAgentState(membershipCapacity);
+        _authoredBindingSeenEntities = new HashSet<Entity>(membershipCapacity);
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
-        MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
+        MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
+        MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
+        MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
+        _activeHotZoneId = activeHotZone.Id;
+        _activeHotZoneLabel = activeHotZone.Label;
+        _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
+        _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
+        _activeHotZoneWidthCm = activeHotZone.WidthCm;
+        _activeHotZoneHeightCm = activeHotZone.HeightCm;
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
-        _commandActorScratch = new Entity[config.ScenarioRuntime.InitialCommandActorScratchCapacity];
-        _commandActors = new Entity[config.ScenarioRuntime.InitialCommandActorSnapshotCapacity];
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
-        _loadedChunks = new WorldGridLoadedChunks(WorldConfig.StreamingChunkSizeCm, _loadedChunkCapacity);
+        _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);
         _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
-        _simWindowCenterXCm = WorldConfig.ActiveHotZone.CenterXCm;
-        _simWindowCenterYCm = WorldConfig.ActiveHotZone.CenterYCm;
+        _simWindowCenterXCm = _activeHotZoneCenterXCm;
+        _simWindowCenterYCm = _activeHotZoneCenterYCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
         _flowWorkAreaCenterYCm = _simWindowCenterYCm;
         _flowWorkAreaWidthCm = _simWindowWidthCm;
         _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowTuning = config.Flow;
-        FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
-        NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime, config.ScenarioRuntime.RuntimeCapacity);
-        AgentsPerTeam = config.Scenario.AgentsPerTeam;
-        _initialActiveTeamId = config.Scenario.InitialActiveTeamId;
+        NavGroupRuntime = new MassNavigationGroupRuntime(config.Semantics.Group, config.ScenarioRuntime.RuntimeCapacity);
         ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
-        ActiveTeamId = _initialActiveTeamId;
         MassNavigationFlow.ArrivalTuning.CopyFrom(config.Arrival);
         MassNavigationFlow.AvoidanceTuning.CopyFrom(config.Avoidance);
         MassNavigationFlow.Semantics.CopyFrom(config.Semantics);
     }
 
-    public void BindBoardWorld(WorldSizeSpec boardWorldSize)
+    public void BindBoardWorld(WorldSizeSpec boardWorldSize, WorldGridLoadedChunks loadedChunks)
     {
+        ArgumentNullException.ThrowIfNull(loadedChunks);
+        if (loadedChunks.ChunkSizeCm != WorldConfig.StreamingChunkSizeCm)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation streaming chunk size {WorldConfig.StreamingChunkSizeCm} does not match board-owned loaded chunks {loadedChunks.ChunkSizeCm}.");
+        }
+
+        if (!ReferenceEquals(_loadedChunks, loadedChunks))
+        {
+            ReleaseLoadedChunkContribution();
+            _loadedChunks = loadedChunks;
+        }
+
         ValidateInitialSolverWindow(boardWorldSize);
-        _boardWorldSize = boardWorldSize;
-        _boardWorldBound = true;
-        _flowWorkAreaCenterXCm = _simWindowCenterXCm;
-        _flowWorkAreaCenterYCm = _simWindowCenterYCm;
-        MassNavigationFlow.SetWorldBounds(
-            boardWorldSize.Bounds.Left,
-            boardWorldSize.Bounds.Right,
-            boardWorldSize.Bounds.Top,
-            boardWorldSize.Bounds.Bottom);
-        MassNavigationFlow.SetWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
-        InvalidateStreamingWindowCache();
-        UpdateStreamingWindow(ToWorldCm(new System.Numerics.Vector2(
-            MassNavigationFlow.FieldWidthCm * 0.5f,
-            MassNavigationFlow.FieldHeightCm * 0.5f)));
+        _loadedChunkContributor ??= loadedChunks.AcquireContributor(
+            $"MassNavigation:{Config.MapId}",
+            _loadedChunkCapacity);
+        try
+        {
+            _boardWorldSize = boardWorldSize;
+            _boardWorldBound = true;
+            _flowWorkAreaCenterXCm = _simWindowCenterXCm;
+            _flowWorkAreaCenterYCm = _simWindowCenterYCm;
+            MassNavigationFlow.SetWorldBounds(
+                boardWorldSize.Bounds.Left,
+                boardWorldSize.Bounds.Right,
+                boardWorldSize.Bounds.Top,
+                boardWorldSize.Bounds.Bottom);
+            MassNavigationFlow.SetWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
+            InvalidateStreamingWindowCache();
+            UpdateStreamingWindow(ToWorldCm(new System.Numerics.Vector2(
+                MassNavigationFlow.FieldWidthCm * 0.5f,
+                MassNavigationFlow.FieldHeightCm * 0.5f)));
+        }
+        catch
+        {
+            _boardWorldBound = false;
+            ReleaseLoadedChunkContribution();
+            throw;
+        }
     }
 
-    public void SetWorldOperationsReady(bool ready)
+    public void ReleaseLoadedChunkContribution()
     {
-        IsReadyForWorldOperations = ready;
+        _loadedChunkContributor?.Dispose();
+        _loadedChunkContributor = null;
+        _loadedChunkLastTouchedSeconds.Clear();
+        _loadedChunksToEvict.Clear();
+        _loadedChunksAddedDuringUpdate.Clear();
+        InvalidateStreamingWindowCache();
     }
 
     public void BeginFrame(float dt)
@@ -324,6 +359,12 @@ public sealed class MassNavigationSimulationRuntime
         AdvanceCommandFocus();
     }
 
+    internal void SetDomainRelationshipProjection(MassNavigationDomainStanceProjection projection)
+    {
+        _domainStanceProjection = projection ?? throw new ArgumentNullException(nameof(projection));
+        MassNavigationFlow.SetDomainRelationshipProjection(projection);
+    }
+
     private void AdvanceCommandFocus()
     {
         if (_commandFocusTicksRemaining <= 0)
@@ -332,16 +373,24 @@ public sealed class MassNavigationSimulationRuntime
             return;
         }
 
+        FocusState previous = CaptureFocusState();
         _commandFocusTicksRemaining--;
         if (_commandFocusTicksRemaining == 0)
         {
-            _hasCommandFocus = false;
-            UpdateStreamingWindow(ResolveStreamingFocus());
+            try
+            {
+                _hasCommandFocus = false;
+                UpdateStreamingWindow(ResolveStreamingFocus());
+            }
+            catch
+            {
+                RestoreFocusState(in previous);
+                throw;
+            }
         }
     }
 
-    public void ObserveCommandActorSync(double sampleMs) => Telemetry.ObserveCommandActorSync(sampleMs);
-    public void ObserveFormationTargets(double sampleMs) => Telemetry.ObserveFormationTargets(sampleMs);
+    public void ObserveGroupTargetUpdate(double sampleMs) => Telemetry.ObserveGroupTargetUpdate(sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
     public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
     public void ObserveLocalSteering(double sampleMs) => Telemetry.ObserveLocalSteering(sampleMs);
@@ -349,71 +398,6 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
     public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
     public void ObservePerformerCommand(double sampleMs) => Telemetry.ObservePerformerCommand(sampleMs);
-
-    public bool ToggleFlowEnabled()
-    {
-        FlowTuning.Enabled = !FlowTuning.Enabled;
-        MassNavigationFlow.RequestFlowRebuild();
-        return FlowTuning.Enabled;
-    }
-
-    public int AdjustFlowIterations(int delta)
-    {
-        FlowTuning.AdjustIterations(delta);
-        MassNavigationFlow.RequestFlowRebuild();
-        return FlowTuning.IterationsPerStep;
-    }
-
-    public int AdjustFlowStepHz(int delta)
-    {
-        Cadence.AdjustFlowStepHz(delta);
-        MassNavigationFlow.RequestFlowRebuild();
-        return Cadence.FlowStepHz;
-    }
-
-    public int AdjustFlowCrowdStampHz(int delta)
-    {
-        Cadence.AdjustFlowCrowdStampHz(delta);
-        MassNavigationFlow.RequestFlowRebuild();
-        return Cadence.FlowCrowdStampHz;
-    }
-
-    public int AdjustFlowObstacleStampHz(int delta)
-    {
-        Cadence.AdjustFlowObstacleStampHz(delta);
-        MassNavigationFlow.RequestFlowRebuild();
-        return Cadence.FlowObstacleStampHz;
-    }
-
-    public bool ToggleArrivalRecovery()
-    {
-        MassNavigationFlow.ArrivalTuning.Enabled = !MassNavigationFlow.ArrivalTuning.Enabled;
-        return MassNavigationFlow.ArrivalTuning.Enabled;
-    }
-
-    public int AdjustArrivalTimeoutMs(int delta)
-    {
-        MassNavigationFlow.ArrivalTuning.AdjustTimeoutMs(delta);
-        return MassNavigationFlow.ArrivalTuning.TimeoutMs;
-    }
-
-    public int AdjustArrivalProgressDistanceCm(int delta)
-    {
-        MassNavigationFlow.ArrivalTuning.AdjustProgressDistanceCm(delta);
-        return MassNavigationFlow.ArrivalTuning.ProgressDistanceCm;
-    }
-
-    public int AdjustArrivalWakePushDistanceCm(int delta)
-    {
-        MassNavigationFlow.ArrivalTuning.AdjustWakePushDistanceCm(delta);
-        return MassNavigationFlow.ArrivalTuning.WakePushDistanceCm;
-    }
-
-    public int AdjustArrivalMaxRetryCount(int delta)
-    {
-        MassNavigationFlow.ArrivalTuning.AdjustMaxRetryCount(delta);
-        return MassNavigationFlow.ArrivalTuning.MaxRetryCount;
-    }
 
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
     {
@@ -435,7 +419,7 @@ public sealed class MassNavigationSimulationRuntime
             GroupSlotClearanceCm: MassNavigationFlow.Semantics.TargetProjection.GroupSlotClearanceCm,
             UnitTargetStopThresholdCm: MassNavigationFlow.Semantics.Group.UnitTargetStopThresholdCm,
             GoalArrivalRadiusCm: MassNavigationFlow.Semantics.Steering.GoalArrivalRadiusCm,
-            FormationFlowSlowRadiusCm: MassNavigationFlow.Semantics.Group.FormationFlowSlowRadiusCm,
+            GroupedAgentFlowSlowRadiusCm: MassNavigationFlow.Semantics.Group.GroupedAgentFlowSlowRadiusCm,
             DominantMassRatio: MassNavigationFlow.AvoidanceTuning.DominantMassRatio,
             FriendlyResponseScale: MassNavigationFlow.AvoidanceTuning.FriendlyResponseScale,
             NonFriendlyResponseScale: MassNavigationFlow.AvoidanceTuning.NonFriendlyResponseScale,
@@ -479,7 +463,6 @@ public sealed class MassNavigationSimulationRuntime
                 WorldYCm: ToWorldYCm(localY),
                 TeamId: MassNavigationFlow.GetTeam(i),
                 BodyRadiusCm: MassNavigationFlow.GetBodyRadiusCm(i),
-                CommandActor: MassNavigationFlow.IsCommandActor(i),
                 HeavyProfile: MassNavigationFlow.IsHeavyProfile(i),
                 Settled: MassNavigationFlow.IsUnitSettled(i),
                 InsidePlayArea: localX >= MassNavigationFlow.PlayAreaMinXCm &&
@@ -522,52 +505,11 @@ public sealed class MassNavigationSimulationRuntime
             performerDroppedCount);
     }
 
-    public void ObserveCommandActorSyncTick() => Telemetry.ObserveCommandActorSyncTick();
     public void ObserveControlTick() => Telemetry.ObserveControlTick();
     public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
     public void ObserveSimTick() => Telemetry.ObserveSimTick();
     public void ObservePerformerTick() => Telemetry.ObservePerformerTick();
     public void ObservePanelTick() => Telemetry.ObservePanelTick();
-
-    public Span<Entity> EnsureCommandActorScratch(int required)
-    {
-        if (required > _commandActorScratch.Length)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation command actor scratch required {required} entities, exceeding configured scenarioRuntime.initialCommandActorScratchCapacity {_commandActorScratch.Length}.");
-        }
-
-        return _commandActorScratch.AsSpan(0, required);
-    }
-
-    public void SetCommandActorSnapshot(ReadOnlySpan<Entity> entities, uint revision)
-    {
-        if (entities.Length > _commandActors.Length)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation command actor snapshot required {entities.Length} entities, exceeding configured scenarioRuntime.initialCommandActorSnapshotCapacity {_commandActors.Length}.");
-        }
-
-        entities.CopyTo(_commandActors.AsSpan(0, entities.Length));
-        _commandActorCount = entities.Length;
-        _commandActorSnapshotRevision = revision;
-        Telemetry.MarkCommandActorSnapshot();
-        MassNavigationFlow.SetCommandActorFlags(AgentState, _commandActors.AsSpan(0, _commandActorCount));
-    }
-
-    public void ClearCommandActorSnapshot()
-    {
-        if (_commandActorCount == 0)
-        {
-            MassNavigationFlow.SetCommandActorFlags(AgentState, ReadOnlySpan<Entity>.Empty);
-            return;
-        }
-
-        _commandActorCount = 0;
-        _commandActorSnapshotRevision++;
-        Telemetry.MarkCommandActorSnapshot();
-        MassNavigationFlow.SetCommandActorFlags(AgentState, ReadOnlySpan<Entity>.Empty);
-    }
 
     public void MarkStructuralChange()
     {
@@ -584,60 +526,25 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkScenarioSpawned();
     }
 
-    public void MarkSceneResetExecuted()
+    internal void BeginRuntimeBindingPreparation()
     {
-        Telemetry.MarkSceneResetExecuted();
+        _authoredAgentBindingPassComplete = false;
+        _environmentBindingPassComplete = false;
+    }
+
+    internal void MarkAuthoredAgentBindingPassComplete()
+    {
+        _authoredAgentBindingPassComplete = true;
+    }
+
+    internal void MarkEnvironmentBindingPassComplete()
+    {
+        _environmentBindingPassComplete = true;
     }
 
     public void MarkFlowReconcile()
     {
         Telemetry.MarkFlowReconcile();
-    }
-
-    public void RejectCommandOutsideWorld(float worldXCm, float worldYCm)
-    {
-        Telemetry.MarkCommandRejected(worldXCm, worldYCm);
-    }
-
-    public void RejectCommandWithoutCommandActors(float worldXCm, float worldYCm)
-    {
-        Telemetry.MarkCommandRejected(worldXCm, worldYCm);
-    }
-
-    public void RejectCommandUnauthorizedCommandActors(float worldXCm, float worldYCm)
-    {
-        Telemetry.MarkCommandRejected(worldXCm, worldYCm);
-    }
-
-    public void RejectCommandOrderSubmit(float worldXCm, float worldYCm)
-    {
-        Telemetry.MarkCommandRejected(worldXCm, worldYCm);
-    }
-
-    public void SetAgentsPerTeam(int agentsPerTeam)
-    {
-        if (agentsPerTeam < 0)
-        {
-            throw new InvalidOperationException("MassNavigationSimulationRuntime.SetAgentsPerTeam requires agentsPerTeam >= 0.");
-        }
-
-        if (AgentsPerTeam == agentsPerTeam)
-        {
-            return;
-        }
-
-        AgentsPerTeam = agentsPerTeam;
-        RequestSceneReset();
-    }
-
-    public void SetActiveTeam(int teamId)
-    {
-        if (Array.IndexOf(_teamIds, teamId) < 0)
-        {
-            throw new InvalidOperationException($"MassNavigationSimulationRuntime active team {teamId} is not configured.");
-        }
-
-        ActiveTeamId = teamId;
     }
 
     public void ConfigureScenarioTeams(ReadOnlySpan<int> teamIds)
@@ -653,65 +560,11 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         teamIds.CopyTo(_teamIds);
-        if (Array.IndexOf(_teamIds, ActiveTeamId) < 0)
-        {
-            if (Array.IndexOf(_teamIds, _initialActiveTeamId) < 0)
-            {
-                throw new InvalidOperationException("MassNavigationSimulationRuntime configured teams do not include the initial active team.");
-            }
-
-            ActiveTeamId = _initialActiveTeamId;
-        }
-    }
-
-    public int AllocateSharedOrderId()
-    {
-        int next = _nextSharedOrderId++;
-        if (next <= 0)
-        {
-            _nextSharedOrderId = 1;
-            next = _nextSharedOrderId++;
-        }
-
-        return next;
-    }
-
-    public void CycleActiveTeam()
-    {
-        if (_teamIds.Length <= 0)
-        {
-            return;
-        }
-
-        int index = Array.IndexOf(_teamIds, ActiveTeamId);
-        if (index < 0)
-        {
-            ActiveTeamId = _initialActiveTeamId;
-            return;
-        }
-
-        ActiveTeamId = _teamIds[(index + 1) % _teamIds.Length];
-    }
-
-    public void SetFormationMode(MassNavigationFormationMode mode)
-    {
-        if (!Enum.IsDefined(typeof(MassNavigationFormationMode), mode))
-        {
-            throw new ArgumentOutOfRangeException(nameof(mode), mode, "MassNavigation formation mode is not defined.");
-        }
-
-        FormationMode = mode;
-    }
-
-    public void RequestSceneReset()
-    {
-        _sceneResetRequested = true;
     }
 
     public void ResetRuntimeState(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearCommandActorSnapshot();
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
         MarkAuthoredRuntimeBindingChanged();
@@ -726,10 +579,10 @@ public sealed class MassNavigationSimulationRuntime
     public void ClearAuthoredRuntimeBindings(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearCommandActorSnapshot();
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
+        _domainStanceProjection?.ResetDomains(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
         MarkAuthoredRuntimeBindingChanged();
     }
 
@@ -751,18 +604,18 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
         }
 
-        int previousCommandActorCount = _commandActorCount;
-        uint previousCommandActorSnapshotRevision = _commandActorSnapshotRevision;
-        Span<Entity> previousCommandActors = previousCommandActorCount > 0
-            ? EnsureCommandActorScratch(previousCommandActorCount)
-            : Span<Entity>.Empty;
-        if (previousCommandActorCount > 0)
-        {
-            _commandActors.AsSpan(0, previousCommandActorCount).CopyTo(previousCommandActors);
-        }
+        PreflightAuthoredAgentBindings(
+            world,
+            entities,
+            controllableFlags,
+            startIndex: 0,
+            unitCountAfterCommit: agentSeeds.Length,
+            allowExistingRuntimeBinding: true);
 
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
+        _domainStanceProjection?.ValidateResetDomains(agentSeeds);
         ClearAuthoredRuntimeBindings(world);
+        _domainStanceProjection?.ResetDomains(agentSeeds);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
         {
@@ -770,7 +623,6 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
-        RestoreCommandActorSnapshotAfterAuthoredRebuild(world, previousCommandActors, previousCommandActorSnapshotRevision);
         MarkStructuralChange();
     }
 
@@ -799,6 +651,16 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         int startIndex = MassNavigationFlow.UnitCount;
+        PreflightAuthoredAgentBindings(
+            world,
+            newEntities,
+            controllableFlags,
+            startIndex,
+            unitCountAfterCommit: checked(startIndex + newAgentSeeds.Length),
+            allowExistingRuntimeBinding: false);
+
+        _domainStanceProjection?.ValidateAppendDomains(newAgentSeeds);
+        _domainStanceProjection?.AppendDomains(newAgentSeeds);
         MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
         for (int i = 0; i < newEntities.Length; i++)
         {
@@ -808,74 +670,93 @@ public sealed class MassNavigationSimulationRuntime
         MarkStructuralChange();
     }
 
-    private void RestoreCommandActorSnapshotAfterAuthoredRebuild(
-        World world,
-        ReadOnlySpan<Entity> previousCommandActors,
-        uint previousCommandActorSnapshotRevision)
-    {
-        if (previousCommandActors.Length <= 0)
-        {
-            return;
-        }
-
-        int restoredCount = 0;
-        Span<Entity> restored = EnsureCommandActorScratch(previousCommandActors.Length);
-        for (int i = 0; i < previousCommandActors.Length; i++)
-        {
-            Entity entity = previousCommandActors[i];
-            if (world.IsAlive(entity) && AgentState.TryGetControllableIndex(entity, out _))
-            {
-                restored[restoredCount++] = entity;
-            }
-        }
-
-        if (restoredCount <= 0)
-        {
-            return;
-        }
-
-        SetCommandActorSnapshot(restored[..restoredCount], previousCommandActorSnapshotRevision);
-    }
-
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        ObserveFlowWorkArea(worldCenterCm, _simWindowWidthCm, _simWindowHeightCm, ReadOnlySpan<Entity>.Empty, "manual focus");
-        MoveSolverWindow(worldCenterCm, "manual nav focus");
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        FocusState previous = CaptureFocusState();
+        try
+        {
+            ObserveFlowWorkArea(worldCenterCm, _simWindowWidthCm, _simWindowHeightCm, ReadOnlySpan<Entity>.Empty, "manual focus");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
+            MoveSolverWindow(worldCenterCm, "manual nav focus");
+            UpdateStreamingWindow(ResolveStreamingFocus());
+        }
+        catch
+        {
+            RestoreFocusState(in previous);
+            throw;
+        }
     }
 
-    public void FocusCommandTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> commandActors)
+    internal void FocusOrderTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> orderMembers)
     {
-        _hasCommandFocus = true;
-        _lastCommandFocusXCm = worldCenterCm.X;
-        _lastCommandFocusYCm = worldCenterCm.Y;
-        _lastCommandActorCount = commandActors.Length;
-        _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
-        ObserveFlowWorkArea(
-            worldCenterCm,
-            _simWindowWidthCm,
-            _simWindowHeightCm,
-            commandActors,
-            commandActors.Length > 0 ? "actor command" : "team command");
-        MoveSolverWindow(ResolveSolverFocusForWorkArea(), commandActors.Length > 0 ? "actor command" : "team command");
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        FocusState previous = CaptureFocusState();
+        try
+        {
+            _hasCommandFocus = true;
+            _lastCommandFocusXCm = worldCenterCm.X;
+            _lastCommandFocusYCm = worldCenterCm.Y;
+            _lastOrderMemberCount = orderMembers.Length;
+            _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
+            ObserveFlowWorkArea(
+                worldCenterCm,
+                _simWindowWidthCm,
+                _simWindowHeightCm,
+                orderMembers,
+                orderMembers.Length > 0 ? "order members" : "order");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
+            MoveSolverWindow(ResolveSolverFocusForWorkArea(), orderMembers.Length > 0 ? "order members" : "order");
+            UpdateStreamingWindow(ResolveStreamingFocus());
+        }
+        catch
+        {
+            RestoreFocusState(in previous);
+            throw;
+        }
     }
 
-    public void FocusCommandTargetForEntities(System.Numerics.Vector2 worldCenterCm, Entity[] commandActors)
+    internal void PreflightOrderTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> orderMembers)
     {
-        FocusCommandTarget(worldCenterCm, commandActors.AsSpan());
+        FocusState previous = CaptureFocusState();
+        try
+        {
+            _hasCommandFocus = true;
+            _lastCommandFocusXCm = worldCenterCm.X;
+            _lastCommandFocusYCm = worldCenterCm.Y;
+            _lastOrderMemberCount = orderMembers.Length;
+            _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
+            ObserveFlowWorkArea(
+                worldCenterCm,
+                _simWindowWidthCm,
+                _simWindowHeightCm,
+                orderMembers,
+                orderMembers.Length > 0 ? "order members" : "order");
+            ValidateStreamingWindowCapacity(ResolveStreamingFocus());
+        }
+        finally
+        {
+            RestoreFocusState(in previous);
+        }
     }
 
     public void ObserveRuntimeFocus(System.Numerics.Vector2 focusCenterCm, float focusWidthCm, float focusHeightCm)
     {
-        ObserveFlowWorkArea(
-            focusCenterCm,
-            MathF.Max(1f, focusWidthCm),
-            MathF.Max(1f, focusHeightCm),
-            ReadOnlySpan<Entity>.Empty,
-            _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "runtime focus + command hold" : "runtime focus");
-        Telemetry.MarkFocusBudgetUpdated();
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        FocusState previous = CaptureFocusState();
+        try
+        {
+            ObserveFlowWorkArea(
+                focusCenterCm,
+                MathF.Max(1f, focusWidthCm),
+                MathF.Max(1f, focusHeightCm),
+                ReadOnlySpan<Entity>.Empty,
+                _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "runtime focus + command hold" : "runtime focus");
+            Telemetry.MarkFocusBudgetUpdated();
+            UpdateStreamingWindow(ResolveStreamingFocus());
+        }
+        catch
+        {
+            RestoreFocusState(in previous);
+            throw;
+        }
     }
 
     public System.Numerics.Vector2 ToLocalCm(System.Numerics.Vector2 worldCm)
@@ -956,98 +837,9 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.ResetRuntimeObstaclesFromWorld(obstacles);
     }
 
-    public MassNavigationCarriedRangeSyncResult SyncCarriedAgentRangeToCarrier(
-        int carrierAgentIndex,
-        int firstMemberAgentIndex,
-        int memberAgentCount,
-        bool previousCarrierSnapshotInitialized,
-        float previousCarrierWorldXCm,
-        float previousCarrierWorldYCm)
-    {
-        RequireAgentIndex(carrierAgentIndex);
-        RequireAgentRange(firstMemberAgentIndex, memberAgentCount, nameof(firstMemberAgentIndex));
-
-        System.Numerics.Vector2 carrierLocal = GetAgentLocalPositionCm(carrierAgentIndex);
-        float carrierWorldX = ToWorldXCm(carrierLocal.X);
-        float carrierWorldY = ToWorldYCm(carrierLocal.Y);
-        float deltaX = previousCarrierSnapshotInitialized ? carrierWorldX - previousCarrierWorldXCm : 0f;
-        float deltaY = previousCarrierSnapshotInitialized ? carrierWorldY - previousCarrierWorldYCm : 0f;
-        bool applied = previousCarrierSnapshotInitialized && (deltaX != 0f || deltaY != 0f);
-        if (applied)
-        {
-            MassNavigationFlow.ApplyExternalDisplacementRange(firstMemberAgentIndex, memberAgentCount, deltaX, deltaY);
-        }
-
-        return new MassNavigationCarriedRangeSyncResult(
-            carrierLocal.X,
-            carrierLocal.Y,
-            carrierWorldX,
-            carrierWorldY,
-            deltaX,
-            deltaY,
-            applied);
-    }
-
-    public MassNavigationCarriedRangeSyncResult SyncCarriedAgentsToCarrier(
-        int carrierAgentIndex,
-        ReadOnlySpan<int> memberAgentIndices,
-        bool previousCarrierSnapshotInitialized,
-        float previousCarrierWorldXCm,
-        float previousCarrierWorldYCm)
-    {
-        RequireAgentIndex(carrierAgentIndex);
-        for (int i = 0; i < memberAgentIndices.Length; i++)
-        {
-            RequireAgentIndex(memberAgentIndices[i]);
-        }
-
-        System.Numerics.Vector2 carrierLocal = GetAgentLocalPositionCm(carrierAgentIndex);
-        float carrierWorldX = ToWorldXCm(carrierLocal.X);
-        float carrierWorldY = ToWorldYCm(carrierLocal.Y);
-        float deltaX = previousCarrierSnapshotInitialized ? carrierWorldX - previousCarrierWorldXCm : 0f;
-        float deltaY = previousCarrierSnapshotInitialized ? carrierWorldY - previousCarrierWorldYCm : 0f;
-        bool applied = previousCarrierSnapshotInitialized && (deltaX != 0f || deltaY != 0f);
-        if (applied)
-        {
-            MassNavigationFlow.ApplyExternalDisplacement(memberAgentIndices, deltaX, deltaY);
-        }
-
-        return new MassNavigationCarriedRangeSyncResult(
-            carrierLocal.X,
-            carrierLocal.Y,
-            carrierWorldX,
-            carrierWorldY,
-            deltaX,
-            deltaY,
-            applied);
-    }
-
     public void SyncAgentEntitiesNow(World world)
     {
         MassNavigationFlow.SyncEntities(world, AgentState);
-    }
-
-    public MassNavigationCarriedSlotTarget ResolveCarriedAgentSlotTarget(
-        int memberAgentIndex,
-        float carrierLocalXCm,
-        float carrierLocalYCm,
-        float slotOffsetLocalXCm,
-        float slotOffsetLocalYCm)
-    {
-        RequireAgentIndex(memberAgentIndex);
-        System.Numerics.Vector2 resolvedLocal = MassNavigationFlow.ResolveUnitNavigableTarget(
-            memberAgentIndex,
-            carrierLocalXCm + slotOffsetLocalXCm,
-            carrierLocalYCm + slotOffsetLocalYCm,
-            slotOffsetLocalXCm,
-            slotOffsetLocalYCm,
-            MassNavigationFlow.Semantics.TargetProjection.GroupSlotClearanceCm);
-        System.Numerics.Vector2 resolvedWorld = ToWorldCm(resolvedLocal);
-        return new MassNavigationCarriedSlotTarget(
-            resolvedLocal.X,
-            resolvedLocal.Y,
-            resolvedWorld.X,
-            resolvedWorld.Y);
     }
 
     public bool TryGetAgentNavigationTargetLocalCm(int agentIndex, out float xCm, out float yCm)
@@ -1069,6 +861,42 @@ public sealed class MassNavigationSimulationRuntime
         xCm = ToWorldXCm(localX);
         yCm = ToWorldYCm(localY);
         return true;
+    }
+
+    public Vector2 ResolveAgentNavigableTargetWorldCm(
+        int agentIndex,
+        Vector2 targetWorldCm,
+        Vector2 projectionHintWorldCm,
+        float minimumClearanceCm)
+    {
+        RequireAgentIndex(agentIndex);
+        if (!float.IsFinite(targetWorldCm.X) ||
+            !float.IsFinite(targetWorldCm.Y) ||
+            !float.IsFinite(projectionHintWorldCm.X) ||
+            !float.IsFinite(projectionHintWorldCm.Y))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(targetWorldCm),
+                "MassNavigation navigable-target projection requires finite target and hint coordinates.");
+        }
+
+        if (!float.IsFinite(minimumClearanceCm) || minimumClearanceCm < 0f)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(minimumClearanceCm),
+                minimumClearanceCm,
+                "MassNavigation navigable-target projection requires finite minimumClearanceCm >= 0.");
+        }
+
+        Vector2 targetLocalCm = ToLocalCm(targetWorldCm);
+        Vector2 resolvedLocalCm = MassNavigationFlow.ResolveUnitNavigableTarget(
+            agentIndex,
+            targetLocalCm.X,
+            targetLocalCm.Y,
+            projectionHintWorldCm.X,
+            projectionHintWorldCm.Y,
+            minimumClearanceCm);
+        return ToWorldCm(resolvedLocalCm);
     }
 
     public bool SetAgentNavigationTargetLocalCm(int agentIndex, float xCm, float yCm, bool resetRecovery = false)
@@ -1182,15 +1010,6 @@ public sealed class MassNavigationSimulationRuntime
         return true;
     }
 
-    public bool ApplyCarriedAgentSlotTarget(
-        int memberAgentIndex,
-        in MassNavigationCarriedSlotTarget target,
-        bool resetRecovery)
-    {
-        RequireAgentIndex(memberAgentIndex);
-        return MassNavigationFlow.SetUnitTarget(memberAgentIndex, target.LocalXCm, target.LocalYCm, resetRecovery);
-    }
-
     public void BindSpawnedAgent(
         World world,
         Entity entity,
@@ -1198,25 +1017,14 @@ public sealed class MassNavigationSimulationRuntime
         bool controllable)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (!world.IsAlive(entity))
-        {
-            throw new InvalidOperationException("MassNavigation cannot bind a spawned agent on a dead entity.");
-        }
-
-        if ((uint)agentIndex >= (uint)MassNavigationFlow.UnitCount)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation spawned agent index {agentIndex} exceeds current agent count {MassNavigationFlow.UnitCount}.");
-        }
-
-        if (world.Has<MassNavigationAgentIndex>(entity) || world.Has<MassNavigationAgentProfile>(entity))
-        {
-            throw new InvalidOperationException($"MassNavigation entity {entity.Id} was already bound as an agent.");
-        }
-
-        int teamId = MassNavigationFlow.GetTeam(agentIndex);
-        UpsertComponent(world, entity, new Team { Id = teamId });
-        int profileId = world.TryGet(entity, out MassNavigationAgent agent) ? agent.ProfileId : 0;
+        MassNavigationAgent agent = ValidateSpawnedAgentBinding(
+            world,
+            entity,
+            agentIndex,
+            controllable,
+            MassNavigationFlow.UnitCount,
+            allowExistingRuntimeBinding: false);
+        int profileId = agent.ProfileId;
         world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
         world.Add(entity, new MassNavigationAgentProfile
         {
@@ -1225,7 +1033,132 @@ public sealed class MassNavigationSimulationRuntime
             VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),
             SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),
         });
+        if (world.Has<MovePlanExecutionIntent>(entity))
+        {
+            world.Set(entity, default(MovePlanExecutionIntent));
+        }
+        else
+        {
+            world.Add(entity, default(MovePlanExecutionIntent));
+        }
+
+        if (world.Has<MovePlanExecutionResult>(entity))
+        {
+            world.Set(entity, default(MovePlanExecutionResult));
+        }
+        else
+        {
+            world.Add(entity, default(MovePlanExecutionResult));
+        }
         AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
+    }
+
+    private void PreflightAuthoredAgentBindings(
+        World world,
+        ReadOnlySpan<Entity> entities,
+        ReadOnlySpan<bool> controllableFlags,
+        int startIndex,
+        int unitCountAfterCommit,
+        bool allowExistingRuntimeBinding)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (entities.Length != controllableFlags.Length)
+        {
+            throw new InvalidOperationException("MassNavigation authored binding preflight requires matching entity and controllable spans.");
+        }
+
+        _authoredBindingSeenEntities.Clear();
+        try
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                Entity entity = entities[i];
+                if (!_authoredBindingSeenEntities.Add(entity))
+                {
+                    throw new InvalidOperationException($"MassNavigation authored binding contains duplicate entity {entity.Id}.");
+                }
+
+                ValidateSpawnedAgentBinding(
+                    world,
+                    entity,
+                    checked(startIndex + i),
+                    controllableFlags[i],
+                    unitCountAfterCommit,
+                    allowExistingRuntimeBinding);
+            }
+        }
+        finally
+        {
+            _authoredBindingSeenEntities.Clear();
+        }
+    }
+
+    private MassNavigationAgent ValidateSpawnedAgentBinding(
+        World world,
+        Entity entity,
+        int agentIndex,
+        bool controllable,
+        int unitCountAfterCommit,
+        bool allowExistingRuntimeBinding)
+    {
+        if (!IsAliveInWorld(world, entity))
+        {
+            throw new InvalidOperationException("MassNavigation cannot bind a spawned agent on a dead entity.");
+        }
+
+        if ((uint)agentIndex >= (uint)unitCountAfterCommit)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent index {agentIndex} exceeds current agent count {unitCountAfterCommit}.");
+        }
+
+        bool hasRuntimeBinding =
+            world.Has<MassNavigationAgentIndex>(entity) ||
+            world.Has<MassNavigationAgentProfile>(entity);
+        if (hasRuntimeBinding &&
+            (!allowExistingRuntimeBinding || !IsCommittedRuntimeBindingEntity(entity)))
+        {
+            throw new InvalidOperationException($"MassNavigation entity {entity.Id} was already bound as an agent.");
+        }
+
+        if (!world.TryGet(entity, out MassNavigationAgent agent))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent entity {entity.Id} requires MassNavigationAgent before binding.");
+        }
+
+        if (agent.ProfileId <= MassNavigationProfileRegistry.InvalidId)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
+        }
+
+        if (!allowExistingRuntimeBinding)
+        {
+            AgentState.ValidateAgentRegistration(agentIndex, controllable);
+        }
+
+        return agent;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsAliveInWorld(World world, Entity entity)
+    {
+        return entity != Entity.Null && entity.WorldId == world.Id && world.IsAlive(entity);
+    }
+
+    private bool IsCommittedRuntimeBindingEntity(Entity entity)
+    {
+        IReadOnlyList<Entity> agents = AgentState.AllAgents;
+        for (int i = 0; i < agents.Count; i++)
+        {
+            if (agents[i].Equals(entity))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static int ResolveAgentLocomotionSpeedParamKey()
@@ -1247,7 +1180,7 @@ public sealed class MassNavigationSimulationRuntime
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
         int radius = Streaming.RadiusCm;
-        int chunkSize = _loadedChunks.ChunkSizeCm;
+        int chunkSize = RequireLoadedChunks().ChunkSizeCm;
         int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
         int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
         int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
@@ -1257,63 +1190,99 @@ public sealed class MassNavigationSimulationRuntime
             minChunkY != _streamingMinChunkY ||
             maxChunkY != _streamingMaxChunkY ||
             radius != _streamingRadiusCm;
-        if (minChunkX == _streamingMinChunkX &&
-            maxChunkX == _streamingMaxChunkX &&
-            minChunkY == _streamingMinChunkY &&
-            maxChunkY == _streamingMaxChunkY &&
-            radius == _streamingRadiusCm)
+        ValidateStreamingWindowCapacity(worldCenterCm);
+        _loadedChunksAddedDuringUpdate.Clear();
+        try
         {
-            EvictExpiredStreamingChunks();
-            return;
-        }
-
-        _streamingMinChunkX = minChunkX;
-        _streamingMaxChunkX = maxChunkX;
-        _streamingMinChunkY = minChunkY;
-        _streamingMaxChunkY = maxChunkY;
-        _streamingRadiusCm = radius;
-        for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
-        {
-            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+            for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
             {
-                long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
-                TouchStreamingChunk(chunkKey);
+                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+                {
+                    long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
+                    bool wasTracked = _loadedChunkLastTouchedSeconds.ContainsKey(chunkKey);
+                    TouchStreamingChunk(chunkKey);
+                    if (!wasTracked)
+                    {
+                        _loadedChunksAddedDuringUpdate.Add(chunkKey);
+                    }
+                }
             }
+
+            EvictExpiredStreamingChunks(minChunkX, maxChunkX, minChunkY, maxChunkY);
+            _streamingMinChunkX = minChunkX;
+            _streamingMaxChunkX = maxChunkX;
+            _streamingMinChunkY = minChunkY;
+            _streamingMaxChunkY = maxChunkY;
+            _streamingRadiusCm = radius;
+        }
+        catch
+        {
+            for (int i = _loadedChunksAddedDuringUpdate.Count - 1; i >= 0; i--)
+            {
+                long chunkKey = _loadedChunksAddedDuringUpdate[i];
+                if (_loadedChunkLastTouchedSeconds.Remove(chunkKey))
+                {
+                    RequireLoadedChunkContributor().SetLoaded(chunkKey, false);
+                }
+            }
+
+            InvalidateStreamingWindowCache();
+            throw;
         }
 
-        EvictExpiredStreamingChunks();
         if (changed)
         {
             Telemetry.MarkStreamingWindowUpdated();
         }
     }
 
-    public void AdjustStreamingRetainSeconds(float deltaSeconds)
+    private void ValidateStreamingWindowCapacity(System.Numerics.Vector2 worldCenterCm)
     {
-        float next = Streaming.RetainSeconds + deltaSeconds;
-        if (next < 0f)
+        int centerX = (int)MathF.Round(worldCenterCm.X);
+        int centerY = (int)MathF.Round(worldCenterCm.Y);
+        int radius = Streaming.RadiusCm;
+        int chunkSize = RequireLoadedChunks().ChunkSizeCm;
+        int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
+        int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
+        int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
+        int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);
+        int requiredCount = 0;
+        foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
         {
-            throw new InvalidOperationException(
-                $"MassNavigation streaming.retainSeconds adjustment would produce invalid value {next:0.###}.");
+            (int chunkX, int chunkY) = GraphChunkKey.Unpack(pair.Key);
+            bool inNextWindow = chunkX >= minChunkX && chunkX <= maxChunkX && chunkY >= minChunkY && chunkY <= maxChunkY;
+            float elapsedSeconds = _streamingClockSeconds - pair.Value;
+            bool expired = !inNextWindow &&
+                ((Streaming.RetainSeconds == 0f && elapsedSeconds >= 0f) || elapsedSeconds > Streaming.RetainSeconds);
+            if (!expired)
+            {
+                requiredCount++;
+            }
         }
 
-        Streaming.RetainSeconds = next;
-    }
-
-    public void AdjustStreamingRadiusCm(int deltaCm)
-    {
-        int next = Streaming.RadiusCm + deltaCm;
-        if (next < WorldConfig.StreamingChunkSizeCm)
+        for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
         {
-            throw new InvalidOperationException(
-                $"MassNavigation streaming.radiusCm adjustment would produce {next}, below streaming chunk size {WorldConfig.StreamingChunkSizeCm}.");
+            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+            {
+                if (!_loadedChunkLastTouchedSeconds.ContainsKey(GraphChunkKey.Pack(chunkX, chunkY)))
+                {
+                    requiredCount++;
+                }
+            }
         }
 
-        Streaming.RadiusCm = next;
-        InvalidateStreamingWindowCache();
+        if (requiredCount > _loadedChunkCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation streaming transition requires {requiredCount} retained chunks, exceeding configured loadedChunkCapacity {_loadedChunkCapacity}.");
+        }
     }
 
-    private void EvictExpiredStreamingChunks()
+    private void EvictExpiredStreamingChunks(
+        int currentMinChunkX,
+        int currentMaxChunkX,
+        int currentMinChunkY,
+        int currentMaxChunkY)
     {
         float retainSeconds = Streaming.RetainSeconds;
         if (retainSeconds < 0f)
@@ -1324,7 +1293,10 @@ public sealed class MassNavigationSimulationRuntime
         _loadedChunksToEvict.Clear();
         foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
         {
-            if (_streamingClockSeconds - pair.Value > retainSeconds)
+            (int chunkX, int chunkY) = GraphChunkKey.Unpack(pair.Key);
+            bool inCurrentWindow = chunkX >= currentMinChunkX && chunkX <= currentMaxChunkX &&
+                chunkY >= currentMinChunkY && chunkY <= currentMaxChunkY;
+            if (!inCurrentWindow && _streamingClockSeconds - pair.Value > retainSeconds)
             {
                 _loadedChunksToEvict.Add(pair.Key);
             }
@@ -1334,7 +1306,7 @@ public sealed class MassNavigationSimulationRuntime
         {
             long chunkKey = _loadedChunksToEvict[i];
             _loadedChunkLastTouchedSeconds.Remove(chunkKey);
-            _loadedChunks.SetLoaded(chunkKey, false);
+            RequireLoadedChunkContributor().SetLoaded(chunkKey, false);
         }
     }
 
@@ -1350,7 +1322,7 @@ public sealed class MassNavigationSimulationRuntime
             }
 
             _loadedChunkLastTouchedSeconds.Add(chunkKey, _streamingClockSeconds);
-            _loadedChunks.SetLoaded(chunkKey, true);
+            RequireLoadedChunkContributor().SetLoaded(chunkKey, true);
             return;
         }
 
@@ -1398,14 +1370,14 @@ public sealed class MassNavigationSimulationRuntime
             bounds.Left,
             bounds.Right,
             _simWindowWidthCm,
-            WorldConfig.ActiveHotZoneId,
+            _activeHotZoneId,
             "x");
         EnsurePointInsideWindowCenterBounds(
             _simWindowCenterYCm,
             bounds.Top,
             bounds.Bottom,
             _simWindowHeightCm,
-            WorldConfig.ActiveHotZoneId,
+            _activeHotZoneId,
             "y");
     }
 
@@ -1413,7 +1385,7 @@ public sealed class MassNavigationSimulationRuntime
         System.Numerics.Vector2 focusCm,
         float focusWidthCm,
         float focusHeightCm,
-        ReadOnlySpan<Entity> commandActors,
+        ReadOnlySpan<Entity> orderMembers,
         string reason)
     {
         float clampedWidth = MathF.Max(1f, focusWidthCm);
@@ -1428,9 +1400,9 @@ public sealed class MassNavigationSimulationRuntime
             IncludePoint(ref minX, ref maxX, ref minY, ref maxY, _lastCommandFocusXCm, _lastCommandFocusYCm);
         }
 
-        if (commandActors.Length > 0)
+        if (orderMembers.Length > 0)
         {
-            IncludeCommandActorBounds(ref minX, ref maxX, ref minY, ref maxY, commandActors);
+            IncludeOrderMemberBounds(ref minX, ref maxX, ref minY, ref maxY, orderMembers);
         }
 
         float padding = WorldConfig.WorkAreaPaddingCm;
@@ -1463,11 +1435,11 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaRevision++;
     }
 
-    private void IncludeCommandActorBounds(ref float minX, ref float maxX, ref float minY, ref float maxY, ReadOnlySpan<Entity> commandActors)
+    private void IncludeOrderMemberBounds(ref float minX, ref float maxX, ref float minY, ref float maxY, ReadOnlySpan<Entity> orderMembers)
     {
-        for (int i = 0; i < commandActors.Length; i++)
+        for (int i = 0; i < orderMembers.Length; i++)
         {
-            if (!AgentState.TryGetControllableIndex(commandActors[i], out int unitIndex) ||
+            if (!AgentState.TryGetControllableIndex(orderMembers[i], out int unitIndex) ||
                 (uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
             {
                 continue;
@@ -1516,6 +1488,45 @@ public sealed class MassNavigationSimulationRuntime
         return new System.Numerics.Vector2(_flowWorkAreaCenterXCm, _flowWorkAreaCenterYCm);
     }
 
+    private FocusState CaptureFocusState()
+    {
+        return new FocusState
+        {
+            SolverCenterX = _simWindowCenterXCm,
+            SolverCenterY = _simWindowCenterYCm,
+            CommandTicksRemaining = _commandFocusTicksRemaining,
+            HasCommandFocus = _hasCommandFocus,
+            CommandFocusX = _lastCommandFocusXCm,
+            CommandFocusY = _lastCommandFocusYCm,
+            LastOrderMemberCount = _lastOrderMemberCount,
+            WorkAreaCenterX = _flowWorkAreaCenterXCm,
+            WorkAreaCenterY = _flowWorkAreaCenterYCm,
+            WorkAreaWidth = _flowWorkAreaWidthCm,
+            WorkAreaHeight = _flowWorkAreaHeightCm,
+            WorkAreaRevision = _flowWorkAreaRevision,
+            WorkAreaReason = _flowWorkAreaReason,
+            SolverDriver = _solverWindowDriver,
+        };
+    }
+
+    private void RestoreFocusState(in FocusState state)
+    {
+        _simWindowCenterXCm = state.SolverCenterX;
+        _simWindowCenterYCm = state.SolverCenterY;
+        _commandFocusTicksRemaining = state.CommandTicksRemaining;
+        _hasCommandFocus = state.HasCommandFocus;
+        _lastCommandFocusXCm = state.CommandFocusX;
+        _lastCommandFocusYCm = state.CommandFocusY;
+        _lastOrderMemberCount = state.LastOrderMemberCount;
+        _flowWorkAreaCenterXCm = state.WorkAreaCenterX;
+        _flowWorkAreaCenterYCm = state.WorkAreaCenterY;
+        _flowWorkAreaWidthCm = state.WorkAreaWidth;
+        _flowWorkAreaHeightCm = state.WorkAreaHeight;
+        _flowWorkAreaRevision = state.WorkAreaRevision;
+        _flowWorkAreaReason = state.WorkAreaReason;
+        _solverWindowDriver = state.SolverDriver;
+    }
+
     private static void IncludePoint(ref float minX, ref float maxX, ref float minY, ref float maxY, float x, float y)
     {
         minX = MathF.Min(minX, x);
@@ -1544,6 +1555,18 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         return _boardWorldSize;
+    }
+
+    private WorldGridLoadedChunks RequireLoadedChunks()
+    {
+        return _loadedChunks
+            ?? throw new InvalidOperationException("MassNavigation requires board-owned WorldGridLoadedChunks before streaming operations.");
+    }
+
+    private WorldGridLoadedChunkContributor RequireLoadedChunkContributor()
+    {
+        return _loadedChunkContributor
+            ?? throw new InvalidOperationException("MassNavigation requires an active board loaded-chunk contribution before streaming operations.");
     }
 
     private void RequireAgentIndex(int agentIndex)
@@ -1621,17 +1644,6 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException(
                 $"MassNavigation active hot zone '{hotZoneId}' center {axisName}={centerCm:0.###} cannot host solver window {windowSizeCm:0.###} cm inside board center range [{minCenter:0.###}, {maxCenter:0.###}].");
         }
-    }
-
-    public bool ConsumeSceneResetRequest()
-    {
-        if (!_sceneResetRequested)
-        {
-            return false;
-        }
-
-        _sceneResetRequested = false;
-        return true;
     }
 
     private static int[] CreateTeamIdArray(MassNavigationScenarioTeamConfig[] teams)

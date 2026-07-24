@@ -576,7 +576,7 @@
     ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
-    "participatesInResponse": true,
+    "participatesInResponse": false,
     "projectile": {
       "speed": 1400,
       "range": 5200,
@@ -599,7 +599,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
-    "participatesInResponse": true,
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Health",

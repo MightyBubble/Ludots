@@ -89,6 +89,7 @@ namespace Ludots.Core.Engine
             CurrentMapSession = session;
             if (session == null)
             {
+                GameSession.Camera.ResetVirtualCameras();
                 RemoveService(CoreServiceKeys.MapId);
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
@@ -505,6 +506,7 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            ApplyDefaultCamera(session.MapConfig);
             _massNavigationRuntime.HandleMapFocused(this, session.MapId);
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));

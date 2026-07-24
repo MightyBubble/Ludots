@@ -20,7 +20,7 @@
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\RtsCncTrainingShowcaseMod.csproj" />
   </ItemGroup>
 

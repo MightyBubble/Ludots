@@ -24,6 +24,7 @@ namespace Ludots.Tests.GAS.Production
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("acceptance")]
     public sealed class StaticObstaclePhysicsShowcaseAcceptanceTests
     {
         private const float DeltaTime = 1f / 60f;

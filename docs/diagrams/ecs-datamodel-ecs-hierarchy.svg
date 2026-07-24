@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="984.6pt" height="853.443562pt" viewBox="0 0 984.6 853.443562" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1425.6pt" height="777.6pt" viewBox="0 0 1425.6 777.6" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-07-02T20:13:44.371150</dc:date>
+    <dc:date>2026-07-20T06:14:22.542798</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -21,2861 +21,673 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 853.443562 
-L 984.6 853.443562 
-L 984.6 0 
-L 0 0 
+   <path d="M 0 777.6
+L 1425.6 777.6
+L 1425.6 0
+L 0 0
 z
-" style="fill: #faf7f2"/>
+" style="fill: #ffffff"/>
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 490.321288 123.900352 
-Q 328.384246 146.615541 176.133237 199.840647 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 180.569163 200.408591 
-L 176.133237 199.840647 
-L 179.249148 196.632672 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 610.56 108
+L 815.04 108
+Q 820.8 108 820.8 113.76
+L 820.8 181.44
+Q 820.8 187.2 815.04 187.2
+L 610.56 187.2
+Q 604.8 187.2 604.8 181.44
+L 604.8 113.76
+Q 604.8 108 610.56 108
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f4ede9; stroke: #b08d7f; stroke-width: 1.6; stroke-linejoin: miter"/>
    </g>
    <g id="patch_3">
-    <path d="M 490.499513 124.501117 
-Q 425.459219 156.293175 369.550238 198.677161 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 373.946054 197.854481 
-L 369.550238 198.677161 
-L 371.529584 194.6669 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 120.96 302.4
+L 325.44 302.4
+Q 331.2 302.4 331.2 308.16
+L 331.2 390.24
+Q 331.2 396 325.44 396
+L 120.96 396
+Q 115.2 396 115.2 390.24
+L 115.2 308.16
+Q 115.2 302.4 120.96 302.4
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ebeef2; stroke: #7d8ba0; stroke-linejoin: miter"/>
    </g>
    <g id="patch_4">
-    <path d="M 493.796687 124.955264 
-Q 541.898051 167.611424 595.372921 199.095041 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 592.940674 195.342153 
-L 595.372921 199.095041 
-L 590.911262 198.789106 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 444.96 302.4
+L 649.44 302.4
+Q 655.2 302.4 655.2 308.16
+L 655.2 390.24
+Q 655.2 396 649.44 396
+L 444.96 396
+Q 439.2 396 439.2 390.24
+L 439.2 308.16
+Q 439.2 302.4 444.96 302.4
+z
+" clip-path="url(#p74e2561f43)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
    </g>
    <g id="patch_5">
-    <path d="M 494.173596 124.311293 
-Q 638.846609 177.277979 788.874144 200.590542 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 785.228669 198.000075 
-L 788.874144 200.590542 
-L 784.614486 201.952641 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 768.96 302.4
+L 973.44 302.4
+Q 979.2 302.4 979.2 308.16
+L 979.2 390.24
+Q 979.2 396 973.44 396
+L 768.96 396
+Q 763.2 396 763.2 390.24
+L 763.2 308.16
+Q 763.2 302.4 768.96 302.4
+z
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_6">
-    <path d="M 170.891762 299.826217 
-Q 123.591503 359.525102 81.830175 421.611229 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 85.722187 419.408448 
-L 81.830175 421.611229 
-L 82.403157 417.175951 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 1092.96 302.4
+L 1297.44 302.4
+Q 1303.2 302.4 1303.2 308.16
+L 1303.2 390.24
+Q 1303.2 396 1297.44 396
+L 1092.96 396
+Q 1087.2 396 1087.2 390.24
+L 1087.2 308.16
+Q 1087.2 302.4 1092.96 302.4
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
    </g>
    <g id="patch_7">
-    <path d="M 171.827233 300.233261 
-Q 162.413543 361.037595 157.834272 421.050216 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 160.13281 417.213978 
-L 157.834272 421.050216 
-L 156.144405 416.909642 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 34.56 475.2
+L 123.84 475.2
+Q 129.6 475.2 129.6 480.96
+L 129.6 519.84
+Q 129.6 525.6 123.84 525.6
+L 34.56 525.6
+Q 28.8 525.6 28.8 519.84
+L 28.8 480.96
+Q 28.8 475.2 34.56 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ebeef2; stroke: #7d8ba0; stroke-linejoin: miter"/>
    </g>
    <g id="patch_8">
-    <path d="M 172.95833 300.085101 
-Q 201.214163 362.550313 233.586783 421.458264 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 233.413099 416.989502 
-L 233.586783 421.458264 
-L 229.907563 418.915954 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 149.76 475.2
+L 239.04 475.2
+Q 244.8 475.2 244.8 480.96
+L 244.8 519.84
+Q 244.8 525.6 239.04 525.6
+L 149.76 525.6
+Q 144 525.6 144 519.84
+L 144 480.96
+Q 144 475.2 149.76 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ebeef2; stroke: #7d8ba0; stroke-linejoin: miter"/>
    </g>
    <g id="patch_9">
-    <path d="M 364.931762 299.826217 
-Q 317.631503 359.525102 275.870175 421.611229 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 279.762187 419.408448 
-L 275.870175 421.611229 
-L 276.443157 417.175951 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 264.96 475.2
+L 354.24 475.2
+Q 360 475.2 360 480.96
+L 360 519.84
+Q 360 525.6 354.24 525.6
+L 264.96 525.6
+Q 259.2 525.6 259.2 519.84
+L 259.2 480.96
+Q 259.2 475.2 264.96 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ebeef2; stroke: #7d8ba0; stroke-linejoin: miter"/>
    </g>
    <g id="patch_10">
-    <path d="M 365.867233 300.233261 
-Q 356.453543 361.037595 351.874272 421.050216 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 354.17281 417.213978 
-L 351.874272 421.050216 
-L 350.184405 416.909642 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 380.16 475.2
+L 469.44 475.2
+Q 475.2 475.2 475.2 480.96
+L 475.2 519.84
+Q 475.2 525.6 469.44 525.6
+L 380.16 525.6
+Q 374.4 525.6 374.4 519.84
+L 374.4 480.96
+Q 374.4 475.2 380.16 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
    </g>
    <g id="patch_11">
-    <path d="M 366.99833 300.085101 
-Q 395.254163 362.550313 427.626783 421.458264 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 427.453099 416.989502 
-L 427.626783 421.458264 
-L 423.947563 418.915954 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 495.36 475.2
+L 584.64 475.2
+Q 590.4 475.2 590.4 480.96
+L 590.4 519.84
+Q 590.4 525.6 584.64 525.6
+L 495.36 525.6
+Q 489.6 525.6 489.6 519.84
+L 489.6 480.96
+Q 489.6 475.2 495.36 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
    </g>
    <g id="patch_12">
-    <path d="M 597.779762 299.826217 
-Q 550.479503 359.525102 508.718175 421.611229 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 512.610187 419.408448 
-L 508.718175 421.611229 
-L 509.291157 417.175951 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 610.56 475.2
+L 699.84 475.2
+Q 705.6 475.2 705.6 480.96
+L 705.6 519.84
+Q 705.6 525.6 699.84 525.6
+L 610.56 525.6
+Q 604.8 525.6 604.8 519.84
+L 604.8 480.96
+Q 604.8 475.2 610.56 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
    </g>
    <g id="patch_13">
-    <path d="M 598.715233 300.233261 
-Q 589.301543 361.037595 584.722272 421.050216 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 587.02081 417.213978 
-L 584.722272 421.050216 
-L 583.032405 416.909642 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 725.76 475.2
+L 815.04 475.2
+Q 820.8 475.2 820.8 480.96
+L 820.8 519.84
+Q 820.8 525.6 815.04 525.6
+L 725.76 525.6
+Q 720 525.6 720 519.84
+L 720 480.96
+Q 720 475.2 725.76 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_14">
-    <path d="M 599.84633 300.085101 
-Q 628.102163 362.550313 660.474783 421.458264 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 660.301099 416.989502 
-L 660.474783 421.458264 
-L 656.795563 418.915954 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 840.96 475.2
+L 930.24 475.2
+Q 936 475.2 936 480.96
+L 936 519.84
+Q 936 525.6 930.24 525.6
+L 840.96 525.6
+Q 835.2 525.6 835.2 519.84
+L 835.2 480.96
+Q 835.2 475.2 840.96 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_15">
-    <path d="M 792.209303 300.072955 
-Q 763.930681 360.288588 740.881162 421.260857 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 744.166386 418.226503 
-L 740.881162 421.260857 
-L 740.424813 416.812065 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 956.16 475.2
+L 1045.44 475.2
+Q 1051.2 475.2 1051.2 480.96
+L 1051.2 519.84
+Q 1051.2 525.6 1045.44 525.6
+L 956.16 525.6
+Q 950.4 525.6 950.4 519.84
+L 950.4 480.96
+Q 950.4 475.2 956.16 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_16">
-    <path d="M 793.361614 300.234008 
-Q 802.744139 361.793323 816.558914 421.135083 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 817.599877 416.785785 
-L 816.558914 421.135083 
-L 813.704054 417.692734 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 1071.36 475.2
+L 1160.64 475.2
+Q 1166.4 475.2 1166.4 480.96
+L 1166.4 519.84
+Q 1166.4 525.6 1160.64 525.6
+L 1071.36 525.6
+Q 1065.6 525.6 1065.6 519.84
+L 1065.6 480.96
+Q 1065.6 475.2 1071.36 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
    </g>
    <g id="patch_17">
-    <path d="M 794.253585 299.86067 
-Q 841.534829 363.308996 892.732636 421.870651 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 891.605598 417.542859 
-L 892.732636 421.870651 
-L 888.59418 420.175606 
-" style="fill: none; stroke: #6b6560; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 1186.56 475.2
+L 1275.84 475.2
+Q 1281.6 475.2 1281.6 480.96
+L 1281.6 519.84
+Q 1281.6 525.6 1275.84 525.6
+L 1186.56 525.6
+Q 1180.8 525.6 1180.8 519.84
+L 1180.8 480.96
+Q 1180.8 475.2 1186.56 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
    </g>
    <g id="patch_18">
-    <path d="M 120.575082 473.773069 
-Q 244.171207 533.861322 372.932054 578.596105 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 369.809963 575.394145 
-L 372.932054 578.596105 
-L 368.497231 579.172601 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
+    <path d="M 1301.76 475.2
+L 1391.04 475.2
+Q 1396.8 475.2 1396.8 480.96
+L 1396.8 519.84
+Q 1396.8 525.6 1391.04 525.6
+L 1301.76 525.6
+Q 1296 525.6 1296 519.84
+L 1296 480.96
+Q 1296 475.2 1301.76 475.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
    </g>
    <g id="patch_19">
-    <path d="M 198.045523 474.019083 
-Q 282.99159 531.539614 373.105384 578.185137 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 370.472464 574.570205 
-L 373.105384 578.185137 
-L 368.633686 578.122513 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
+    <path d="M 437.76 619.2
+L 671.04 619.2
+Q 676.8 619.2 676.8 624.96
+L 676.8 692.64
+Q 676.8 698.4 671.04 698.4
+L 437.76 698.4
+Q 432 698.4 432 692.64
+L 432 624.96
+Q 432 619.2 437.76 619.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_20">
-    <path d="M 275.296825 474.420322 
-Q 321.82434 529.231734 373.595815 577.494555 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 372.033753 573.304094 
-L 373.595815 577.494555 
-L 369.306209 576.229928 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_21">
-    <path d="M 314.646534 473.683524 
-Q 457.604156 535.021336 605.731358 578.735625 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 602.461021 575.685231 
-L 605.731358 578.735625 
-L 601.328841 579.521658 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_22">
-    <path d="M 392.172134 473.88057 
-Q 496.427824 532.699439 605.846393 578.416742 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 602.926643 575.029256 
-L 605.846393 578.416742 
-L 601.384554 578.720051 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_23">
-    <path d="M 469.564042 474.197039 
-Q 535.254903 530.383423 606.134085 577.883963 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 603.924672 573.995712 
-L 606.134085 577.883963 
-L 601.697837 577.318543 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_24">
-    <path d="M 544.032431 474.05987 
-Q 463.906287 531.250561 378.609246 578.117559 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 383.078019 577.944182 
-L 378.609246 578.117559 
-L 381.151808 574.438514 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_25">
-    <path d="M 621.493143 473.794838 
-Q 502.731824 533.569636 378.806341 578.555213 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 383.248714 579.070305 
-L 378.806341 578.555213 
-L 381.883839 575.31037 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_26">
-    <path d="M 699.033197 473.632035 
-Q 541.548412 535.894592 378.889897 578.823296 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 383.267833 579.736355 
-L 378.889897 578.823296 
-L 382.247106 575.868783 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_27">
-    <path d="M 776.880431 474.05987 
-Q 696.754287 531.250561 611.457246 578.117559 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 615.926019 577.944182 
-L 611.457246 578.117559 
-L 613.999808 574.438514 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_28">
-    <path d="M 854.341143 473.794838 
-Q 735.579824 533.569636 611.654341 578.555213 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 616.096714 579.070305 
-L 611.654341 578.555213 
-L 614.731839 575.31037 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_29">
-    <path d="M 931.881197 473.632035 
-Q 774.396412 535.894592 611.737897 578.823296 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-    <path d="M 616.115833 579.736355 
-L 611.737897 578.823296 
-L 615.095106 575.868783 
-" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #6b6560; stroke-linecap: round"/>
-   </g>
-   <g id="patch_30">
-    <path d="M 474.890405 613.764191 
-Q 492.301816 615.326372 507.486108 613.963728 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 503.323355 612.329257 
-L 507.486108 613.963728 
-L 503.68088 616.313247 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-   </g>
-   <g id="patch_31">
-    <path d="M 509.709595 613.385809 
-Q 492.298184 611.823628 477.113892 613.186272 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-    <path d="M 481.276645 614.820743 
-L 477.113892 613.186272 
-L 480.91912 610.836753 
-" style="fill: none; stroke: #e0d8d0; stroke-width: 2; stroke-linecap: round"/>
-   </g>
-   <g id="patch_32">
-    <path d="M 26.604 705.744 
-L 46.008 705.744 
-L 46.008 686.34 
-L 26.604 686.34 
+    <path d="M 812.16 619.2
+L 1045.44 619.2
+Q 1051.2 619.2 1051.2 624.96
+L 1051.2 692.64
+Q 1051.2 698.4 1045.44 698.4
+L 812.16 698.4
+Q 806.4 698.4 806.4 692.64
+L 806.4 624.96
+Q 806.4 619.2 812.16 619.2
 z
-" clip-path="url(#p0bbd69a356)" style="fill: #dfa998; stroke: #c45c3e; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_33">
-    <path d="M 26.604 734.85 
-L 46.008 734.85 
-L 46.008 715.446 
-L 26.604 715.446 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #abb1c0; stroke: #5c6b8e; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_34">
-    <path d="M 26.604 763.956 
-L 46.008 763.956 
-L 46.008 744.552 
-L 26.604 744.552 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #b2c2ae; stroke: #6b8e6b; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_35">
-    <path d="M 26.604 793.062 
-L 46.008 793.062 
-L 46.008 773.658 
-L 26.604 773.658 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #abb8c0; stroke: #5c7a8e; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_36">
-    <path d="M 26.604 822.168 
-L 46.008 822.168 
-L 46.008 802.764 
-L 26.604 802.764 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #c4b1a7; stroke: #8e6b5c; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_37">
-    <path d="M 26.604 851.274 
-L 46.008 851.274 
-L 46.008 831.87 
-L 26.604 831.87 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #bab1c0; stroke: #7a6b8e; stroke-width: 2; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_38">
-    <path d="M 424.386 128.475 
-L 560.214 128.475 
-Q 574.767 128.475 574.767 113.922 
-L 574.767 65.412 
-Q 574.767 50.859 560.214 50.859 
-L 424.386 50.859 
-Q 409.833 50.859 409.833 65.412 
-L 409.833 113.922 
-Q 409.833 128.475 424.386 128.475 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #e9c8bb; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_39">
-    <path d="M 94.518 303.111 
-L 249.75 303.111 
-Q 264.303 303.111 264.303 288.558 
-L 264.303 210.942 
-Q 264.303 196.389 249.75 196.389 
-L 94.518 196.389 
-Q 79.965 196.389 79.965 210.942 
-L 79.965 288.558 
-Q 79.965 303.111 94.518 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cacdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_40">
-    <path d="M 288.558 303.111 
-L 443.79 303.111 
-Q 458.343 303.111 458.343 288.558 
-L 458.343 210.942 
-Q 458.343 196.389 443.79 196.389 
-L 288.558 196.389 
-Q 274.005 196.389 274.005 210.942 
-L 274.005 288.558 
-Q 274.005 303.111 288.558 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cfd7c9; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_41">
-    <path d="M 521.406 303.111 
-L 676.638 303.111 
-Q 691.191 303.111 691.191 288.558 
-L 691.191 210.942 
-Q 691.191 196.389 676.638 196.389 
-L 521.406 196.389 
-Q 506.853 196.389 506.853 210.942 
-L 506.853 288.558 
-Q 506.853 303.111 521.406 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_42">
-    <path d="M 715.446 303.111 
-L 870.678 303.111 
-Q 885.231 303.111 885.231 288.558 
-L 885.231 210.942 
-Q 885.231 196.389 870.678 196.389 
-L 715.446 196.389 
-Q 700.893 196.389 700.893 210.942 
-L 700.893 288.558 
-Q 700.893 303.111 715.446 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_43">
-    <path d="M 55.71 477.747 
-L 104.22 477.747 
-Q 118.773 477.747 118.773 463.194 
-L 118.773 434.088 
-Q 118.773 419.535 104.22 419.535 
-L 55.71 419.535 
-Q 41.157 419.535 41.157 434.088 
-L 41.157 463.194 
-Q 41.157 477.747 55.71 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cacdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_44">
-    <path d="M 133.326 477.747 
-L 181.836 477.747 
-Q 196.389 477.747 196.389 463.194 
-L 196.389 434.088 
-Q 196.389 419.535 181.836 419.535 
-L 133.326 419.535 
-Q 118.773 419.535 118.773 434.088 
-L 118.773 463.194 
-Q 118.773 477.747 133.326 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cacdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_45">
-    <path d="M 210.942 477.747 
-L 259.452 477.747 
-Q 274.005 477.747 274.005 463.194 
-L 274.005 434.088 
-Q 274.005 419.535 259.452 419.535 
-L 210.942 419.535 
-Q 196.389 419.535 196.389 434.088 
-L 196.389 463.194 
-Q 196.389 477.747 210.942 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cacdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_46">
-    <path d="M 249.75 477.747 
-L 298.26 477.747 
-Q 312.813 477.747 312.813 463.194 
-L 312.813 434.088 
-Q 312.813 419.535 298.26 419.535 
-L 249.75 419.535 
-Q 235.197 419.535 235.197 434.088 
-L 235.197 463.194 
-Q 235.197 477.747 249.75 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cfd7c9; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_47">
-    <path d="M 327.366 477.747 
-L 375.876 477.747 
-Q 390.429 477.747 390.429 463.194 
-L 390.429 434.088 
-Q 390.429 419.535 375.876 419.535 
-L 327.366 419.535 
-Q 312.813 419.535 312.813 434.088 
-L 312.813 463.194 
-Q 312.813 477.747 327.366 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cfd7c9; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_48">
-    <path d="M 404.982 477.747 
-L 453.492 477.747 
-Q 468.045 477.747 468.045 463.194 
-L 468.045 434.088 
-Q 468.045 419.535 453.492 419.535 
-L 404.982 419.535 
-Q 390.429 419.535 390.429 434.088 
-L 390.429 463.194 
-Q 390.429 477.747 404.982 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cfd7c9; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_49">
-    <path d="M 482.598 477.747 
-L 531.108 477.747 
-Q 545.661 477.747 545.661 463.194 
-L 545.661 434.088 
-Q 545.661 419.535 531.108 419.535 
-L 482.598 419.535 
-Q 468.045 419.535 468.045 434.088 
-L 468.045 463.194 
-Q 468.045 477.747 482.598 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_50">
-    <path d="M 560.214 477.747 
-L 608.724 477.747 
-Q 623.277 477.747 623.277 463.194 
-L 623.277 434.088 
-Q 623.277 419.535 608.724 419.535 
-L 560.214 419.535 
-Q 545.661 419.535 545.661 434.088 
-L 545.661 463.194 
-Q 545.661 477.747 560.214 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_51">
-    <path d="M 637.83 477.747 
-L 686.34 477.747 
-Q 700.893 477.747 700.893 463.194 
-L 700.893 434.088 
-Q 700.893 419.535 686.34 419.535 
-L 637.83 419.535 
-Q 623.277 419.535 623.277 434.088 
-L 623.277 463.194 
-Q 623.277 477.747 637.83 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_52">
-    <path d="M 715.446 477.747 
-L 763.956 477.747 
-Q 778.509 477.747 778.509 463.194 
-L 778.509 434.088 
-Q 778.509 419.535 763.956 419.535 
-L 715.446 419.535 
-Q 700.893 419.535 700.893 434.088 
-L 700.893 463.194 
-Q 700.893 477.747 715.446 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_53">
-    <path d="M 793.062 477.747 
-L 841.572 477.747 
-Q 856.125 477.747 856.125 463.194 
-L 856.125 434.088 
-Q 856.125 419.535 841.572 419.535 
-L 793.062 419.535 
-Q 778.509 419.535 778.509 434.088 
-L 778.509 463.194 
-Q 778.509 477.747 793.062 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_54">
-    <path d="M 870.678 477.747 
-L 919.188 477.747 
-Q 933.741 477.747 933.741 463.194 
-L 933.741 434.088 
-Q 933.741 419.535 919.188 419.535 
-L 870.678 419.535 
-Q 856.125 419.535 856.125 434.088 
-L 856.125 463.194 
-Q 856.125 477.747 870.678 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_55">
-    <path d="M 288.558 652.383 
-L 463.194 652.383 
-Q 477.747 652.383 477.747 637.83 
-L 477.747 589.32 
-Q 477.747 574.767 463.194 574.767 
-L 288.558 574.767 
-Q 274.005 574.767 274.005 589.32 
-L 274.005 637.83 
-Q 274.005 652.383 288.558 652.383 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #d3cdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_56">
-    <path d="M 521.406 652.383 
-L 696.042 652.383 
-Q 710.595 652.383 710.595 637.83 
-L 710.595 589.32 
-Q 710.595 574.767 696.042 574.767 
-L 521.406 574.767 
-Q 506.853 574.767 506.853 589.32 
-L 506.853 637.83 
-Q 506.853 652.383 521.406 652.383 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: #cacdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
-    <!-- Ludots ECS Hierarchy -->
-    <g style="fill: #2d2a26" transform="translate(407.248594 41.256) scale(0.18 -0.18)">
-     <defs>
-      <path id="NotoSansSC-Thin-4c" d="M 704 0 
-L 704 4646 
-L 941 4646 
-L 941 211 
-L 3117 211 
-L 3117 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-75" d="M 1632 -83 
-Q 1114 -83 864 230 
-Q 614 544 614 1203 
-L 614 3373 
-L 845 3373 
-L 845 1229 
-Q 845 672 1033 400 
-Q 1222 128 1651 128 
-Q 1965 128 2224 304 
-Q 2483 480 2797 851 
-L 2797 3373 
-L 3027 3373 
-L 3027 0 
-L 2829 0 
-L 2803 576 
-L 2790 576 
-Q 2534 282 2259 99 
-Q 1984 -83 1632 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-64" d="M 1773 -83 
-Q 1350 -83 1036 118 
-Q 723 320 550 713 
-Q 378 1107 378 1677 
-Q 378 2221 586 2621 
-Q 794 3021 1136 3238 
-Q 1478 3456 1888 3456 
-Q 2195 3456 2432 3347 
-Q 2669 3238 2925 3034 
-L 2906 3667 
-L 2906 5082 
-L 3136 5082 
-L 3136 0 
-L 2944 0 
-L 2912 448 
-L 2899 448 
-Q 2688 237 2406 77 
-Q 2125 -83 1773 -83 
-z
-M 1792 128 
-Q 2086 128 2358 281 
-Q 2630 435 2906 710 
-L 2906 2784 
-Q 2630 3034 2384 3139 
-Q 2138 3245 1875 3245 
-Q 1523 3245 1238 3033 
-Q 954 2822 787 2467 
-Q 621 2112 621 1677 
-Q 621 1216 758 867 
-Q 896 518 1158 323 
-Q 1421 128 1792 128 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-6f" d="M 1875 -83 
-Q 1472 -83 1129 125 
-Q 787 333 582 726 
-Q 378 1120 378 1677 
-Q 378 2246 582 2643 
-Q 787 3040 1129 3248 
-Q 1472 3456 1875 3456 
-Q 2176 3456 2448 3337 
-Q 2720 3219 2928 2992 
-Q 3136 2765 3254 2432 
-Q 3373 2099 3373 1677 
-Q 3373 1120 3165 726 
-Q 2957 333 2617 125 
-Q 2278 -83 1875 -83 
-z
-M 1875 128 
-Q 2234 128 2518 323 
-Q 2803 518 2969 867 
-Q 3136 1216 3136 1677 
-Q 3136 2144 2969 2496 
-Q 2803 2848 2518 3046 
-Q 2234 3245 1875 3245 
-Q 1517 3245 1232 3046 
-Q 947 2848 784 2496 
-Q 621 2144 621 1677 
-Q 621 1216 784 867 
-Q 947 518 1232 323 
-Q 1517 128 1875 128 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-74" d="M 1542 -83 
-Q 1229 -83 1056 38 
-Q 883 160 816 381 
-Q 749 602 749 896 
-L 749 3162 
-L 211 3162 
-L 211 3341 
-L 749 3373 
-L 774 4358 
-L 973 4358 
-L 973 3373 
-L 1971 3373 
-L 1971 3162 
-L 973 3162 
-L 973 864 
-Q 973 538 1081 333 
-Q 1190 128 1562 128 
-Q 1658 128 1779 160 
-Q 1901 192 1990 237 
-L 2067 45 
-Q 1920 -6 1776 -44 
-Q 1632 -83 1542 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-73" d="M 1466 -83 
-Q 1088 -83 774 54 
-Q 461 192 237 378 
-L 384 563 
-Q 595 384 851 256 
-Q 1107 128 1478 128 
-Q 1901 128 2115 339 
-Q 2330 550 2330 838 
-Q 2330 1062 2202 1209 
-Q 2074 1357 1878 1453 
-Q 1683 1549 1485 1619 
-Q 1229 1715 985 1824 
-Q 742 1933 582 2112 
-Q 422 2291 422 2579 
-Q 422 2816 544 3014 
-Q 666 3213 902 3334 
-Q 1139 3456 1485 3456 
-Q 1741 3456 1990 3360 
-Q 2240 3264 2419 3110 
-L 2285 2938 
-Q 2118 3066 1926 3155 
-Q 1734 3245 1472 3245 
-Q 1056 3245 857 3043 
-Q 659 2842 659 2592 
-Q 659 2394 771 2262 
-Q 883 2131 1065 2044 
-Q 1248 1958 1446 1882 
-Q 1651 1805 1849 1725 
-Q 2048 1645 2208 1536 
-Q 2368 1427 2467 1264 
-Q 2566 1101 2566 851 
-Q 2566 602 2438 387 
-Q 2310 173 2067 45 
-Q 1824 -83 1466 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-20" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-45" d="M 704 0 
-L 704 4646 
-L 3200 4646 
-L 3200 4435 
-L 941 4435 
-L 941 2586 
-L 2835 2586 
-L 2835 2374 
-L 941 2374 
-L 941 211 
-L 3270 211 
-L 3270 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-43" d="M 2317 -83 
-Q 1888 -83 1536 86 
-Q 1184 256 928 576 
-Q 672 896 534 1341 
-Q 397 1786 397 2336 
-Q 397 2886 537 3328 
-Q 678 3770 934 4083 
-Q 1190 4397 1552 4563 
-Q 1914 4730 2355 4730 
-Q 2758 4730 3059 4560 
-Q 3360 4390 3539 4179 
-L 3392 4019 
-Q 3206 4237 2944 4371 
-Q 2682 4506 2355 4506 
-Q 1824 4506 1440 4240 
-Q 1056 3974 851 3488 
-Q 646 3002 646 2336 
-Q 646 1670 851 1177 
-Q 1056 685 1433 413 
-Q 1811 141 2330 141 
-Q 2694 141 2982 288 
-Q 3270 435 3533 730 
-L 3680 576 
-Q 3418 269 3094 93 
-Q 2771 -83 2317 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-53" d="M 1888 -83 
-Q 1376 -83 989 115 
-Q 602 314 339 621 
-L 499 787 
-Q 755 493 1113 317 
-Q 1472 141 1888 141 
-Q 2445 141 2774 416 
-Q 3104 691 3104 1126 
-Q 3104 1440 2985 1625 
-Q 2867 1811 2675 1929 
-Q 2483 2048 2246 2150 
-L 1536 2470 
-Q 1338 2560 1117 2694 
-Q 896 2829 742 3049 
-Q 589 3270 589 3610 
-Q 589 3949 761 4198 
-Q 934 4448 1232 4589 
-Q 1530 4730 1907 4730 
-Q 2330 4730 2653 4566 
-Q 2976 4403 3174 4179 
-L 3027 4019 
-Q 2829 4237 2547 4371 
-Q 2266 4506 1907 4506 
-Q 1421 4506 1126 4269 
-Q 832 4032 832 3635 
-Q 832 3347 966 3164 
-Q 1101 2982 1293 2876 
-Q 1485 2771 1645 2694 
-L 2355 2374 
-Q 2618 2259 2842 2108 
-Q 3066 1958 3203 1731 
-Q 3341 1504 3341 1146 
-Q 3341 794 3161 515 
-Q 2982 237 2656 77 
-Q 2330 -83 1888 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-48" d="M 704 0 
-L 704 4646 
-L 941 4646 
-L 941 2586 
-L 3526 2586 
-L 3526 4646 
-L 3770 4646 
-L 3770 0 
-L 3526 0 
-L 3526 2374 
-L 941 2374 
-L 941 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-69" d="M 672 0 
-L 672 3373 
-L 902 3373 
-L 902 0 
-L 672 0 
-z
-M 794 4224 
-Q 691 4224 627 4294 
-Q 563 4365 563 4486 
-Q 563 4595 627 4662 
-Q 691 4730 794 4730 
-Q 890 4730 957 4662 
-Q 1024 4595 1024 4486 
-Q 1024 4365 957 4294 
-Q 890 4224 794 4224 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-65" d="M 1920 -83 
-Q 1498 -83 1146 128 
-Q 794 339 586 732 
-Q 378 1126 378 1677 
-Q 378 2093 496 2419 
-Q 614 2746 822 2979 
-Q 1030 3213 1289 3334 
-Q 1549 3456 1830 3456 
-Q 2221 3456 2505 3277 
-Q 2790 3098 2947 2749 
-Q 3104 2400 3104 1901 
-Q 3104 1850 3104 1795 
-Q 3104 1741 3091 1670 
-L 621 1670 
-Q 621 1229 784 880 
-Q 947 531 1241 329 
-Q 1536 128 1933 128 
-Q 2221 128 2445 211 
-Q 2669 294 2861 435 
-L 2963 237 
-Q 2771 122 2534 19 
-Q 2298 -83 1920 -83 
-z
-M 621 1882 
-L 2880 1882 
-Q 2880 2566 2592 2905 
-Q 2304 3245 1830 3245 
-Q 1530 3245 1267 3081 
-Q 1005 2918 832 2614 
-Q 659 2310 621 1882 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-72" d="M 672 0 
-L 672 3373 
-L 864 3373 
-L 902 2739 
-L 915 2739 
-Q 1082 3046 1325 3251 
-Q 1568 3456 1869 3456 
-Q 1958 3456 2035 3443 
-Q 2112 3430 2195 3386 
-L 2138 3174 
-Q 2054 3206 1996 3219 
-Q 1939 3232 1837 3232 
-Q 1613 3232 1357 3030 
-Q 1101 2829 902 2330 
-L 902 0 
-L 672 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-61" d="M 1395 -83 
-Q 1133 -83 912 13 
-Q 691 109 556 310 
-Q 422 512 422 832 
-Q 422 1395 953 1686 
-Q 1485 1978 2624 2106 
-Q 2637 2381 2576 2640 
-Q 2515 2899 2336 3072 
-Q 2157 3245 1805 3245 
-Q 1446 3245 1158 3104 
-Q 870 2963 704 2835 
-L 589 3021 
-Q 698 3098 880 3200 
-Q 1062 3302 1302 3379 
-Q 1542 3456 1818 3456 
-Q 2214 3456 2441 3280 
-Q 2669 3104 2761 2816 
-Q 2854 2528 2854 2182 
-L 2854 0 
-L 2662 0 
-L 2630 448 
-L 2611 448 
-Q 2355 237 2044 77 
-Q 1734 -83 1395 -83 
-z
-M 1414 128 
-Q 1715 128 2003 272 
-Q 2291 416 2624 698 
-L 2624 1907 
-Q 1894 1830 1462 1686 
-Q 1030 1542 844 1334 
-Q 659 1126 659 838 
-Q 659 448 883 288 
-Q 1107 128 1414 128 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-63" d="M 1888 -83 
-Q 1459 -83 1116 125 
-Q 774 333 576 726 
-Q 378 1120 378 1677 
-Q 378 2246 589 2643 
-Q 800 3040 1145 3248 
-Q 1491 3456 1894 3456 
-Q 2240 3456 2477 3325 
-Q 2714 3194 2880 3034 
-L 2733 2867 
-Q 2566 3027 2361 3136 
-Q 2157 3245 1894 3245 
-Q 1536 3245 1248 3046 
-Q 960 2848 790 2496 
-Q 621 2144 621 1677 
-Q 621 1216 781 867 
-Q 941 518 1225 323 
-Q 1510 128 1894 128 
-Q 2176 128 2413 246 
-Q 2650 365 2829 531 
-L 2963 365 
-Q 2752 179 2483 48 
-Q 2214 -83 1888 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-68" d="M 672 0 
-L 672 5082 
-L 902 5082 
-L 902 3584 
-L 902 2822 
-Q 1171 3098 1449 3277 
-Q 1728 3456 2080 3456 
-Q 2598 3456 2848 3139 
-Q 3098 2822 3098 2170 
-L 3098 0 
-L 2867 0 
-L 2867 2138 
-Q 2867 2694 2678 2969 
-Q 2490 3245 2054 3245 
-Q 1741 3245 1481 3078 
-Q 1222 2912 902 2579 
-L 902 0 
-L 672 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-79" d="M 474 -1562 
-Q 390 -1562 300 -1542 
-Q 211 -1523 147 -1491 
-L 205 -1280 
-Q 256 -1306 333 -1322 
-Q 410 -1338 486 -1338 
-Q 806 -1338 1024 -1066 
-Q 1242 -794 1382 -390 
-L 1478 -77 
-L 83 3373 
-L 339 3373 
-L 1190 1171 
-Q 1274 954 1373 701 
-Q 1472 448 1568 224 
-L 1600 224 
-Q 1683 448 1766 701 
-Q 1850 954 1920 1171 
-L 2675 3373 
-L 2912 3373 
-L 1568 -474 
-Q 1485 -736 1337 -985 
-Q 1190 -1235 979 -1398 
-Q 768 -1562 474 -1562 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-4c"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(50.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(108.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(167.999969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(226.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(259.999954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(304.099945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-45" transform="translate(326.09993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(382.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(444.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(501.099915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-48" transform="translate(523.099899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(592.899887 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(617.399872 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(670.099869 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(703.999863 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(757.599854 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(791.499847 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(840.699844 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(898.199829 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="712.8" y="141.392187" transform="rotate(-0 712.8 141.392187)">World</text>
    </g>
    <g id="text_2">
-    <!-- World → Entity → Component → System → Query → Archetype -->
-    <g style="fill: #6b6560" transform="translate(338.740859 68.437) scale(0.11 -0.11)">
-     <defs>
-      <path id="NotoSansSC-Thin-57" d="M 1286 0 
-L 211 4646 
-L 461 4646 
-L 1075 1843 
-Q 1165 1466 1248 1085 
-Q 1331 704 1414 320 
-L 1440 320 
-Q 1530 704 1622 1085 
-Q 1715 1466 1811 1843 
-L 2560 4646 
-L 2829 4646 
-L 3584 1843 
-Q 3680 1466 3773 1085 
-Q 3866 704 3962 320 
-L 3994 320 
-Q 4077 704 4153 1085 
-Q 4230 1466 4307 1843 
-L 4928 4646 
-L 5165 4646 
-L 4102 0 
-L 3853 0 
-L 2963 3315 
-Q 2899 3597 2838 3840 
-Q 2778 4083 2707 4358 
-L 2682 4358 
-Q 2618 4083 2547 3840 
-Q 2477 3597 2413 3315 
-L 1536 0 
-L 1286 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-6c" d="M 1018 -83 
-Q 909 -83 832 -35 
-Q 755 13 713 115 
-Q 672 218 672 378 
-L 672 5082 
-L 902 5082 
-L 902 339 
-Q 902 237 940 182 
-Q 979 128 1043 128 
-Q 1062 128 1088 131 
-Q 1114 134 1165 141 
-L 1210 -58 
-Q 1165 -64 1126 -73 
-Q 1088 -83 1018 -83 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-2192" d="M 5606 2547 
-Q 5312 2771 4973 3094 
-Q 4634 3418 4371 3757 
-L 4563 3891 
-Q 4781 3610 5046 3341 
-Q 5312 3072 5603 2841 
-Q 5894 2611 6176 2432 
-Q 5894 2259 5603 2025 
-Q 5312 1792 5046 1523 
-Q 4781 1254 4563 973 
-L 4371 1107 
-Q 4634 1446 4973 1772 
-Q 5312 2099 5606 2317 
-L 256 2317 
-L 256 2547 
-L 5606 2547 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-6e" d="M 672 0 
-L 672 3373 
-L 864 3373 
-L 902 2835 
-L 915 2835 
-Q 1178 3098 1453 3277 
-Q 1728 3456 2080 3456 
-Q 2598 3456 2848 3139 
-Q 3098 2822 3098 2170 
-L 3098 0 
-L 2867 0 
-L 2867 2138 
-Q 2867 2694 2678 2969 
-Q 2490 3245 2054 3245 
-Q 1741 3245 1481 3078 
-Q 1222 2912 902 2579 
-L 902 0 
-L 672 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-6d" d="M 672 0 
-L 672 3373 
-L 864 3373 
-L 902 2835 
-L 915 2835 
-Q 1146 3098 1427 3277 
-Q 1709 3456 1984 3456 
-Q 2400 3456 2614 3264 
-Q 2829 3072 2912 2752 
-Q 3213 3078 3497 3267 
-Q 3782 3456 4070 3456 
-Q 4563 3456 4816 3139 
-Q 5069 2822 5069 2170 
-L 5069 0 
-L 4845 0 
-L 4845 2138 
-Q 4845 2694 4649 2969 
-Q 4454 3245 4045 3245 
-Q 3795 3245 3539 3078 
-Q 3283 2912 2982 2579 
-L 2982 0 
-L 2758 0 
-L 2758 2138 
-Q 2758 2694 2566 2969 
-Q 2374 3245 1965 3245 
-Q 1722 3245 1456 3078 
-Q 1190 2912 902 2579 
-L 902 0 
-L 672 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-70" d="M 672 -1555 
-L 672 3373 
-L 864 3373 
-L 902 2938 
-L 915 2938 
-Q 1165 3136 1462 3296 
-Q 1760 3456 2074 3456 
-Q 2534 3456 2835 3241 
-Q 3136 3027 3283 2643 
-Q 3430 2259 3430 1734 
-Q 3430 1165 3222 755 
-Q 3014 346 2675 131 
-Q 2336 -83 1933 -83 
-Q 1696 -83 1433 29 
-Q 1171 141 902 339 
-L 902 -294 
-L 902 -1555 
-L 672 -1555 
-z
-M 1952 128 
-Q 2310 128 2588 333 
-Q 2867 538 3027 902 
-Q 3187 1267 3187 1734 
-Q 3187 2163 3075 2505 
-Q 2963 2848 2716 3046 
-Q 2470 3245 2054 3245 
-Q 1798 3245 1510 3094 
-Q 1222 2944 902 2662 
-L 902 582 
-Q 1203 333 1478 230 
-Q 1754 128 1952 128 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-51" d="M 2285 -83 
-Q 1734 -83 1308 217 
-Q 883 518 640 1062 
-Q 397 1606 397 2336 
-Q 397 3072 640 3606 
-Q 883 4141 1308 4435 
-Q 1734 4730 2285 4730 
-Q 2835 4730 3260 4435 
-Q 3686 4141 3929 3606 
-Q 4173 3072 4173 2336 
-Q 4173 1606 3929 1062 
-Q 3686 518 3260 217 
-Q 2835 -83 2285 -83 
-z
-M 2285 128 
-Q 2778 128 3146 403 
-Q 3514 678 3718 1174 
-Q 3923 1670 3923 2336 
-Q 3923 3002 3718 3488 
-Q 3514 3974 3146 4240 
-Q 2778 4506 2285 4506 
-Q 1798 4506 1427 4240 
-Q 1056 3974 851 3488 
-Q 646 3002 646 2336 
-Q 646 1670 851 1174 
-Q 1056 678 1427 403 
-Q 1798 128 2285 128 
-z
-M 3622 -1075 
-Q 3232 -1075 2928 -934 
-Q 2624 -794 2419 -547 
-Q 2214 -301 2112 0 
-L 2381 0 
-Q 2477 -262 2653 -451 
-Q 2829 -640 3081 -739 
-Q 3334 -838 3648 -838 
-Q 3808 -838 3917 -822 
-Q 4026 -806 4109 -781 
-L 4166 -998 
-Q 4083 -1024 3936 -1049 
-Q 3789 -1075 3622 -1075 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-41" d="M 70 0 
-L 1728 4646 
-L 1939 4646 
-L 3603 0 
-L 3347 0 
-L 2381 2784 
-Q 2234 3206 2106 3587 
-Q 1978 3968 1850 4403 
-L 1824 4403 
-Q 1696 3968 1565 3587 
-Q 1434 3206 1286 2784 
-L 307 0 
-L 70 0 
-z
-M 787 1651 
-L 787 1856 
-L 2861 1856 
-L 2861 1651 
-L 787 1651 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-57"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(84.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(142.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6c" transform="translate(176.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(202.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(261.599945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(283.59993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(383.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-45" transform="translate(405.599899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(461.799896 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(519.799881 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(553.199875 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(577.69986 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(611.099854 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(657.899841 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(679.899826 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(779.899811 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(801.899796 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(863.799789 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(922.39978 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(1011.299774 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(1070.799759 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1129.39975 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1187.399734 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1240.099731 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1298.099716 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1331.49971 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(1353.499695 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1453.49968 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(1475.499664 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(1532.399658 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(1579.199646 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1623.299637 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1656.699631 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(1709.399628 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1798.299622 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(1820.299606 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1920.299591 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-51" transform="translate(1942.299576 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(2013.69957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(2071.399567 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(2124.099564 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(2157.999557 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(2204.799545 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(2226.79953 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(2326.799515 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(2348.7995 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(2406.199493 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(2440.099487 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(2489.299484 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(2546.799469 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(2599.499466 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(2632.89946 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(2679.699448 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(2739.199432 0)"/>
-    </g>
-   </g>
-   <g id="patch_57">
-    <path d="M 424.386 128.475 
-L 560.214 128.475 
-Q 574.767 128.475 574.767 113.922 
-L 574.767 65.412 
-Q 574.767 50.859 560.214 50.859 
-L 424.386 50.859 
-Q 409.833 50.859 409.833 65.412 
-L 409.833 113.922 
-Q 409.833 128.475 424.386 128.475 
-L 424.386 128.475 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #c45c3e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_58">
-    <path d="M 94.518 303.111 
-L 249.75 303.111 
-Q 264.303 303.111 264.303 288.558 
-L 264.303 210.942 
-Q 264.303 196.389 249.75 196.389 
-L 94.518 196.389 
-Q 79.965 196.389 79.965 210.942 
-L 79.965 288.558 
-Q 79.965 303.111 94.518 303.111 
-L 94.518 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_59">
-    <path d="M 288.558 303.111 
-L 443.79 303.111 
-Q 458.343 303.111 458.343 288.558 
-L 458.343 210.942 
-Q 458.343 196.389 443.79 196.389 
-L 288.558 196.389 
-Q 274.005 196.389 274.005 210.942 
-L 274.005 288.558 
-Q 274.005 303.111 288.558 303.111 
-L 288.558 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #6b8e6b; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_60">
-    <path d="M 521.406 303.111 
-L 676.638 303.111 
-Q 691.191 303.111 691.191 288.558 
-L 691.191 210.942 
-Q 691.191 196.389 676.638 196.389 
-L 521.406 196.389 
-Q 506.853 196.389 506.853 210.942 
-L 506.853 288.558 
-Q 506.853 303.111 521.406 303.111 
-L 521.406 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_61">
-    <path d="M 715.446 303.111 
-L 870.678 303.111 
-Q 885.231 303.111 885.231 288.558 
-L 885.231 210.942 
-Q 885.231 196.389 870.678 196.389 
-L 715.446 196.389 
-Q 700.893 196.389 700.893 210.942 
-L 700.893 288.558 
-Q 700.893 303.111 715.446 303.111 
-L 715.446 303.111 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_62">
-    <path d="M 55.71 477.747 
-L 104.22 477.747 
-Q 118.773 477.747 118.773 463.194 
-L 118.773 434.088 
-Q 118.773 419.535 104.22 419.535 
-L 55.71 419.535 
-Q 41.157 419.535 41.157 434.088 
-L 41.157 463.194 
-Q 41.157 477.747 55.71 477.747 
-L 55.71 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_63">
-    <path d="M 133.326 477.747 
-L 181.836 477.747 
-Q 196.389 477.747 196.389 463.194 
-L 196.389 434.088 
-Q 196.389 419.535 181.836 419.535 
-L 133.326 419.535 
-Q 118.773 419.535 118.773 434.088 
-L 118.773 463.194 
-Q 118.773 477.747 133.326 477.747 
-L 133.326 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_64">
-    <path d="M 210.942 477.747 
-L 259.452 477.747 
-Q 274.005 477.747 274.005 463.194 
-L 274.005 434.088 
-Q 274.005 419.535 259.452 419.535 
-L 210.942 419.535 
-Q 196.389 419.535 196.389 434.088 
-L 196.389 463.194 
-Q 196.389 477.747 210.942 477.747 
-L 210.942 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_65">
-    <path d="M 249.75 477.747 
-L 298.26 477.747 
-Q 312.813 477.747 312.813 463.194 
-L 312.813 434.088 
-Q 312.813 419.535 298.26 419.535 
-L 249.75 419.535 
-Q 235.197 419.535 235.197 434.088 
-L 235.197 463.194 
-Q 235.197 477.747 249.75 477.747 
-L 249.75 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #6b8e6b; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_66">
-    <path d="M 327.366 477.747 
-L 375.876 477.747 
-Q 390.429 477.747 390.429 463.194 
-L 390.429 434.088 
-Q 390.429 419.535 375.876 419.535 
-L 327.366 419.535 
-Q 312.813 419.535 312.813 434.088 
-L 312.813 463.194 
-Q 312.813 477.747 327.366 477.747 
-L 327.366 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #6b8e6b; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_67">
-    <path d="M 404.982 477.747 
-L 453.492 477.747 
-Q 468.045 477.747 468.045 463.194 
-L 468.045 434.088 
-Q 468.045 419.535 453.492 419.535 
-L 404.982 419.535 
-Q 390.429 419.535 390.429 434.088 
-L 390.429 463.194 
-Q 390.429 477.747 404.982 477.747 
-L 404.982 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #6b8e6b; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_68">
-    <path d="M 482.598 477.747 
-L 531.108 477.747 
-Q 545.661 477.747 545.661 463.194 
-L 545.661 434.088 
-Q 545.661 419.535 531.108 419.535 
-L 482.598 419.535 
-Q 468.045 419.535 468.045 434.088 
-L 468.045 463.194 
-Q 468.045 477.747 482.598 477.747 
-L 482.598 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_69">
-    <path d="M 560.214 477.747 
-L 608.724 477.747 
-Q 623.277 477.747 623.277 463.194 
-L 623.277 434.088 
-Q 623.277 419.535 608.724 419.535 
-L 560.214 419.535 
-Q 545.661 419.535 545.661 434.088 
-L 545.661 463.194 
-Q 545.661 477.747 560.214 477.747 
-L 560.214 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_70">
-    <path d="M 637.83 477.747 
-L 686.34 477.747 
-Q 700.893 477.747 700.893 463.194 
-L 700.893 434.088 
-Q 700.893 419.535 686.34 419.535 
-L 637.83 419.535 
-Q 623.277 419.535 623.277 434.088 
-L 623.277 463.194 
-Q 623.277 477.747 637.83 477.747 
-L 637.83 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_71">
-    <path d="M 715.446 477.747 
-L 763.956 477.747 
-Q 778.509 477.747 778.509 463.194 
-L 778.509 434.088 
-Q 778.509 419.535 763.956 419.535 
-L 715.446 419.535 
-Q 700.893 419.535 700.893 434.088 
-L 700.893 463.194 
-Q 700.893 477.747 715.446 477.747 
-L 715.446 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_72">
-    <path d="M 793.062 477.747 
-L 841.572 477.747 
-Q 856.125 477.747 856.125 463.194 
-L 856.125 434.088 
-Q 856.125 419.535 841.572 419.535 
-L 793.062 419.535 
-Q 778.509 419.535 778.509 434.088 
-L 778.509 463.194 
-Q 778.509 477.747 793.062 477.747 
-L 793.062 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_73">
-    <path d="M 870.678 477.747 
-L 919.188 477.747 
-Q 933.741 477.747 933.741 463.194 
-L 933.741 434.088 
-Q 933.741 419.535 919.188 419.535 
-L 870.678 419.535 
-Q 856.125 419.535 856.125 434.088 
-L 856.125 463.194 
-Q 856.125 477.747 870.678 477.747 
-L 870.678 477.747 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_74">
-    <path d="M 288.558 652.383 
-L 463.194 652.383 
-Q 477.747 652.383 477.747 637.83 
-L 477.747 589.32 
-Q 477.747 574.767 463.194 574.767 
-L 288.558 574.767 
-Q 274.005 574.767 274.005 589.32 
-L 274.005 637.83 
-Q 274.005 652.383 288.558 652.383 
-L 288.558 652.383 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #7a6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_75">
-    <path d="M 521.406 652.383 
-L 696.042 652.383 
-Q 710.595 652.383 710.595 637.83 
-L 710.595 589.32 
-Q 710.595 574.767 696.042 574.767 
-L 521.406 574.767 
-Q 506.853 574.767 506.853 589.32 
-L 506.853 637.83 
-Q 506.853 652.383 521.406 652.383 
-L 521.406 652.383 
-z
-" clip-path="url(#p0bbd69a356)" style="fill: none; stroke: #5c6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="712.8" y="158.214656" transform="rotate(-0 712.8 158.214656)">Entity Manager + System Manager</text>
    </g>
    <g id="text_3">
-    <!-- Core Engine -->
-    <g style="fill: #2d2a26" transform="translate(55.71 698.395359) scale(0.09 -0.09)">
-     <defs>
-      <path id="NotoSansSC-Thin-67" d="M 1760 -1645 
-Q 1331 -1645 1020 -1526 
-Q 710 -1408 544 -1197 
-Q 378 -986 378 -704 
-Q 378 -480 515 -259 
-Q 653 -38 890 128 
-L 890 154 
-Q 762 230 675 364 
-Q 589 499 589 691 
-Q 589 922 720 1078 
-Q 851 1235 960 1312 
-L 960 1338 
-Q 800 1478 665 1718 
-Q 531 1958 531 2266 
-Q 531 2611 684 2880 
-Q 838 3149 1104 3302 
-Q 1370 3456 1690 3456 
-Q 1837 3456 1949 3430 
-Q 2061 3405 2131 3373 
-L 3258 3373 
-L 3258 3162 
-L 2451 3162 
-Q 2630 3014 2739 2784 
-Q 2848 2554 2848 2266 
-Q 2848 1933 2694 1661 
-Q 2541 1389 2278 1229 
-Q 2016 1069 1690 1069 
-Q 1549 1069 1392 1110 
-Q 1235 1152 1120 1222 
-Q 1005 1133 915 1008 
-Q 826 883 826 710 
-Q 826 518 960 380 
-Q 1094 243 1485 243 
-L 2234 243 
-Q 2790 243 3052 60 
-Q 3315 -122 3315 -512 
-Q 3315 -794 3123 -1056 
-Q 2931 -1318 2582 -1481 
-Q 2234 -1645 1760 -1645 
-z
-M 1690 1280 
-Q 1939 1280 2147 1405 
-Q 2355 1530 2483 1754 
-Q 2611 1978 2611 2266 
-Q 2611 2566 2486 2787 
-Q 2362 3008 2154 3126 
-Q 1946 3245 1690 3245 
-Q 1440 3245 1232 3126 
-Q 1024 3008 899 2790 
-Q 774 2573 774 2266 
-Q 774 1978 902 1754 
-Q 1030 1530 1238 1405 
-Q 1446 1280 1690 1280 
-z
-M 1773 -1440 
-Q 2176 -1440 2467 -1305 
-Q 2758 -1171 2918 -963 
-Q 3078 -755 3078 -538 
-Q 3078 -237 2870 -112 
-Q 2662 13 2266 13 
-L 1498 13 
-Q 1466 13 1347 25 
-Q 1229 38 1088 70 
-Q 838 -96 729 -297 
-Q 621 -499 621 -685 
-Q 621 -1018 921 -1229 
-Q 1222 -1440 1773 -1440 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(154.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(207.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-45" transform="translate(229.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(285.299957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(343.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(396.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(420.799911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(478.799896 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="223.2" y="329.269219" transform="rotate(-0 223.2 329.269219)">Entity</text>
    </g>
    <g id="text_4">
-    <!-- Storage/Data -->
-    <g style="fill: #2d2a26" transform="translate(55.71 727.5105) scale(0.09 -0.09)">
-     <defs>
-      <path id="NotoSansSC-Thin-2f" d="M 58 -1126 
-L 2298 5005 
-L 2515 5005 
-L 282 -1126 
-L 58 -1126 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-44" d="M 704 0 
-L 704 4646 
-L 1747 4646 
-Q 2470 4646 2931 4358 
-Q 3392 4070 3613 3552 
-Q 3834 3034 3834 2336 
-Q 3834 1645 3613 1117 
-Q 3392 589 2931 294 
-Q 2470 0 1754 0 
-L 704 0 
-z
-M 941 211 
-L 1715 211 
-Q 2374 211 2787 486 
-Q 3200 762 3392 1245 
-Q 3584 1728 3584 2336 
-Q 3584 2950 3392 3424 
-Q 3200 3898 2787 4166 
-Q 2374 4435 1715 4435 
-L 941 4435 
-L 941 211 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(90.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(148.899979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(182.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(236.399963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(289.399948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2f" transform="translate(342.099945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-44" transform="translate(381.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(447.799927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(501.399918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(534.799911 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="223.2" y="346.134656" transform="rotate(-0 223.2 346.134656)">EntityManager</text>
    </g>
    <g id="text_5">
-    <!-- Component/GAS -->
-    <g style="fill: #2d2a26" transform="translate(55.71 756.733922) scale(0.09 -0.09)">
-     <defs>
-      <path id="NotoSansSC-Thin-47" d="M 2355 -83 
-Q 1766 -83 1324 217 
-Q 883 518 640 1062 
-Q 397 1606 397 2336 
-Q 397 2886 541 3328 
-Q 685 3770 953 4083 
-Q 1222 4397 1593 4563 
-Q 1965 4730 2426 4730 
-Q 2893 4730 3190 4550 
-Q 3488 4371 3667 4179 
-L 3520 4019 
-Q 3341 4218 3078 4362 
-Q 2816 4506 2426 4506 
-Q 1875 4506 1475 4240 
-Q 1075 3974 860 3488 
-Q 646 3002 646 2336 
-Q 646 1670 854 1177 
-Q 1062 685 1449 413 
-Q 1837 141 2374 141 
-Q 2707 141 3001 240 
-Q 3296 339 3469 512 
-L 3469 2035 
-L 2323 2035 
-L 2323 2246 
-L 3718 2246 
-L 3718 435 
-Q 3501 205 3155 61 
-Q 2810 -83 2355 -83 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(268.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(327.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(385.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(438.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(496.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2f" transform="translate(529.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-47" transform="translate(569.199905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(635.299896 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(692.69989 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="223.2" y="359.993156" transform="rotate(-0 223.2 359.993156)">EntityCommandBuffer</text>
    </g>
    <g id="text_6">
-    <!-- System/Logic -->
-    <g style="fill: #2d2a26" transform="translate(55.71 785.7225) scale(0.09 -0.09)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2f" transform="translate(322.799957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4c" transform="translate(362.399948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(413.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(471.799927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(524.799911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(549.299896 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="223.2" y="373.494656" transform="rotate(-0 223.2 373.494656)">EntityQuery</text>
    </g>
    <g id="text_7">
-    <!-- Archetype/Layout -->
-    <g style="fill: #2d2a26" transform="translate(55.71 814.941) scale(0.09 -0.09)">
-     <use xlink:href="#NotoSansSC-Thin-41"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(57.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(91.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(140.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(197.999969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(250.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(284.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(330.899948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(390.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2f" transform="translate(443.09993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4c" transform="translate(482.699921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(533.499908 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(587.099899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(633.899887 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(692.499878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(750.199875 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="547.2" y="329.312188" transform="rotate(-0 547.2 329.312188)">Component</text>
    </g>
    <g id="text_8">
-    <!-- Query/Search -->
-    <g style="fill: #2d2a26" transform="translate(55.71 844.047) scale(0.09 -0.09)">
-     <use xlink:href="#NotoSansSC-Thin-51"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(71.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(129.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(181.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(215.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2f" transform="translate(262.499969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(302.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(358.999954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(411.699951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(465.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(499.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(548.399933 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="547.2" y="346.193625" transform="rotate(-0 547.2 346.193625)">IComponentData</text>
    </g>
    <g id="text_9">
-    <g id="patch_76">
-     <path d="M 666.936 708.21175 
-L 814.531 708.21175 
-Q 818.531 708.21175 818.531 704.21175 
-L 818.531 686.34875 
-Q 818.531 682.34875 814.531 682.34875 
-L 666.936 682.34875 
-Q 662.936 682.34875 662.936 686.34875 
-L 662.936 704.21175 
-Q 662.936 708.21175 666.936 708.21175 
-z
-" style="fill: #f2e8e0; opacity: 0.8; stroke: #e0d8d0; stroke-linejoin: miter"/>
-    </g>
-    <!-- All entities with the same component -->
-    <g style="fill: #6b6560" transform="translate(666.936 692.6925) scale(0.08 -0.08)">
-     <defs>
-      <path id="NotoSansSC-Thin-77" d="M 1184 0 
-L 166 3373 
-L 422 3373 
-L 1069 1114 
-Q 1126 877 1187 662 
-Q 1248 448 1299 224 
-L 1331 224 
-Q 1395 448 1456 662 
-Q 1517 877 1581 1114 
-L 2227 3373 
-L 2534 3373 
-L 3181 1114 
-Q 3245 877 3309 662 
-Q 3373 448 3437 224 
-L 3462 224 
-Q 3520 448 3584 662 
-Q 3648 877 3712 1114 
-L 4339 3373 
-L 4582 3373 
-L 3597 0 
-L 3283 0 
-L 2656 2182 
-Q 2579 2426 2518 2662 
-Q 2458 2899 2387 3142 
-L 2355 3142 
-Q 2291 2899 2227 2656 
-Q 2163 2413 2080 2170 
-L 1466 0 
-L 1184 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-41"/>
-     <use xlink:href="#NotoSansSC-Thin-6c" transform="translate(57.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6c" transform="translate(82.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(108.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(130.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(182.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(240.899948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(274.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(298.799927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(332.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(356.699905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(409.399902 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(453.499893 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-77" transform="translate(475.499878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(549.69986 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(574.199844 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(607.599838 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(665.099823 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(687.099808 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(720.499802 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(777.999786 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(830.699783 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(852.699768 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(896.799759 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(950.39975 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1039.299744 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1091.999741 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(1113.999725 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(1163.199722 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(1221.799713 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(1310.699707 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(1370.199692 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1428.799683 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1486.799667 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1539.499664 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1597.499649 0)"/>
-    </g>
-    <!-- types share an Archetype → Chunk → SoA -->
-    <g style="fill: #6b6560" transform="translate(666.936 702.25925) scale(0.08 -0.08)">
-     <defs>
-      <path id="NotoSansSC-Thin-6b" d="M 672 0 
-L 672 5082 
-L 902 5082 
-L 902 1242 
-L 915 1242 
-L 2650 3373 
-L 2918 3373 
-L 1830 2042 
-L 3110 0 
-L 2861 0 
-L 1696 1869 
-L 902 928 
-L 902 0 
-L 672 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-74"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(33.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(80.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(139.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(192.399963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(236.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(258.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(302.59993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(360.099915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(413.699905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(447.599899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(500.299896 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(522.299881 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(575.899872 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(633.899857 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(655.899841 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(713.299835 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(747.199829 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(796.399826 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(853.899811 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(906.599808 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(939.999802 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(986.799789 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1046.299774 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1098.999771 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(1120.999756 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1220.999741 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(1242.999725 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(1304.899719 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(1362.399704 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1420.099701 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6b" transform="translate(1478.099686 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1527.99968 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2192" transform="translate(1549.999664 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1649.999649 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(1671.999634 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(1728.899628 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(1787.499619 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="547.2" y="359.873625" transform="rotate(-0 547.2 359.873625)">ISharedComponentData</text>
    </g>
    <g id="text_10">
-    <!-- World -->
-    <g style="fill: #2d2a26" transform="translate(476.603437 78.420562) scale(0.12 -0.12)">
-     <use xlink:href="#NotoSansSC-Thin-57"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(84.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(142.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6c" transform="translate(176.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(202.09996 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="547.2" y="373.673156" transform="rotate(-0 547.2 373.673156)">DynamicBuffer</text>
    </g>
    <g id="text_11">
-    <!-- Entity Manager + System Manager -->
-    <g style="fill: #6b6560" transform="translate(440.541562 110.901391) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-4d" d="M 704 0 
-L 704 4646 
-L 1082 4646 
-L 2074 1843 
-Q 2170 1587 2266 1321 
-Q 2362 1056 2458 794 
-L 2483 794 
-Q 2579 1056 2668 1321 
-Q 2758 1587 2848 1843 
-L 3846 4646 
-L 4224 4646 
-L 4224 0 
-L 3987 0 
-L 3987 3213 
-Q 3987 3398 3990 3606 
-Q 3994 3814 4000 4028 
-Q 4006 4243 4013 4429 
-L 3987 4429 
-L 3629 3405 
-L 2586 518 
-L 2336 518 
-L 1286 3405 
-L 922 4429 
-L 896 4429 
-Q 909 4243 915 4028 
-Q 922 3814 925 3606 
-Q 928 3398 928 3213 
-L 928 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-2b" d="M 1549 787 
-L 1549 2221 
-L 237 2221 
-L 237 2426 
-L 1549 2426 
-L 1549 3866 
-L 1786 3866 
-L 1786 2426 
-L 3098 2426 
-L 3098 2221 
-L 1786 2221 
-L 1786 787 
-L 1549 787 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(252.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4d" transform="translate(274.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(351.299911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(404.899902 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(462.899887 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(516.499878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(569.499863 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(622.19986 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(656.099854 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2b" transform="translate(678.099838 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(730.199829 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(752.199814 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(809.099808 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(855.899796 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(899.999786 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(933.39978 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(986.099777 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1074.999771 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4d" transform="translate(1096.999756 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(1173.999741 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1227.599731 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(1285.599716 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(1339.199707 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1392.199692 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(1444.899689 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="871.2" y="329.251641" transform="rotate(-0 871.2 329.251641)">System</text>
    </g>
    <g id="text_12">
-    <!-- Entity -->
-    <g style="fill: #2d2a26" transform="translate(158.256812 238.215984) scale(0.11 -0.11)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="871.2" y="346.134656" transform="rotate(-0 871.2 346.134656)">ISystem</text>
    </g>
    <g id="text_13">
-    <!-- EntityManager -->
-    <g style="fill: #6b6560" transform="translate(149.940172 262.551359) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4d" transform="translate(252.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(329.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(382.899918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(440.899902 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(494.499893 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(547.499878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(600.199875 0)"/>
-    </g>
-    <!-- EntityCommandBuffer -->
-    <g style="fill: #6b6560" transform="translate(137.657359 271.129641) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-42" d="M 704 0 
-L 704 4646 
-L 1920 4646 
-Q 2387 4646 2723 4524 
-Q 3059 4403 3244 4153 
-Q 3430 3904 3430 3520 
-Q 3430 3277 3347 3072 
-Q 3264 2867 3104 2723 
-Q 2944 2579 2701 2509 
-L 2701 2477 
-Q 3162 2406 3443 2121 
-Q 3725 1837 3725 1350 
-Q 3725 909 3513 608 
-Q 3302 307 2918 153 
-Q 2534 0 2003 0 
-L 704 0 
-z
-M 941 2586 
-L 1779 2586 
-Q 2541 2586 2864 2832 
-Q 3187 3078 3187 3507 
-Q 3187 4019 2841 4230 
-Q 2496 4442 1824 4442 
-L 941 4442 
-L 941 2586 
-z
-M 941 211 
-L 1920 211 
-Q 2643 211 3065 483 
-Q 3488 755 3488 1338 
-Q 3488 1869 3075 2121 
-Q 2662 2374 1920 2374 
-L 941 2374 
-L 941 211 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-66" d="M 704 0 
-L 704 4192 
-Q 704 4525 797 4739 
-Q 890 4954 1066 5059 
-Q 1242 5165 1485 5165 
-Q 1594 5165 1715 5136 
-Q 1837 5107 1958 5056 
-L 1888 4858 
-Q 1683 4960 1478 4960 
-Q 1190 4960 1059 4749 
-Q 928 4538 928 4160 
-L 928 0 
-L 704 0 
-z
-M 237 3162 
-L 237 3341 
-L 704 3373 
-L 1728 3373 
-L 1728 3162 
-L 237 3162 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(252.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(314.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(372.799927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(461.699921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(550.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(604.199905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(662.19989 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-42" transform="translate(721.699875 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(784.899872 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(842.599869 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(870.499863 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(898.399857 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(951.099854 0)"/>
-    </g>
-    <!-- EntityQuery -->
-    <g style="fill: #6b6560" transform="translate(154.115016 279.508203) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-51" transform="translate(252.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(323.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(381.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(434.09993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(467.999924 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="871.2" y="359.814656" transform="rotate(-0 871.2 359.814656)">SystemGroup</text>
    </g>
    <g id="text_14">
-    <!-- Component -->
-    <g style="fill: #2d2a26" transform="translate(337.045484 238.228016) scale(0.11 -0.11)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(268.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(327.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(385.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(438.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(496.199921 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="871.2" y="373.494656" transform="rotate(-0 871.2 373.494656)">SystemState</text>
    </g>
    <g id="text_15">
-    <!-- IComponentData -->
-    <g style="fill: #6b6560" transform="translate(339.504 262.653625) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-49" d="M 704 0 
-L 704 4646 
-L 941 4646 
-L 941 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(87.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(146.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(235.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(294.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(353.199951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(411.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(463.899933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(521.899918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-44" transform="translate(555.299911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(621.399902 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(674.999893 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(708.399887 0)"/>
-    </g>
-    <!-- ISharedComponentData -->
-    <g style="fill: #6b6560" transform="translate(328.510172 271.024531) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(82.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(140.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(193.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(227.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(280.299957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(339.799942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(401.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(460.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(549.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(608.699905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(667.299896 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(725.299881 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(777.999878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(835.999863 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-44" transform="translate(869.399857 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(935.499847 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(989.099838 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(1022.499832 0)"/>
-    </g>
-    <!-- DynamicBuffer -->
-    <g style="fill: #6b6560" transform="translate(343.409234 279.504375) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-44"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(66.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(112.899979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(170.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(224.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(313.399948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(337.899933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-42" transform="translate(387.09993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(450.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(507.999924 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(535.899918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(563.799911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(616.499908 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1195.2" y="329.312188" transform="rotate(-0 1195.2 329.312188)">Archetype</text>
    </g>
    <g id="text_16">
-    <!-- System -->
-    <g style="fill: #2d2a26" transform="translate(581.267312 238.215984) scale(0.11 -0.11)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1195.2" y="346.193625" transform="rotate(-0 1195.2 346.193625)">Chunk Layout</text>
    </g>
    <g id="text_17">
-    <!-- ISystem -->
-    <g style="fill: #6b6560" transform="translate(586.823953 262.696609) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(82.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(129.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(173.499969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(206.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(259.59996 0)"/>
-    </g>
-    <!-- SystemGroup -->
-    <g style="fill: #6b6560" transform="translate(578.070672 271.075172) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-47" transform="translate(322.799957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(388.899948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(422.799942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(481.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(539.09993 0)"/>
-    </g>
-    <!-- SystemState -->
-    <g style="fill: #6b6560" transform="translate(579.673016 279.453734) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(322.799957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(379.699951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(413.099945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(466.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(500.09993 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1195.2" y="359.873625" transform="rotate(-0 1195.2 359.873625)">TypeIndex[]</text>
    </g>
    <g id="text_18">
-    <!-- Archetype -->
-    <g style="fill: #2d2a26" transform="translate(768.690125 238.222) scale(0.11 -0.11)">
-     <use xlink:href="#NotoSansSC-Thin-41"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(57.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(91.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(140.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(197.999969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(250.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(284.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(330.899948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(390.399933 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1195.2" y="373.553625" transform="rotate(-0 1195.2 373.553625)">Component Size</text>
    </g>
    <g id="text_19">
-    <!-- Chunk Layout -->
-    <g style="fill: #6b6560" transform="translate(771.785281 262.704266) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(119.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(177.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6b" transform="translate(235.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(284.999954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-4c" transform="translate(306.999939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(357.799927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(411.399918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(458.199905 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(516.799896 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(574.499893 0)"/>
-    </g>
-    <!-- TypeIndex[] -->
-    <g style="fill: #6b6560" transform="translate(775.022234 271.082828) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-54" d="M 1709 0 
-L 1709 4435 
-L 211 4435 
-L 211 4646 
-L 3456 4646 
-L 3456 4435 
-L 1958 4435 
-L 1958 0 
-L 1709 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-78" d="M 96 0 
-L 1254 1760 
-L 198 3373 
-L 454 3373 
-L 1024 2477 
-Q 1114 2336 1206 2201 
-Q 1299 2067 1395 1920 
-L 1421 1920 
-Q 1510 2067 1596 2201 
-Q 1683 2336 1779 2477 
-L 2336 3373 
-L 2579 3373 
-L 1523 1747 
-L 2682 0 
-L 2419 0 
-L 1792 966 
-Q 1702 1126 1600 1283 
-Q 1498 1440 1389 1587 
-L 1357 1587 
-Q 1254 1440 1155 1283 
-Q 1056 1126 954 966 
-L 346 0 
-L 96 0 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-5b" d="M 704 -1069 
-L 704 4992 
-L 1779 4992 
-L 1779 4826 
-L 883 4826 
-L 883 -909 
-L 1779 -909 
-L 1779 -1069 
-L 704 -1069 
-z
-" transform="scale(0.015625)"/>
-      <path id="NotoSansSC-Thin-5d" d="M 134 -1069 
-L 134 -909 
-L 1030 -909 
-L 1030 4826 
-L 134 4826 
-L 134 4992 
-L 1210 4992 
-L 1210 -1069 
-L 134 -1069 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-54"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(57.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(104.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(163.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-49" transform="translate(216.299957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(241.999954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(299.999939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(359.499924 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-78" transform="translate(412.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-5b" transform="translate(455.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-5d" transform="translate(485.499908 0)"/>
-    </g>
-    <!-- Component Size -->
-    <g style="fill: #6b6560" transform="translate(767.528953 279.461391) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-7a" d="M 186 0 
-L 186 122 
-L 2246 3162 
-L 410 3162 
-L 410 3373 
-L 2547 3373 
-L 2547 3245 
-L 486 211 
-L 2618 211 
-L 2618 0 
-L 186 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(268.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(327.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(385.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(438.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(496.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(529.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(551.599899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(608.499893 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-7a" transform="translate(632.999878 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(676.799866 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="79.2" y="495.229219" transform="rotate(-0 79.2 495.229219)">Entity</text>
    </g>
    <g id="text_20">
-    <!-- Entity -->
-    <g style="fill: #2d2a26" transform="translate(71.134062 446.3275) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-    </g>
-    <!-- Manager -->
-    <g style="fill: #2d2a26" transform="translate(66.602109 454.706062) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-4d"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(76.999985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(130.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(188.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(242.199951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(295.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(347.899933 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="79.2" y="512.094656" transform="rotate(-0 79.2 512.094656)">Manager</text>
    </g>
    <g id="text_21">
-    <!-- Entity -->
-    <g style="fill: #2d2a26" transform="translate(148.750062 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-    </g>
-    <!-- CommandBuffer -->
-    <g style="fill: #2d2a26" transform="translate(131.935297 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(298.299973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(351.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(409.899948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-42" transform="translate(469.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(532.59993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(590.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(618.199921 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(646.099915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(698.799911 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="194.4" y="495.229219" transform="rotate(-0 194.4 495.229219)">Entity</text>
    </g>
    <g id="text_22">
-    <!-- Entity -->
-    <g style="fill: #2d2a26" transform="translate(226.366062 446.372891) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-    </g>
-    <!-- Query -->
-    <g style="fill: #2d2a26" transform="translate(226.008953 454.751453) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-51"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(71.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(129.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(181.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(215.699982 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="512.153625" transform="rotate(-0 194.4 512.153625)">CommandBuffer</text>
    </g>
    <g id="text_23">
-    <!-- IComponent -->
-    <g style="fill: #2d2a26" transform="translate(254.569063 446.384375) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(87.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(146.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(235.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(294.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(353.199951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(411.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(463.899933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(521.899918 0)"/>
-    </g>
-    <!-- Data -->
-    <g style="fill: #2d2a26" transform="translate(266.770938 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-44"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(66.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(119.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(153.099976 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="309.6" y="495.229219" transform="rotate(-0 309.6 495.229219)">Entity</text>
    </g>
    <g id="text_24">
-    <!-- IShared -->
-    <g style="fill: #2d2a26" transform="translate(339.727562 446.384375) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(82.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(140.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(193.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(227.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(280.299957 0)"/>
-    </g>
-    <!-- Component -->
-    <g style="fill: #2d2a26" transform="translate(333.084672 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(268.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(327.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(385.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(438.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(496.199921 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="309.6" y="512.094656" transform="rotate(-0 309.6 512.094656)">Query</text>
    </g>
    <g id="text_25">
-    <!-- Dynamic -->
-    <g style="fill: #2d2a26" transform="translate(415.688719 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-44"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(66.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(112.899979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(170.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(224.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(313.399948 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(337.899933 0)"/>
-    </g>
-    <!-- Buffer -->
-    <g style="fill: #2d2a26" transform="translate(420.020516 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-42"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(63.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(120.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(148.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(176.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(229.399979 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="424.8" y="495.272188" transform="rotate(-0 424.8 495.272188)">IComponent</text>
    </g>
    <g id="text_26">
-    <!-- ISystem -->
-    <g style="fill: #2d2a26" transform="translate(494.654953 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(82.599991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(129.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(173.499969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(206.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(259.59996 0)"/>
-    </g>
-    <!-- Interface -->
-    <g style="fill: #2d2a26" transform="translate(493.303625 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(83.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(117.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(169.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(203.699966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(231.59996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(285.199951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(334.399948 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="424.8" y="512.153625" transform="rotate(-0 424.8 512.153625)">Data</text>
    </g>
    <g id="text_27">
-    <!-- System -->
-    <g style="fill: #2d2a26" transform="translate(573.170562 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-    </g>
-    <!-- Group -->
-    <g style="fill: #2d2a26" transform="translate(574.816109 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-47"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(66.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(99.999985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(158.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(216.299973 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="540" y="495.272188" transform="rotate(-0 540 495.272188)">IShared</text>
    </g>
    <g id="text_28">
-    <!-- System -->
-    <g style="fill: #2d2a26" transform="translate(650.786562 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(103.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(147.799973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(181.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(233.899963 0)"/>
-    </g>
-    <!-- State -->
-    <g style="fill: #2d2a26" transform="translate(654.034453 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(90.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(143.899979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(177.299973 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="540" y="512.153625" transform="rotate(-0 540 512.153625)">Component</text>
    </g>
    <g id="text_29">
-    <!-- Chunk -->
-    <g style="fill: #2d2a26" transform="translate(729.725453 446.380547) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(119.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(177.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6b" transform="translate(235.09996 0)"/>
-    </g>
-    <!-- Layout -->
-    <g style="fill: #2d2a26" transform="translate(729.169828 454.751453) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-4c"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(50.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(104.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(151.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(209.799957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(267.499954 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="655.2" y="495.229219" transform="rotate(-0 655.2 495.229219)">Dynamic</text>
    </g>
    <g id="text_30">
-    <!-- Type -->
-    <g style="fill: #2d2a26" transform="translate(809.746609 446.376719) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-54"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(57.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(104.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(163.59996 0)"/>
-    </g>
-    <!-- Index[] -->
-    <g style="fill: #2d2a26" transform="translate(806.847625 454.755281) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-49"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(25.699997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-64" transform="translate(83.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(143.199966 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-78" transform="translate(195.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-5b" transform="translate(239.299957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-5d" transform="translate(269.199951 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="655.2" y="512.153625" transform="rotate(-0 655.2 512.153625)">Buffer</text>
    </g>
    <g id="text_31">
-    <!-- Component -->
-    <g style="fill: #2d2a26" transform="translate(876.396672 446.384375) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(120.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(209.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(268.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(327.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(385.499939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(438.199936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(496.199921 0)"/>
-    </g>
-    <!-- Offsets -->
-    <g style="fill: #2d2a26" transform="translate(884.379953 454.755281) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-4f" d="M 2285 -83 
-Q 1734 -83 1308 217 
-Q 883 518 640 1062 
-Q 397 1606 397 2336 
-Q 397 3072 640 3606 
-Q 883 4141 1308 4435 
-Q 1734 4730 2285 4730 
-Q 2835 4730 3260 4435 
-Q 3686 4141 3929 3606 
-Q 4173 3072 4173 2336 
-Q 4173 1606 3929 1062 
-Q 3686 518 3260 217 
-Q 2835 -83 2285 -83 
-z
-M 2285 141 
-Q 2778 141 3146 413 
-Q 3514 685 3718 1177 
-Q 3923 1670 3923 2336 
-Q 3923 3002 3718 3488 
-Q 3514 3974 3146 4240 
-Q 2778 4506 2285 4506 
-Q 1798 4506 1427 4240 
-Q 1056 3974 851 3488 
-Q 646 3002 646 2336 
-Q 646 1670 851 1177 
-Q 1056 685 1427 413 
-Q 1798 141 2285 141 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-4f"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(71.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-66" transform="translate(99.299988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(127.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(171.299973 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(223.999969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(257.399963 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="770.4" y="495.211641" transform="rotate(-0 770.4 495.211641)">ISystem</text>
    </g>
    <g id="text_32">
-    <!-- EntityQuery -->
-    <g style="fill: #2d2a26" transform="translate(350.134594 601.766531) scale(0.1 -0.1)">
-     <use xlink:href="#NotoSansSC-Thin-45"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(56.199997 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(114.199982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(147.599976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(172.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(205.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-51" transform="translate(252.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(323.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(381.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(434.09993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(467.999924 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="770.4" y="512.153625" transform="rotate(-0 770.4 512.153625)">Interface</text>
    </g>
    <g id="text_33">
-    <!-- Query Description + Filter + Iterator -->
-    <g style="fill: #6b6560" transform="translate(322.391078 634.904) scale(0.07 -0.07)">
-     <defs>
-      <path id="NotoSansSC-Thin-46" d="M 704 0 
-L 704 4646 
-L 3187 4646 
-L 3187 4435 
-L 941 4435 
-L 941 2496 
-L 2835 2496 
-L 2835 2291 
-L 941 2291 
-L 941 0 
-L 704 0 
-z
-" transform="scale(0.015625)"/>
-     </defs>
-     <use xlink:href="#NotoSansSC-Thin-51"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(71.399994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(129.099991 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(181.799988 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(215.699982 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(262.499969 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-44" transform="translate(284.499954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(350.599945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(403.299942 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-63" transform="translate(447.399933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(496.59993 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(530.499924 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(554.999908 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(614.499893 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(647.899887 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(672.399872 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(730.999863 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(788.999847 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2b" transform="translate(810.999832 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(863.099823 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-46" transform="translate(885.099808 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-69" transform="translate(936.899796 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6c" transform="translate(961.39978 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(986.799774 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1020.199768 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(1072.899765 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1106.799759 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-2b" transform="translate(1128.799744 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1180.899734 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-49" transform="translate(1202.899719 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1228.599716 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1261.99971 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(1314.699707 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(1348.599701 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1402.199692 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(1435.599686 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(1494.199677 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="885.6" y="495.211641" transform="rotate(-0 885.6 495.211641)">System</text>
    </g>
    <g id="text_34">
-    <!-- Chunk Storage -->
-    <g style="fill: #2d2a26" transform="translate(576.26775 601.707156) scale(0.1 -0.1)">
-     <use xlink:href="#NotoSansSC-Thin-43"/>
-     <use xlink:href="#NotoSansSC-Thin-68" transform="translate(61.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-75" transform="translate(119.399979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(177.099976 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6b" transform="translate(235.09996 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(284.999954 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-53" transform="translate(306.999939 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(363.899933 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(397.299927 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(455.899918 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(489.799911 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-67" transform="translate(543.399902 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(596.399887 0)"/>
-    </g>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="885.6" y="512.153625" transform="rotate(-0 885.6 512.153625)">Group</text>
    </g>
    <g id="text_35">
-    <!-- SoA Arrays per Component Type -->
-    <g style="fill: #6b6560" transform="translate(558.932125 634.900172) scale(0.07 -0.07)">
-     <use xlink:href="#NotoSansSC-Thin-53"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(56.899994 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(115.499985 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(172.899979 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-41" transform="translate(194.899963 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(252.299957 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(286.199951 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-61" transform="translate(320.099945 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(373.699936 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-73" transform="translate(420.499924 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(464.599915 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(486.599899 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(546.099884 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-72" transform="translate(598.799881 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(632.699875 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-43" transform="translate(654.69986 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(716.599854 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6d" transform="translate(775.199844 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(864.099838 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6f" transform="translate(923.599823 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(982.199814 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1040.199799 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-6e" transform="translate(1092.899796 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-74" transform="translate(1150.89978 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-20" transform="translate(1184.299774 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-54" transform="translate(1206.299759 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-79" transform="translate(1263.599747 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-70" transform="translate(1310.399734 0)"/>
-     <use xlink:href="#NotoSansSC-Thin-65" transform="translate(1369.899719 0)"/>
-    </g>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1000.8" y="495.211641" transform="rotate(-0 1000.8 495.211641)">System</text>
+   </g>
+   <g id="text_36">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1000.8" y="512.153625" transform="rotate(-0 1000.8 512.153625)">State</text>
+   </g>
+   <g id="text_37">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1116" y="495.272188" transform="rotate(-0 1116 495.272188)">Chunk</text>
+   </g>
+   <g id="text_38">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1116" y="512.094656" transform="rotate(-0 1116 512.094656)">Layout</text>
+   </g>
+   <g id="text_39">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1231.2" y="495.211641" transform="rotate(-0 1231.2 495.211641)">Type</text>
+   </g>
+   <g id="text_40">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1231.2" y="512.153625" transform="rotate(-0 1231.2 512.153625)">Index[]</text>
+   </g>
+   <g id="text_41">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1346.4" y="495.272188" transform="rotate(-0 1346.4 495.272188)">Component</text>
+   </g>
+   <g id="text_42">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1346.4" y="512.153625" transform="rotate(-0 1346.4 512.153625)">Offsets</text>
+   </g>
+   <g id="text_43">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="554.4" y="652.549219" transform="rotate(-0 554.4 652.549219)">EntityQuery</text>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="669.473625" transform="rotate(-0 554.4 669.473625)">Query Description + Filter + Iterator</text>
+   </g>
+   <g id="text_45">
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="928.8" y="652.592188" transform="rotate(-0 928.8 652.592188)">Chunk Storage</text>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="928.8" y="669.414656" transform="rotate(-0 928.8 669.414656)">SoA Arrays per Component Type</text>
+   </g>
+   <g id="line2d_1">
+    <path d="M 616.628571 187.2
+L 331.2 304.729412
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 680.271429 187.2
+L 585.642857 302.4
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 743.914286 187.2
+L 834.428571 302.4
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 807.557143 187.2
+L 1087.2 304.065672
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 178.628571 396
+L 103.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 214.285714 396
+L 199.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 249.942857 396
+L 295.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 509.314286 396
+L 445.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 544.971429 396
+L 541.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_10">
+    <path d="M 580.628571 396
+L 637.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_11">
+    <path d="M 840 396
+L 787.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_12">
+    <path d="M 875.657143 396
+L 883.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 911.314286 396
+L 979.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 1170.685714 396
+L 1129.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_15">
+    <path d="M 1206.342857 396
+L 1225.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_16">
+    <path d="M 1242 396
+L 1321.2 475.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_17">
+    <path d="M 129.6 517.2
+L 435.6 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_18">
+    <path d="M 244.8 522.576
+L 464.4 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_19">
+    <path d="M 348.545455 525.6
+L 493.2 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_20">
+    <path d="M 445.418182 525.6
+L 522 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_21">
+    <path d="M 542.290909 525.6
+L 550.8 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_22">
+    <path d="M 639.163636 525.6
+L 579.6 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_23">
+    <path d="M 795.6 525.6
+L 889.2 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_24">
+    <path d="M 892.472727 525.6
+L 918 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_25">
+    <path d="M 989.345455 525.6
+L 946.8 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_26">
+    <path d="M 1086.218182 525.6
+L 975.6 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_27">
+    <path d="M 1183.090909 525.6
+L 1004.4 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_28">
+    <path d="M 1296 519.517241
+L 1033.2 619.2
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke-dasharray: 6,4.8; stroke-dashoffset: 0; stroke: #8a94a3; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_29">
+    <path d="M 676.8 658.8
+L 806.4 658.8
+" clip-path="url(#p74e2561f43)" style="fill: none; stroke: #8a94a3; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_47">
+    <text style="font-weight: 700; font-size: 20px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #181b20" x="712.8" y="40.4675" transform="rotate(-0 712.8 40.4675)">Ludots ECS Hierarchy</text>
+   </g>
+   <g id="text_48">
+    <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="712.8" y="68.6325" transform="rotate(-0 712.8 68.6325)">World → Entity → Component → System → Query → Archetype</text>
+   </g>
+   <g id="text_49">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="1166.4" y="641.194062" transform="rotate(-0 1166.4 641.194062)">All entities with the same component</text>
+   </g>
+   <g id="text_50">
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="1166.4" y="658.474063" transform="rotate(-0 1166.4 658.474063)">types share an Archetype → Chunk → SoA</text>
+   </g>
+   <g id="patch_21">
+    <path d="M 36 93.6
+L 180 93.6
+Q 187.2 93.6 187.2 100.8
+L 187.2 266.4
+Q 187.2 273.6 180 273.6
+L 36 273.6
+Q 28.8 273.6 28.8 266.4
+L 28.8 100.8
+Q 28.8 93.6 36 93.6
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ffffff; stroke: #dfe3e9; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_51">
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #23272e" x="41.76" y="110.633438" transform="rotate(-0 41.76 110.633438)">Legend</text>
+   </g>
+   <g id="patch_22">
+    <path d="M 45.36 124.2
+L 58.32 124.2
+Q 61.92 124.2 61.92 127.8
+L 61.92 135
+Q 61.92 138.6 58.32 138.6
+L 45.36 138.6
+Q 41.76 138.6 41.76 135
+L 41.76 127.8
+Q 41.76 124.2 45.36 124.2
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f4ede9; stroke: #b08d7f; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_52">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="134.150016" transform="rotate(-0 67.68 134.150016)">Core Engine</text>
+   </g>
+   <g id="patch_23">
+    <path d="M 45.36 147.96
+L 58.32 147.96
+Q 61.92 147.96 61.92 151.56
+L 61.92 158.76
+Q 61.92 162.36 58.32 162.36
+L 45.36 162.36
+Q 41.76 162.36 41.76 158.76
+L 41.76 151.56
+Q 41.76 147.96 45.36 147.96
+z
+" clip-path="url(#p74e2561f43)" style="fill: #ebeef2; stroke: #7d8ba0; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_53">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="157.910016" transform="rotate(-0 67.68 157.910016)">Storage/Data</text>
+   </g>
+   <g id="patch_24">
+    <path d="M 45.36 171.72
+L 58.32 171.72
+Q 61.92 171.72 61.92 175.32
+L 61.92 182.52
+Q 61.92 186.12 58.32 186.12
+L 45.36 186.12
+Q 41.76 186.12 41.76 182.52
+L 41.76 175.32
+Q 41.76 171.72 45.36 171.72
+z
+" clip-path="url(#p74e2561f43)" style="fill: #edf3ee; stroke: #7fa087; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_54">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="181.728984" transform="rotate(-0 67.68 181.728984)">Component/GAS</text>
+   </g>
+   <g id="patch_25">
+    <path d="M 45.36 195.48
+L 58.32 195.48
+Q 61.92 195.48 61.92 199.08
+L 61.92 206.28
+Q 61.92 209.88 58.32 209.88
+L 45.36 209.88
+Q 41.76 209.88 41.76 206.28
+L 41.76 199.08
+Q 41.76 195.48 45.36 195.48
+z
+" clip-path="url(#p74e2561f43)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_55">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="205.430016" transform="rotate(-0 67.68 205.430016)">System/Logic</text>
+   </g>
+   <g id="patch_26">
+    <path d="M 45.36 219.24
+L 58.32 219.24
+Q 61.92 219.24 61.92 222.84
+L 61.92 230.04
+Q 61.92 233.64 58.32 233.64
+L 45.36 233.64
+Q 41.76 233.64 41.76 230.04
+L 41.76 222.84
+Q 41.76 219.24 45.36 219.24
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_56">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="229.2195" transform="rotate(-0 67.68 229.2195)">Archetype/Layout</text>
+   </g>
+   <g id="patch_27">
+    <path d="M 45.36 243
+L 58.32 243
+Q 61.92 243 61.92 246.6
+L 61.92 253.8
+Q 61.92 257.4 58.32 257.4
+L 45.36 257.4
+Q 41.76 257.4 41.76 253.8
+L 41.76 246.6
+Q 41.76 243 45.36 243
+z
+" clip-path="url(#p74e2561f43)" style="fill: #f1edf3; stroke: #9d8ba8; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_57">
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #3a4149" x="67.68" y="252.9795" transform="rotate(-0 67.68 252.9795)">Query/Search</text>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p0bbd69a356">
-   <rect x="7.2" y="7.2" width="970.2" height="776.16"/>
+  <clipPath id="p74e2561f43">
+   <rect x="0" y="0" width="1425.6" height="777.6"/>
   </clipPath>
  </defs>
 </svg>

@@ -9,10 +9,28 @@ var app = builder.Build();
 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
 var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
 var gameHost = new WebGameHost(baseDir, configFile);
-var setup = gameHost.Setup;
 
 var cts = new CancellationTokenSource();
-var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
+var setupReady = new TaskCompletionSource<WebHostSetup>(TaskCreationOptions.RunContinuationsAsynchronously);
+var gameLoopTask = Task.Factory.StartNew(
+    () =>
+    {
+        try
+        {
+            WebHostSetup loopSetup = gameHost.Setup;
+            setupReady.TrySetResult(loopSetup);
+            gameHost.Run(cts.Token);
+        }
+        catch (Exception ex)
+        {
+            setupReady.TrySetException(ex);
+            throw;
+        }
+    },
+    CancellationToken.None,
+    TaskCreationOptions.LongRunning,
+    TaskScheduler.Default);
+var setup = setupReady.Task.GetAwaiter().GetResult();
 _ = gameLoopTask.ContinueWith(
     t =>
     {

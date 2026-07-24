@@ -1,0 +1,24 @@
+{
+  "Id": "arpg_entry",
+  "Tags": ["arpg"],
+  "DefaultCamera": {
+    "VirtualCameraId": "TPS"
+  },
+  "Entities": [
+    { "Template": "arpg_hero", "InstanceId": "arpg-entry-hero", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
+    { "Template": "arpg_enemy", "InstanceId": "arpg-entry-enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } } } }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "arpg-entry-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "arpg-entry-enemy" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "ArpgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "ArpgDemo.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "ArpgDemo.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
+}

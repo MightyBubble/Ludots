@@ -1,0 +1,101 @@
+{
+  "name": "ecs-datamodel-ecs-hierarchy",
+  "title": "Ludots ECS Hierarchy",
+  "subtitle": "World → Entity → Component → System → Query → Archetype",
+  "canvas": { "width": 1980, "height": 1080 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 220,
+    "items": [
+      { "label": "Core Engine", "tint": "clay" },
+      { "label": "Storage/Data", "tint": "slate" },
+      { "label": "Component/GAS", "tint": "sage" },
+      { "label": "System/Logic", "tint": "steel" },
+      { "label": "Archetype/Layout", "tint": "stone" },
+      { "label": "Query/Search", "tint": "mauve" }
+    ]
+  },
+
+  "nodes": [
+    { "id": "world", "title": "World", "tint": "clay", "border_w": 1.6,
+      "x": 840, "y": 150, "w": 300, "h": 110,
+      "items": ["Entity Manager + System Manager"] },
+
+    { "id": "entity", "title": "Entity", "tint": "slate",
+      "x": 160, "y": 420, "w": 300, "h": 130,
+      "items": ["EntityManager", "EntityCommandBuffer", "EntityQuery"] },
+    { "id": "component", "title": "Component", "tint": "sage",
+      "x": 610, "y": 420, "w": 300, "h": 130,
+      "items": ["IComponentData", "ISharedComponentData", "DynamicBuffer"] },
+    { "id": "system", "title": "System", "tint": "steel",
+      "x": 1060, "y": 420, "w": 300, "h": 130,
+      "items": ["ISystem", "SystemGroup", "SystemState"] },
+    { "id": "archetype", "title": "Archetype", "tint": "stone",
+      "x": 1510, "y": 420, "w": 300, "h": 130,
+      "items": ["Chunk Layout", "TypeIndex[]", "Component Size"] },
+
+    { "id": "leaf_em", "title": "Entity", "tint": "slate", "x": 40, "y": 660, "w": 140, "h": 70, "items": ["Manager"] },
+    { "id": "leaf_ecb", "title": "Entity", "tint": "slate", "x": 200, "y": 660, "w": 140, "h": 70, "items": ["CommandBuffer"] },
+    { "id": "leaf_eq", "title": "Entity", "tint": "slate", "x": 360, "y": 660, "w": 140, "h": 70, "items": ["Query"] },
+    { "id": "leaf_icd", "title": "IComponent", "tint": "sage", "x": 520, "y": 660, "w": 140, "h": 70, "items": ["Data"] },
+    { "id": "leaf_isc", "title": "IShared", "tint": "sage", "x": 680, "y": 660, "w": 140, "h": 70, "items": ["Component"] },
+    { "id": "leaf_db", "title": "Dynamic", "tint": "sage", "x": 840, "y": 660, "w": 140, "h": 70, "items": ["Buffer"] },
+    { "id": "leaf_isi", "title": "ISystem", "tint": "steel", "x": 1000, "y": 660, "w": 140, "h": 70, "items": ["Interface"] },
+    { "id": "leaf_sg", "title": "System", "tint": "steel", "x": 1160, "y": 660, "w": 140, "h": 70, "items": ["Group"] },
+    { "id": "leaf_ss", "title": "System", "tint": "steel", "x": 1320, "y": 660, "w": 140, "h": 70, "items": ["State"] },
+    { "id": "leaf_cl", "title": "Chunk", "tint": "stone", "x": 1480, "y": 660, "w": 140, "h": 70, "items": ["Layout"] },
+    { "id": "leaf_ti", "title": "Type", "tint": "stone", "x": 1640, "y": 660, "w": 140, "h": 70, "items": ["Index[]"] },
+    { "id": "leaf_co", "title": "Component", "tint": "stone", "x": 1800, "y": 660, "w": 140, "h": 70, "items": ["Offsets"] },
+
+    { "id": "entityquery", "title": "EntityQuery", "tint": "mauve",
+      "x": 600, "y": 860, "w": 340, "h": 110,
+      "items": ["Query Description + Filter + Iterator"] },
+    { "id": "chunkstorage", "title": "Chunk Storage", "tint": "steel",
+      "x": 1120, "y": 860, "w": 340, "h": 110,
+      "items": ["SoA Arrays per Component Type"] }
+  ],
+
+  "edges": [
+    { "from": "world", "to": "entity", "arrow": false },
+    { "from": "world", "to": "component", "arrow": false },
+    { "from": "world", "to": "system", "arrow": false },
+    { "from": "world", "to": "archetype", "arrow": false },
+
+    { "from": "entity", "to": "leaf_em", "arrow": false },
+    { "from": "entity", "to": "leaf_ecb", "arrow": false },
+    { "from": "entity", "to": "leaf_eq", "arrow": false },
+    { "from": "component", "to": "leaf_icd", "arrow": false },
+    { "from": "component", "to": "leaf_isc", "arrow": false },
+    { "from": "component", "to": "leaf_db", "arrow": false },
+    { "from": "system", "to": "leaf_isi", "arrow": false },
+    { "from": "system", "to": "leaf_sg", "arrow": false },
+    { "from": "system", "to": "leaf_ss", "arrow": false },
+    { "from": "archetype", "to": "leaf_cl", "arrow": false },
+    { "from": "archetype", "to": "leaf_ti", "arrow": false },
+    { "from": "archetype", "to": "leaf_co", "arrow": false },
+
+    { "from": "leaf_em", "to": "entityquery", "style": "dashed", "arrow": false },
+    { "from": "leaf_ecb", "to": "entityquery", "style": "dashed", "arrow": false },
+    { "from": "leaf_eq", "to": "entityquery", "style": "dashed", "arrow": false },
+    { "from": "leaf_icd", "to": "entityquery", "style": "dashed", "arrow": false },
+    { "from": "leaf_isc", "to": "entityquery", "style": "dashed", "arrow": false },
+    { "from": "leaf_db", "to": "entityquery", "style": "dashed", "arrow": false },
+
+    { "from": "leaf_isi", "to": "chunkstorage", "style": "dashed", "arrow": false },
+    { "from": "leaf_sg", "to": "chunkstorage", "style": "dashed", "arrow": false },
+    { "from": "leaf_ss", "to": "chunkstorage", "style": "dashed", "arrow": false },
+    { "from": "leaf_cl", "to": "chunkstorage", "style": "dashed", "arrow": false },
+    { "from": "leaf_ti", "to": "chunkstorage", "style": "dashed", "arrow": false },
+    { "from": "leaf_co", "to": "chunkstorage", "style": "dashed", "arrow": false },
+
+    { "from": "entityquery", "to": "chunkstorage", "arrow": false }
+  ],
+
+  "notes": [
+    { "text": "All entities with the same component", "x": 1620, "y": 880, "ha": "left" },
+    { "text": "types share an Archetype → Chunk → SoA", "x": 1620, "y": 904, "ha": "left" }
+  ]
+}

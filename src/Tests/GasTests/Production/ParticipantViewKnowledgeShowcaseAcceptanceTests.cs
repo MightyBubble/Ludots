@@ -23,6 +23,8 @@ namespace Ludots.Tests.GAS.Production;
 
 [NonParallelizable]
 [TestFixture]
+[Category("ci-gate")]
+[Category("acceptance")]
 public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
 {
     private const string MapId = "capability_standard_participant_views";

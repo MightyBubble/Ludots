@@ -1,8 +1,10 @@
 using System;
 using System.Buffers.Binary;
+using System.Numerics;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
@@ -49,7 +51,8 @@ namespace Ludots.Adapter.Web.Streaming
             WorldHudStringTable? worldHudStrings,
             DebugDrawCommandBuffer? debugDraw,
             ScreenOverlayBuffer? screenOverlay = null,
-            string? uiSceneJson = null)
+            string? uiSceneJson = null,
+            SkinnedVisualBatchBuffer? skinnedVisuals = null)
         {
             _pos = 0;
             EnsureCapacity(FrameProtocol.FrameHeaderSize);
@@ -60,7 +63,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteInt64(timestampMs);
 
             WriteCamera(in camera);
-            WritePrimitives(primitives);
+            WritePrimitives(primitives, skinnedVisuals);
             WriteGroundOverlays(groundOverlays);
             WriteWorldHud(worldHud);
             WriteScreenHud(screenHud, worldHudStrings);
@@ -86,24 +89,89 @@ namespace Ludots.Adapter.Web.Streaming
             WriteFloat(cam.FovYDeg);
         }
 
-        private void WritePrimitives(PrimitiveDrawBuffer? buf)
+        private void WritePrimitives(PrimitiveDrawBuffer? primitives, SkinnedVisualBatchBuffer? skinnedVisuals)
         {
-            if (buf == null || buf.Count == 0) return;
+            bool replaceProjectedSkinnedLane = skinnedVisuals != null;
+            int primitiveCount = primitives?.Count ?? 0;
+            if (replaceProjectedSkinnedLane && primitives != null)
+            {
+                primitiveCount -= primitives.SkinnedLaneItemCount;
+            }
 
-            var span = buf.GetSpan();
-            int count = span.Length;
+            int skinnedCount = CountVisibleSkinnedVisuals(skinnedVisuals);
+            int count = checked(primitiveCount + skinnedCount);
+            if (count == 0)
+            {
+                return;
+            }
+
+            if (count > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Web primitive wire section contains {count} static/skinned visuals, exceeding protocol capacity {ushort.MaxValue}.");
+            }
+
             int itemBytes = count * WirePrimitiveDrawItem.SizeInBytes;
             WriteSectionHeader(FrameProtocol.SectionPrimitives, (ushort)count, itemBytes);
             EnsureCapacity(itemBytes);
 
-            for (int i = 0; i < count; i++)
+            if (primitives != null)
             {
-                ref readonly var item = ref span[i];
-                WriteInt32(item.MeshAssetId);
-                WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
-                WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
-                WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                ReadOnlySpan<PrimitiveDrawItem> primitiveSpan = primitives.GetSpan();
+                for (int i = 0; i < primitiveSpan.Length; i++)
+                {
+                    ref readonly PrimitiveDrawItem item = ref primitiveSpan[i];
+                    if (replaceProjectedSkinnedLane && item.RenderPath.IsSkinnedLane())
+                    {
+                        continue;
+                    }
+
+                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color);
+                }
             }
+
+            if (skinnedVisuals != null)
+            {
+                ReadOnlySpan<SkinnedVisualBatchItem> skinnedSpan = skinnedVisuals.GetSpan();
+                for (int i = 0; i < skinnedSpan.Length; i++)
+                {
+                    ref readonly SkinnedVisualBatchItem item = ref skinnedSpan[i];
+                    if (item.Visibility != VisualVisibility.Visible)
+                    {
+                        continue;
+                    }
+
+                    WritePrimitive(item.MeshAssetId, item.Position, item.Scale, item.Color);
+                }
+            }
+        }
+
+        private static int CountVisibleSkinnedVisuals(SkinnedVisualBatchBuffer? skinnedVisuals)
+        {
+            if (skinnedVisuals == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            ReadOnlySpan<SkinnedVisualBatchItem> span = skinnedVisuals.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i].Visibility == VisualVisibility.Visible)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private void WritePrimitive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color)
+        {
+            WriteInt32(meshAssetId);
+            WriteFloat(position.X); WriteFloat(position.Y); WriteFloat(position.Z);
+            WriteFloat(scale.X); WriteFloat(scale.Y); WriteFloat(scale.Z);
+            WriteFloat(color.X); WriteFloat(color.Y); WriteFloat(color.Z); WriteFloat(color.W);
         }
 
         private void WriteGroundOverlays(GroundOverlayBuffer? buf)

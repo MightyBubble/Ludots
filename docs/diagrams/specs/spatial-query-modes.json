@@ -1,0 +1,45 @@
+{
+  "name": "spatial-query-modes",
+  "title": "Spatial Query Service - 8 Query Modes",
+  "subtitle": "ChunkedGridSpatialPartitionWorld Full Spatial Query Capability",
+  "canvas": { "width": 1980, "height": 1120 },
+
+  "nodes": [
+    { "id": "m1", "title": "1 · Point", "tint": "slate",
+      "x": 40, "y": 150, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Simplest"],
+      "items": ["Point Query", "Single coord · O(1) direct index"] },
+    { "id": "m2", "title": "2 · AABB", "tint": "slate",
+      "x": 530, "y": 150, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Simple"],
+      "items": ["Axis-Aligned Box", "Min/Max rect · Grid filter"] },
+    { "id": "m3", "title": "3 · Radius", "tint": "slate",
+      "x": 1020, "y": 150, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Simple"],
+      "items": ["Radius Query", "Circle range · Distance sq compare"] },
+    { "id": "m4", "title": "4 · Rectangle", "tint": "slate",
+      "x": 1510, "y": 150, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Medium"],
+      "items": ["Rectangle", "Rotated/AABB rect · Boundary cross test"] },
+    { "id": "m5", "title": "5 · Line", "tint": "slate",
+      "x": 40, "y": 570, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Medium"],
+      "items": ["Infinite Line", "Parametric ray · Grid traversal (DDA)"] },
+    { "id": "m6", "title": "6 · Segment", "tint": "slate",
+      "x": 530, "y": 570, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Medium"],
+      "items": ["Line Segment", "Finite segment · Endpoint + grid"] },
+    { "id": "m7", "title": "7 · Cone", "tint": "slate",
+      "x": 1020, "y": 570, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Complex"],
+      "items": ["Cone Query", "Origin+dir+angle · Fan angle filter"] },
+    { "id": "m8", "title": "8 · Hex", "tint": "slate",
+      "x": 1510, "y": 570, "w": 440, "h": 360, "valign": "top",
+      "chips": ["Complex"],
+      "items": ["Hex Range/Ring", "Hex coord system · Ring/spiral/distance"] }
+  ],
+
+  "notes": [
+    { "text": "All queries executed via ChunkedGridSpatialPartitionWorld -> SpatialQueryService, sync/async dual mode", "x": 990, "y": 1020, "ha": "center" }
+  ]
+}

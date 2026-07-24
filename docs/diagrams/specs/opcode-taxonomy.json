@@ -1,0 +1,155 @@
+{
+  "name": "opcode-taxonomy",
+  "title": "GraphNodeOp OpCode 分类图",
+  "subtitle": "133 Opcodes mapped to 9 Taxonomy Categories — used up to #396, 512 slots reserved",
+  "canvas": {
+    "width": 1720,
+    "height": 1420
+  },
+  "layout": [
+    {
+      "type": "grid",
+      "nodes": [
+        "const",
+        "arith",
+        "cmp",
+        "attr",
+        "effect",
+        "target",
+        "call",
+        "special",
+        "reserved"
+      ],
+      "origin": [
+        90,
+        170
+      ],
+      "columns": 3,
+      "spacing_x": 55,
+      "spacing_y": 60,
+      "cell_w": 480,
+      "cell_h": 300
+    }
+  ],
+  "nodes": [
+    {
+      "id": "const",
+      "title": "常量 (4)",
+      "tint": "mauve",
+      "items": [
+        "LoadFloat · LoadInt",
+        "LoadBool · LoadEntity"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "arith",
+      "title": "算术 (17)",
+      "tint": "clay",
+      "items": [
+        "AddFloat · SubFloat · MulFloat · DivFloat",
+        "Sqrt · Sin · Cos · Pow · Log · Abs",
+        "MinFloat · MaxFloat · LerpFloat",
+        "ClampFloat · Floor · Ceil · Round"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "cmp",
+      "title": "比较 (12)",
+      "tint": "steel",
+      "items": [
+        "EqFloat · NeqFloat · GtFloat",
+        "GteFloat · LtFloat · LteFloat",
+        "AndBool · OrBool · NotBool",
+        "EqInt · GtInt · LtInt"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "attr",
+      "title": "属性 (8)",
+      "tint": "sage",
+      "items": [
+        "GetAttribute · SetAttribute · ModifyAttribute",
+        "AddTag · RemoveTag · HasTag",
+        "GetTagCount · SetTagCount"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "effect",
+      "title": "效果 (6)",
+      "tint": "clay",
+      "items": [
+        "DispatchEffect · FanOutDispatchEffect",
+        "ApplyModifier · RemoveModifier",
+        "StackEffect · ClearEffect"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "target",
+      "title": "目标 (11)",
+      "tint": "steel",
+      "items": [
+        "QueryRadius · QueryCone · QueryRectangle",
+        "QueryLine · QueryHexRange · QueryAABB",
+        "QueryNearest · QueryAll",
+        "FilterByTag · FilterByTeam · FilterByAttribute"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "call",
+      "title": "调用 (10)",
+      "tint": "teal",
+      "items": [
+        "SetRelationship · AddRelationshipMetric",
+        "GetRelationshipSynergy",
+        "ReadBlackboard · WriteBlackboard",
+        "ReadConfigInt · ReadConfigFloat",
+        "ReadConfigBool · InvokeFunction · CallHandler"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "special",
+      "title": "特殊 (11)",
+      "tint": "mauve",
+      "items": [
+        "Caster · GetTarget · GetTargetPosition",
+        "GetRandomSeed · GetTick · GetWorldTime",
+        "GetEntityPosition · GetEntityVelocity",
+        "PrintDebug · Breakpoint · Nop"
+      ],
+      "w": 480,
+      "h": 270
+    },
+    {
+      "id": "reserved",
+      "title": "预留 (1)",
+      "tint": "graphite",
+      "items": [
+        "Reserved_397_511"
+      ],
+      "w": 480,
+      "h": 270
+    }
+  ],
+  "notes": [
+    {
+      "text": "Total: 133 defined opcodes | Used: up to #396 | Handler Table: 512 slots | GraphCompiler.cs switch spans line 91-457",
+      "x": 860,
+      "y": 1360,
+      "ha": "center"
+    }
+  ]
+}

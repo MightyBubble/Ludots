@@ -16,23 +16,24 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMovePlanSelectionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly float _defaultSpeedCmPerSec;
         private readonly int _moveSpeedAttributeId;
         private readonly int _roadMoveFollowOrderTypeId;
         private readonly MovePlanStore _plans;
         private readonly MovePlanRuntimeService _runtime;
-        private readonly MassNavigationSimulationRuntime _simulation;
+        private readonly RoadNetworkMassNavigationRuntimeAccessor _navigation;
         private readonly RoadRouteProfileCatalog _profiles;
         private readonly RoadRouteSelectionStrategy _selection = new();
 
-        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation, float defaultSpeedCmPerSec = 600f) : base(world)
+        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationRuntimeBinding binding, float defaultSpeedCmPerSec = 600f) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+            _navigation = new RoadNetworkMassNavigationRuntimeAccessor(binding);
             _defaultSpeedCmPerSec = Math.Max(0f, defaultSpeedCmPerSec);
             _moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
             _profiles = new RoadRouteProfileCatalog(world);
@@ -46,6 +47,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 Span<MovePlanOrderRuntime> orderStates = chunk.GetSpan<MovePlanOrderRuntime>();
                 Span<MovePlanRuntime> planStates = chunk.GetSpan<MovePlanRuntime>();
                 ref Entity entityFirst = ref chunk.Entity(0);
+                MassNavigationSimulationRuntime? simulation = null;
 
                 foreach (int index in chunk)
                 {
@@ -73,7 +75,8 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    if (!_simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
+                    simulation ??= _navigation.RequireSimulation(nameof(RoadMovePlanSelectionSystem));
+                    if (!simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
                     {
                         orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
                         orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;
@@ -119,6 +122,7 @@ namespace RoadNetworkShowcaseMod.Systems
                     intent.TargetWorldCm = selection.Target;
                     intent.SpeedCmPerSec = ResolveMoveSpeed(entity) * Math.Max(0.1f, execution.SpeedMultiplier);
                     intent.StopRadiusCm = execution.WaypointRadiusCm;
+                    intent.Mode = MovePlanExecutionMode.Individual;
                     intent.HasTarget = 1;
                 }
             }

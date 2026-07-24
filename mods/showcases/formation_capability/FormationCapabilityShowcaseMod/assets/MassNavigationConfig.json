@@ -26,29 +26,18 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
-    "initialCommandActorScratchCapacity": 512,
-    "initialCommandActorSnapshotCapacity": 128,
     "runtimeCapacity": {
       "navigationGroupCapacity": 512,
       "groupMembershipAgentCapacity": 80000,
-      "commandActorScratchCapacity": 512,
       "groupMemberCapacity": 512,
-      "orderIngestionTokenCapacity": 512,
-      "orderIngestionMemberCapacity": 512,
+      "movePlanExecutionGroupCapacity": 512,
+      "movePlanExecutionMemberCapacity": 512,
       "loadedChunkCapacity": 512,
-      "metadataTeamCapacity": 2
+      "relationshipDomainCapacity": 2
     }
   },
   "agentProfiles": {
     "profiles": [
-      {
-        "id": "formation",
-        "heavy": true,
-        "visualScale": 1,
-        "speedCmPerSecond": 360,
-        "everyNth": 0,
-        "nthOffset": 0
-      },
       {
         "id": "heavy",
         "heavy": true,

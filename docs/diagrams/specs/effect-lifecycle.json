@@ -1,0 +1,308 @@
+{
+  "name": "effect-lifecycle",
+  "title": "Effect 6 阶段生命周期",
+  "subtitle": "EffectPhaseExecutor 驱动的完整生命周期管线",
+  "canvas": {
+    "width": 1880,
+    "height": 1080
+  },
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 130,
+    "width": 190,
+    "items": [
+      {
+        "label": "Apply Phase",
+        "tint": "clay"
+      },
+      {
+        "label": "Update Phase",
+        "tint": "steel"
+      },
+      {
+        "label": "Lifetime Phase",
+        "tint": "stone"
+      },
+      {
+        "label": "Expire Phase",
+        "tint": "mauve"
+      },
+      {
+        "label": "Cleanup Phase",
+        "tint": "sand"
+      },
+      {
+        "label": "Publish Phase",
+        "tint": "sage"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "id": "handlers",
+      "title": "Phase 绑定机制与 Handler 调用",
+      "x": 230,
+      "y": 700,
+      "w": 1430,
+      "h": 250,
+      "tint": "sage",
+      "border_style": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "request",
+      "title": "EffectRequest",
+      "tint": "graphite",
+      "x": 60,
+      "y": 420,
+      "w": 170,
+      "h": 70
+    },
+    {
+      "id": "apply",
+      "title": "1 · Apply",
+      "tint": "clay",
+      "x": 250,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "初始化 · Proposal 窗口",
+        "OnPropose / OnCalculate",
+        "OnApply"
+      ]
+    },
+    {
+      "id": "update",
+      "title": "2 · Update",
+      "tint": "steel",
+      "x": 480,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "状态更新 · 堆叠",
+        "Duration · EffectStack",
+        "LifetimeMarkers"
+      ]
+    },
+    {
+      "id": "lifetime",
+      "title": "3 · Lifetime",
+      "tint": "stone",
+      "x": 710,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "周期 Tick · 过期检查",
+        "PeriodicTick",
+        "Expiration"
+      ]
+    },
+    {
+      "id": "expire",
+      "title": "4 · Expire",
+      "tint": "mauve",
+      "x": 940,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "标记过期 · 触发 Remove",
+        "OnExpire listener"
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": "5 · Cleanup",
+      "tint": "sand",
+      "x": 1170,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "撤销修改",
+        "移除 GrantedTags",
+        "MutationOps 回滚"
+      ]
+    },
+    {
+      "id": "publish",
+      "title": "6 · Publish",
+      "tint": "sage",
+      "x": 1400,
+      "y": 270,
+      "w": 210,
+      "h": 170,
+      "items": [
+        "发布事件",
+        "DeferredTrigger",
+        "GameplayEventBus"
+      ]
+    },
+    {
+      "id": "completed",
+      "title": "Completed",
+      "tint": "graphite",
+      "x": 1650,
+      "y": 320,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "id": "graphbindings",
+      "title": "GraphBindings",
+      "tint": "sage",
+      "x": 270,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "16 步",
+        "Phase 图绑定"
+      ]
+    },
+    {
+      "id": "listenerbuffer",
+      "title": "ListenerBuffer",
+      "tint": "sage",
+      "x": 500,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "8 个/Effect",
+        "阶段监听器"
+      ]
+    },
+    {
+      "id": "globallistener",
+      "title": "GlobalListener",
+      "tint": "sage",
+      "x": 730,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "堆叠/过期",
+        "全局监听"
+      ]
+    },
+    {
+      "id": "builtinhandler",
+      "title": "BuiltinHandler",
+      "tint": "sage",
+      "x": 960,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "Mod 扩展",
+        "Handler 注册"
+      ]
+    },
+    {
+      "id": "phasehandler",
+      "title": "PhaseHandler",
+      "tint": "sage",
+      "x": 1190,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "GraphProgram",
+        "图驱动"
+      ]
+    },
+    {
+      "id": "triggerdispatch",
+      "title": "TriggerDispatch",
+      "tint": "sage",
+      "x": 1420,
+      "y": 790,
+      "w": 210,
+      "h": 110,
+      "items": [
+        "统一发布",
+        "延迟触发"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "request",
+      "to": "apply",
+      "route": "elbow",
+      "from_side": "top",
+      "to_side": "left",
+      "label": "消费"
+    },
+    {
+      "from": "apply",
+      "to": "update",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Phase 2"
+    },
+    {
+      "from": "update",
+      "to": "lifetime",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Phase 3"
+    },
+    {
+      "from": "lifetime",
+      "to": "expire",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Phase 4"
+    },
+    {
+      "from": "expire",
+      "to": "cleanup",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Phase 5"
+    },
+    {
+      "from": "cleanup",
+      "to": "publish",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left",
+      "label": "Phase 6"
+    },
+    {
+      "from": "publish",
+      "to": "completed",
+      "route": "elbow",
+      "from_side": "right",
+      "to_side": "left"
+    },
+    {
+      "from": "apply",
+      "to": "handlers",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "style": "dashed",
+      "label": "Periodic Update 循环 (每固定帧)"
+    },
+    {
+      "from": "publish",
+      "to": "handlers",
+      "route": "elbow",
+      "from_side": "bottom",
+      "to_side": "top",
+      "style": "dashed"
+    }
+  ]
+}

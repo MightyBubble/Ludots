@@ -36,7 +36,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     private Entity _navigationProbeEntity = Entity.Null;
     private Entity _physicsProbeEntity = Entity.Null;
     private MassNavigationFlowSolverState? _navigationFlow;
-    private MassNavigationGroupRuntime? _navigationGroups;
+    private MassNavigationFlowStepper? _navigationStepper;
     private int _physicsShapeIndex = -1;
     private TimeFlowToken _settingsPauseToken;
     private TimeFlowToken _menuPauseToken;
@@ -222,13 +222,12 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
 
         MassNavigationFlowSolverState flow = _navigationFlow
             ?? throw new InvalidOperationException("TimeFlow showcase navigation probe is not initialized.");
-        MassNavigationGroupRuntime groups = _navigationGroups
-            ?? throw new InvalidOperationException("TimeFlow showcase navigation group runtime is not initialized.");
+        MassNavigationFlowStepper stepper = _navigationStepper
+            ?? throw new InvalidOperationException("TimeFlow showcase navigation stepper is not initialized.");
 
-        flow.Step(
-            dt,
+        stepper.Step(
             engine.World,
-            groups,
+            dt,
             runHardResolve: false,
             hardResolveCandidateThresholdAgents: 2);
         _navigationStepCount++;
@@ -580,7 +579,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         StopHeroLocalBurst(engine, restorePhysicsVelocity: false);
         engine.World.Destroy(in _ownedEntityQuery);
         _navigationFlow = null;
-        _navigationGroups = null;
+        _navigationStepper = null;
         _navigationProbeEntity = Entity.Null;
         _physicsProbeEntity = Entity.Null;
         _navigationStepCount = 0;
@@ -967,7 +966,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
 
     private void EnsureNavigationProbe(GameEngine engine, CapabilityStandardTimeFlowShowcaseConfig config)
     {
-        if (_navigationFlow != null && _navigationGroups != null)
+        if (_navigationFlow != null && _navigationStepper != null)
         {
             return;
         }
@@ -1001,9 +1000,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         }
 
         _navigationFlow = flow;
-        _navigationGroups = new MassNavigationGroupRuntime(
-            flow.Semantics.Group,
-            config.NavigationRuntimeCapacity);
+        _navigationStepper = new MassNavigationFlowStepper(flow, config.NavigationRuntimeCapacity);
         _navigationProbeEntity = engine.World.Create(
             new CapabilityStandardTimeFlowShowcaseEntityTag(),
             new CapabilityStandardTimeFlowShowcaseNavigationProbeTag(),
@@ -1134,7 +1131,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         _navigationProbeEntity = Entity.Null;
         _physicsProbeEntity = Entity.Null;
         _navigationFlow = null;
-        _navigationGroups = null;
+        _navigationStepper = null;
         _navigationStepCount = 0;
         _heroSkillCastCount = 0;
         _lastHeroSkillCastGasStep = -1;

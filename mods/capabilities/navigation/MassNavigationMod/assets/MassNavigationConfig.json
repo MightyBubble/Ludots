@@ -4,7 +4,6 @@
     "solverWindowWidthCm": 10000,
     "solverWindowHeightCm": 10000,
     "streamingChunkSizeCm": 6400,
-    "streamingRadiusCm": 16000,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 48000,
@@ -108,7 +107,6 @@
   },
   "scenario": {
     "agentsPerTeam": 2500,
-    "initialActiveTeamId": 1,
     "teams": [
       {
         "id": 1,
@@ -135,17 +133,17 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialCommandActorScratchCapacity": 10000,
-    "initialCommandActorSnapshotCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
       "groupMemberCapacity": 10000,
-      "commandActorScratchCapacity": 10000,
-      "orderIngestionTokenCapacity": 256,
-      "orderIngestionMemberCapacity": 10000,
+      "movePlanExecutionGroupCapacity": 256,
+      "movePlanExecutionMemberCapacity": 10000,
+      "routeStateCapacity": 10000,
+      "routeMaxExpandedPerRequest": 2048,
+      "routeWaypointCapacityPerAgent": 64,
       "loadedChunkCapacity": 256,
-      "metadataTeamCapacity": 4
+      "relationshipDomainCapacity": 4
     }
   },
   "cadence": {
@@ -157,8 +155,7 @@
     "hardResolveHz": 10,
     "entitySyncHz": 15,
     "maxStepsPerFixedTick": 1,
-    "hardResolveCandidateThresholdAgents": 1,
-    "orderIdleScanIntervalFrames": 6
+    "hardResolveCandidateThresholdAgents": 1
   },
   "agentProfiles": {
     "defaultProfileId": "light",
@@ -192,13 +189,13 @@
       }
     ]
   },
+  "relationshipPolicy": {
+    "cooperativeStance": "Friendly"
+  },
   "flow": {
     "enabled": false,
     "iterationsPerStep": 4096,
     "maxIterationsPerStep": 131072,
-    "stepIntervalTicks": 1,
-    "crowdStampIntervalTicks": 1,
-    "obstacleStampIntervalTicks": 1,
     "forceRefreshFlow": false,
     "forceRefreshCrowd": false,
     "forceRefreshObstacles": false
@@ -270,20 +267,13 @@
       "spawnSpacingCm": 46,
       "spawnJitterCm": 12,
       "teamSlotSpacingCm": 90,
-      "formationLineSpacingCm": 180,
-      "formationSquareSpacingCm": 80,
-      "formationCircleSpacingCm": 180,
-      "formationCircleMinRadiusCm": 200,
-      "formationWedgeSpacingCm": 180,
-      "formationRotationEpsilonRadians": 0.00001,
-      "formationRotationSpeedRadiansPerSecond": 2.5,
       "pullDeadZoneCm": 50,
       "pullClampCm": 2000,
       "arrivedRadiusCm": 150,
-      "formationArriveThresholdCm": 200,
+      "groupedAgentArriveThresholdCm": 200,
       "looseArriveThresholdCm": 300,
       "unitTargetStopThresholdCm": 50,
-      "formationFlowSlowRadiusCm": 400,
+      "groupedAgentFlowSlowRadiusCm": 400,
       "nearSlotBlend": 0.82,
       "farSlotBlend": 0.38,
       "nearSlotBlendDistanceSq": 4000000
@@ -292,7 +282,7 @@
       "separationRadiusCm": 200,
       "goalArrivalRadiusCm": 1200,
       "flowObstacleAvoidanceScale": 1.2,
-      "formationSeparationScale": 2,
+      "groupedAgentSeparationScale": 2,
       "looseSeparationScale": 4,
       "velocityBlendPerSecond": 5
     },

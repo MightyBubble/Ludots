@@ -26,6 +26,7 @@ namespace Ludots.Tests.GAS.Production
 {
     [TestFixture]
     [NonParallelizable]
+    [Category("acceptance")]
     public sealed class CapabilityStandardPhysics2DShowcaseAcceptanceTests
     {
         private const string BindingName = "capability_standard_physics2d_showcase";

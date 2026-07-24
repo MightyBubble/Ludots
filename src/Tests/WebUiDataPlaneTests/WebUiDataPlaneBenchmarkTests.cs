@@ -11,6 +11,7 @@ namespace Ludots.Tests.WebUiDataPlane;
 
 [TestFixture]
 [SupportedOSPlatform("windows")]
+[Category("benchmark")]
 public sealed class WebUiDataPlaneBenchmarkTests
 {
 	private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

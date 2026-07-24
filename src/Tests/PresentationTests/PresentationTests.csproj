@@ -35,9 +35,9 @@
     <ProjectReference Include="..\..\..\mods\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\VisualTerrainEditorMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fourx_demo\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\moba_demo\MobaDemoMod\MobaDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\animation\AnimationAcceptanceMod\AnimationAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />

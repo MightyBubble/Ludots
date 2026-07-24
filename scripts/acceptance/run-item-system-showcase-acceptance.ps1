@@ -1,6 +1,6 @@
 param(
-    [string]$ScreenshotPath = "D:\001_AI\LudotsDev\Ludots-item-worktree\artifacts\acceptance\item-system-showcase\item-system-showcase-raylib.png",
-    [string]$DiagnosticPath = "D:\001_AI\LudotsDev\Ludots-item-worktree\artifacts\acceptance\item-system-showcase\item-system-showcase-raylib-diagnostic.log",
+    [string]$ScreenshotPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "artifacts\acceptance\item-system-showcase\item-system-showcase-raylib.png"),
+    [string]$DiagnosticPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "artifacts\acceptance\item-system-showcase\item-system-showcase-raylib-diagnostic.log"),
     [int]$ScreenshotFrame = 180,
     [int]$KillAfterSeconds = 45,
     [string]$Configuration = "Release",
@@ -12,7 +12,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = "D:\001_AI\LudotsDev\Ludots-item-worktree"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $raylibScript = Join-Path $repoRoot "scripts\acceptance\run-item-system-showcase-raylib.ps1"
 $roomCaptureScript = Join-Path $repoRoot "scripts\acceptance\capture-item-system-showcase-rooms.ps1"
 

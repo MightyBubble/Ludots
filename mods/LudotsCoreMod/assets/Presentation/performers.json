@@ -240,6 +240,29 @@
     ]
   },
   {
+    "id": "core.combat_text.event_rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "EffectApplied",
+          "key": "*"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "floating_combat_text",
+          "ownerSource": "EventSource",
+          "scopeSource": "Fixed",
+          "paramKey": "worldText.value0",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      }
+    ]
+  },
+  {
     "id": "floating_combat_text",
     "defaultColor": [
       1,
@@ -278,26 +301,6 @@
             1,
             1
           ]
-        }
-      }
-    ],
-    "rules": [
-      {
-        "event": {
-          "kind": "EffectApplied",
-          "key": "*"
-        },
-        "condition": {
-          "inline": "None"
-        },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "floating_combat_text",
-          "ownerSource": "EventSource",
-          "scopeSource": "Fixed",
-          "paramKey": "worldText.value0",
-          "paramLane": "Float",
-          "valueSource": "EventMagnitude"
         }
       }
     ]

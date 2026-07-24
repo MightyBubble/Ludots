@@ -47,6 +47,36 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
+        public bool TrySubmitSharedBatch(Span<Order> orders)
+        {
+            if (orders.IsEmpty)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (TryBuildFollowOrder(in orders[i], out Order routeOrder))
+                {
+                    orders[i] = routeOrder;
+                    continue;
+                }
+
+                if (ShouldExpandRoadMove(in orders[i], out _))
+                {
+                    return false;
+                }
+            }
+
+            if (!_incomingOrders.TryEnqueueSharedBatch(orders))
+            {
+                WriteStatus("Road command rejected: order queue is full.");
+                return false;
+            }
+
+            return true;
+        }
+
         public bool TryBuildFollowOrder(in Order order, out Order routeOrder)
         {
             return _planning.TryPlan(in order, out routeOrder, out _);

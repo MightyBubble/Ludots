@@ -9,6 +9,7 @@ public sealed partial class MassNavigationFlowSolverState
         public MassNavigationFlowSolverState? Owner { get; set; }
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
+        public int ScratchWorkerIndex { get; set; }
         public float Dt { get; set; }
         public MassNavigationGroupRuntime? NavGroupRuntime { get; set; }
         public float SepRadiusSq { get; set; }
@@ -27,6 +28,7 @@ public sealed partial class MassNavigationFlowSolverState
             Owner!.StepRange(
                 StartIndex,
                 EndIndex,
+                ScratchWorkerIndex,
                 Dt,
                 NavGroupRuntime!,
                 SepRadiusSq,

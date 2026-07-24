@@ -28,6 +28,7 @@ import {
 export type ViewMode = "card" | "list";
 export type BuildState = "idle" | "building" | "done" | "error";
 export type DetailTab = "info" | "readme" | "changelog" | "graph";
+export type MainView = "mods" | "showcase";
 
 interface LauncherState {
   mods: ModInfo[];
@@ -54,6 +55,7 @@ interface LauncherState {
   workspaceSources: string[];
   showWorkspace: boolean;
   showCreateDialog: boolean;
+  mainView: MainView;
 
   init: () => Promise<void>;
   refreshMods: () => Promise<void>;
@@ -77,6 +79,7 @@ interface LauncherState {
   addSource: (path: string) => Promise<boolean>;
   toggleWorkspace: () => void;
   toggleCreateDialog: () => void;
+  setMainView: (view: MainView) => void;
 }
 
 function createModMap(mods: ModInfo[]): Map<string, ModInfo> {
@@ -308,6 +311,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
     workspaceSources: [],
     showWorkspace: false,
     showCreateDialog: false,
+    mainView: "mods",
 
     init: async () => {
       set({ loading: true });
@@ -490,6 +494,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
     setDetailTab: (tab) => set({ detailTab: tab }),
     toggleWorkspace: () => set((state) => ({ showWorkspace: !state.showWorkspace })),
     toggleCreateDialog: () => set((state) => ({ showCreateDialog: !state.showCreateDialog })),
+    setMainView: (view) => set({ mainView: view }),
 
     buildActive: async () => {
       const state = get();

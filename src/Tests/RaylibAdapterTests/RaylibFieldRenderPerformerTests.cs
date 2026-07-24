@@ -10,6 +10,8 @@ using Raylib_cs;
 namespace Ludots.Tests.RaylibAdapter;
 
 [TestFixture]
+[Category("ci-gate")]
+[Category("raylib-field")]
 public sealed class RaylibFieldRenderPerformerTests
 {
     [Test]

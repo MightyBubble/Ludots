@@ -31,6 +31,7 @@
       }
     },
     {
+      "InstanceId": "camera_team_2",
       "Template": "moba_dummy",
       "Overrides": {
         "Name": { "Value": "CapabilityStandardCameraSouthEast" },
@@ -42,6 +43,10 @@
     {
       "TeamId": 1,
       "RepresentativeInstanceId": "camera_team_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "camera_team_2"
     }
   ],
   "Players": [

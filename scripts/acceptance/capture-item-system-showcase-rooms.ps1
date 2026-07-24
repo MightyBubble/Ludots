@@ -1,12 +1,12 @@
 param(
-    [string]$OutputDirectory = "D:\001_AI\LudotsDev\Ludots-item-worktree\artifacts\acceptance\item-system-showcase\room-screenshots",
+    [string]$OutputDirectory = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path "artifacts\acceptance\item-system-showcase\room-screenshots"),
     [int]$ScreenshotFrame = 180,
     [int]$KillAfterSeconds = 35
 )
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = "D:\001_AI\LudotsDev\Ludots-item-worktree"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $captureScript = Join-Path $repoRoot "scripts\acceptance\run-item-system-showcase-raylib.ps1"
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null

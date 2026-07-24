@@ -367,7 +367,7 @@ namespace CoreInputMod.Systems
                     buffer.ActiveOrder.Order.OrderId == order.OrderId &&
                     buffer.ActiveOrder.Order.OrderTypeId == order.OrderTypeId)
                 {
-                    return Math.Clamp(buffer.ActiveOrder.RuntimeInt0, 0, pointCount - 1);
+                    return Math.Clamp(buffer.ActiveRuntimeInt0, 0, pointCount - 1);
                 }
             }
 

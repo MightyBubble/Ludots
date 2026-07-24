@@ -93,7 +93,6 @@ namespace Ludots.Core.Presentation.Systems
             for (int ei = 0; ei < span.Length; ei++)
             {
                 ref readonly var evt = ref span[ei];
-
                 // 1. Check exact-match rules: (eventKind, keyId)
                 long exactKey = PackKey(evt.Kind, evt.KeyId);
                 if (_exactIndex.TryGetValue(exactKey, out var exactRules))
@@ -395,7 +394,10 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (CommandTargetsScopedPerformer(rule.Command.CommandKind))
                 {
-                    if (ScopedCommandRequiresOwnerDefinitionInstance(rule.OwnerDefinitionId))
+                    if (ScopedCommandRequiresOwnerDefinitionInstance(
+                        rule.OwnerDefinitionId,
+                        in rule.Command,
+                        evt.Kind))
                     {
                         EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
                         return;
@@ -409,8 +411,18 @@ namespace Ludots.Core.Presentation.Systems
             EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
         }
 
-        private bool ScopedCommandRequiresOwnerDefinitionInstance(int ownerDefinitionId)
+        private bool ScopedCommandRequiresOwnerDefinitionInstance(
+            int ownerDefinitionId,
+            in PerformerCommand command,
+            PresentationEventKind eventKind)
         {
+            if (command.CommandKind == PerformerCommandKind.CreatePerformer &&
+                command.PerformerDefinitionId == ownerDefinitionId &&
+                !EventTargetsExistingPerformerInstances(eventKind))
+            {
+                return false;
+            }
+
             if (_runtime != null &&
                 _runtime.GetActiveByDefinition(ownerDefinitionId).Count != 0)
             {
@@ -493,7 +505,7 @@ namespace Ludots.Core.Presentation.Systems
             Entity normalizedParent = NormalizeOptionalEntity(cmd.ParentEntity);
             emitted.ParentEntity = normalizedParent != Entity.Null
                 ? normalizedParent
-                : ResolveImplicitParent(in evt);
+                : ResolveImplicitParent(in evt, emitted.PerformerDefinitionId, emitted.Source, emitted.ScopeTag);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, in evt)
                 : ResolveParamFloatValue(in cmd, in evt);
@@ -520,6 +532,7 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
             }
+
         }
 
         private static Entity ResolveCommandOwner(in PerformerCommand cmd, in PresentationEvent evt)
@@ -536,7 +549,11 @@ namespace Ludots.Core.Presentation.Systems
             return entity == default || entity.Id < 0 ? Entity.Null : entity;
         }
 
-        private Entity ResolveImplicitParent(in PresentationEvent evt)
+        private Entity ResolveImplicitParent(
+            in PresentationEvent evt,
+            int performerDefinitionId,
+            Entity owner,
+            int scopeId)
         {
             if (evt.Kind == PresentationEventKind.PerformerCreated)
             {
@@ -548,7 +565,23 @@ namespace Ludots.Core.Presentation.Systems
                 World.Has<PresentationOwnerHasPerformerPayload>(evt.Source))
             {
                 Entity parent = World.Get<PresentationOwnerHasPerformerPayload>(evt.Source).SingleRootPerformer;
-                return NormalizeOptionalEntity(parent);
+                parent = NormalizeOptionalEntity(parent);
+                if (parent != Entity.Null &&
+                    performerDefinitionId > 0 &&
+                    scopeId > 0 &&
+                    World.IsAlive(parent) &&
+                    World.Has<PerformerState>(parent))
+                {
+                    ref readonly PerformerState parentState = ref World.Get<PerformerState>(parent);
+                    if (parentState.DefId == performerDefinitionId &&
+                        parentState.OwnerEntity == owner &&
+                        parentState.ScopeId == scopeId)
+                    {
+                        return Entity.Null;
+                    }
+                }
+
+                return parent;
             }
 
             return Entity.Null;

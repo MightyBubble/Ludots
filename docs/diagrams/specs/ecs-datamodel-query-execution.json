@@ -1,0 +1,52 @@
+{
+  "name": "ecs-datamodel-query-execution",
+  "title": "Query Execution Flow",
+  "subtitle": "Description → Filter → Iterate → Component Access",
+  "canvas": { "width": 1640, "height": 1360 },
+
+  "nodes": [
+    { "id": "start", "title": "System.Update()", "tint": "clay",
+      "x": 700, "y": 120, "w": 240, "h": 60 },
+    { "id": "s1", "title": "1 · Create EntityQuery", "tint": "clay",
+      "x": 640, "y": 240, "w": 360, "h": 70 },
+    { "id": "s2", "title": "2 · Query Description", "tint": "steel",
+      "x": 640, "y": 370, "w": 360, "h": 90,
+      "items": ["ComponentTypes + AccessMode"] },
+    { "id": "dec", "title": "Filter Match?", "tint": "stone",
+      "x": 710, "y": 520, "w": 220, "h": 70 },
+    { "id": "s3a", "title": "3 · Skip Archetype", "tint": "sage",
+      "x": 260, "y": 660, "w": 300, "h": 70 },
+    { "id": "s3b", "title": "3 · Include Archetype", "tint": "sage",
+      "x": 1080, "y": 660, "w": 320, "h": 70 },
+    { "id": "s4", "title": "4 · Build Chunk Iterator", "tint": "stone",
+      "x": 640, "y": 800, "w": 360, "h": 100,
+      "items": ["Filtered Archetypes → Chunks"] },
+    { "id": "s5", "title": "5 · ForEach Chunk", "tint": "mauve",
+      "x": 640, "y": 960, "w": 360, "h": 100,
+      "items": ["ForEach Entity in Chunk"] },
+    { "id": "access", "title": "Component Access", "tint": "steel",
+      "x": 1120, "y": 960, "w": 320, "h": 100,
+      "items": ["Read / Write / Exclude"] },
+    { "id": "end", "title": "End Update", "tint": "clay",
+      "x": 700, "y": 1130, "w": 240, "h": 60 }
+  ],
+
+  "edges": [
+    { "from": "start", "to": "s1", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s1", "to": "s2", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s2", "to": "dec", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "dec", "to": "s3a", "route": "elbow", "from_side": "left", "to_side": "top", "label": "No" },
+    { "from": "dec", "to": "s3b", "route": "elbow", "from_side": "right", "to_side": "top", "label": "Yes" },
+    { "from": "s3a", "to": "s4", "route": "elbow", "from_side": "bottom", "to_side": "left" },
+    { "from": "s3b", "to": "s4", "route": "elbow", "from_side": "bottom", "to_side": "right" },
+    { "from": "s4", "to": "s5", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "s5", "to": "access", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "s5", "to": "end", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "access", "to": "end", "route": "elbow", "from_side": "bottom", "to_side": "right" }
+  ],
+
+  "notes": [
+    { "text": "Filter: All / Any / None component matching", "x": 60, "y": 1230, "ha": "left" },
+    { "text": "Access: ReadOnly / ReadWrite / Exclude", "x": 60, "y": 1254, "ha": "left" }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "name": "tick-loop",
+  "title": "Game Tick Loop",
+  "subtitle": "Complete Frame Cycle: Input → Simulation → Presentation",
+  "canvas": { "width": 2240, "height": 1360 },
+
+  "groups": [
+    { "id": "simloop", "title": "Simulation Loop", "x": 40, "y": 500, "w": 640, "h": 220, "tint": "clay" },
+    { "id": "visloop", "title": "Visual Loop", "x": 40, "y": 800, "w": 1200, "h": 200, "tint": "stone" }
+  ],
+
+  "nodes": [
+    { "id": "tick", "title": "Tick(platformDeltaTime)", "tint": "clay", "border_w": 1.6, "x": 940, "y": 120, "w": 360, "h": 70 },
+
+    { "id": "n1", "title": "1 · ApplyTimeFlowScales()", "tint": "clay", "x": 40, "y": 220, "w": 360, "h": 70 },
+    { "id": "n2", "title": "2 · dt = delta * TimeScale", "tint": "clay", "x": 460, "y": 220, "w": 360, "h": 70 },
+    { "id": "n3", "title": "3 · Update TotalTime", "tint": "clay", "x": 880, "y": 220, "w": 360, "h": 70 },
+    { "id": "n4", "title": "4 · GameTask.Update", "tint": "clay", "x": 1300, "y": 220, "w": 360, "h": 70 },
+    { "id": "n5", "title": "5 · SyncContext.Process", "tint": "clay", "x": 1720, "y": 220, "w": 360, "h": 70 },
+
+    { "id": "n6", "title": "6 · EnsureCameraConfigured()", "tint": "mauve", "x": 1720, "y": 360, "w": 360, "h": 70 },
+    { "id": "n7", "title": "7 · InputRuntimeSystem.Update", "tint": "mauve", "x": 1300, "y": 360, "w": 360, "h": 70 },
+    { "id": "n8", "title": "8 · ProcessPendingMapLoads()", "tint": "clay", "x": 880, "y": 360, "w": 360, "h": 70 },
+
+    { "id": "schema", "title": "Schema", "tint": "sage", "x": 70, "y": 570, "w": 180, "h": 80 },
+    { "id": "pacemaker", "title": "Pacemaker", "tint": "sage", "x": 270, "y": 570, "w": 180, "h": 80,
+      "items": ["BudgetMS + SliceLimit"] },
+    { "id": "ability", "title": "Ability", "tint": "sage", "x": 470, "y": 570, "w": 180, "h": 80 },
+
+    { "id": "fused", "title": "Budget Fused?", "tint": "sand", "x": 740, "y": 555, "w": 180, "h": 100 },
+    { "id": "n9", "title": "9 · Halt + FuseEvent", "tint": "clay", "x": 990, "y": 495, "w": 340, "h": 60 },
+    { "id": "n10", "title": "10 · CooperativeSimulation.Update", "tint": "clay", "x": 990, "y": 625, "w": 340, "h": 60 },
+
+    { "id": "phase", "title": "PhaseOrderedCooperativeSimulation", "tint": "clay", "x": 1400, "y": 500, "w": 380, "h": 190,
+      "items": ["For each SystemGroup phase:", "Execute all systems", "OnFixedStepCompleted()"] },
+    { "id": "n11", "title": "11 · AfterFixedTick()", "tint": "clay", "x": 1840, "y": 555, "w": 300, "h": 80 },
+
+    { "id": "v1", "title": "Clear Buffers", "tint": "stone", "x": 70, "y": 870, "w": 200, "h": 80 },
+    { "id": "v2", "title": "FrameSetup", "tint": "stone", "x": 300, "y": 870, "w": 200, "h": 80 },
+    { "id": "v3", "title": "WorldToVisual", "tint": "stone", "x": 530, "y": 870, "w": 200, "h": 80 },
+    { "id": "v4", "title": "PerformerRule", "tint": "stone", "x": 760, "y": 870, "w": 200, "h": 80 },
+    { "id": "v5", "title": "PerformerEmit", "tint": "stone", "x": 990, "y": 870, "w": 200, "h": 80 },
+
+    { "id": "n12", "title": "12 · Clear GAS Events", "tint": "stone", "x": 240, "y": 1080, "w": 360, "h": 70 },
+    { "id": "n13", "title": "13 · Swap / Submit", "tint": "stone", "x": 680, "y": 1080, "w": 360, "h": 70 },
+    { "id": "n14", "title": "14 · Platform Render", "tint": "teal", "x": 1120, "y": 1080, "w": 360, "h": 70 },
+    { "id": "n15", "title": "15 · Screen / Frame", "tint": "teal", "x": 1560, "y": 1080, "w": 360, "h": 70 }
+  ],
+
+  "edges": [
+    { "from": "tick", "to": "n1", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 30 },
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "n3" },
+    { "from": "n3", "to": "n4" },
+    { "from": "n4", "to": "n5" },
+    { "from": "n5", "to": "n6" },
+    { "from": "n6", "to": "n7" },
+    { "from": "n7", "to": "n8" },
+    { "from": "n8", "to": "simloop" },
+    { "from": "simloop", "to": "fused" },
+    { "from": "fused", "to": "n9", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 25, "label": "No" },
+    { "from": "fused", "to": "n10", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 25, "label": "Yes" },
+    { "from": "n9", "to": "simloop", "route": "elbow", "from_side": "left", "to_side": "right", "stub": 25, "style": "dashed" },
+    { "from": "n10", "to": "phase" },
+    { "from": "phase", "to": "n11" },
+    { "from": "n11", "to": "visloop", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40 },
+    { "from": "visloop", "to": "n12", "route": "elbow", "from_side": "bottom", "to_side": "top", "stub": 40 },
+    { "from": "n12", "to": "n13" },
+    { "from": "n13", "to": "n14" },
+    { "from": "n14", "to": "n15" },
+    { "from": "n15", "to": "tick", "route": "elbow", "from_side": "right", "to_side": "right", "stub": 240, "label": "Next Frame" }
+  ],
+
+  "notes": [
+    { "text": "Simulation Budget:\n• BudgetMsPerFrame = 4ms\n• MaxSlicesPerFrame = 120\n• BudgetFuse → halt + event", "x": 40, "y": 1230, "ha": "left" },
+    { "text": "Time Scale Domains:\n• Simulation\n• GAS\n• Physics2D\n• Navigation2D", "x": 1560, "y": 1230, "ha": "left" }
+  ]
+}

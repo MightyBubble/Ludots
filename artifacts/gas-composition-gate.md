@@ -2,6 +2,183 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - PR #660 Final Main-Lag Repair
+
+- **Task / Issue**: PR #660 final merge repair against current `main`
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（沿现有 Order/GAS、Knowledge、UI Surface、Input 与 Physics2D 管线修复合并落后问题）
+
+结论: PASS
+
+一句话理由: 本轮只修正现有 showcase、验收宿主和热路径使用方式；没有新增 graph op、effect preset enum、profile 字段、loader、registry、fallback 或平行运行时。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Interaction stress order pressure | N/A | existing `gasRuntimeCapacity` budget and existing stress fireball effect templates |
+| Relationship frontend mount | N/A | existing `AcceptanceUiHostInstaller` + `UiSurfaceHost` |
+| Physics2D steady-state allocation repair | N/A | existing `InputActionAttributeBindingSystem` and `Physics2DSimulationSystem` inline queries |
+| Performance Visualization Health HUD audience | N/A | existing `LocalPlayerEntity`, `KnowledgeProjectionStore`, `KnowledgeDisclosureRecord` |
+| UX Prototype selectable visibility | N/A | existing local player services, `PlayerEntityLookup`, `KnowledgeProjectionStore` |
+
+### 3. Reuse list
+
+- Handlers: existing GAS effect handlers; no new builtin handler.
+- Queues / Systems: `OrderAdmissionResultBuffer`, `RuntimeEntitySpawnQueue`, `InputActionAttributeBindingSystem`, `Physics2DSimulationSystem`, existing presentation/UI runtime.
+- Resolvers / Registries: `KnowledgeProjectionStore`, `PlayerEntityLookup`, `EntityTemplateKeyRegistry`, existing UI surface services.
+- Existing presets / graphs: unchanged; stress fireball keeps existing `LaunchProjectile` / `InstantDamage` presets and only opts out of response-chain participation for the stress-only path.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No atomic op, graph operation, effect handler, preset, registry, schema, or materialization path was added.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A；本轮不改 mutation transaction。Order 压力修复只对齐现有入队/接单结果容量；UI 修复只补齐验收 composition root；Physics2D 修复只缓存稳定相机输入承载实体并使用 inline-query 读取统计。
+
+### 6. Config SSOT
+
+行为配置落在:
+
+- `mods/showcases/interaction/InteractionShowcaseMod/assets/game.json`：showcase 专属 Order admission / rejection capacity。
+- `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json`：stress-only fireball response-chain participation。
+- 其他修复复用现有 runtime services，不新增配置文件。
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn/effect/order/UI/physics 平行的运行时管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback、兼容旁路或静默容量放过
+- [x] 未新增 registry、preset、loader 或 schema
+- [x] 热路径修复不新增 ECS 结构变更或托管集合增长
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / showcase 数据预算。输入、知识可见性、UI 挂载和 Physics2D 统计继续走现有服务与系统，不修改 Core gameplay enum。
+
+---
+
+## GAS Composition Gate - PR #660 Spawn Relationship Test Repair
+
+- **Task / Issue**: PR #660 merge repair for runtime spawn Team → MemberOf relationship contract
+- **Date**: 2026-07-23
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（测试装配复用现有 spawn 与 relationship 基建）
+
+结论: PASS
+
+一句话理由: 本轮只让 runtime spawn 测试显式注入正式 `RelationshipRuntime`、`RelationshipTypeRegistry` 与 `TeamEntityLookup`，不新增 graph op、preset、profile 字段、loader、registry 或平行物化管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Team 代表实体装配 | N/A | `TeamIdentity` + `TeamEntityLookup` |
+| MemberOf 类型注册 | N/A | `RelationshipTypeRegistry` |
+| Spawn 后队伍归属关系 | N/A | existing `RuntimeEntitySpawnSystem` + `RelationshipRuntime` |
+
+### 3. Reuse list
+
+- Handlers: existing `CreateUnit` / runtime spawn path unchanged
+- Queues / Systems: existing `RuntimeEntitySpawnQueue` and `RuntimeEntitySpawnSystem`
+- Resolvers / Registries: `RelationshipTypeRegistry`, `TeamEntityLookup`, `RelationshipReverseIndex`
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A；本轮不改生产事务，只补测试 composition root。spawn 系统继续在入队消费前显式校验 Team 代表和 MemberOf 类型，缺失即 hard failure。
+
+### 6. Config SSOT
+
+行为配置落在: existing spawn request and relationship runtime registration.
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback 或兼容旁路
+- [x] 未新增 registry、preset 或 schema
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤 / graph 连线。需要队伍归属时继续通过正式 relationship runtime 和 Team 代表实体表达。
+
+---
+
+## GAS Composition Gate - PR #660 main merge repair
+
+- **Task / Issue**: PR #660 merge with current `main`
+- **Date**: 2026-07-23
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Merge the existing typed Order admission/result contract with the existing mainline batch, shared-id, and clustered command admission path.
+
+Result: PASS
+
+Reason: The repair reuses `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderBufferSystem`, `OrderSubmitter`, `InputOrderMappingSystem`, and existing MovePlan/MassNavigation ports. It adds no gameplay profile enum, effect preset switch, graph op, lifecycle DSL, loader, or parallel order runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Typed global/entity order admission | N/A | `OrderAdmissionResultBuffer` |
+| Atomic batch/shared/clustered intake | N/A | `OrderQueue` |
+| Batch preflight before activation | N/A | `OrderBufferSystem` |
+| Actor authorization before fan-out submit | N/A | `InputOrderMappingSystem` |
+| MovePlan-backed road execution binding | N/A | existing `MassNavigationRuntimeBinding` and `MovePlanStore` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderSubmitter`, existing `SystemGroup.RuntimeEntityBinding`.
+- Resolvers / Registries: `OrderTypeRegistry`, `CommandIntentProfileRegistry`, `CastDispatchProfileRegistry`, `MassNavigationRuntimeBinding`.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Batch intake validates order type, capacity, actor ownership, command-source grouping, and entity intake preflight before any row activates. If one batch member fails entity intake, every row is rejected and spatial payload ownership is released.
+
+### 6. Config SSOT
+
+Behavior remains in the existing order type catalog, input mapping data, and GAS runtime capacity config. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel spawn, order, MovePlan, or lifecycle runtime added
+- [x] No fallback constructor restored for `OrderQueue`
+- [x] No silent partial batch admission
+
+### 8. Next variant test
+
+The next Mod variant changes command routing data or effect/graph composition, not Core enums.
+
+---
+
 ## GAS Composition Gate - #649 Production Closeout
 
 - **Task / Issue**: #649
@@ -693,6 +870,63 @@ Behavior remains in the existing effect template and phase graph assets. No JSON
 ### 8. Next variant test
 
 A new Mod lifetime variant changes an effect template or phase graph connection and automatically uses the same lifetime transaction. It does not add a Core enum, preset switch, alternate transaction, or compatibility path.
+
+---
+
+## GAS Composition Gate - PR #660 Collection Performer Lifecycle
+
+- **Task / Issue**: PR #660 main merge repair for collection-member highlight lifetime and performer implicit parent resolution
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Repair existing performer rule command composition and runtime lifecycle semantics for entity collection presentation events.
+
+Result: PASS
+
+Reason: The change reuses `EntityCollectionPresentationEventSystem`, `PerformerRuleSystem`, `PerformerRuntimeSystem`, `PerformerEntityRuntime`, and `PresentationOwnerHasPerformerPayload`. It adds no graph op, effect preset, profile field, loader, registry, fallback path, or parallel presentation pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Collection member event command emission | N/A | Existing `PerformerRuleSystem` |
+| Persistent scoped performer idempotent update | N/A | Existing `PerformerRuntimeSystem` duplicate scoped create path |
+| Owner root payload parent lookup | N/A | Existing `PresentationOwnerHasPerformerPayload` marker and `PerformerState` identity |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing collection event, performer rule, performer runtime, and performer behavior systems
+- Resolvers / Registries: existing performer definition registry, entity collection key registry, and owner payload marker
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A. No lifecycle atomic op, graph operation, effect handler, preset, registry, schema, or materialization path was added.
+
+### 5. Transaction boundary
+
+N/A. This repair does not introduce a mutation transaction. The lifecycle boundary remains the existing performer command tick: collection row removal emits a scoped destroy for the removed row, while a metadata re-add for a surviving row must resolve to the same persistent scoped performer and update in place.
+
+### 6. Config SSOT
+
+Behavior remains in existing performer definition rules and collection key registration.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit, placement, or preset enum added
+- [x] No parallel collection, performer, or lifecycle pipeline added
+- [x] No owner/parent fallback or silent create bypass added
+- [x] No hard-coded definition id or implicit numeric registry slot added
+- [x] No hot-path structural mutation pattern added
+
+### 8. Next variant test
+
+A new Mod collection highlight variant changes performer definition rules or collection event bindings. It continues through the same collection event stream and performer command runtime; it does not add a Core enum, alternate parent resolver, or compatibility path.
 
 ---
 

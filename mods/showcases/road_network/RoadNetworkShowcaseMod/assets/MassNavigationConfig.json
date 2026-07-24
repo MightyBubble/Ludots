@@ -3,7 +3,6 @@
   "world": {
     "solverWindowWidthCm": 50000,
     "solverWindowHeightCm": 50000,
-    "streamingRadiusCm": 32000,
     "workAreaMaxWidthCm": 50000,
     "workAreaMaxHeightCm": 50000,
     "activeHotZoneId": "road_core",
@@ -44,16 +43,13 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
-    "initialCommandActorScratchCapacity": 32,
-    "initialCommandActorSnapshotCapacity": 16,
     "runtimeCapacity": {
       "navigationGroupCapacity": 32,
       "groupMembershipAgentCapacity": 128,
-      "commandActorScratchCapacity": 32,
       "groupMemberCapacity": 32,
-      "orderIngestionTokenCapacity": 32,
-      "orderIngestionMemberCapacity": 32,
-      "metadataTeamCapacity": 2
+      "movePlanExecutionGroupCapacity": 32,
+      "movePlanExecutionMemberCapacity": 32,
+      "relationshipDomainCapacity": 3
     }
   },
   "cadence": {

@@ -1,0 +1,11 @@
+{
+  "types": [
+    { "id": "ChampionSkillSandbox.Participant", "isSymmetric": false }
+  ],
+  "metrics": [],
+  "flags": [],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

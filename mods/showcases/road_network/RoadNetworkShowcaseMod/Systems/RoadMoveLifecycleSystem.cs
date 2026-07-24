@@ -17,7 +17,8 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveLifecycleSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>()
+            .WithNone<SuspendedTag>();
 
         private readonly Dictionary<string, object> _globals;
         private readonly OrderTypeRegistry _orderTypeRegistry;
@@ -26,10 +27,9 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly MovePlanRuntimeService _runtime;
         private readonly RoadRouteArrivalPolicy _arrival = new();
         private readonly RoadRouteTimeoutPolicy _timeout = new();
-        private readonly IMovePlanExecutionSink _executionSink;
+        private readonly RoadNetworkMassNavigationRuntimeAccessor _navigation;
         private readonly RoadRouteRefreshService _refresh;
         private readonly RoadRouteProfileCatalog _profiles;
-        private readonly MassNavigationSimulationRuntime _simulation;
 
         public RoadMoveLifecycleSystem(
             World world,
@@ -38,15 +38,14 @@ namespace RoadNetworkShowcaseMod.Systems
             int roadMoveFollowOrderTypeId,
             MovePlanStore plans,
             MovePlanRuntimeService runtime,
-            MassNavigationSimulationRuntime simulation) : base(world)
+            MassNavigationRuntimeBinding binding) : base(world)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
-            _executionSink = new MassNavigationMovePlanExecutionSink(_simulation);
+            _navigation = new RoadNetworkMassNavigationRuntimeAccessor(binding);
             _refresh = new RoadRouteRefreshService(world, globals, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             _profiles = new RoadRouteProfileCatalog(world);
         }
@@ -60,6 +59,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 Span<MovePlanOrderRuntime> orderStates = chunk.GetSpan<MovePlanOrderRuntime>();
                 Span<MovePlanRuntime> planStates = chunk.GetSpan<MovePlanRuntime>();
                 ref Entity entityFirst = ref chunk.Entity(0);
+                MassNavigationSimulationRuntime? simulation = null;
 
                 foreach (int index in chunk)
                 {
@@ -72,7 +72,8 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    if (!_simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
+                    simulation ??= _navigation.RequireSimulation(nameof(RoadMoveLifecycleSystem));
+                    if (!simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
                     {
                         orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
                         orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;
@@ -202,7 +203,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private void CompleteRoadOrder(Entity entity)
         {
-            _executionSink.Clear(World, entity);
+            _navigation.RequireExecutionSink(nameof(RoadMoveLifecycleSystem)).Clear(World, entity);
             _runtime.Clear(entity);
             if (RoadMoveActiveOrderResolver.TryResolve(World, entity, _roadMoveFollowOrderTypeId, out _))
             {

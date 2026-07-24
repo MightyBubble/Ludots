@@ -1,0 +1,106 @@
+{
+  "name": "adapter-comparison",
+  "title": "Ludots Adapter Platform - Three Platform Comparison",
+  "subtitle": "Raylib (Native) vs Web (Browser) vs UE5 (Plugin)",
+  "canvas": { "width": 2050, "height": 1330 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 40,
+    "y": 140,
+    "width": 210,
+    "items": [
+      { "label": "Engine Core", "tint": "clay" },
+      { "label": "Raylib", "tint": "sage" },
+      { "label": "Web", "tint": "steel" },
+      { "label": "UE5", "tint": "stone" }
+    ]
+  },
+
+  "groups": [
+    { "id": "core", "title": "Ludots Engine Core (Shared)",
+      "x": 475, "y": 130, "w": 1100, "h": 170,
+      "tint": "clay", "border_style": "dashed", "title_anchor": "top-center" },
+    { "id": "raylib-ad", "title": "Raylib Adapter",
+      "x": 60, "y": 360, "w": 560, "h": 540,
+      "tint": "sage", "border_style": "dashed" },
+    { "id": "web-ad", "title": "Web Adapter",
+      "x": 745, "y": 360, "w": 560, "h": 540,
+      "tint": "steel", "border_style": "dashed" },
+    { "id": "ue5-ad", "title": "UE5 Adapter",
+      "x": 1430, "y": 360, "w": 560, "h": 540,
+      "tint": "stone", "border_style": "dashed" }
+  ],
+
+  "nodes": [
+    { "id": "ecs", "title": "ECS", "tint": "teal", "x": 525, "y": 175, "w": 150, "h": 90 },
+    { "id": "gas", "title": "GAS", "tint": "sage", "x": 695, "y": 175, "w": 150, "h": 90 },
+    { "id": "sysgroup", "title": "SystemGroup", "tint": "clay", "x": 865, "y": 175, "w": 150, "h": 90 },
+    { "id": "registry", "title": "Registry", "tint": "steel", "x": 1035, "y": 175, "w": 150, "h": 90 },
+    { "id": "modding", "title": "Modding", "tint": "sand", "x": 1205, "y": 175, "w": 150, "h": 90 },
+    { "id": "vfs", "title": "VFS", "tint": "mauve", "x": 1375, "y": 175, "w": 150, "h": 90 },
+
+    { "id": "r-window", "title": "Window", "tint": "sage", "x": 95, "y": 430, "w": 250, "h": 90 },
+    { "id": "r-input", "title": "Input", "tint": "sage", "x": 375, "y": 430, "w": 250, "h": 90 },
+    { "id": "r-graphics", "title": "Graphics", "tint": "sage", "x": 95, "y": 550, "w": 250, "h": 90 },
+    { "id": "r-audio", "title": "Audio", "tint": "sage", "x": 375, "y": 550, "w": 250, "h": 90 },
+    { "id": "r-asset", "title": "Asset", "tint": "sage", "x": 95, "y": 670, "w": 250, "h": 90 },
+    { "id": "r-timer", "title": "Timer", "tint": "sage", "x": 375, "y": 670, "w": 250, "h": 90 },
+    { "id": "r-bar", "title": "IAdapter Interface", "tint": "sage", "border_w": 1.6,
+      "x": 95, "y": 790, "w": 530, "h": 70 },
+    { "id": "r-api", "title": "Raylib C API", "tint": "graphite",
+      "x": 95, "y": 940, "w": 530, "h": 70 },
+    { "id": "r-rt", "title": "Desktop (Win/Mac/Linux)", "tint": "sage",
+      "x": 95, "y": 1050, "w": 530, "h": 70 },
+    { "id": "r-os", "title": "Windows / macOS / Linux", "tint": "sage",
+      "x": 95, "y": 1160, "w": 530, "h": 70 },
+
+    { "id": "w-canvas", "title": "Canvas", "tint": "steel", "x": 780, "y": 430, "w": 250, "h": 90 },
+    { "id": "w-websocket", "title": "WebSocket", "tint": "steel", "x": 1060, "y": 430, "w": 250, "h": 90 },
+    { "id": "w-dom", "title": "DOM Event", "tint": "steel", "x": 780, "y": 550, "w": 250, "h": 90 },
+    { "id": "w-streamer", "title": "Streamer", "tint": "steel", "x": 1060, "y": 550, "w": 250, "h": 90 },
+    { "id": "w-delta", "title": "DeltaComp", "tint": "steel", "x": 780, "y": 670, "w": 250, "h": 90 },
+    { "id": "w-frame", "title": "FrameProto", "tint": "steel", "x": 1060, "y": 670, "w": 250, "h": 90 },
+    { "id": "w-bar", "title": "IAdapter Interface", "tint": "steel", "border_w": 1.6,
+      "x": 780, "y": 790, "w": 530, "h": 70 },
+    { "id": "w-api", "title": "Browser APIs (WebGL/WebSocket)", "tint": "graphite",
+      "x": 780, "y": 940, "w": 530, "h": 70 },
+    { "id": "w-rt", "title": "Browser (WebAssembly + JS)", "tint": "steel",
+      "x": 780, "y": 1050, "w": 530, "h": 70 },
+    { "id": "w-os", "title": "Any Modern Browser", "tint": "steel",
+      "x": 780, "y": 1160, "w": 530, "h": 70 },
+
+    { "id": "u-world", "title": "World", "tint": "stone", "x": 1465, "y": 430, "w": 250, "h": 90 },
+    { "id": "u-actor", "title": "Actor", "tint": "stone", "x": 1745, "y": 430, "w": 250, "h": 90 },
+    { "id": "u-render", "title": "Render", "tint": "stone", "x": 1465, "y": 550, "w": 250, "h": 90 },
+    { "id": "u-input", "title": "Input", "tint": "stone", "x": 1745, "y": 550, "w": 250, "h": 90 },
+    { "id": "u-blueprint", "title": "Blueprint", "tint": "stone", "x": 1465, "y": 670, "w": 250, "h": 90 },
+    { "id": "u-tick", "title": "Tick", "tint": "stone", "x": 1745, "y": 670, "w": 250, "h": 90 },
+    { "id": "u-bar", "title": "IAdapter Interface", "tint": "stone", "border_w": 1.6,
+      "x": 1465, "y": 790, "w": 530, "h": 70 },
+    { "id": "u-api", "title": "UE5 C++ / Blueprint API", "tint": "graphite",
+      "x": 1465, "y": 940, "w": 530, "h": 70 },
+    { "id": "u-rt", "title": "UE5 Editor / Standalone", "tint": "stone",
+      "x": 1465, "y": 1050, "w": 530, "h": 70 },
+    { "id": "u-os", "title": "UE5 Runtime (Win/Linux)", "tint": "stone",
+      "x": 1465, "y": 1160, "w": 530, "h": 70 }
+  ],
+
+  "edges": [
+    { "from": "core", "to": "raylib-ad", "route": "curve", "rad": 0.12 },
+    { "from": "core", "to": "web-ad", "route": "curve", "rad": 0.0, "arrow": true },
+    { "from": "core", "to": "ue5-ad", "route": "curve", "rad": -0.12 },
+
+    { "from": "r-bar", "to": "r-api" },
+    { "from": "r-api", "to": "r-rt" },
+    { "from": "r-rt", "to": "r-os" },
+
+    { "from": "w-bar", "to": "w-api" },
+    { "from": "w-api", "to": "w-rt" },
+    { "from": "w-rt", "to": "w-os" },
+
+    { "from": "u-bar", "to": "u-api" },
+    { "from": "u-api", "to": "u-rt" },
+    { "from": "u-rt", "to": "u-os" }
+  ]
+}

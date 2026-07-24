@@ -203,5 +203,19 @@
   "Players": [
     { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_player_anchor" },
     { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_player_anchor" }
-  ]
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsRedAlertLike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsRedAlertLike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsRedAlertLike.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsRedAlertLike.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsRedAlertLike.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsRedAlertLike.Participant", "Symmetric": false }
+    ]
+  }
 }

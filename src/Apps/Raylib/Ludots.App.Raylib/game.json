@@ -2,7 +2,7 @@
   "modPaths": [
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
-    "../../../../../../../mods/MobaDemoMod",
+    "../../../../../../../mods/showcases/moba_demo/MobaDemoMod",
     "../../../../../../../mods/PerformanceVisualizationMod",
     "../../../../../../../mods/TerrainBenchmarkMod",
     "../../../../../../../mods/showcases/capability_standard/CapabilityStandardPhysics2DPlaygroundV2Mod"

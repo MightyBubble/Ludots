@@ -11,6 +11,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Production;
 
 [TestFixture]
+[Category("ci-gate")]
+[Category("acceptance")]
 public sealed class FogOfWarShowcaseAcceptanceTests
 {
     [Test]

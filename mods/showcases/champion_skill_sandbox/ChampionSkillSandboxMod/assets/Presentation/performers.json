@@ -240,19 +240,7 @@
     ]
   },
   {
-    "id": "champion_skill_sandbox.selection_indicator",
-    "defaultColor": [
-      0.28,
-      0.88,
-      1,
-      0.16
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.04,
-      0
-    ],
+    "id": "champion_skill_sandbox.selection_event_rules",
     "rules": [
       {
         "event": {
@@ -278,7 +266,76 @@
           "definitionId": "champion_skill_sandbox.selection_indicator",
           "scopeSource": "SourceStableId"
         }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.command.hover"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.command.hover"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ability.aim.hover"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ability.aim.hover"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
       }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.selection_indicator",
+    "defaultColor": [
+      0.28,
+      0.88,
+      1,
+      0.16
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.04,
+      0
     ],
     "bindings": [
       {
@@ -344,62 +401,6 @@
       0,
       0.06,
       0
-    ],
-    "rules": [
-      {
-        "event": {
-          "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ui.command.hover"
-        },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ui.command.hover"
-        },
-        "command": {
-          "kind": "DestroyScopedPerformer",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ability.aim.hover"
-        },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ability.aim.hover"
-        },
-        "command": {
-          "kind": "DestroyScopedPerformer",
-          "definitionId": "champion_skill_sandbox.hover_indicator",
-          "scopeSource": "EventPayloadA",
-          "ownerSource": "EventSource"
-        }
-      }
     ],
     "bindings": [
       {

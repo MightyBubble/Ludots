@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships.Config;
 
 namespace Ludots.Core.Gameplay.Relationships
@@ -121,6 +122,42 @@ namespace Ludots.Core.Gameplay.Relationships
         public bool HasStance(Entity a, Entity b, int stanceId)
         {
             return GetStance(a, b) == stanceId;
+        }
+
+        /// <summary>
+        /// Resolves an entity that is itself a player/team representative or is explicitly linked to a
+        /// team representative through the catalog member-of relationship.
+        /// </summary>
+        public bool TryResolveStanceDomain(Entity target, out Entity domainRep)
+        {
+            domainRep = Entity.Null;
+            if (target == Entity.Null || !_relationships.World.IsAlive(target))
+            {
+                return false;
+            }
+
+            if (_relationships.World.Has<PlayerIdentity>(target) ||
+                _relationships.World.Has<TeamIdentity>(target))
+            {
+                domainRep = target;
+                return true;
+            }
+
+            Span<Entity> domains = stackalloc Entity[1];
+            if (_relationships.CollectOutgoing(target, _memberOfTypeId, domains) <= 0)
+            {
+                return false;
+            }
+
+            Entity resolved = domains[0];
+            if (!_relationships.World.Has<TeamIdentity>(resolved))
+            {
+                throw new InvalidOperationException(
+                    $"Relationship member-of domain for entity {target.Id} must target a TeamIdentity representative.");
+            }
+
+            domainRep = resolved;
+            return true;
         }
 
         /// <summary>

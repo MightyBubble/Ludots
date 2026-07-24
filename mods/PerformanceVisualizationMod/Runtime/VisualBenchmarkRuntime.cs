@@ -5,8 +5,10 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -33,6 +35,8 @@ namespace PerformanceVisualizationMod.Runtime
 
         private const int SpawnBatchSize = 2048;
         private const int DestroyBatchSize = 2048;
+        private const int ShowcaseLocalPlayerId = 1;
+        private const int LiveKnowledgeConfidencePermille = 1000;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
             .WithAll<MapEntity, Name, PresentationStableId, PresentationLocalBounds>();
@@ -58,6 +62,8 @@ namespace PerformanceVisualizationMod.Runtime
         private int _screenHudDropped;
         private int _healthAttributeId;
         private int _benchmarkCubeDefinitionId;
+        private Entity _audienceViewer = Entity.Null;
+        private bool _ownsAudienceViewer;
         private uint _directHudRandomState = 0x5EED_1000u;
 
         public VisualBenchmarkRuntime(IModContext context)
@@ -369,6 +375,19 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             World world = engine.World;
+            Entity audienceViewer = scenario.AttachHealthAttributes
+                ? EnsureBenchmarkAudience(engine)
+                : Entity.Null;
+            KnowledgeProjectionStore? knowledge = scenario.AttachHealthAttributes
+                ? RequireKnowledgeStore(engine)
+                : null;
+            KnowledgeIdMask256 healthAttributeMask = scenario.AttachHealthAttributes
+                ? KnowledgeIdMask256.Empty.WithId(_healthAttributeId)
+                : KnowledgeIdMask256.Empty;
+            int observedTick = scenario.AttachHealthAttributes
+                ? KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext)
+                : 0;
+            var emptyKnowledgeMask = KnowledgeIdMask256.Empty;
             var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("PresentationStableIdAllocator service is missing.");
             var commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
@@ -440,6 +459,21 @@ namespace PerformanceVisualizationMod.Runtime
                     ref var attributes = ref world.Get<AttributeBuffer>(entity);
                     attributes.SetBase(_healthAttributeId, 100f);
                     attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+
+                    knowledge!.Upsert(
+                        audienceViewer,
+                        entity,
+                        new KnowledgeDisclosureRecord(
+                            KnowledgePresence.LiveVisible,
+                            KnowledgePositionAccess.Live,
+                            healthAttributeMask,
+                            emptyKnowledgeMask,
+                            emptyKnowledgeMask,
+                            audienceViewer,
+                            observedTick,
+                            expiryTick: 0,
+                            confidencePermille: LiveKnowledgeConfidencePermille,
+                            revision: 0));
                 }
             }
 
@@ -467,6 +501,7 @@ namespace PerformanceVisualizationMod.Runtime
                     return;
                 }
 
+                RemoveBenchmarkKnowledge(engine, entity);
                 engine.World.Add(entity, new PresentationDestroyPending());
                 marked++;
             });
@@ -493,6 +528,126 @@ namespace PerformanceVisualizationMod.Runtime
             {
                 _panelController.ClearIfOwned(root);
             }
+
+            ClearOwnedBenchmarkAudience(engine);
+        }
+
+        private Entity EnsureBenchmarkAudience(GameEngine engine)
+        {
+            if (_audienceViewer != Entity.Null && engine.World.IsAlive(_audienceViewer))
+            {
+                PublishBenchmarkAudience(engine, _audienceViewer);
+                return _audienceViewer;
+            }
+
+            if (TryResolveLiveLocalPlayer(engine, out Entity existingViewer))
+            {
+                _audienceViewer = existingViewer;
+                _ownsAudienceViewer = false;
+                return existingViewer;
+            }
+
+            Entity viewer = engine.World.Create(
+                new Name { Value = "Performance Visualization Viewer" },
+                new PlayerOwner { PlayerId = ShowcaseLocalPlayerId });
+            _audienceViewer = viewer;
+            _ownsAudienceViewer = true;
+            PublishBenchmarkAudience(engine, viewer);
+            return viewer;
+        }
+
+        private static bool TryResolveLiveLocalPlayer(GameEngine engine, out Entity viewer)
+        {
+            viewer = Entity.Null;
+            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
+                serviceViewer != Entity.Null &&
+                engine.World.IsAlive(serviceViewer))
+            {
+                viewer = serviceViewer;
+                return true;
+            }
+
+            Entity sessionViewer = engine.CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
+            if (sessionViewer != Entity.Null && engine.World.IsAlive(sessionViewer))
+            {
+                viewer = sessionViewer;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void PublishBenchmarkAudience(GameEngine engine, Entity viewer)
+        {
+            if (viewer == Entity.Null || !engine.World.IsAlive(viewer))
+            {
+                throw new InvalidOperationException("PerformanceVisualizationMod requires a live local audience before publishing benchmark HUD knowledge.");
+            }
+
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+
+            if (engine.CurrentMapSession != null)
+            {
+                engine.CurrentMapSession.LocalPlayerEntity = viewer;
+            }
+
+            if (engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0)
+            {
+                engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
+                if (engine.CurrentMapSession != null)
+                {
+                    engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
+                }
+            }
+        }
+
+        private static KnowledgeProjectionStore RequireKnowledgeStore(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("PerformanceVisualizationMod requires KnowledgeProjectionStore before publishing benchmark HUD visibility.");
+        }
+
+        private void RemoveBenchmarkKnowledge(GameEngine engine, Entity target)
+        {
+            if (_audienceViewer == Entity.Null ||
+                !engine.World.IsAlive(_audienceViewer) ||
+                engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is not KnowledgeProjectionStore knowledge)
+            {
+                return;
+            }
+
+            knowledge.Remove(_audienceViewer, target);
+        }
+
+        private void ClearOwnedBenchmarkAudience(GameEngine engine)
+        {
+            if (!_ownsAudienceViewer || _audienceViewer == Entity.Null)
+            {
+                _audienceViewer = Entity.Null;
+                _ownsAudienceViewer = false;
+                return;
+            }
+
+            Entity viewer = _audienceViewer;
+            if (engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is KnowledgeProjectionStore knowledge)
+            {
+                knowledge.ClearViewer(viewer);
+            }
+
+            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
+                serviceViewer == viewer)
+            {
+                engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
+                engine.RemoveService(CoreServiceKeys.LocalPlayerId);
+            }
+
+            if (engine.World.IsAlive(viewer))
+            {
+                engine.World.Destroy(viewer);
+            }
+
+            _audienceViewer = Entity.Null;
+            _ownsAudienceViewer = false;
         }
 
         private static bool MatchesScenarioEntity(in MapEntity mapEntity, in Name name, in MapId currentMapId)

@@ -1,0 +1,95 @@
+{
+  "name": "registry-dependency",
+  "title": "Ludots Registry Dependency Network",
+  "subtitle": "StringIntRegistry as the central ID-mapping hub",
+  "canvas": { "width": 1900, "height": 1660 },
+
+  "legend": {
+    "title": "Legend",
+    "x": 80, "y": 1330, "width": 220, "row_height": 30,
+    "items": [
+      { "label": "Engine Core", "tint": "clay" },
+      { "label": "Presentation", "tint": "stone" },
+      { "label": "Input / Orders", "tint": "mauve" },
+      { "label": "Scripting / Mod", "tint": "sand" },
+      { "label": "GAS / Gameplay", "tint": "sage" },
+      { "label": "Navigation", "tint": "steel" },
+      { "label": "Graph / VM", "tint": "slate" },
+      { "label": "Items / Economy", "tint": "teal" }
+    ]
+  },
+
+  "groups": [
+    { "id": "gas", "title": "GAS / Gameplay", "x": 80, "y": 130, "w": 380, "h": 410, "tint": "sage" },
+    { "id": "core", "title": "Engine Core / ECS", "x": 80, "y": 570, "w": 380, "h": 410, "tint": "clay" },
+    { "id": "nav", "title": "Navigation", "x": 80, "y": 1010, "w": 380, "h": 266, "tint": "steel" },
+    { "id": "pres", "title": "Presentation", "x": 700, "y": 130, "w": 500, "h": 410, "tint": "stone" },
+    { "id": "graph", "title": "Graph / VM", "x": 700, "y": 1030, "w": 500, "h": 266, "tint": "slate" },
+    { "id": "input", "title": "Input / Orders", "x": 1420, "y": 130, "w": 380, "h": 338, "tint": "mauve" },
+    { "id": "items", "title": "Items / Economy", "x": 1420, "y": 498, "w": 380, "h": 338, "tint": "teal" },
+    { "id": "script", "title": "Scripting / Mod", "x": 1420, "y": 866, "w": 380, "h": 266, "tint": "sand" }
+  ],
+
+  "nodes": [
+    { "id": "hub", "title": "StringIntRegistry", "tint": "core", "border_w": 1.6,
+      "x": 760, "y": 640, "w": 380, "h": 140,
+      "items": ["string -> Int ID mapping"] },
+
+    { "id": "gas1", "title": "AbilityDefinition", "tint": "sage", "x": 110, "y": 170, "w": 320, "h": 56 },
+    { "id": "gas2", "title": "EffectTemplate", "tint": "sage", "x": 110, "y": 242, "w": 320, "h": 56 },
+    { "id": "gas3", "title": "TagRegistry", "tint": "sage", "x": 110, "y": 314, "w": 320, "h": 56 },
+    { "id": "gas4", "title": "AttributeSink", "tint": "sage", "x": 110, "y": 386, "w": 320, "h": 56 },
+    { "id": "gas5", "title": "BuiltinHandler", "tint": "sage", "x": 110, "y": 458, "w": 320, "h": 56 },
+
+    { "id": "core1", "title": "Registry", "tint": "clay", "x": 110, "y": 610, "w": 320, "h": 56 },
+    { "id": "core2", "title": "SystemFactory", "tint": "clay", "x": 110, "y": 682, "w": 320, "h": 56 },
+    { "id": "core3", "title": "ComponentRegistry", "tint": "clay", "x": 110, "y": 754, "w": 320, "h": 56 },
+    { "id": "core4", "title": "DataRegistry<T>", "tint": "clay", "x": 110, "y": 826, "w": 320, "h": 56 },
+    { "id": "core5", "title": "ConfigCatalog", "tint": "clay", "x": 110, "y": 898, "w": 320, "h": 56 },
+
+    { "id": "nav1", "title": "NavQueryService", "tint": "steel", "x": 110, "y": 1050, "w": 320, "h": 56 },
+    { "id": "nav2", "title": "AgentProfile", "tint": "steel", "x": 110, "y": 1122, "w": 320, "h": 56 },
+    { "id": "nav3", "title": "LayerRegistry", "tint": "steel", "x": 110, "y": 1194, "w": 320, "h": 56 },
+
+    { "id": "pres1", "title": "PerformerDefinition", "tint": "stone", "x": 730, "y": 170, "w": 440, "h": 56 },
+    { "id": "pres2", "title": "AnimationClip", "tint": "stone", "x": 730, "y": 242, "w": 440, "h": 56 },
+    { "id": "pres3", "title": "MeshAsset", "tint": "stone", "x": 730, "y": 314, "w": 440, "h": 56 },
+    { "id": "pres4", "title": "Material", "tint": "stone", "x": 730, "y": 386, "w": 440, "h": 56 },
+    { "id": "pres5", "title": "Prefab", "tint": "stone", "x": 730, "y": 458, "w": 440, "h": 56 },
+
+    { "id": "graph1", "title": "GraphProgram", "tint": "slate", "x": 730, "y": 1070, "w": 440, "h": 56 },
+    { "id": "graph2", "title": "GraphIdRegistry", "tint": "slate", "x": 730, "y": 1142, "w": 440, "h": 56 },
+    { "id": "graph3", "title": "GraphId (4095 max)", "tint": "slate", "x": 730, "y": 1214, "w": 440, "h": 56 },
+
+    { "id": "in1", "title": "SelectionRule", "tint": "mauve", "x": 1450, "y": 170, "w": 320, "h": 56 },
+    { "id": "in2", "title": "SelectionSetKey", "tint": "mauve", "x": 1450, "y": 242, "w": 320, "h": 56 },
+    { "id": "in3", "title": "OrderType", "tint": "mauve", "x": 1450, "y": 314, "w": 320, "h": 56 },
+    { "id": "in4", "title": "OrderBBKey", "tint": "mauve", "x": 1450, "y": 386, "w": 320, "h": 56 },
+
+    { "id": "it1", "title": "ItemDefinition", "tint": "teal", "x": 1450, "y": 538, "w": 320, "h": 56 },
+    { "id": "it2", "title": "ItemShape", "tint": "teal", "x": 1450, "y": 610, "w": 320, "h": 56 },
+    { "id": "it3", "title": "ItemLayout", "tint": "teal", "x": 1450, "y": 682, "w": 320, "h": 56 },
+    { "id": "it4", "title": "ExchangeOperation", "tint": "teal", "x": 1450, "y": 754, "w": 320, "h": 56 },
+
+    { "id": "sc1", "title": "FunctionRegistry", "tint": "sand", "x": 1450, "y": 906, "w": 320, "h": 56 },
+    { "id": "sc2", "title": "TriggerDecorator", "tint": "sand", "x": 1450, "y": 978, "w": 320, "h": 56 },
+    { "id": "sc3", "title": "SaveParticipant", "tint": "sand", "x": 1450, "y": 1050, "w": 320, "h": 56 }
+  ],
+
+  "edges": [
+    { "from": "hub", "to": "gas", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "core", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "nav", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "pres", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "graph", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "input", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "items", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "hub", "to": "script", "style": "dashed", "arrow": false, "color": "#b6bdc8", "width": 1.0 }
+  ],
+
+  "notes": [
+    { "text": "Dashed line = StringIntRegistry composition", "x": 700, "y": 1420, "ha": "left" },
+    { "text": "Each subsystem holds a private StringIntRegistry instance", "x": 700, "y": 1446, "ha": "left" },
+    { "text": "for zero-GC O(1) string->int ID mapping", "x": 700, "y": 1472, "ha": "left" }
+  ]
+}

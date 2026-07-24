@@ -1,0 +1,100 @@
+{
+  "Id": "ra2_shoreline",
+  "Tags": ["rts_showcase", "ra2"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 15000,
+    "TargetYCm": 15000,
+    "Yaw": 200,
+    "Pitch": 55,
+    "DistanceCm": 23500,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_ra2_conyard",
+      "InstanceId": "allied_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6200, "Y": 23500 } },
+        "Name": { "Value": "Allied ConYard" }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 8300, "Y": 24400 } },
+        "Name": { "Value": "Power Plant" }
+      }
+    },
+    {
+      "Template": "rts_ra2_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
+        "Name": { "Value": "War Factory" }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12000, "Y": 21400 } },
+        "Name": { "Value": "Frontline Bunker" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12700, "Y": 21400 } },
+        "Name": { "Value": "Rocket Trooper A" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 13150, "Y": 21950 } },
+        "Name": { "Value": "Rocket Trooper B" }
+      }
+    },
+    {
+      "Template": "rts_ra2_conyard",
+      "InstanceId": "soviet_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 29200, "Y": 5800 } },
+        "Name": { "Value": "Soviet ConYard" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 27200, "Y": 7600 } },
+        "Name": { "Value": "Rhino Patrol" },
+        "Team": { "Id": 2 }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "allied_conyard" },
+    { "TeamId": 2, "RepresentativeInstanceId": "soviet_conyard" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_conyard" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_conyard" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RtsShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "RtsShowcase.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "RtsShowcase.Participant", "Symmetric": false }
+    ]
+  }
+}

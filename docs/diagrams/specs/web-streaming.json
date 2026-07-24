@@ -1,0 +1,90 @@
+{
+  "name": "web-streaming",
+  "title": "Web Adapter - Streaming Architecture",
+  "subtitle": "Server-side Frame Streaming to Browser Client",
+  "canvas": { "width": 1900, "height": 1400 },
+
+  "groups": [
+    { "id": "server", "title": "Server (Ludots Host)",
+      "x": 60, "y": 110, "w": 800, "h": 800,
+      "tint": "clay", "border_style": "dashed", "title_anchor": "top-center" },
+    { "id": "client", "title": "Browser Client",
+      "x": 1030, "y": 110, "w": 800, "h": 800,
+      "tint": "steel", "border_style": "dashed", "title_anchor": "top-center" }
+  ],
+
+  "nodes": [
+    { "id": "game", "title": "Game Engine", "tint": "clay", "x": 95, "y": 170, "w": 350, "h": 100 },
+    { "id": "ecs", "title": "ECS World", "tint": "sage", "x": 95, "y": 320, "w": 350, "h": 100 },
+    { "id": "async", "title": "AdapterSync", "tint": "sage", "x": 95, "y": 470, "w": 350, "h": 100 },
+    { "id": "cap", "title": "FrameCapture", "tint": "steel", "x": 95, "y": 620, "w": 350, "h": 100 },
+    { "id": "proto", "title": "FrameProtocol", "tint": "steel", "x": 95, "y": 770, "w": 350, "h": 100 },
+
+    { "id": "sysgroup", "title": "SystemGroup", "tint": "clay", "x": 480, "y": 170, "w": 350, "h": 100 },
+    { "id": "gas", "title": "GAS", "tint": "sage", "x": 480, "y": 320, "w": 350, "h": 100 },
+    { "id": "pres", "title": "Presentation", "tint": "sand", "x": 480, "y": 470, "w": 350, "h": 100 },
+    { "id": "delta", "title": "DeltaCompressor", "tint": "steel", "x": 480, "y": 620, "w": 350, "h": 100 },
+    { "id": "wsserver", "title": "WebSocket Server", "tint": "mauve", "x": 480, "y": 770, "w": 350, "h": 100 },
+
+    { "id": "wsclient", "title": "WebSocket Client", "tint": "mauve", "x": 1065, "y": 170, "w": 350, "h": 100 },
+    { "id": "applier", "title": "DeltaApplier", "tint": "steel", "x": 1065, "y": 320, "w": 350, "h": 100 },
+    { "id": "canvas", "title": "Canvas 2D / WebGL", "tint": "sand", "x": 1065, "y": 470, "w": 350, "h": 100 },
+    { "id": "input", "title": "Input Capture", "tint": "sage", "x": 1065, "y": 620, "w": 350, "h": 100 },
+    { "id": "send", "title": "Send to Server", "tint": "mauve", "x": 1065, "y": 770, "w": 350, "h": 100 },
+
+    { "id": "decoder", "title": "FrameDecoder", "tint": "mauve", "x": 1450, "y": 170, "w": 350, "h": 100 },
+    { "id": "render", "title": "Render Engine", "tint": "steel", "x": 1450, "y": 320, "w": 350, "h": 100 },
+    { "id": "dom", "title": "DOM UI", "tint": "sand", "x": 1450, "y": 470, "w": 350, "h": 100 },
+    { "id": "router", "title": "Event Router", "tint": "clay", "x": 1450, "y": 620, "w": 350, "h": 100 },
+
+    { "id": "packet", "title": "FrameProtocol Packet Format", "tint": "steel", "valign": "top",
+      "x": 60, "y": 1010, "w": 560, "h": 320,
+      "items": [
+        "Field        Type       Size",
+        "FrameSeq   uint32    4B",
+        "DeltaMask  uint64    8B",
+        "Payload    byte[]     N",
+        "Checksum   uint32    4B"
+      ] }
+  ],
+
+  "edges": [
+    { "from": "game", "to": "ecs" },
+    { "from": "ecs", "to": "async" },
+    { "from": "async", "to": "cap" },
+    { "from": "cap", "to": "proto" },
+
+    { "from": "sysgroup", "to": "gas" },
+    { "from": "gas", "to": "pres" },
+    { "from": "pres", "to": "delta" },
+    { "from": "delta", "to": "wsserver" },
+
+    { "from": "game", "to": "sysgroup" },
+    { "from": "ecs", "to": "gas" },
+    { "from": "async", "to": "pres" },
+    { "from": "cap", "to": "delta" },
+    { "from": "proto", "to": "wsserver" },
+
+    { "from": "wsclient", "to": "applier" },
+    { "from": "applier", "to": "canvas" },
+    { "from": "canvas", "to": "input" },
+    { "from": "input", "to": "send" },
+
+    { "from": "decoder", "to": "render" },
+    { "from": "render", "to": "dom" },
+    { "from": "dom", "to": "router" },
+
+    { "from": "wsclient", "to": "decoder" },
+    { "from": "applier", "to": "render" },
+    { "from": "canvas", "to": "dom" },
+    { "from": "input", "to": "router" },
+
+    { "from": "wsserver", "to": "send", "label": "WebSocket (TCP/TLS)", "color": "#b06a5a", "width": 2.2 },
+    { "from": "send", "to": "proto", "route": "curve", "rad": -0.3, "label": "Input Events" }
+  ],
+
+  "notes": [
+    { "text": "Delta Compression: 10-50x bandwidth savings", "x": 1065, "y": 1180, "ha": "left" },
+    { "text": "Key Frame: full frame every 60 frames, client can seek", "x": 1065, "y": 1215, "ha": "left" }
+  ]
+}

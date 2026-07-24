@@ -1,0 +1,76 @@
+{
+  "name": "business-game-tick-e2e",
+  "title": "Ludots Game Tick — End-to-End Flow",
+  "subtitle": "Input → ECS → GAS → Navigation → Physics → Presentation → Render",
+  "canvas": { "width": 2400, "height": 1280 },
+
+  "groups": [
+    { "id": "g1", "title": "Input System", "x": 60, "y": 500, "w": 280, "h": 560, "tint": "mauve" },
+    { "id": "g2", "title": "ECS Tick", "x": 380, "y": 500, "w": 280, "h": 560, "tint": "clay" },
+    { "id": "g3", "title": "GAS Execution", "x": 700, "y": 500, "w": 280, "h": 560, "tint": "sage" },
+    { "id": "g4", "title": "Navigation Update", "x": 1020, "y": 500, "w": 280, "h": 560, "tint": "steel" },
+    { "id": "g5", "title": "Physics Simulation", "x": 1340, "y": 500, "w": 280, "h": 560, "tint": "slate" },
+    { "id": "g6", "title": "Presentation Pipeline", "x": 1660, "y": 500, "w": 280, "h": 560, "tint": "stone" },
+    { "id": "g7", "title": "Render Output", "x": 1980, "y": 500, "w": 280, "h": 560, "tint": "sand" }
+  ],
+
+  "nodes": [
+    { "id": "p1", "title": "1 · Input System", "tint": "mauve", "border_w": 1.6, "x": 60, "y": 240, "w": 280, "h": 100 },
+    { "id": "p2", "title": "2 · ECS Tick", "tint": "clay", "border_w": 1.6, "x": 380, "y": 240, "w": 280, "h": 100 },
+    { "id": "p3", "title": "3 · GAS Execution", "tint": "sage", "border_w": 1.6, "x": 700, "y": 240, "w": 280, "h": 100 },
+    { "id": "p4", "title": "4 · Navigation Update", "tint": "steel", "border_w": 1.6, "x": 1020, "y": 240, "w": 280, "h": 100 },
+    { "id": "p5", "title": "5 · Physics Simulation", "tint": "slate", "border_w": 1.6, "x": 1340, "y": 240, "w": 280, "h": 100 },
+    { "id": "p6", "title": "6 · Presentation Pipeline", "tint": "stone", "border_w": 1.6, "x": 1660, "y": 240, "w": 280, "h": 100 },
+    { "id": "p7", "title": "7 · Render Output", "tint": "sand", "border_w": 1.6, "x": 1980, "y": 240, "w": 280, "h": 100 },
+
+    { "id": "s11", "title": "Raw Input", "tint": "mauve", "x": 90, "y": 560, "w": 220, "h": 90 },
+    { "id": "s12", "title": "Order", "tint": "mauve", "x": 90, "y": 730, "w": 220, "h": 90 },
+    { "id": "s13", "title": "Command", "tint": "mauve", "x": 90, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s21", "title": "SystemGroup", "tint": "clay", "x": 410, "y": 560, "w": 220, "h": 90 },
+    { "id": "s22", "title": "Component Update", "tint": "clay", "x": 410, "y": 730, "w": 220, "h": 90 },
+    { "id": "s23", "title": "Entity Query", "tint": "clay", "x": 410, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s31", "title": "Ability Activation", "tint": "sage", "x": 730, "y": 560, "w": 220, "h": 90 },
+    { "id": "s32", "title": "Effect Apply", "tint": "sage", "x": 730, "y": 730, "w": 220, "h": 90 },
+    { "id": "s33", "title": "Attribute Calc", "tint": "sage", "x": 730, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s41", "title": "Pathfinding", "tint": "steel", "x": 1050, "y": 560, "w": 220, "h": 90 },
+    { "id": "s42", "title": "HPA Update", "tint": "steel", "x": 1050, "y": 730, "w": 220, "h": 90 },
+    { "id": "s43", "title": "ORCA Avoid", "tint": "steel", "x": 1050, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s51", "title": "Collision", "tint": "slate", "x": 1370, "y": 560, "w": 220, "h": 90 },
+    { "id": "s52", "title": "Movement", "tint": "slate", "x": 1370, "y": 730, "w": 220, "h": 90 },
+    { "id": "s53", "title": "Spatial Query", "tint": "slate", "x": 1370, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s61", "title": "Performer Update", "tint": "stone", "x": 1690, "y": 560, "w": 220, "h": 90 },
+    { "id": "s62", "title": "Command Buffer", "tint": "stone", "x": 1690, "y": 730, "w": 220, "h": 90 },
+    { "id": "s63", "title": "GPU Dispatch", "tint": "stone", "x": 1690, "y": 900, "w": 220, "h": 90 },
+
+    { "id": "s71", "title": "Frame Protocol", "tint": "sand", "x": 2010, "y": 560, "w": 220, "h": 90 },
+    { "id": "s72", "title": "Delta Compress", "tint": "sand", "x": 2010, "y": 730, "w": 220, "h": 90 },
+    { "id": "s73", "title": "Swap Buffer", "tint": "sand", "x": 2010, "y": 900, "w": 220, "h": 90 }
+  ],
+
+  "edges": [
+    { "from": "p1", "to": "p2", "label": "InputEvents" },
+    { "from": "p2", "to": "p3", "label": "EntityCommands" },
+    { "from": "p3", "to": "p4", "label": "GameplayTags" },
+    { "from": "p4", "to": "p5", "label": "NavQueries" },
+    { "from": "p5", "to": "p6", "label": "PhysicsEvents" },
+    { "from": "p6", "to": "p7", "label": "RenderCmds" },
+    { "from": "p7", "to": "p1", "route": "elbow", "from_side": "top", "to_side": "top", "stub": 70, "style": "dashed", "label": "FrameData · Next Frame (loop)" },
+
+    { "from": "p1", "to": "g1", "arrow": false },
+    { "from": "p2", "to": "g2", "arrow": false },
+    { "from": "p3", "to": "g3", "arrow": false },
+    { "from": "p4", "to": "g4", "arrow": false },
+    { "from": "p5", "to": "g5", "arrow": false },
+    { "from": "p6", "to": "g6", "arrow": false },
+    { "from": "p7", "to": "g7", "arrow": false }
+  ],
+
+  "notes": [
+    { "text": "Note: One complete tick = ~16.67ms @ 60Hz. Each phase runs sequentially in SystemGroup.\nPhysics & Presentation may run at different frequencies via interpolation.", "x": 60, "y": 1160, "ha": "left" }
+  ]
+}

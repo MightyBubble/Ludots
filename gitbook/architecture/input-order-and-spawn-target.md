@@ -60,13 +60,13 @@
 
 Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；mapping 声明了 `actorOrderRouting` 但未注册 TagOps 时，在 mapping 创建期 fail-fast。
 
-## 3 Group move formation
+## 3 Group move target layout
 
-`groupMoveFormation` 为全局配置，控制多选 position move 的网格偏移：
+`groupMoveTargetLayout` 为全局配置，控制多 actor position move 的中性网格目标偏移；它不是 Formation capability：
 
 ```json
 {
-  "groupMoveFormation": {
+  "groupMoveTargetLayout": {
     "mode": "Grid",
     "spacingCm": 140,
     "orderTypeKeys": [ "moveTo" ]

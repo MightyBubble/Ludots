@@ -67,26 +67,6 @@ internal static class FormationCapabilityShowcaseFormationOutlineSegments
     }
 }
 
-internal struct FormationCapabilityShowcaseFormationSoldier
-{
-    public int FormationIndex;
-    public int SlotIndex;
-}
-
-internal struct FormationCapabilityShowcaseFormationAgent
-{
-    public int FormationIndex;
-}
-
-internal struct FormationCapabilityShowcaseFormationState
-{
-    public int SoldierCount;
-    public int AliveSoldierCount;
-    public float CenterXCm;
-    public float CenterYCm;
-    public float FacingRad;
-}
-
 internal struct FormationCapabilityShowcaseFormationOutline
 {
     public FormationCapabilityShowcaseFormationOutlineShape Shape;

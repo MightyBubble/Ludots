@@ -22,13 +22,13 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
 
 [NonParallelizable]
 [TestFixture]
+[Category("acceptance")]
 public sealed class ItemSystemShowcasePlayableAcceptanceTests
 {
     private const float DeltaTime = 1f / 60f;
@@ -558,11 +558,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
 
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        AcceptanceUiHostInstaller.Install(engine);
 
         var view = new StubViewController(1920f, 1080f);
         engine.SetService(CoreServiceKeys.ViewController, view);

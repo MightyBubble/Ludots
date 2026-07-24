@@ -63,6 +63,7 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
+            TagStateInstaller.EnsureInstalled(world, P2Rep);
             Ready = true;
         }
 

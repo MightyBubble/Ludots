@@ -107,6 +107,23 @@ namespace RoadNetworkShowcaseMod.Systems
                     ? OrderSubmitResult.Queued
                     : OrderSubmitResult.RejectedQueueFull;
             });
+            _mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
+            {
+                if (orders.IsEmpty)
+                {
+                    return true;
+                }
+
+                _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
+                    $"type:{orders[0].OrderTypeId},player:{orders[0].PlayerId},actor:{orders[0].Actor.Id}:{orders[0].Actor.WorldId}:{orders[0].Actor.Version},submit:{orders[0].SubmitMode},batch:{orders.Length}";
+                bool accepted = _expander.TrySubmitSharedBatch(orders);
+                for (int i = 0; i < orders.Length; i++)
+                {
+                    EmitSubmitCue(in orders[i], accepted);
+                }
+
+                return accepted;
+            });
             _mapping.SetQueueModifierProvider(() =>
             {
                 return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&

@@ -30,6 +30,7 @@
 - [Transport Network SSOT](transport-network-ssot.md)
 - [Placement Validation SSOT](placement-validation-ssot.md)
 - [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
+- [MassNavigation 数值域与确定性边界](mass-navigation-numeric-domain.md)
 - [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)

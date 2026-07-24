@@ -1,0 +1,64 @@
+{
+  "name": "mod-extension-points",
+  "title": "Mod Extension Points Registration Sequence",
+  "subtitle": "IMod -> OnLoad(IModContext) -> Registry",
+  "canvas": { "width": 1720, "height": 920 },
+
+  "groups": [
+    {
+      "id": "ext",
+      "title": "Extension Points",
+      "x": 1150, "y": 140, "w": 500, "h": 695,
+      "border_style": "dashed"
+    }
+  ],
+
+  "nodes": [
+    { "id": "imod", "title": "IMod", "tint": "stone",
+      "x": 100, "y": 210, "w": 300, "h": 130,
+      "items": ["Entry point"] },
+    { "id": "imodctx", "title": "IModContext", "tint": "clay", "border_w": 1.6,
+      "x": 640, "y": 210, "w": 340, "h": 130,
+      "items": ["Extension API"] },
+
+    { "id": "ep1", "title": "SystemFactoryRegistry", "tint": "sage",
+      "x": 1190, "y": 190, "w": 420, "h": 90,
+      "items": ["Register System factory"] },
+    { "id": "ep2", "title": "FunctionRegistry", "tint": "mauve",
+      "x": 1190, "y": 295, "w": 420, "h": 90,
+      "items": ["Register script functions"] },
+    { "id": "ep3", "title": "TriggerDecoratorRegistry", "tint": "slate",
+      "x": 1190, "y": 400, "w": 420, "h": 90,
+      "items": ["Register trigger decorators"] },
+    { "id": "ep4", "title": "OnEvent", "tint": "sand",
+      "x": 1190, "y": 505, "w": 420, "h": 90,
+      "items": ["Subscribe to global events"] },
+    { "id": "ep5", "title": "VFS", "tint": "steel",
+      "x": 1190, "y": 610, "w": 420, "h": 90,
+      "items": ["Virtual file access"] },
+    { "id": "ep6", "title": "LogChannel", "tint": "graphite",
+      "x": 1190, "y": 715, "w": 420, "h": 90,
+      "items": ["Log filtering source"] },
+
+    { "id": "seq", "title": "Registration Sequence", "valign": "top",
+      "x": 100, "y": 500, "w": 760, "h": 300,
+      "items": [
+        "1.  IMod.OnLoad(IModContext context) called by ModLoader",
+        "2.  context.SystemFactoryRegistry.Register(name, phase, factory)",
+        "3.  context.FunctionRegistry.Register(name, func)",
+        "4.  context.TriggerDecorators.RegisterAnchor(anchor, decorator)",
+        "5.  context.OnEvent(eventKey, handler)",
+        "6.  context.VFS.GetStream(modId:path)"
+      ] }
+  ],
+
+  "edges": [
+    { "from": "imod", "to": "imodctx", "route": "straight", "label": "OnLoad(ctx)" },
+    { "from": "imodctx", "to": "ep1", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 24, "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "imodctx", "to": "ep2", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 42, "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "imodctx", "to": "ep3", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 60, "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "imodctx", "to": "ep4", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 78, "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "imodctx", "to": "ep5", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 96, "arrow": false, "color": "#b6bdc8", "width": 1.0 },
+    { "from": "imodctx", "to": "ep6", "route": "elbow", "from_side": "right", "to_side": "left", "stub": 114, "arrow": false, "color": "#b6bdc8", "width": 1.0 }
+  ]
+}

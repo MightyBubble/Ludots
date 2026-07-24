@@ -1,57 +1,62 @@
 # Documentation Governance Report
 
-Date: 2026-04-01
-Scope:
-- `docs/architecture/README.md`
-- `docs/architecture/entity_selection_architecture.md`
-- `docs/architecture/gas_layered_architecture.md`
-- `docs/architecture/interaction/README.md`
-- `docs/architecture/launcher_ssot_user_first.md`
-- `docs/architecture/mod_architecture.md`
-- `docs/architecture/mod_runtime_single_source_of_truth.md`
-- `docs/architecture/narrative_frontend_kit.md`
-- `docs/architecture/narrative_quest_dialogue_cinematic.md`
-- `docs/architecture/order_navigation_movement.md`
-- `docs/architecture/startup_entrypoints.md`
-- `docs/architecture/time_flow.md`
-- `docs/reference/README.md`
-- `docs/reference/cli_runbook.md`
-- `docs/rfcs/README.md`
-- `skills/README.md`
-- `skills/registry.json`
-- `scripts/run-mod-launcher.ps1`
-- `src/Tools/Ludots.Editor.Bridge/Program.cs`
-Ruleset: `ludots-doc-governance` checklist plus launcher SSOT and user-first remediation goals
+Date: 2026-07-19
+Scope: PR #658 MassNavigation/Formation SSOT pages and capability README
+Ruleset: `gitbook/contributing/documentation-governance.md`, `ludots-doc-governance`
 
 ## Summary
 
-- Total findings remaining in scope: 0
+- Total open findings: 0
 - P0: 0
 - P1: 0
 - P2: 0
 - P3: 0
 
-## Findings
+## Resolved Findings
 
-- Launcher entrypoint docs now align with implementation:
-  - wrapper canonical form is `.\scripts\run-mod-launcher.cmd cli ...`
-  - canonical browser entry is `http://localhost:5299/launcher/index.html`
-  - `/` and `/launcher` redirect to `/launcher/index.html`
-- Startup and runtime docs now describe the current product chain consistently:
-  - launcher graph artifact is the runtime planning authority
-  - `launcher.runtime.json` is the adapter bootstrap carrier
-  - one resolved launch plan loads through one shared `ModLoadContext`
-- Reference and RFC index pages now only point to files that exist in the repository.
-- Skill docs remain aligned with `skills/registry.json`; `skills/contracts/` is documented as support material, not a skill layer.
+### P0-01 Stale ownership model
+
+- Problem: formal docs described MassNavigation as an Order consumer and Formation as Optional Core.
+- Impact: the documentation certified the same architectural inversion fixed by issue #690.
+- Evidence:
+  - `gitbook/reference/mass-navigation-formal-chain.md`
+  - `gitbook/reference/mass-navigation-user-book.md`
+  - `gitbook/architecture/entity-simulation-layering.md`
+  - `gitbook/architecture/entity-simulation-uat.md`
+- Resolution: replaced with Command Router cluster forwarding, GAS-owned lifecycle, showcase-owned Formation and typed MassNavigation execution.
+
+### P1-01 Removed feature still promised to players
+
+- Problem: user/UAT docs promised Q/E rotation and dedicated Formation orders.
+- Impact: tests and documentation preserved a presentation-only action as a gameplay feature.
+- Evidence:
+  - `gitbook/reference/mass-navigation-user-book.md`
+  - `gitbook/architecture/uat-playable-showcase-matrix.md`
+- Resolution: removed rotation from player and Mod contracts.
+
+### P1-02 Numeric boundary assigned Order completion to MassNavigation
+
+- Problem: numeric SSOT allowed solver arrival to mutate `OrderBuffer` directly.
+- Impact: ownership and failure semantics crossed module boundaries.
+- Evidence:
+  - `gitbook/architecture/mass-navigation-numeric-domain.md`
+- Resolution: arrival/failure now cross the boundary only as `MovePlanExecutionResult`; GAS completes or cancels.
+
+## Path Integrity
+
+- Canonical pages remain under `gitbook/`.
+- No parallel ADR was added.
+- `gitbook/SUMMARY.md` now includes the UAT showcase matrix.
+- All 10 changed Markdown files passed Markdown-link and repository-path validation.
+- Guide and capability README paths use explicit repository-relative targets.
+- Evidence paths point to current source/test files.
 
 ## Fix Order
 
-1. Keep launcher wrapper, bridge routes, and runbook examples synchronized whenever entry URLs or CLI verbs change.
-2. Keep startup documentation aligned with the current graph-backed runtime contract until a separate lock artifact is implemented.
-3. Continue shrinking direct-debug and string-key compatibility paths in code, then backwrite those removals to docs in the same slice.
+1. Completed: formal chain and responsibility boundary.
+2. Completed: Mod/player guide and UAT contract.
+3. Completed: numeric boundary and capability README.
 
 ## Residual Risks
 
-- Product startup is graph-backed, but direct-debug compatibility paths still exist for explicit `modPaths`; docs must continue to keep them outside the default creator workflow.
-- A distinct launcher lock artifact still does not exist; when that contract lands, code and docs must evolve together.
-- `docs/rfcs/` currently contains two historical files under `RFC-0059`; indexing is accurate to the repository, but future RFC governance should normalize duplicate identifiers.
+- Historical issue comments and closed issues remain historical evidence; issue #690 is the only current SSOT.

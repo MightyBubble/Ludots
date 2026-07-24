@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "source": "showcase.registry.json",
+  "selection": {
+    "tier": "T1",
+    "status": "active"
+  },
+  "counts": {
+    "runnable": 23,
+    "testOnly": 0,
+    "total": 23
+  },
+  "runnable": [
+    {
+      "id": "animation_acceptance",
+      "preset": "animation_acceptance_raylib",
+      "binding": "animation_acceptance",
+      "testFilter": "AnimationAcceptancePrototypeTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "blacksmith_test",
+      "preset": "blacksmith_test_raylib",
+      "binding": "blacksmith_test",
+      "testFilter": "BlacksmithPerformerUatTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "camera_acceptance",
+      "preset": "camera_acceptance_raylib",
+      "binding": "camera_acceptance",
+      "testFilter": "CameraAcceptanceModTests",
+      "artifactDir": "artifacts/acceptance/launcher-camera-acceptance-raylib",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "camera_acceptance_hotpath_entry",
+      "preset": "camera_acceptance_hotpath_raylib",
+      "binding": "camera_acceptance_hotpath",
+      "testFilter": "CameraAcceptanceModTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_mass_navigation_large_world_10k",
+      "preset": "capability_standard_mass_navigation_large_world_10k_raylib",
+      "binding": "capability_standard_mass_navigation_large_world_10k",
+      "testFilter": "CapabilityStandardMassNavigationLargeWorld10kProductionPathTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_participant_views",
+      "preset": "capability_standard_participant_views_raylib",
+      "binding": "capability_standard_participant_views",
+      "testFilter": "ParticipantViewKnowledgeShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_physics2d",
+      "preset": "capability_standard_physics2d_raylib",
+      "binding": "capability_standard_physics2d",
+      "testFilter": "CapabilityStandardPhysics2DAcceptanceTests",
+      "artifactDir": "artifacts/showcases/capability-standard-physics2d",
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_physics2d_showcase",
+      "preset": "capability_standard_physics2d_showcase_raylib",
+      "binding": "capability_standard_physics2d_showcase",
+      "testFilter": "CapabilityStandardPhysics2DShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_physics2d_stress",
+      "preset": "capability_standard_physics2d_stress_raylib",
+      "binding": "capability_standard_physics2d_stress",
+      "testFilter": "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/showcases/capability-standard-physics2d-stress",
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_time_flow_showcase",
+      "preset": "capability_standard_time_flow_showcase_raylib",
+      "binding": "capability_standard_time_flow_showcase",
+      "testFilter": "CapabilityStandardTimeFlowShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_virtual_camera_showcase",
+      "preset": "capability_standard_virtual_camera_showcase_raylib",
+      "binding": "capability_standard_virtual_camera_showcase",
+      "testFilter": "CapabilityStandardVirtualCameraShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "control_plane_projection",
+      "preset": "control_plane_projection_raylib",
+      "binding": "control_plane_projection_showcase",
+      "testFilter": "ControlPlaneProjectionShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "entity_command_panel",
+      "preset": "entity_command_panel_raylib",
+      "binding": "entity_command_panel_showcase",
+      "testFilter": "EntityCommandPanelShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "fog_of_war",
+      "preset": "fog_of_war_raylib",
+      "binding": "fog_of_war",
+      "testFilter": "FogOfWarShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "fog_vision_decay",
+      "preset": "fog_vision_decay_raylib",
+      "binding": "fog_vision_decay",
+      "testFilter": "FogVisionDecayShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "forge_socket",
+      "preset": "forge_socket_raylib",
+      "binding": "forge_socket",
+      "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "interaction",
+      "preset": "interaction_raylib",
+      "binding": "interaction_showcase",
+      "testFilter": "InteractionShowcasePlayableAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/interaction-showcase",
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "item_loadout",
+      "preset": "item_loadout_raylib",
+      "binding": "item_loadout",
+      "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "item_system",
+      "preset": "item_system_raylib",
+      "binding": "item_system",
+      "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "progression_scope",
+      "preset": "progression_scope_raylib",
+      "binding": "progression_scope",
+      "testFilter": "ProgressionScopeShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "raid_loop",
+      "preset": "raid_loop_raylib",
+      "binding": "raid_loop",
+      "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "superweapon_context",
+      "preset": "superweapon_context_raylib",
+      "binding": "superweapon_context_showcase",
+      "testFilter": "SuperweaponContextShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "weapon_bench",
+      "preset": "weapon_bench_raylib",
+      "binding": "weapon_bench",
+      "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    }
+  ],
+  "testOnly": []
+}
