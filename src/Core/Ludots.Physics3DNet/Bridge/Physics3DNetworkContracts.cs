@@ -1,5 +1,7 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Ludots.Core.Layers;
+using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Physics3D;
 
@@ -25,11 +27,45 @@ public struct Physics3DNetworkClientMirror
     public uint LastCommittedTick;
 }
 
+public struct Physics3DHeadlessClientMirror
+{
+    public NetworkEntityHandle Handle;
+    public Physics3DBodyState State;
+    public Physics3DBodyKind AuthoritativeKind;
+    public ulong SessionEpoch;
+    public uint LastCommittedTick;
+}
+
+public sealed class Physics3DReplicationSchemaConfig
+{
+    public int SchemaId { get; init; }
+    [JsonRequired]
+    public Physics3DReplicationQuantizationConfig Quantization { get; init; } = null!;
+
+    public void Validate(NetworkRuntimeConfig network)
+    {
+        ArgumentNullException.ThrowIfNull(network);
+        network.Validate();
+        if (SchemaId <= 0 || SchemaId > network.ReplicationSchemaCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Physics3D replication schema {SchemaId} is outside configured registry capacity {network.ReplicationSchemaCapacity}.");
+        }
+
+        ArgumentNullException.ThrowIfNull(Quantization);
+        Quantization.Validate();
+    }
+}
+
 public sealed class Physics3DReplicationQuantizationConfig
 {
+    [JsonRequired]
     public float PositionResolutionCm { get; init; } = 0.5f;
+    [JsonRequired]
     public float QuaternionResolution { get; init; } = 1f / short.MaxValue;
+    [JsonRequired]
     public float LinearVelocityResolutionCmPerSecond { get; init; } = 0.5f;
+    [JsonRequired]
     public float AngularVelocityResolutionRadiansPerSecond { get; init; } = 0.001f;
 
     public void Validate()

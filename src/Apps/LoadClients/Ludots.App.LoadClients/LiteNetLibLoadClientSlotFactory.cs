@@ -7,6 +7,8 @@ using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
+using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Input;
 
 namespace Ludots.App.LoadClients;
 
@@ -36,7 +38,7 @@ public sealed class LiteNetLibLoadClientSlotFactory : ILoadClientSlotFactory
         ReplicatedClientNetworkRuntime? runtime = null;
         try
         {
-            ClientReplicationSchemaApplierRegistry appliers = CreateFrozenAppliers(config.ReplicationSchemaIds);
+            ClientReplicationSchemaApplierRegistry appliers = CreateFrozenAppliers(config.Physics3DReplication);
             var credentials = new AtomicFileClientSessionCredentialPort(credentialPath);
             transport = LiteNetLibTransportFactory.CreateClient(
                 networking,
@@ -59,11 +61,11 @@ public sealed class LiteNetLibLoadClientSlotFactory : ILoadClientSlotFactory
                 transport,
                 transport,
                 transport,
-                reconnectRetrySeconds: config.ClientReconnectRetryMilliseconds / 1000f,
+                reconnectRetrySeconds: networking.ClientReconnectRetryMilliseconds / 1000f,
                 protocol,
                 config.PlanFingerprint,
                 credentials,
-                new LoadClientReplicationBridgeFactory(
+                new ClientReplicationBridgeFactory(
                     world,
                     capacity.GlobalEntityCapacity,
                     appliers),
@@ -73,10 +75,10 @@ public sealed class LiteNetLibLoadClientSlotFactory : ILoadClientSlotFactory
 
             var clock = new ReplicatedClientFixedInputClock(
                 runtime,
-                new DeterministicFixedInputPayloadSource(clientIndex),
-                config.SimulationTickRateHz,
+                new Physics3DLoadClientFixedInputPayloadSource(config.MovementInput.Value),
+                networking.SimulationTickRateHz,
                 capacity.FixedInputFramePayloadBytes,
-                config.FixedInputLeadTicks,
+                networking.FixedInputLeadTicks,
                 capacity.FixedInputMaxFutureTicks,
                 config.MaxStepsPerAdvance,
                 config.MaxAccumulatedSteps);
@@ -99,19 +101,19 @@ public sealed class LiteNetLibLoadClientSlotFactory : ILoadClientSlotFactory
         }
     }
 
-    internal static ClientReplicationSchemaApplierRegistry CreateFrozenAppliers(int[] schemaIds)
+    internal static ClientReplicationSchemaApplierRegistry CreateFrozenAppliers(
+        Physics3DReplicationSchemaConfig replication)
     {
-        int capacity = Math.Max(1, schemaIds.Length);
-        var appliers = new ClientReplicationSchemaApplierRegistry(capacity);
-        var shared = new LoadClientMirrorSchemaApplier();
-        for (int i = 0; i < schemaIds.Length; i++)
+        ArgumentNullException.ThrowIfNull(replication);
+        var appliers = new ClientReplicationSchemaApplierRegistry(replication.SchemaId);
+        var applier = new Physics3DHeadlessReplicationApplier(
+            replication.SchemaId,
+            replication.Quantization);
+        ReplicationSchemaRegistrationResult registered = appliers.Register(replication.SchemaId, applier);
+        if (registered != ReplicationSchemaRegistrationResult.Success)
         {
-            ReplicationSchemaRegistrationResult registered = appliers.Register(schemaIds[i], shared);
-            if (registered != ReplicationSchemaRegistrationResult.Success)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to register load-client replication schema id {schemaIds[i]}: {registered}.");
-            }
+            throw new InvalidOperationException(
+                $"Failed to register Physics3D load-client replication schema id {replication.SchemaId}: {registered}.");
         }
 
         appliers.Freeze();

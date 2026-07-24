@@ -514,7 +514,7 @@ public sealed class LoadClientHost
                     heldThirtyHzContract: false);
             }
 
-            double expectedTicks = measurementElapsed * _config.SimulationTickRateHz;
+            double expectedTicks = measurementElapsed * _config.Networking.SimulationTickRateHz;
             // Wall-clock boundaries may straddle one fixed tick; no catch-up batch widens this contract.
             long minExpected = (long)Math.Floor(expectedTicks);
             long maxExpected = checked((long)Math.Ceiling(expectedTicks) + 1L);

@@ -290,6 +290,94 @@ public sealed class Physics3DNetworkBridgeTests
     }
 
     [Test]
+    public void HeadlessReplication_UsesFormalCodecAndEnforcesSchemaGenerationAndSession()
+    {
+        var quantization = new Physics3DReplicationQuantizationConfig();
+        var state = new Physics3DBodyState
+        {
+            PositionCm = new Vector3(125.25f, 50f, -75.25f),
+            Orientation = Quaternion.Identity,
+            LinearVelocityCmPerSecond = new Vector3(10f, 0f, -5f),
+            AngularVelocityRadiansPerSecond = Vector3.Zero,
+            Awake = true,
+        };
+        Assert.That(
+            Physics3DReplicationStateCodec.TryEncode(
+                in state,
+                Physics3DBodyKind.Dynamic,
+                quantization,
+                out ReplicationStateVector values),
+            Is.True);
+
+        using World world = World.Create();
+        var applier = new Physics3DHeadlessReplicationApplier(SchemaId, quantization);
+        var firstHandle = new NetworkEntityHandle(slot: 0, generation: 1);
+        var first = new ReplicatedEntityState(firstHandle, SchemaId, revision: 1, in values);
+        var createContext = new ReplicationApplyContext(
+            SessionEpoch,
+            committedTick: 1,
+            snapshotId: 1,
+            ReplicationPacketKind.Full);
+        var identity = new ReplicationMirrorIdentity(firstHandle);
+        var mirrorState = new ReplicationMirrorState(SchemaId, revision: 1, in values);
+
+        Assert.That(applier.CanCreate(world, in first, in createContext), Is.True);
+        Entity mirrorEntity = applier.Create(world, in identity, in mirrorState, in createContext);
+        Physics3DHeadlessClientMirror mirror = world.Get<Physics3DHeadlessClientMirror>(mirrorEntity);
+        Assert.Multiple(() =>
+        {
+            Assert.That(mirror.SessionEpoch, Is.EqualTo(SessionEpoch));
+            Assert.That(mirror.LastCommittedTick, Is.EqualTo(1));
+            Assert.That(mirror.AuthoritativeKind, Is.EqualTo(Physics3DBodyKind.Dynamic));
+            Assert.That(mirror.State.PositionCm.X, Is.EqualTo(125.5f).Within(0.001f));
+            Assert.That(world.Has<Physics3DBodyCm>(mirrorEntity), Is.False);
+        });
+
+        var polluted = new ReplicationStateVector(
+            values.Value0,
+            values.Value1,
+            values.Value2,
+            values.Value3 | long.MinValue);
+        var invalid = new ReplicatedEntityState(firstHandle, SchemaId, revision: 2, in polluted);
+        var wrongSchema = new ReplicatedEntityState(firstHandle, SchemaId + 1, revision: 2, in values);
+        var staleGeneration = new ReplicatedEntityState(
+            new NetworkEntityHandle(slot: 0, generation: 2),
+            SchemaId,
+            revision: 2,
+            in values);
+        var updateContext = new ReplicationApplyContext(
+            SessionEpoch,
+            committedTick: 2,
+            snapshotId: 2,
+            ReplicationPacketKind.Delta);
+        var wrongSession = new ReplicationApplyContext(
+            SessionEpoch + 1,
+            committedTick: 2,
+            snapshotId: 2,
+            ReplicationPacketKind.Delta);
+        Assert.Multiple(() =>
+        {
+            Assert.That(applier.CanApply(world, mirrorEntity, in invalid, in updateContext), Is.False);
+            Assert.That(applier.CanApply(world, mirrorEntity, in wrongSchema, in updateContext), Is.False);
+            Assert.That(applier.CanApply(world, mirrorEntity, in staleGeneration, in updateContext), Is.False);
+            Assert.That(applier.CanApply(world, mirrorEntity, in first, in wrongSession), Is.False);
+            Assert.That(
+                applier.CanRelease(world, mirrorEntity, ReplicationMirrorLeaveKind.Teardown, in wrongSession),
+                Is.False);
+        });
+
+        applier.Apply(world, mirrorEntity, in first, in updateContext);
+        mirror = world.Get<Physics3DHeadlessClientMirror>(mirrorEntity);
+        Assert.That(mirror.LastCommittedTick, Is.EqualTo(2));
+        applier.Release(world, mirrorEntity, ReplicationMirrorLeaveKind.Teardown, in updateContext);
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Has<Physics3DHeadlessClientMirror>(mirrorEntity), Is.False);
+            Assert.That(world.Has<ReplicationSchemaRef>(mirrorEntity), Is.False);
+        });
+    }
+
+    [Test]
     public void AuthoritativeProjector_RejectsUnknownEntityAndOutOfRangeQuantizedState()
     {
         using World ecs = World.Create();

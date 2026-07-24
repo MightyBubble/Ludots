@@ -1,7 +1,11 @@
+using Arch.Core;
 using Ludots.Adapter.LiteNetLib;
 using Ludots.App.LoadClients;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Session;
+using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Input;
 using NUnit.Framework;
 
 namespace Ludots.Tests.LoadClients;
@@ -50,6 +54,7 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
                 Assert.That(slots[1].BoundPort, Is.Not.EqualTo(slots[2].BoundPort));
                 Assert.That(slots[0].CredentialPath, Is.Not.EqualTo(slots[1].CredentialPath));
                 Assert.That(slots[0].Clock.SimulationTickRateHz, Is.EqualTo(30));
+                Assert.That(slots[0].Clock.PayloadBytes, Is.EqualTo(Physics3DFixedInputFrameCodec.PayloadBytes));
                 Assert.That(File.Exists(slots[0].CredentialPath), Is.False); // empty until store
             });
 
@@ -75,5 +80,33 @@ public sealed class LiteNetLibLoadClientSlotFactoryTests
                 slots[i]?.Dispose();
             }
         }
+    }
+
+    [Test]
+    public void CreateFrozenAppliers_RegistersOnlyFormalPhysics3DHeadlessSchema()
+    {
+        LoadClientHostConfig config = LoadClientHostConfig.ParseJson(
+            LoadClientHostConfigTests.CreateValidJson());
+
+        ClientReplicationSchemaApplierRegistry appliers =
+            LiteNetLibLoadClientSlotFactory.CreateFrozenAppliers(config.Physics3DReplication);
+        using World world = World.Create();
+        var factory = new ClientReplicationBridgeFactory(
+            world,
+            config.Networking.GlobalNetworkEntityCapacity,
+            appliers);
+        ClientWorldReplicationBridge bridge = factory.Create(sessionEpoch: 42);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(appliers.IsFrozen, Is.True);
+            Assert.That(
+                appliers.TryGet(config.Physics3DReplication.SchemaId, out IClientReplicationSchemaApplier applier),
+                Is.True);
+            Assert.That(applier, Is.TypeOf<Physics3DHeadlessReplicationApplier>());
+            Assert.That(appliers.TryGet(config.Physics3DReplication.SchemaId + 1, out _), Is.False);
+            Assert.That(bridge.EntityCapacity, Is.EqualTo(config.Networking.GlobalNetworkEntityCapacity));
+            Assert.That(bridge.SessionEpoch, Is.EqualTo(42));
+        });
     }
 }
