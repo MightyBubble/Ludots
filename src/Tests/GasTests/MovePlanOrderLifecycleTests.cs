@@ -29,7 +29,7 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(actors[2], secondSource),
         };
 
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
         Assert.Multiple(() =>
         {
             Assert.That(batch[0].OrderId, Is.Positive);
@@ -50,7 +50,7 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(actors[0], firstSource),
             CreateOrder(actors[1], firstSource),
         };
-        Assert.That(full.TryEnqueueClusteredBatch(rejected), Is.False);
+        Assert.That(full.TryEnqueueClusteredBatch(rejected), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         Assert.Multiple(() =>
         {
             Assert.That(full.Count, Is.EqualTo(3));
@@ -81,7 +81,7 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(validActor, source),
             CreateOrder(invalidActor, source),
         };
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
 
         var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Replace);
         var system = new OrderBufferSystem(
@@ -121,7 +121,7 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(firstActor, source),
             CreateOrder(blockedActor, source),
         };
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
 
         var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Ignore, canInterruptSelf: false);
         var system = new OrderBufferSystem(

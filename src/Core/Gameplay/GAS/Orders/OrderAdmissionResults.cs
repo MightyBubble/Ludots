@@ -277,6 +277,88 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        internal void EnsureWritableForNewOrders(OrderAdmissionStage stage, int count)
+        {
+            if (count < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(count));
+            }
+            if (count == 0)
+            {
+                return;
+            }
+
+            ThrowIfTerminalFaulted();
+            bool writePending = ShouldWritePending(stage);
+            int written = writePending ? _pendingCount : _currentCount;
+            int reserved = writePending ? _pendingReserved : _currentReserved;
+            int rejectionCount = writePending ? _pendingRejectionCount : _currentRejectionCount;
+            OrderAdmissionOutcome[] items = writePending ? _pendingItems : _currentItems;
+            OrderAdmissionOutcome[] rejections = writePending ? _pendingRejections : _currentRejections;
+            if (written + reserved + count > items.Length &&
+                rejectionCount + count > rejections.Length)
+            {
+                OverflowCount++;
+                EnterTerminalFault(stage);
+            }
+        }
+
+        internal bool CanReserve(OrderAdmissionStage stage, int count)
+        {
+            if (count < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(count));
+            }
+            if (count == 0)
+            {
+                return true;
+            }
+
+            ThrowIfTerminalFaulted();
+            bool writePending = ShouldWritePending(stage);
+            int written = writePending ? _pendingCount : _currentCount;
+            int reserved = writePending ? _pendingReserved : _currentReserved;
+            OrderAdmissionOutcome[] items = writePending ? _pendingItems : _currentItems;
+            return written + reserved + count <= items.Length;
+        }
+
+        internal void RecordCapacityFailures(ReadOnlySpan<Order> orders, OrderAdmissionStage stage)
+        {
+            if (orders.IsEmpty)
+            {
+                return;
+            }
+
+            ThrowIfTerminalFaulted();
+            bool writePending = ShouldWritePending(stage);
+            ref int count = ref (writePending
+                ? ref _pendingRejectionCount
+                : ref _currentRejectionCount);
+            OrderAdmissionOutcome[] rejections = writePending
+                ? _pendingRejections
+                : _currentRejections;
+            if (count + orders.Length > rejections.Length)
+            {
+                OverflowCount++;
+                EnterTerminalFault(stage);
+            }
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                rejections[count++] = new OrderAdmissionOutcome(
+                    orders[i].OrderId,
+                    orders[i].OrderTypeId,
+                    stage,
+                    OrderSubmitResult.RejectedAdmissionCapacity);
+                _observedByResult[(int)OrderSubmitResult.RejectedAdmissionCapacity]++;
+            }
+
+            if (Count > HighWatermark)
+            {
+                HighWatermark = Count;
+            }
+        }
+
         internal OrderAdmissionReservation Reserve(OrderAdmissionStage stage, int orderId, int orderTypeId)
         {
             if (TryReserve(stage, out OrderAdmissionReservation reservation))

@@ -114,11 +114,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        public bool TryEnqueueBatch(Span<Order> orders)
+        public OrderSubmitResult TryEnqueueBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
             {
-                return true;
+                return OrderSubmitResult.Queued;
             }
 
             for (int i = 0; i < orders.Length; i++)
@@ -126,6 +126,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ValidateOrderTypeId(orders[i].OrderTypeId);
             }
 
+            _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
@@ -134,6 +135,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchIndex = 0;
             }
 
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
+            {
+                return RejectBatchForAdmissionCapacityWithoutQueueMutation(orders);
+            }
             if (orders.Length > AvailableCapacity)
             {
                 return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
@@ -148,14 +153,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _count += orders.Length;
             CommitReservedBatch(orders, OrderSubmitResult.Queued);
-            return true;
+            return OrderSubmitResult.Queued;
         }
 
-        public bool TryEnqueueSharedBatch(Span<Order> orders)
+        public OrderSubmitResult TryEnqueueSharedBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
             {
-                return true;
+                return OrderSubmitResult.Queued;
             }
 
             for (int i = 0; i < orders.Length; i++)
@@ -181,6 +186,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int sharedOrderId = idSource.OrderId;
             int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
+            _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
                 orders[i].OrderId = sharedOrderId;
@@ -189,6 +195,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchIndex = (ushort)i;
             }
 
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
+            {
+                return RejectBatchForAdmissionCapacityWithoutQueueMutation(orders);
+            }
             if (orders.Length > AvailableCapacity)
             {
                 return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
@@ -203,14 +213,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _count += orders.Length;
             CommitReservedBatch(orders, OrderSubmitResult.Queued);
-            return true;
+            return OrderSubmitResult.Queued;
         }
 
-        public bool TryEnqueueClusteredBatch(Span<Order> orders)
+        public OrderSubmitResult TryEnqueueClusteredBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
             {
-                return true;
+                return OrderSubmitResult.Queued;
             }
 
             Entity previousCluster = Entity.Null;
@@ -249,6 +259,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int clusterOrderId = 0;
             int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
+            _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
                 if (orders[i].CommandSource != previousCluster)
@@ -267,6 +278,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchIndex = (ushort)i;
             }
 
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
+            {
+                return RejectBatchForAdmissionCapacityWithoutQueueMutation(orders);
+            }
             if (orders.Length > AvailableCapacity)
             {
                 return RejectBatchWithoutQueueMutation(orders, OrderSubmitResult.RejectedQueueFull);
@@ -281,7 +296,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _count += orders.Length;
             CommitReservedBatch(orders, OrderSubmitResult.Queued);
-            return true;
+            return OrderSubmitResult.Queued;
         }
 
         public bool TryDequeueBatch(Span<Order> destination, out int count)
@@ -419,8 +434,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private bool RejectBatchWithoutQueueMutation(ReadOnlySpan<Order> orders, OrderSubmitResult result)
+        private OrderSubmitResult RejectBatchForAdmissionCapacityWithoutQueueMutation(ReadOnlySpan<Order> orders)
         {
+            _admissionResults.RecordCapacityFailures(orders, OrderAdmissionStage.GlobalIntake);
+            return OrderSubmitResult.RejectedAdmissionCapacity;
+        }
+
+        private OrderSubmitResult RejectBatchWithoutQueueMutation(ReadOnlySpan<Order> orders, OrderSubmitResult result)
+        {
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
+            {
+                return RejectBatchForAdmissionCapacityWithoutQueueMutation(orders);
+            }
+
             OrderAdmissionReservation reservation = default;
             int reservedCount = 0;
             int committedCount = 0;
@@ -450,7 +476,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     committedCount++;
                 }
 
-                return false;
+                return result;
             }
             finally
             {

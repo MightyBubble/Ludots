@@ -111,18 +111,19 @@ namespace RoadNetworkShowcaseMod.Systems
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
                     $"type:{orders[0].OrderTypeId},player:{orders[0].PlayerId},actor:{orders[0].Actor.Id}:{orders[0].Actor.WorldId}:{orders[0].Actor.Version},submit:{orders[0].SubmitMode},batch:{orders.Length}";
-                bool accepted = _expander.TrySubmitSharedBatch(orders);
+                OrderSubmitResult result = _expander.TrySubmitSharedBatch(orders);
+                bool accepted = OrderSubmitResultSemantics.IsAccepted(result);
                 for (int i = 0; i < orders.Length; i++)
                 {
                     EmitSubmitCue(in orders[i], accepted);
                 }
 
-                return accepted;
+                return result;
             });
             _mapping.SetQueueModifierProvider(() =>
             {

@@ -292,7 +292,7 @@ namespace Ludots.Tests.GAS
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             input.InjectButtonPress("Command");
@@ -368,7 +368,7 @@ namespace Ludots.Tests.GAS
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             input.InjectButtonPress("Command");
@@ -433,7 +433,7 @@ namespace Ludots.Tests.GAS
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             input.InjectButtonPress("Stop");

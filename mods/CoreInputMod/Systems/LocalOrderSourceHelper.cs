@@ -187,7 +187,7 @@ namespace CoreInputMod.Systems
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LastOrderDebugKey] = DescribeOrder(in orders[0]);
@@ -195,14 +195,14 @@ namespace CoreInputMod.Systems
                 {
                     if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in orders[i]))
                     {
-                        return false;
+                        return OrderSubmitResult.RejectedByRule;
                     }
                 }
 
-                bool accepted = _planner != null
+                OrderSubmitResult result = _planner != null
                     ? _planner.TrySubmitSharedBatch(orders)
                     : _orders.TryEnqueueSharedBatch(orders);
-                if (accepted)
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
                     {
@@ -210,13 +210,13 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                return accepted;
+                return result;
             });
             mapping.SetOrderClusterBatchSubmitHandler((Span<Order> orders) =>
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LastOrderDebugKey] = DescribeOrder(in orders[0]);
@@ -224,14 +224,14 @@ namespace CoreInputMod.Systems
                 {
                     if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in orders[i]))
                     {
-                        return false;
+                        return OrderSubmitResult.RejectedByRule;
                     }
                 }
 
-                bool accepted = _planner != null
+                OrderSubmitResult result = _planner != null
                     ? _planner.TrySubmitClusteredBatch(orders)
                     : _orders.TryEnqueueClusteredBatch(orders);
-                if (accepted)
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
                     {
@@ -239,7 +239,7 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                return accepted;
+                return result;
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {

@@ -108,9 +108,9 @@ namespace Ludots.Core.Input.Orders
     /// <summary>
     /// Delegate for atomically submitting a caller-owned order batch.
     /// </summary>
-    public delegate bool OrderBatchSubmitHandler(Span<Order> orders);
+    public delegate OrderSubmitResult OrderBatchSubmitHandler(Span<Order> orders);
 
-    public delegate bool OrderClusterBatchSubmitHandler(Span<Order> orders);
+    public delegate OrderSubmitResult OrderClusterBatchSubmitHandler(Span<Order> orders);
 
     /// <summary>
     /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
@@ -2197,8 +2197,8 @@ namespace Ludots.Core.Input.Orders
                     $"Input mapping '{mapping.ActionId}' requires atomic batch submission for {context}, but no order batch submit handler is configured.");
             }
 
-            bool accepted = _orderBatchSubmitHandler(orders);
-            return RecordBatchSubmissionResult(orders, accepted);
+            OrderSubmitResult result = _orderBatchSubmitHandler(orders);
+            return RecordBatchSubmissionResult(orders, result);
         }
 
         private OrderSubmitResult SubmitClusteredOrderBatch(InputOrderMapping mapping, Span<Order> orders, string context)
@@ -2209,15 +2209,12 @@ namespace Ludots.Core.Input.Orders
                     $"Input mapping '{mapping.ActionId}' requires atomic clustered batch submission for {context}, but no order cluster batch submit handler is configured.");
             }
 
-            bool accepted = _orderClusterBatchSubmitHandler(orders);
-            return RecordBatchSubmissionResult(orders, accepted);
+            OrderSubmitResult result = _orderClusterBatchSubmitHandler(orders);
+            return RecordBatchSubmissionResult(orders, result);
         }
 
-        private OrderSubmitResult RecordBatchSubmissionResult(ReadOnlySpan<Order> orders, bool accepted)
+        private OrderSubmitResult RecordBatchSubmissionResult(ReadOnlySpan<Order> orders, OrderSubmitResult result)
         {
-            OrderSubmitResult result = accepted
-                ? OrderSubmitResult.Queued
-                : OrderSubmitResult.RejectedQueueFull;
             Entity actor = orders.IsEmpty ? Entity.Null : orders[0].Actor;
             _lastSubmittedOrderId = orders.IsEmpty ? 0 : orders[0].OrderId;
             LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)

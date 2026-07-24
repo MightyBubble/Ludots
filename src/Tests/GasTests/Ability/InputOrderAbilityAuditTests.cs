@@ -866,7 +866,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Order { OrderTypeId = 1 },
             };
 
-            Assert.That(queue.TryEnqueueBatch(batch), Is.False);
+            Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
             Assert.That(queue.Count, Is.EqualTo(3));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
             Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
@@ -877,7 +877,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void OrderQueue_BatchAdmission_CancelsRejectedRowsWhenAdmissionCapacityIsInsufficient()
+        public void OrderQueue_BatchAdmission_PublishesEveryAssignedIdWhenAdmissionCapacityIsInsufficient()
         {
             var results = new OrderAdmissionResultBuffer(2, 2);
             var queue = new OrderQueue(capacity: 1, results);
@@ -889,16 +889,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Order { OrderTypeId = 1 },
             };
 
-            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
-                queue.TryEnqueueBatch(batch))!;
-
-            Assert.That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            Assert.That(queue.TryEnqueueBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             Assert.That(queue.Count, Is.EqualTo(1));
             Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedQueueFull), Is.EqualTo(0));
-            Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(1));
-            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out _), Is.False);
-            Assert.That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.GlobalIntake, out var admissionCapacity), Is.True);
-            Assert.That(admissionCapacity.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
+            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var first), Is.True);
+            Assert.That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.GlobalIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         }
 
         [Test]
@@ -914,7 +912,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Order { OrderTypeId = 1, Actor = secondActor },
             };
 
-            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.True);
+            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
             Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
             Assert.That(queue.TryDequeue(out Order first), Is.True);
@@ -938,13 +936,69 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Order { OrderTypeId = 1, Actor = secondActor },
             };
 
-            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.False);
+            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
 
             Assert.That(queue.Count, Is.EqualTo(1));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
             Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
             Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+        }
+
+        [Test]
+        public void OrderQueue_SharedBatch_PublishesAssignedSharedIdWhenAdmissionCapacityIsInsufficient()
+        {
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var results = new OrderAdmissionResultBuffer(2, 2);
+            var queue = new OrderQueue(capacity: 1, results);
+            var seed = new Order { OrderTypeId = 1 };
+            Assert.That(queue.TryEnqueue(in seed), Is.True);
+            var batch = new[]
+            {
+                new Order { OrderTypeId = 1, Actor = firstActor },
+                new Order { OrderTypeId = 1, Actor = secondActor },
+            };
+
+            Assert.That(queue.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+
+            Assert.That(queue.Count, Is.EqualTo(1));
+            Assert.That(batch[0].OrderId, Is.GreaterThan(0));
+            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
+            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+        }
+
+        [Test]
+        public void OrderQueue_ClusteredBatch_PublishesEveryAssignedIdWhenAdmissionCapacityIsInsufficient()
+        {
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            Entity firstSource = world.Create();
+            Entity secondSource = world.Create();
+            var results = new OrderAdmissionResultBuffer(2, 2);
+            var queue = new OrderQueue(capacity: 1, results);
+            var seed = new Order { OrderTypeId = 1 };
+            Assert.That(queue.TryEnqueue(in seed), Is.True);
+            var batch = new[]
+            {
+                new Order { OrderTypeId = 1, Actor = firstActor, CommandSource = firstSource },
+                new Order { OrderTypeId = 1, Actor = secondActor, CommandSource = secondSource },
+            };
+
+            Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+
+            Assert.That(queue.Count, Is.EqualTo(1));
+            Assert.That(batch[0].OrderId, Is.GreaterThan(0));
+            Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
+            Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
+            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var first), Is.True);
+            Assert.That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.GlobalIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         }
 
         [Test]

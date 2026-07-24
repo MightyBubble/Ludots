@@ -47,11 +47,11 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
-        public bool TrySubmitSharedBatch(Span<Order> orders)
+        public OrderSubmitResult TrySubmitSharedBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
             {
-                return true;
+                return OrderSubmitResult.Queued;
             }
 
             for (int i = 0; i < orders.Length; i++)
@@ -64,17 +64,21 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
                 if (ShouldExpandRoadMove(in orders[i], out _))
                 {
-                    return false;
+                    return OrderSubmitResult.RejectedValidation;
                 }
             }
 
-            if (!_incomingOrders.TryEnqueueSharedBatch(orders))
+            OrderSubmitResult result = _incomingOrders.TryEnqueueSharedBatch(orders);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 WriteStatus("Road command rejected: order queue is full.");
-                return false;
+                for (int i = 0; i < orders.Length; i++)
+                {
+                    OrderSpatialPayloadOps.Release(_planning.World, in orders[i]);
+                }
             }
 
-            return true;
+            return result;
         }
 
         public bool TryBuildFollowOrder(in Order order, out Order routeOrder)

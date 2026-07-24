@@ -2606,11 +2606,12 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("MassNavigation UAT found no live actors for the massNavigationMove order batch.");
         }
 
-        if (!orderQueue.TryEnqueueSharedBatch(orders.AsSpan(0, orderCount)))
+        OrderSubmitResult result = orderQueue.TryEnqueueSharedBatch(orders.AsSpan(0, orderCount));
+        if (!OrderSubmitResultSemantics.IsAccepted(result))
         {
             throw new InvalidOperationException(
                 $"MassNavigation UAT could not atomically admit {orderCount} move orders; " +
-                $"OrderQueue available capacity is {orderQueue.AvailableCapacity}.");
+                $"result={result}, OrderQueue available capacity is {orderQueue.AvailableCapacity}.");
         }
 
     }

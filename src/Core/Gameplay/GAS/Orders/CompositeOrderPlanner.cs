@@ -99,7 +99,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        public bool TrySubmitSharedBatch(Span<Order> orders)
+        public OrderSubmitResult TrySubmitSharedBatch(Span<Order> orders)
         {
             for (int i = 0; i < orders.Length; i++)
             {
@@ -113,7 +113,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _incomingOrders.TryEnqueueSharedBatch(orders);
         }
 
-        public bool TrySubmitClusteredBatch(Span<Order> orders)
+        public OrderSubmitResult TrySubmitClusteredBatch(Span<Order> orders)
         {
             for (int i = 0; i < orders.Length; i++)
             {

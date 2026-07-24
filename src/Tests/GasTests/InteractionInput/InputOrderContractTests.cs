@@ -927,7 +927,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             system.Update(0f);
@@ -1095,7 +1095,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             system.Update(0f);
@@ -1207,7 +1207,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     orders.Add(batch[i]);
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             system.Update(0f);
@@ -1696,7 +1696,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderBatchSubmitHandler((Span<Order> _) =>
             {
                 Assert.Fail("Expanded command intent must not use the shared batch handler.");
-                return false;
+                return OrderSubmitResult.RejectedValidation;
             });
             system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueClusteredBatch(orders));
             var expander = new TestCommandActorExpander(
@@ -2368,7 +2368,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     batch[i].OrderId = 700;
                 }
 
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             system.Update(0f);
@@ -2439,6 +2439,69 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 admissionResults.TryGet(system.LastActivationResult.OrderId, OrderAdmissionStage.GlobalIntake, out var outcome),
                 Is.True);
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+        }
+
+        [Test]
+        public void Update_CollectionFanOutRuleRejected_PreservesBatchHandlerReason()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+            using var world = World.Create();
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(firstActor, 1);
+            system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
+            system.SetCollectionEntityListProvider((_, list) =>
+            {
+                list.Add(firstActor);
+                list.Add(secondActor);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(10f, 0f, 20f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 8);
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && (actor == firstActor || actor == secondActor));
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("Multi-actor collection fan-out must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 900 + i;
+                }
+
+                return OrderSubmitResult.RejectedByRule;
+            });
+
+            system.Update(0f);
+
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Actor, Is.EqualTo(firstActor));
+            Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(900));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
         }
 
         [Test]
@@ -2634,7 +2697,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderBatchSubmitHandler((Span<Order> _) =>
             {
                 Assert.Fail("Unauthorized collection fan-out must reject before atomic batch submission.");
-                return false;
+                return OrderSubmitResult.RejectedValidation;
             });
 
             system.Update(0f);
@@ -2707,7 +2770,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 }
 
                 authorizationOpen = false;
-                return true;
+                return OrderSubmitResult.Queued;
             });
 
             system.Update(0f);

@@ -2,6 +2,72 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 Order Admission Follow-up Repair - 2026-07-24
+
+This is the current live self-review section for the final order admission follow-up on branch `codex/issues-649-651-ordering`. Older PR #660 sections below are historical context, not alternate active branches.
+
+- **Task / Issue**: Close the remaining #650 / #651 batch result contract gaps after the `62a2a928...` repair.
+- **Date**: 2026-07-24
+- **Agent / Author**: Codex.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten the existing Order admission and input fan-out contract so every assigned batch order id has a queryable typed result, and batch submitters can preserve their real rejection reason.
+
+Result: PASS.
+
+Reason: This work reuses the existing `OrderQueue`, `OrderAdmissionResultBuffer`, `InputOrderMappingSystem`, `CompositeOrderPlanner`, CoreInput local order source, RoadNetwork order expander, and launcher evidence recorder. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, or parallel order runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Batch admission-result capacity failure stays queryable for every assigned row | N/A | existing `OrderAdmissionResultBuffer` rejection area |
+| Batch queue APIs return typed submit results | N/A | existing `OrderQueue` batch/shared/clustered entrypoints |
+| Collection fan-out preserves handler rejection reason | N/A | existing `InputOrderMappingSystem` batch submission path |
+| Mod and tool batch callers consume typed outcomes | N/A | existing CoreInput, RoadNetwork, and launcher evidence call sites |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderAdmissionResultBuffer`, `InputOrderMappingSystem`, `CompositeOrderPlanner`.
+- Resolvers / Registries: existing order type ids, input mapping data, local order source hooks.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Batch intake assigns ids first, then checks whether normal admission-result slots can hold the whole batch. If normal slots are unavailable but rejection slots can hold the batch, the queue is not mutated and every assigned id gets `RejectedAdmissionCapacity`. If a batch handler rejects for rules, validation, or queue capacity, the input activation result returns that exact `OrderSubmitResult` instead of translating all failures to queue-full.
+
+### 6. Config SSOT
+
+Behavior remains in the existing order type catalog, input mapping data, response-chain queue contracts, and runtime capacity values.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, response-chain, continuation, or lifecycle runtime added
+- [x] No fallback constructor or compatibility bypass added
+- [x] No silent zero-id, swallowed batch rejection, or unqueryable assigned order result remains in the repaired batch paths
+- [x] No Core gameplay enum, preset, loader, registry, or schema added
+
+### 8. Verification
+
+- `dotnet build src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --nologo -v:minimal`: PASS.
+- `dotnet test src\Tests\GasTests\GasTests.csproj --no-build -c Debug --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~MovePlanOrderLifecycleTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~InteractionSelectionConvergenceTests" --logger "console;verbosity=minimal" -m:1`: PASS, 159/159.
+- `dotnet test src\Tests\GasTests\GasTests.csproj --no-build -c Debug --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~MovePlanOrderLifecycleTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~ResponseChainPresenterPipelineTests|FullyQualifiedName~OrderCompositePlannerTests" --logger "console;verbosity=minimal" -m:1`: PASS, 149/149.
+- `dotnet test src\Tests\GasTests\GasTests.csproj --no-build -c Debug --filter "TestCategory=ci-gate" --logger "console;verbosity=minimal" -m:1`: PASS, 166/166.
+- `dotnet build src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj -c Debug --nologo -v:minimal`: PASS.
+
+### 9. Next variant test
+
+A new player command variant changes input mapping data, effect chains, or graph wiring and continues through the same order admission/result contract. It must not add an alternate Core order runtime or silently bypass admission results.
+
 ## PR #660 Order Admission Mergeability Repair - 2026-07-24
 
 This is the live self-review section for the order admission repair on branch `codex/issues-649-651-ordering`. Older sections below are historical context only.
