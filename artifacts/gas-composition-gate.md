@@ -2,6 +2,58 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 Core Order Lifecycle Lane - 2026-07-24
+
+- **Task / Issue**: PR #660 lane — Core order lifecycle, admission observability, atomicity, ownership (`b822b83` follow-up)
+- **Date**: 2026-07-24
+- **Agent / Author**: Cursor Agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: 沿用 `OrderQueue` / `OrderAdmissionResultBuffer` / `OrderSubmitter` / terminal buffer，修复 GlobalIntake 窗口、批预检、队列终态、排队晋升与 continuation/incoming 所有权；不新增 profile enum / preset 开关 / 平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|------:|----------|
+| GlobalIntake 跨帧可查 | 1 | `OrderAdmissionResultBuffer` carry-forward |
+| 批预检与黑板拒绝对齐 | 1 | `OrderSubmitter.Preview` |
+| 队列清理终态 | 1 | `OrderSubmitter` release/cancel → terminal |
+| 排队晋升 typed failure | 1 | `TryPromoteNextQueuedToActive` + EntityIntake |
+| Continuation/incoming 所有权 | 1 | `OrderContinuationSystem` / `OrderBufferSystem` |
+
+### 3. Reuse list
+
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`
+- Resolvers / Registries: `OrderTypeRegistry`, `OrderRuleRegistry`, `OrderSubmitter`
+- Handlers / presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A
+
+### 5. Transaction boundary
+
+Shared/clustered batch 预检覆盖 blackboard 准备拒绝，失败不改 actor；排队晋升失败移除坏单并写终态/EntityIntake；单条 incoming 先处理再 dequeue，异常时保留队列与 GlobalIntake。
+
+### 6. Config SSOT
+
+现有 order type / admission 合同。新增 JSON schema: **NO**
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建平行物化/接单管线
+- [x] 未添加说不清的默认 fallback
+
+### 8. Next variant test
+
+下一个 Mod 变体改 graph 连线 / effect 步骤 / input mapping，继续走同一 admission + terminal 合同。
+
 ## PR #660 Order Admission Follow-up Repair - 2026-07-24
 
 This is the current live self-review section for the final order admission follow-up on branch `codex/issues-649-651-ordering`. Older PR #660 sections below are historical context, not alternate active branches.

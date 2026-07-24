@@ -811,6 +811,254 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void OrderAdmissionResults_GlobalIntakeDuringOpenWindow_SurvivesUntilEntityIntakeOnNextStep()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(4, 4);
+            var reset = new GasBudgetResetSystem(new GasBudget(), orderAdmissionResults: results);
+            var end = new OrderAdmissionGenerationEndSystem(results);
+            var incoming = new OrderQueue(64, results);
+            var clock = new DiscreteClock();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            var intake = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                incoming,
+                closeEntityIntakeOnUpdate: false);
+            var intakeEnd = new OrderAdmissionEntityIntakeEndSystem(results);
+            float dt = 0f;
+
+            reset.Update(in dt);
+            intake.Update(in dt);
+
+            // Enqueue after OrderBufferSystem already drained this step, while entity intake is still open.
+            var lateOrder = new Order
+            {
+                Actor = actor,
+                OrderTypeId = 2,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+            That(incoming.TryEnqueueAssigned(ref lateOrder), Is.True);
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.GlobalIntake, out _), Is.True);
+
+            intakeEnd.Update(in dt);
+            end.Update(in dt);
+
+            reset.Update(in dt);
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.GlobalIntake, out var carried), Is.True);
+            That(carried.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            intake.Update(in dt);
+
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.GlobalIntake, out _), Is.True);
+            That(results.TryGet(lateOrder.OrderId, OrderAdmissionStage.EntityIntake, out var entityOutcome), Is.True);
+            That(entityOutcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+        }
+
+        [Test]
+        public void OrderBufferSystem_SharedBatch_RejectsBeforeMutatingActorsWhenBlackboardCapacityFails()
+        {
+            using var world = World.Create();
+            const int orderTypeId = 40;
+            const int spatialKey = 1;
+            var results = new OrderAdmissionResultBuffer(16, 16);
+            results.BeginLogicStep();
+            var incoming = new OrderQueue(64, results);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 100,
+                CanInterruptSelf = true,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity first = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
+            Entity second = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
+            ref BlackboardSpatialBuffer secondBoard = ref world.Get<BlackboardSpatialBuffer>(second);
+            for (int key = 0; key < BlackboardSpatialBuffer.MAX_ENTRIES; key++)
+            {
+                secondBoard.SetPoint(key == spatialKey ? key + BlackboardSpatialBuffer.MAX_ENTRIES : key, new Vector3(key, 0f, key));
+            }
+
+            int pointCount = BlackboardSpatialBuffer.MAX_POINTS_PER_ENTRY + 1;
+            var pointX = new int[pointCount];
+            var pointY = new int[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                pointX[i] = 100 + i;
+                pointY[i] = 200 + i;
+            }
+
+            var batch = new[]
+            {
+                new Order { Actor = first, OrderTypeId = orderTypeId, SubmitMode = OrderSubmitMode.Immediate },
+                new Order { Actor = second, OrderTypeId = orderTypeId, SubmitMode = OrderSubmitMode.Immediate },
+            };
+            OrderSpatialPayloadOps.SetPath(world, first, ref batch[0], pointX, pointY, 1);
+            OrderSpatialPayloadOps.SetPath(world, second, ref batch[1], pointX, pointY, pointCount);
+            That(incoming.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                incoming);
+            intake.Update(0f);
+
+            That(world.Get<OrderBuffer>(first).HasActive, Is.False);
+            That(world.Get<OrderBuffer>(second).HasActive, Is.False);
+            That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out var firstOutcome), Is.True);
+            That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.EntityIntake, out var secondOutcome), Is.True);
+            That(firstOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedBlackboardCapacity));
+            That(secondOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedBlackboardCapacity));
+            That(incoming.Count, Is.Zero);
+        }
+
+        [Test]
+        public void OrderSubmitter_QueueCleanupPaths_PublishCancelledTerminalOutcomes()
+        {
+            using var world = World.Create();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 2,
+                Priority = 50,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8,
+                BufferWindowMs = 1000,
+                SameTypePolicy = SameTypePolicy.Replace,
+            });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var queued = new Order { OrderId = 101, Actor = actor, OrderTypeId = 2, SubmitMode = OrderSubmitMode.Queued };
+            var pending = new Order { OrderId = 102, Actor = actor, OrderTypeId = 2 };
+            That(buffer.Enqueue(in queued, priority: 50, expireStep: 1, insertStep: 0), Is.True);
+            buffer.SetPending(in pending, priority: 50, expireStep: 1, insertStep: 0);
+
+            OrderSubmitter.CancelAll(world, actor, orderTypes);
+
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(2));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(101).Or.EqualTo(102));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            That(orderTypes.TerminalResults[1].OrderId, Is.EqualTo(101).Or.EqualTo(102));
+            That(orderTypes.TerminalResults[1].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            That(buffer.HasQueued, Is.False);
+            That(buffer.HasPending, Is.False);
+        }
+
+        [Test]
+        public void OrderBufferSystem_ExpiredQueuedOrder_PublishesCancelledTerminalAndAllowsLaterOrders()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(8, 8);
+            results.BeginLogicStep();
+            var clock = new DiscreteClock();
+            clock.Advance(ClockDomainId.Step, 5);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true, Priority = 10 });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var expired = new Order { OrderId = 201, Actor = actor, OrderTypeId = 2 };
+            That(buffer.Enqueue(in expired, priority: 10, expireStep: 1, insertStep: 0), Is.True);
+            var intake = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                results);
+
+            intake.Update(0f);
+
+            That(buffer.HasQueued, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(201));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
+        }
+
+        [Test]
+        public void OrderBufferSystem_QueuedPromotionFailure_IsTypedAndClearsBadOrder()
+        {
+            using var world = World.Create();
+            const int orderTypeId = 41;
+            const int spatialKey = 2;
+            var results = new OrderAdmissionResultBuffer(8, 8);
+            results.BeginLogicStep();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 20,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 4,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var badQueued = new Order
+            {
+                OrderId = 301,
+                Actor = actor,
+                OrderTypeId = orderTypeId,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(1f, 0f, 2f),
+                    },
+                },
+            };
+            That(buffer.Enqueue(in badQueued, priority: 20, expireStep: -1, insertStep: 0), Is.True);
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                closeEntityIntakeOnUpdate: false);
+
+            Assert.DoesNotThrow(() => intake.Update(0f));
+
+            That(buffer.HasActive, Is.False);
+            That(buffer.HasQueued, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(301));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionMissingBlackboard));
+            That(results.TryGet(301, OrderAdmissionStage.EntityIntake, out var outcome), Is.True);
+            That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedMissingBlackboard));
+
+            world.Add(actor, new BlackboardSpatialBuffer());
+            var good = new Order
+            {
+                OrderId = 302,
+                Actor = actor,
+                OrderTypeId = orderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = badQueued.Args,
+            };
+            That(intake.SubmitOrder(actor, in good), Is.EqualTo(OrderSubmitResult.Activated));
+            ref OrderBuffer bufferAfter = ref world.Get<OrderBuffer>(actor);
+            That(bufferAfter.HasActive, Is.True);
+            That(bufferAfter.ActiveOrder.Order.OrderId, Is.EqualTo(302));
+        }
+
+        [Test]
         public void OrderAdmissionResults_EntityIntakeAfterCutoff_FailsBeforeChangingActorState()
         {
             using var world = World.Create();

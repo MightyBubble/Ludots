@@ -90,11 +90,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 foreach (var index in chunk)
                 {
                     ref OrderBuffer buffer = ref buffers[index];
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
                     ReleaseExpiredOrders(ref buffer, currentStep);
                     if (!buffer.HasActive && buffer.HasQueued)
                     {
-                        Entity entity = Unsafe.Add(ref entityFirst, index);
-                        OrderSubmitter.TryPromoteNextQueuedToActive(World, entity, ref buffer, _orderTypeRegistry);
+                        bool promoted = OrderSubmitter.TryPromoteNextQueuedToActive(
+                            World,
+                            entity,
+                            ref buffer,
+                            _orderTypeRegistry,
+                            out OrderSubmitResult failureResult,
+                            out int failedOrderId,
+                            out int failedOrderTypeId);
+                        if (!promoted &&
+                            failedOrderId > 0 &&
+                            failureResult != OrderSubmitResult.Activated)
+                        {
+                            CommitPromotionFailureAdmission(failedOrderId, failedOrderTypeId, failureResult);
+                        }
                     }
                 }
             }
@@ -115,15 +128,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                QueuedOrder removed = buffer.RemoveAtTransferred(i);
-                OrderSpatialPayloadOps.Release(World, in removed.Order);
+                OrderSubmitter.ReleaseQueuedOrderAt(
+                    World,
+                    ref buffer,
+                    _orderTypeRegistry,
+                    i,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
             }
 
             if (buffer.HasPending &&
                 buffer.PendingOrder.ExpireStep >= 0 &&
                 buffer.PendingOrder.ExpireStep <= currentStep)
             {
-                OrderSubmitter.ReleasePendingOrder(World, ref buffer);
+                OrderSubmitter.ReleasePendingOrder(World, ref buffer, _orderTypeRegistry);
             }
         }
 
@@ -152,8 +170,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             bool committed = false;
             try
             {
-                DequeueReservedBatch(expectedBatchCount: 1);
+                // Process before dequeue so an unexpected submit failure keeps GlobalIntake ownership
+                // on the still-queued order instead of silently cancelling the reservation.
                 OrderSubmitResult result = ProcessIncomingOrder(ref order, currentStep);
+                DequeueReservedBatch(expectedBatchCount: 1);
                 CommitAdmission(in reservation, in order, result);
                 committed = true;
                 if (OrderSubmitResultSemantics.IsAccepted(result))
@@ -345,7 +365,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
                 ref var buffer = ref World.Get<OrderBuffer>(order.Actor);
-                OrderSubmitter.ReplacePending(World, ref buffer, in order, config.Priority, pendingExpireStep, currentStep);
+                OrderSubmitter.ReplacePending(
+                    World,
+                    ref buffer,
+                    _orderTypeRegistry,
+                    in order,
+                    config.Priority,
+                    pendingExpireStep,
+                    currentStep);
                 result = OrderSubmitResult.Pending;
             }
             else if (!OrderSubmitResultSemantics.IsAccepted(result))
@@ -403,6 +430,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderSubmitResult result)
         {
             var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
+            _admissionResults.Commit(in reservation, in outcome);
+        }
+
+        private void CommitPromotionFailureAdmission(int orderId, int orderTypeId, OrderSubmitResult result)
+        {
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                orderId,
+                orderTypeId);
+            var outcome = new OrderAdmissionOutcome(orderId, orderTypeId, OrderAdmissionStage.EntityIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
         }
 
