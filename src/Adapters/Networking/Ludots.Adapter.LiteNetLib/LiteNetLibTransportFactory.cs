@@ -20,7 +20,13 @@ public static class LiteNetLibTransportFactory
             config.DatagramQueueCapacity,
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
-            config.TransportChannelCount);
+            config.TransportMaxConnectAttempts,
+            config.TransportDisconnectTimeoutMilliseconds,
+            config.ReliableDisconnectFlushTimeoutMilliseconds,
+            config.TransportChannelCount,
+            new Core.Networking.Transport.ChannelId(checked((byte)config.ControlChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.CommandChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)));
     }
 
     public static LiteNetLibClientDatagramPort CreateClient(
@@ -37,7 +43,12 @@ public static class LiteNetLibTransportFactory
             config.DatagramQueueCapacity,
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
-            config.TransportChannelCount);
+            config.TransportMaxConnectAttempts,
+            config.TransportDisconnectTimeoutMilliseconds,
+            config.TransportChannelCount,
+            new Core.Networking.Transport.ChannelId(checked((byte)config.ControlChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.CommandChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)));
     }
 
     private static void ValidateTransport(NetworkRuntimeConfig config)

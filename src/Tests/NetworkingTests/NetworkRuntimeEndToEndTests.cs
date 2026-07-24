@@ -53,7 +53,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 1, 2, 3 });
         var protocol = new ProtocolVersion(1, 0);
-        var capacity = Capacity();
+        var capacity = Capacity(simulationTickRateHz: 30, statePublishRateHz: 10);
         var transport = new InMemoryTransport(new ConnectionId(11));
         var observer = new RecordingObserver();
         var input = new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle);
@@ -65,6 +65,8 @@ public sealed class NetworkRuntimeEndToEndTests
             reconnectWindowTicks: 2);
         var server = new AuthoritativeServerNetworkRuntime(
             in capacity,
+            NetworkTransportPortOwnership.Owned,
+            transport,
             transport,
             transport,
             sessions,
@@ -80,6 +82,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var clientAdmissions = new NetworkCommandAdmissionResultBuffer(capacity: 16);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
+            NetworkTransportPortOwnership.Borrowed,
             transport,
             transport,
             transport,
@@ -106,11 +109,18 @@ public sealed class NetworkRuntimeEndToEndTests
 
         server.BeforeAuthoritativeTick(10);
         server.AfterAuthoritativeCommit(10);
+        Assert.That(transport.ServerSnapshotFragmentCount, Is.Zero);
+        server.BeforeAuthoritativeTick(11);
+        server.AfterAuthoritativeCommit(11);
+        Assert.That(transport.ServerSnapshotFragmentCount, Is.Zero);
+        server.BeforeAuthoritativeTick(12);
+        server.AfterAuthoritativeCommit(12);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(1));
         client.PumpTransport();
         server.PumpTransport();
 
         Assert.That(clientFactory.Bridge, Is.Not.Null);
+        Assert.That(client.LastCommittedTick, Is.EqualTo(12));
         Assert.That(clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out Entity mirroredFirst), Is.True);
         Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
 
@@ -124,8 +134,8 @@ public sealed class NetworkRuntimeEndToEndTests
         var header = new NetworkCommandBatchHeader(
             client.SessionEpoch.Value,
             clientBatchSequence: 1,
-            targetTick: 10,
-            acknowledgedCommittedTick: 10,
+            targetTick: 12,
+            acknowledgedCommittedTick: 12,
             entryCount: 2);
         Assert.That(client.TrySubmitCommand(in header, entries), Is.True);
         Assert.That(transport.ClientCommandFragmentCount, Is.GreaterThan(1));
@@ -134,7 +144,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
         Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
 
-        server.BeforeAuthoritativeTick(10);
+        server.BeforeAuthoritativeTick(12);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
         Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
@@ -143,8 +153,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(admittedCount, Is.EqualTo(2));
 
         serverWorld.Set(first, new TestReplicatedData(2, 99));
-        server.BeforeAuthoritativeTick(11);
-        server.AfterAuthoritativeCommit(11);
+        server.BeforeAuthoritativeTick(15);
+        server.AfterAuthoritativeCommit(15);
         client.PumpTransport();
         server.PumpTransport();
         Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(99));
@@ -169,16 +179,16 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(client.Seat.Generation, Is.EqualTo(1));
         });
 
-        server.BeforeAuthoritativeTick(12);
-        server.AfterAuthoritativeCommit(12);
+        server.BeforeAuthoritativeTick(18);
+        server.AfterAuthoritativeCommit(18);
         client.PumpTransport();
         server.PumpTransport();
         transport.Disconnect();
         server.PumpTransport();
         client.PumpTransport();
-        server.BeforeAuthoritativeTick(13);
+        server.BeforeAuthoritativeTick(19);
         Assert.That(observer.SeatReleases, Is.Zero);
-        server.BeforeAuthoritativeTick(16);
+        server.BeforeAuthoritativeTick(22);
 
         Assert.Multiple(() =>
         {
@@ -187,6 +197,39 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(server.IsFaulted, Is.False);
             Assert.That(client.IsFaulted, Is.False);
         });
+
+        var rejectedClient = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            new ProtocolVersion(2, 0),
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            new NetworkCommandAdmissionResultBuffer(capacity: 4),
+            observer);
+        Assert.That(rejectedClient.TryConnectNow(), Is.True);
+        rejectedClient.PumpTransport();
+        server.PumpTransport();
+        int attemptsAfterRejectedHandshake = transport.ConnectAttempts;
+        rejectedClient.PumpTransport();
+        rejectedClient.PumpReplicatedClient(1f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.ServerDisconnectAttempts, Is.EqualTo(1));
+            Assert.That(rejectedClient.State, Is.EqualTo(ReplicatedClientConnectionState.Rejected));
+            Assert.That(transport.ConnectAttempts, Is.EqualTo(attemptsAfterRejectedHandshake));
+        });
+        client.Dispose();
+        rejectedClient.Dispose();
+        Assert.That(transport.DisposeCalls, Is.Zero);
+        server.Dispose();
+        server.Dispose();
+        Assert.That(transport.DisposeCalls, Is.EqualTo(1));
     }
 
     [Test]
@@ -200,6 +243,7 @@ public sealed class NetworkRuntimeEndToEndTests
         using World world = World.Create();
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
+            NetworkTransportPortOwnership.Borrowed,
             transport,
             transport,
             transport,
@@ -246,6 +290,7 @@ public sealed class NetworkRuntimeEndToEndTests
         using World world = World.Create();
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
+            NetworkTransportPortOwnership.Borrowed,
             transport,
             transport,
             transport,
@@ -267,6 +312,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in rejected, payload, out int payloadBytes), Is.EqualTo(NetworkWireCodecStatus.Success));
         transport.EnqueueServerFrame(new ChannelId(0), NetworkWireKind.SessionHandshakeResponse, payload[..payloadBytes]);
+        transport.Disconnect();
         client.PumpTransport();
 
         Assert.Multiple(() =>
@@ -281,7 +327,97 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(transport.ConnectAttempts, Is.EqualTo(2));
     }
 
-    private static NetworkRuntimeCapacity Capacity() => new(
+    [Test]
+    public void ClientRuntime_Dispose_RespectsDeclaredTransportOwnership()
+    {
+        var capacity = Capacity();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 4 });
+        using World borrowedWorld = World.Create();
+        var borrowedTransport = new InMemoryTransport(new ConnectionId(8));
+        var borrowed = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Borrowed,
+            borrowedTransport,
+            borrowedTransport,
+            borrowedTransport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(borrowedWorld, 2),
+            new NetworkCommandAdmissionResultBuffer(4),
+            new RecordingObserver());
+
+        borrowed.Dispose();
+        Assert.That(borrowedTransport.DisposeCalls, Is.Zero);
+
+        using World ownedWorld = World.Create();
+        var ownedTransport = new InMemoryTransport(new ConnectionId(9));
+        var owned = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Owned,
+            ownedTransport,
+            ownedTransport,
+            ownedTransport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(ownedWorld, 2),
+            new NetworkCommandAdmissionResultBuffer(4),
+            new RecordingObserver());
+
+        owned.Dispose();
+        owned.Dispose();
+        Assert.That(ownedTransport.DisposeCalls, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ClientRuntime_Dispose_AttemptsEveryDistinctOwnedPortAndAggregatesFailures()
+    {
+        var capacity = Capacity();
+        var first = new DisposableClientPort(throwOnDispose: true);
+        var second = new DisposableClientPort(throwOnDispose: false);
+        var third = new DisposableClientPort(throwOnDispose: true);
+        using World world = World.Create();
+        var runtime = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            NetworkTransportPortOwnership.Owned,
+            first,
+            second,
+            third,
+            reconnectRetrySeconds: 1f,
+            new ProtocolVersion(1, 0),
+            ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 5 }),
+            new MemoryCredentials(),
+            new ClientBridgeFactory(world, 2),
+            new NetworkCommandAdmissionResultBuffer(4),
+            new RecordingObserver());
+
+        AggregateException exception = Assert.Throws<AggregateException>(runtime.Dispose)!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.InnerExceptions, Has.Count.EqualTo(2));
+            Assert.That(first.DisposeCalls, Is.EqualTo(1));
+            Assert.That(second.DisposeCalls, Is.EqualTo(1));
+            Assert.That(third.DisposeCalls, Is.EqualTo(1));
+        });
+
+        Assert.DoesNotThrow(runtime.Dispose);
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.DisposeCalls, Is.EqualTo(1));
+            Assert.That(second.DisposeCalls, Is.EqualTo(1));
+            Assert.That(third.DisposeCalls, Is.EqualTo(1));
+        });
+    }
+
+    private static NetworkRuntimeCapacity Capacity(
+        int simulationTickRateHz = 30,
+        int statePublishRateHz = 30) => new(
+        simulationTickRateHz,
+        statePublishRateHz,
         maxDatagramPayloadBytes: 128,
         connectionCapacity: 2,
         entityCapacity: 2,
@@ -542,7 +678,9 @@ public sealed class NetworkRuntimeEndToEndTests
         IClientConnectionEventPort,
         IServerDatagramPort,
         IClientDatagramPort,
-        IClientConnectionControlPort
+        IServerConnectionControlPort,
+        IClientConnectionControlPort,
+        IDisposable
     {
         private readonly ConnectionId _connection;
         private readonly Queue<ServerConnectionEvent> _serverEvents = new();
@@ -555,6 +693,8 @@ public sealed class NetworkRuntimeEndToEndTests
         public int ServerSnapshotFragmentCount { get; private set; }
         public int ClientCommandFragmentCount { get; private set; }
         public int ConnectAttempts { get; private set; }
+        public int ServerDisconnectAttempts { get; private set; }
+        public int DisposeCalls { get; private set; }
         public ClientConnectionControlState State { get; private set; }
 
         public void Connect()
@@ -593,6 +733,15 @@ public sealed class NetworkRuntimeEndToEndTests
         }
 
         void IClientConnectionControlPort.Disconnect() => Disconnect();
+
+        void IServerConnectionControlPort.DisconnectAfterReliableFlush(ConnectionId connectionId)
+        {
+            Assert.That(connectionId, Is.EqualTo(_connection));
+            ServerDisconnectAttempts++;
+            Disconnect();
+        }
+
+        public void Dispose() => DisposeCalls++;
 
         public void EnqueueServerFrame(ChannelId channel, NetworkWireKind kind, ReadOnlySpan<byte> payload)
         {
@@ -673,5 +822,50 @@ public sealed class NetworkRuntimeEndToEndTests
         }
 
         private readonly record struct Frame(ChannelId Channel, byte[] Payload);
+    }
+
+    private sealed class DisposableClientPort :
+        IClientConnectionEventPort,
+        IClientDatagramPort,
+        IClientConnectionControlPort,
+        IDisposable
+    {
+        private readonly bool _throwOnDispose;
+
+        public DisposableClientPort(bool throwOnDispose) => _throwOnDispose = throwOnDispose;
+
+        public int DisposeCalls { get; private set; }
+        public ClientConnectionControlState State => ClientConnectionControlState.Disconnected;
+
+        public void Pump() { }
+
+        public bool TryReceiveConnectionEvent(out ClientConnectionEvent connectionEvent)
+        {
+            connectionEvent = default;
+            return false;
+        }
+
+        public bool TryReceive(Span<byte> buffer, out int bytesReceived, out ChannelId channelId)
+        {
+            bytesReceived = 0;
+            channelId = default;
+            return false;
+        }
+
+        public DatagramSendStatus TrySend(ChannelId channelId, ReadOnlySpan<byte> payload) =>
+            DatagramSendStatus.Closed;
+
+        public bool TryConnect() => false;
+
+        public void Disconnect() => throw new InvalidOperationException("No connection is active.");
+
+        public void Dispose()
+        {
+            DisposeCalls++;
+            if (_throwOnDispose)
+            {
+                throw new InvalidOperationException("Configured disposal failure.");
+            }
+        }
     }
 }

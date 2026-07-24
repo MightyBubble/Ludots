@@ -19,6 +19,7 @@ namespace Ludots.Core.Networking.Runtime
     public sealed class ReplicatedClientNetworkRuntime : INetworkRuntimePort
     {
         private readonly NetworkRuntimeCapacity _capacity;
+        private readonly NetworkTransportPortOwnership _transportOwnership;
         private readonly IClientConnectionEventPort _connectionEvents;
         private readonly IClientDatagramPort _datagrams;
         private readonly IClientConnectionControlPort _connectionControl;
@@ -53,6 +54,7 @@ namespace Ludots.Core.Networking.Runtime
 
         public ReplicatedClientNetworkRuntime(
             in NetworkRuntimeCapacity capacity,
+            NetworkTransportPortOwnership transportOwnership,
             IClientConnectionEventPort connectionEvents,
             IClientDatagramPort datagrams,
             IClientConnectionControlPort connectionControl,
@@ -75,9 +77,15 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _capacity = capacity;
+            _transportOwnership = transportOwnership;
             _connectionEvents = connectionEvents ?? throw new ArgumentNullException(nameof(connectionEvents));
             _datagrams = datagrams ?? throw new ArgumentNullException(nameof(datagrams));
             _connectionControl = connectionControl ?? throw new ArgumentNullException(nameof(connectionControl));
+            NetworkTransportPortLifetime.Validate(
+                transportOwnership,
+                _connectionEvents,
+                _datagrams,
+                _connectionControl);
             if (!float.IsFinite(reconnectRetrySeconds) || reconnectRetrySeconds <= 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(reconnectRetrySeconds));
@@ -195,14 +203,14 @@ namespace Ludots.Core.Networking.Runtime
             EnsureOperational();
             FlushOutbound();
             _connectionEvents.Pump();
-            while (_connectionEvents.TryReceiveConnectionEvent(out ClientConnectionEvent connectionEvent))
-            {
-                ProcessConnectionEvent(in connectionEvent);
-            }
-
             while (_datagrams.TryReceive(_receiveBuffer, out int bytesReceived, out ChannelId channel))
             {
                 ProcessDatagram(channel, _receiveBuffer.AsSpan(0, bytesReceived));
+            }
+
+            while (_connectionEvents.TryReceiveConnectionEvent(out ClientConnectionEvent connectionEvent))
+            {
+                ProcessConnectionEvent(in connectionEvent);
             }
 
             FlushOutbound();
@@ -245,7 +253,13 @@ namespace Ludots.Core.Networking.Runtime
 
         public void Dispose()
         {
+            if (_disposed) return;
             _disposed = true;
+            NetworkTransportPortLifetime.DisposeOwned(
+                _transportOwnership,
+                _connectionEvents,
+                _datagrams,
+                _connectionControl);
         }
 
         private void ProcessConnectionEvent(in ClientConnectionEvent connectionEvent)
@@ -263,8 +277,12 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
-            _state = ReplicatedClientConnectionState.Disconnected;
-            _reconnectElapsedSeconds = 0f;
+            if (_state != ReplicatedClientConnectionState.Rejected)
+            {
+                _state = ReplicatedClientConnectionState.Disconnected;
+                _reconnectElapsedSeconds = 0f;
+            }
+
             _snapshotReassembler.Reset();
         }
 
@@ -343,8 +361,9 @@ namespace Ludots.Core.Networking.Runtime
 
             NetworkWireCodecStatus decoded = HandshakeWireCodec.TryDecodeResponse(payload, out SessionHandshakeResponse response);
             if (decoded != NetworkWireCodecStatus.Success ||
-                response.ProtocolVersion != _protocolVersion ||
-                response.ContentFingerprint != _contentFingerprint)
+                (response.Accepted &&
+                 (response.ProtocolVersion != _protocolVersion ||
+                  response.ContentFingerprint != _contentFingerprint)))
             {
                 ProtocolFault(NetworkRuntimeFaultCode.MalformedDatagram, NetworkWireKind.SessionHandshakeResponse, decoded);
                 return;

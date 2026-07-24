@@ -1,5 +1,6 @@
 using System;
 using global::LiteNetLib;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Transport;
 
 namespace Ludots.Adapter.LiteNetLib;
@@ -7,12 +8,17 @@ namespace Ludots.Adapter.LiteNetLib;
 public sealed class LiteNetLibClientDatagramPort :
     IClientDatagramPort,
     IClientConnectionEventPort,
+    IClientConnectionControlPort,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;
     private readonly NetManager _manager;
     private readonly FixedDatagramQueue _inbound;
     private readonly FixedClientConnectionEventQueue _connectionEvents;
+    private readonly LiteNetLibChannelDeliveryContract _delivery;
+    private readonly string _host;
+    private readonly int _port;
+    private readonly string _connectionKey;
     private NetPeer? _serverPeer;
     private bool _disposed;
 
@@ -23,21 +29,36 @@ public sealed class LiteNetLibClientDatagramPort :
         int datagramCapacity,
         int connectionEventCapacity,
         int maxPayloadBytes,
-        int channelCount)
+        int maxConnectAttempts,
+        int disconnectTimeoutMilliseconds,
+        int channelCount,
+        ChannelId controlChannel,
+        ChannelId commandChannel,
+        ChannelId stateChannel)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if ((uint)port > ushort.MaxValue || port == 0) throw new ArgumentOutOfRangeException(nameof(port));
         if (string.IsNullOrWhiteSpace(connectionKey)) throw new ArgumentException("Connection key is required.", nameof(connectionKey));
+        if (maxConnectAttempts <= 0) throw new ArgumentOutOfRangeException(nameof(maxConnectAttempts));
+        if (disconnectTimeoutMilliseconds <= 0) throw new ArgumentOutOfRangeException(nameof(disconnectTimeoutMilliseconds));
         if ((uint)(channelCount - 1) >= 64u) throw new ArgumentOutOfRangeException(nameof(channelCount));
 
         _inbound = new FixedDatagramQueue(datagramCapacity, maxPayloadBytes);
         _connectionEvents = new FixedClientConnectionEventQueue(connectionEventCapacity);
+        _host = host;
+        _port = port;
+        _connectionKey = connectionKey;
+        _delivery = new LiteNetLibChannelDeliveryContract(
+            channelCount,
+            controlChannel,
+            commandChannel,
+            stateChannel);
         _listener = new EventBasedNetListener();
         _manager = new NetManager(_listener)
         {
             AutoRecycle = true,
-            MaxConnectAttempts = 10,
-            DisconnectTimeout = 5000,
+            MaxConnectAttempts = maxConnectAttempts,
+            DisconnectTimeout = disconnectTimeoutMilliseconds,
             ChannelsCount = (byte)channelCount,
         };
 
@@ -49,9 +70,53 @@ public sealed class LiteNetLibClientDatagramPort :
         {
             throw new InvalidOperationException("LiteNetLib client failed to start its UDP endpoint.");
         }
+    }
 
-        _serverPeer = _manager.Connect(host, port, connectionKey)
-            ?? throw new InvalidOperationException($"LiteNetLib client failed to start connection to {host}:{port}.");
+    public ClientConnectionControlState State
+    {
+        get
+        {
+            ThrowIfDisposed();
+            if (_serverPeer == null)
+            {
+                return ClientConnectionControlState.Disconnected;
+            }
+
+            return _serverPeer.ConnectionState switch
+            {
+                ConnectionState.Disconnected => ClientConnectionControlState.Disconnected,
+                ConnectionState.Outgoing => ClientConnectionControlState.Connecting,
+                ConnectionState.Connected => ClientConnectionControlState.Connected,
+                ConnectionState.ShutdownRequested => ClientConnectionControlState.Connected,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported LiteNetLib connection state {_serverPeer.ConnectionState}."),
+            };
+        }
+    }
+
+    public bool TryConnect()
+    {
+        ThrowIfDisposed();
+        if (State != ClientConnectionControlState.Disconnected)
+        {
+            return false;
+        }
+
+        _serverPeer = _manager.Connect(_host, _port, _connectionKey)
+            ?? throw new InvalidOperationException(
+                $"LiteNetLib client failed to start connection to {_host}:{_port}.");
+        return true;
+    }
+
+    public void Disconnect()
+    {
+        ThrowIfDisposed();
+        if (_serverPeer == null || _serverPeer.ConnectionState == ConnectionState.Disconnected)
+        {
+            throw new InvalidOperationException("LiteNetLib client has no active connection to disconnect.");
+        }
+
+        _serverPeer.Disconnect();
     }
 
     public void Pump()
@@ -89,7 +154,7 @@ public sealed class LiteNetLibClientDatagramPort :
                 : DatagramSendStatus.NotReady;
         }
 
-        _serverPeer.Send(payload, channelId.Value, DeliveryMethod.ReliableOrdered);
+        _serverPeer.Send(payload, channelId.Value, _delivery.GetExpected(channelId.Value));
         return DatagramSendStatus.Sent;
     }
 
@@ -115,11 +180,7 @@ public sealed class LiteNetLibClientDatagramPort :
         byte channelNumber,
         DeliveryMethod deliveryMethod)
     {
-        if (deliveryMethod != DeliveryMethod.ReliableOrdered)
-        {
-            throw new InvalidOperationException($"Unexpected delivery method {deliveryMethod}; reliable ordered is required.");
-        }
-
+        _delivery.ValidateReceived(channelNumber, deliveryMethod);
         _inbound.Enqueue(connectionValue: 0, channelNumber, reader.GetRemainingBytesSpan());
     }
 

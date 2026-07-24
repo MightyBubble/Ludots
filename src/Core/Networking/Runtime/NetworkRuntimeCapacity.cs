@@ -7,6 +7,8 @@ namespace Ludots.Core.Networking.Runtime
     public readonly struct NetworkRuntimeCapacity
     {
         public NetworkRuntimeCapacity(
+            int simulationTickRateHz,
+            int statePublishRateHz,
             int maxDatagramPayloadBytes,
             int connectionCapacity,
             int entityCapacity,
@@ -21,6 +23,15 @@ namespace Ludots.Core.Networking.Runtime
             ChannelId commandChannel,
             ChannelId stateChannel)
         {
+            if (simulationTickRateHz <= 0) throw new ArgumentOutOfRangeException(nameof(simulationTickRateHz));
+            if (statePublishRateHz <= 0) throw new ArgumentOutOfRangeException(nameof(statePublishRateHz));
+            if (simulationTickRateHz % statePublishRateHz != 0)
+            {
+                throw new ArgumentException(
+                    $"State publish rate {statePublishRateHz} must divide simulation rate {simulationTickRateHz} exactly.",
+                    nameof(statePublishRateHz));
+            }
+
             if (maxDatagramPayloadBytes <= NetworkWireEnvelope.SizeInBytes)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxDatagramPayloadBytes));
@@ -47,6 +58,9 @@ namespace Ludots.Core.Networking.Runtime
             _ = CommandFragmentWireCodec.GetMaxFragmentDataBytes(maxDatagramPayloadBytes);
             _ = SnapshotFragmentWireCodec.GetMaxFragmentDataBytes(maxDatagramPayloadBytes);
 
+            SimulationTickRateHz = simulationTickRateHz;
+            StatePublishRateHz = statePublishRateHz;
+            StatePublishIntervalTicks = simulationTickRateHz / statePublishRateHz;
             MaxDatagramPayloadBytes = maxDatagramPayloadBytes;
             ConnectionCapacity = connectionCapacity;
             EntityCapacity = entityCapacity;
@@ -62,6 +76,9 @@ namespace Ludots.Core.Networking.Runtime
             StateChannel = stateChannel;
         }
 
+        public int SimulationTickRateHz { get; }
+        public int StatePublishRateHz { get; }
+        public int StatePublishIntervalTicks { get; }
         public int MaxDatagramPayloadBytes { get; }
         public int ConnectionCapacity { get; }
         public int EntityCapacity { get; }

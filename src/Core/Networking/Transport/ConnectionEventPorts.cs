@@ -80,4 +80,15 @@ namespace Ludots.Core.Networking.Transport
         void Pump();
         bool TryReceiveConnectionEvent(out ClientConnectionEvent connectionEvent);
     }
+
+    /// <summary>
+    /// Explicit server-side control over one established transport connection. A requested close
+    /// preserves already-accepted reliable datagrams before ending the connection. Repeating the
+    /// request for the same pending connection is idempotent. Flush timeout is an explicit fault;
+    /// implementations must not silently discard queued reliable datagrams.
+    /// </summary>
+    public interface IServerConnectionControlPort
+    {
+        void DisconnectAfterReliableFlush(ConnectionId connectionId);
+    }
 }
