@@ -79,7 +79,13 @@ namespace Ludots.Tests.Architecture
             var failingRegistry = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
             Assert.That(failingRegistry.Register(1, new FailingProjector()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             failingRegistry.Freeze();
-            var failingBridge = new AuthoritativeWorldReplicationBridge(world, table, knowledge, viewer, failingRegistry, entityCapacity: 2);
+            var failingBridge = new AuthoritativeWorldReplicationBridge(
+                world,
+                table,
+                knowledge,
+                viewer,
+                failingRegistry,
+                replicationEntityCapacityPerSeat: 2);
             knowledge.Upsert(viewer, target, Disclosure(KnowledgePresence.LiveVisible));
             Assert.That(failingBridge.Project(new[] { targetHandle }, 10, output), Is.EqualTo(ReplicationBridgeResult.ProjectionFailed));
             Assert.That(output.States.Length, Is.EqualTo(0));
@@ -105,6 +111,14 @@ namespace Ludots.Tests.Architecture
                 bridge.Project(new[] { firstHandle, secondHandle }, 10, tooSmall),
                 Is.EqualTo(ReplicationBridgeResult.CapacityContractViolated));
             Assert.That(tooSmall.States.Length, Is.EqualTo(0));
+
+            var orderedOutput = new ReplicationProjectionBuffer(entityCapacity: 2);
+            Assert.That(
+                bridge.Project(new[] { secondHandle, firstHandle }, 10, orderedOutput),
+                Is.EqualTo(ReplicationBridgeResult.InvalidInput));
+            Assert.That(
+                bridge.Project(new[] { firstHandle, firstHandle }, 10, orderedOutput),
+                Is.EqualTo(ReplicationBridgeResult.InvalidInput));
 
             Assert.That(table.TryRelease(firstHandle), Is.True);
             var output = new ReplicationProjectionBuffer(entityCapacity: 2);

@@ -62,7 +62,7 @@ namespace Ludots.Core.Networking.Replication
         private readonly KnowledgeProjectionStore _knowledge;
         private readonly Entity _viewer;
         private readonly ReplicationSchemaProjectorRegistry _projectors;
-        private readonly bool[] _seenSlots;
+        private readonly int _replicationEntityCapacityPerSeat;
 
         public AuthoritativeWorldReplicationBridge(
             World world,
@@ -70,7 +70,7 @@ namespace Ludots.Core.Networking.Replication
             KnowledgeProjectionStore knowledge,
             Entity viewer,
             ReplicationSchemaProjectorRegistry projectors,
-            int entityCapacity)
+            int replicationEntityCapacityPerSeat)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _entities = entities ?? throw new ArgumentNullException(nameof(entities));
@@ -86,19 +86,23 @@ namespace Ludots.Core.Networking.Replication
                 throw new InvalidOperationException("Replication schema projector registry must be frozen before bridge construction.");
             }
 
-            if (entityCapacity <= 0 || entityCapacity != entities.Capacity)
+            if (replicationEntityCapacityPerSeat <= 0 ||
+                replicationEntityCapacityPerSeat > entities.Capacity)
             {
-                throw new ArgumentOutOfRangeException(nameof(entityCapacity), "Bridge capacity must match the network entity table capacity.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(replicationEntityCapacityPerSeat),
+                    "Per-seat replication capacity must be positive and cannot exceed the global network entity capacity.");
             }
 
             _viewer = viewer;
-            _seenSlots = new bool[entityCapacity];
+            _replicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat;
         }
 
-        public int EntityCapacity => _seenSlots.Length;
+        public int GlobalEntityCapacity => _entities.Capacity;
+        public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
 
         public ReplicationBridgeResult Project(
-            ReadOnlySpan<NetworkEntityHandle> activeHandles,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
             int currentTick,
             ReplicationProjectionBuffer output)
         {
@@ -113,24 +117,25 @@ namespace Ludots.Core.Networking.Replication
                 return ReplicationBridgeResult.InvalidInput;
             }
 
-            if (activeHandles.Length > _seenSlots.Length || activeHandles.Length > output.EntityCapacity)
+            if (interestHandles.Length > _replicationEntityCapacityPerSeat ||
+                interestHandles.Length > output.EntityCapacity)
             {
                 return ReplicationBridgeResult.CapacityContractViolated;
             }
 
-            Array.Clear(_seenSlots);
-            for (int i = 0; i < activeHandles.Length; i++)
+            int previousSlot = -1;
+            for (int i = 0; i < interestHandles.Length; i++)
             {
-                NetworkEntityHandle handle = activeHandles[i];
+                NetworkEntityHandle handle = interestHandles[i];
                 int slot = handle.Slot;
                 if (!handle.IsValid ||
-                    (uint)slot >= (uint)_seenSlots.Length ||
-                    _seenSlots[slot])
+                    (uint)slot >= (uint)_entities.Capacity ||
+                    slot <= previousSlot)
                 {
                     return Fail(output, ReplicationBridgeResult.InvalidInput);
                 }
 
-                _seenSlots[slot] = true;
+                previousSlot = slot;
                 if (!_entities.TryResolve(handle, out Entity entity) || !_world.IsAlive(entity))
                 {
                     return Fail(output, ReplicationBridgeResult.EntityUnavailable);
@@ -199,7 +204,7 @@ namespace Ludots.Core.Networking.Replication
             ulong sessionEpoch,
             uint tick,
             ulong snapshotId,
-            ReadOnlySpan<NetworkEntityHandle> activeHandles,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
             ReplicationProjectionBuffer projection,
             ReplicationPacketBuffer packet)
         {
@@ -210,7 +215,7 @@ namespace Ludots.Core.Networking.Replication
                 return ReplicationBridgeResult.InvalidInput;
             }
 
-            ReplicationBridgeResult projected = Project(activeHandles, (int)tick, projection);
+            ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
             if (projected != ReplicationBridgeResult.Success)
             {
                 packet.Reset(default);
@@ -233,7 +238,7 @@ namespace Ludots.Core.Networking.Replication
             uint tick,
             ulong snapshotId,
             ulong acknowledgedBaselineId,
-            ReadOnlySpan<NetworkEntityHandle> activeHandles,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
             ReplicationProjectionBuffer projection,
             ReplicationPacketBuffer packet)
         {
@@ -244,7 +249,7 @@ namespace Ludots.Core.Networking.Replication
                 return ReplicationBridgeResult.InvalidInput;
             }
 
-            ReplicationBridgeResult projected = Project(activeHandles, (int)tick, projection);
+            ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
             if (projected != ReplicationBridgeResult.Success)
             {
                 packet.Reset(default);

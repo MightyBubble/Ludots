@@ -242,7 +242,7 @@ public sealed class NetworkWireCodecTests
         var visible = new NetworkEntityHandle(0, 1);
         var hidden = new NetworkEntityHandle(1, 1);
         var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 8);
-        var channel = new AuthoritativeReplicationChannel(entityCapacity: 4, baselineCapacity: 2, disclosureLog);
+        var channel = new AuthoritativeReplicationChannel(replicationEntityCapacityPerSeat: 4, baselineCapacity: 2, disclosureLog);
         var packet = new ReplicationPacketBuffer(entityCapacity: 4);
         var states = new[]
         {

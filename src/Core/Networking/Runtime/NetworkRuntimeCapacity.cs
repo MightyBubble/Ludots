@@ -11,7 +11,8 @@ namespace Ludots.Core.Networking.Runtime
             int statePublishRateHz,
             int maxDatagramPayloadBytes,
             int connectionCapacity,
-            int entityCapacity,
+            int globalEntityCapacity,
+            int replicationEntityCapacityPerSeat,
             int maxCommandEntries,
             int maxCommandPayloadBytes,
             int maxCommandFragments,
@@ -37,15 +38,37 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentOutOfRangeException(nameof(maxDatagramPayloadBytes));
             }
 
-            if (connectionCapacity <= 0 || entityCapacity <= 0 || maxCommandEntries <= 0 ||
+            if (connectionCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(connectionCapacity));
+            }
+
+            if (globalEntityCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(globalEntityCapacity));
+            }
+
+            if (replicationEntityCapacityPerSeat <= 0 ||
+                replicationEntityCapacityPerSeat > globalEntityCapacity ||
+                replicationEntityCapacityPerSeat > ushort.MaxValue / 2)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(replicationEntityCapacityPerSeat),
+                    "Per-seat replication capacity must fit the global table and leave wire capacity for conceal plus reveal changes.");
+            }
+
+            if (maxCommandEntries <= 0 ||
                 maxCommandPayloadBytes < CommandBatchWireCodec.GetPayloadSize(maxCommandEntries) ||
                 maxCommandFragments <= 0 || maxSnapshotBytes <= 0 || maxSnapshotFragments <= 0 ||
                 outboundQueueCapacity <= 0 || acknowledgementHistoryCapacity <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(connectionCapacity), "All runtime capacities must cover their declared payloads.");
+                throw new ArgumentOutOfRangeException(nameof(maxCommandEntries), "All runtime capacities must cover their declared payloads.");
             }
 
-            if (ReplicationPacketWireCodec.GetPayloadSize(entityCapacity, entityCapacity, entityCapacity) > maxSnapshotBytes)
+            if (ReplicationPacketWireCodec.GetPayloadSize(
+                    replicationEntityCapacityPerSeat,
+                    replicationEntityCapacityPerSeat,
+                    checked(replicationEntityCapacityPerSeat * 2)) > maxSnapshotBytes)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxSnapshotBytes), "Snapshot capacity cannot hold the largest replication packet.");
             }
@@ -63,7 +86,8 @@ namespace Ludots.Core.Networking.Runtime
             StatePublishIntervalTicks = simulationTickRateHz / statePublishRateHz;
             MaxDatagramPayloadBytes = maxDatagramPayloadBytes;
             ConnectionCapacity = connectionCapacity;
-            EntityCapacity = entityCapacity;
+            GlobalEntityCapacity = globalEntityCapacity;
+            ReplicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat;
             MaxCommandEntries = maxCommandEntries;
             MaxCommandPayloadBytes = maxCommandPayloadBytes;
             MaxCommandFragments = maxCommandFragments;
@@ -81,7 +105,8 @@ namespace Ludots.Core.Networking.Runtime
         public int StatePublishIntervalTicks { get; }
         public int MaxDatagramPayloadBytes { get; }
         public int ConnectionCapacity { get; }
-        public int EntityCapacity { get; }
+        public int GlobalEntityCapacity { get; }
+        public int ReplicationEntityCapacityPerSeat { get; }
         public int MaxCommandEntries { get; }
         public int MaxCommandPayloadBytes { get; }
         public int MaxCommandFragments { get; }

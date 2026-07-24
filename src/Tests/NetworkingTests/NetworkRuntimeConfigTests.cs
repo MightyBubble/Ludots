@@ -21,7 +21,8 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.PlayerCapacity, Is.EqualTo(2));
             Assert.That(config.SimulationTickRateHz, Is.EqualTo(30));
             Assert.That(config.StatePublishRateHz, Is.EqualTo(10));
-            Assert.That(config.NetworkEntityCapacity, Is.EqualTo(256));
+            Assert.That(config.GlobalNetworkEntityCapacity, Is.EqualTo(100_000));
+            Assert.That(config.ReplicationEntityCapacityPerSeat, Is.EqualTo(512));
             Assert.That(config.MaxCommandBatchesPerSecondPerPlayer, Is.EqualTo(32));
             Assert.That(config.MaxActorsPerCommandBatch, Is.EqualTo(128));
             Assert.That(config.CommandSchemas, Has.Count.EqualTo(3));
@@ -42,9 +43,29 @@ public sealed class NetworkRuntimeConfigTests
     public void CapacityMismatch_IsRejectedAtStartup()
     {
         NetworkRuntimeConfig config = CreateRtsDuelConfig();
-        config.ReplicationPacketEntityCapacity = 128;
+        config.ReplicationEntityCapacityPerSeat = 100_001;
 
-        Assert.That(config.Validate, Throws.InvalidOperationException.With.Message.Contains("below network entity capacity"));
+        Assert.That(config.Validate, Throws.InvalidOperationException.With.Message.Contains("exceeds global network entity capacity"));
+    }
+
+    [Test]
+    public void PerSeatCapacity_MustFitReplicationWireCounts()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.ReplicationEntityCapacityPerSeat = 70_000;
+
+        Assert.That(config.Validate, Throws.InvalidOperationException.With.Message.Contains("wire count limit"));
+    }
+
+    [Test]
+    public void DisclosureLog_MustHoldOneCompleteAreaTransition()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.DisclosureChangeLogCapacity = (config.ReplicationEntityCapacityPerSeat * 2) - 1;
+
+        Assert.That(
+            config.Validate,
+            Throws.InvalidOperationException.With.Message.Contains("maximum-area transition"));
     }
 
     [Test]
@@ -99,7 +120,8 @@ public sealed class NetworkRuntimeConfigTests
         PlayerCapacity = 2,
         SimulationTickRateHz = 30,
         StatePublishRateHz = 10,
-        NetworkEntityCapacity = 256,
+        GlobalNetworkEntityCapacity = 100_000,
+        ReplicationEntityCapacityPerSeat = 512,
         OrderQueueCapacity = 512,
         MaxCommandBatchesPerSecondPerPlayer = 32,
         CommandBurstBatchCapacity = 32,
@@ -111,7 +133,6 @@ public sealed class NetworkRuntimeConfigTests
         EntityAdmissionResultCapacity = 1024,
         ReconnectWindowSeconds = 30,
         BaselineCapacity = 32,
-        ReplicationPacketEntityCapacity = 256,
         DisclosureChangeLogCapacity = 4096,
         DatagramQueueCapacity = 1024,
         ConnectionEventCapacity = 64,

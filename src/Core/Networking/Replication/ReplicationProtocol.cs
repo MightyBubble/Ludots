@@ -192,13 +192,21 @@ namespace Ludots.Core.Networking.Replication
                 throw new ArgumentOutOfRangeException(nameof(entityCapacity));
             }
 
+            if (entityCapacity > ushort.MaxValue / 2)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(entityCapacity),
+                    "Entity capacity must leave room for both conceal and reveal changes in one packet.");
+            }
+
             _upserts = new ReplicatedEntityState[entityCapacity];
             _removals = new NetworkEntityHandle[entityCapacity];
-            _disclosureChanges = new ReplicationDisclosureChange[entityCapacity];
+            _disclosureChanges = new ReplicationDisclosureChange[checked(entityCapacity * 2)];
         }
 
         public ReplicationPacketHeader Header { get; private set; }
         public int EntityCapacity => _upserts.Length;
+        public int DisclosureCapacity => _disclosureChanges.Length;
         public int UpsertCount => _upsertCount;
         public int RemovalCount => _removalCount;
         public int DisclosureChangeCount => _disclosureChangeCount;
