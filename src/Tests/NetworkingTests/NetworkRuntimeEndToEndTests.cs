@@ -94,7 +94,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(replicationFactory.AcquireCount, Is.Zero, "Server construction must not prebuild a seat runtime.");
 
         var credentials = new MemoryCredentials();
-        var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
+        var clientFactory = new ClientBridgeFactory(clientWorld, globalEntityCapacity: 2);
         var clientAdmissions = new NetworkCommandAdmissionResultBuffer(capacity: 16);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -236,7 +236,7 @@ public sealed class NetworkRuntimeEndToEndTests
             new ProtocolVersion(2, 0),
             fingerprint,
             new MemoryCredentials(),
-            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            new ClientBridgeFactory(clientWorld, globalEntityCapacity: 2),
             new NetworkCommandAdmissionResultBuffer(capacity: 4),
             observer);
         Assert.That(rejectedClient.TryConnectNow(), Is.True);
@@ -359,7 +359,7 @@ public sealed class NetworkRuntimeEndToEndTests
             protocol,
             fingerprint,
             new MemoryCredentials(),
-            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            new ClientBridgeFactory(clientWorld, globalEntityCapacity: 2, replicationEntityCapacityPerSeat: 1),
             new NetworkCommandAdmissionResultBuffer(4),
             observer);
 
@@ -486,7 +486,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var protocol = new ProtocolVersion(1, 0);
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 4, 2 });
         using World world = World.Create();
-        var factory = new ClientBridgeFactory(world, globalEntityCapacity);
+        var factory = new ClientBridgeFactory(world, globalEntityCapacity, perSeatCapacity);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
@@ -598,7 +598,12 @@ public sealed class NetworkRuntimeEndToEndTests
             protocol,
             fingerprint,
             new MemoryCredentials(),
-            new ClientBridgeFactory(world, entityCapacity: 1, declaredGlobalEntityCapacity: 2),
+            new ClientBridgeFactory(
+                world,
+                globalEntityCapacity: 2,
+                replicationEntityCapacityPerSeat: 2,
+                createGlobalEntityCapacity: 2,
+                createActiveMirrorCapacity: 1),
             new NetworkCommandAdmissionResultBuffer(4),
             new RecordingObserver());
 
@@ -622,7 +627,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
         Assert.That(
             client.PumpTransport,
-            Throws.InvalidOperationException.With.Message.Contains("differs from its factory"));
+            Throws.InvalidOperationException.With.Message.Contains("network runtime capacity contract"));
     }
 
     [Test]
@@ -710,7 +715,7 @@ public sealed class NetworkRuntimeEndToEndTests
         var credentials = new MemoryCredentials();
         using World world = World.Create();
         Entity authored = world.Create(new TestAppliedState(0));
-        var factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        var factory = new ClientBridgeFactory(world, globalEntityCapacity: 2);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
@@ -1221,26 +1226,33 @@ public sealed class NetworkRuntimeEndToEndTests
     private sealed class ClientBridgeFactory : IClientReplicationBridgeFactory
     {
         private readonly World _world;
-        private readonly int _entityCapacity;
-        private readonly int _declaredGlobalEntityCapacity;
+        private readonly int _globalEntityCapacity;
+        private readonly int _replicationEntityCapacityPerSeat;
+        private readonly int _createGlobalEntityCapacity;
+        private readonly int _createActiveMirrorCapacity;
         private readonly TestApplier _applier;
 
         public ClientBridgeFactory(
             World world,
-            int entityCapacity,
-            int? declaredGlobalEntityCapacity = null,
+            int globalEntityCapacity,
+            int? replicationEntityCapacityPerSeat = null,
+            int? createGlobalEntityCapacity = null,
+            int? createActiveMirrorCapacity = null,
             TestApplier? applier = null)
         {
             _world = world;
-            _entityCapacity = entityCapacity;
-            _declaredGlobalEntityCapacity = declaredGlobalEntityCapacity ?? entityCapacity;
+            _globalEntityCapacity = globalEntityCapacity;
+            _replicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat ?? globalEntityCapacity;
+            _createGlobalEntityCapacity = createGlobalEntityCapacity ?? _globalEntityCapacity;
+            _createActiveMirrorCapacity = createActiveMirrorCapacity ?? _replicationEntityCapacityPerSeat;
             _applier = applier ?? new TestApplier();
         }
 
         public ClientWorldReplicationBridge? Bridge { get; private set; }
         public TestApplier Applier => _applier;
         public int CreateCount { get; private set; }
-        public int GlobalEntityCapacity => _declaredGlobalEntityCapacity;
+        public int GlobalEntityCapacity => _globalEntityCapacity;
+        public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
 
         public ClientWorldReplicationBridge Create(ulong sessionEpoch)
         {
@@ -1248,7 +1260,12 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(appliers.Register(1, _applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
             CreateCount++;
-            Bridge = new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
+            Bridge = new ClientWorldReplicationBridge(
+                _world,
+                _createGlobalEntityCapacity,
+                _createActiveMirrorCapacity,
+                sessionEpoch,
+                appliers);
             return Bridge;
         }
     }

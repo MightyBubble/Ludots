@@ -196,12 +196,25 @@ namespace Ludots.Core.Networking.Runtime
         public ClientReplicationBridgeFactory(
             World world,
             int globalEntityCapacity,
+            int replicationEntityCapacityPerSeat,
             ClientReplicationSchemaApplierRegistry appliers)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             if (globalEntityCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(globalEntityCapacity));
+            }
+
+            if (replicationEntityCapacityPerSeat <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(replicationEntityCapacityPerSeat));
+            }
+
+            if (replicationEntityCapacityPerSeat > globalEntityCapacity)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(replicationEntityCapacityPerSeat),
+                    "Per-seat replication capacity cannot exceed global entity capacity.");
             }
 
             _appliers = appliers ?? throw new ArgumentNullException(nameof(appliers));
@@ -212,9 +225,12 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             GlobalEntityCapacity = globalEntityCapacity;
+            ReplicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat;
         }
 
         public int GlobalEntityCapacity { get; }
+
+        public int ReplicationEntityCapacityPerSeat { get; }
 
         public ClientWorldReplicationBridge Create(ulong sessionEpoch)
         {
@@ -226,6 +242,7 @@ namespace Ludots.Core.Networking.Runtime
             return new ClientWorldReplicationBridge(
                 _world,
                 GlobalEntityCapacity,
+                ReplicationEntityCapacityPerSeat,
                 sessionEpoch,
                 _appliers);
         }

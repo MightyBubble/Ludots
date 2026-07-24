@@ -27,6 +27,7 @@ namespace Ludots.Core.Networking.Replication
         EpochMismatch = 2,
         BaselineMismatch = 3,
         SnapshotOutOfOrder = 4,
+        CapacityExceeded = 5,
     }
 
     public enum ReplicationDisclosureChangeKind : byte

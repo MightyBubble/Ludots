@@ -46,7 +46,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(packet.DisclosureChanges.Length, Is.EqualTo(1));
             Assert.That(packet.DisclosureChanges[0].Kind, Is.EqualTo(ReplicationDisclosureChangeKind.Reveal));
 
-            var mirror = new ClientReplicationMirror(entityCapacity: 4, sessionEpoch: 7);
+            var mirror = new ClientReplicationMirror(globalEntityCapacity: 4, activeMirrorCapacity: 4, sessionEpoch: 7);
             Assert.That(mirror.Apply(packet), Is.EqualTo(ReplicationApplyResult.Success));
             Assert.That(mirror.TryGet(visible, out ReplicatedEntityState mirrored), Is.True);
             Assert.That(mirrored, Is.EqualTo(states[0]));
@@ -62,7 +62,7 @@ namespace Ludots.Tests.Architecture
             var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 16);
             var channel = new AuthoritativeReplicationChannel(new NetworkEntityTable(4), 4, 3, disclosureLog);
             var packet = new ReplicationPacketBuffer(entityCapacity: 4);
-            var mirror = new ClientReplicationMirror(entityCapacity: 4, sessionEpoch: 7);
+            var mirror = new ClientReplicationMirror(globalEntityCapacity: 4, activeMirrorCapacity: 4, sessionEpoch: 7);
             var initialStates = new[]
             {
                 State(retained, revision: 1, value: 10),
@@ -161,7 +161,7 @@ namespace Ludots.Tests.Architecture
                 baselineCapacity: 3,
                 new ReplicationDisclosureChangeLog(capacity: 8));
             var packet = new ReplicationPacketBuffer(entityCapacity: 3);
-            var mirror = new ClientReplicationMirror(entityCapacity: 3, sessionEpoch: 7);
+            var mirror = new ClientReplicationMirror(globalEntityCapacity: 3, activeMirrorCapacity: 3, sessionEpoch: 7);
             var states = new[]
             {
                 State(previouslyVisible, revision: 1, value: 10),
@@ -238,7 +238,7 @@ namespace Ludots.Tests.Architecture
             var wrongEpoch = new ReplicationPacketBuffer(entityCapacity: 2);
             Assert.That(wrongEpochChannel.BuildFull(8, 100, 1, states, disclosures, wrongEpoch), Is.EqualTo(ReplicationBuildResult.Success));
 
-            var mirror = new ClientReplicationMirror(entityCapacity: 2, sessionEpoch: 7);
+            var mirror = new ClientReplicationMirror(globalEntityCapacity: 2, activeMirrorCapacity: 2, sessionEpoch: 7);
             Assert.That(mirror.Apply(full), Is.EqualTo(ReplicationApplyResult.Success));
             Assert.That(mirror.Apply(wrongEpoch), Is.EqualTo(ReplicationApplyResult.EpochMismatch));
             Assert.That(mirror.LastSnapshotId, Is.EqualTo(1));
@@ -288,7 +288,7 @@ namespace Ludots.Tests.Architecture
                 baselineCapacity: 2,
                 new ReplicationDisclosureChangeLog(capacity: 1));
             var packet = new ReplicationPacketBuffer(entityCapacity: 1);
-            var mirror = new ClientReplicationMirror(entityCapacity: 1, sessionEpoch: 7);
+            var mirror = new ClientReplicationMirror(globalEntityCapacity: 1, activeMirrorCapacity: 1, sessionEpoch: 7);
             bool allSucceeded = channel.BuildFull(7, 1, 1, states, disclosures, packet) == ReplicationBuildResult.Success &&
                                 mirror.Apply(packet) == ReplicationApplyResult.Success;
             ulong baselineId = 1;

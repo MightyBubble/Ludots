@@ -102,10 +102,11 @@ namespace Ludots.Core.Networking.Runtime
             _contentFingerprint = contentFingerprint;
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _replicationFactory = replicationFactory ?? throw new ArgumentNullException(nameof(replicationFactory));
-            if (_replicationFactory.GlobalEntityCapacity != capacity.GlobalEntityCapacity)
+            if (_replicationFactory.GlobalEntityCapacity != capacity.GlobalEntityCapacity ||
+                _replicationFactory.ReplicationEntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat)
             {
                 throw new ArgumentException(
-                    "Client replication factory capacity must match the global network entity table.",
+                    "Client replication factory capacities must match the global network entity table and per-seat replication budget.",
                     nameof(replicationFactory));
             }
 
@@ -552,10 +553,11 @@ namespace Ludots.Core.Networking.Runtime
             {
                 ClientWorldReplicationBridge bridge = _replicationFactory.Create(response.SessionEpoch.Value) ??
                     throw new InvalidOperationException("Client replication bridge factory returned null.");
-                if (bridge.EntityCapacity != _capacity.GlobalEntityCapacity)
+                if (bridge.GlobalEntityCapacity != _capacity.GlobalEntityCapacity ||
+                    bridge.ActiveMirrorCapacity != _capacity.ReplicationEntityCapacityPerSeat)
                 {
                     throw new InvalidOperationException(
-                        "Client replication bridge capacity differs from its factory and the global network entity table.");
+                        "Client replication bridge capacities differ from its factory and the network runtime capacity contract.");
                 }
 
                 if (bridge.SessionEpoch != response.SessionEpoch.Value)

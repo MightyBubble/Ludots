@@ -44,6 +44,7 @@ namespace Ludots.Core.Networking.Replication
                 ReplicationApplyResult.EpochMismatch => ReplicationBridgeResult.EpochMismatch,
                 ReplicationApplyResult.BaselineMismatch => ReplicationBridgeResult.ResyncRequired,
                 ReplicationApplyResult.SnapshotOutOfOrder => ReplicationBridgeResult.SnapshotOutOfOrder,
+                ReplicationApplyResult.CapacityExceeded => ReplicationBridgeResult.CapacityContractViolated,
                 _ => ReplicationBridgeResult.InvalidPacket,
             };
         }

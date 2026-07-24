@@ -271,7 +271,12 @@ namespace Ludots.Tests.Architecture
             using World world = World.Create();
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             appliers.Freeze();
-            var bridge = new ClientWorldReplicationBridge(world, 1, 7, appliers);
+            var bridge = new ClientWorldReplicationBridge(
+                world,
+                globalEntityCapacity: 1,
+                activeMirrorCapacity: 1,
+                sessionEpoch: 7,
+                appliers);
             var handle = new NetworkEntityHandle(0, 1);
             var packet = new ReplicationPacketBuffer(1);
             var channel = Channel(capacity: 1);
@@ -340,6 +345,239 @@ namespace Ludots.Tests.Architecture
             Assert.That(world.Get<ReplicationMirrorState>(entity).Revision, Is.EqualTo(10_257));
         }
 
+        [Test]
+        public void SparseMirror_GlobalOneHundredThousand_ActiveFiveHundredTwelve_HandlesHighSlotAndRejectsOverflowWithoutPartialCommit()
+        {
+            const int globalCapacity = 100_000;
+            const int activeCapacity = 512;
+            using World world = World.Create();
+            var entities = new NetworkEntityTable(capacity: globalCapacity);
+            var channel = new AuthoritativeReplicationChannel(
+                entities,
+                activeCapacity,
+                baselineCapacity: 2,
+                new ReplicationDisclosureChangeLog(activeCapacity * 4));
+            var packet = new ReplicationPacketBuffer(activeCapacity);
+            var bridge = new ClientWorldReplicationBridge(
+                world,
+                globalCapacity,
+                activeCapacity,
+                sessionEpoch: 7,
+                CreateAppliers());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bridge.GlobalEntityCapacity, Is.EqualTo(globalCapacity));
+                Assert.That(bridge.ActiveMirrorCapacity, Is.EqualTo(activeCapacity));
+            });
+
+            var high = new NetworkEntityHandle(slot: 99_999, generation: 1);
+            var highStates = new[] { State(high, revision: 1, value: 999) };
+            var highVisible = new[] { new ReplicationDisclosureInput(high, KnowledgePresence.LiveVisible) };
+            Assert.That(channel.BuildFull(7, 1, 1, highStates, highVisible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(high, out Entity highEntity), Is.True);
+            Assert.That(world.Get<ReplicationMirrorState>(highEntity).Values.Value0, Is.EqualTo(999));
+
+            highStates[0] = State(high, revision: 2, value: 1001);
+            Assert.That(
+                channel.BuildDelta(7, 2, 2, 1, highStates, highVisible, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(high, out Entity updatedHigh), Is.True);
+            Assert.That(updatedHigh, Is.EqualTo(highEntity));
+            Assert.That(world.Get<ReplicationMirrorState>(updatedHigh).Values.Value0, Is.EqualTo(1001));
+
+            Assert.That(
+                channel.BuildDelta(
+                    7,
+                    3,
+                    3,
+                    2,
+                    highStates,
+                    new[] { new ReplicationDisclosureInput(high, KnowledgePresence.Known) },
+                    packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(high, out _), Is.False);
+            Assert.That(world.IsAlive(highEntity), Is.False);
+
+            var handles = new NetworkEntityHandle[activeCapacity];
+            var states = new ReplicatedEntityState[activeCapacity];
+            var visible = new ReplicationDisclosureInput[activeCapacity];
+            for (int i = 0; i < activeCapacity; i++)
+            {
+                handles[i] = new NetworkEntityHandle(slot: i, generation: 1);
+                states[i] = State(handles[i], revision: 1, value: i);
+                visible[i] = new ReplicationDisclosureInput(handles[i], KnowledgePresence.LiveVisible);
+            }
+
+            Assert.That(channel.BuildFull(7, 4, 4, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            for (int i = 0; i < activeCapacity; i++)
+            {
+                Assert.That(bridge.TryResolve(handles[i], out _), Is.True);
+            }
+
+            var overflow = new NetworkEntityHandle(slot: activeCapacity, generation: 1);
+            packet.Reset(new ReplicationPacketHeader(
+                ReplicationPacketKind.Delta,
+                sessionEpoch: 7,
+                tick: 5,
+                snapshotId: 5,
+                baselineSnapshotId: 4));
+            packet.AddUpsert(State(overflow, revision: 1, value: 513));
+            packet.AddDisclosureChange(new ReplicationDisclosureChange(
+                sequence: 1,
+                snapshotId: 5,
+                overflow,
+                ReplicationDisclosureChangeKind.Reveal));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.CapacityContractViolated));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(4));
+            Assert.That(bridge.TryResolve(overflow, out _), Is.False);
+            for (int i = 0; i < activeCapacity; i++)
+            {
+                Assert.That(bridge.TryResolve(handles[i], out Entity retained), Is.True);
+                Assert.That(world.Get<ReplicationMirrorState>(retained).Values.Value0, Is.EqualTo(i));
+            }
+
+            var replacement = new NetworkEntityHandle(slot: 0, generation: 2);
+            var replaceStates = new ReplicatedEntityState[activeCapacity];
+            var replaceVisible = new ReplicationDisclosureInput[activeCapacity];
+            replaceStates[0] = State(replacement, revision: 1, value: 777);
+            replaceVisible[0] = new ReplicationDisclosureInput(replacement, KnowledgePresence.LiveVisible);
+            for (int i = 1; i < activeCapacity; i++)
+            {
+                replaceStates[i] = State(handles[i], revision: 1, value: i);
+                replaceVisible[i] = visible[i];
+            }
+
+            Assert.That(bridge.TryResolve(handles[0], out Entity beforeReplace), Is.True);
+            Assert.That(
+                channel.BuildDelta(7, 6, 6, 4, replaceStates, replaceVisible, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(world.IsAlive(beforeReplace), Is.False);
+            Assert.That(bridge.TryResolve(handles[0], out _), Is.False);
+            Assert.That(bridge.TryResolve(replacement, out Entity replaced), Is.True);
+            Assert.That(world.Get<ReplicationMirrorState>(replaced).Values.Value0, Is.EqualTo(777));
+            for (int i = 1; i < activeCapacity; i++)
+            {
+                Assert.That(bridge.TryResolve(handles[i], out _), Is.True);
+            }
+
+            var stale = State(handles[0], revision: 9, value: -1);
+            packet.Reset(new ReplicationPacketHeader(
+                ReplicationPacketKind.Delta,
+                sessionEpoch: 7,
+                tick: 7,
+                snapshotId: 7,
+                baselineSnapshotId: 6));
+            packet.AddUpsert(stale);
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.ResyncRequired));
+            Assert.That(bridge.TryResolve(replacement, out Entity unchanged), Is.True);
+            Assert.That(unchanged, Is.EqualTo(replaced));
+            Assert.That(world.Get<ReplicationMirrorState>(unchanged).Values.Value0, Is.EqualTo(777));
+        }
+
+        [Test]
+        public void SparseMirror_WarmedHighSlotDeltaApply_IsZeroAlloc()
+        {
+            const int globalCapacity = 100_000;
+            const int activeCapacity = 512;
+            using World world = World.Create();
+            var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: globalCapacity),
+                activeCapacity,
+                baselineCapacity: 2,
+                new ReplicationDisclosureChangeLog(activeCapacity * 4));
+            var bridge = new ClientWorldReplicationBridge(
+                world,
+                globalCapacity,
+                activeCapacity,
+                sessionEpoch: 7,
+                CreateAppliers());
+            var handle = new NetworkEntityHandle(slot: 99_999, generation: 1);
+            var states = new[] { State(handle, 1, 1) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+            var warmupPacket = new ReplicationPacketBuffer(activeCapacity);
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, warmupPacket), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(warmupPacket), Is.EqualTo(ReplicationBridgeResult.Success));
+
+            const int warmupCount = 64;
+            const int measureCount = 256;
+            var packets = new ReplicationPacketBuffer[warmupCount + measureCount];
+            ulong baseline = 1;
+            for (int i = 0; i < packets.Length; i++)
+            {
+                uint snapshotId = (uint)(i + 2);
+                states[0] = State(handle, snapshotId, snapshotId);
+                packets[i] = new ReplicationPacketBuffer(activeCapacity);
+                Assert.That(
+                    channel.BuildDelta(7, snapshotId, snapshotId, baseline, states, visible, packets[i]),
+                    Is.EqualTo(ReplicationBuildResult.Success));
+                baseline = snapshotId;
+            }
+
+            for (int i = 0; i < warmupCount; i++)
+            {
+                Assert.That(bridge.Apply(packets[i]), Is.EqualTo(ReplicationBridgeResult.Success));
+            }
+
+            _ = GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            bool succeeded = true;
+            for (int i = warmupCount; i < packets.Length; i++)
+            {
+                succeeded &= bridge.Apply(packets[i]) == ReplicationBridgeResult.Success;
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(succeeded, Is.True);
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void SparseMirror_ConstructingOneHundredFortyNineBridges_StaysWithinPerSeatAllocationCeiling()
+        {
+            const int globalCapacity = 100_000;
+            const int activeCapacity = 512;
+            const int bridgeCount = 149;
+            // Conservative ceiling: allocations must scale with active=512, not global=100000.
+            // Prior global-sized arrays were multi-GB for 149 seats; 256MB is still far below that.
+            const long allocationCeilingBytes = 256L * 1024L * 1024L;
+            var appliers = CreateAppliers();
+            var worlds = new World[bridgeCount];
+            var bridges = new ClientWorldReplicationBridge[bridgeCount];
+
+            _ = GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < bridgeCount; i++)
+            {
+                worlds[i] = World.Create();
+                bridges[i] = new ClientWorldReplicationBridge(
+                    worlds[i],
+                    globalCapacity,
+                    activeCapacity,
+                    sessionEpoch: 7,
+                    appliers);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestContext.WriteLine(
+                $"Measured allocation for {bridgeCount} bridges at global={globalCapacity}, active={activeCapacity}: {allocated} bytes");
+            Assert.That(allocated, Is.GreaterThan(0));
+            Assert.That(allocated, Is.LessThan(allocationCeilingBytes));
+            Assert.That(bridges[0].GlobalEntityCapacity, Is.EqualTo(globalCapacity));
+            Assert.That(bridges[0].ActiveMirrorCapacity, Is.EqualTo(activeCapacity));
+            Assert.That(bridges[bridgeCount - 1].ActiveMirrorCapacity, Is.EqualTo(activeCapacity));
+
+            for (int i = 0; i < bridgeCount; i++)
+            {
+                worlds[i].Dispose();
+            }
+        }
+
         private static AuthoritativeReplicationChannel Channel(int capacity) => Channel(capacity, out _);
 
         private static AuthoritativeReplicationChannel Channel(
@@ -363,10 +601,7 @@ namespace Ludots.Tests.Architecture
                 new ReplicationDisclosureChangeLog(capacity * 4));
         }
 
-        private static ClientWorldReplicationBridge Bridge(
-            World world,
-            int entityCapacity,
-            ulong sessionEpoch,
+        private static ClientReplicationSchemaApplierRegistry CreateAppliers(
             TrackingSchemaApplier? tracking = null)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
@@ -374,7 +609,21 @@ namespace Ludots.Tests.Architecture
                 appliers.Register(1, tracking ?? new TrackingSchemaApplier()),
                 Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            return new ClientWorldReplicationBridge(world, entityCapacity, sessionEpoch, appliers);
+            return appliers;
+        }
+
+        private static ClientWorldReplicationBridge Bridge(
+            World world,
+            int entityCapacity,
+            ulong sessionEpoch,
+            TrackingSchemaApplier? tracking = null)
+        {
+            return new ClientWorldReplicationBridge(
+                world,
+                globalEntityCapacity: entityCapacity,
+                activeMirrorCapacity: entityCapacity,
+                sessionEpoch,
+                CreateAppliers(tracking));
         }
 
         private static ReplicatedEntityState State(NetworkEntityHandle handle, uint revision, long value)
