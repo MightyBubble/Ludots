@@ -279,10 +279,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NetworkProcessRole> NetworkProcessRole = new("NetworkProcessRole");
         public static readonly ServiceKey<INetworkRuntimePort> NetworkRuntimePort = new("NetworkRuntimePort");
         public static readonly ServiceKey<NetworkRuntimeStateObserver> NetworkRuntimeStateObserver = new("NetworkRuntimeStateObserver");
+        public static readonly ServiceKey<INetworkRuntimeObserver> NetworkRuntimeObserverBridge = new("NetworkRuntimeObserverBridge");
         public static readonly ServiceKey<ReplicationSchemaProjectorRegistry> ReplicationSchemaProjectors = new("ReplicationSchemaProjectors");
         public static readonly ServiceKey<ClientReplicationSchemaApplierRegistry> ClientReplicationSchemaAppliers = new("ClientReplicationSchemaAppliers");
         public static readonly ServiceKey<IAuthoritativeReplicationInterestPort> AuthoritativeReplicationInterest = new("AuthoritativeReplicationInterest");
-        public static readonly ServiceKey<AuthoritativeSeatControllerRegistry> AuthoritativeSeatControllers = new("AuthoritativeSeatControllers");
+        public static readonly ServiceKey<IAuthoritativeSeatControllerResolver> AuthoritativeSeatControllerResolver = new("AuthoritativeSeatControllerResolver");
         public static readonly ServiceKey<IAuthoritativeReplicationSeatRuntimeFactory> AuthoritativeReplicationSeatRuntimeFactory = new("AuthoritativeReplicationSeatRuntimeFactory");
         public static readonly ServiceKey<AuthoritativeFixedInputIngress> AuthoritativeFixedInputIngress = new("AuthoritativeFixedInputIngress");
         public static readonly ServiceKey<NetworkCommandIngress> NetworkCommandIngress = new("NetworkCommandIngress");
