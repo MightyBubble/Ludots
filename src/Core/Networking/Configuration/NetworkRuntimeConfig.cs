@@ -15,7 +15,8 @@ namespace Ludots.Core.Networking.Configuration
         public int PlayerCapacity { get; set; }
         public int SimulationTickRateHz { get; set; }
         public int StatePublishRateHz { get; set; }
-        public int NetworkEntityCapacity { get; set; }
+        public int GlobalNetworkEntityCapacity { get; set; }
+        public int ReplicationEntityCapacityPerSeat { get; set; }
         public int OrderQueueCapacity { get; set; }
         public int MaxCommandBatchesPerSecondPerPlayer { get; set; }
         public int CommandBurstBatchCapacity { get; set; }
@@ -27,7 +28,6 @@ namespace Ludots.Core.Networking.Configuration
         public int EntityAdmissionResultCapacity { get; set; }
         public int ReconnectWindowSeconds { get; set; }
         public int BaselineCapacity { get; set; }
-        public int ReplicationPacketEntityCapacity { get; set; }
         public int DisclosureChangeLogCapacity { get; set; }
         public int DatagramQueueCapacity { get; set; }
         public int ConnectionEventCapacity { get; set; }
@@ -61,7 +61,19 @@ namespace Ludots.Core.Networking.Configuration
                     $"Networking state publish rate {StatePublishRateHz} must divide simulation rate {SimulationTickRateHz} exactly.");
             }
 
-            RequirePositive(NetworkEntityCapacity, nameof(NetworkEntityCapacity));
+            RequirePositive(GlobalNetworkEntityCapacity, nameof(GlobalNetworkEntityCapacity));
+            RequirePositive(ReplicationEntityCapacityPerSeat, nameof(ReplicationEntityCapacityPerSeat));
+            if (ReplicationEntityCapacityPerSeat > GlobalNetworkEntityCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"Per-seat replication entity capacity {ReplicationEntityCapacityPerSeat} exceeds global network entity capacity {GlobalNetworkEntityCapacity}.");
+            }
+
+            if (ReplicationEntityCapacityPerSeat > ushort.MaxValue / 2)
+            {
+                throw new InvalidOperationException(
+                    $"Per-seat replication entity capacity {ReplicationEntityCapacityPerSeat} cannot encode both conceal and reveal changes within the replication wire count limit {ushort.MaxValue}.");
+            }
             RequirePositive(OrderQueueCapacity, nameof(OrderQueueCapacity));
             RequirePositive(MaxCommandBatchesPerSecondPerPlayer, nameof(MaxCommandBatchesPerSecondPerPlayer));
             RequirePositive(CommandBurstBatchCapacity, nameof(CommandBurstBatchCapacity));
@@ -92,14 +104,14 @@ namespace Ludots.Core.Networking.Configuration
             RequirePositive(EntityAdmissionResultCapacity, nameof(EntityAdmissionResultCapacity));
             RequirePositive(ReconnectWindowSeconds, nameof(ReconnectWindowSeconds));
             RequirePositive(BaselineCapacity, nameof(BaselineCapacity));
-            RequirePositive(ReplicationPacketEntityCapacity, nameof(ReplicationPacketEntityCapacity));
-            if (ReplicationPacketEntityCapacity < NetworkEntityCapacity)
+            RequirePositive(DisclosureChangeLogCapacity, nameof(DisclosureChangeLogCapacity));
+            int maximumAreaDisclosureChanges = checked(ReplicationEntityCapacityPerSeat * 2);
+            if (DisclosureChangeLogCapacity < maximumAreaDisclosureChanges)
             {
                 throw new InvalidOperationException(
-                    $"Replication packet entity capacity {ReplicationPacketEntityCapacity} is below network entity capacity {NetworkEntityCapacity}.");
+                    $"Networking disclosure change log capacity {DisclosureChangeLogCapacity} is below one maximum-area transition {maximumAreaDisclosureChanges}.");
             }
 
-            RequirePositive(DisclosureChangeLogCapacity, nameof(DisclosureChangeLogCapacity));
             RequirePositive(DatagramQueueCapacity, nameof(DatagramQueueCapacity));
             RequirePositive(ConnectionEventCapacity, nameof(ConnectionEventCapacity));
             RequirePositive(MaxDatagramPayloadBytes, nameof(MaxDatagramPayloadBytes));

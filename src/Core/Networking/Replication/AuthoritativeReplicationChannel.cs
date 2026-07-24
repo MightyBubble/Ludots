@@ -4,29 +4,38 @@ namespace Ludots.Core.Networking.Replication
 {
     public sealed class AuthoritativeReplicationChannel
     {
-        private readonly int _entityCapacity;
+        private readonly int _replicationEntityCapacityPerSeat;
         private readonly int _baselineCapacity;
         private readonly ReplicationDisclosureChangeLog _disclosureLog;
-        private readonly bool[] _allowed;
-        private readonly uint[] _allowedGenerations;
-        private readonly bool[] _stateSeen;
-        private readonly bool[] _currentActive;
-        private readonly ReplicatedEntityState[] _currentStates;
-        private readonly bool[] _baselineActive;
-        private readonly ReplicatedEntityState[] _baselineStates;
+
+        private readonly NetworkEntityHandle[] _currentEntities;
+        private readonly int[] _currentSchemaIds;
+        private readonly uint[] _currentRevisions;
+        private readonly ReplicationStateVector[] _currentValues;
+        private int _currentCount;
+
+        private readonly NetworkEntityHandle[] _currentDisclosureEntities;
+        private readonly bool[] _currentDisclosureLive;
+        private int _currentDisclosureCount;
+
+        private readonly NetworkEntityHandle[] _baselineEntities;
+        private readonly int[] _baselineSchemaIds;
+        private readonly uint[] _baselineRevisions;
+        private readonly ReplicationStateVector[] _baselineValues;
+        private readonly int[] _baselineCounts;
         private readonly ulong[] _baselineIds;
         private int _nextBaselineSlot;
         private ulong _sessionEpoch;
         private ulong _lastSnapshotId;
 
         public AuthoritativeReplicationChannel(
-            int entityCapacity,
+            int replicationEntityCapacityPerSeat,
             int baselineCapacity,
             ReplicationDisclosureChangeLog disclosureLog)
         {
-            if (entityCapacity <= 0)
+            if (replicationEntityCapacityPerSeat <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(entityCapacity));
+                throw new ArgumentOutOfRangeException(nameof(replicationEntityCapacityPerSeat));
             }
 
             if (baselineCapacity <= 0)
@@ -34,18 +43,34 @@ namespace Ludots.Core.Networking.Replication
                 throw new ArgumentOutOfRangeException(nameof(baselineCapacity));
             }
 
-            _entityCapacity = entityCapacity;
+            _replicationEntityCapacityPerSeat = replicationEntityCapacityPerSeat;
             _baselineCapacity = baselineCapacity;
             _disclosureLog = disclosureLog ?? throw new ArgumentNullException(nameof(disclosureLog));
-            _allowed = new bool[entityCapacity];
-            _allowedGenerations = new uint[entityCapacity];
-            _stateSeen = new bool[entityCapacity];
-            _currentActive = new bool[entityCapacity];
-            _currentStates = new ReplicatedEntityState[entityCapacity];
-            _baselineActive = new bool[checked(entityCapacity * baselineCapacity)];
-            _baselineStates = new ReplicatedEntityState[checked(entityCapacity * baselineCapacity)];
+
+            _currentEntities = new NetworkEntityHandle[replicationEntityCapacityPerSeat];
+            _currentSchemaIds = new int[replicationEntityCapacityPerSeat];
+            _currentRevisions = new uint[replicationEntityCapacityPerSeat];
+            _currentValues = new ReplicationStateVector[replicationEntityCapacityPerSeat];
+            _currentDisclosureEntities = new NetworkEntityHandle[replicationEntityCapacityPerSeat];
+            _currentDisclosureLive = new bool[replicationEntityCapacityPerSeat];
+
+            int baselineStateCapacity = checked(replicationEntityCapacityPerSeat * baselineCapacity);
+            _baselineEntities = new NetworkEntityHandle[baselineStateCapacity];
+            _baselineSchemaIds = new int[baselineStateCapacity];
+            _baselineRevisions = new uint[baselineStateCapacity];
+            _baselineValues = new ReplicationStateVector[baselineStateCapacity];
+            _baselineCounts = new int[baselineCapacity];
             _baselineIds = new ulong[baselineCapacity];
         }
+
+        public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
+        public int BaselineCapacity => _baselineCapacity;
+        public int DisclosureChangeLogCapacity => _disclosureLog.Capacity;
+        public int ReservedCurrentStateCapacity => _currentEntities.Length;
+        public int ReservedBaselineStateCapacity => _baselineEntities.Length;
+
+        public bool TryAcknowledgeDisclosureChangesThrough(ulong sequence) =>
+            _disclosureLog.TryAcknowledgeThrough(sequence);
 
         public ReplicationBuildResult BuildFull(
             ulong sessionEpoch,
@@ -67,18 +92,19 @@ namespace Ludots.Core.Networking.Replication
                 return headerResult;
             }
 
-            ReplicationBuildResult viewResult = BuildCurrentView(states, disclosures, out int visibleCount);
+            ReplicationBuildResult viewResult = BuildCurrentView(states, disclosures);
             if (viewResult != ReplicationBuildResult.Success)
             {
                 return viewResult;
             }
 
-            if (visibleCount > packet.EntityCapacity)
+            if (_currentCount > packet.EntityCapacity ||
+                _currentCount > packet.DisclosureCapacity)
             {
                 return ReplicationBuildResult.PacketCapacityExceeded;
             }
 
-            if (visibleCount > _disclosureLog.AvailableCapacity)
+            if (_currentCount > _disclosureLog.AvailableCapacity)
             {
                 return ReplicationBuildResult.DisclosureLogCapacityExceeded;
             }
@@ -91,25 +117,11 @@ namespace Ludots.Core.Networking.Replication
                 baselineSnapshotId: 0);
             packet.Reset(in header);
 
-            for (int slot = 0; slot < _entityCapacity; slot++)
+            for (int i = 0; i < _currentCount; i++)
             {
-                if (!_currentActive[slot])
-                {
-                    continue;
-                }
-
-                ReplicatedEntityState state = _currentStates[slot];
+                ReplicatedEntityState state = GetCurrentState(i);
                 packet.AddUpsert(in state);
-                if (!_disclosureLog.TryAppend(
-                        snapshotId,
-                        state.Entity,
-                        ReplicationDisclosureChangeKind.Reveal,
-                        out ReplicationDisclosureChange change))
-                {
-                    throw new InvalidOperationException("Disclosure log capacity changed during full snapshot construction.");
-                }
-
-                packet.AddDisclosureChange(in change);
+                AppendDisclosureChange(packet, snapshotId, state.Entity, ReplicationDisclosureChangeKind.Reveal);
             }
 
             StoreBaseline(snapshotId);
@@ -149,64 +161,20 @@ namespace Ludots.Core.Networking.Replication
                 return ReplicationBuildResult.BaselineUnavailable;
             }
 
-            ReplicationBuildResult viewResult = BuildCurrentView(states, disclosures, out _);
+            ReplicationBuildResult viewResult = BuildCurrentView(states, disclosures);
             if (viewResult != ReplicationBuildResult.Success)
             {
                 return viewResult;
             }
 
-            int baselineOffset = baselineSlot * _entityCapacity;
-            int upsertCount = 0;
-            int removalCount = 0;
-            int disclosureChangeCount = 0;
-            for (int slot = 0; slot < _entityCapacity; slot++)
-            {
-                bool currentActive = _currentActive[slot];
-                bool baselineActive = _baselineActive[baselineOffset + slot];
-                if (currentActive)
-                {
-                    ReplicatedEntityState current = _currentStates[slot];
-                    if (!baselineActive)
-                    {
-                        upsertCount++;
-                        disclosureChangeCount++;
-                        continue;
-                    }
-
-                    ReplicatedEntityState baseline = _baselineStates[baselineOffset + slot];
-                    if (baseline.Entity != current.Entity)
-                    {
-                        removalCount++;
-                        upsertCount++;
-                        disclosureChangeCount++;
-                    }
-                    else if (baseline != current)
-                    {
-                        upsertCount++;
-                    }
-
-                    continue;
-                }
-
-                if (!baselineActive)
-                {
-                    continue;
-                }
-
-                ReplicatedEntityState baselineState = _baselineStates[baselineOffset + slot];
-                if (_allowed[slot] && _allowedGenerations[slot] == baselineState.Entity.Generation)
-                {
-                    removalCount++;
-                }
-                else
-                {
-                    disclosureChangeCount++;
-                }
-            }
-
+            CountDelta(
+                baselineSlot,
+                out int upsertCount,
+                out int removalCount,
+                out int disclosureChangeCount);
             if (upsertCount > packet.EntityCapacity ||
                 removalCount > packet.EntityCapacity ||
-                disclosureChangeCount > packet.EntityCapacity)
+                disclosureChangeCount > packet.DisclosureCapacity)
             {
                 return ReplicationBuildResult.PacketCapacityExceeded;
             }
@@ -223,51 +191,7 @@ namespace Ludots.Core.Networking.Replication
                 snapshotId,
                 acknowledgedBaselineId);
             packet.Reset(in header);
-
-            for (int slot = 0; slot < _entityCapacity; slot++)
-            {
-                bool currentActive = _currentActive[slot];
-                bool baselineActive = _baselineActive[baselineOffset + slot];
-                if (currentActive)
-                {
-                    ReplicatedEntityState current = _currentStates[slot];
-                    if (!baselineActive)
-                    {
-                        AppendDisclosureChange(packet, snapshotId, current.Entity, ReplicationDisclosureChangeKind.Reveal);
-                        packet.AddUpsert(in current);
-                        continue;
-                    }
-
-                    ReplicatedEntityState baseline = _baselineStates[baselineOffset + slot];
-                    if (baseline.Entity != current.Entity)
-                    {
-                        packet.AddRemoval(baseline.Entity);
-                        AppendDisclosureChange(packet, snapshotId, current.Entity, ReplicationDisclosureChangeKind.Reveal);
-                        packet.AddUpsert(in current);
-                    }
-                    else if (baseline != current)
-                    {
-                        packet.AddUpsert(in current);
-                    }
-
-                    continue;
-                }
-
-                if (!baselineActive)
-                {
-                    continue;
-                }
-
-                ReplicatedEntityState baselineState = _baselineStates[baselineOffset + slot];
-                if (_allowed[slot] && _allowedGenerations[slot] == baselineState.Entity.Generation)
-                {
-                    packet.AddRemoval(baselineState.Entity);
-                }
-                else
-                {
-                    AppendDisclosureChange(packet, snapshotId, baselineState.Entity, ReplicationDisclosureChangeKind.Conceal);
-                }
-            }
+            WriteDelta(baselineSlot, snapshotId, packet);
 
             StoreBaseline(snapshotId);
             CommitHeader(sessionEpoch, snapshotId);
@@ -276,54 +200,272 @@ namespace Ludots.Core.Networking.Replication
 
         private ReplicationBuildResult BuildCurrentView(
             ReadOnlySpan<ReplicatedEntityState> states,
-            ReadOnlySpan<ReplicationDisclosureInput> disclosures,
-            out int visibleCount)
+            ReadOnlySpan<ReplicationDisclosureInput> disclosures)
         {
-            Array.Clear(_allowed);
-            Array.Clear(_allowedGenerations);
-            Array.Clear(_stateSeen);
-            Array.Clear(_currentActive);
-            visibleCount = 0;
+            _currentCount = 0;
+            _currentDisclosureCount = 0;
+            if (states.Length > _replicationEntityCapacityPerSeat ||
+                disclosures.Length > _replicationEntityCapacityPerSeat)
+            {
+                return ReplicationBuildResult.InvalidInput;
+            }
 
+            int previousDisclosureSlot = -1;
             for (int i = 0; i < disclosures.Length; i++)
             {
                 ReplicationDisclosureInput disclosure = disclosures[i];
-                int slot = disclosure.Entity.Slot;
-                if (!disclosure.Entity.IsValid ||
-                    (uint)slot >= (uint)_entityCapacity ||
-                    _allowedGenerations[slot] != 0)
+                if (!disclosure.Entity.IsValid || disclosure.Entity.Slot <= previousDisclosureSlot)
                 {
                     return ReplicationBuildResult.InvalidInput;
                 }
 
-                _allowedGenerations[slot] = disclosure.Entity.Generation;
-                _allowed[slot] = disclosure.CanReplicateLiveState;
+                previousDisclosureSlot = disclosure.Entity.Slot;
+                _currentDisclosureEntities[i] = disclosure.Entity;
+                _currentDisclosureLive[i] = disclosure.CanReplicateLiveState;
             }
 
+            _currentDisclosureCount = disclosures.Length;
+            int disclosureIndex = 0;
+            int previousStateSlot = -1;
             for (int i = 0; i < states.Length; i++)
             {
                 ReplicatedEntityState state = states[i];
-                int slot = state.Entity.Slot;
-                if (!state.Entity.IsValid ||
-                    state.SchemaId <= 0 ||
-                    (uint)slot >= (uint)_entityCapacity ||
-                    _stateSeen[slot])
+                if (!state.Entity.IsValid || state.SchemaId <= 0 || state.Entity.Slot <= previousStateSlot)
                 {
+                    _currentCount = 0;
+                    _currentDisclosureCount = 0;
                     return ReplicationBuildResult.InvalidInput;
                 }
 
-                _stateSeen[slot] = true;
-                if (!_allowed[slot] || _allowedGenerations[slot] != state.Entity.Generation)
+                previousStateSlot = state.Entity.Slot;
+                while (disclosureIndex < disclosures.Length &&
+                       disclosures[disclosureIndex].Entity.Slot < state.Entity.Slot)
+                {
+                    disclosureIndex++;
+                }
+
+                if (disclosureIndex == disclosures.Length ||
+                    disclosures[disclosureIndex].Entity != state.Entity ||
+                    !disclosures[disclosureIndex].CanReplicateLiveState)
                 {
                     continue;
                 }
 
-                _currentStates[slot] = state;
-                _currentActive[slot] = true;
-                visibleCount++;
+                int write = _currentCount++;
+                _currentEntities[write] = state.Entity;
+                _currentSchemaIds[write] = state.SchemaId;
+                _currentRevisions[write] = state.Revision;
+                _currentValues[write] = state.Values;
             }
 
             return ReplicationBuildResult.Success;
+        }
+
+        private void CountDelta(
+            int baselineSlot,
+            out int upsertCount,
+            out int removalCount,
+            out int disclosureChangeCount)
+        {
+            upsertCount = 0;
+            removalCount = 0;
+            disclosureChangeCount = 0;
+            int baselineOffset = baselineSlot * _replicationEntityCapacityPerSeat;
+            int baselineCount = _baselineCounts[baselineSlot];
+            int baselineIndex = 0;
+            int currentIndex = 0;
+            int disclosureIndex = 0;
+
+            while (baselineIndex < baselineCount || currentIndex < _currentCount)
+            {
+                if (baselineIndex == baselineCount)
+                {
+                    upsertCount++;
+                    disclosureChangeCount++;
+                    currentIndex++;
+                    continue;
+                }
+
+                if (currentIndex == _currentCount)
+                {
+                    CountAbsentBaseline(
+                        _baselineEntities[baselineOffset + baselineIndex],
+                        ref disclosureIndex,
+                        ref removalCount,
+                        ref disclosureChangeCount);
+                    baselineIndex++;
+                    continue;
+                }
+
+                int baselineStorageIndex = baselineOffset + baselineIndex;
+                NetworkEntityHandle baselineEntity = _baselineEntities[baselineStorageIndex];
+                NetworkEntityHandle currentEntity = _currentEntities[currentIndex];
+                if (baselineEntity.Slot < currentEntity.Slot)
+                {
+                    CountAbsentBaseline(
+                        baselineEntity,
+                        ref disclosureIndex,
+                        ref removalCount,
+                        ref disclosureChangeCount);
+                    baselineIndex++;
+                }
+                else if (currentEntity.Slot < baselineEntity.Slot)
+                {
+                    upsertCount++;
+                    disclosureChangeCount++;
+                    currentIndex++;
+                }
+                else
+                {
+                    if (baselineEntity != currentEntity)
+                    {
+                        removalCount++;
+                        upsertCount++;
+                        disclosureChangeCount++;
+                    }
+                    else if (!StateEquals(baselineStorageIndex, currentIndex))
+                    {
+                        upsertCount++;
+                    }
+
+                    baselineIndex++;
+                    currentIndex++;
+                }
+            }
+        }
+
+        private void WriteDelta(int baselineSlot, ulong snapshotId, ReplicationPacketBuffer packet)
+        {
+            int baselineOffset = baselineSlot * _replicationEntityCapacityPerSeat;
+            int baselineCount = _baselineCounts[baselineSlot];
+            int baselineIndex = 0;
+            int currentIndex = 0;
+            int disclosureIndex = 0;
+
+            while (baselineIndex < baselineCount || currentIndex < _currentCount)
+            {
+                if (baselineIndex == baselineCount)
+                {
+                    AppendCurrentReveal(currentIndex++, snapshotId, packet);
+                    continue;
+                }
+
+                if (currentIndex == _currentCount)
+                {
+                    AppendAbsentBaseline(
+                        _baselineEntities[baselineOffset + baselineIndex],
+                        ref disclosureIndex,
+                        snapshotId,
+                        packet);
+                    baselineIndex++;
+                    continue;
+                }
+
+                int baselineStorageIndex = baselineOffset + baselineIndex;
+                NetworkEntityHandle baselineEntity = _baselineEntities[baselineStorageIndex];
+                NetworkEntityHandle currentEntity = _currentEntities[currentIndex];
+                if (baselineEntity.Slot < currentEntity.Slot)
+                {
+                    AppendAbsentBaseline(baselineEntity, ref disclosureIndex, snapshotId, packet);
+                    baselineIndex++;
+                }
+                else if (currentEntity.Slot < baselineEntity.Slot)
+                {
+                    AppendCurrentReveal(currentIndex++, snapshotId, packet);
+                }
+                else
+                {
+                    if (baselineEntity != currentEntity)
+                    {
+                        packet.AddRemoval(baselineEntity);
+                        AppendCurrentReveal(currentIndex, snapshotId, packet);
+                    }
+                    else if (!StateEquals(baselineStorageIndex, currentIndex))
+                    {
+                        ReplicatedEntityState state = GetCurrentState(currentIndex);
+                        packet.AddUpsert(in state);
+                    }
+
+                    baselineIndex++;
+                    currentIndex++;
+                }
+            }
+        }
+
+        private void CountAbsentBaseline(
+            NetworkEntityHandle baselineEntity,
+            ref int disclosureIndex,
+            ref int removalCount,
+            ref int disclosureChangeCount)
+        {
+            if (IsStillLiveDisclosed(baselineEntity, ref disclosureIndex))
+            {
+                removalCount++;
+            }
+            else
+            {
+                disclosureChangeCount++;
+            }
+        }
+
+        private void AppendAbsentBaseline(
+            NetworkEntityHandle baselineEntity,
+            ref int disclosureIndex,
+            ulong snapshotId,
+            ReplicationPacketBuffer packet)
+        {
+            if (IsStillLiveDisclosed(baselineEntity, ref disclosureIndex))
+            {
+                packet.AddRemoval(baselineEntity);
+            }
+            else
+            {
+                AppendDisclosureChange(
+                    packet,
+                    snapshotId,
+                    baselineEntity,
+                    ReplicationDisclosureChangeKind.Conceal);
+            }
+        }
+
+        private bool IsStillLiveDisclosed(NetworkEntityHandle entity, ref int disclosureIndex)
+        {
+            while (disclosureIndex < _currentDisclosureCount &&
+                   _currentDisclosureEntities[disclosureIndex].Slot < entity.Slot)
+            {
+                disclosureIndex++;
+            }
+
+            return disclosureIndex < _currentDisclosureCount &&
+                   _currentDisclosureEntities[disclosureIndex] == entity &&
+                   _currentDisclosureLive[disclosureIndex];
+        }
+
+        private void AppendCurrentReveal(int currentIndex, ulong snapshotId, ReplicationPacketBuffer packet)
+        {
+            ReplicatedEntityState state = GetCurrentState(currentIndex);
+            AppendDisclosureChange(
+                packet,
+                snapshotId,
+                state.Entity,
+                ReplicationDisclosureChangeKind.Reveal);
+            packet.AddUpsert(in state);
+        }
+
+        private bool StateEquals(int baselineStorageIndex, int currentIndex)
+        {
+            return _baselineSchemaIds[baselineStorageIndex] == _currentSchemaIds[currentIndex] &&
+                   _baselineRevisions[baselineStorageIndex] == _currentRevisions[currentIndex] &&
+                   _baselineValues[baselineStorageIndex] == _currentValues[currentIndex];
+        }
+
+        private ReplicatedEntityState GetCurrentState(int index)
+        {
+            return new ReplicatedEntityState(
+                _currentEntities[index],
+                _currentSchemaIds[index],
+                _currentRevisions[index],
+                _currentValues[index]);
         }
 
         private ReplicationBuildResult ValidateHeader(ulong sessionEpoch, ulong snapshotId)
@@ -349,16 +491,12 @@ namespace Ludots.Core.Networking.Replication
         private void StoreBaseline(ulong snapshotId)
         {
             int baselineSlot = _nextBaselineSlot;
-            int offset = baselineSlot * _entityCapacity;
-            for (int slot = 0; slot < _entityCapacity; slot++)
-            {
-                _baselineActive[offset + slot] = _currentActive[slot];
-                if (_currentActive[slot])
-                {
-                    _baselineStates[offset + slot] = _currentStates[slot];
-                }
-            }
-
+            int offset = baselineSlot * _replicationEntityCapacityPerSeat;
+            _currentEntities.AsSpan(0, _currentCount).CopyTo(_baselineEntities.AsSpan(offset));
+            _currentSchemaIds.AsSpan(0, _currentCount).CopyTo(_baselineSchemaIds.AsSpan(offset));
+            _currentRevisions.AsSpan(0, _currentCount).CopyTo(_baselineRevisions.AsSpan(offset));
+            _currentValues.AsSpan(0, _currentCount).CopyTo(_baselineValues.AsSpan(offset));
+            _baselineCounts[baselineSlot] = _currentCount;
             _baselineIds[baselineSlot] = snapshotId;
             _nextBaselineSlot = (baselineSlot + 1) % _baselineCapacity;
         }
@@ -384,7 +522,7 @@ namespace Ludots.Core.Networking.Replication
         {
             if (!_disclosureLog.TryAppend(snapshotId, entity, kind, out ReplicationDisclosureChange change))
             {
-                throw new InvalidOperationException("Disclosure log capacity changed during delta construction.");
+                throw new InvalidOperationException("Disclosure log capacity changed during replication construction.");
             }
 
             packet.AddDisclosureChange(in change);

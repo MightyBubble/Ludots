@@ -188,7 +188,7 @@ namespace Ludots.Core.Networking.Protocol
 
             if (upsertCount > packet.EntityCapacity ||
                 removalCount > packet.EntityCapacity ||
-                disclosureCount > packet.EntityCapacity)
+                disclosureCount > packet.DisclosureCapacity)
             {
                 return NetworkWireCodecStatus.CapacityExhausted;
             }
