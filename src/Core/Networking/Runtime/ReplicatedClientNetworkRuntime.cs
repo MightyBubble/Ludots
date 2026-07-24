@@ -17,7 +17,7 @@ namespace Ludots.Core.Networking.Runtime
         Rejected = 3,
     }
 
-    public sealed class ReplicatedClientNetworkRuntime : INetworkRuntimePort, IReplicatedClientFixedInputPort
+    public sealed class ReplicatedClientNetworkRuntime : IReplicatedClientNetworkRuntimePort
     {
         private readonly NetworkRuntimeCapacity _capacity;
         private readonly NetworkTransportPortOwnership _transportOwnership;
@@ -230,6 +230,8 @@ namespace Ludots.Core.Networking.Runtime
         /// <summary>
         /// Explicit fixed-input send pulse for a fixed-rate caller (for example 30Hz).
         /// Does not run inside <see cref="PumpReplicatedClient"/>; empty outboxes produce no datagram.
+        /// Returns true only when the framed batch was accepted immediately by transport or by the
+        /// bounded outbound send queue. Transport-closed never reports success.
         /// </summary>
         public bool TryPulseFixedInputSend()
         {
@@ -271,11 +273,10 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.FixedInputRejected, NetworkWireKind.FixedInputBatch, encoded);
             }
 
-            SendFramed(
+            return TrySendFramed(
                 _capacity.InputChannel,
                 NetworkWireKind.FixedInputBatch,
                 _fixedInputBatchBuffer.AsSpan(0, payloadBytes));
-            return true;
         }
 
         public bool TryConnectNow()
@@ -800,29 +801,39 @@ namespace Ludots.Core.Networking.Runtime
 
         private void SendFramed(ChannelId channel, NetworkWireKind kind, ReadOnlySpan<byte> payload)
         {
+            _ = TrySendFramed(channel, kind, payload);
+        }
+
+        private bool TrySendFramed(ChannelId channel, NetworkWireKind kind, ReadOnlySpan<byte> payload)
+        {
             NetworkWireCodecStatus framed = NetworkWireEnvelopeCodec.TryEncode(kind, payload, _datagramBuffer, out int bytes);
             if (framed != NetworkWireCodecStatus.Success)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationEncodeRejected, kind, framed);
             }
 
-            SendOrQueue(channel, _datagramBuffer.AsSpan(0, bytes));
+            return TrySendOrQueue(channel, _datagramBuffer.AsSpan(0, bytes));
         }
 
         private void SendOrQueue(ChannelId channel, ReadOnlySpan<byte> datagram)
+        {
+            _ = TrySendOrQueue(channel, datagram);
+        }
+
+        private bool TrySendOrQueue(ChannelId channel, ReadOnlySpan<byte> datagram)
         {
             if (_outbound.Count == 0)
             {
                 DatagramSendStatus sent = _datagrams.TrySend(channel, datagram);
                 if (sent == DatagramSendStatus.Sent)
                 {
-                    return;
+                    return true;
                 }
 
                 if (sent == DatagramSendStatus.Closed)
                 {
                     ProtocolFault(NetworkRuntimeFaultCode.TransportClosed);
-                    return;
+                    return false;
                 }
             }
 
@@ -830,6 +841,8 @@ namespace Ludots.Core.Networking.Runtime
             {
                 Fail(NetworkRuntimeFaultCode.OutboundQueueCapacityExceeded, detail: _outbound.Count);
             }
+
+            return true;
         }
 
         private void FlushOutbound()

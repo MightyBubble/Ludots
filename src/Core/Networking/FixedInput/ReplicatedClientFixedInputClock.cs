@@ -36,6 +36,11 @@ namespace Ludots.Core.Networking.FixedInput
         /// Elapsed time is not accumulated and no input is sampled or enqueued.
         /// </summary>
         WaitingForAuthoritativeAcknowledgement = 7,
+        /// <summary>
+        /// Prediction commit failed after enqueue and pulse both succeeded. Terminal local contract fault —
+        /// the tick is already owned/sent and must never invent a fake prediction or be re-submitted.
+        /// </summary>
+        CommitFailed = 8,
     }
 
     /// <summary>
@@ -101,6 +106,7 @@ namespace Ludots.Core.Networking.FixedInput
         private bool _waitingForAuthoritativeAck;
         private bool _observedConnected;
         private bool _terminalPulseFault;
+        private bool _terminalCommitFault;
 
         public ReplicatedClientFixedInputClock(
             IReplicatedClientFixedInputPort client,
@@ -171,6 +177,7 @@ namespace Ludots.Core.Networking.FixedInput
         public bool IsArmed => _armed;
         public bool IsWaitingForAuthoritativeAcknowledgement => _waitingForAuthoritativeAck;
         public bool IsTerminalPulseFaulted => _terminalPulseFault;
+        public bool IsTerminalCommitFaulted => _terminalCommitFault;
         public SessionEpoch ArmedSessionEpoch =>
             _armed ? new SessionEpoch(_armedSessionEpochValue) : SessionEpoch.Empty;
 
@@ -180,7 +187,7 @@ namespace Ludots.Core.Networking.FixedInput
         /// </summary>
         public uint PeekNextTargetTick()
         {
-            EnsureNotTerminalPulseFaulted();
+            EnsureNotTerminalFaulted();
             return SelectNextTargetTickOrThrow();
         }
 
@@ -190,7 +197,7 @@ namespace Ludots.Core.Networking.FixedInput
         /// </summary>
         public ReplicatedClientFixedInputClockAdvanceResult Advance(float elapsedRealSeconds)
         {
-            EnsureNotTerminalPulseFaulted();
+            EnsureNotTerminalFaulted();
 
             if (!float.IsFinite(elapsedRealSeconds) || elapsedRealSeconds < 0f)
             {
@@ -307,7 +314,7 @@ namespace Ludots.Core.Networking.FixedInput
                 throw new ArgumentException("Session epoch must be non-empty.", nameof(sessionEpoch));
             }
 
-            EnsureNotTerminalPulseFaulted();
+            EnsureNotTerminalFaulted();
             ArmForConnectedEdge(sessionEpoch);
             _observedConnected = _client.State == ReplicatedClientConnectionState.Connected
                 && _client.SessionEpoch == sessionEpoch;
@@ -349,6 +356,19 @@ namespace Ludots.Core.Networking.FixedInput
                         NetworkRuntimeFaultCode.FixedInputRejected,
                         wireKind: NetworkWireKind.FixedInputBatch,
                         detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
+            }
+
+            FixedInputPayloadCommitStatus committed = _source.TryCommit(targetTick, payload);
+            if (committed != FixedInputPayloadCommitStatus.Committed)
+            {
+                // Bytes were accepted for send; never invent fake prediction or re-submit this tick.
+                _terminalCommitFault = true;
+                throw new NetworkRuntimeException(
+                    new NetworkRuntimeFault(
+                        NetworkRuntimeFaultSeverity.LocalContractViolation,
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        wireKind: NetworkWireKind.FixedInputBatch,
+                        detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.CommitFailed));
             }
 
             _lastEmittedTargetTick = targetTick;
@@ -415,19 +435,27 @@ namespace Ludots.Core.Networking.FixedInput
             _lastEmittedTargetTick = 0;
         }
 
-        private void EnsureNotTerminalPulseFaulted()
+        private void EnsureNotTerminalFaulted()
         {
-            if (!_terminalPulseFault)
+            if (_terminalPulseFault)
             {
-                return;
+                throw new NetworkRuntimeException(
+                    new NetworkRuntimeFault(
+                        NetworkRuntimeFaultSeverity.LocalContractViolation,
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        wireKind: NetworkWireKind.FixedInputBatch,
+                        detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
             }
 
-            throw new NetworkRuntimeException(
-                new NetworkRuntimeFault(
-                    NetworkRuntimeFaultSeverity.LocalContractViolation,
-                    NetworkRuntimeFaultCode.FixedInputRejected,
-                    wireKind: NetworkWireKind.FixedInputBatch,
-                    detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
+            if (_terminalCommitFault)
+            {
+                throw new NetworkRuntimeException(
+                    new NetworkRuntimeFault(
+                        NetworkRuntimeFaultSeverity.LocalContractViolation,
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        wireKind: NetworkWireKind.FixedInputBatch,
+                        detail: (int)ReplicatedClientFixedInputClockAdvanceStatus.CommitFailed));
+            }
         }
 
         private ReplicatedClientFixedInputClockAdvanceResult IdleResult() =>

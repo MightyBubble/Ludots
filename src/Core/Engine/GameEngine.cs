@@ -102,6 +102,7 @@ using Ludots.Core.Persistence;
 using Ludots.Core.Vision;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 
@@ -434,6 +435,16 @@ namespace Ludots.Core.Engine
                     }
 
                     RemoveService(CoreServiceKeys.NetworkRuntimePort);
+                    if (TryGetService(CoreServiceKeys.ReplicatedClientNetworkRuntimePort, out _))
+                    {
+                        RemoveService(CoreServiceKeys.ReplicatedClientNetworkRuntimePort);
+                    }
+
+                    if (TryGetService(CoreServiceKeys.ReplicatedClientFixedInputClock, out _))
+                    {
+                        RemoveService(CoreServiceKeys.ReplicatedClientFixedInputClock);
+                    }
+
                     SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.Standalone);
                 }
 
@@ -3311,8 +3322,43 @@ namespace Ludots.Core.Engine
                     "A different network runtime is already configured for this engine.");
             }
 
+            if (role == NetworkProcessRole.ReplicatedClient)
+            {
+                if (runtime is not IReplicatedClientNetworkRuntimePort clientRuntime)
+                {
+                    throw new ArgumentException(
+                        "Replicated client process role requires IReplicatedClientNetworkRuntimePort.",
+                        nameof(runtime));
+                }
+
+                SetService(CoreServiceKeys.ReplicatedClientNetworkRuntimePort, clientRuntime);
+            }
+
             SetService(CoreServiceKeys.NetworkProcessRole, role);
             SetService(CoreServiceKeys.NetworkRuntimePort, runtime);
+        }
+
+        private void AdvanceReplicatedClientFixedInputClock(float platformDeltaTime)
+        {
+            if (!TryGetService(
+                    CoreServiceKeys.ReplicatedClientFixedInputClock,
+                    out ReplicatedClientFixedInputClock clock))
+            {
+                throw new InvalidOperationException(
+                    "Replicated client process role requires ReplicatedClientFixedInputClock.");
+            }
+
+            ReplicatedClientFixedInputClockAdvanceResult advance = clock.Advance(platformDeltaTime);
+            if (advance.IsSuccess)
+            {
+                return;
+            }
+
+            throw new NetworkRuntimeException(
+                new NetworkRuntimeFault(
+                    NetworkRuntimeFaultSeverity.LocalContractViolation,
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    detail: (int)advance.Status));
         }
 
         private void ValidateNetworkRuntimeBeforeStart()
@@ -3343,6 +3389,20 @@ namespace Ludots.Core.Engine
             {
                 throw new InvalidOperationException(
                     $"Configured network runtime role {runtime.Role} does not match engine process role {role}.");
+            }
+
+            if (role == NetworkProcessRole.ReplicatedClient)
+            {
+                // Map-owned FixedInputPayloadSource and ReplicatedClientFixedInputClock exist only after
+                // MapLoaded; first PumpTransport materializes them. Start only requires the composite port.
+                if (!TryGetService(
+                        CoreServiceKeys.ReplicatedClientNetworkRuntimePort,
+                        out IReplicatedClientNetworkRuntimePort clientRuntime) ||
+                    !ReferenceEquals(clientRuntime, runtime))
+                {
+                    throw new InvalidOperationException(
+                        "Replicated client start requires the composite IReplicatedClientNetworkRuntimePort identity.");
+                }
             }
         }
 
@@ -3382,6 +3442,16 @@ namespace Ludots.Core.Engine
             {
                 networkRuntime.Dispose();
                 RemoveService(CoreServiceKeys.NetworkRuntimePort);
+            }
+
+            if (TryGetService(CoreServiceKeys.ReplicatedClientNetworkRuntimePort, out _))
+            {
+                RemoveService(CoreServiceKeys.ReplicatedClientNetworkRuntimePort);
+            }
+
+            if (TryGetService(CoreServiceKeys.ReplicatedClientFixedInputClock, out _))
+            {
+                RemoveService(CoreServiceKeys.ReplicatedClientFixedInputClock);
             }
 
             if (_pendingMapLoads.Count > 0)
@@ -3476,9 +3546,12 @@ namespace Ludots.Core.Engine
             }
 
             // 1. Simulation Loop (GAS, Physics, AI) - Controlled by Pacemaker
+            // Replicated clients never advance the local authoritative Pacemaker/whole-world simulation.
+            // Fixed-input clock uses raw unscaled platform delta (pause/time-scale must not affect it).
             if (networkRole == NetworkProcessRole.ReplicatedClient)
             {
-                networkRuntime!.PumpReplicatedClient(dt);
+                networkRuntime!.PumpReplicatedClient(platformDeltaTime);
+                AdvanceReplicatedClientFixedInputClock(platformDeltaTime);
             }
             else if (!_simulationBudgetFused)
             {

@@ -501,6 +501,22 @@ public sealed class FixedInputRuntimeTests
     }
 
     [Test]
+    public void TransportClosed_PulseDoesNotReportSendSuccess()
+    {
+        using FixedInputHarness harness = CreateHarness();
+        Handshake(harness);
+
+        Span<byte> frame = stackalloc byte[PayloadBytes];
+        frame.Fill(0x3C);
+        Assert.That(harness.Client.TrySubmitFixedInput(1, frame), Is.EqualTo(FixedInputOutboxEnqueueStatus.Enqueued));
+        harness.Transport.CloseClientSends = true;
+
+        Assert.That(harness.Client.TryPulseFixedInputSend(), Is.False);
+        Assert.That(harness.Transport.ClientFixedInputBatchCount, Is.Zero);
+        Assert.That(harness.Observer.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.TransportClosed));
+    }
+
+    [Test]
     public void SteadyState_NonemptySuccessPath_AllocatesZeroManagedBytes()
     {
         using FixedInputHarness harness = CreateHarness(statePublishRateHz: 1);
@@ -1187,6 +1203,7 @@ public sealed class FixedInputRuntimeTests
         public ChannelId LastServerSendChannel { get; private set; }
         public ClientConnectionControlState State { get; private set; }
         public bool BlockFixedInputAckSends { get; set; }
+        public bool CloseClientSends { get; set; }
         public NetworkFixedInputAcknowledgement LastServerFixedInputAck { get; private set; }
         public NetworkFixedInputBatchHeader LastClientBatchHeader { get; private set; }
 
@@ -1300,6 +1317,11 @@ public sealed class FixedInputRuntimeTests
 
         public DatagramSendStatus TrySend(ChannelId channelId, ReadOnlySpan<byte> payload)
         {
+            if (CloseClientSends)
+            {
+                return DatagramSendStatus.Closed;
+            }
+
             Enqueue(ref _serverInboundHead, ref _serverInboundTail, ref _serverInboundCount, _serverInbound, channelId, payload);
             LastClientSendChannel = channelId;
             if (TryGetKind(payload, out NetworkWireKind kind) && kind == NetworkWireKind.FixedInputBatch)

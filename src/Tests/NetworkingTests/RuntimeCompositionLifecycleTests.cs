@@ -5,8 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.FixedInput;
+using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -140,6 +143,46 @@ public sealed class RuntimeCompositionLifecycleTests
         }
 
         Assert.That(RuntimeCompositionProbeState.InstalledNetworkRuntime!.DisposeCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ReplicatedClientStart_SucceedsWithCompositePort_BeforePayloadSourceOrClockExist()
+    {
+        RuntimeCompositionProbeState.Reset();
+        using var fixture = RuntimeCompositionModFixture.Create(includeNetworking: true);
+        GameEngine engine = new();
+        SynchronizationContext? previousContext = SynchronizationContext.Current;
+
+        try
+        {
+            fixture.Initialize(engine);
+            var runtime = new RuntimeCompositionClientNetworkRuntime();
+            engine.ConfigureNetworkRuntime(NetworkProcessRole.ReplicatedClient, runtime);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    engine.TryGetService(CoreServiceKeys.FixedInputPayloadSource, out _),
+                    Is.False);
+                Assert.That(
+                    engine.TryGetService(CoreServiceKeys.ReplicatedClientFixedInputClock, out _),
+                    Is.False);
+                Assert.That(
+                    engine.TryGetService(
+                        CoreServiceKeys.ReplicatedClientNetworkRuntimePort,
+                        out IReplicatedClientNetworkRuntimePort composite),
+                    Is.True);
+                Assert.That(ReferenceEquals(composite, runtime), Is.True);
+            });
+
+            Assert.DoesNotThrow(engine.Start);
+            Assert.That(RuntimeCompositionProbeState.GameStartCount, Is.EqualTo(1));
+        }
+        finally
+        {
+            engine.Dispose();
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
     }
 
     [Test]
@@ -534,6 +577,51 @@ public sealed class RuntimeCompositionNetworkRuntime : INetworkRuntimePort
     public void PumpReplicatedClient(float frameDeltaTime)
     {
     }
+
+    public void Dispose()
+    {
+        DisposeCount++;
+    }
+}
+
+public sealed class RuntimeCompositionClientNetworkRuntime : IReplicatedClientNetworkRuntimePort
+{
+    public NetworkProcessRole Role => NetworkProcessRole.ReplicatedClient;
+
+    public ReplicatedClientConnectionState State => ReplicatedClientConnectionState.Disconnected;
+
+    public SessionEpoch SessionEpoch { get; } = new(1);
+
+    public uint FixedInputAcknowledgedCommittedTick => 0;
+
+    public ulong FixedInputAcknowledgementObservationVersion => 0;
+
+    public bool HasEnqueuedFixedInputTargetTick => false;
+
+    public uint LastEnqueuedFixedInputTargetTick => 0;
+
+    public int DisposeCount { get; private set; }
+
+    public void PumpTransport()
+    {
+    }
+
+    public void BeforeAuthoritativeTick(uint executingTick)
+    {
+    }
+
+    public void AfterAuthoritativeCommit(uint committedTick)
+    {
+    }
+
+    public void PumpReplicatedClient(float frameDeltaTime)
+    {
+    }
+
+    public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload) =>
+        FixedInputOutboxEnqueueStatus.InvalidInput;
+
+    public bool TryPulseFixedInputSend() => false;
 
     public void Dispose()
     {

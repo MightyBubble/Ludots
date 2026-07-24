@@ -175,6 +175,7 @@ public sealed class ReplicatedClientFixedInputClockTests
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.SourceFailed));
         Assert.That(harness.Client.SubmitCount, Is.Zero);
         Assert.That(harness.Client.PulseCount, Is.Zero);
+        Assert.That(harness.Source.CommitCount, Is.Zero);
         Assert.That(harness.Clock.PeekNextTargetTick(), Is.EqualTo(1u));
         Assert.That(harness.Clock.AccumulatedSeconds, Is.GreaterThan(0d));
     }
@@ -201,8 +202,57 @@ public sealed class ReplicatedClientFixedInputClockTests
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.EnqueueRejected));
         Assert.That(result.EnqueueStatus, Is.EqualTo(FixedInputOutboxEnqueueStatus.CapacityExceeded));
         Assert.That(harness.Client.PulseCount, Is.Zero);
+        Assert.That(harness.Source.CommitCount, Is.Zero);
         Assert.That(harness.Client.HasEnqueuedFixedInputTargetTick, Is.False);
         Assert.That(harness.Clock.PeekNextTargetTick(), Is.EqualTo(1u));
+    }
+
+    [Test]
+    public void PredictionCommit_RunsOnlyAfterSuccessfulEnqueueAndPulse()
+    {
+        using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
+        harness.Client.PulseResult = false;
+
+        Assert.That(
+            () => harness.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Client.SubmitCount, Is.EqualTo(1));
+        Assert.That(harness.Source.CommitCount, Is.Zero);
+        Assert.That(harness.Clock.IsTerminalPulseFaulted, Is.True);
+    }
+
+    [Test]
+    public void PredictionCommitFailure_IsTerminal_AndDoesNotInventPrediction()
+    {
+        using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
+        harness.Source.FailNextCommit = true;
+
+        NetworkRuntimeException exception = Assert.Throws<NetworkRuntimeException>(
+            () => harness.Clock.Advance(1f / TickRateHz))!;
+        Assert.That(exception.Fault.Detail, Is.EqualTo((int)ReplicatedClientFixedInputClockAdvanceStatus.CommitFailed));
+        Assert.That(harness.Client.SubmitCount, Is.EqualTo(1));
+        Assert.That(harness.Client.PulseCount, Is.EqualTo(1));
+        Assert.That(harness.Source.CommitCount, Is.Zero);
+        Assert.That(harness.Clock.IsTerminalCommitFaulted, Is.True);
+        Assert.That(
+            () => harness.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
+    }
+
+    [Test]
+    public void MultiStepCatchUp_CommitsExactTickOrderWithExactSentPayloadBytes()
+    {
+        using var harness = CreateHarness(maxStepsPerAdvance: 3, maxAccumulatedSteps: 60);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
+        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(3f / TickRateHz);
+        Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(result.StepsEmitted, Is.EqualTo(3));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(new uint[] { 1, 2, 3 }));
+        Assert.That(harness.Source.CommittedTicks, Is.EqualTo(new uint[] { 1, 2, 3 }));
+        Assert.That(harness.Source.CommittedPayloadHeads, Is.EqualTo(new byte[] { 0, 1, 2 }));
+        Assert.That(harness.Source.CommitCount, Is.EqualTo(harness.Client.PulseCount));
     }
 
     [Test]
@@ -555,7 +605,10 @@ public sealed class ReplicatedClientFixedInputClockTests
     {
         private readonly int _payloadBytes;
         private readonly uint[] _sampledTicks = new uint[16_384];
+        private readonly uint[] _committedTicks = new uint[16_384];
+        private readonly byte[] _committedPayloadHeads = new byte[16_384];
         private int _sampledCount;
+        private int _committedCount;
         private byte _sequence;
 
         public FillPayloadSource(int payloadBytes)
@@ -564,9 +617,15 @@ public sealed class ReplicatedClientFixedInputClockTests
         }
 
         public bool FailNext { get; set; }
+        public bool FailNextCommit { get; set; }
         public int SampleCount => _sampledCount;
+        public int CommitCount => _committedCount;
         public uint LastSampledTargetTick { get; private set; }
+        public uint LastCommittedTargetTick { get; private set; }
         public IReadOnlyList<uint> SampledTicks => _sampledTicks.AsSpan(0, _sampledCount).ToArray();
+        public IReadOnlyList<uint> CommittedTicks => _committedTicks.AsSpan(0, _committedCount).ToArray();
+        public IReadOnlyList<byte> CommittedPayloadHeads =>
+            _committedPayloadHeads.AsSpan(0, _committedCount).ToArray();
 
         public FixedInputPayloadSampleStatus TrySample(uint targetTick, Span<byte> destination)
         {
@@ -591,6 +650,32 @@ public sealed class ReplicatedClientFixedInputClockTests
             _sampledTicks[_sampledCount++] = targetTick;
             destination.Fill(_sequence++);
             return FixedInputPayloadSampleStatus.Sampled;
+        }
+
+        public FixedInputPayloadCommitStatus TryCommit(uint targetTick, ReadOnlySpan<byte> sentPayload)
+        {
+            if (FailNextCommit)
+            {
+                FailNextCommit = false;
+                return FixedInputPayloadCommitStatus.Failed;
+            }
+
+            if (!FixedInputWireCodec.IsValidInputTargetTick(targetTick) ||
+                sentPayload.Length != _payloadBytes)
+            {
+                return FixedInputPayloadCommitStatus.Failed;
+            }
+
+            if (_committedCount >= _committedTicks.Length)
+            {
+                throw new InvalidOperationException("Payload source commit capacity exceeded.");
+            }
+
+            LastCommittedTargetTick = targetTick;
+            _committedTicks[_committedCount] = targetTick;
+            _committedPayloadHeads[_committedCount] = sentPayload[0];
+            _committedCount++;
+            return FixedInputPayloadCommitStatus.Committed;
         }
     }
 

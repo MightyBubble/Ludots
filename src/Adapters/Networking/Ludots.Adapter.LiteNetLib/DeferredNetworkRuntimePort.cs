@@ -1,8 +1,12 @@
+using System;
 using Ludots.Core.Networking.Runtime;
 
 namespace Ludots.Adapter.LiteNetLib;
 
-internal sealed class DeferredNetworkRuntimePort : INetworkRuntimePort
+/// <summary>
+/// Lazily materializes the owned network runtime on first use.
+/// </summary>
+internal class DeferredNetworkRuntimePort : INetworkRuntimePort
 {
     private readonly Func<INetworkRuntimePort> _factory;
     private INetworkRuntimePort? _runtime;
@@ -42,9 +46,10 @@ internal sealed class DeferredNetworkRuntimePort : INetworkRuntimePort
         _disposed = true;
         _runtime?.Dispose();
         _runtime = null;
+        OnRuntimeCleared();
     }
 
-    private INetworkRuntimePort GetRuntime()
+    protected INetworkRuntimePort GetRuntime()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_runtime != null)
@@ -61,7 +66,25 @@ internal sealed class DeferredNetworkRuntimePort : INetworkRuntimePort
                 $"Network runtime factory returned role {runtime.Role}, expected {Role}.");
         }
 
+        try
+        {
+            ValidateRuntime(runtime);
+        }
+        catch
+        {
+            runtime.Dispose();
+            throw;
+        }
+
         _runtime = runtime;
         return runtime;
+    }
+
+    protected virtual void ValidateRuntime(INetworkRuntimePort runtime)
+    {
+    }
+
+    protected virtual void OnRuntimeCleared()
+    {
     }
 }
