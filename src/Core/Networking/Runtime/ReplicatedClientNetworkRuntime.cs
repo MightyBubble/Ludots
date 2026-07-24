@@ -148,6 +148,18 @@ namespace Ludots.Core.Networking.Runtime
         public uint FixedInputAcknowledgedCommittedTick =>
             _fixedInputOutbox?.AppliedCommittedThrough ?? 0;
 
+        /// <inheritdoc />
+        public ulong FixedInputAcknowledgementObservationVersion =>
+            _fixedInputOutbox?.AppliedAcknowledgementVersion ?? 0UL;
+
+        /// <inheritdoc />
+        public bool HasEnqueuedFixedInputTargetTick =>
+            _fixedInputOutbox?.HasEnqueued ?? false;
+
+        /// <inheritdoc />
+        public uint LastEnqueuedFixedInputTargetTick =>
+            _fixedInputOutbox?.HighestEnqueuedTick ?? 0;
+
         public bool TrySubmitCommand(
             in NetworkCommandBatchHeader header,
             ReadOnlySpan<NetworkCommandWireEntry> entries)

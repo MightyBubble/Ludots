@@ -47,6 +47,8 @@ public sealed class SparseReplicationTests
 
             fixedInputMaxFutureTicks: 4,
 
+            fixedInputLeadTicks: 2,
+
             fixedInputMaxFramesPerBatch: 4,
 
             fixedInputPendingFrameCapacity: 8);

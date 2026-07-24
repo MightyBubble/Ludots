@@ -45,6 +45,7 @@ namespace Ludots.Core.Networking.Configuration
         public int FixedInputSchemaId { get; set; }
         public int FixedInputFramePayloadBytes { get; set; }
         public int FixedInputMaxFutureTicks { get; set; }
+        public int FixedInputLeadTicks { get; set; }
         public int FixedInputMaxFramesPerBatch { get; set; }
         public int FixedInputPendingFrameCapacity { get; set; }
         public int SnapshotChunkCapacity { get; set; }
@@ -174,6 +175,12 @@ namespace Ludots.Core.Networking.Configuration
             }
 
             RequirePositive(FixedInputMaxFutureTicks, nameof(FixedInputMaxFutureTicks));
+            if (FixedInputLeadTicks < 1 || FixedInputLeadTicks > FixedInputMaxFutureTicks)
+            {
+                throw new InvalidOperationException(
+                    $"Networking FixedInputLeadTicks {FixedInputLeadTicks} must satisfy 1 <= lead <= FixedInputMaxFutureTicks {FixedInputMaxFutureTicks}.");
+            }
+
             RequirePositive(FixedInputMaxFramesPerBatch, nameof(FixedInputMaxFramesPerBatch));
             RequirePositive(FixedInputPendingFrameCapacity, nameof(FixedInputPendingFrameCapacity));
             if (FixedInputPendingFrameCapacity < FixedInputMaxFutureTicks)

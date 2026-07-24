@@ -560,6 +560,7 @@ public sealed class FixedInputRuntimeTests
             Assert.That(capacity.FixedInputSchemaId, Is.EqualTo((ushort)config.FixedInputSchemaId));
             Assert.That(capacity.FixedInputFramePayloadBytes, Is.EqualTo((ushort)config.FixedInputFramePayloadBytes));
             Assert.That(capacity.FixedInputPendingFrameCapacity, Is.EqualTo(config.FixedInputPendingFrameCapacity));
+            Assert.That(capacity.FixedInputLeadTicks, Is.EqualTo(config.FixedInputLeadTicks));
             Assert.That(protocol.SeatCapacity, Is.EqualTo(config.PlayerCapacity));
             Assert.That(protocol.SessionEpoch, Is.EqualTo(9UL));
             Assert.That(protocol.MaxDatagramPayloadBytes, Is.EqualTo(config.MaxDatagramPayloadBytes));
@@ -580,6 +581,14 @@ public sealed class FixedInputRuntimeTests
         NetworkRuntimeConfig pending = CreateValidConfig();
         pending.FixedInputPendingFrameCapacity = pending.FixedInputMaxFutureTicks - 1;
         Assert.That(pending.Validate, Throws.InvalidOperationException);
+
+        NetworkRuntimeConfig leadZero = CreateValidConfig();
+        leadZero.FixedInputLeadTicks = 0;
+        Assert.That(leadZero.Validate, Throws.InvalidOperationException.With.Message.Contains("FixedInputLeadTicks"));
+
+        NetworkRuntimeConfig leadTooHigh = CreateValidConfig();
+        leadTooHigh.FixedInputLeadTicks = leadTooHigh.FixedInputMaxFutureTicks + 1;
+        Assert.That(leadTooHigh.Validate, Throws.InvalidOperationException.With.Message.Contains("FixedInputLeadTicks"));
     }
 
     private static void Handshake(FixedInputHarness harness)
@@ -829,6 +838,7 @@ public sealed class FixedInputRuntimeTests
         fixedInputSchemaId: SchemaId,
         fixedInputFramePayloadBytes: PayloadBytes,
         fixedInputMaxFutureTicks: 4,
+        fixedInputLeadTicks: 2,
         fixedInputMaxFramesPerBatch: 4,
         fixedInputPendingFrameCapacity: 8);
 
@@ -870,6 +880,7 @@ public sealed class FixedInputRuntimeTests
         FixedInputSchemaId = 1,
         FixedInputFramePayloadBytes = 12,
         FixedInputMaxFutureTicks = 4,
+        FixedInputLeadTicks = 2,
         FixedInputMaxFramesPerBatch = 4,
         FixedInputPendingFrameCapacity = 8,
         SnapshotChunkCapacity = 64,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Runtime;
@@ -12,11 +13,13 @@ public sealed class ReplicatedClientFixedInputClockTests
 {
     private const int TickRateHz = 30;
     private const ushort PayloadBytes = 12;
+    private const int DefaultLeadTicks = 1;
 
     [Test]
     public void SixtyHzRender_OneSecond_EmitsExactlyThirtyStrictlyIncreasingTicks()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         var clock = harness.Clock;
 
         int emitted = 0;
@@ -32,8 +35,8 @@ public sealed class ReplicatedClientFixedInputClockTests
             Assert.That(emitted, Is.EqualTo(30));
             Assert.That(harness.Client.SubmitCount, Is.EqualTo(30));
             Assert.That(harness.Client.PulseCount, Is.EqualTo(30));
-            Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(30)));
-            Assert.That(clock.NextTargetTick, Is.EqualTo(31u));
+            Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(start: 1, count: 30)));
+            Assert.That(clock.PeekNextTargetTick(), Is.EqualTo(31u));
         });
     }
 
@@ -41,6 +44,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void OneFortyFourHzRender_OneSecond_EmitsExactlyThirtyFrames()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         int emitted = 0;
         for (int frame = 0; frame < 144; frame++)
         {
@@ -50,14 +54,14 @@ public sealed class ReplicatedClientFixedInputClockTests
         }
 
         Assert.That(emitted, Is.EqualTo(30));
-        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(30)));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(start: 1, count: 30)));
     }
 
     [Test]
     public void IrregularDeltas_TotalingOneSecond_EmitsExactlyThirtyFrames()
     {
         using var harness = CreateHarness();
-        // Irregular positive deltas constructed so the exact double sum is 1.0s.
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         double[] deltas =
         {
             0.12, 0.01, 0.07, 0.03, 0.005, 0.045, 0.02, 0.08,
@@ -65,7 +69,6 @@ public sealed class ReplicatedClientFixedInputClockTests
             0.022, 0.018, 0.05, 0.04, 0.006, 0.034, 0.016, 0.024,
             0.002, 0.028, 0.032, 0.038, 0.042, 0.011,
         };
-        // Force last sample to close the second exactly.
         double partial = 0d;
         for (int i = 0; i < deltas.Length - 1; i++)
         {
@@ -94,6 +97,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void ZeroDelta_AdvancesNothing_AndDoesNotPulse()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(0f);
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Idle));
         Assert.That(result.StepsEmitted, Is.Zero);
@@ -105,6 +109,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void NegativeOrNonFiniteDelta_FailsFast()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         Assert.That(() => harness.Clock.Advance(-0.01f), Throws.TypeOf<ArgumentOutOfRangeException>());
         Assert.That(() => harness.Clock.Advance(float.NaN), Throws.TypeOf<ArgumentOutOfRangeException>());
         Assert.That(() => harness.Clock.Advance(float.PositiveInfinity), Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -114,25 +119,26 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void CatchUp_EmitsUpToMaxStepsPerAdvance_AndRetainsRemainingTime()
     {
         using var harness = CreateHarness(maxStepsPerAdvance: 5, maxAccumulatedSteps: 60);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         ReplicatedClientFixedInputClockAdvanceResult first = harness.Clock.Advance(1f);
         Assert.That(first.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
         Assert.That(first.StepsEmitted, Is.EqualTo(5));
         Assert.That(harness.Clock.AccumulatedSeconds, Is.EqualTo(25d / TickRateHz).Within(1e-9d));
-        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(5)));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(start: 1, count: 5)));
 
-        // Tiny positive delta must continue catch-up from retained time; never discard backlog.
         ReplicatedClientFixedInputClockAdvanceResult second = harness.Clock.Advance(1e-4f);
         Assert.That(second.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
         Assert.That(second.StepsEmitted, Is.EqualTo(5));
         Assert.That(harness.Clock.AccumulatedSeconds, Is.EqualTo((20d / TickRateHz) + 1e-4d).Within(1e-9d));
-        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(10)));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(ExpectedTicks(start: 1, count: 10)));
     }
 
     [Test]
     public void CatchUpBacklogExceeded_FailsExplicitly_AndDoesNotDiscardTimeOrEmit()
     {
         using var harness = CreateHarness(maxStepsPerAdvance: 4, maxAccumulatedSteps: 8);
-        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f); // 30 due > 8
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
+        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f);
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.CatchUpBacklogExceeded));
         Assert.That(result.StepsEmitted, Is.Zero);
         Assert.That(harness.Client.SubmitCount, Is.Zero);
@@ -143,44 +149,202 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void SourceFailure_DoesNotEnqueuePulseOrAdvanceTick_AndRetainsDueTime()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         harness.Source.FailNext = true;
         ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f / TickRateHz);
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.SourceFailed));
         Assert.That(harness.Client.SubmitCount, Is.Zero);
         Assert.That(harness.Client.PulseCount, Is.Zero);
-        Assert.That(harness.Clock.NextTargetTick, Is.EqualTo(1u));
+        Assert.That(harness.Clock.PeekNextTargetTick(), Is.EqualTo(1u));
         Assert.That(harness.Clock.AccumulatedSeconds, Is.GreaterThan(0d));
+    }
+
+    [Test]
+    public void SourceReceivesExactSelectedTargetTick()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 500);
+        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(result.LastTargetTick, Is.EqualTo(502u));
+        Assert.That(harness.Source.LastSampledTargetTick, Is.EqualTo(502u));
+        Assert.That(harness.Source.SampledTicks, Is.EqualTo(new uint[] { 502 }));
     }
 
     [Test]
     public void EnqueueCapacityExceeded_FailsExplicitly_AndDoesNotPulseOrAdvanceTick()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         harness.Client.EnqueueStatus = FixedInputOutboxEnqueueStatus.CapacityExceeded;
         ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f / TickRateHz);
         Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.EnqueueRejected));
         Assert.That(result.EnqueueStatus, Is.EqualTo(FixedInputOutboxEnqueueStatus.CapacityExceeded));
         Assert.That(harness.Client.PulseCount, Is.Zero);
-        Assert.That(harness.Clock.NextTargetTick, Is.EqualTo(1u));
+        Assert.That(harness.Client.HasEnqueuedFixedInputTargetTick, Is.False);
+        Assert.That(harness.Clock.PeekNextTargetTick(), Is.EqualTo(1u));
     }
 
     [Test]
-    public void PulseFailure_FailsExplicitly_AfterSuccessfulEnqueue()
+    public void PulseFailure_IsTerminalLocalContractFault_AndSubsequentCallCannotDuplicateTick()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         harness.Client.PulseResult = false;
-        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f / TickRateHz);
-        Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.PulseFailed));
+
+        Assert.That(
+            () => harness.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
         Assert.That(harness.Client.SubmitCount, Is.EqualTo(1));
-        Assert.That(harness.Clock.NextTargetTick, Is.EqualTo(1u));
+        Assert.That(harness.Client.LastEnqueuedFixedInputTargetTick, Is.EqualTo(1u));
+        Assert.That(harness.Clock.IsTerminalPulseFaulted, Is.True);
+
+        int submitsAfterFault = harness.Client.SubmitCount;
+        Assert.That(
+            () => harness.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Client.SubmitCount, Is.EqualTo(submitsAfterFault));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(new uint[] { 1 }));
     }
 
     [Test]
-    public void NotConnected_DoesNotAccumulateOrSend_AndSessionResetRestartsTickSsot()
+    public void LateJoin_CommittedTick500_Lead2_Emits502Not1()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        Assert.That(
+            harness.Clock.Advance(1f / TickRateHz).Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+        Assert.That(harness.Client.SubmitCount, Is.Zero);
+
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 500);
+        ReplicatedClientFixedInputClockAdvanceResult result = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(result.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(result.LastTargetTick, Is.EqualTo(502u));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(new uint[] { 502 }));
+        Assert.That(harness.Source.LastSampledTargetTick, Is.EqualTo(502u));
+    }
+
+    [Test]
+    public void NoInputBeforeFirstPostConnectAck()
     {
         using var harness = CreateHarness();
+        for (int i = 0; i < 5; i++)
+        {
+            ReplicatedClientFixedInputClockAdvanceResult waiting = harness.Clock.Advance(1f / TickRateHz);
+            Assert.That(
+                waiting.Status,
+                Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+            Assert.That(harness.Clock.AccumulatedSeconds, Is.EqualTo(0d));
+        }
+
+        Assert.That(harness.Client.SubmitCount, Is.Zero);
+        Assert.That(harness.Client.PulseCount, Is.Zero);
+        Assert.That(harness.Source.SampleCount, Is.Zero);
+    }
+
+    [Test]
+    public void SameEpochReconnect_PreservesOutboxTick_WaitsForFreshAck_ThenContinuesStrictlyAboveBoth()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 10);
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(12u));
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(13u));
+        Assert.That(harness.Client.LastEnqueuedFixedInputTargetTick, Is.EqualTo(13u));
+
+        harness.Client.State = ReplicatedClientConnectionState.Disconnected;
+        Assert.That(
+            harness.Clock.Advance(1f).Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.NotConnected));
+
+        harness.Client.State = ReplicatedClientConnectionState.Connected;
+        harness.Client.SessionEpoch = new SessionEpoch(1);
+        ReplicatedClientFixedInputClockAdvanceResult waiting = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(
+            waiting.Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+        Assert.That(harness.Client.SubmitCount, Is.EqualTo(2));
+        Assert.That(harness.Client.LastEnqueuedFixedInputTargetTick, Is.EqualTo(13u));
+
+        // Fresh ACK after Connected edge; committed stays behind outbox so next tick is outbox+1.
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 11);
+        ReplicatedClientFixedInputClockAdvanceResult resumed = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(resumed.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(resumed.LastTargetTick, Is.EqualTo(14u));
+        Assert.That(resumed.LastTargetTick, Is.GreaterThan(13u));
+        Assert.That(resumed.LastTargetTick, Is.GreaterThan(11u + 2u));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(new uint[] { 12, 13, 14 }));
+    }
+
+    [Test]
+    public void NewEpoch_StartsFromThatEpochFreshAck_DoesNotInheritOldGenerationTarget()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 100);
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(102u));
+
+        harness.Client.State = ReplicatedClientConnectionState.Disconnected;
+        Assert.That(harness.Clock.Advance(0f).Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.NotConnected));
+
+        harness.Client.ResetOutboxGeneration();
+        harness.Client.State = ReplicatedClientConnectionState.Connected;
+        harness.Client.SessionEpoch = new SessionEpoch(2);
+
+        Assert.That(
+            harness.Clock.Advance(1f / TickRateHz).Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+        Assert.That(harness.Client.HasEnqueuedFixedInputTargetTick, Is.False);
+
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 3);
+        ReplicatedClientFixedInputClockAdvanceResult resumed = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(resumed.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(resumed.LastTargetTick, Is.EqualTo(5u));
+        Assert.That(harness.Clock.ArmedSessionEpoch, Is.EqualTo(new SessionEpoch(2)));
+        Assert.That(harness.Client.EmittedTicks[^1], Is.EqualTo(5u));
+    }
+
+    [Test]
+    public void AckCommittedAdvance_JumpsTargetForward_WithoutBackfillingLateTicks()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 10);
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(12u));
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(13u));
+
+        // Mid-session ACK advance is not a Connected edge; just apply newer ACK truth.
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 100);
+        ReplicatedClientFixedInputClockAdvanceResult jumped = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(jumped.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
+        Assert.That(jumped.LastTargetTick, Is.EqualTo(102u));
+        Assert.That(harness.Client.EmittedTicks, Is.EqualTo(new uint[] { 12, 13, 102 }));
+        Assert.That(harness.Source.SampledTicks, Is.EqualTo(new uint[] { 12, 13, 102 }));
+    }
+
+    [Test]
+    public void TargetDomainOverflow_FailsExplicitly()
+    {
+        using var harness = CreateHarness(leadTicks: 2);
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: FixedInputWireCodec.MaxSimulationTick);
+        Assert.That(
+            () => harness.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harness.Client.SubmitCount, Is.Zero);
+
+        using var harnessOutbox = CreateHarness(leadTicks: 1);
+        ObserveConnectedThenApplyAck(harnessOutbox, committedThroughTick: 0);
+        harnessOutbox.Client.SeedEnqueuedTick(FixedInputWireCodec.MaxSimulationTick);
+        Assert.That(
+            () => harnessOutbox.Clock.Advance(1f / TickRateHz),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.That(harnessOutbox.Client.SubmitCount, Is.Zero);
+    }
+
+    [Test]
+    public void NotConnected_DoesNotAccumulateOrSend_AndReconnectRequiresFreshAck()
+    {
+        using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         Assert.That(harness.Clock.Advance(1f / TickRateHz).StepsEmitted, Is.EqualTo(1));
-        Assert.That(harness.Clock.NextTargetTick, Is.EqualTo(2u));
+        Assert.That(harness.Clock.PeekNextTargetTick(), Is.EqualTo(2u));
 
         harness.Client.State = ReplicatedClientConnectionState.Disconnected;
         ReplicatedClientFixedInputClockAdvanceResult paused = harness.Clock.Advance(1f);
@@ -189,8 +353,15 @@ public sealed class ReplicatedClientFixedInputClockTests
         Assert.That(harness.Clock.AccumulatedSeconds, Is.EqualTo(0d));
         Assert.That(harness.Clock.IsArmed, Is.False);
 
+        harness.Client.ResetOutboxGeneration();
         harness.Client.State = ReplicatedClientConnectionState.Connected;
         harness.Client.SessionEpoch = new SessionEpoch(2);
+        ReplicatedClientFixedInputClockAdvanceResult waiting = harness.Clock.Advance(1f / TickRateHz);
+        Assert.That(
+            waiting.Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 0);
         ReplicatedClientFixedInputClockAdvanceResult resumed = harness.Clock.Advance(1f / TickRateHz);
         Assert.That(resumed.Status, Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.Stepped));
         Assert.That(resumed.LastTargetTick, Is.EqualTo(1u));
@@ -198,21 +369,28 @@ public sealed class ReplicatedClientFixedInputClockTests
     }
 
     [Test]
-    public void ExplicitResetForSession_RestartsTargetTickSelection()
+    public void ExplicitResetForSession_RequiresFreshAckBeforeSampling()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(1u));
+
+        harness.Client.SessionEpoch = new SessionEpoch(9);
         harness.Clock.ResetForSession(new SessionEpoch(9));
-        Assert.That(harness.Clock.NextTargetTick, Is.EqualTo(1u));
-        Assert.That(harness.Clock.LastEmittedTargetTick, Is.EqualTo(0u));
-        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(1u));
-        Assert.That(harness.Client.EmittedTicks[^1], Is.EqualTo(1u));
+        Assert.That(harness.Clock.IsWaitingForAuthoritativeAcknowledgement, Is.True);
+        Assert.That(
+            harness.Clock.Advance(1f / TickRateHz).Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick: 4);
+        Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(5u));
     }
 
     [Test]
     public void SameSessionRemainsArmed_ContinuesStrictlyIncreasingTicks()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(1u));
         Assert.That(harness.Clock.Advance(1f / TickRateHz).LastTargetTick, Is.EqualTo(2u));
         Assert.That(harness.Clock.ArmedSessionEpoch.Value, Is.EqualTo(1ul));
@@ -223,7 +401,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void PumpWithoutDueFixedStep_SendsNoInput_OnlyClockPulseSends()
     {
         using var harness = CreateHarness();
-        // Half a tick: not due.
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         Assert.That(harness.Clock.Advance(1f / TickRateHz / 2f).StepsEmitted, Is.Zero);
         Assert.That(harness.Client.PulseCount, Is.Zero);
         Assert.That(harness.Clock.Advance(1f / TickRateHz / 2f).StepsEmitted, Is.EqualTo(1));
@@ -234,6 +412,7 @@ public sealed class ReplicatedClientFixedInputClockTests
     public void SteadyState_Advance_AllocatesZeroManagedBytesAfterWarmup()
     {
         using var harness = CreateHarness();
+        ObserveConnectedThenApplyAck(harness, committedThroughTick: 0);
         for (int i = 0; i < 64; i++)
         {
             Assert.That(harness.Clock.Advance(1f / TickRateHz).IsSuccess, Is.True);
@@ -257,18 +436,67 @@ public sealed class ReplicatedClientFixedInputClockTests
         Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B after warmup; observed {allocated} B.");
     }
 
-    private static uint[] ExpectedTicks(int count)
+    [Test]
+    public void TryComputeNextTargetTick_MatchesSsotFormulaAndRejectsOverflow()
+    {
+        Assert.That(
+            FixedInputWireCodec.TryComputeNextTargetTick(
+                lastEnqueuedTargetTick: 0,
+                hasEnqueued: false,
+                acknowledgedCommittedThroughTick: 500,
+                leadTicks: 2,
+                out uint lateJoin),
+            Is.True);
+        Assert.That(lateJoin, Is.EqualTo(502u));
+
+        Assert.That(
+            FixedInputWireCodec.TryComputeNextTargetTick(
+                lastEnqueuedTargetTick: 510,
+                hasEnqueued: true,
+                acknowledgedCommittedThroughTick: 500,
+                leadTicks: 2,
+                out uint fromOutbox),
+            Is.True);
+        Assert.That(fromOutbox, Is.EqualTo(511u));
+
+        Assert.That(
+            FixedInputWireCodec.TryComputeNextTargetTick(
+                lastEnqueuedTargetTick: 0,
+                hasEnqueued: false,
+                acknowledgedCommittedThroughTick: FixedInputWireCodec.MaxSimulationTick,
+                leadTicks: 1,
+                out _),
+            Is.False);
+    }
+
+    private static uint[] ExpectedTicks(uint start, int count)
     {
         var ticks = new uint[count];
-        for (uint i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
-            ticks[i] = i + 1;
+            ticks[i] = start + (uint)i;
         }
 
         return ticks;
     }
 
-    private static ClockHarness CreateHarness(int maxStepsPerAdvance = 8, int maxAccumulatedSteps = 64)
+    /// <summary>
+    /// Observe the Connected edge first, then apply a NEW authoritative ACK after that edge.
+    /// Matches production ordering: Connected ? post-connect ACK ? sample/enqueue.
+    /// </summary>
+    private static void ObserveConnectedThenApplyAck(ClockHarness harness, uint committedThroughTick)
+    {
+        ReplicatedClientFixedInputClockAdvanceResult waiting = harness.Clock.Advance(0f);
+        Assert.That(
+            waiting.Status,
+            Is.EqualTo(ReplicatedClientFixedInputClockAdvanceStatus.WaitingForAuthoritativeAcknowledgement));
+        harness.Client.ApplyAuthoritativeAck(committedThroughTick);
+    }
+
+    private static ClockHarness CreateHarness(
+        int maxStepsPerAdvance = 8,
+        int maxAccumulatedSteps = 64,
+        int leadTicks = DefaultLeadTicks)
     {
         var client = new FakeFixedInputClient();
         var source = new FillPayloadSource(PayloadBytes);
@@ -277,6 +505,7 @@ public sealed class ReplicatedClientFixedInputClockTests
             source,
             TickRateHz,
             PayloadBytes,
+            leadTicks,
             maxStepsPerAdvance,
             maxAccumulatedSteps);
         return new ClockHarness(client, source, clock);
@@ -303,6 +532,8 @@ public sealed class ReplicatedClientFixedInputClockTests
     private sealed class FillPayloadSource : IFixedInputPayloadSource
     {
         private readonly int _payloadBytes;
+        private readonly uint[] _sampledTicks = new uint[16_384];
+        private int _sampledCount;
         private byte _sequence;
 
         public FillPayloadSource(int payloadBytes)
@@ -311,8 +542,11 @@ public sealed class ReplicatedClientFixedInputClockTests
         }
 
         public bool FailNext { get; set; }
+        public int SampleCount => _sampledCount;
+        public uint LastSampledTargetTick { get; private set; }
+        public IReadOnlyList<uint> SampledTicks => _sampledTicks.AsSpan(0, _sampledCount).ToArray();
 
-        public FixedInputPayloadSampleStatus TrySample(Span<byte> destination)
+        public FixedInputPayloadSampleStatus TrySample(uint targetTick, Span<byte> destination)
         {
             if (FailNext)
             {
@@ -320,11 +554,19 @@ public sealed class ReplicatedClientFixedInputClockTests
                 return FixedInputPayloadSampleStatus.Failed;
             }
 
-            if (destination.Length != _payloadBytes)
+            if (!FixedInputWireCodec.IsValidInputTargetTick(targetTick) ||
+                destination.Length != _payloadBytes)
             {
                 return FixedInputPayloadSampleStatus.Failed;
             }
 
+            if (_sampledCount >= _sampledTicks.Length)
+            {
+                throw new InvalidOperationException("Payload source sample capacity exceeded.");
+            }
+
+            LastSampledTargetTick = targetTick;
+            _sampledTicks[_sampledCount++] = targetTick;
             destination.Fill(_sequence++);
             return FixedInputPayloadSampleStatus.Sampled;
         }
@@ -334,6 +576,10 @@ public sealed class ReplicatedClientFixedInputClockTests
     {
         private readonly uint[] _emitted = new uint[16_384];
         private int _emittedCount;
+        private bool _hasEnqueued;
+        private uint _lastEnqueued;
+        private uint _acknowledgedCommitted;
+        private ulong _ackObservationVersion;
 
         public ReplicatedClientConnectionState State { get; set; } = ReplicatedClientConnectionState.Connected;
         public SessionEpoch SessionEpoch { get; set; } = new(1);
@@ -342,6 +588,44 @@ public sealed class ReplicatedClientFixedInputClockTests
         public int SubmitCount { get; private set; }
         public int PulseCount { get; private set; }
         public IReadOnlyList<uint> EmittedTicks => _emitted.AsSpan(0, _emittedCount).ToArray();
+
+        public uint FixedInputAcknowledgedCommittedTick => _acknowledgedCommitted;
+        public ulong FixedInputAcknowledgementObservationVersion => _ackObservationVersion;
+        public bool HasEnqueuedFixedInputTargetTick => _hasEnqueued;
+        public uint LastEnqueuedFixedInputTargetTick => _lastEnqueued;
+
+        public void ApplyAuthoritativeAck(uint committedThroughTick)
+        {
+            if (!FixedInputWireCodec.IsValidSimulationTickField(committedThroughTick))
+            {
+                throw new ArgumentOutOfRangeException(nameof(committedThroughTick));
+            }
+
+            _acknowledgedCommitted = committedThroughTick;
+            _ackObservationVersion = checked(_ackObservationVersion + 1UL);
+        }
+
+        public void ResetOutboxGeneration()
+        {
+            _hasEnqueued = false;
+            _lastEnqueued = 0;
+            _acknowledgedCommitted = 0;
+            _ackObservationVersion = 0;
+            _emittedCount = 0;
+            SubmitCount = 0;
+            PulseCount = 0;
+        }
+
+        public void SeedEnqueuedTick(uint tick)
+        {
+            if (!FixedInputWireCodec.IsValidInputTargetTick(tick))
+            {
+                throw new ArgumentOutOfRangeException(nameof(tick));
+            }
+
+            _hasEnqueued = true;
+            _lastEnqueued = tick;
+        }
 
         public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload)
         {
@@ -355,6 +639,16 @@ public sealed class ReplicatedClientFixedInputClockTests
                 return EnqueueStatus;
             }
 
+            if (!FixedInputWireCodec.IsValidInputTargetTick(targetTick))
+            {
+                return FixedInputOutboxEnqueueStatus.InvalidInput;
+            }
+
+            if (_hasEnqueued && targetTick <= _lastEnqueued)
+            {
+                return FixedInputOutboxEnqueueStatus.TickNotIncreasing;
+            }
+
             if (_emittedCount >= _emitted.Length)
             {
                 throw new InvalidOperationException("Fake fixed-input client tick capacity exceeded.");
@@ -362,6 +656,8 @@ public sealed class ReplicatedClientFixedInputClockTests
 
             SubmitCount++;
             _emitted[_emittedCount++] = targetTick;
+            _lastEnqueued = targetTick;
+            _hasEnqueued = true;
             return FixedInputOutboxEnqueueStatus.Enqueued;
         }
 

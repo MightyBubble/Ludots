@@ -33,6 +33,7 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.InputChannelId, Is.EqualTo(3));
             Assert.That(config.FixedInputSchemaId, Is.EqualTo(1));
             Assert.That(config.FixedInputFramePayloadBytes, Is.EqualTo(12));
+            Assert.That(config.FixedInputLeadTicks, Is.EqualTo(2));
             Assert.That(config.TransportMaxConnectAttempts, Is.EqualTo(10));
             Assert.That(config.TransportDisconnectTimeoutMilliseconds, Is.EqualTo(5_000));
             Assert.That(config.ReliableDisconnectFlushTimeoutMilliseconds, Is.EqualTo(4_000));
@@ -152,6 +153,7 @@ public sealed class NetworkRuntimeConfigTests
         FixedInputSchemaId = 1,
         FixedInputFramePayloadBytes = 12,
         FixedInputMaxFutureTicks = 4,
+        FixedInputLeadTicks = 2,
         FixedInputMaxFramesPerBatch = 4,
         FixedInputPendingFrameCapacity = 8,
         SnapshotChunkCapacity = 256,

@@ -312,6 +312,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fixedInputSchemaId: 1,
             fixedInputFramePayloadBytes: 12,
             fixedInputMaxFutureTicks: 4,
+            fixedInputLeadTicks: 2,
             fixedInputMaxFramesPerBatch: 4,
             fixedInputPendingFrameCapacity: 8);
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 7, 7 });
@@ -477,6 +478,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fixedInputSchemaId: 1,
             fixedInputFramePayloadBytes: 12,
             fixedInputMaxFutureTicks: 4,
+            fixedInputLeadTicks: 2,
             fixedInputMaxFramesPerBatch: 4,
             fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(31));
@@ -698,6 +700,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fixedInputSchemaId: 1,
             fixedInputFramePayloadBytes: 12,
             fixedInputMaxFutureTicks: 4,
+            fixedInputLeadTicks: 2,
             fixedInputMaxFramesPerBatch: 4,
             fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(41));
@@ -1060,6 +1063,7 @@ public sealed class NetworkRuntimeEndToEndTests
         fixedInputSchemaId: 1,
         fixedInputFramePayloadBytes: 12,
         fixedInputMaxFutureTicks: 4,
+        fixedInputLeadTicks: 2,
         fixedInputMaxFramesPerBatch: 4,
         fixedInputPendingFrameCapacity: 8);
 
