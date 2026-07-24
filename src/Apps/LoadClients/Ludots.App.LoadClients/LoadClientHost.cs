@@ -188,10 +188,13 @@ public sealed class LoadClientHost
             long previousTimestamp = Stopwatch.GetTimestamp();
             double connectDeadline = _config.ConnectTimeoutSeconds;
             double readyDeadline = _config.ConnectTimeoutSeconds + _config.ReadyTimeoutSeconds;
-            double totalDeadline = _config.DurationSeconds;
+            // Connect/ready waiting must not consume active run duration or warmup.
+            double readyAtSeconds = double.NaN;
+            double runDeadlineSeconds = double.PositiveInfinity;
             bool allConnected = false;
             bool allReady = false;
-            long measurementGenerated = 0;
+            long[] measurementBaselines = new long[slots.Length];
+            bool measurementStarted = false;
             double measurementElapsed = 0d;
 
             while (true)
@@ -209,17 +212,47 @@ public sealed class LoadClientHost
                 previousTimestamp = now;
                 double elapsed = stopwatch.Elapsed.TotalSeconds;
 
+                if (allReady)
+                {
+                    double sinceReady = elapsed - readyAtSeconds;
+                    if (!measurementStarted && sinceReady >= _config.WarmUpSeconds)
+                    {
+                        for (int baselineIndex = 0; baselineIndex < constructed; baselineIndex++)
+                        {
+                            measurementBaselines[baselineIndex] = slots[baselineIndex].FixedInputsGenerated;
+                        }
+
+                        measurementStarted = true;
+                    }
+
+                    if (measurementStarted)
+                    {
+                        measurementElapsed = sinceReady - _config.WarmUpSeconds;
+                    }
+                }
+
                 for (int i = 0; i < constructed; i++)
                 {
                     LoadClientSlot slot = slots[i];
-                    slot.Runtime.PumpTransport();
-                    slot.Runtime.PumpReplicatedClient(deltaSeconds);
-
-                    if (slot.Observer.FaultCount > 0 || slot.Runtime.IsFaulted)
+                    ILoadClientSlotTestDriver? driver = slot.TestDriver;
+                    if (driver != null)
                     {
-                        NetworkRuntimeFault fault = slot.Runtime.IsFaulted
-                            ? slot.Runtime.LastFault
-                            : slot.Observer.LastFault;
+                        driver.Pump(deltaSeconds);
+                    }
+                    else
+                    {
+                        slot.Runtime.PumpTransport();
+                        slot.Runtime.PumpReplicatedClient(deltaSeconds);
+                    }
+
+                    bool isFaulted = driver?.IsFaulted ?? (slot.Observer.FaultCount > 0 || slot.Runtime.IsFaulted);
+                    if (isFaulted)
+                    {
+                        NetworkRuntimeFault fault = driver != null
+                            ? driver.LastFault
+                            : slot.Runtime.IsFaulted
+                                ? slot.Runtime.LastFault
+                                : slot.Observer.LastFault;
                         runtimeFaultCode = (int)fault.Code;
                         return Finalize(
                             LoadClientRunOutcome.Failed,
@@ -240,8 +273,9 @@ public sealed class LoadClientHost
                             heldThirtyHzContract: false);
                     }
 
-                    if (slot.Runtime.State == ReplicatedClientConnectionState.Rejected ||
-                        (slot.Observer.HandshakeSeen && !slot.Observer.HandshakeAccepted))
+                    ReplicatedClientConnectionState connectionState = driver?.ConnectionState ?? slot.Runtime.State;
+                    if (connectionState == ReplicatedClientConnectionState.Rejected ||
+                        (driver == null && slot.Observer.HandshakeSeen && !slot.Observer.HandshakeAccepted))
                     {
                         rejections = CountRejections(slots, constructed);
                         return Finalize(
@@ -264,13 +298,13 @@ public sealed class LoadClientHost
                     }
 
                     if (slot.IsReady &&
-                        slot.Runtime.State != ReplicatedClientConnectionState.Connected)
+                        connectionState != ReplicatedClientConnectionState.Connected)
                     {
                         slot.DisconnectAfterReady = true;
                         return Finalize(
                             LoadClientRunOutcome.Failed,
                             LoadClientFaultKind.UnexpectedDisconnect,
-                            $"Client {i} disconnected after readiness (state {slot.Runtime.State}).",
+                            $"Client {i} disconnected after readiness (state {connectionState}).",
                             slots,
                             constructed,
                             CountConnected(slots, constructed),
@@ -286,7 +320,9 @@ public sealed class LoadClientHost
                             heldThirtyHzContract: false);
                     }
 
-                    ReplicatedClientFixedInputClockAdvanceResult advance = slot.Clock.Advance(deltaSeconds);
+                    ReplicatedClientFixedInputClockAdvanceResult advance = driver != null
+                        ? driver.Advance(deltaSeconds)
+                        : slot.Clock.Advance(deltaSeconds);
                     if (!advance.IsSuccess)
                     {
                         LoadClientFaultKind kind = advance.Status switch
@@ -324,22 +360,23 @@ public sealed class LoadClientHost
                     {
                         slot.FixedInputsGenerated += advance.StepsEmitted;
                         slot.FixedInputsPulsed += advance.StepsEmitted;
-                        if (elapsed >= _config.WarmUpSeconds)
-                        {
-                            measurementGenerated += advance.StepsEmitted;
-                        }
                     }
 
-                    uint ack = slot.Runtime.FixedInputAcknowledgedCommittedTick;
+                    uint ack = driver?.FixedInputAcknowledgedCommittedTick
+                        ?? slot.Runtime.FixedInputAcknowledgedCommittedTick;
                     if (ack > slot.HighestAcknowledgedCommittedTick)
                     {
                         slot.HighestAcknowledgedCommittedTick = ack;
                     }
 
+                    bool waitingForAck = driver?.IsWaitingForAuthoritativeAcknowledgement
+                        ?? slot.Clock.IsWaitingForAuthoritativeAcknowledgement;
+                    ulong ackObservationVersion = driver?.FixedInputAcknowledgementObservationVersion
+                        ?? slot.Runtime.FixedInputAcknowledgementObservationVersion;
                     if (!slot.IsReady &&
-                        slot.Runtime.State == ReplicatedClientConnectionState.Connected &&
-                        !slot.Clock.IsWaitingForAuthoritativeAcknowledgement &&
-                        slot.Runtime.FixedInputAcknowledgementObservationVersion > 0)
+                        connectionState == ReplicatedClientConnectionState.Connected &&
+                        !waitingForAck &&
+                        ackObservationVersion > 0)
                     {
                         slot.IsReady = true;
                     }
@@ -381,6 +418,18 @@ public sealed class LoadClientHost
                     if (readyClients == constructed)
                     {
                         allReady = true;
+                        readyAtSeconds = elapsed;
+                        runDeadlineSeconds = readyAtSeconds + _config.DurationSeconds;
+                        if (!measurementStarted && _config.WarmUpSeconds <= 0d)
+                        {
+                            for (int baselineIndex = 0; baselineIndex < constructed; baselineIndex++)
+                            {
+                                measurementBaselines[baselineIndex] = slots[baselineIndex].FixedInputsGenerated;
+                            }
+
+                            measurementStarted = true;
+                            measurementElapsed = 0d;
+                        }
                     }
                     else if (elapsed >= readyDeadline)
                     {
@@ -404,12 +453,8 @@ public sealed class LoadClientHost
                     }
                 }
 
-                if (elapsed >= _config.WarmUpSeconds)
-                {
-                    measurementElapsed = elapsed - _config.WarmUpSeconds;
-                }
-
-                if (elapsed >= totalDeadline)
+                // Duration starts only after every client is ready (readyAt).
+                if (allReady && elapsed >= runDeadlineSeconds)
                 {
                     break;
                 }
@@ -470,15 +515,14 @@ public sealed class LoadClientHost
 
             double expectedTicks = measurementElapsed * _config.SimulationTickRateHz;
             // Allow one tick of quantization slack on wall-clock measurement; never invent missing load.
-            heldThirtyHz = measurementElapsed > 0d &&
-                measurementGenerated >= (long)Math.Floor(expectedTicks) &&
-                measurementGenerated <= (long)Math.Ceiling(expectedTicks) + _config.MaxStepsPerAdvance;
-            if (!heldThirtyHz)
+            long minExpected = (long)Math.Floor(expectedTicks);
+            long maxExpected = (long)Math.Ceiling(expectedTicks) + _config.MaxStepsPerAdvance;
+            if (!(measurementStarted && measurementElapsed > 0d))
             {
                 return Finalize(
                     LoadClientRunOutcome.Failed,
                     LoadClientFaultKind.TickRateContractBroken,
-                    $"30Hz contract broken: measurementGenerated={measurementGenerated} expected≈{expectedTicks.ToString("0.###", CultureInfo.InvariantCulture)} over {measurementElapsed.ToString("0.###", CultureInfo.InvariantCulture)}s.",
+                    $"30Hz contract broken: measurement window was empty (measurementStarted={measurementStarted} measurementElapsed={measurementElapsed.ToString("0.###", CultureInfo.InvariantCulture)}s).",
                     slots,
                     constructed,
                     connectedClients,
@@ -493,6 +537,33 @@ public sealed class LoadClientHost
                     stopwatch.Elapsed.TotalSeconds,
                     heldThirtyHzContract: false);
             }
+
+            for (int i = 0; i < constructed; i++)
+            {
+                long delta = slots[i].FixedInputsGenerated - measurementBaselines[i];
+                if (delta < minExpected || delta > maxExpected)
+                {
+                    return Finalize(
+                        LoadClientRunOutcome.Failed,
+                        LoadClientFaultKind.TickRateContractBroken,
+                        $"30Hz contract broken: client {i} measurementGenerated={delta.ToString(CultureInfo.InvariantCulture)} expected=[{minExpected.ToString(CultureInfo.InvariantCulture)},{maxExpected.ToString(CultureInfo.InvariantCulture)}] over {measurementElapsed.ToString("0.###", CultureInfo.InvariantCulture)}s.",
+                        slots,
+                        constructed,
+                        connectedClients,
+                        readyClients,
+                        uniqueEndpoints,
+                        generated,
+                        pulsed,
+                        maxAck,
+                        disconnectsAfterReady,
+                        rejections,
+                        runtimeFaultCode,
+                        stopwatch.Elapsed.TotalSeconds,
+                        heldThirtyHzContract: false);
+                }
+            }
+
+            heldThirtyHz = true;
 
             return Finalize(
                 LoadClientRunOutcome.Passed,
@@ -647,7 +718,13 @@ public sealed class LoadClientHost
         for (int i = 0; i < count; i++)
         {
             LoadClientSlot? slot = slots[i];
-            if (slot != null && slot.Runtime.State == ReplicatedClientConnectionState.Connected)
+            if (slot == null)
+            {
+                continue;
+            }
+
+            ReplicatedClientConnectionState state = slot.TestDriver?.ConnectionState ?? slot.Runtime.State;
+            if (state == ReplicatedClientConnectionState.Connected)
             {
                 connected++;
             }
@@ -742,8 +819,9 @@ public sealed class LoadClientHost
                 continue;
             }
 
-            if (slot.Runtime.State == ReplicatedClientConnectionState.Rejected ||
-                (slot.Observer.HandshakeSeen && !slot.Observer.HandshakeAccepted))
+            ReplicatedClientConnectionState state = slot.TestDriver?.ConnectionState ?? slot.Runtime.State;
+            if (state == ReplicatedClientConnectionState.Rejected ||
+                (slot.TestDriver == null && slot.Observer.HandshakeSeen && !slot.Observer.HandshakeAccepted))
             {
                 total++;
             }
