@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using Ludots.App.LoadClients;
 using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
@@ -140,7 +142,106 @@ public sealed class LoadClientHostOrchestrationTests
         }
 
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        AssertZeroAllocated(allocated);
+    }
+
+    [Test]
+    public void Run_StaggeredReadiness_DoesNotConsumeWarmupOrDuration()
+    {
+        const double readyDelaySeconds = 0.55d;
+        const double durationSeconds = 0.45d;
+        const double warmUpSeconds = 0.1d;
+        LoadClientHostConfig config = ParseTimedConfig(
+            clientCount: 2,
+            durationSeconds: durationSeconds,
+            warmUpSeconds: warmUpSeconds,
+            connectTimeoutSeconds: 5d,
+            readyTimeoutSeconds: 5d);
+        var factory = new ScriptedSlotFactory(
+            new ScriptedClientSpec(ReadyAfterSeconds: 0.05d, StepsPerSecond: 30d),
+            new ScriptedClientSpec(ReadyAfterSeconds: readyDelaySeconds, StepsPerSecond: 30d));
+        var host = new LoadClientHost(config, factory, baseDirectory: _credentialDirectory);
+        var wall = Stopwatch.StartNew();
+        LoadClientRunEvidence evidence = host.Run(CancellationToken.None);
+        wall.Stop();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(evidence.Outcome, Is.EqualTo(LoadClientRunOutcome.Passed), evidence.FaultDetail);
+            Assert.That(evidence.HeldThirtyHzContract, Is.True);
+            Assert.That(evidence.ReadyClients, Is.EqualTo(2));
+            // If readiness consumed duration, the host would have ended near durationSeconds (~0.45s)
+            // before both clients were ready and could not pass a post-ready measurement window.
+            Assert.That(evidence.ElapsedSeconds, Is.GreaterThanOrEqualTo(readyDelaySeconds + durationSeconds - 0.05d));
+            Assert.That(wall.Elapsed.TotalSeconds, Is.GreaterThanOrEqualTo(readyDelaySeconds + warmUpSeconds));
+            Assert.That(evidence.FixedInputsGenerated, Is.GreaterThan(0));
+        });
+    }
+
+    [Test]
+    public void Run_OneLaggingClient_FailsEvenWhenAggregateCouldPass()
+    {
+        const double durationSeconds = 0.6d;
+        LoadClientHostConfig config = ParseTimedConfig(
+            clientCount: 2,
+            durationSeconds: durationSeconds,
+            warmUpSeconds: 0d,
+            connectTimeoutSeconds: 5d,
+            readyTimeoutSeconds: 5d);
+        var factory = new ScriptedSlotFactory(
+            new ScriptedClientSpec(ReadyAfterSeconds: 0d, StepsPerSecond: 30d),
+            new ScriptedClientSpec(ReadyAfterSeconds: 0d, StepsPerSecond: 8d));
+        var host = new LoadClientHost(config, factory, baseDirectory: _credentialDirectory);
+        LoadClientRunEvidence evidence = host.Run(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(evidence.Outcome, Is.EqualTo(LoadClientRunOutcome.Failed));
+            Assert.That(evidence.FaultKind, Is.EqualTo(LoadClientFaultKind.TickRateContractBroken));
+            Assert.That(evidence.HeldThirtyHzContract, Is.False);
+            Assert.That(evidence.FaultDetail, Does.Contain("client 1"));
+            Assert.That(evidence.FaultDetail, Does.Contain("measurementGenerated="));
+            Assert.That(evidence.FaultDetail, Does.Contain("expected=["));
+            // Aggregate across both clients can still look healthy while client 1 lagged.
+            Assert.That(evidence.FixedInputsGenerated, Is.GreaterThan(0));
+        });
+    }
+
+    // Isolates the exact 0B assert from NUnit/tiered JIT instrumentation of the test method body.
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static void AssertZeroAllocated(long allocated)
+    {
         Assert.That(allocated, Is.EqualTo(0));
+    }
+
+    private LoadClientHostConfig ParseTimedConfig(
+        int clientCount,
+        double durationSeconds,
+        double warmUpSeconds,
+        double connectTimeoutSeconds,
+        double readyTimeoutSeconds)
+    {
+        string json = LoadClientHostConfigTests.CreateValidJson(clientCount: clientCount)
+            .Replace("\"credentialDirectory\": \"credentials\"",
+                $"\"credentialDirectory\": {JsonEscape(_credentialDirectory)}",
+                StringComparison.Ordinal)
+            .Replace(
+                "\"durationSeconds\": 2.0",
+                FormattableString.Invariant($"\"durationSeconds\": {durationSeconds.ToString("0.###", CultureInfo.InvariantCulture)}"),
+                StringComparison.Ordinal)
+            .Replace(
+                "\"warmUpSeconds\": 0.5",
+                FormattableString.Invariant($"\"warmUpSeconds\": {warmUpSeconds.ToString("0.###", CultureInfo.InvariantCulture)}"),
+                StringComparison.Ordinal)
+            .Replace(
+                "\"connectTimeoutSeconds\": 2.0",
+                FormattableString.Invariant($"\"connectTimeoutSeconds\": {connectTimeoutSeconds.ToString("0.###", CultureInfo.InvariantCulture)}"),
+                StringComparison.Ordinal)
+            .Replace(
+                "\"readyTimeoutSeconds\": 2.0",
+                FormattableString.Invariant($"\"readyTimeoutSeconds\": {readyTimeoutSeconds.ToString("0.###", CultureInfo.InvariantCulture)}"),
+                StringComparison.Ordinal);
+        return LoadClientHostConfig.ParseJson(json);
     }
 
     private static string JsonEscape(string path) =>
@@ -181,6 +282,115 @@ public sealed class LoadClientHostOrchestrationTests
             }
 
             return slot;
+        }
+    }
+
+    private readonly record struct ScriptedClientSpec(double ReadyAfterSeconds, double StepsPerSecond);
+
+    private sealed class ScriptedSlotFactory : ILoadClientSlotFactory
+    {
+        private readonly LiteNetLibLoadClientSlotFactory _inner = new();
+        private readonly ScriptedClientSpec[] _specs;
+        private readonly Stopwatch _wall = new();
+
+        public ScriptedSlotFactory(params ScriptedClientSpec[] specs)
+        {
+            _specs = specs ?? throw new ArgumentNullException(nameof(specs));
+        }
+
+        public LoadClientSlot Create(int clientIndex, LoadClientHostConfig config, string credentialDirectory)
+        {
+            if ((uint)clientIndex >= (uint)_specs.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clientIndex));
+            }
+
+            if (!_wall.IsRunning)
+            {
+                _wall.Start();
+            }
+
+            LoadClientSlot slot = _inner.Create(clientIndex, config, credentialDirectory);
+            ScriptedClientSpec spec = _specs[clientIndex];
+            slot.ConnectOverride = static () => true;
+            slot.TestDriver = new ScriptedLoadClientDriver(
+                _wall,
+                spec.ReadyAfterSeconds,
+                spec.StepsPerSecond,
+                config.MaxStepsPerAdvance);
+            return slot;
+        }
+    }
+
+    private sealed class ScriptedLoadClientDriver : ILoadClientSlotTestDriver
+    {
+        private readonly Stopwatch _wall;
+        private readonly double _readyAfterSeconds;
+        private readonly double _stepsPerSecond;
+        private readonly int _maxStepsPerAdvance;
+        private double _accumulator;
+        private bool _readyArmed;
+
+        public ScriptedLoadClientDriver(
+            Stopwatch wall,
+            double readyAfterSeconds,
+            double stepsPerSecond,
+            int maxStepsPerAdvance)
+        {
+            _wall = wall;
+            _readyAfterSeconds = readyAfterSeconds;
+            _stepsPerSecond = stepsPerSecond;
+            _maxStepsPerAdvance = maxStepsPerAdvance;
+        }
+
+        public ReplicatedClientConnectionState ConnectionState => ReplicatedClientConnectionState.Connected;
+        public bool IsFaulted => false;
+        public NetworkRuntimeFault LastFault => default;
+        public bool IsWaitingForAuthoritativeAcknowledgement => !_readyArmed;
+        public ulong FixedInputAcknowledgementObservationVersion => _readyArmed ? 1UL : 0UL;
+        public uint FixedInputAcknowledgedCommittedTick => _readyArmed ? 1u : 0u;
+
+        public void Pump(float deltaSeconds)
+        {
+            if (!_readyArmed && _wall.Elapsed.TotalSeconds >= _readyAfterSeconds)
+            {
+                _readyArmed = true;
+            }
+        }
+
+        public ReplicatedClientFixedInputClockAdvanceResult Advance(float deltaSeconds)
+        {
+            if (!_readyArmed || deltaSeconds <= 0f || _stepsPerSecond <= 0d)
+            {
+                return new ReplicatedClientFixedInputClockAdvanceResult(
+                    ReplicatedClientFixedInputClockAdvanceStatus.Idle,
+                    stepsEmitted: 0,
+                    lastTargetTick: 0,
+                    enqueueStatus: FixedInputOutboxEnqueueStatus.Enqueued);
+            }
+
+            _accumulator += deltaSeconds * _stepsPerSecond;
+            int steps = (int)_accumulator;
+            if (steps <= 0)
+            {
+                return new ReplicatedClientFixedInputClockAdvanceResult(
+                    ReplicatedClientFixedInputClockAdvanceStatus.Idle,
+                    stepsEmitted: 0,
+                    lastTargetTick: 0,
+                    enqueueStatus: FixedInputOutboxEnqueueStatus.Enqueued);
+            }
+
+            if (steps > _maxStepsPerAdvance)
+            {
+                steps = _maxStepsPerAdvance;
+            }
+
+            _accumulator -= steps;
+            return new ReplicatedClientFixedInputClockAdvanceResult(
+                ReplicatedClientFixedInputClockAdvanceStatus.Stepped,
+                stepsEmitted: steps,
+                lastTargetTick: 0,
+                enqueueStatus: FixedInputOutboxEnqueueStatus.Enqueued);
         }
     }
 

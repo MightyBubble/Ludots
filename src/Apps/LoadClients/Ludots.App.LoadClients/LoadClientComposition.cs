@@ -45,6 +45,22 @@ public interface ILoadClientSlotFactory
     LoadClientSlot Create(int clientIndex, LoadClientHostConfig config, string credentialDirectory);
 }
 
+/// <summary>
+/// Test seam for deterministic host orchestration. Production slots leave <see cref="LoadClientSlot.TestDriver"/> null.
+/// Does not replace LiteNetLib production wiring or invent a parallel network runtime.
+/// </summary>
+public interface ILoadClientSlotTestDriver
+{
+    void Pump(float deltaSeconds);
+    ReplicatedClientConnectionState ConnectionState { get; }
+    bool IsFaulted { get; }
+    NetworkRuntimeFault LastFault { get; }
+    bool IsWaitingForAuthoritativeAcknowledgement { get; }
+    ulong FixedInputAcknowledgementObservationVersion { get; }
+    uint FixedInputAcknowledgedCommittedTick { get; }
+    ReplicatedClientFixedInputClockAdvanceResult Advance(float deltaSeconds);
+}
+
 public sealed class LoadClientSlot : IDisposable
 {
     private bool _disposed;
@@ -90,6 +106,11 @@ public sealed class LoadClientSlot : IDisposable
     /// Optional dispose observer for tests verifying exactly-once disposal.
     /// </summary>
     public Action? OnDisposed { get; set; }
+
+    /// <summary>
+    /// Test seam for deterministic readiness/tick-rate orchestration. Production leaves this null.
+    /// </summary>
+    public ILoadClientSlotTestDriver? TestDriver { get; set; }
 
     public bool TryConnect() => ConnectOverride?.Invoke() ?? Runtime.TryConnectNow();
 
