@@ -12,7 +12,7 @@ namespace Ludots.Core.Networking.Protocol
             2 + 2 + ContentFingerprint.ByteLength + 8 + 8 + 8;
 
         public const int ResponseSizeInBytes =
-            1 + 1 + 2 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8;
+            1 + 1 + 2 + 4 + 4 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8;
 
         public static NetworkWireCodecStatus TryEncodeRequest(
             in SessionHandshakeRequest request,
@@ -116,7 +116,7 @@ namespace Ludots.Core.Networking.Protocol
             if (response.Accepted)
             {
                 if (response.RejectReason != HandshakeRejectReason.None ||
-                    response.PlayerId.Value <= 0 ||
+                    !response.Seat.IsValid ||
                     response.ReconnectToken.IsEmpty ||
                     response.SessionEpoch.IsEmpty)
                 {
@@ -137,6 +137,8 @@ namespace Ludots.Core.Networking.Protocol
             if (!NetworkWireBinary.TryWriteByte(destination, ref offset, response.Accepted ? (byte)1 : (byte)0) ||
                 !NetworkWireBinary.TryWriteByte(destination, ref offset, (byte)response.RejectReason) ||
                 !NetworkWireBinary.TryWriteUInt16(destination, ref offset, 0) ||
+                !NetworkWireBinary.TryWriteInt32(destination, ref offset, response.Accepted ? response.Seat.Slot : -1) ||
+                !NetworkWireBinary.TryWriteUInt32(destination, ref offset, response.Accepted ? response.Seat.Generation : 0) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, response.Accepted ? response.PlayerId.Value : 0) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.ReconnectToken.Low) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.ReconnectToken.High) ||
@@ -172,7 +174,9 @@ namespace Ludots.Core.Networking.Protocol
             int offset = 0;
             if (!NetworkWireBinary.TryReadByte(source, ref offset, out byte acceptedByte) ||
                 !NetworkWireBinary.TryReadByte(source, ref offset, out byte rejectByte) ||
-                !NetworkWireBinary.TryReadUInt16(source, ref offset, out _) ||
+                !NetworkWireBinary.TryReadUInt16(source, ref offset, out ushort reserved) ||
+                !NetworkWireBinary.TryReadInt32(source, ref offset, out int seatSlot) ||
+                !NetworkWireBinary.TryReadUInt32(source, ref offset, out uint seatGeneration) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int playerIdValue) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenLow) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenHigh) ||
@@ -185,6 +189,11 @@ namespace Ludots.Core.Networking.Protocol
             if (acceptedByte > 1)
             {
                 return NetworkWireCodecStatus.InvalidEnum;
+            }
+
+            if (reserved != 0)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
             }
 
             Span<byte> fingerprintBytes = stackalloc byte[ContentFingerprint.ByteLength];
@@ -218,13 +227,14 @@ namespace Ludots.Core.Networking.Protocol
                     return NetworkWireCodecStatus.InvalidEnum;
                 }
 
-                if (playerIdValue <= 0 || token.IsEmpty || sessionEpoch.IsEmpty)
+                var seat = new SessionSeatBinding(seatSlot, seatGeneration, new PlayerId(playerIdValue));
+                if (!seat.IsValid || token.IsEmpty || sessionEpoch.IsEmpty)
                 {
                     return NetworkWireCodecStatus.InvalidInput;
                 }
 
                 response = SessionHandshakeResponse.Accept(
-                    new PlayerId(playerIdValue),
+                    in seat,
                     token,
                     version,
                     fingerprint,
@@ -235,6 +245,14 @@ namespace Ludots.Core.Networking.Protocol
             if (!IsKnownRejectReason(rejectByte))
             {
                 return NetworkWireCodecStatus.InvalidEnum;
+            }
+
+            if (seatSlot != -1 ||
+                seatGeneration != 0 ||
+                playerIdValue != 0 ||
+                !token.IsEmpty)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
             }
 
             response = SessionHandshakeResponse.Reject(

@@ -157,7 +157,7 @@ namespace Ludots.Core.Networking.Session
         private SessionHandshakeResponse(
             bool accepted,
             HandshakeRejectReason rejectReason,
-            PlayerId playerId,
+            in SessionSeatBinding seat,
             ReconnectToken reconnectToken,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
@@ -165,7 +165,7 @@ namespace Ludots.Core.Networking.Session
         {
             Accepted = accepted;
             RejectReason = rejectReason;
-            PlayerId = playerId;
+            Seat = seat;
             ReconnectToken = reconnectToken;
             ProtocolVersion = protocolVersion;
             ContentFingerprint = contentFingerprint;
@@ -176,7 +176,9 @@ namespace Ludots.Core.Networking.Session
 
         public HandshakeRejectReason RejectReason { get; }
 
-        public PlayerId PlayerId { get; }
+        public SessionSeatBinding Seat { get; }
+
+        public PlayerId PlayerId => Seat.PlayerId;
 
         public ReconnectToken ReconnectToken { get; }
 
@@ -187,12 +189,17 @@ namespace Ludots.Core.Networking.Session
         public SessionEpoch SessionEpoch { get; }
 
         public static SessionHandshakeResponse Accept(
-            PlayerId playerId,
+            in SessionSeatBinding seat,
             ReconnectToken reconnectToken,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
             SessionEpoch sessionEpoch)
         {
+            if (!seat.IsValid)
+            {
+                throw new ArgumentException("Accepted handshake requires a valid authoritative seat.", nameof(seat));
+            }
+
             if (reconnectToken.IsEmpty)
             {
                 throw new ArgumentException("Accepted handshake must issue a non-empty reconnect token.", nameof(reconnectToken));
@@ -206,7 +213,7 @@ namespace Ludots.Core.Networking.Session
             return new SessionHandshakeResponse(
                 accepted: true,
                 HandshakeRejectReason.None,
-                playerId,
+                in seat,
                 reconnectToken,
                 protocolVersion,
                 contentFingerprint,
@@ -224,14 +231,46 @@ namespace Ludots.Core.Networking.Session
                 throw new ArgumentOutOfRangeException(nameof(reason), "Reject reason must be explicit.");
             }
 
+            SessionSeatBinding seat = default;
             return new SessionHandshakeResponse(
                 accepted: false,
                 reason,
-                playerId: default,
+                in seat,
                 ReconnectToken.Empty,
                 protocolVersion,
                 contentFingerprint,
                 sessionEpoch);
         }
+    }
+
+    public readonly struct SessionSeatBinding : IEquatable<SessionSeatBinding>
+    {
+        public SessionSeatBinding(int slot, uint generation, PlayerId playerId)
+        {
+            Slot = slot;
+            Generation = generation;
+            PlayerId = playerId;
+        }
+
+        public int Slot { get; }
+
+        public uint Generation { get; }
+
+        public PlayerId PlayerId { get; }
+
+        public bool IsValid => Slot >= 0 && Generation != 0 && PlayerId.Value > 0;
+
+        public bool Equals(SessionSeatBinding other) =>
+            Slot == other.Slot &&
+            Generation == other.Generation &&
+            PlayerId == other.PlayerId;
+
+        public override bool Equals(object? obj) => obj is SessionSeatBinding other && Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(Slot, Generation, PlayerId);
+
+        public static bool operator ==(SessionSeatBinding left, SessionSeatBinding right) => left.Equals(right);
+
+        public static bool operator !=(SessionSeatBinding left, SessionSeatBinding right) => !left.Equals(right);
     }
 }

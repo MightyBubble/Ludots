@@ -31,6 +31,9 @@ public sealed class AuthoritativeSessionRegistryTests
             Assert.That(registry.TryGetPlayerId(new ConnectionId(20), out PlayerId playerB), Is.True);
             Assert.That(playerA, Is.EqualTo(first.PlayerId));
             Assert.That(playerB, Is.EqualTo(second.PlayerId));
+            Assert.That(first.Seat.IsValid, Is.True);
+            Assert.That(second.Seat.IsValid, Is.True);
+            Assert.That(first.Seat, Is.Not.EqualTo(second.Seat));
         });
     }
 
@@ -103,6 +106,7 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.Multiple(() =>
         {
             Assert.That(reconnect.PlayerId, Is.EqualTo(originalPlayer));
+            Assert.That(reconnect.Seat, Is.EqualTo(join.Seat));
             Assert.That(reconnect.ReconnectToken, Is.Not.EqualTo(originalToken));
             Assert.That(reconnect.ReconnectToken.IsEmpty, Is.False);
             Assert.That(reconnect.SessionEpoch, Is.EqualTo(Epoch));
