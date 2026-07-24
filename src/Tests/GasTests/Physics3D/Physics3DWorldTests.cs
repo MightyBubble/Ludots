@@ -597,6 +597,91 @@ public sealed class Physics3DWorldTests
         Assert.That(system.PhysicsStepsLastUpdate, Is.EqualTo(1));
     }
 
+    [Test]
+    public void ContactCapacityOverflow_AfterSimulationAdvance_EntersTerminalFaultAndRejectsRetry()
+    {
+        // Arrange: one worker with a single contact-pair slot so any second pair overflows during callbacks.
+        // Floor + two resting mobiles produce at least two pairs on the first Timestep.
+        using var world = new Physics3DWorld(CreateConfig(
+            mobileCapacity: 2,
+            staticCapacity: 1,
+            workerCount: 1,
+            contactPairCapacityPerWorker: 1));
+        Physics3DShapeId floorShape = world.RegisterBoxShape(new Vector3(2_000f, 20f, 2_000f));
+        Physics3DShapeId boxShape = world.RegisterBoxShape(new Vector3(40f));
+        world.CreateBody(CreateBody(Physics3DBodyKind.Static, floorShape, new Vector3(0f, -10f, 0f)));
+        world.CreateBody(CreateBody(Physics3DBodyKind.Dynamic, boxShape, new Vector3(-50f, 20f, 0f)));
+        world.CreateBody(CreateBody(Physics3DBodyKind.Dynamic, boxShape, new Vector3(50f, 20f, 0f)));
+        Assert.That(world.IsTerminalFaulted, Is.False);
+        Assert.That(world.TerminalFault, Is.Null);
+        Assert.That(world.StepIndex, Is.Zero);
+
+        // Act: first Step advances Bepu and StepIndex, then contact finalization fails.
+        Physics3DCapacityExceededException capacity = Assert.Throws<Physics3DCapacityExceededException>(() => world.Step())!;
+
+        // Assert: original capacity failure is preserved as the diagnostic cause; StepIndex already advanced.
+        Assert.Multiple(() =>
+        {
+            Assert.That(capacity.Resource, Is.EqualTo("contact pairs per worker"));
+            Assert.That(capacity.Capacity, Is.EqualTo(1));
+            Assert.That(world.StepIndex, Is.EqualTo(1), "Simulation advanced before contact finalization failed.");
+            Assert.That(world.IsTerminalFaulted, Is.True);
+            Assert.That(world.TerminalFault, Is.SameAs(capacity));
+        });
+
+        // Act: catch-and-retry must fail before any further mutation.
+        long stepIndexAfterFault = world.StepIndex;
+        Physics3DTerminalFaultException retry = Assert.Throws<Physics3DTerminalFaultException>(() => world.Step())!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(retry.StepIndex, Is.EqualTo(stepIndexAfterFault));
+            Assert.That(retry.TerminalFault, Is.SameAs(capacity));
+            Assert.That(retry.InnerException, Is.SameAs(capacity));
+            Assert.That(world.StepIndex, Is.EqualTo(stepIndexAfterFault), "Retry must not advance StepIndex again.");
+            Assert.That(world.IsTerminalFaulted, Is.True);
+            Assert.That(world.TerminalFault, Is.SameAs(capacity));
+        });
+    }
+
+    [Test]
+    public void ContactCapacityOverflow_TerminalFault_RejectsStructuralMutationAndAllowsDispose()
+    {
+        using var world = new Physics3DWorld(CreateConfig(
+            mobileCapacity: 2,
+            staticCapacity: 1,
+            workerCount: 1,
+            contactPairCapacityPerWorker: 1));
+        Physics3DShapeId floorShape = world.RegisterBoxShape(new Vector3(2_000f, 20f, 2_000f));
+        Physics3DShapeId boxShape = world.RegisterBoxShape(new Vector3(40f));
+        world.CreateBody(CreateBody(Physics3DBodyKind.Static, floorShape, new Vector3(0f, -10f, 0f)));
+        Physics3DBodyId left = world.CreateBody(CreateBody(Physics3DBodyKind.Dynamic, boxShape, new Vector3(-50f, 20f, 0f)));
+        world.CreateBody(CreateBody(Physics3DBodyKind.Dynamic, boxShape, new Vector3(50f, 20f, 0f)));
+
+        Physics3DCapacityExceededException capacity = Assert.Throws<Physics3DCapacityExceededException>(() => world.Step())!;
+        Assert.That(world.IsTerminalFaulted, Is.True);
+
+        Physics3DTerminalFaultException createBody = Assert.Throws<Physics3DTerminalFaultException>(() =>
+            world.CreateBody(CreateBody(Physics3DBodyKind.Dynamic, boxShape, new Vector3(0f, 200f, 0f))))!;
+        Physics3DTerminalFaultException registerShape = Assert.Throws<Physics3DTerminalFaultException>(() =>
+            world.RegisterSphereShape(5f))!;
+        Physics3DTerminalFaultException enqueue = Assert.Throws<Physics3DTerminalFaultException>(() =>
+            world.EnqueueForce(left, Vector3.UnitY))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(createBody.TerminalFault, Is.SameAs(capacity));
+            Assert.That(registerShape.TerminalFault, Is.SameAs(capacity));
+            Assert.That(enqueue.TerminalFault, Is.SameAs(capacity));
+            Assert.That(world.StepIndex, Is.EqualTo(1));
+            Assert.That(world.TerminalFault, Is.SameAs(capacity));
+        });
+
+        // Dispose remains valid on a terminal-faulted world; no rollback/retry contract.
+        Assert.DoesNotThrow(() => world.Dispose());
+        Assert.Throws<ObjectDisposedException>(() => world.Step());
+    }
+
     private static Physics3DWorld CreateStackWorld(int workerCount)
     {
         var world = new Physics3DWorld(CreateConfig(mobileCapacity: 128, staticCapacity: 1, workerCount: workerCount));
@@ -643,7 +728,8 @@ public sealed class Physics3DWorldTests
         Vector3? gravityCmPerSecondSquared = null,
         float linearDamping = 0.03f,
         float angularDamping = 0.03f,
-        int fixedStepHz = 60)
+        int fixedStepHz = 60,
+        int? contactPairCapacityPerWorker = null)
     {
         return new Physics3DWorldConfig
         {
@@ -654,7 +740,7 @@ public sealed class Physics3DWorldTests
             ConstraintCapacity = constraintCapacity ?? Math.Max(1, mobileCapacity * 8),
             ConstraintsPerTypeBatchCapacity = Math.Max(1, mobileCapacity * 4),
             ConstraintCountPerBodyEstimate = 8,
-            ContactPairCapacityPerWorker = Math.Max(64, mobileCapacity * 4),
+            ContactPairCapacityPerWorker = contactPairCapacityPerWorker ?? Math.Max(64, mobileCapacity * 4),
             ActuationCommandCapacity = actuationCommandCapacity ?? Math.Max(1, mobileCapacity * 8),
             WorkerCount = workerCount,
             FixedStepHz = fixedStepHz,

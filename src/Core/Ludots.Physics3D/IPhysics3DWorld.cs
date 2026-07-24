@@ -21,6 +21,18 @@ public interface IPhysics3DWorld : IDisposable
     Physics3DStepMetrics LastStepMetrics { get; }
     float FixedDeltaSeconds { get; }
 
+    /// <summary>
+    /// True after a Step advanced the Bepu simulation but failed contact finalization.
+    /// The world rejects further Step and structural mutation; Dispose remains valid.
+    /// No rollback or retry is supported.
+    /// </summary>
+    bool IsTerminalFaulted { get; }
+
+    /// <summary>
+    /// The original finalization failure that entered the terminal fault, or null when healthy.
+    /// </summary>
+    Exception? TerminalFault { get; }
+
     Physics3DShapeId RegisterBoxShape(Vector3 sizeCm);
     Physics3DShapeId RegisterSphereShape(float radiusCm);
     Physics3DShapeId RegisterCapsuleShape(float radiusCm, float cylinderLengthCm);

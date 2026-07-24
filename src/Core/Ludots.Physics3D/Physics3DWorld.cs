@@ -28,6 +28,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     private readonly Physics3DContactSurfaceTimestepper? _productionTimestepper;
     private bool _isStepping;
     private bool _disposed;
+    private Exception? _terminalFault;
 
     public Physics3DWorld(Physics3DWorldConfig config)
         : this(config, CreateDefaultThreadDispatcher(config), null)
@@ -129,6 +130,12 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     public long StepIndex { get; private set; }
     public Physics3DStepMetrics LastStepMetrics { get; private set; }
     public float FixedDeltaSeconds => _config.FixedDeltaSeconds;
+
+    /// <inheritdoc cref="IPhysics3DWorld.IsTerminalFaulted"/>
+    public bool IsTerminalFaulted => _terminalFault is not null;
+
+    /// <inheritdoc cref="IPhysics3DWorld.TerminalFault"/>
+    public Exception? TerminalFault => _terminalFault;
 
     public Physics3DShapeId RegisterBoxShape(Vector3 sizeCm)
     {
@@ -1184,6 +1191,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     public void Step()
     {
         ThrowIfDisposed();
+        ThrowIfTerminalFaulted();
         if (_isStepping)
         {
             throw new InvalidOperationException("Physics3DWorld.Step is not reentrant.");
@@ -1211,38 +1219,48 @@ public sealed class Physics3DWorld : IPhysics3DWorld
                 (metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0) - stageBackgroundAllocationBefore,
                 (metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0) - stageBackgroundDispatchElapsedBefore);
 
+            // Timestep mutates the Bepu simulation. After it returns, StepIndex advances and any
+            // contact-finalization failure is terminal: callers must not catch-and-retry Step.
             _simulation.Timestep(_config.FixedDeltaSeconds, _threadDispatcher);
             StepIndex++;
 
-            stageTimestamp = Stopwatch.GetTimestamp();
-            stageAllocationBefore = GC.GetAllocatedBytesForCurrentThread();
-            stageBackgroundAllocationBefore = metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0;
-            stageBackgroundDispatchElapsedBefore = metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0;
-            _contacts.CompleteStep(_bodies, _simulation, StepIndex);
-            Physics3DStageMetrics contactFinalize = new(
-                Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds,
-                GC.GetAllocatedBytesForCurrentThread() - stageAllocationBefore,
-                (metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0) - stageBackgroundAllocationBefore,
-                (metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0) - stageBackgroundDispatchElapsedBefore);
+            try
+            {
+                stageTimestamp = Stopwatch.GetTimestamp();
+                stageAllocationBefore = GC.GetAllocatedBytesForCurrentThread();
+                stageBackgroundAllocationBefore = metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0;
+                stageBackgroundDispatchElapsedBefore = metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0;
+                _contacts.CompleteStep(_bodies, _simulation, StepIndex);
+                Physics3DStageMetrics contactFinalize = new(
+                    Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds,
+                    GC.GetAllocatedBytesForCurrentThread() - stageAllocationBefore,
+                    (metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0) - stageBackgroundAllocationBefore,
+                    (metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0) - stageBackgroundDispatchElapsedBefore);
 
-            Physics3DStageMetrics total = new(
-                Stopwatch.GetElapsedTime(totalTimestamp).TotalMilliseconds,
-                GC.GetAllocatedBytesForCurrentThread() - totalAllocationBefore,
-                (metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0) - totalBackgroundAllocationBefore,
-                (metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0) - totalBackgroundDispatchElapsedBefore);
-            Physics3DKernelStepMetrics kernel = _productionTimestepper?.LastStepMetrics ?? default;
-            LastStepMetrics = new Physics3DStepMetrics(
-                StepIndex,
-                _productionTimestepper is not null,
-                total,
-                commandReplay,
-                kernel.Sleep,
-                kernel.PredictBounds,
-                kernel.CollisionDetection,
-                kernel.ContactSurface,
-                kernel.Solve,
-                kernel.Optimize,
-                contactFinalize);
+                Physics3DStageMetrics total = new(
+                    Stopwatch.GetElapsedTime(totalTimestamp).TotalMilliseconds,
+                    GC.GetAllocatedBytesForCurrentThread() - totalAllocationBefore,
+                    (metricsDispatcher?.BackgroundWorkerAllocatedBytesCurrentStep ?? 0) - totalBackgroundAllocationBefore,
+                    (metricsDispatcher?.BackgroundWorkerDispatchElapsedTimestampTicksCurrentStep ?? 0) - totalBackgroundDispatchElapsedBefore);
+                Physics3DKernelStepMetrics kernel = _productionTimestepper?.LastStepMetrics ?? default;
+                LastStepMetrics = new Physics3DStepMetrics(
+                    StepIndex,
+                    _productionTimestepper is not null,
+                    total,
+                    commandReplay,
+                    kernel.Sleep,
+                    kernel.PredictBounds,
+                    kernel.CollisionDetection,
+                    kernel.ContactSurface,
+                    kernel.Solve,
+                    kernel.Optimize,
+                    contactFinalize);
+            }
+            catch (Exception ex)
+            {
+                EnterTerminalFault(ex);
+                throw;
+            }
         }
         finally
         {
@@ -1515,6 +1533,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     private void RequireStructuralPhase()
     {
         ThrowIfDisposed();
+        ThrowIfTerminalFaulted();
         if (_isStepping)
         {
             throw new InvalidOperationException("Physics3D structural changes are forbidden during a simulation step.");
@@ -1524,6 +1543,23 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private void ThrowIfTerminalFaulted()
+    {
+        if (_terminalFault is null)
+        {
+            return;
+        }
+
+        throw new Physics3DTerminalFaultException(_terminalFault, StepIndex);
+    }
+
+    private void EnterTerminalFault(Exception fault)
+    {
+        // Keep the first finalization failure as SSOT diagnostics. Later Step/mutation attempts
+        // throw Physics3DTerminalFaultException instead of replaying or clearing this cause.
+        _terminalFault ??= fault;
     }
 
     private static void Hash(ref ulong hash, int value) => Hash(ref hash, unchecked((uint)value));

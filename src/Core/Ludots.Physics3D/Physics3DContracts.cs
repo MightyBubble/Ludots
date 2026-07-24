@@ -912,6 +912,29 @@ public sealed class Physics3DCapacityExceededException : InvalidOperationExcepti
     public int Capacity { get; }
 }
 
+/// <summary>
+/// Thrown when a caller attempts Step or structural mutation on a Physics3DWorld that already entered
+/// a terminal fault. The original finalization failure remains available as <see cref="Exception.InnerException"/>
+/// and on <see cref="IPhysics3DWorld.TerminalFault"/>. No rollback or retry is supported; Dispose remains valid.
+/// </summary>
+public sealed class Physics3DTerminalFaultException : InvalidOperationException
+{
+    public Physics3DTerminalFaultException(Exception terminalFault, long stepIndex)
+        : base(
+            $"Physics3DWorld is in a terminal fault state after step {stepIndex}. " +
+            "The Bepu simulation advanced but contact finalization failed; further Step and structural mutation are rejected. " +
+            "Dispose remains valid. No rollback or retry is supported.",
+            terminalFault)
+    {
+        ArgumentNullException.ThrowIfNull(terminalFault);
+        TerminalFault = terminalFault;
+        StepIndex = stepIndex;
+    }
+
+    public Exception TerminalFault { get; }
+    public long StepIndex { get; }
+}
+
 internal static class Physics3DValidation
 {
     public static void RequireFinite(float value, string parameterName)
