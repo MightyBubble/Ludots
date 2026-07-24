@@ -37,7 +37,7 @@ namespace Ludots.Core.Networking.Commands
             ActorCount = actorCount;
             OrderId = orderId;
             AdmissionBatchId = admissionBatchId;
-            Stage = result == OrderSubmitResult.Queued
+            Stage = result is OrderSubmitResult.Queued or OrderSubmitResult.QueueFull
                 ? OrderAdmissionStage.GlobalIntake
                 : OrderAdmissionStage.NetworkIntake;
             Result = result;

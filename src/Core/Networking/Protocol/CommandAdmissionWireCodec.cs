@@ -138,6 +138,6 @@ namespace Ludots.Core.Networking.Protocol
         private static bool IsKnownResult(OrderSubmitResult result) => IsKnownResultByte((byte)result);
 
         private static bool IsKnownResultByte(byte value) =>
-            value <= (byte)OrderSubmitResult.NetworkSequenceOutsideHistory;
+            value <= (byte)OrderSubmitResult.NetworkCommandSchemaMismatch;
     }
 }

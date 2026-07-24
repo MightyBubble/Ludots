@@ -25,7 +25,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         NetworkAdmissionBackpressured = 14,
         NetworkInvalidConnectionSeat = 15,
         NetworkSequenceGap = 16,
-        NetworkSequenceOutsideHistory = 17
+        NetworkSequenceOutsideHistory = 17,
+        NetworkScheduled = 18,
+        NetworkScheduleFull = 19,
+        NetworkInvalidActorHandle = 20,
+        NetworkStaleActorGeneration = 21,
+        NetworkActorNotControlled = 22,
+        NetworkInvalidTargetHandle = 23,
+        NetworkStaleTargetGeneration = 24,
+        NetworkTargetNotKnown = 25,
+        NetworkCommandSchemaMismatch = 26
     }
 
     public static class OrderSubmitter
