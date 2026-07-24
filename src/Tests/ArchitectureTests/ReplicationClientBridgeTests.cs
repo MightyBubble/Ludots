@@ -165,13 +165,14 @@ namespace Ludots.Tests.Architecture
             var bridge = Bridge(world, entityCapacity: 1, sessionEpoch: 7, tracking);
             Assert.That(bridge.BindExisting(handle, authored), Is.EqualTo(ReplicationBridgeResult.Success));
 
-            var channel = Channel(capacity: 1);
+            var channel = Channel(capacity: 1, out NetworkEntityTable entities);
             var packet = new ReplicationPacketBuffer(1);
             var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
             Assert.That(
                 channel.BuildFull(7, 1, 1, new[] { State(handle, 1, 55) }, visible, packet),
                 Is.EqualTo(ReplicationBuildResult.Success));
             Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(entities.TryRelease(handle), Is.True);
             Assert.That(
                 channel.BuildDelta(
                     7,
@@ -339,10 +340,14 @@ namespace Ludots.Tests.Architecture
             Assert.That(world.Get<ReplicationMirrorState>(entity).Revision, Is.EqualTo(10_257));
         }
 
-        private static AuthoritativeReplicationChannel Channel(int capacity)
+        private static AuthoritativeReplicationChannel Channel(int capacity) => Channel(capacity, out _);
+
+        private static AuthoritativeReplicationChannel Channel(
+            int capacity,
+            out NetworkEntityTable entities)
         {
             using World world = World.Create();
-            var entities = new NetworkEntityTable(capacity);
+            entities = new NetworkEntityTable(capacity);
             for (int i = 0; i < capacity; i++)
             {
                 if (!entities.TryAllocate(world.Create(), out NetworkEntityHandle handle) || handle.Slot != i)
