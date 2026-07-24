@@ -37,7 +37,8 @@ public sealed class LiteNetLibServerDatagramPort :
         int channelCount,
         ChannelId controlChannel,
         ChannelId commandChannel,
-        ChannelId stateChannel)
+        ChannelId stateChannel,
+        ChannelId inputChannel)
     {
         if ((uint)listenPort > ushort.MaxValue) throw new ArgumentOutOfRangeException(nameof(listenPort));
         if (string.IsNullOrWhiteSpace(connectionKey)) throw new ArgumentException("Connection key is required.", nameof(connectionKey));
@@ -64,7 +65,8 @@ public sealed class LiteNetLibServerDatagramPort :
             channelCount,
             controlChannel,
             commandChannel,
-            stateChannel);
+            stateChannel,
+            inputChannel);
         _listener = new EventBasedNetListener();
         _manager = new NetManager(_listener)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Session;
@@ -39,12 +40,16 @@ namespace Ludots.Core.Networking.Runtime
         private readonly byte[] _payloadBuffer;
         private readonly byte[] _datagramBuffer;
         private readonly byte[] _commandBuffer;
+        private readonly uint[] _fixedInputTargetTicks;
+        private readonly byte[] _fixedInputPayloads;
+        private readonly byte[] _fixedInputBatchBuffer;
 
         private ReplicatedClientConnectionState _state;
         private SessionSeatBinding _seat;
         private ReconnectToken _reconnectToken;
         private SessionEpoch _sessionEpoch;
         private ClientWorldReplicationBridge? _replicationBridge;
+        private FixedInputClientOutbox? _fixedInputOutbox;
         private uint _lastCommittedTick;
         private bool _awaitingFullSnapshot;
         private bool _disposed;
@@ -119,6 +124,11 @@ namespace Ludots.Core.Networking.Runtime
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.RequestSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _commandBuffer = new byte[capacity.MaxCommandPayloadBytes];
+            _fixedInputTargetTicks = new uint[capacity.FixedInputMaxFramesPerBatch];
+            _fixedInputPayloads = new byte[checked(capacity.FixedInputMaxFramesPerBatch * capacity.FixedInputFramePayloadBytes)];
+            _fixedInputBatchBuffer = new byte[FixedInputWireCodec.GetBatchPayloadSize(
+                capacity.FixedInputFramePayloadBytes,
+                capacity.FixedInputMaxFramesPerBatch)];
         }
 
         public NetworkProcessRole Role => NetworkProcessRole.ReplicatedClient;
@@ -129,6 +139,7 @@ namespace Ludots.Core.Networking.Runtime
         public uint LastCommittedTick => _lastCommittedTick;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
+        public int FixedInputPendingCount => _fixedInputOutbox?.PendingCount ?? 0;
 
         public bool TrySubmitCommand(
             in NetworkCommandBatchHeader header,
@@ -183,6 +194,67 @@ namespace Ludots.Core.Networking.Runtime
                     _payloadBuffer.AsSpan(0, payloadBytes));
             }
 
+            return true;
+        }
+
+        public FixedInputOutboxEnqueueStatus TrySubmitFixedInput(uint targetTick, ReadOnlySpan<byte> payload)
+        {
+            EnsureOperational();
+            if (_state != ReplicatedClientConnectionState.Connected || _fixedInputOutbox == null)
+            {
+                return FixedInputOutboxEnqueueStatus.InvalidInput;
+            }
+
+            return _fixedInputOutbox.TryEnqueue(targetTick, payload);
+        }
+
+        /// <summary>
+        /// Explicit fixed-input send pulse for a fixed-rate caller (for example 30Hz).
+        /// Does not run inside <see cref="PumpReplicatedClient"/>; empty outboxes produce no datagram.
+        /// </summary>
+        public bool TryPulseFixedInputSend()
+        {
+            EnsureOperational();
+            if (_state != ReplicatedClientConnectionState.Connected || _fixedInputOutbox == null)
+            {
+                return false;
+            }
+
+            FixedInputBatchBuildStatus built = _fixedInputOutbox.TryBuildBatch(
+                _lastCommittedTick,
+                _fixedInputTargetTicks,
+                _fixedInputPayloads,
+                out NetworkFixedInputBatchHeader header,
+                out int frameCount);
+            if (built == FixedInputBatchBuildStatus.NoData)
+            {
+                return false;
+            }
+
+            if (built != FixedInputBatchBuildStatus.Built)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    NetworkWireKind.FixedInputBatch,
+                    detail: (int)built);
+                return false;
+            }
+
+            NetworkWireCodecStatus encoded = FixedInputWireCodec.TryEncodeBatch(
+                in header,
+                _fixedInputTargetTicks.AsSpan(0, frameCount),
+                _fixedInputPayloads.AsSpan(0, checked(frameCount * _capacity.FixedInputFramePayloadBytes)),
+                _fixedInputBatchBuffer,
+                out int payloadBytes);
+            if (encoded != NetworkWireCodecStatus.Success)
+            {
+                Fail(NetworkRuntimeFaultCode.FixedInputRejected, NetworkWireKind.FixedInputBatch, encoded);
+            }
+
+            SendFramed(
+                _capacity.InputChannel,
+                NetworkWireKind.FixedInputBatch,
+                _fixedInputBatchBuffer.AsSpan(0, payloadBytes));
             return true;
         }
 
@@ -352,6 +424,9 @@ namespace Ludots.Core.Networking.Runtime
                 case NetworkWireKind.ResyncRequired:
                     ProcessServerResync(payload);
                     return;
+                case NetworkWireKind.FixedInputAcknowledgement:
+                    ProcessFixedInputAcknowledgement(payload);
+                    return;
                 default:
                     ProtocolFault(NetworkRuntimeFaultCode.UnexpectedWireKind, envelope.Kind);
                     return;
@@ -394,12 +469,14 @@ namespace Ludots.Core.Networking.Runtime
                         TeardownReplicationEpoch(NetworkWireKind.SessionHandshakeResponse);
                     }
 
+                    ClearFixedInputOutboxOnce();
                     _connectionControl.Disconnect();
                     _state = ReplicatedClientConnectionState.Disconnected;
                     _reconnectElapsedSeconds = 0f;
                 }
                 else
                 {
+                    ClearFixedInputOutboxOnce();
                     _state = ReplicatedClientConnectionState.Rejected;
                 }
 
@@ -447,6 +524,7 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.SessionContractViolation, NetworkWireKind.SessionHandshakeResponse);
             }
 
+            EnsureFixedInputOutbox(in response);
             _seat = response.Seat;
             _sessionEpoch = response.SessionEpoch;
             _reconnectToken = response.ReconnectToken;
@@ -560,6 +638,36 @@ namespace Ludots.Core.Networking.Runtime
             SendAcknowledgement(_replicationPacket.Header.SnapshotId, _replicationPacket.Header.Tick);
         }
 
+        private void ProcessFixedInputAcknowledgement(ReadOnlySpan<byte> payload)
+        {
+            if (_state != ReplicatedClientConnectionState.Connected || _fixedInputOutbox == null)
+            {
+                ProtocolFault(NetworkRuntimeFaultCode.UnauthenticatedMessage, NetworkWireKind.FixedInputAcknowledgement);
+                return;
+            }
+
+            NetworkWireCodecStatus decoded = FixedInputWireCodec.TryDecodeAcknowledgement(
+                payload,
+                out NetworkFixedInputAcknowledgement acknowledgement);
+            if (decoded != NetworkWireCodecStatus.Success)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    NetworkWireKind.FixedInputAcknowledgement,
+                    decoded);
+                return;
+            }
+
+            FixedInputAckApplyStatus applied = _fixedInputOutbox.TryApplyAcknowledgement(in acknowledgement);
+            if (applied != FixedInputAckApplyStatus.Applied)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    NetworkWireKind.FixedInputAcknowledgement,
+                    detail: (int)applied);
+            }
+        }
+
         private void ProcessServerResync(ReadOnlySpan<byte> payload)
         {
             NetworkWireCodecStatus decoded = SnapshotControlWireCodec.TryDecodeResyncRequired(payload, out NetworkResyncRequired message);
@@ -616,6 +724,37 @@ namespace Ludots.Core.Networking.Runtime
             _lastCommittedTick = 0;
             _awaitingFullSnapshot = false;
             _snapshotReassembler.Reset();
+            ClearFixedInputOutboxOnce();
+        }
+
+        private void EnsureFixedInputOutbox(in SessionHandshakeResponse response)
+        {
+            if (_fixedInputOutbox != null &&
+                !_sessionEpoch.IsEmpty &&
+                _sessionEpoch == response.SessionEpoch &&
+                _seat.IsValid &&
+                _seat.Slot == response.Seat.Slot &&
+                _seat.Generation == response.Seat.Generation &&
+                _seat.PlayerId.Value == response.Seat.PlayerId.Value)
+            {
+                return;
+            }
+
+            ClearFixedInputOutboxOnce();
+            FixedInputProtocolConfig config = _capacity.CreateFixedInputProtocolConfig(
+                response.SessionEpoch.Value,
+                seatCapacity: 1);
+            _fixedInputOutbox = new FixedInputClientOutbox(in config, _capacity.FixedInputPendingFrameCapacity);
+        }
+
+        private void ClearFixedInputOutboxOnce()
+        {
+            if (_fixedInputOutbox == null)
+            {
+                return;
+            }
+
+            _fixedInputOutbox = null;
         }
 
         private void RequestResync(NetworkResyncReason reason)
@@ -697,6 +836,7 @@ namespace Ludots.Core.Networking.Runtime
             {
                 NetworkWireKind.CommandAdmissionResult => _capacity.CommandChannel,
                 NetworkWireKind.ReplicationPacket => _capacity.StateChannel,
+                NetworkWireKind.FixedInputAcknowledgement => _capacity.InputChannel,
                 NetworkWireKind.SessionHandshakeResponse or
                 NetworkWireKind.SnapshotFragment or
                 NetworkWireKind.ResyncRequired => _capacity.ControlChannel,

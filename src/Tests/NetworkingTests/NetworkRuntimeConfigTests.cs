@@ -30,6 +30,9 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.ControlChannelId, Is.EqualTo(0));
             Assert.That(config.CommandChannelId, Is.EqualTo(1));
             Assert.That(config.StateChannelId, Is.EqualTo(2));
+            Assert.That(config.InputChannelId, Is.EqualTo(3));
+            Assert.That(config.FixedInputSchemaId, Is.EqualTo(1));
+            Assert.That(config.FixedInputFramePayloadBytes, Is.EqualTo(12));
             Assert.That(config.TransportMaxConnectAttempts, Is.EqualTo(10));
             Assert.That(config.TransportDisconnectTimeoutMilliseconds, Is.EqualTo(5_000));
             Assert.That(config.ReliableDisconnectFlushTimeoutMilliseconds, Is.EqualTo(4_000));
@@ -144,6 +147,13 @@ public sealed class NetworkRuntimeConfigTests
         ControlChannelId = 0,
         CommandChannelId = 1,
         StateChannelId = 2,
+        InputChannelId = 3,
+        FixedInputHistoryTicksPerSeat = 8,
+        FixedInputSchemaId = 1,
+        FixedInputFramePayloadBytes = 12,
+        FixedInputMaxFutureTicks = 4,
+        FixedInputMaxFramesPerBatch = 4,
+        FixedInputPendingFrameCapacity = 8,
         SnapshotChunkCapacity = 256,
         MaxServerOutboundBytesPerSecondPerClient = 256 * 1024,
         TickP95BudgetMicroseconds = 26_700,

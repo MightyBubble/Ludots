@@ -34,7 +34,8 @@ public sealed class LiteNetLibClientDatagramPort :
         int channelCount,
         ChannelId controlChannel,
         ChannelId commandChannel,
-        ChannelId stateChannel)
+        ChannelId stateChannel,
+        ChannelId inputChannel)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if ((uint)port > ushort.MaxValue || port == 0) throw new ArgumentOutOfRangeException(nameof(port));
@@ -52,7 +53,8 @@ public sealed class LiteNetLibClientDatagramPort :
             channelCount,
             controlChannel,
             commandChannel,
-            stateChannel);
+            stateChannel,
+            inputChannel);
         _listener = new EventBasedNetListener();
         _manager = new NetManager(_listener)
         {

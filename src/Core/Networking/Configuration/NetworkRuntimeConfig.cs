@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
 
 namespace Ludots.Core.Networking.Configuration
@@ -39,6 +40,13 @@ namespace Ludots.Core.Networking.Configuration
         public int ControlChannelId { get; set; }
         public int CommandChannelId { get; set; }
         public int StateChannelId { get; set; }
+        public int InputChannelId { get; set; }
+        public int FixedInputHistoryTicksPerSeat { get; set; }
+        public int FixedInputSchemaId { get; set; }
+        public int FixedInputFramePayloadBytes { get; set; }
+        public int FixedInputMaxFutureTicks { get; set; }
+        public int FixedInputMaxFramesPerBatch { get; set; }
+        public int FixedInputPendingFrameCapacity { get; set; }
         public int SnapshotChunkCapacity { get; set; }
         public int MaxServerOutboundBytesPerSecondPerClient { get; set; }
         public int TickP95BudgetMicroseconds { get; set; }
@@ -138,13 +146,51 @@ namespace Ludots.Core.Networking.Configuration
             ValidateChannel(ControlChannelId, nameof(ControlChannelId));
             ValidateChannel(CommandChannelId, nameof(CommandChannelId));
             ValidateChannel(StateChannelId, nameof(StateChannelId));
+            ValidateChannel(InputChannelId, nameof(InputChannelId));
             if (ControlChannelId == CommandChannelId ||
                 ControlChannelId == StateChannelId ||
-                CommandChannelId == StateChannelId)
+                ControlChannelId == InputChannelId ||
+                CommandChannelId == StateChannelId ||
+                CommandChannelId == InputChannelId ||
+                StateChannelId == InputChannelId)
             {
                 throw new InvalidOperationException(
-                    "Networking control, command, and state channels must be distinct.");
+                    "Networking control, command, state, and input channels must be distinct.");
             }
+
+            RequirePositive(FixedInputHistoryTicksPerSeat, nameof(FixedInputHistoryTicksPerSeat));
+            RequirePositive(FixedInputSchemaId, nameof(FixedInputSchemaId));
+            if (FixedInputSchemaId > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Networking FixedInputSchemaId {FixedInputSchemaId} must fit in ushort.");
+            }
+
+            RequirePositive(FixedInputFramePayloadBytes, nameof(FixedInputFramePayloadBytes));
+            if (FixedInputFramePayloadBytes > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Networking FixedInputFramePayloadBytes {FixedInputFramePayloadBytes} must fit in ushort.");
+            }
+
+            RequirePositive(FixedInputMaxFutureTicks, nameof(FixedInputMaxFutureTicks));
+            RequirePositive(FixedInputMaxFramesPerBatch, nameof(FixedInputMaxFramesPerBatch));
+            RequirePositive(FixedInputPendingFrameCapacity, nameof(FixedInputPendingFrameCapacity));
+            if (FixedInputPendingFrameCapacity < FixedInputMaxFutureTicks)
+            {
+                throw new InvalidOperationException(
+                    $"Networking FixedInputPendingFrameCapacity {FixedInputPendingFrameCapacity} is below FixedInputMaxFutureTicks {FixedInputMaxFutureTicks}.");
+            }
+
+            _ = new FixedInputProtocolConfig(
+                PlayerCapacity,
+                FixedInputHistoryTicksPerSeat,
+                checked((ushort)FixedInputSchemaId),
+                checked((ushort)FixedInputFramePayloadBytes),
+                FixedInputMaxFutureTicks,
+                FixedInputMaxFramesPerBatch,
+                MaxDatagramPayloadBytes,
+                sessionEpoch: 1);
 
             RequirePositive(SnapshotChunkCapacity, nameof(SnapshotChunkCapacity));
 

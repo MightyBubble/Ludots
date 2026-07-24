@@ -26,7 +26,8 @@ public static class LiteNetLibTransportFactory
             config.TransportChannelCount,
             new Core.Networking.Transport.ChannelId(checked((byte)config.ControlChannelId)),
             new Core.Networking.Transport.ChannelId(checked((byte)config.CommandChannelId)),
-            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)));
+            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.InputChannelId)));
     }
 
     public static LiteNetLibClientDatagramPort CreateClient(
@@ -48,7 +49,8 @@ public static class LiteNetLibTransportFactory
             config.TransportChannelCount,
             new Core.Networking.Transport.ChannelId(checked((byte)config.ControlChannelId)),
             new Core.Networking.Transport.ChannelId(checked((byte)config.CommandChannelId)),
-            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)));
+            new Core.Networking.Transport.ChannelId(checked((byte)config.StateChannelId)),
+            new Core.Networking.Transport.ChannelId(checked((byte)config.InputChannelId)));
     }
 
     private static void ValidateTransport(NetworkRuntimeConfig config)

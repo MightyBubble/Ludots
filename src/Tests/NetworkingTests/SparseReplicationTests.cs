@@ -35,7 +35,21 @@ public sealed class SparseReplicationTests
             acknowledgementHistoryCapacity: 32,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+
+            inputChannel: new ChannelId(3),
+
+            fixedInputHistoryTicksPerSeat: 8,
+
+            fixedInputSchemaId: 1,
+
+            fixedInputFramePayloadBytes: 12,
+
+            fixedInputMaxFutureTicks: 4,
+
+            fixedInputMaxFramesPerBatch: 4,
+
+            fixedInputPendingFrameCapacity: 8);
         var channel = new AuthoritativeReplicationChannel(
             new NetworkEntityTable(capacity.GlobalEntityCapacity),
             perSeatCapacity,

@@ -11,7 +11,7 @@ namespace Ludots.Tests.NetworkingAdapter;
 public sealed class LiteNetLibDatagramPortTests
 {
     [Test]
-    public void RealUdpConnection_UsesReliableControlAndCommandsAndSequencedStateBothWays()
+    public void RealUdpConnection_UsesReliableControlCommandAndSequencedStateInputBothWays()
     {
         using var server = CreateServer(datagramCapacity: 8);
         using var client = CreateClient(server.BoundPort, "rts-duel-test", datagramCapacity: 8);
@@ -58,6 +58,9 @@ public sealed class LiteNetLibDatagramPortTests
         Assert.That(client.TrySend(new ChannelId(2), new byte[] { 6 }), Is.EqualTo(DatagramSendStatus.Sent));
         PumpUntil(server, client, () => server.TryReceive(receiveBuffer, out bytesReceived, out connectionId, out channelId));
         Assert.That(channelId, Is.EqualTo(new ChannelId(2)));
+        Assert.That(client.TrySend(new ChannelId(3), new byte[] { 7 }), Is.EqualTo(DatagramSendStatus.Sent));
+        PumpUntil(server, client, () => server.TryReceive(receiveBuffer, out bytesReceived, out connectionId, out channelId));
+        Assert.That(channelId, Is.EqualTo(new ChannelId(3)));
 
         Span<byte> serverPayload = stackalloc byte[] { 9, 8, 7 };
         Assert.That(
@@ -81,6 +84,9 @@ public sealed class LiteNetLibDatagramPortTests
         Assert.That(server.TrySend(connectionId, new ChannelId(2), new byte[] { 5 }), Is.EqualTo(DatagramSendStatus.Sent));
         PumpUntil(server, client, () => client.TryReceive(receiveBuffer, out bytesReceived, out channelId));
         Assert.That(channelId, Is.EqualTo(new ChannelId(2)));
+        Assert.That(server.TrySend(connectionId, new ChannelId(3), new byte[] { 4 }), Is.EqualTo(DatagramSendStatus.Sent));
+        PumpUntil(server, client, () => client.TryReceive(receiveBuffer, out bytesReceived, out channelId));
+        Assert.That(channelId, Is.EqualTo(new ChannelId(3)));
 
         Assert.That(
             server.TrySend(connectionId, new ChannelId(0), new byte[] { 4, 2 }),
@@ -300,6 +306,75 @@ public sealed class LiteNetLibDatagramPortTests
             Is.EqualTo(DatagramSendStatus.Sent));
     }
 
+    [Test]
+    public void ServerReceive_InputChannelWithReliableOrderedDelivery_FailsLoudly()
+    {
+        using var server = CreateServer(datagramCapacity: 4);
+        var listener = new EventBasedNetListener();
+        var rawClient = new NetManager(listener)
+        {
+            AutoRecycle = true,
+            ChannelsCount = 8,
+        };
+        try
+        {
+            Assert.That(rawClient.Start(), Is.True);
+
+            NetPeer? serverPeer = null;
+            listener.PeerConnectedEvent += peer => serverPeer = peer;
+            Assert.That(rawClient.Connect("127.0.0.1", server.BoundPort, "rts-duel-test"), Is.Not.Null);
+
+            PumpUntil(
+                server,
+                rawClient,
+                () => serverPeer != null && server.TryReceiveConnectionEvent(out _));
+
+            serverPeer!.Send(new byte[] { 1 }, channelNumber: 3, DeliveryMethod.ReliableOrdered);
+
+            Assert.That(
+                () => PumpUntil(server, rawClient, () => false, timeoutMs: 1000),
+                Throws.InvalidOperationException.With.Message.Contains("Sequenced"));
+        }
+        finally
+        {
+            rawClient.Stop();
+        }
+    }
+
+    [Test]
+    public void ClientReceive_InputChannelWithReliableOrderedDelivery_FailsLoudly()
+    {
+        var listener = new EventBasedNetListener();
+        var rawServer = new NetManager(listener)
+        {
+            AutoRecycle = true,
+            ChannelsCount = 8,
+        };
+        listener.ConnectionRequestEvent += request => request.AcceptIfKey("rts-duel-test");
+        NetPeer? clientPeer = null;
+        listener.PeerConnectedEvent += peer => clientPeer = peer;
+        try
+        {
+            Assert.That(rawServer.Start(0), Is.True);
+            using var client = CreateClient(rawServer.LocalPort, "rts-duel-test", datagramCapacity: 4);
+            Assert.That(client.TryConnect(), Is.True);
+            PumpUntil(
+                rawServer,
+                client,
+                () => clientPeer != null && client.TryReceiveConnectionEvent(out _));
+
+            clientPeer!.Send(new byte[] { 1 }, channelNumber: 3, DeliveryMethod.ReliableOrdered);
+
+            Assert.That(
+                () => PumpUntil(rawServer, client, () => false, timeoutMs: 1000),
+                Throws.InvalidOperationException.With.Message.Contains("Sequenced"));
+        }
+        finally
+        {
+            rawServer.Stop();
+        }
+    }
+
     private static LiteNetLibServerDatagramPort CreateServer(
         int datagramCapacity,
         int reliableFlushTimeoutMilliseconds = 4_000) =>
@@ -316,7 +391,8 @@ public sealed class LiteNetLibDatagramPortTests
             channelCount: 8,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+            inputChannel: new ChannelId(3));
 
     private static LiteNetLibClientDatagramPort CreateClient(
         int port,
@@ -334,7 +410,8 @@ public sealed class LiteNetLibDatagramPortTests
             channelCount: 8,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+            inputChannel: new ChannelId(3));
 
     private static bool CaptureConnection(in ServerConnectionEvent connectionEvent, out ConnectionId connectionId)
     {

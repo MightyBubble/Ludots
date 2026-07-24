@@ -9,30 +9,39 @@ internal readonly struct LiteNetLibChannelDeliveryContract
     private readonly byte _controlChannel;
     private readonly byte _commandChannel;
     private readonly byte _stateChannel;
+    private readonly byte _inputChannel;
 
     public LiteNetLibChannelDeliveryContract(
         int channelCount,
         ChannelId controlChannel,
         ChannelId commandChannel,
-        ChannelId stateChannel)
+        ChannelId stateChannel,
+        ChannelId inputChannel)
     {
         if ((uint)(channelCount - 1) >= 64u) throw new ArgumentOutOfRangeException(nameof(channelCount));
-        if (controlChannel == commandChannel || controlChannel == stateChannel || commandChannel == stateChannel)
+        if (controlChannel == commandChannel ||
+            controlChannel == stateChannel ||
+            controlChannel == inputChannel ||
+            commandChannel == stateChannel ||
+            commandChannel == inputChannel ||
+            stateChannel == inputChannel)
         {
-            throw new ArgumentException("Control, command, and state channels must be distinct.");
+            throw new ArgumentException("Control, command, state, and input channels must be distinct.");
         }
 
         ValidateWithinCount(controlChannel, channelCount, nameof(controlChannel));
         ValidateWithinCount(commandChannel, channelCount, nameof(commandChannel));
         ValidateWithinCount(stateChannel, channelCount, nameof(stateChannel));
+        ValidateWithinCount(inputChannel, channelCount, nameof(inputChannel));
         _controlChannel = controlChannel.Value;
         _commandChannel = commandChannel.Value;
         _stateChannel = stateChannel.Value;
+        _inputChannel = inputChannel.Value;
     }
 
     public DeliveryMethod GetExpected(byte channel)
     {
-        if (channel == _stateChannel)
+        if (channel == _stateChannel || channel == _inputChannel)
         {
             return DeliveryMethod.Sequenced;
         }

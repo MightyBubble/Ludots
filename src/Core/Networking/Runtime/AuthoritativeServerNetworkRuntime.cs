@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Session;
@@ -25,6 +26,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInterestPort _replicationInterest;
         private readonly AuthoritativeReplicationSeatRuntime[] _replicationSeats;
+        private readonly AuthoritativeFixedInputIngress _fixedInput;
         private readonly INetworkRuntimeObserver _observer;
         private readonly SnapshotFragmentEncoder _snapshotEncoder;
         private readonly FixedServerDatagramSendQueue _outbound;
@@ -53,6 +55,12 @@ namespace Ludots.Core.Networking.Runtime
         private readonly byte[] _payloadBuffer;
         private readonly byte[] _datagramBuffer;
         private readonly byte[] _snapshotBuffer;
+        private readonly uint[] _fixedInputTargetTicks;
+        private readonly byte[] _fixedInputPayloads;
+        private readonly FixedInputAdmissionDisposition[] _fixedInputDispositions;
+        private readonly bool[] _pendingFixedInputAck;
+        private readonly byte[] _pendingFixedInputAckPayload;
+        private readonly int[] _pendingFixedInputAckBytes;
 
         private uint _currentTick;
         private uint _lastCommittedTick;
@@ -73,6 +81,7 @@ namespace Ludots.Core.Networking.Runtime
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInterestPort replicationInterest,
             AuthoritativeReplicationSeatRuntime[] replicationSeats,
+            AuthoritativeFixedInputIngress fixedInput,
             INetworkRuntimeObserver observer)
         {
             _capacity = capacity;
@@ -91,12 +100,15 @@ namespace Ludots.Core.Networking.Runtime
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInterest = replicationInterest ?? throw new ArgumentNullException(nameof(replicationInterest));
             _replicationSeats = replicationSeats ?? throw new ArgumentNullException(nameof(replicationSeats));
+            _fixedInput = fixedInput ?? throw new ArgumentNullException(nameof(fixedInput));
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
             if (sessions.SeatCapacity != replicationSeats.Length || sessions.SeatCapacity > capacity.ConnectionCapacity)
             {
                 throw new ArgumentException("Session, replication-seat, and connection capacities must agree.");
             }
+
+            ValidateFixedInputIngress(in capacity, sessions, fixedInput);
 
             for (int i = 0; i < replicationSeats.Length; i++)
             {
@@ -145,16 +157,31 @@ namespace Ludots.Core.Networking.Runtime
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.ResponseSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _snapshotBuffer = new byte[capacity.MaxSnapshotBytes];
+            _fixedInputTargetTicks = new uint[capacity.FixedInputMaxFramesPerBatch];
+            _fixedInputPayloads = new byte[checked(capacity.FixedInputMaxFramesPerBatch * capacity.FixedInputFramePayloadBytes)];
+            _fixedInputDispositions = new FixedInputAdmissionDisposition[capacity.FixedInputMaxFramesPerBatch];
+            _pendingFixedInputAck = new bool[seats];
+            _pendingFixedInputAckPayload = new byte[checked(seats * NetworkFixedInputAcknowledgement.SizeInBytes)];
+            _pendingFixedInputAckBytes = new int[seats];
         }
 
         public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
+        public AuthoritativeFixedInputIngress FixedInput => _fixedInput;
+
+        public FixedInputLookupResult TryGetFixedInput(
+            in SessionSeatBinding seat,
+            uint tick,
+            Span<byte> destination,
+            out int bytesWritten) =>
+            _fixedInput.TryGet(in seat, tick, destination, out bytesWritten);
 
         public void PumpTransport()
         {
             EnsureOperational();
             FlushOutbound();
+            FlushPendingFixedInputAcknowledgements();
             _connectionEvents.Pump();
             while (_connectionEvents.TryReceiveConnectionEvent(out ServerConnectionEvent connectionEvent))
             {
@@ -174,6 +201,7 @@ namespace Ludots.Core.Networking.Runtime
 
             FlushPendingAdmissions();
             FlushOutbound();
+            FlushPendingFixedInputAcknowledgements();
         }
 
         public void BeforeAuthoritativeTick(uint executingTick)
@@ -200,8 +228,13 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _lastCommittedTick = committedTick;
+            QueueFixedInputAcknowledgements();
+            FlushPendingFixedInputAcknowledgements();
+
             if (committedTick % (uint)_capacity.StatePublishIntervalTicks != 0)
             {
+                FlushOutbound();
+                FlushPendingFixedInputAcknowledgements();
                 return;
             }
 
@@ -213,6 +246,8 @@ namespace Ludots.Core.Networking.Runtime
 
             if (!anyConnected)
             {
+                FlushOutbound();
+                FlushPendingFixedInputAcknowledgements();
                 return;
             }
 
@@ -256,6 +291,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             FlushOutbound();
+            FlushPendingFixedInputAcknowledgements();
         }
 
         public void PumpReplicatedClient(float frameDeltaTime)
@@ -322,6 +358,7 @@ namespace Ludots.Core.Networking.Runtime
             _seatConnections[seat] = 0;
             _seatDisconnectTicks[seat] = _currentTick;
             _commandReassemblers[seat].Reset();
+            ClearPendingFixedInputAcknowledgement(seat);
             _observer.OnServerSeatDisconnected(in binding, connectionEvent.DisconnectReason);
         }
 
@@ -363,6 +400,9 @@ namespace Ludots.Core.Networking.Runtime
                     return;
                 case NetworkWireKind.ResyncRequired:
                     ProcessClientResyncRequest(connection, payload);
+                    return;
+                case NetworkWireKind.FixedInputBatch:
+                    ProcessFixedInputBatch(connection, payload);
                     return;
                 default:
                     ProtocolFault(NetworkRuntimeFaultCode.UnexpectedWireKind, connection.Value, envelope.Kind);
@@ -443,6 +483,8 @@ namespace Ludots.Core.Networking.Runtime
             _seatDisconnectTicks[seat] = 0;
             PrepareFullSnapshot(seat);
             _commandReassemblers[seat].Reset();
+            ClearPendingFixedInputAcknowledgement(seat);
+            _fixedInput.BindSeat(in binding);
             _observer.OnServerSeatConnected(in binding, reconnect);
         }
 
@@ -493,6 +535,52 @@ namespace Ludots.Core.Networking.Runtime
                 in header,
                 checked((int)_currentTick),
                 _commandEntries.AsSpan(0, entryCount));
+        }
+
+        private void ProcessFixedInputBatch(ConnectionId connection, ReadOnlySpan<byte> payload)
+        {
+            int seat = FindSeatByConnection(connection.Value);
+            if (seat < 0 || _seatStates[seat] != SeatConnected)
+            {
+                ProtocolFault(NetworkRuntimeFaultCode.UnauthenticatedMessage, connection.Value, NetworkWireKind.FixedInputBatch);
+                return;
+            }
+
+            NetworkWireCodecStatus decoded = FixedInputWireCodec.TryDecodeBatch(
+                payload,
+                _fixedInputTargetTicks,
+                _fixedInputPayloads,
+                out NetworkFixedInputBatchHeader header,
+                out int frameCount);
+            if (decoded != NetworkWireCodecStatus.Success)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    connection.Value,
+                    NetworkWireKind.FixedInputBatch,
+                    decoded);
+                return;
+            }
+
+            // Authority is derived exclusively from the authenticated connection seat binding.
+            SessionSeatBinding binding = GetSeatBinding(seat);
+            ReadOnlySpan<byte> payloads = _fixedInputPayloads.AsSpan(
+                0,
+                checked(frameCount * _capacity.FixedInputFramePayloadBytes));
+            FixedInputBatchAdmissionStatus admitted = _fixedInput.TryAdmitBatch(
+                in binding,
+                in header,
+                _fixedInputTargetTicks.AsSpan(0, frameCount),
+                payloads,
+                _fixedInputDispositions.AsSpan(0, frameCount));
+            if (admitted != FixedInputBatchAdmissionStatus.Success)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.FixedInputRejected,
+                    connection.Value,
+                    NetworkWireKind.FixedInputBatch,
+                    detail: (int)_fixedInputDispositions[0]);
+            }
         }
 
         private void ProcessAcknowledgement(ConnectionId connection, ReadOnlySpan<byte> payload)
@@ -800,6 +888,11 @@ namespace Ludots.Core.Networking.Runtime
                     Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seat);
                 }
 
+                if (!_fixedInput.TryReleaseSeat(in binding))
+                {
+                    Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seat);
+                }
+
                 if (_seatLastDisclosureSequences[seat] != 0)
                 {
                     _replicationSeats[seat].Channel.TryAcknowledgeDisclosureChangesThrough(
@@ -813,6 +906,7 @@ namespace Ludots.Core.Networking.Runtime
                 _seatAcknowledgedSnapshots[seat] = 0;
                 _seatLastDisclosureSequences[seat] = 0;
                 ClearAcknowledgementHistory(seat);
+                ClearPendingFixedInputAcknowledgement(seat);
                 _commandReassemblers[seat].Reset();
                 _observer.OnServerSeatReleased(in binding);
             }
@@ -912,11 +1006,127 @@ namespace Ludots.Core.Networking.Runtime
             return kind switch
             {
                 NetworkWireKind.CommandFragment => _capacity.CommandChannel,
+                NetworkWireKind.FixedInputBatch => _capacity.InputChannel,
                 NetworkWireKind.SessionHandshakeRequest or
                 NetworkWireKind.SnapshotAcknowledgement or
                 NetworkWireKind.ResyncRequired => _capacity.ControlChannel,
                 _ => default,
             };
+        }
+
+        private void QueueFixedInputAcknowledgements()
+        {
+            for (int seat = 0; seat < _seatStates.Length; seat++)
+            {
+                if (_seatStates[seat] != SeatConnected)
+                {
+                    continue;
+                }
+
+                SessionSeatBinding binding = GetSeatBinding(seat);
+                NetworkFixedInputAcknowledgement acknowledgement = _fixedInput.BuildAcknowledgement(in binding);
+                Span<byte> destination = _pendingFixedInputAckPayload.AsSpan(
+                    seat * NetworkFixedInputAcknowledgement.SizeInBytes,
+                    NetworkFixedInputAcknowledgement.SizeInBytes);
+                NetworkWireCodecStatus encoded = FixedInputWireCodec.TryEncodeAcknowledgement(
+                    in acknowledgement,
+                    destination,
+                    out int payloadBytes);
+                if (encoded != NetworkWireCodecStatus.Success)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        _seatConnections[seat],
+                        NetworkWireKind.FixedInputAcknowledgement,
+                        encoded);
+                }
+
+                // Latest-per-seat overwrite: never accumulate stale ACK payloads in FIFO order.
+                _pendingFixedInputAckBytes[seat] = payloadBytes;
+                _pendingFixedInputAck[seat] = true;
+            }
+        }
+
+        private void FlushPendingFixedInputAcknowledgements()
+        {
+            for (int seat = 0; seat < _pendingFixedInputAck.Length; seat++)
+            {
+                if (!_pendingFixedInputAck[seat] || _seatStates[seat] != SeatConnected)
+                {
+                    continue;
+                }
+
+                ReadOnlySpan<byte> payload = _pendingFixedInputAckPayload.AsSpan(
+                    seat * NetworkFixedInputAcknowledgement.SizeInBytes,
+                    _pendingFixedInputAckBytes[seat]);
+                NetworkWireCodecStatus framed = NetworkWireEnvelopeCodec.TryEncode(
+                    NetworkWireKind.FixedInputAcknowledgement,
+                    payload,
+                    _datagramBuffer,
+                    out int bytes);
+                if (framed != NetworkWireCodecStatus.Success)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.FixedInputRejected,
+                        _seatConnections[seat],
+                        NetworkWireKind.FixedInputAcknowledgement,
+                        framed);
+                }
+
+                DatagramSendStatus sent = _datagrams.TrySend(
+                    new ConnectionId(_seatConnections[seat]),
+                    _capacity.InputChannel,
+                    _datagramBuffer.AsSpan(0, bytes));
+                if (sent == DatagramSendStatus.Sent)
+                {
+                    _pendingFixedInputAck[seat] = false;
+                    _pendingFixedInputAckBytes[seat] = 0;
+                    continue;
+                }
+
+                if (sent == DatagramSendStatus.Closed)
+                {
+                    ProtocolFault(NetworkRuntimeFaultCode.TransportClosed, _seatConnections[seat]);
+                    ClearPendingFixedInputAcknowledgement(seat);
+                    continue;
+                }
+
+                // NotReady: retain the latest pending ACK for this seat only.
+            }
+        }
+
+        private void ClearPendingFixedInputAcknowledgement(int seat)
+        {
+            _pendingFixedInputAck[seat] = false;
+            _pendingFixedInputAckBytes[seat] = 0;
+            _pendingFixedInputAckPayload.AsSpan(
+                seat * NetworkFixedInputAcknowledgement.SizeInBytes,
+                NetworkFixedInputAcknowledgement.SizeInBytes).Clear();
+        }
+
+        private static void ValidateFixedInputIngress(
+            in NetworkRuntimeCapacity capacity,
+            AuthoritativeSessionRegistry sessions,
+            AuthoritativeFixedInputIngress fixedInput)
+        {
+            FixedInputProtocolConfig expected = capacity.CreateFixedInputProtocolConfig(
+                sessions.SessionEpoch.Value,
+                sessions.SeatCapacity);
+            FixedInputProtocolConfig actual = fixedInput.Config;
+            if (actual.SeatCapacity != expected.SeatCapacity ||
+                actual.SeatCapacity != sessions.SeatCapacity ||
+                actual.HistoryTicksPerSeat != expected.HistoryTicksPerSeat ||
+                actual.SchemaId != expected.SchemaId ||
+                actual.FramePayloadBytes != expected.FramePayloadBytes ||
+                actual.MaxFutureTicks != expected.MaxFutureTicks ||
+                actual.MaxFramesPerBatch != expected.MaxFramesPerBatch ||
+                actual.MaxDatagramPayloadBytes != expected.MaxDatagramPayloadBytes ||
+                actual.SessionEpoch != expected.SessionEpoch)
+            {
+                throw new ArgumentException(
+                    "Fixed-input ingress config must match NetworkRuntimeCapacity and the session epoch.",
+                    nameof(fixedInput));
+            }
         }
 
         private int FindTransportConnection(int value)

@@ -5,6 +5,8 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.FixedInput;
+using Ludots.Core.Networking.Simulation;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
@@ -66,6 +68,10 @@ public sealed class NetworkRuntimeEndToEndTests
             protocol,
             fingerprint,
             reconnectWindowTicks: 2);
+        var tickState = new AuthoritativeSimulationTickState();
+        var fixedInput = new AuthoritativeFixedInputIngress(
+            capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
+            tickState);
         var server = new AuthoritativeServerNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Owned,
@@ -78,6 +84,7 @@ public sealed class NetworkRuntimeEndToEndTests
             new FixedControllerResolver(player),
             interest,
             new[] { serverSeat },
+            fixedInput,
             observer);
 
         var credentials = new MemoryCredentials();
@@ -290,7 +297,21 @@ public sealed class NetworkRuntimeEndToEndTests
             acknowledgementHistoryCapacity: 4,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+
+            inputChannel: new ChannelId(3),
+
+            fixedInputHistoryTicksPerSeat: 8,
+
+            fixedInputSchemaId: 1,
+
+            fixedInputFramePayloadBytes: 12,
+
+            fixedInputMaxFutureTicks: 4,
+
+            fixedInputMaxFramesPerBatch: 4,
+
+            fixedInputPendingFrameCapacity: 8);
         ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 7, 7 });
         var protocol = new ProtocolVersion(1, 0);
         var transport = new InMemoryTransport(new ConnectionId(17));
@@ -302,6 +323,10 @@ public sealed class NetworkRuntimeEndToEndTests
             protocol,
             fingerprint,
             reconnectWindowTicks: 2);
+        var tickState = new AuthoritativeSimulationTickState();
+        var fixedInput = new AuthoritativeFixedInputIngress(
+            capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
+            tickState);
         var server = new AuthoritativeServerNetworkRuntime(
             in capacity,
             NetworkTransportPortOwnership.Borrowed,
@@ -314,6 +339,7 @@ public sealed class NetworkRuntimeEndToEndTests
             new FixedControllerResolver(player),
             interest,
             new[] { serverSeat },
+            fixedInput,
             observer);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
@@ -441,7 +467,21 @@ public sealed class NetworkRuntimeEndToEndTests
             acknowledgementHistoryCapacity: 4,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+
+            inputChannel: new ChannelId(3),
+
+            fixedInputHistoryTicksPerSeat: 8,
+
+            fixedInputSchemaId: 1,
+
+            fixedInputFramePayloadBytes: 12,
+
+            fixedInputMaxFutureTicks: 4,
+
+            fixedInputMaxFramesPerBatch: 4,
+
+            fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(31));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
@@ -655,7 +695,21 @@ public sealed class NetworkRuntimeEndToEndTests
             acknowledgementHistoryCapacity: 4,
             controlChannel: new ChannelId(0),
             commandChannel: new ChannelId(1),
-            stateChannel: new ChannelId(2));
+            stateChannel: new ChannelId(2),
+
+            inputChannel: new ChannelId(3),
+
+            fixedInputHistoryTicksPerSeat: 8,
+
+            fixedInputSchemaId: 1,
+
+            fixedInputFramePayloadBytes: 12,
+
+            fixedInputMaxFutureTicks: 4,
+
+            fixedInputMaxFramesPerBatch: 4,
+
+            fixedInputPendingFrameCapacity: 8);
         var transport = new InMemoryTransport(new ConnectionId(41));
         var observer = new RecordingObserver();
         var protocol = new ProtocolVersion(1, 0);
@@ -993,7 +1047,21 @@ public sealed class NetworkRuntimeEndToEndTests
         acknowledgementHistoryCapacity: 4,
         controlChannel: new ChannelId(0),
         commandChannel: new ChannelId(1),
-        stateChannel: new ChannelId(2));
+        stateChannel: new ChannelId(2),
+
+        inputChannel: new ChannelId(3),
+
+        fixedInputHistoryTicksPerSeat: 8,
+
+        fixedInputSchemaId: 1,
+
+        fixedInputFramePayloadBytes: 12,
+
+        fixedInputMaxFutureTicks: 4,
+
+        fixedInputMaxFramesPerBatch: 4,
+
+        fixedInputPendingFrameCapacity: 8);
 
     private static CommandHarness CreateCommandHarness(World world, Entity player, Entity first, Entity second)
     {
