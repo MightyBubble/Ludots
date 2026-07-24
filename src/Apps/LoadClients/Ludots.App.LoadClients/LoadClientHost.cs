@@ -515,9 +515,9 @@ public sealed class LoadClientHost
             }
 
             double expectedTicks = measurementElapsed * _config.SimulationTickRateHz;
-            // Allow one tick of quantization slack on wall-clock measurement; never invent missing load.
+            // Wall-clock boundaries may straddle one fixed tick; no catch-up batch widens this contract.
             long minExpected = (long)Math.Floor(expectedTicks);
-            long maxExpected = (long)Math.Ceiling(expectedTicks) + _config.MaxStepsPerAdvance;
+            long maxExpected = checked((long)Math.Ceiling(expectedTicks) + 1L);
             if (!(measurementStarted && measurementElapsed > 0d))
             {
                 return Finalize(

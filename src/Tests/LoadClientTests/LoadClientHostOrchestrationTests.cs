@@ -110,7 +110,7 @@ public sealed class LoadClientHostOrchestrationTests
     }
 
     [Test]
-    public void SteadyStatePump_DoesNotAllocate()
+    public void FixedInputClockSteadyStateHotLoop_DoesNotAllocateOnCallingThread()
     {
         var client = new FakeFixedInputClient();
         var source = new DeterministicFixedInputPayloadSource(clientIndex: 0);
@@ -131,6 +131,8 @@ public sealed class LoadClientHostOrchestrationTests
             _ = clock.Advance(1f / 30f);
         }
 
+        // This is the fixed-input clock hot-loop gate only. It does not cover the load host,
+        // 149 LiteNetLib endpoints, replication pumps, or transport worker threads.
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 120; i++)
         {
@@ -146,7 +148,7 @@ public sealed class LoadClientHostOrchestrationTests
     }
 
     [Test]
-    public void Run_StaggeredReadiness_DoesNotConsumeWarmupOrDuration()
+    public void ScriptedOrchestration_StaggeredReadiness_DoesNotConsumeWarmupOrDuration()
     {
         const double readyDelaySeconds = 0.55d;
         const double durationSeconds = 0.45d;
@@ -180,7 +182,7 @@ public sealed class LoadClientHostOrchestrationTests
     }
 
     [Test]
-    public void Run_OneLaggingClient_FailsEvenWhenAggregateCouldPass()
+    public void ScriptedOrchestration_OneLaggingClient_FailsEvenWhenAggregateCouldPass()
     {
         const double durationSeconds = 0.6d;
         LoadClientHostConfig config = ParseTimedConfig(
@@ -208,7 +210,33 @@ public sealed class LoadClientHostOrchestrationTests
         });
     }
 
-    // Isolates the exact 0B assert from NUnit/tiered JIT instrumentation of the test method body.
+    [Test]
+    public void ScriptedOrchestration_OneOverRateClient_FailsPerClientThirtyHzContract()
+    {
+        const double durationSeconds = 0.6d;
+        LoadClientHostConfig config = ParseTimedConfig(
+            clientCount: 1,
+            durationSeconds: durationSeconds,
+            warmUpSeconds: 0d,
+            connectTimeoutSeconds: 5d,
+            readyTimeoutSeconds: 5d);
+        var factory = new ScriptedSlotFactory(
+            new ScriptedClientSpec(ReadyAfterSeconds: 0d, StepsPerSecond: 35d));
+        var host = new LoadClientHost(config, factory, baseDirectory: _credentialDirectory);
+        LoadClientRunEvidence evidence = host.Run(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(evidence.Outcome, Is.EqualTo(LoadClientRunOutcome.Failed));
+            Assert.That(evidence.FaultKind, Is.EqualTo(LoadClientFaultKind.TickRateContractBroken));
+            Assert.That(evidence.HeldThirtyHzContract, Is.False);
+            Assert.That(evidence.FaultDetail, Does.Contain("client 0"));
+            Assert.That(evidence.FaultDetail, Does.Contain("measurementGenerated="));
+            Assert.That(evidence.FaultDetail, Does.Contain("expected=["));
+        });
+    }
+
+    // Isolates the fixed-input clock's exact calling-thread 0B assert from NUnit/tiered JIT instrumentation.
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static void AssertZeroAllocated(long allocated)
     {
