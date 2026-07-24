@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
+    <ProjectReference Include="..\..\..\Adapters\Networking\Ludots.Adapter.LiteNetLib\Ludots.Adapter.LiteNetLib.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
   </ItemGroup>

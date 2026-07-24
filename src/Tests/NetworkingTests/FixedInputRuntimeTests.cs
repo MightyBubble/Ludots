@@ -853,6 +853,8 @@ public sealed class FixedInputRuntimeTests
         NetworkAdmissionResultCapacity = 32,
         EntityAdmissionResultCapacity = 32,
         ReconnectWindowSeconds = 30,
+        ClientReconnectRetryMilliseconds = 500,
+        ReplicationSchemaCapacity = 8,
         BaselineCapacity = 8,
         DisclosureChangeLogCapacity = 32,
         DatagramQueueCapacity = 64,

@@ -102,6 +102,8 @@ namespace Ludots.Tests.Architecture
                 Assert.That(result.Engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+                Assert.That(result.PlanFingerprint, Is.EqualTo("test-fingerprint"));
+                Assert.That(result.NetworkHost, Is.Null);
             }
             finally
             {
@@ -205,6 +207,68 @@ namespace Ludots.Tests.Architecture
                 Assert.That(result.Engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+                Assert.That(result.PlanFingerprint, Is.EqualTo("full-graph-fingerprint"));
+                Assert.That(result.NetworkHost, Is.Null);
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_RejectsNetworkHostWithoutMergedNetworkingProfile()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-network-pair-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+            var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+            try
+            {
+                File.WriteAllText(
+                    graphPath,
+                    $$"""
+                    {
+                      "schemaVersion": 1,
+                      "planFingerprint": "network-pair-fingerprint",
+                      "orderedModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "plannedMods": [
+                        {
+                          "id": "LudotsCoreMod",
+                          "rootPath": "{{modRoot.Replace("\\", "\\\\")}}"
+                        }
+                      ]
+                    }
+                    """);
+
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanFingerprint": "network-pair-fingerprint",
+                      "PlanSchemaVersion": 1,
+                      "NetworkHost": {
+                        "ProcessRole": "authoritativeServer",
+                        "Port": 27777,
+                        "ConnectionKey": "physics3d"
+                      }
+                    }
+                    """);
+
+                Assert.That(
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"),
+                    Throws.InvalidOperationException.With.Message.Contains(
+                        "declares NetworkHost, but merged game configuration has no networking profile"));
             }
             finally
             {
