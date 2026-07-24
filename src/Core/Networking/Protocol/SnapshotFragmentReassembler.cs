@@ -97,6 +97,11 @@ namespace Ludots.Core.Networking.Protocol
                 return SnapshotReassemblyStatus.StaleOrOutOfOrder;
             }
 
+            if (header.SessionEpoch == 0 || header.SnapshotId == 0)
+            {
+                return SnapshotReassemblyStatus.InvalidFragment;
+            }
+
             if (header.FragmentCount == 0 || header.FragmentIndex >= header.FragmentCount)
             {
                 return SnapshotReassemblyStatus.InvalidFragment;

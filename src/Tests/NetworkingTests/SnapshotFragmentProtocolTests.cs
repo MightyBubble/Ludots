@@ -92,6 +92,39 @@ public sealed class SnapshotFragmentProtocolTests
     }
 
     [Test]
+    public void ZeroSessionOrSnapshotIdentity_IsRejectedAtEveryEntryPoint()
+    {
+        var encoder = new SnapshotFragmentEncoder(MaxDatagramPayloadBytes, MaxSnapshotBytes, MaxFragments);
+        byte[] payload = { 1, 2, 3 };
+        Span<byte> wire = stackalloc byte[SnapshotFragmentWireCodec.GetWirePayloadSize(payload.Length)];
+
+        Assert.That(
+            encoder.TryEncodeFragment(0, 1, payload, 0, 1, wire, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            encoder.TryEncodeFragment(1, 0, payload, 0, 1, wire, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        var zeroEpoch = new NetworkSnapshotFragmentHeader(0, 1, 0, 1, 3, 3);
+        var zeroSnapshot = new NetworkSnapshotFragmentHeader(1, 0, 0, 1, 3, 3);
+        Assert.That(
+            SnapshotFragmentWireCodec.TryEncode(in zeroEpoch, payload, wire, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            SnapshotFragmentWireCodec.TryEncode(in zeroSnapshot, payload, wire, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+
+        var reassembler = new SnapshotFragmentReassembler(MaxSnapshotBytes, MaxFragments);
+        Assert.That(
+            reassembler.TryAccept(in zeroEpoch, payload),
+            Is.EqualTo(SnapshotReassemblyStatus.InvalidFragment));
+        Assert.That(
+            reassembler.TryAccept(in zeroSnapshot, payload),
+            Is.EqualTo(SnapshotReassemblyStatus.InvalidFragment));
+        Assert.That(reassembler.Phase, Is.EqualTo(SnapshotReassemblyPhase.Empty));
+    }
+
+    [Test]
     public void DuplicateIdentical_IsDuplicate_DisagreeingDuplicate_IsInvalidWithoutMutation()
     {
         var encoder = new SnapshotFragmentEncoder(MaxDatagramPayloadBytes, MaxSnapshotBytes, MaxFragments);
