@@ -306,3 +306,77 @@ Core enum or a private training runtime.
 | Add Layer 1 | None |
 | Add Layer 2 | None |
 | Forbidden | New training preset mode; private Showcase queue; duplicate resource ledger; silent command fallback |
+
+## Follow-up Review - Repeated CreateUnit Scatter Identity
+
+- **Task / Issue**: #709 - keep separately trained units independently selectable
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the existing `CreateUnit` atomic handler keeps the same
+placement mode and authored radius, but its deterministic scatter seed must
+identify each effect instance so repeated single-unit executions do not produce
+the same world position.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Resolve the authored spawn origin | 0 | Existing `EffectTargetPointResolver` |
+| Derive a deterministic per-effect scatter offset | 0 | Existing `CreateUnit` built-in handler |
+| Queue and materialize the unit | 0/1 | Existing `RuntimeEntitySpawnQueue` and lifecycle path |
+| Prove units remain independently selectable | 3 | Existing three-process player-input acceptance Mod |
+
+### 3. Reuse list
+
+- Handlers: existing `BuiltinHandlerId.CreateUnit` handler.
+- Queues / Systems: existing `RuntimeEntitySpawnQueue` and spawn
+  materialization systems.
+- Resolvers / Registries: existing `EffectTargetPointResolver`; the live effect
+  entity identity already supplied to every built-in handler invocation.
+- Existing presets / graphs: existing Frontline training ability and
+  `Effect.Rts.Frontline.CreateInfantry` template.
+
+### 4. New Layer 0 ops
+
+N/A. The change corrects the deterministic input set of the existing atomic
+placement operation.
+
+### 5. Transaction boundary
+
+No new rollback boundary is introduced. All spawn requests from one
+`CreateUnit` invocation retain the existing queue-capacity and materialization
+semantics.
+
+### 6. Config SSOT
+
+The placement mode and radius remain authored in the existing effect template.
+New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps or authored placement values**. It
+does not require a Core enum.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | `CreateUnit`; effect entity identity; `EffectTargetPointResolver`; runtime spawn queue and materializer |
+| Add Layer 0 op | None |
+| Add Layer 1 | None |
+| Add Layer 2 | None |
+| Forbidden | Per-Mod spawn counter; new placement mode; wall-clock/random seed; silent overlap fallback |

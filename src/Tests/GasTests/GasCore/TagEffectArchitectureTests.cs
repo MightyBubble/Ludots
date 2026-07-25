@@ -621,6 +621,41 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void BuiltinHandlers_CreateUnit_RepeatedEffectsFromSameSource_UseDistinctScatterOffsets()
+        {
+            using var world = World.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(1200, 3400));
+            var firstEffect = world.Create();
+            var secondEffect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 2);
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                SpawnRequests = queue,
+            };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var context = new EffectContext { Source = caster, Target = caster };
+            var template = new EffectTemplateData
+            {
+                UnitCreation = new UnitCreationDescriptor
+                {
+                    UnitTypeId = 7,
+                    Count = 1,
+                    OffsetRadius = 220,
+                },
+            };
+            var mergedParams = new EffectConfigParams();
+
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, firstEffect, ref context, in mergedParams, in template, runtime);
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, secondEffect, ref context, in mergedParams, in template, runtime);
+
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
+            That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
         public void BuiltinHandlers_CreateUnit_WithTemplate_EnqueuesTemplateSpawnRequests()
         {
             using var world = World.Create();

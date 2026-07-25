@@ -288,6 +288,7 @@ namespace Ludots.Core.Gameplay.GAS
                 ComputeUnitCreationPlacement(
                     in unit,
                     context.Source,
+                    effectEntity,
                     unit.UnitTypeId,
                     i,
                     out Fix64Vec2 offsetCm,
@@ -839,7 +840,12 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        private static Fix64Vec2 ComputeScatterOffsetCm(Entity source, int unitTypeId, int index, int radiusCm)
+        private static Fix64Vec2 ComputeScatterOffsetCm(
+            Entity source,
+            Entity effectEntity,
+            int unitTypeId,
+            int index,
+            int radiusCm)
         {
             if (radiusCm <= 0)
             {
@@ -848,11 +854,14 @@ namespace Ludots.Core.Gameplay.GAS
 
             unchecked
             {
-                uint seed = (uint)(
-                    (source.Id * 73856093) ^
-                    (source.WorldId * 19349663) ^
-                    ((index + 1) * 83492791) ^
-                    (unitTypeId * 265443576));
+                uint seed = (uint)source.Id * 73856093u;
+                seed ^= (uint)source.WorldId * 19349663u;
+                seed ^= (uint)source.Version * 83492791u;
+                seed ^= (uint)effectEntity.Id * 2654435761u;
+                seed ^= (uint)effectEntity.WorldId * 2246822519u;
+                seed ^= (uint)effectEntity.Version * 3266489917u;
+                seed ^= (uint)(index + 1) * 668265263u;
+                seed ^= (uint)unitTypeId * 374761393u;
 
                 seed ^= seed << 13;
                 seed ^= seed >> 17;
@@ -871,6 +880,7 @@ namespace Ludots.Core.Gameplay.GAS
         private static void ComputeUnitCreationPlacement(
             in UnitCreationDescriptor unit,
             Entity source,
+            Entity effectEntity,
             int unitTypeId,
             int index,
             out Fix64Vec2 offsetCm,
@@ -883,7 +893,7 @@ namespace Ludots.Core.Gameplay.GAS
                     ComputeCirclePlacement(in unit, index, out offsetCm, out facingAngleRad, out hasFacing);
                     return;
                 default:
-                    offsetCm = ComputeScatterOffsetCm(source, unitTypeId, index, unit.OffsetRadius);
+                    offsetCm = ComputeScatterOffsetCm(source, effectEntity, unitTypeId, index, unit.OffsetRadius);
                     facingAngleRad = 0f;
                     hasFacing = false;
                     return;
