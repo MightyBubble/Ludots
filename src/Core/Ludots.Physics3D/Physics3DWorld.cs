@@ -155,6 +155,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     public long StepIndex { get; private set; }
     public Physics3DStepMetrics LastStepMetrics { get; private set; }
     public float FixedDeltaSeconds => _config.FixedDeltaSeconds;
+    public Vector3 GravityCmPerSecondSquared => _config.GravityCmPerSecondSquared;
 
     /// <inheritdoc cref="IPhysics3DWorld.IsTerminalFaulted"/>
     public bool IsTerminalFaulted => _terminalFault is not null;

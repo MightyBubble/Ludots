@@ -38,7 +38,11 @@ internal enum Physics3DShowcaseCommandKind : byte
     RelaunchWindPair = 18,
     ToggleConstraintDrive = 19,
     ReverseConstraintDrive = 20,
-    StartReplayDifferenceComparison = 21
+    StartReplayDifferenceComparison = 21,
+    SetScannerResultMode = 22,
+    ToggleScannerSensors = 23,
+    ToggleScannerIgnoreSelf = 24,
+    ToggleScannerIgnoreAssembly = 25
 }
 
 internal readonly struct Physics3DShowcaseCommand
@@ -80,6 +84,13 @@ internal enum Physics3DShowcaseQueryKind : byte
     BoxOverlap = 5,
     SphereOverlap = 6,
     CapsuleOverlap = 7
+}
+
+internal enum Physics3DShowcaseQueryResultMode : byte
+{
+    All = 0,
+    Closest = 1,
+    Any = 2
 }
 
 internal enum Physics3DShowcaseWindZone : byte

@@ -96,8 +96,12 @@ internal sealed partial class Physics3DShowcaseRuntime
         Physics3DScannerRangeShowcaseConfig scanner = config.ScannerRange;
         scanner.Validate(nameof(config.ScannerRange));
         _scannerQueryKind = scanner.InitialQueryKind;
+        _scannerResultMode = scanner.InitialResultMode;
         _scannerDistancePresetIndex = scanner.InitialDistancePresetIndex;
         _scannerLayerFilterIndex = scanner.InitialLayerFilterIndex;
+        _scannerIncludeSensors = scanner.InitialIncludeSensors;
+        _scannerIgnoreSelf = scanner.InitialIgnoreSelf;
+        _scannerIgnoreAssembly = scanner.InitialIgnoreAssembly;
         AddFloor();
         float size = config.BodySizeCm;
         for (int lane = 0; lane < QueryKindCount; lane++)
@@ -115,6 +119,39 @@ internal sealed partial class Physics3DShowcaseRuntime
             _queryDistancesCm[lane] = lane < 4
                 ? scanner.DistancePresetsCm[_scannerDistancePresetIndex]
                 : 0f;
+            Physics3DCollisionSubgroup sourceSubgroup = new(
+                scanner.SourceAssemblyId,
+                checked((byte)(lane * 2)),
+                uint.MaxValue);
+            _scannerSourceBodies[lane] = AddOwnedBody(
+                Physics3DBodyKind.Kinematic,
+                _boxShape,
+                Physics3DShapeKind.Box,
+                new Vector3(size),
+                0f,
+                _queryOriginsCm[lane],
+                Quaternion.Identity,
+                Vector3.Zero,
+                Vector3.Zero,
+                Physics3DContinuousDetectionMode.Discrete,
+                KinematicColor,
+                collisionSubgroup: sourceSubgroup);
+            AddOwnedBody(
+                Physics3DBodyKind.Kinematic,
+                _boxShape,
+                Physics3DShapeKind.Box,
+                new Vector3(size),
+                0f,
+                _queryOriginsCm[lane] + (Vector3.UnitX * scanner.SourceMemberOffsetCm),
+                Quaternion.Identity,
+                Vector3.Zero,
+                Vector3.Zero,
+                Physics3DContinuousDetectionMode.Discrete,
+                KinematicColor,
+                collisionSubgroup: new Physics3DCollisionSubgroup(
+                    scanner.SourceAssemblyId,
+                    checked((byte)((lane * 2) + 1)),
+                    uint.MaxValue));
             for (int target = 0; target < scanner.TargetCount; target++)
             {
                 Physics3DScannerLayerShowcaseConfig layer = scanner.Layers[scanner.TargetLayerIndices[target]];
@@ -133,6 +170,9 @@ internal sealed partial class Physics3DShowcaseRuntime
                     Vector3.Zero,
                     Physics3DContinuousDetectionMode.Discrete,
                     new Vector4(layer.ColorR, layer.ColorG, layer.ColorB, 1f),
+                    contactPolicy: target == scanner.SensorTargetIndex
+                        ? Physics3DBodyContactPolicy.Sensor()
+                        : default,
                     collisionLayer: new LayerMask(layer.Category, uint.MaxValue));
             }
         }
@@ -383,7 +423,7 @@ internal sealed partial class Physics3DShowcaseRuntime
                 ObserveRagdollLabFixedStep(_sceneStep - 1);
                 break;
             case Physics3DShowcaseScene.ScaleCity:
-                RecordScaleCityPerformanceSample(RequireSimulation().MaximumStepMillisecondsLastUpdate);
+                RecordScaleCityPhysicsPerformanceSample(RequireSimulation().MaximumStepMillisecondsLastUpdate);
                 break;
             case Physics3DShowcaseScene.ScannerRange:
                 AdvanceScannerPlayback();
@@ -400,8 +440,62 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         _scannerQueryKind = (Physics3DShowcaseQueryKind)value;
+        if (IsScannerOverlap(_scannerQueryKind) && _scannerResultMode != Physics3DShowcaseQueryResultMode.All)
+        {
+            _scannerResultMode = Physics3DShowcaseQueryResultMode.All;
+        }
         ClearScannerResult();
         _lastAction = $"Selected {ScannerQueryLabel(_scannerQueryKind)}. Press Run Scan to query the authored targets.";
+    }
+
+    private void SetScannerResultMode(int value)
+    {
+        RequireScannerRangeCommand(nameof(Physics3DShowcaseCommandKind.SetScannerResultMode));
+        if ((uint)value > byte.MaxValue || !Enum.IsDefined(typeof(Physics3DShowcaseQueryResultMode), (byte)value))
+        {
+            throw new InvalidOperationException($"Unknown Scanner Range result mode value {value}.");
+        }
+
+        Physics3DShowcaseQueryResultMode mode = (Physics3DShowcaseQueryResultMode)value;
+        if (IsScannerOverlap(_scannerQueryKind) && mode != Physics3DShowcaseQueryResultMode.All)
+        {
+            throw new InvalidOperationException(
+                $"{ScannerQueryLabel(_scannerQueryKind)} only supports All results; Closest and Any require a cast query.");
+        }
+
+        _scannerResultMode = mode;
+        ClearScannerResult();
+        _lastAction = $"Result mode set to {ScannerResultModeLabel(mode)}. Press Run Scan to apply it.";
+    }
+
+    private void ToggleScannerSensors()
+    {
+        RequireScannerRangeCommand(nameof(Physics3DShowcaseCommandKind.ToggleScannerSensors));
+        _scannerIncludeSensors = !_scannerIncludeSensors;
+        ClearScannerResult();
+        _lastAction = _scannerIncludeSensors
+            ? "Sensor targets are included. Press Run Scan to apply it."
+            : "Sensor targets are excluded. Press Run Scan to apply it.";
+    }
+
+    private void ToggleScannerIgnoreSelf()
+    {
+        RequireScannerRangeCommand(nameof(Physics3DShowcaseCommandKind.ToggleScannerIgnoreSelf));
+        _scannerIgnoreSelf = !_scannerIgnoreSelf;
+        ClearScannerResult();
+        _lastAction = _scannerIgnoreSelf
+            ? "The scanner source body is ignored. Press Run Scan to apply it."
+            : "The scanner source body can be hit. Press Run Scan to apply it.";
+    }
+
+    private void ToggleScannerIgnoreAssembly()
+    {
+        RequireScannerRangeCommand(nameof(Physics3DShowcaseCommandKind.ToggleScannerIgnoreAssembly));
+        _scannerIgnoreAssembly = !_scannerIgnoreAssembly;
+        ClearScannerResult();
+        _lastAction = _scannerIgnoreAssembly
+            ? "The scanner source assembly is ignored. Press Run Scan to apply it."
+            : "Other members of the scanner source assembly can be hit. Press Run Scan to apply it.";
     }
 
     private void SetScannerDistancePreset(int value)
@@ -443,7 +537,12 @@ internal sealed partial class Physics3DShowcaseRuntime
         int queryIndex = ScannerQueryIndex;
         Physics3DScannerLayerFilterShowcaseConfig filterConfig =
             ActiveConfig.ScannerRange.LayerFilters[_scannerLayerFilterIndex];
-        LayerMask filter = new(uint.MaxValue, filterConfig.Mask);
+        LayerMask layerFilter = new(uint.MaxValue, filterConfig.Mask);
+        Physics3DQueryFilter filter = new(
+            layerFilter,
+            _scannerIgnoreSelf ? _scannerSourceBodies[queryIndex] : default,
+            _scannerIncludeSensors,
+            _scannerIgnoreAssembly ? ActiveConfig.ScannerRange.SourceAssemblyId : 0u);
         IPhysics3DWorld world = RequirePhysicsWorld();
 
         try
@@ -451,50 +550,17 @@ internal sealed partial class Physics3DShowcaseRuntime
             switch (_scannerQueryKind)
             {
                 case Physics3DShowcaseQueryKind.Ray:
-                    _queryHitCounts[queryIndex] = world.Raycast(
-                        _queryOriginsCm[queryIndex],
-                        _queryDirections[queryIndex],
-                        _queryDistancesCm[queryIndex],
-                        filter,
-                        _rayHits);
-                    CaptureRaycastHits(queryIndex);
+                    ExecuteScannerRay(world, queryIndex, filter);
                     break;
                 case Physics3DShowcaseQueryKind.BoxCast:
-                    _queryHitCounts[queryIndex] = world.BoxCast(
-                        _queryOriginsCm[queryIndex],
-                        _querySizesCm[queryIndex],
-                        Quaternion.Identity,
-                        _queryDirections[queryIndex],
-                        _queryDistancesCm[queryIndex],
-                        filter,
-                        _shapeCastHits);
-                    CaptureShapeCastHits(queryIndex);
+                    ExecuteScannerBoxCast(world, queryIndex, filter);
                     break;
                 case Physics3DShowcaseQueryKind.SphereCast:
-                    _queryHitCounts[queryIndex] = world.SphereCast(
-                        _queryOriginsCm[queryIndex],
-                        _querySizesCm[queryIndex].X * 0.5f,
-                        _queryDirections[queryIndex],
-                        _queryDistancesCm[queryIndex],
-                        filter,
-                        _shapeCastHits);
-                    CaptureShapeCastHits(queryIndex);
+                    ExecuteScannerSphereCast(world, queryIndex, filter);
                     break;
                 case Physics3DShowcaseQueryKind.CapsuleCast:
-                {
-                    float diameter = _querySizesCm[queryIndex].X;
-                    _queryHitCounts[queryIndex] = world.CapsuleCast(
-                        _queryOriginsCm[queryIndex],
-                        diameter * 0.5f,
-                        _querySizesCm[queryIndex].Y - diameter,
-                        Quaternion.Identity,
-                        _queryDirections[queryIndex],
-                        _queryDistancesCm[queryIndex],
-                        filter,
-                        _shapeCastHits);
-                    CaptureShapeCastHits(queryIndex);
+                    ExecuteScannerCapsuleCast(world, queryIndex, filter);
                     break;
-                }
                 case Physics3DShowcaseQueryKind.BoxOverlap:
                     _queryHitCounts[queryIndex] = world.OverlapBox(
                         _queryOriginsCm[queryIndex],
@@ -556,6 +622,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         Array.Clear(_queryHitStartedOverlapping, 0, _queryHitStartedOverlapping.Length);
         _scannerHasResult = false;
         _scannerQueryFailed = false;
+        _scannerAnyHit = false;
         _scannerPlaybackTick = 0;
         _scannerVisibleHitCount = 0;
         _scannerPlaybackDistanceCm = 0f;
@@ -566,6 +633,18 @@ internal sealed partial class Physics3DShowcaseRuntime
     {
         _scannerPlaybackTick = 0;
         _scannerPlaybackDistanceCm = 0f;
+        if (_scannerResultMode == Physics3DShowcaseQueryResultMode.Any)
+        {
+            _scannerPlaybackTick = ActiveConfig.ScannerRange.CastPlaybackDurationTicks;
+            _scannerPlaybackDistanceCm = _queryDistancesCm[queryIndex];
+            _scannerVisibleHitCount = 0;
+            _scannerPlaybackStatus = Physics3DScannerPlaybackStatus.Complete;
+            _lastAction = _scannerAnyHit
+                ? $"{ScannerQueryLabel(_scannerQueryKind)} path is blocked. Any mode does not request a hit point."
+                : $"{ScannerQueryLabel(_scannerQueryKind)} path is clear. Any mode does not request hit details.";
+            return;
+        }
+
         if (_scannerQueryKind is Physics3DShowcaseQueryKind.BoxOverlap or
             Physics3DShowcaseQueryKind.SphereOverlap or
             Physics3DShowcaseQueryKind.CapsuleOverlap)
@@ -672,6 +751,193 @@ internal sealed partial class Physics3DShowcaseRuntime
         Physics3DShowcaseQueryKind.CapsuleOverlap => "Capsule Overlap",
         _ => throw new InvalidOperationException($"Unknown Scanner Range query kind '{kind}'.")
     };
+
+    private static string ScannerResultModeLabel(Physics3DShowcaseQueryResultMode mode) => mode switch
+    {
+        Physics3DShowcaseQueryResultMode.All => "All",
+        Physics3DShowcaseQueryResultMode.Closest => "Closest",
+        Physics3DShowcaseQueryResultMode.Any => "Any",
+        _ => throw new InvalidOperationException($"Unknown Scanner Range result mode '{mode}'.")
+    };
+
+    private static bool IsScannerOverlap(Physics3DShowcaseQueryKind kind) =>
+        kind is Physics3DShowcaseQueryKind.BoxOverlap or
+            Physics3DShowcaseQueryKind.SphereOverlap or
+            Physics3DShowcaseQueryKind.CapsuleOverlap;
+
+    private void ExecuteScannerRay(IPhysics3DWorld world, int queryIndex, in Physics3DQueryFilter filter)
+    {
+        switch (_scannerResultMode)
+        {
+            case Physics3DShowcaseQueryResultMode.All:
+                _queryHitCounts[queryIndex] = world.Raycast(
+                    _queryOriginsCm[queryIndex],
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter,
+                    _rayHits);
+                CaptureRaycastHits(queryIndex);
+                break;
+            case Physics3DShowcaseQueryResultMode.Closest:
+                if (world.RaycastClosest(
+                        _queryOriginsCm[queryIndex],
+                        _queryDirections[queryIndex],
+                        _queryDistancesCm[queryIndex],
+                        filter,
+                        out Physics3DRaycastHit closest))
+                {
+                    _rayHits[0] = closest;
+                    _queryHitCounts[queryIndex] = 1;
+                    CaptureRaycastHits(queryIndex);
+                }
+                break;
+            case Physics3DShowcaseQueryResultMode.Any:
+                _scannerAnyHit = world.RaycastAny(
+                    _queryOriginsCm[queryIndex],
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported Scanner Range result mode '{_scannerResultMode}'.");
+        }
+    }
+
+    private void ExecuteScannerBoxCast(IPhysics3DWorld world, int queryIndex, in Physics3DQueryFilter filter)
+    {
+        switch (_scannerResultMode)
+        {
+            case Physics3DShowcaseQueryResultMode.All:
+                _queryHitCounts[queryIndex] = world.BoxCast(
+                    _queryOriginsCm[queryIndex],
+                    _querySizesCm[queryIndex],
+                    Quaternion.Identity,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter,
+                    _shapeCastHits);
+                CaptureShapeCastHits(queryIndex);
+                break;
+            case Physics3DShowcaseQueryResultMode.Closest:
+                if (world.BoxCastClosest(
+                        _queryOriginsCm[queryIndex],
+                        _querySizesCm[queryIndex],
+                        Quaternion.Identity,
+                        _queryDirections[queryIndex],
+                        _queryDistancesCm[queryIndex],
+                        filter,
+                        out Physics3DShapeCastHit closest))
+                {
+                    _shapeCastHits[0] = closest;
+                    _queryHitCounts[queryIndex] = 1;
+                    CaptureShapeCastHits(queryIndex);
+                }
+                break;
+            case Physics3DShowcaseQueryResultMode.Any:
+                _scannerAnyHit = world.BoxCastAny(
+                    _queryOriginsCm[queryIndex],
+                    _querySizesCm[queryIndex],
+                    Quaternion.Identity,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported Scanner Range result mode '{_scannerResultMode}'.");
+        }
+    }
+
+    private void ExecuteScannerSphereCast(IPhysics3DWorld world, int queryIndex, in Physics3DQueryFilter filter)
+    {
+        float radiusCm = _querySizesCm[queryIndex].X * 0.5f;
+        switch (_scannerResultMode)
+        {
+            case Physics3DShowcaseQueryResultMode.All:
+                _queryHitCounts[queryIndex] = world.SphereCast(
+                    _queryOriginsCm[queryIndex],
+                    radiusCm,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter,
+                    _shapeCastHits);
+                CaptureShapeCastHits(queryIndex);
+                break;
+            case Physics3DShowcaseQueryResultMode.Closest:
+                if (world.SphereCastClosest(
+                        _queryOriginsCm[queryIndex],
+                        radiusCm,
+                        _queryDirections[queryIndex],
+                        _queryDistancesCm[queryIndex],
+                        filter,
+                        out Physics3DShapeCastHit closest))
+                {
+                    _shapeCastHits[0] = closest;
+                    _queryHitCounts[queryIndex] = 1;
+                    CaptureShapeCastHits(queryIndex);
+                }
+                break;
+            case Physics3DShowcaseQueryResultMode.Any:
+                _scannerAnyHit = world.SphereCastAny(
+                    _queryOriginsCm[queryIndex],
+                    radiusCm,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported Scanner Range result mode '{_scannerResultMode}'.");
+        }
+    }
+
+    private void ExecuteScannerCapsuleCast(IPhysics3DWorld world, int queryIndex, in Physics3DQueryFilter filter)
+    {
+        float diameterCm = _querySizesCm[queryIndex].X;
+        float radiusCm = diameterCm * 0.5f;
+        float cylinderLengthCm = _querySizesCm[queryIndex].Y - diameterCm;
+        switch (_scannerResultMode)
+        {
+            case Physics3DShowcaseQueryResultMode.All:
+                _queryHitCounts[queryIndex] = world.CapsuleCast(
+                    _queryOriginsCm[queryIndex],
+                    radiusCm,
+                    cylinderLengthCm,
+                    Quaternion.Identity,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter,
+                    _shapeCastHits);
+                CaptureShapeCastHits(queryIndex);
+                break;
+            case Physics3DShowcaseQueryResultMode.Closest:
+                if (world.CapsuleCastClosest(
+                        _queryOriginsCm[queryIndex],
+                        radiusCm,
+                        cylinderLengthCm,
+                        Quaternion.Identity,
+                        _queryDirections[queryIndex],
+                        _queryDistancesCm[queryIndex],
+                        filter,
+                        out Physics3DShapeCastHit closest))
+                {
+                    _shapeCastHits[0] = closest;
+                    _queryHitCounts[queryIndex] = 1;
+                    CaptureShapeCastHits(queryIndex);
+                }
+                break;
+            case Physics3DShowcaseQueryResultMode.Any:
+                _scannerAnyHit = world.CapsuleCastAny(
+                    _queryOriginsCm[queryIndex],
+                    radiusCm,
+                    cylinderLengthCm,
+                    Quaternion.Identity,
+                    _queryDirections[queryIndex],
+                    _queryDistancesCm[queryIndex],
+                    filter);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported Scanner Range result mode '{_scannerResultMode}'.");
+        }
+    }
 
     private void CaptureRaycastHits(int queryIndex)
     {

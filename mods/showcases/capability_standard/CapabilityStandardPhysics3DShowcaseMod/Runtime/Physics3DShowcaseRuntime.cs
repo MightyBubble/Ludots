@@ -24,6 +24,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     private readonly Vector3[] _queryDirections = new Vector3[QueryKindCount];
     private readonly Vector3[] _querySizesCm = new Vector3[QueryKindCount];
     private readonly float[] _queryDistancesCm = new float[QueryKindCount];
+    private readonly Physics3DBodyId[] _scannerSourceBodies = new Physics3DBodyId[QueryKindCount];
     private Vector3[] _queryHitPositionsCm = Array.Empty<Vector3>();
     private Vector3[] _queryHitNormals = Array.Empty<Vector3>();
     private float[] _queryHitDistancesCm = Array.Empty<float>();
@@ -81,6 +82,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     private bool _inputContextActive;
     private bool _isActive;
     private Physics3DShowcaseQueryKind _scannerQueryKind;
+    private Physics3DShowcaseQueryResultMode _scannerResultMode;
     private int _scannerDistancePresetIndex;
     private int _scannerLayerFilterIndex;
     private int _scannerRunSequence;
@@ -90,6 +92,10 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     private Physics3DScannerPlaybackStatus _scannerPlaybackStatus;
     private bool _scannerHasResult;
     private bool _scannerQueryFailed;
+    private bool _scannerAnyHit;
+    private bool _scannerIncludeSensors;
+    private bool _scannerIgnoreSelf;
+    private bool _scannerIgnoreAssembly;
     private Physics3DShowcaseScene _scene;
     private Physics3DShowcaseReplayStatus _replayStatus;
     private string _lastAction = "Physics3D Playground is waiting for its map.";
@@ -127,11 +133,16 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     internal long SceneStep => _sceneStep;
     internal long SceneRevision => _sceneRevision;
     internal Physics3DShowcaseQueryKind ScannerQueryKind => _scannerQueryKind;
+    internal Physics3DShowcaseQueryResultMode ScannerResultMode => _scannerResultMode;
     internal int ScannerQueryIndex => (int)_scannerQueryKind - 1;
     internal int ScannerDistancePresetIndex => _scannerDistancePresetIndex;
     internal int ScannerLayerFilterIndex => _scannerLayerFilterIndex;
     internal bool ScannerHasResult => _scannerHasResult;
     internal bool ScannerQueryFailed => _scannerQueryFailed;
+    internal bool ScannerAnyHit => _scannerAnyHit;
+    internal bool ScannerIncludeSensors => _scannerIncludeSensors;
+    internal bool ScannerIgnoreSelf => _scannerIgnoreSelf;
+    internal bool ScannerIgnoreAssembly => _scannerIgnoreAssembly;
     internal int ScannerRunSequence => _scannerRunSequence;
     internal int ScannerPlaybackTick => _scannerPlaybackTick;
     internal int ScannerVisibleHitCount => _scannerVisibleHitCount;
@@ -237,6 +248,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
 
     internal void PrepareFixedStep()
     {
+        CancelScaleCityFrameMeasurement();
         if (!_isActive)
         {
             return;
@@ -258,6 +270,11 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             return;
         }
 
+        if (_scene == Physics3DShowcaseScene.ScaleCity)
+        {
+            BeginScaleCityFrameMeasurement();
+        }
+
         CaptureCharacterTraversalInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         CaptureWheelLabInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         PrepareSceneForPhysicsStep();
@@ -275,6 +292,15 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         {
             _sceneStep++;
             ObserveSceneAfterPhysicsStep();
+        }
+
+        if (_scene == Physics3DShowcaseScene.ScaleCity && steps > 0)
+        {
+            CompleteScaleCityFrameMeasurement();
+        }
+        else
+        {
+            CancelScaleCityFrameMeasurement();
         }
     }
 
@@ -359,12 +385,17 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             DeterminismDifferenceInjected: _replayDifferenceInjected,
             ScannerQueries: scannerQueries,
             ScannerQueryKind: _scannerQueryKind,
+            ScannerResultMode: _scannerResultMode,
             ScannerDistancePresetIndex: _scannerDistancePresetIndex,
             ScannerDistanceCm: scannerDistanceCm,
             ScannerLayerFilterIndex: _scannerLayerFilterIndex,
             ScannerLayerFilterName: scannerLayerFilterName,
             ScannerHasResult: scannerActive && _scannerHasResult,
             ScannerQueryFailed: scannerActive && _scannerQueryFailed,
+            ScannerAnyHit: scannerActive && _scannerAnyHit,
+            ScannerIncludeSensors: scannerActive && _scannerIncludeSensors,
+            ScannerIgnoreSelf: scannerActive && _scannerIgnoreSelf,
+            ScannerIgnoreAssembly: scannerActive && _scannerIgnoreAssembly,
             ScannerRunSequence: _scannerRunSequence,
             ScannerPlaybackStatus: scannerActive ? _scannerPlaybackStatus : Physics3DScannerPlaybackStatus.Waiting,
             ScannerPlaybackTick: scannerActive ? _scannerPlaybackTick : 0,
@@ -396,6 +427,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             MaterialSummary: CreateMaterialHillSummary(),
             WindSummary: CreateWindTunnelSummary(),
             ConstraintSummary: CreateConstraintForgeSummary(),
+            RagdollLab: RagdollLabState,
             RagdollSummary: CreateRagdollLabSummary());
     }
 
@@ -782,6 +814,18 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             case Physics3DShowcaseCommandKind.RunScannerQuery:
                 ExecuteSelectedScannerQuery();
                 break;
+            case Physics3DShowcaseCommandKind.SetScannerResultMode:
+                SetScannerResultMode(command.Value);
+                break;
+            case Physics3DShowcaseCommandKind.ToggleScannerSensors:
+                ToggleScannerSensors();
+                break;
+            case Physics3DShowcaseCommandKind.ToggleScannerIgnoreSelf:
+                ToggleScannerIgnoreSelf();
+                break;
+            case Physics3DShowcaseCommandKind.ToggleScannerIgnoreAssembly:
+                ToggleScannerIgnoreAssembly();
+                break;
             case Physics3DShowcaseCommandKind.SetWindZone:
                 SetWindTunnelZone(command.Value);
                 break;
@@ -956,6 +1000,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         Array.Clear(_bodyVisualSizesCm, 0, _bodyCount);
         Array.Clear(_bodyCapsuleCylinderLengthsCm, 0, _bodyCount);
         Array.Clear(_bodyColors, 0, _bodyCount);
+        Array.Clear(_scannerSourceBodies, 0, _scannerSourceBodies.Length);
         _bodyCount = 0;
         _dynamicBodyCount = 0;
         _kinematicBodyCount = 0;

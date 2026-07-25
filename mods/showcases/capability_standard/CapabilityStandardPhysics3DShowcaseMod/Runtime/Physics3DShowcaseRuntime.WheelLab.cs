@@ -1229,11 +1229,9 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
-        float fixedDeltaSeconds = RequirePhysicsWorld().FixedDeltaSeconds;
-        float throttleSeconds = config.TrialRecommendedThrottleTicks * fixedDeltaSeconds;
-        float brakeSeconds = config.TrialRecommendedBrakeTicks * fixedDeltaSeconds;
-        return $"Reference run: hold W for {throttleSeconds:0.0}s, then Space for up to {brakeSeconds:0.0}s. " +
-               "Press Q only between runs.";
+        float brakeSeconds = config.TrialRecommendedBrakeTicks * RequirePhysicsWorld().FixedDeltaSeconds;
+        return $"Drive with W, steer with A/D across the blue bank, then release W and hold Space " +
+               $"for up to {brakeSeconds:0.0}s when the chassis enters the green zone. Press Q only between runs.";
     }
 
     internal bool TryGetWheelLabTrialResult(
@@ -1305,7 +1303,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         {
             next = WheelLabCourseSection.MovingPlatform;
         }
-        else if (positionZCm < config.RampEndZCm)
+        else if (positionZCm < config.BrakeStartZCm)
         {
             next = WheelLabCourseSection.Jump;
         }
@@ -1325,7 +1323,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             WheelLabCourseSection.Pothole => "The recessed brown lane exposes wheel drop and recovery.",
             WheelLabCourseSection.SideSlope => "Counter-steer across the blue side slope while lateral grip holds the line.",
             WheelLabCourseSection.MovingPlatform => "Cross the moving purple platform; tire velocity includes its contact-point motion.",
-            WheelLabCourseSection.Jump => "Commit to the red ramp, then watch all four contact markers clear the ground.",
+            WheelLabCourseSection.Jump => "Commit to the red ramp, then watch contact markers unload and settle before the green braking zone.",
             WheelLabCourseSection.Braking => "Release throttle and hold Space inside the green braking zone.",
             WheelLabCourseSection.Finish => "Course complete. Press R to restart or Q to compare another wheel type.",
             _ => "Drive forward to begin the Wheel Lab course."

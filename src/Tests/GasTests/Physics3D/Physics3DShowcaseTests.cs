@@ -104,6 +104,222 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_RagdollLab_Scenario_PendulumHitsMannequinBeforeItTumblesDownTwoSteps()
+    {
+        // Given a new player sees the live mannequin at the top of the authored stair route.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.RagdollLab);
+        Vector3[] initialRoots = CaptureDynamicPositions(harness.Runtime, Physics3DShapeKind.Box);
+        Assert.That(initialRoots, Has.Length.EqualTo(1), "Ragdoll Lab must expose one dynamic pelvis/root box.");
+
+        // When the player launches the pendulum, the station must observe a real pendulum-to-bone contact.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.LaunchRagdollPendulum));
+        const int impactDeadlineTicks = 180;
+        for (int tick = 0; tick < impactDeadlineTicks &&
+                           !harness.Runtime.CapturePanelState().RagdollSummary.Contains(
+                               "IMPACT CONFIRMED",
+                               StringComparison.Ordinal); tick++)
+        {
+            harness.Step();
+        }
+
+        Assert.That(
+            harness.Runtime.CapturePanelState().RagdollSummary,
+            Does.Contain("IMPACT CONFIRMED"),
+            "Swing Pendulum must prove contact with a mannequin bone, not only change the pendulum velocity.");
+
+        // When active pose is released, then the same struck mannequin travels down at least two authored steps.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.ToggleRagdollActivePose));
+        float requiredRootX = initialRoots[0].X + (2f * config.RagdollLab.StairDepthCm);
+        Physics3DBodyState root = new() { PositionCm = initialRoots[0] };
+        for (int tick = 0; tick < 300 && root.PositionCm.X < requiredRootX; tick++)
+        {
+            harness.Step();
+            Vector3[] roots = CaptureDynamicPositions(harness.Runtime, Physics3DShapeKind.Box);
+            Assert.That(roots, Has.Length.EqualTo(1));
+            root.PositionCm = roots[0];
+        }
+
+        Assert.That(
+            root.PositionCm.X,
+            Is.GreaterThanOrEqualTo(requiredRootX),
+            "After the confirmed impact and passive release, the mannequin root must pass at least two stair centers.");
+        Assert.That(
+            harness.Runtime.RagdollLabState.StairStepsDescended,
+            Is.GreaterThanOrEqualTo(config.RagdollLab.MinimumStairStepsDescended));
+    }
+
+    [Test]
+    public void Feature_RagdollLab_Scenario_MovingMannequinRejectsRecoveryUntilTheLandingSettles()
+    {
+        // Given the pendulum has struck the mannequin and the player releases active pose.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.RagdollLab);
+        Vector3 initialRoot = CaptureDynamicPositions(harness.Runtime, Physics3DShapeKind.Box)[0];
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.LaunchRagdollPendulum));
+        for (int tick = 0; tick < config.RagdollLab.PendulumImpactTimeoutTicks &&
+                           !harness.Runtime.RagdollLabState.ImpactConfirmed; tick++)
+        {
+            harness.Step();
+        }
+
+        Assert.That(harness.Runtime.RagdollLabState.ImpactConfirmed, Is.True);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.ToggleRagdollActivePose));
+        harness.Step();
+
+        // When Recover is pressed while the struck mannequin is still moving, it remains a dynamic ragdoll.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.RecoverRagdoll));
+        harness.Step();
+        Physics3DRagdollLabShowcaseState rejected = harness.Runtime.RagdollLabState;
+        Assert.Multiple(() =>
+        {
+            Assert.That(rejected.IsRecovered, Is.False);
+            Assert.That(rejected.ActivePoseEnabled, Is.False);
+            Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(config.RagdollLab.Bones.Length + 1));
+            Assert.That(harness.Runtime.CapturePanelState().LastAction, Does.Contain("Recovery is not ready"));
+        });
+
+        // Then the station grants recovery only after the route distance and consecutive stable ticks are both real.
+        const int settleDeadlineTicks = 900;
+        float maximumRootX = initialRoot.X;
+        for (int tick = 0; tick < settleDeadlineTicks && !harness.Runtime.RagdollLabState.CanRecover; tick++)
+        {
+            harness.Step();
+            maximumRootX = MathF.Max(
+                maximumRootX,
+                CaptureDynamicPositions(harness.Runtime, Physics3DShapeKind.Box)[0].X);
+        }
+
+        Physics3DRagdollLabShowcaseState ready = harness.Runtime.RagdollLabState;
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                ready.Phase,
+                Is.EqualTo(Physics3DRagdollLabPhase.Recoverable),
+                $"Root started at {initialRoot.X:0.###} cm and reached at most {maximumRootX:0.###} cm.");
+            Assert.That(ready.StairStepsDescended, Is.GreaterThanOrEqualTo(config.RagdollLab.MinimumStairStepsDescended));
+            Assert.That(ready.SettledTicks, Is.EqualTo(config.RagdollLab.RequiredSettledTicks));
+            Assert.That(ready.MaximumLinearSpeedCmPerSecond, Is.LessThanOrEqualTo(config.RagdollLab.SettledLinearSpeedCmPerSecond));
+            Assert.That(ready.MaximumAngularSpeedRadiansPerSecond, Is.LessThanOrEqualTo(config.RagdollLab.SettledAngularSpeedRadiansPerSecond));
+        });
+    }
+
+    [Test]
+    public void Feature_RagdollLab_Scenario_BlockedLandingPersistsUntilClearedThenRecoveryIsIdempotent()
+    {
+        // Given the mannequin has completed the stair tumble and is ready to recover.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.RagdollLab);
+        AdvanceRagdollLabToRecoverable(harness, config);
+        Vector3 rootPosition = CaptureDynamicPositions(harness.Runtime, Physics3DShapeKind.Box)[0];
+        Physics3DShapeId blockerShape = harness.PhysicsWorld.RegisterBoxShape(new Vector3(100f));
+        Physics3DBodyId blocker = harness.PhysicsWorld.CreateBody(new Physics3DBodyDescription(
+            Entity.Null,
+            Physics3DBodyKind.Static,
+            blockerShape,
+            rootPosition + new Vector3(
+                config.RagdollLab.RecoveryCenterOffsetXCm,
+                config.RagdollLab.RecoveryCenterOffsetYCm,
+                config.RagdollLab.RecoveryCenterOffsetZCm),
+            Quaternion.Identity,
+            Vector3.Zero,
+            Vector3.Zero,
+            0f,
+            Ludots.Core.Layers.LayerMask.All,
+            new Physics3DMaterial(0.8f, 200f, 30f, 1f),
+            Physics3DContinuousDetectionMode.Discrete));
+        int dynamicBodiesBeforeRecovery = harness.Runtime.DynamicBodyCount;
+        int kinematicBodiesBeforeRecovery = harness.Runtime.KinematicBodyCount;
+
+        // When the player requests recovery into the occupied landing space, the ragdoll stays physical.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.RecoverRagdoll));
+        harness.Step();
+        Physics3DRagdollLabShowcaseState blocked = harness.Runtime.RagdollLabState;
+        for (int tick = 0; tick < 30; tick++)
+        {
+            harness.Step();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(blocked.Phase, Is.EqualTo(Physics3DRagdollLabPhase.RecoveryBlocked));
+            Assert.That(blocked.RecoveryBlockerCount, Is.GreaterThan(0));
+            Assert.That(harness.Runtime.RagdollLabState.Phase, Is.EqualTo(Physics3DRagdollLabPhase.RecoveryBlocked));
+            Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery));
+            Assert.That(harness.Runtime.CapturePanelState().RagdollSummary, Does.Contain("RECOVERY BLOCKED"));
+        });
+
+        // Then clearing the space permits one recovery; repeated actions leave the completed pose unchanged.
+        harness.PhysicsWorld.DestroyBody(blocker);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.RecoverRagdoll));
+        harness.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.RagdollLabState.IsRecovered, Is.True);
+            Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery - config.RagdollLab.Bones.Length));
+            Assert.That(harness.Runtime.KinematicBodyCount, Is.EqualTo(kinematicBodiesBeforeRecovery + config.RagdollLab.Bones.Length));
+            Assert.That(harness.Runtime.CapturePanelState().RagdollSummary, Does.Contain("RECOVERED").And.Contain("standing display pose"));
+        });
+
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RecoverRagdoll));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.ToggleRagdollActivePose));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.LaunchRagdollPendulum));
+        harness.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.RagdollLabState.IsRecovered, Is.True);
+            Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery - config.RagdollLab.Bones.Length));
+            Assert.That(harness.Runtime.KinematicBodyCount, Is.EqualTo(kinematicBodiesBeforeRecovery + config.RagdollLab.Bones.Length));
+        });
+    }
+
+    [Test]
+    public void RagdollLab_StableFixedStepsAllocateZeroManagedBytes()
+    {
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.RagdollLab);
+        for (int tick = 0; tick < 120; tick++)
+        {
+            harness.Step();
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int tick = 0; tick < 30; tick++)
+        {
+            harness.Step();
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.That(allocated, Is.Zero, $"Ragdoll Lab fixed-step path allocated {allocated} managed bytes after warmup.");
+    }
+
+    [Test]
     public void Feature_ScannerRange_Scenario_PlayerChoosesOneScanLayerAndDistanceThenResets()
     {
         // Given a new player enters Scanner Range with no scan silently running for them.
@@ -453,6 +669,113 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_ScannerRange_Scenario_PlayerComparesAllClosestAndAnyWithoutInventedHitMarkers()
+    {
+        // Given the player enters Scanner Range with sensors included and the source assembly ignored.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+
+        // When All is played, every authored target, including the sensor, is numbered.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerDistancePreset,
+            config.ScannerRange.DistancePresetsCm.Length - 1));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.ScannerResultMode, Is.EqualTo(Physics3DShowcaseQueryResultMode.All));
+            Assert.That(harness.Runtime.GetQueryHitCount(0), Is.EqualTo(config.ScannerRange.TargetCount));
+            Assert.That(harness.Runtime.ScannerIncludeSensors, Is.True);
+        });
+
+        // When sensors are excluded, the authored sensor disappears rather than becoming a solid hit.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.ToggleScannerSensors));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        Assert.That(harness.Runtime.GetQueryHitCount(0), Is.EqualTo(config.ScannerRange.TargetCount - 1));
+
+        // When Closest is selected, exactly one real hit with a readable position is published.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerResultMode,
+            (int)Physics3DShowcaseQueryResultMode.Closest));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.GetQueryHitCount(0), Is.EqualTo(1));
+            Assert.That(harness.Runtime.TryGetQueryHitVisual(0, 0, out _), Is.True);
+        });
+
+        // When Any is selected, the path reports blocked but exposes no fabricated hit marker.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerResultMode,
+            (int)Physics3DShowcaseQueryResultMode.Any));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        Physics3DShowcasePanelState any = harness.Runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(any.ScannerAnyHit, Is.True);
+            Assert.That(any.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Complete));
+            Assert.That(harness.Runtime.GetQueryHitCount(0), Is.Zero);
+            Assert.That(harness.Runtime.TryGetQueryHitVisual(0, 0, out _), Is.False);
+            Assert.That(any.LastAction, Does.Contain("blocked").And.Contain("does not request a hit point"));
+        });
+    }
+
+    [Test]
+    public void Feature_ScannerRange_Scenario_PlayerRevealsSourceMemberAndOverlapKeepsAllSemantics()
+    {
+        // Given the source body and its second assembly member are both ignored by default.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 256,
+            benchmarkPresets: new[] { 32, 64, 96, 128 },
+            replaySteps: 16);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(320, 64));
+        harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerDistancePreset,
+            config.ScannerRange.DistancePresetsCm.Length - 1));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        int filteredTargetCount = harness.Runtime.GetQueryHitCount(0);
+
+        // When assembly filtering is disabled but self filtering remains, the nearby assembly member becomes the first hit.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.ToggleScannerIgnoreAssembly));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.RunScannerQuery));
+        harness.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.ScannerIgnoreSelf, Is.True);
+            Assert.That(harness.Runtime.ScannerIgnoreAssembly, Is.False);
+            Assert.That(harness.Runtime.GetQueryHitCount(0), Is.EqualTo(filteredTargetCount + 1));
+            Assert.That(harness.Runtime.TryGetQueryHitVisual(0, 0, out Physics3DShowcaseQueryHitVisual member), Is.True);
+            Assert.That(member.DistanceCm, Is.LessThan(config.ScannerRange.FirstTargetXCm - config.ScannerRange.CastOriginXCm));
+        });
+
+        // When an overlap is chosen, its only valid result contract is restored to All.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerResultMode,
+            (int)Physics3DShowcaseQueryResultMode.Closest));
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerQueryKind,
+            (int)Physics3DShowcaseQueryKind.SphereOverlap));
+        harness.Step();
+        Assert.That(harness.Runtime.ScannerResultMode, Is.EqualTo(Physics3DShowcaseQueryResultMode.All));
+
+        // And an invalid Closest request while overlap is selected fails loudly.
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.SetScannerResultMode,
+            (int)Physics3DShowcaseQueryResultMode.Closest));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => harness.Step())!;
+        Assert.That(error.Message, Does.Contain("only supports All results"));
+    }
+
+    [Test]
     public void Feature_ConstraintForge_Scenario_AllNineAdvancedConstraintKindsRunInTheFixedFrameLoop()
     {
         Physics3DShowcaseConfig config = CreateShowcaseConfig(
@@ -780,47 +1103,254 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
-    public void Feature_PlatformStation_Scenario_PlayerClearsFourLiveSurfacesAndCanRestartAfterFailure()
+    public void Feature_PlatformStation_Scenario_PlayerClearsFourLiveSurfacesWithoutPositionMutation()
     {
-        // Given a new player enters a timed route with four named live surfaces.
+        // Given a new player enters a timed route at its authored start position.
         Physics3DShowcaseConfig config = CreateShowcaseConfig(
             maximumBodies: 1_200,
             benchmarkPresets: new[] { 100, 200, 500, 1_000 },
             replaySteps: 30);
         using var harness = new ShowcaseHarness(config, CreateWorldConfig(1_300, 256));
         harness.SelectScene(Physics3DShowcaseScene.PlatformStation);
-        Physics3DShowcasePanelState initial = harness.Runtime.CapturePanelState();
-        Assert.Multiple(() =>
-        {
-            Assert.That(initial.CharacterRouteStatus, Is.EqualTo(Physics3DShowcaseRouteStatus.InProgress));
-            Assert.That(initial.CharacterRouteCheckpointCount, Is.EqualTo(4));
-            Assert.That(initial.CharacterRouteNextAction, Does.Contain("moving lift"));
-        });
+        Physics3DCharacterTraversalShowcaseConfig route = config.CharacterTraversal;
+        int movingSupportTicks = 0;
+        int rotatingSupportTicks = 0;
+        bool inheritedMovingVelocity = false;
+        bool conveyorCarriedWithoutInput = false;
+        bool enteredOneWayFromBelow = false;
+        bool clearedOneWayTop = false;
+        bool reachedOneWaySideLane = false;
+        bool reachedOneWayUnderside = false;
+        bool oneWayJumpStarted = false;
+        bool conveyorTracking = false;
+        float conveyorStartX = 0f;
+        int jumpAttempts = 0;
+        float maximumPlayerHeightCm = float.NegativeInfinity;
+        float minimumGroundedXCm = float.PositiveInfinity;
+        float maximumGroundedXCm = float.NegativeInfinity;
+        float firstAirborneXCm = float.NaN;
+        Physics3DBodyId movingSupport = default;
+        Physics3DBodyId rotatingSupport = default;
+        Physics3DBodyId previousSupport = default;
+        Vector3 previousSupportVelocity = Vector3.Zero;
+        float oneWayBottom = route.PlatformStationOneWayCenterYCm - (route.DeckThicknessCm * 0.5f);
+        float oneWayTop = route.PlatformStationOneWayCenterYCm + (route.DeckThicknessCm * 0.5f);
+        float oneWayHalfDepth = route.PlatformStationOneWaySizeZCm * 0.5f;
+        float oneWaySideLaneZ = oneWayHalfDepth + route.CharacterRadiusCm + route.PlatformOneWayPassThroughClearanceCm;
 
-        // When the player lands on the moving lift, turntable, conveyor, and one-way finish in order.
-        for (int checkpoint = 0; checkpoint < 4; checkpoint++)
+        // When the player uses movement and jump input to complete every physical behavior in order.
+        for (int step = 0;
+             step < route.PlatformRouteTimeLimitTicks &&
+             harness.Runtime.CharacterRouteStatus == Physics3DShowcaseRouteStatus.InProgress;
+             step++)
         {
-            harness.Runtime.PlacePlayerOnPlatformCheckpointForTests(checkpoint);
-            for (int settle = 0;
-                 settle < 4 && harness.Runtime.CharacterRouteCheckpointIndex == checkpoint;
-                 settle++)
+            Character3DState character = harness.Runtime.GetPlayerCharacterStateForTests();
+            maximumPlayerHeightCm = MathF.Max(maximumPlayerHeightCm, character.PositionCm.Y);
+            if (character.IsGrounded)
             {
-                harness.Step();
+                minimumGroundedXCm = MathF.Min(minimumGroundedXCm, character.PositionCm.X);
+                maximumGroundedXCm = MathF.Max(maximumGroundedXCm, character.PositionCm.X);
+            }
+            else if (float.IsNaN(firstAirborneXCm))
+            {
+                firstAirborneXCm = character.PositionCm.X;
+            }
+            int checkpoint = harness.Runtime.CharacterRouteCheckpointIndex;
+            if (checkpoint <= 1 &&
+                character.IsGrounded &&
+                character.SupportVelocityCmPerSecond.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+            {
+                if (!movingSupport.IsValid)
+                {
+                    movingSupport = character.SupportBody;
+                }
+
+                if (character.SupportBody == movingSupport)
+                {
+                    movingSupportTicks++;
+                }
             }
 
-            Assert.That(
-                harness.Runtime.CharacterRouteCheckpointIndex,
-                Is.EqualTo(checkpoint + 1),
-                $"The real support body for checkpoint {checkpoint + 1} must advance the route exactly once.");
+            if (movingSupport.IsValid &&
+                previousSupport == movingSupport &&
+                !character.IsGrounded &&
+                previousSupportVelocity.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+            {
+                float supportSpeed = previousSupportVelocity.Length();
+                float retained = Vector3.Dot(
+                    character.LinearVelocityCmPerSecond,
+                    previousSupportVelocity / supportSpeed);
+                inheritedMovingVelocity |= retained >= supportSpeed * route.PlatformInheritedVelocityRatio;
+            }
+
+            bool withinRotatingPlatform =
+                MathF.Abs(character.PositionCm.X - route.RotatingPlatformCenterXCm) <= route.RotatingPlatformRadiusCm &&
+                MathF.Abs(character.PositionCm.Z) <= route.RotatingPlatformRadiusCm;
+            if (checkpoint == 1 &&
+                character.IsGrounded &&
+                character.SupportBody != movingSupport &&
+                withinRotatingPlatform)
+            {
+                if (!rotatingSupport.IsValid)
+                {
+                    rotatingSupport = character.SupportBody;
+                }
+
+                rotatingSupportTicks++;
+            }
+
+            bool onConveyor =
+                checkpoint == 2 &&
+                character.IsGrounded &&
+                MathF.Abs(character.SupportVelocityCmPerSecond.X - route.PlatformStationConveyorSpeedCmPerSecond) <= 1f;
+            if (onConveyor)
+            {
+                if (!conveyorTracking)
+                {
+                    conveyorTracking = true;
+                    conveyorStartX = character.PositionCm.X;
+                }
+                else
+                {
+                    conveyorCarriedWithoutInput |=
+                        character.PositionCm.X - conveyorStartX >= route.PlatformConveyorCarryDistanceCm;
+                }
+            }
+
+            float oneWayHalfWidth = route.PlatformStationOneWaySizeXCm * 0.5f;
+            bool withinOneWay =
+                MathF.Abs(character.PositionCm.X - route.PlatformStationOneWayCenterXCm) <= oneWayHalfWidth &&
+                MathF.Abs(character.PositionCm.Z) <= oneWayHalfDepth;
+            enteredOneWayFromBelow |= withinOneWay &&
+                                      character.PositionCm.Y <= oneWayBottom + route.PlatformOneWayPassThroughClearanceCm;
+            clearedOneWayTop |= enteredOneWayFromBelow &&
+                                withinOneWay &&
+                                character.PositionCm.Y >= oneWayTop + route.PlatformOneWayPassThroughClearanceCm;
+            reachedOneWaySideLane |= checkpoint == 3 && character.PositionCm.Z >= oneWaySideLaneZ;
+            reachedOneWayUnderside |= reachedOneWaySideLane &&
+                                       withinOneWay &&
+                                       character.IsGrounded &&
+                                       character.PositionCm.Y <= oneWayBottom + route.PlatformOneWayPassThroughClearanceCm;
+
+            Vector2 move = Vector2.Zero;
+            bool jump = false;
+            switch (checkpoint)
+            {
+                case 0:
+                    if (character.IsGrounded &&
+                        character.SupportVelocityCmPerSecond.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+                    {
+                        Physics3DBodyState platform = harness.PhysicsWorld.GetBodyState(character.SupportBody);
+                        move = MoveTowardX(character.PositionCm.X, platform.PositionCm.X);
+                    }
+                    else
+                    {
+                        move = MoveTowardX(character.PositionCm.X, route.MovingPlatformCenterXCm);
+                        jump = character.IsGrounded &&
+                               (character.PositionCm.X >= route.PlatformStationStartXCm +
+                                                          (route.PlatformStationStartDeckSizeXCm * 0.35f) ||
+                                MathF.Abs(character.PositionCm.X - route.MovingPlatformCenterXCm) <=
+                                route.PlatformSizeXCm * 0.6f);
+                    }
+                    break;
+                case 1:
+                    float rotatingRideX = route.RotatingPlatformCenterXCm -
+                                           (route.RotatingPlatformRadiusCm * 0.55f);
+                    if (character.IsGrounded && character.SupportBody == movingSupport)
+                    {
+                        Physics3DBodyState platform = harness.PhysicsWorld.GetBodyState(movingSupport);
+                        float movingPlatformDismountX = route.MovingPlatformCenterXCm +
+                                                        route.MovingPlatformTravelCm -
+                                                        (route.PlatformSizeXCm * 0.05f);
+                        move = MoveTowardX(character.PositionCm.X, platform.PositionCm.X);
+                        jump = MathF.Abs(character.PositionCm.X - platform.PositionCm.X) <= 20f &&
+                               platform.PositionCm.X >= movingPlatformDismountX &&
+                               character.SupportVelocityCmPerSecond.X >=
+                                   route.PlatformMinimumSupportSpeedCmPerSecond;
+                    }
+                    else
+                    {
+                        move = MoveTowardX(character.PositionCm.X, rotatingRideX);
+                    }
+                    if (character.IsGrounded && character.SupportBody != movingSupport)
+                    {
+                        jump = false;
+                    }
+                    if (rotatingSupport.IsValid && character.SupportBody == rotatingSupport)
+                    {
+                        move = Vector2.Zero;
+                        jump = false;
+                    }
+                    break;
+                case 2:
+                    if (onConveyor)
+                    {
+                        move = Vector2.Zero;
+                    }
+                    else
+                    {
+                        float conveyorCenterX = route.RotatingPlatformCenterXCm + route.PlatformStationConveyorOffsetXCm;
+                        move = MoveTowardX(character.PositionCm.X, conveyorCenterX);
+                        jump = character.IsGrounded && character.SupportBody == rotatingSupport;
+                    }
+                    break;
+                case 3:
+                    if (!reachedOneWaySideLane)
+                    {
+                        move = Vector2.UnitY;
+                    }
+                    else if (!reachedOneWayUnderside &&
+                             MathF.Abs(character.PositionCm.X - route.PlatformStationOneWayCenterXCm) > 10f)
+                    {
+                        move = MoveTowardX(character.PositionCm.X, route.PlatformStationOneWayCenterXCm);
+                    }
+                    else if (!reachedOneWayUnderside)
+                    {
+                        move = -Vector2.UnitY;
+                    }
+                    else if (!oneWayJumpStarted && character.IsGrounded)
+                    {
+                        jump = true;
+                        oneWayJumpStarted = true;
+                    }
+                    else if (oneWayJumpStarted && character.IsGrounded && !clearedOneWayTop)
+                    {
+                        oneWayJumpStarted = false;
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unexpected platform checkpoint {checkpoint}.");
+            }
+
+            previousSupport = character.IsGrounded ? character.SupportBody : default;
+            previousSupportVelocity = character.SupportVelocityCmPerSecond;
+            if (jump)
+            {
+                jumpAttempts++;
+            }
+            harness.Runtime.SetCharacterIntentForTests(move, jump, traverseRequested: false);
+            harness.Step();
         }
 
-        // Then completion is visible and a reset starts a fresh run rather than preserving old progress.
+        // Then every checkpoint is backed by its observable physical behavior, and reset starts a fresh run.
         Physics3DShowcasePanelState completed = harness.Runtime.CapturePanelState();
+        Character3DState finalCharacter = harness.Runtime.GetPlayerCharacterStateForTests();
+        TestContext.WriteLine(
+            $"platform route final={finalCharacter.PositionCm}, velocity={finalCharacter.LinearVelocityCmPerSecond}, " +
+            $"grounded={finalCharacter.IsGrounded}, supportVelocity={finalCharacter.SupportVelocityCmPerSecond}, " +
+            $"maxY={maximumPlayerHeightCm}, groundedX=[{minimumGroundedXCm}, {maximumGroundedXCm}], " +
+            $"firstAirborneX={firstAirborneXCm}, jumps={jumpAttempts}, checkpoint={harness.Runtime.CharacterRouteCheckpointIndex}");
         Assert.Multiple(() =>
         {
             Assert.That(completed.CharacterRouteStatus, Is.EqualTo(Physics3DShowcaseRouteStatus.Completed));
             Assert.That(completed.CharacterRouteSummary, Does.StartWith("COMPLETE"));
             Assert.That(completed.LastAction, Does.Contain("Route complete"));
+            Assert.That(movingSupportTicks, Is.GreaterThanOrEqualTo(route.PlatformStableSupportTicks));
+            Assert.That(rotatingSupportTicks, Is.GreaterThanOrEqualTo(route.PlatformStableSupportTicks));
+            Assert.That(inheritedMovingVelocity, Is.True, "Leaving the moving lift must preserve its velocity.");
+            Assert.That(conveyorCarriedWithoutInput, Is.True, "The conveyor must carry a player who releases movement.");
+            Assert.That(enteredOneWayFromBelow, Is.True, "The player never entered the one-way platform from below.");
+            Assert.That(clearedOneWayTop, Is.True, "The player never passed through the one-way platform to its top side.");
         });
         harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(Physics3DShowcaseCommandKind.Reset));
         harness.Step();
@@ -868,6 +1398,51 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_TraversalCourse_Scenario_BypassingObstaclesDoesNotAdvanceTheRoute()
+    {
+        // Given a player deliberately leaves the authored obstacle lane while remaining inside the course boundary.
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 1_200,
+            benchmarkPresets: new[] { 100, 200, 500, 1_000 },
+            replaySteps: 30);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(1_300, 256));
+        harness.SelectScene(Physics3DShowcaseScene.TraversalCourse);
+
+        Vector2 moveAcrossLane = Vector2.UnitY;
+        float bypassZ = (config.CharacterTraversal.RampWidthCm * 0.5f) +
+                        (config.CharacterTraversal.CharacterRadiusCm * 3f);
+        int sidestepTicks = 0;
+        while (harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.Z < bypassZ && sidestepTicks < 90)
+        {
+            harness.Runtime.SetCharacterIntentForTests(moveAcrossLane, jumpRequested: false, traverseRequested: false);
+            harness.Step();
+            sidestepTicks++;
+        }
+
+        // When the player runs past the slope, steps, and moving-platform X positions on the flat floor.
+        float bypassEndX = config.CharacterTraversal.MovingPlatformCenterXCm +
+                           (config.CharacterTraversal.PlatformSizeXCm * 0.75f);
+        int forwardTicks = 0;
+        while (harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X < bypassEndX && forwardTicks < 360)
+        {
+            harness.Runtime.SetCharacterIntentForTests(Vector2.UnitX, jumpRequested: false, traverseRequested: false);
+            harness.Step();
+            forwardTicks++;
+        }
+
+        // Then crossing coordinate thresholds alone must not award any obstacle checkpoint.
+        Character3DState bypassed = harness.Runtime.GetPlayerCharacterStateForTests();
+        Assert.Multiple(() =>
+        {
+            Assert.That(bypassed.PositionCm.X, Is.GreaterThanOrEqualTo(bypassEndX));
+            Assert.That(
+                harness.Runtime.CharacterRouteCheckpointIndex,
+                Is.Zero,
+                "The route must require real slope, step, and moving-platform contact instead of X-coordinate crossings.");
+        });
+    }
+
+    [Test]
     public void TraversalCourse_PlayerRunsToLadderAttachesAndClimbs()
     {
         Physics3DShowcaseConfig config = CreateShowcaseConfig(
@@ -882,7 +1457,13 @@ public sealed class Physics3DShowcaseTests
         int steps = 0;
         while (harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X < attachReadyX && steps < 300)
         {
-            harness.Runtime.SetCharacterIntentForTests(Vector2.UnitX, jumpRequested: false, traverseRequested: false);
+            Character3DState character = harness.Runtime.GetPlayerCharacterStateForTests();
+            bool jumpOntoMovingPlatform =
+                harness.Runtime.CharacterRouteCheckpointIndex == 2 && character.IsGrounded;
+            harness.Runtime.SetCharacterIntentForTests(
+                Vector2.UnitX,
+                jumpRequested: jumpOntoMovingPlatform,
+                traverseRequested: false);
             harness.Step();
             steps++;
         }
@@ -945,10 +1526,15 @@ public sealed class Physics3DShowcaseTests
                                  (config.CharacterTraversal.AttachProbeDistanceCm * 0.9f);
         bool gapJumped = false;
         int wallApproachSteps = 0;
-        while (harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X < wallAttachReadyX &&
-               wallApproachSteps < 180)
+        while (wallApproachSteps < 240)
         {
-            float x = harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X;
+            Character3DState character = harness.Runtime.GetPlayerCharacterStateForTests();
+            if (character.PositionCm.X >= wallAttachReadyX)
+            {
+                break;
+            }
+
+            float x = character.PositionCm.X;
             bool jump = !gapJumped &&
                         x >= config.CharacterTraversal.LadderDeckCenterXCm +
                              (config.CharacterTraversal.LadderDeckLengthCm * 0.3f);
@@ -962,9 +1548,22 @@ public sealed class Physics3DShowcaseTests
             harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X,
             Is.GreaterThanOrEqualTo(wallAttachReadyX),
             "The authored deck gap must be jumpable on the way from the ladder to the climbing wall.");
+        Assert.That(
+            harness.Runtime.GetPlayerCharacterStateForTests().PositionCm.X,
+            Is.LessThan(config.CharacterTraversal.WallCenterXCm - (config.CharacterTraversal.WallThicknessCm * 0.5f)),
+            "The interaction window must occur before the player crosses the climbing face.");
+        Character3DState wallAttachState = harness.Runtime.GetPlayerCharacterStateForTests();
         harness.Runtime.SetCharacterIntentForTests(Vector2.Zero, jumpRequested: false, traverseRequested: true);
         harness.Step();
-        Assert.That(harness.Runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Attached));
+        Assert.That(
+            harness.Runtime.GetPlayerTraversalStatusForTests().State,
+            Is.EqualTo(Traversal3DState.Attached),
+            $"The wall attach input must acquire the authored wall. " +
+            $"position={wallAttachState.PositionCm}, velocity={wallAttachState.LinearVelocityCmPerSecond}, " +
+            $"grounded={wallAttachState.IsGrounded}, support={wallAttachState.SupportBody}, " +
+            $"wallCenterX={config.CharacterTraversal.WallCenterXCm}, " +
+            $"probeDistance={config.CharacterTraversal.AttachProbeDistanceCm}, " +
+            $"checkpoint={harness.Runtime.CharacterRouteCheckpointIndex}.");
         harness.Runtime.SetCharacterIntentForTests(Vector2.Zero, jumpRequested: false, traverseRequested: false);
         harness.Step();
         Assert.That(harness.Runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Climbing));
@@ -1122,7 +1721,8 @@ public sealed class Physics3DShowcaseTests
         {
             Assert.That(initialStatus.InteractiveBodies, Is.EqualTo(config.ScaleCity.InteractiveBodyLimit));
             Assert.That(initialStatus.SparseBodies, Is.EqualTo(128 - config.ScaleCity.InteractiveBodyLimit));
-            Assert.That(initialStatus.PerformanceSampleCount, Is.EqualTo(1));
+            Assert.That(initialStatus.PhysicsPerformanceSampleCount, Is.EqualTo(1));
+            Assert.That(initialStatus.FramePerformanceSampleCount, Is.EqualTo(1));
             Assert.That(initialStatus.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Warming));
             Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(128));
             Assert.That(harness.Runtime.BodyCount, Is.EqualTo(129));
@@ -1178,39 +1778,46 @@ public sealed class Physics3DShowcaseTests
             replaySteps: 16);
         config.ScaleCity.InteractiveBodyLimit = 16;
         config.ScaleCity.PerformanceWindowSampleCount = 5;
-        config.BenchmarkRealTimeBudgetMilliseconds = 4.9f;
+        config.BenchmarkRealTimeBudgetMilliseconds = 5.5f;
 
         using var harness = new ShowcaseHarness(config, CreateWorldConfig(192, 32));
         harness.Simulation.Enabled = false;
         harness.SelectBenchmark(64);
         for (int sample = 1; sample <= 4; sample++)
         {
-            harness.Runtime.RecordScaleCityPerformanceSampleForTests(sample);
+            harness.Runtime.RecordScaleCityPerformanceSampleForTests(sample, sample + 2d);
         }
 
         Physics3DScaleCityShowcaseState warming = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
-            Assert.That(warming.PerformanceSampleCount, Is.EqualTo(4));
+            Assert.That(warming.PhysicsPerformanceSampleCount, Is.EqualTo(4));
+            Assert.That(warming.FramePerformanceSampleCount, Is.EqualTo(4));
             Assert.That(warming.PerformanceWindowCapacity, Is.EqualTo(5));
-            Assert.That(warming.StepP50Milliseconds, Is.EqualTo(2.5d).Within(1e-9));
-            Assert.That(warming.StepP95Milliseconds, Is.EqualTo(3.85d).Within(1e-9));
-            Assert.That(warming.StepP99Milliseconds, Is.EqualTo(3.97d).Within(1e-9));
+            Assert.That(warming.PhysicsStepP50Milliseconds, Is.EqualTo(2.5d).Within(1e-9));
+            Assert.That(warming.PhysicsStepP95Milliseconds, Is.EqualTo(3.85d).Within(1e-9));
+            Assert.That(warming.PhysicsStepP99Milliseconds, Is.EqualTo(3.97d).Within(1e-9));
+            Assert.That(warming.FullFrameP50Milliseconds, Is.EqualTo(4.5d).Within(1e-9));
+            Assert.That(warming.FullFrameP95Milliseconds, Is.EqualTo(5.85d).Within(1e-9));
+            Assert.That(warming.FullFrameP99Milliseconds, Is.EqualTo(5.97d).Within(1e-9));
             Assert.That(warming.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Warming));
             Assert.That(
                 Physics3DShowcasePanelController.ScaleCityPerformanceStatusLabel(warming.PerformanceStatus),
                 Is.EqualTo("WARMING"));
         });
 
-        harness.Runtime.RecordScaleCityPerformanceSampleForTests(5d);
+        harness.Runtime.RecordScaleCityPerformanceSampleForTests(5d, 7d);
         Physics3DScaleCityShowcaseState p99OverBudget = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
-            Assert.That(p99OverBudget.StepP50Milliseconds, Is.EqualTo(3d).Within(1e-9));
-            Assert.That(p99OverBudget.StepP95Milliseconds, Is.EqualTo(4.8d).Within(1e-9));
-            Assert.That(p99OverBudget.StepP99Milliseconds, Is.EqualTo(4.96d).Within(1e-9));
-            Assert.That(p99OverBudget.StepP95Milliseconds, Is.LessThan(config.BenchmarkRealTimeBudgetMilliseconds));
-            Assert.That(p99OverBudget.StepP99Milliseconds, Is.GreaterThan(config.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(p99OverBudget.PhysicsStepP50Milliseconds, Is.EqualTo(3d).Within(1e-9));
+            Assert.That(p99OverBudget.PhysicsStepP95Milliseconds, Is.EqualTo(4.8d).Within(1e-9));
+            Assert.That(p99OverBudget.PhysicsStepP99Milliseconds, Is.EqualTo(4.96d).Within(1e-9));
+            Assert.That(p99OverBudget.PhysicsStepP99Milliseconds, Is.LessThan(config.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(p99OverBudget.FullFrameP50Milliseconds, Is.EqualTo(5d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP95Milliseconds, Is.EqualTo(6.8d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP99Milliseconds, Is.EqualTo(6.96d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP99Milliseconds, Is.GreaterThan(config.BenchmarkRealTimeBudgetMilliseconds));
             Assert.That(p99OverBudget.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.OverBudget));
             Assert.That(
                 Physics3DShowcasePanelController.ScaleCityPerformanceStatusLabel(p99OverBudget.PerformanceStatus),
@@ -1219,10 +1826,14 @@ public sealed class Physics3DShowcaseTests
 
         harness.SelectBenchmark(96);
         Physics3DScaleCityShowcaseState afterScaleChange = harness.Runtime.ScaleCityState;
-        Assert.That(afterScaleChange.PerformanceSampleCount, Is.Zero);
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterScaleChange.PhysicsPerformanceSampleCount, Is.Zero);
+            Assert.That(afterScaleChange.FramePerformanceSampleCount, Is.Zero);
+        });
         for (int sample = 0; sample < config.ScaleCity.PerformanceWindowSampleCount; sample++)
         {
-            harness.Runtime.RecordScaleCityPerformanceSampleForTests(4d);
+            harness.Runtime.RecordScaleCityPerformanceSampleForTests(4d, 4.5d);
         }
 
         Physics3DScaleCityShowcaseState passing = harness.Runtime.ScaleCityState;
@@ -1239,21 +1850,27 @@ public sealed class Physics3DShowcaseTests
                 Does.Contain("foreground launched").And.Contain("background recycled"));
         });
 
-        harness.Runtime.RecordScaleCityPerformanceSampleForTests(100d);
+        harness.Runtime.RecordScaleCityPerformanceSampleForTests(100d, 100d);
         Physics3DScaleCityShowcaseState rolledWindow = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
-            Assert.That(rolledWindow.PerformanceSampleCount, Is.EqualTo(config.ScaleCity.PerformanceWindowSampleCount));
-            Assert.That(rolledWindow.StepP50Milliseconds, Is.EqualTo(4d).Within(1e-9));
-            Assert.That(rolledWindow.StepP95Milliseconds, Is.EqualTo(80.8d).Within(1e-9));
-            Assert.That(rolledWindow.StepP99Milliseconds, Is.EqualTo(96.16d).Within(1e-9));
+            Assert.That(rolledWindow.PhysicsPerformanceSampleCount, Is.EqualTo(config.ScaleCity.PerformanceWindowSampleCount));
+            Assert.That(rolledWindow.FramePerformanceSampleCount, Is.EqualTo(config.ScaleCity.PerformanceWindowSampleCount));
+            Assert.That(rolledWindow.PhysicsStepP50Milliseconds, Is.EqualTo(4d).Within(1e-9));
+            Assert.That(rolledWindow.PhysicsStepP95Milliseconds, Is.EqualTo(80.8d).Within(1e-9));
+            Assert.That(rolledWindow.PhysicsStepP99Milliseconds, Is.EqualTo(96.16d).Within(1e-9));
+            Assert.That(rolledWindow.FullFrameP50Milliseconds, Is.EqualTo(4.5d).Within(1e-9));
             Assert.That(rolledWindow.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.OverBudget));
         });
 
         harness.SelectScene(Physics3DShowcaseScene.ScannerRange);
         Assert.That(harness.Runtime.ScaleCityState, Is.EqualTo(Physics3DScaleCityShowcaseState.Empty));
         harness.SelectBenchmark(64);
-        Assert.That(harness.Runtime.ScaleCityState.PerformanceSampleCount, Is.Zero);
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.ScaleCityState.PhysicsPerformanceSampleCount, Is.Zero);
+            Assert.That(harness.Runtime.ScaleCityState.FramePerformanceSampleCount, Is.Zero);
+        });
     }
 
     [Test]
@@ -1473,6 +2090,38 @@ public sealed class Physics3DShowcaseTests
         Assert.That(allocated, Is.Zero);
     }
 
+    private static void AdvanceRagdollLabToRecoverable(
+        ShowcaseHarness harness,
+        Physics3DShowcaseConfig config)
+    {
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.LaunchRagdollPendulum));
+        for (int tick = 0; tick < config.RagdollLab.PendulumImpactTimeoutTicks &&
+                           !harness.Runtime.RagdollLabState.ImpactConfirmed; tick++)
+        {
+            harness.Step();
+        }
+
+        Assert.That(harness.Runtime.RagdollLabState.ImpactConfirmed, Is.True);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.ToggleRagdollActivePose));
+        harness.Step();
+        const int settleDeadlineTicks = 900;
+        for (int tick = 0; tick < settleDeadlineTicks &&
+                           harness.Runtime.RagdollLabState.Phase != Physics3DRagdollLabPhase.Recoverable; tick++)
+        {
+            harness.Step();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Runtime.RagdollLabState.Phase, Is.EqualTo(Physics3DRagdollLabPhase.Recoverable));
+            Assert.That(
+                harness.Runtime.RagdollLabState.StairStepsDescended,
+                Is.GreaterThanOrEqualTo(config.RagdollLab.MinimumStairStepsDescended));
+        });
+    }
+
     private static Physics3DShowcaseConfig CreateShowcaseConfig(
         int maximumBodies,
         int[] benchmarkPresets,
@@ -1492,6 +2141,18 @@ public sealed class Physics3DShowcaseTests
                                     config.BenchmarkLaneColumns;
         return config;
     }
+
+    private static Vector2 MoveTowardX(float currentX, float targetX)
+    {
+        float delta = targetX - currentX;
+        if (MathF.Abs(delta) <= 10f)
+        {
+            return Vector2.Zero;
+        }
+
+        return delta > 0f ? Vector2.UnitX : -Vector2.UnitX;
+    }
+
 
     private static JsonObject LoadOfficialShowcaseJson()
     {

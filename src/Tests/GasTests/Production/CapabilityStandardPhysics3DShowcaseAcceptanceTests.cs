@@ -365,6 +365,363 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
     }
 
     [Test]
+    public void Feature_PlatformStation_Scenario_PlayerCompletesFourLiveSurfacesWithKeyboard()
+    {
+        // Given a new player enters Platform Station through the formal launcher and sees the route camera.
+        string repoRoot = FindRepoRoot();
+        LauncherLaunchPlan plan = ResolveLaunchPlan(repoRoot);
+        using GameEngine engine = CreateEngine(repoRoot, plan, out AcceptanceInputBackend inputBackend);
+        engine.LoadEntryMap(MapId);
+        Tick(engine);
+        var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as Physics3DShowcaseRuntime
+            ?? throw new InvalidOperationException("Physics3D showcase runtime is missing.");
+        IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("Acceptance UI surface host is missing.");
+        IPhysics3DWorld world = engine.GetService(Physics3DServiceKeys.World)
+            ?? throw new InvalidOperationException("Physics3D world is missing.");
+        ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.PlatformStation));
+        TickUntil(
+            engine,
+            () => runtime.ActiveScene == Physics3DShowcaseScene.PlatformStation &&
+                  engine.GameSession.Camera.IsVirtualCameraActive(CharacterRouteCameraId),
+            maximumFrames: 128);
+
+        // When the player boards, rides, jumps, releases movement on the conveyor, and approaches the one-way platform from below.
+        Physics3DCharacterTraversalShowcaseConfig route = runtime.ActiveConfig.CharacterTraversal;
+        int movingSupportTicks = 0;
+        int rotatingSupportTicks = 0;
+        bool inheritedMovingVelocity = false;
+        bool conveyorCarriedWithoutInput = false;
+        bool enteredOneWayFromBelow = false;
+        bool clearedOneWayTop = false;
+        bool reachedOneWaySideLane = false;
+        bool reachedOneWayUnderside = false;
+        bool oneWayJumpStarted = false;
+        bool conveyorTracking = false;
+        float conveyorStartX = 0f;
+        Physics3DBodyId movingSupport = default;
+        Physics3DBodyId rotatingSupport = default;
+        Physics3DBodyId previousSupport = default;
+        Vector3 previousSupportVelocity = Vector3.Zero;
+        float oneWayBottom = route.PlatformStationOneWayCenterYCm - (route.DeckThicknessCm * 0.5f);
+        float oneWayTop = route.PlatformStationOneWayCenterYCm + (route.DeckThicknessCm * 0.5f);
+        float oneWayHalfDepth = route.PlatformStationOneWaySizeZCm * 0.5f;
+        float oneWaySideLaneZ = oneWayHalfDepth + route.CharacterRadiusCm + route.PlatformOneWayPassThroughClearanceCm;
+
+        for (int step = 0;
+             step < route.PlatformRouteTimeLimitTicks &&
+             runtime.CharacterRouteStatus == Physics3DShowcaseRouteStatus.InProgress;
+             step++)
+        {
+            Character3DState character = runtime.GetPlayerCharacterStateForTests();
+            int checkpoint = runtime.CharacterRouteCheckpointIndex;
+            if (checkpoint <= 1 &&
+                character.IsGrounded &&
+                character.SupportVelocityCmPerSecond.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+            {
+                if (!movingSupport.IsValid)
+                {
+                    movingSupport = character.SupportBody;
+                }
+
+                if (character.SupportBody == movingSupport)
+                {
+                    movingSupportTicks++;
+                }
+            }
+
+            if (movingSupport.IsValid &&
+                previousSupport == movingSupport &&
+                !character.IsGrounded &&
+                previousSupportVelocity.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+            {
+                float supportSpeed = previousSupportVelocity.Length();
+                float retained = Vector3.Dot(
+                    character.LinearVelocityCmPerSecond,
+                    previousSupportVelocity / supportSpeed);
+                inheritedMovingVelocity |= retained >= supportSpeed * route.PlatformInheritedVelocityRatio;
+            }
+
+            bool withinRotatingPlatform =
+                MathF.Abs(character.PositionCm.X - route.RotatingPlatformCenterXCm) <= route.RotatingPlatformRadiusCm &&
+                MathF.Abs(character.PositionCm.Z) <= route.RotatingPlatformRadiusCm;
+            if (checkpoint == 1 &&
+                character.IsGrounded &&
+                character.SupportBody != movingSupport &&
+                withinRotatingPlatform)
+            {
+                if (!rotatingSupport.IsValid)
+                {
+                    rotatingSupport = character.SupportBody;
+                }
+
+                rotatingSupportTicks++;
+            }
+
+            bool onConveyor =
+                checkpoint == 2 &&
+                character.IsGrounded &&
+                MathF.Abs(character.SupportVelocityCmPerSecond.X - route.PlatformStationConveyorSpeedCmPerSecond) <= 1f;
+            if (onConveyor)
+            {
+                if (!conveyorTracking)
+                {
+                    conveyorTracking = true;
+                    conveyorStartX = character.PositionCm.X;
+                }
+                else
+                {
+                    conveyorCarriedWithoutInput |=
+                        character.PositionCm.X - conveyorStartX >= route.PlatformConveyorCarryDistanceCm;
+                }
+            }
+
+            float oneWayHalfWidth = route.PlatformStationOneWaySizeXCm * 0.5f;
+            bool withinOneWay =
+                MathF.Abs(character.PositionCm.X - route.PlatformStationOneWayCenterXCm) <= oneWayHalfWidth &&
+                MathF.Abs(character.PositionCm.Z) <= oneWayHalfDepth;
+            enteredOneWayFromBelow |= withinOneWay &&
+                                      character.PositionCm.Y <= oneWayBottom + route.PlatformOneWayPassThroughClearanceCm;
+            clearedOneWayTop |= enteredOneWayFromBelow &&
+                                withinOneWay &&
+                                character.PositionCm.Y >= oneWayTop + route.PlatformOneWayPassThroughClearanceCm;
+            reachedOneWaySideLane |= checkpoint == 3 && character.PositionCm.Z >= oneWaySideLaneZ;
+            reachedOneWayUnderside |= reachedOneWaySideLane &&
+                                       withinOneWay &&
+                                       character.IsGrounded &&
+                                       character.PositionCm.Y <= oneWayBottom + route.PlatformOneWayPassThroughClearanceCm;
+
+            Vector2 move = Vector2.Zero;
+            bool jump = false;
+            switch (checkpoint)
+            {
+                case 0:
+                    if (character.IsGrounded &&
+                        character.SupportVelocityCmPerSecond.Length() >= route.PlatformMinimumSupportSpeedCmPerSecond)
+                    {
+                        Physics3DBodyState platform = world.GetBodyState(character.SupportBody);
+                        move = MoveTowardX(character.PositionCm.X, platform.PositionCm.X);
+                    }
+                    else
+                    {
+                        move = MoveTowardX(character.PositionCm.X, route.MovingPlatformCenterXCm);
+                        jump = character.IsGrounded &&
+                               (character.PositionCm.X >= route.PlatformStationStartXCm +
+                                                          (route.PlatformStationStartDeckSizeXCm * 0.35f) ||
+                                MathF.Abs(character.PositionCm.X - route.MovingPlatformCenterXCm) <=
+                                route.PlatformSizeXCm * 0.6f);
+                    }
+                    break;
+                case 1:
+                    float rotatingRideX = route.RotatingPlatformCenterXCm -
+                                           (route.RotatingPlatformRadiusCm * 0.55f);
+                    if (character.IsGrounded && character.SupportBody == movingSupport)
+                    {
+                        Physics3DBodyState platform = world.GetBodyState(movingSupport);
+                        float movingPlatformDismountX = route.MovingPlatformCenterXCm +
+                                                        route.MovingPlatformTravelCm -
+                                                        (route.PlatformSizeXCm * 0.05f);
+                        move = MoveTowardX(character.PositionCm.X, platform.PositionCm.X);
+                        jump = MathF.Abs(character.PositionCm.X - platform.PositionCm.X) <= 20f &&
+                               platform.PositionCm.X >= movingPlatformDismountX &&
+                               character.SupportVelocityCmPerSecond.X >= route.PlatformMinimumSupportSpeedCmPerSecond;
+                    }
+                    else
+                    {
+                        move = MoveTowardX(character.PositionCm.X, rotatingRideX);
+                    }
+
+                    if (character.IsGrounded && character.SupportBody != movingSupport)
+                    {
+                        jump = false;
+                    }
+
+                    if (rotatingSupport.IsValid && character.SupportBody == rotatingSupport)
+                    {
+                        move = Vector2.Zero;
+                        jump = false;
+                    }
+                    break;
+                case 2:
+                    if (!onConveyor)
+                    {
+                        float conveyorCenterX = route.RotatingPlatformCenterXCm + route.PlatformStationConveyorOffsetXCm;
+                        move = MoveTowardX(character.PositionCm.X, conveyorCenterX);
+                        jump = character.IsGrounded && character.SupportBody == rotatingSupport;
+                    }
+                    break;
+                case 3:
+                    if (!reachedOneWaySideLane)
+                    {
+                        move = Vector2.UnitY;
+                    }
+                    else if (!reachedOneWayUnderside &&
+                             MathF.Abs(character.PositionCm.X - route.PlatformStationOneWayCenterXCm) > 10f)
+                    {
+                        move = MoveTowardX(character.PositionCm.X, route.PlatformStationOneWayCenterXCm);
+                    }
+                    else if (!reachedOneWayUnderside)
+                    {
+                        move = -Vector2.UnitY;
+                    }
+                    else if (!oneWayJumpStarted && character.IsGrounded)
+                    {
+                        jump = true;
+                        oneWayJumpStarted = true;
+                    }
+                    else if (oneWayJumpStarted && character.IsGrounded && !clearedOneWayTop)
+                    {
+                        oneWayJumpStarted = false;
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unexpected Platform Station checkpoint {checkpoint}.");
+            }
+
+            previousSupport = character.IsGrounded ? character.SupportBody : default;
+            previousSupportVelocity = character.SupportVelocityCmPerSecond;
+            SetCharacterKeyboardIntent(inputBackend, move, jump, traverse: false);
+            Tick(engine);
+        }
+
+        ClearCharacterKeyboardIntent(inputBackend);
+
+        // Then the route reports completion only after all four visible physical behaviors occurred.
+        Physics3DShowcasePanelState completed = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(completed.CharacterRouteStatus, Is.EqualTo(Physics3DShowcaseRouteStatus.Completed));
+            Assert.That(completed.CharacterRouteCheckpointIndex, Is.EqualTo(4));
+            Assert.That(completed.CharacterRouteSummary, Does.StartWith("COMPLETE"));
+            Assert.That(movingSupportTicks, Is.GreaterThanOrEqualTo(route.PlatformStableSupportTicks));
+            Assert.That(rotatingSupportTicks, Is.GreaterThanOrEqualTo(route.PlatformStableSupportTicks));
+            Assert.That(inheritedMovingVelocity, Is.True, "Jumping from the moving lift did not retain lift velocity.");
+            Assert.That(conveyorCarriedWithoutInput, Is.True, "Releasing movement on the conveyor did not carry the player.");
+            Assert.That(enteredOneWayFromBelow, Is.True, "The player never entered the one-way platform from below.");
+            Assert.That(clearedOneWayTop, Is.True, "The player never passed through the one-way platform to its top side.");
+            Assert.That(engine.GameSession.Camera.IsVirtualCameraActive(CharacterRouteCameraId), Is.True);
+        });
+    }
+
+    [Test]
+    public void Feature_TraversalCourse_Scenario_PlayerCompletesBothMantlesWithKeyboard()
+    {
+        // Given a new player enters Traversal Course through the formal launcher.
+        string repoRoot = FindRepoRoot();
+        LauncherLaunchPlan plan = ResolveLaunchPlan(repoRoot);
+        using GameEngine engine = CreateEngine(repoRoot, plan, out AcceptanceInputBackend inputBackend);
+        engine.LoadEntryMap(MapId);
+        Tick(engine);
+        var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as Physics3DShowcaseRuntime
+            ?? throw new InvalidOperationException("Physics3D showcase runtime is missing.");
+        IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("Acceptance UI surface host is missing.");
+        ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.TraversalCourse));
+        TickUntil(
+            engine,
+            () => runtime.ActiveScene == Physics3DShowcaseScene.TraversalCourse &&
+                  engine.GameSession.Camera.IsVirtualCameraActive(CharacterRouteCameraId),
+            maximumFrames: 128);
+
+        Physics3DCharacterTraversalShowcaseConfig route = runtime.ActiveConfig.CharacterTraversal;
+        DriveTraversalCourseToLadder(engine, inputBackend, runtime, route);
+
+        // When the player presses E at the ladder, climbs with D, and mantles its deck.
+        SetCharacterKeyboardIntent(inputBackend, Vector2.Zero, jump: false, traverse: true);
+        Tick(engine);
+        SetCharacterKeyboardIntent(inputBackend, Vector2.Zero, jump: false, traverse: false);
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Attached));
+        Tick(engine);
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Climbing));
+        SetCharacterKeyboardIntent(inputBackend, Vector2.UnitY, jump: false, traverse: false);
+        int ladderClimbSteps = 0;
+        while (runtime.GetPlayerTraversalStatusForTests().State != Traversal3DState.LedgeHang &&
+               ladderClimbSteps < 120)
+        {
+            Tick(engine);
+            ladderClimbSteps++;
+        }
+
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.LedgeHang));
+        Tick(engine);
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Mantling));
+        int ladderMantleSteps = 0;
+        while (runtime.GetPlayerTraversalStatusForTests().State != Traversal3DState.NormalMovement &&
+               ladderMantleSteps < 120)
+        {
+            Tick(engine);
+            ladderMantleSteps++;
+        }
+
+        ClearCharacterKeyboardIntent(inputBackend);
+        Assert.That(runtime.CharacterRouteCheckpointIndex, Is.GreaterThanOrEqualTo(4));
+
+        // When the player runs and jumps across the gap, presses E at the high wall, then completes the second mantle.
+        float wallAttachReadyX = route.WallCenterXCm - (route.AttachProbeDistanceCm * 0.9f);
+        bool gapJumped = false;
+        int wallApproachSteps = 0;
+        while (runtime.GetPlayerCharacterStateForTests().PositionCm.X < wallAttachReadyX &&
+               wallApproachSteps < 240)
+        {
+            Character3DState character = runtime.GetPlayerCharacterStateForTests();
+            bool jump = !gapJumped &&
+                        character.PositionCm.X >= route.LadderDeckCenterXCm + (route.LadderDeckLengthCm * 0.3f);
+            gapJumped |= jump;
+            SetCharacterKeyboardIntent(inputBackend, Vector2.UnitX, jump, traverse: false);
+            Tick(engine);
+            wallApproachSteps++;
+        }
+
+        ClearCharacterKeyboardIntent(inputBackend);
+        Character3DState atWall = runtime.GetPlayerCharacterStateForTests();
+        Assert.Multiple(() =>
+        {
+            Assert.That(atWall.PositionCm.X, Is.GreaterThanOrEqualTo(wallAttachReadyX));
+            Assert.That(atWall.PositionCm.X, Is.LessThan(route.WallCenterXCm - (route.WallThicknessCm * 0.5f)));
+            Assert.That(gapJumped, Is.True);
+        });
+
+        SetCharacterKeyboardIntent(inputBackend, Vector2.Zero, jump: false, traverse: true);
+        Tick(engine);
+        SetCharacterKeyboardIntent(inputBackend, Vector2.Zero, jump: false, traverse: false);
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Attached));
+        Tick(engine);
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.Climbing));
+        SetCharacterKeyboardIntent(inputBackend, Vector2.UnitY, jump: false, traverse: false);
+        int wallClimbSteps = 0;
+        while (runtime.GetPlayerTraversalStatusForTests().State != Traversal3DState.LedgeHang &&
+               wallClimbSteps < 150)
+        {
+            Tick(engine);
+            wallClimbSteps++;
+        }
+
+        Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.LedgeHang));
+        Tick(engine);
+        int wallMantleSteps = 0;
+        while (runtime.GetPlayerTraversalStatusForTests().State != Traversal3DState.NormalMovement &&
+               wallMantleSteps < 120)
+        {
+            Tick(engine);
+            wallMantleSteps++;
+        }
+
+        ClearCharacterKeyboardIntent(inputBackend);
+
+        // Then the visible route completes at 6/6 on the upper deck, with the route camera still following the player.
+        Physics3DShowcasePanelState completed = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(completed.CharacterRouteStatus, Is.EqualTo(Physics3DShowcaseRouteStatus.Completed));
+            Assert.That(completed.CharacterRouteCheckpointIndex, Is.EqualTo(6));
+            Assert.That(completed.CharacterRouteSummary, Does.StartWith("COMPLETE"));
+            Assert.That(runtime.GetPlayerTraversalStatusForTests().State, Is.EqualTo(Traversal3DState.NormalMovement));
+            Assert.That(runtime.GetPlayerCharacterStateForTests().PositionCm.Y, Is.GreaterThan(route.WallDeckCenterYCm));
+            Assert.That(engine.GameSession.Camera.IsVirtualCameraActive(CharacterRouteCameraId), Is.True);
+        });
+    }
+
+    [Test]
     public void Feature_WheelLab_Scenario_PlayerKeepsEveryWheelTypeInViewAcrossTheCompleteCourse()
     {
         // Given the player enters Wheel Lab through the formal launcher path.
@@ -434,11 +791,19 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                     ref maximumCameraErrorCm,
                     ref minimumGroundedWheelCount,
                     ref sawGroundContact);
+                if (runtime.WheelLabSection == WheelLabCourseSection.Braking)
+                {
+                    break;
+                }
             }
 
             inputBackend.SetButton("<Keyboard>/w", pressed: false);
             inputBackend.SetButton("<Keyboard>/a", pressed: false);
             inputBackend.SetButton("<Keyboard>/d", pressed: false);
+            Assert.That(
+                runtime.WheelLabSection,
+                Is.EqualTo(WheelLabCourseSection.Braking),
+                $"{wheelKinds[run]} did not reach the visible green braking zone within the authored drive window.");
             inputBackend.SetButton("<Keyboard>/space", pressed: true);
             for (int tick = 0; tick < config.TrialRecommendedBrakeTicks; tick++)
             {
@@ -511,6 +876,37 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                   engine.GameSession.Camera.IsVirtualCameraActive(CameraId),
             maximumFrames: 128);
         Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
+    }
+
+    [Test]
+    public void Feature_RagdollLab_Scenario_PlayerKnocksDownAndRecoversTheMannequin()
+    {
+        // Given a new player enters Ragdoll Lab through the formal launcher and sees an active-pose mannequin.
+        string repoRoot = FindRepoRoot();
+        LauncherLaunchPlan plan = ResolveLaunchPlan(repoRoot);
+        using GameEngine engine = CreateEngine(repoRoot, plan, out _);
+        engine.LoadEntryMap(MapId);
+        Tick(engine);
+        var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as Physics3DShowcaseRuntime
+            ?? throw new InvalidOperationException("Physics3D showcase runtime is missing.");
+        IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("Acceptance UI surface host is missing.");
+        Physics3DSimulationSystem simulation = engine.GetService(Physics3DServiceKeys.SimulationSystem)
+            ?? throw new InvalidOperationException("Physics3D simulation system is missing.");
+        ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.RagdollLab));
+        TickUntil(engine, () => runtime.ActiveScene == Physics3DShowcaseScene.RagdollLab, maximumFrames: 128);
+
+        // When the player swings the pendulum, releases active pose, tries recovery too early, waits for rest, and retries.
+        RunRagdollLabPlayerRoute(engine, runtime, simulation, surfaceHost);
+
+        // Then the visible mannequin has been handed back from dynamic ragdoll bodies to its recovered pose.
+        Physics3DShowcasePanelState completed = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.RagdollLabState.IsRecovered, Is.True);
+            Assert.That(completed.RagdollSummary, Does.Contain("RECOVERED").And.Contain("clearance passed"));
+            Assert.That(completed.LastAction, Does.Contain("Clearance passed"));
+        });
     }
 
     [Test]
@@ -668,11 +1064,28 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             TickUntilNextPhysicsStep(engine, simulation);
         }
 
-        Assert.That(
-            runtime.TryGetBodyVisual(1, out Physics3DBodyState probeBefore, out _, out _, out _, out _, out _),
-            Is.True);
+        int motionProbeCount = Math.Min(
+            runtime.ScaleCityState.InteractiveBodies,
+            runtime.ActiveConfig.ScaleCity.LauncherWaveCount);
+        var motionProbeStarts = new Vector3[motionProbeCount];
+        for (int probeIndex = 0; probeIndex < motionProbeStarts.Length; probeIndex++)
+        {
+            Assert.That(
+                runtime.TryGetBodyVisual(
+                    probeIndex + 1,
+                    out Physics3DBodyState probe,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _),
+                Is.True);
+            motionProbeStarts[probeIndex] = probe.PositionCm;
+        }
+
+        float maximumVisibleProbeMovementCm = 0f;
         bool observedRelaunch = false;
-        var fiftyThousandSamples = new double[30];
+        var fiftyThousandSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         int fiftyThousandPeakContactPairs = 0;
         for (int i = 0; i < fiftyThousandSamples.Length; i++)
         {
@@ -680,6 +1093,22 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             fiftyThousandSamples[i] = simulation.PhysicsUpdateMillisecondsLastUpdate;
             fiftyThousandPeakContactPairs = Math.Max(fiftyThousandPeakContactPairs, world.ContactPairCount);
             observedRelaunch |= runtime.BenchmarkRecycledBodiesLastStep > 0;
+            for (int probeIndex = 0; probeIndex < motionProbeStarts.Length; probeIndex++)
+            {
+                Assert.That(
+                    runtime.TryGetBodyVisual(
+                        probeIndex + 1,
+                        out Physics3DBodyState probe,
+                        out _,
+                        out _,
+                        out _,
+                        out _,
+                        out _),
+                    Is.True);
+                maximumVisibleProbeMovementCm = MathF.Max(
+                    maximumVisibleProbeMovementCm,
+                    Vector3.Distance(probe.PositionCm, motionProbeStarts[probeIndex]));
+            }
         }
         double fiftyThousandP95 = Percentile(fiftyThousandSamples, 0.95d);
         Physics3DScaleCityShowcaseState fiftyThousandState =
@@ -689,13 +1118,18 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             fiftyThousandP95,
             Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds),
             $"50K Scale City Physics3D P95 {fiftyThousandP95:0.###}ms exceeds the configured 30Hz budget.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(fiftyThousandState.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Pass));
+            Assert.That(fiftyThousandState.FullFrameP95Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(fiftyThousandState.FullFrameP99Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+        });
         Assert.That(fiftyThousandPeakContactPairs, Is.GreaterThan(0), "Scale City foreground never produced real contacts.");
         Assert.That(observedRelaunch, Is.True, "Scale City never relaunched an authored wave.");
         Assert.That(
-            runtime.TryGetBodyVisual(1, out Physics3DBodyState probeAfter, out _, out _, out _, out _, out _),
-            Is.True);
-        Assert.That(
-            (probeAfter.PositionCm - probeBefore.PositionCm).Length(),
+            maximumVisibleProbeMovementCm,
             Is.GreaterThan(runtime.ActiveConfig.BodySizeCm),
             "The 50K world was counted but its visible rigid bodies did not keep moving.");
         trace.Add(JsonSerializer.Serialize(new
@@ -710,10 +1144,13 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             windAccelerationXCmPerSecondSquared = fiftyThousandState.WindAccelerationXCmPerSecondSquared,
             lastLauncherWaveIndex = fiftyThousandState.LastLauncherWaveIndex,
             continuousRelaunch = observedRelaunch,
+            maximumVisibleProbeMovementCm,
             physicsP95Ms = fiftyThousandP95,
+            completeFrameP95Ms = fiftyThousandState.FullFrameP95Milliseconds,
+            completeFrameP99Ms = fiftyThousandState.FullFrameP99Milliseconds,
             peakContactPairs = fiftyThousandPeakContactPairs,
             steadyContactPairs = fiftyThousandSteadyContactPairs,
-            budget = fiftyThousandP95 <= runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds
+            budget = fiftyThousandState.PerformanceStatus == Physics3DScaleCityPerformanceStatus.Pass
                 ? "realtime"
                 : "over-30hz-budget"
         }));
@@ -728,7 +1165,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             TickUntilNextPhysicsStep(engine, simulation);
         }
 
-        var twentyFiveThousandSamples = new double[30];
+        var twentyFiveThousandSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         int twentyFiveThousandPeakContactPairs = 0;
         for (int i = 0; i < twentyFiveThousandSamples.Length; i++)
         {
@@ -747,6 +1184,14 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             twentyFiveThousandP95,
             Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds),
             $"25K Scale City Physics3D P95 {twentyFiveThousandP95:0.###}ms exceeds the configured 30Hz budget.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(twentyFiveThousandState.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Pass));
+            Assert.That(twentyFiveThousandState.FullFrameP95Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(twentyFiveThousandState.FullFrameP99Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+        });
         Assert.That(twentyFiveThousandPeakContactPairs, Is.GreaterThan(0), "Scale City foreground never produced real contacts.");
         trace.Add(JsonSerializer.Serialize(new
         {
@@ -755,10 +1200,12 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             interactiveBodies = twentyFiveThousandState.InteractiveBodies,
             sparseBodies = twentyFiveThousandState.SparseBodies,
             physicsP95Ms = twentyFiveThousandP95,
+            completeFrameP95Ms = twentyFiveThousandState.FullFrameP95Milliseconds,
+            completeFrameP99Ms = twentyFiveThousandState.FullFrameP99Milliseconds,
             peakContactPairs = twentyFiveThousandPeakContactPairs,
             steadyContactPairs = twentyFiveThousandSteadyContactPairs,
             budgetMs = runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds,
-            budget = twentyFiveThousandP95 <= runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds
+            budget = twentyFiveThousandState.PerformanceStatus == Physics3DScaleCityPerformanceStatus.Pass
                 ? "realtime"
                 : "over-30hz-budget"
         }));
@@ -773,8 +1220,8 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             TickUntilNextPhysicsStep(engine, simulation);
         }
 
-        var samples = new double[60];
-        var endToEnd = new double[60];
+        var samples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
+        var endToEnd = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         int tenThousandPeakContactPairs = 0;
         for (int i = 0; i < samples.Length; i++)
         {
@@ -794,6 +1241,14 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             physicsP95,
             Is.LessThanOrEqualTo(FixedStepBudgetMilliseconds),
             $"10K authoritative Physics3D P95 {physicsP95:0.###}ms exceeds the 30Hz step budget {FixedStepBudgetMilliseconds:0.###}ms.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(tenThousandState.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Pass));
+            Assert.That(tenThousandState.FullFrameP95Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(tenThousandState.FullFrameP99Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+        });
         Assert.That(tenThousandPeakContactPairs, Is.GreaterThan(0), "Scale City foreground never produced real contacts.");
         trace.Add(JsonSerializer.Serialize(new
         {
@@ -808,11 +1263,13 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             physicsP50Ms = physicsP50,
             physicsP95Ms = physicsP95,
             physicsP99Ms = physicsP99,
+            completeFrameP95Ms = tenThousandState.FullFrameP95Milliseconds,
+            completeFrameP99Ms = tenThousandState.FullFrameP99Milliseconds,
             endToEndP95Ms = endToEndP95,
             peakContactPairs = tenThousandPeakContactPairs,
             steadyContactPairs = tenThousandSteadyContactPairs,
             budgetMs = runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds,
-            budget = physicsP95 <= runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds
+            budget = tenThousandState.PerformanceStatus == Physics3DScaleCityPerformanceStatus.Pass
                 ? "realtime"
                 : "over-30hz-budget"
         }));
@@ -1271,6 +1728,52 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                     Assert.That(queries.RayFirstDistanceCm, Is.GreaterThan(0f));
                     Assert.That(float.IsFinite(queries.RayFirstDistanceCm), Is.True);
                 });
+
+                int allHitCount = queries.RayHits;
+                int runSequence = runtime.ScannerRunSequence;
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-result-closest");
+                TickUntil(
+                    engine,
+                    () => runtime.ScannerResultMode == Physics3DShowcaseQueryResultMode.Closest,
+                    maximumFrames: 128);
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-run");
+                TickUntil(engine, () => runtime.ScannerRunSequence > runSequence, maximumFrames: 128);
+                Assert.That(runtime.GetQueryHitCount(0), Is.EqualTo(1));
+
+                runSequence = runtime.ScannerRunSequence;
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-result-any");
+                TickUntil(
+                    engine,
+                    () => runtime.ScannerResultMode == Physics3DShowcaseQueryResultMode.Any,
+                    maximumFrames: 128);
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-run");
+                TickUntil(engine, () => runtime.ScannerRunSequence > runSequence, maximumFrames: 128);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(runtime.ScannerAnyHit, Is.True);
+                    Assert.That(runtime.GetQueryHitCount(0), Is.Zero, "Any must not invent a hit marker.");
+                });
+
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-result-all");
+                TickUntil(
+                    engine,
+                    () => runtime.ScannerResultMode == Physics3DShowcaseQueryResultMode.All,
+                    maximumFrames: 128);
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-sensors");
+                TickUntil(engine, () => !runtime.ScannerIncludeSensors, maximumFrames: 128);
+                runSequence = runtime.ScannerRunSequence;
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-run");
+                TickUntil(engine, () => runtime.ScannerRunSequence > runSequence, maximumFrames: 128);
+                Assert.That(runtime.GetQueryHitCount(0), Is.EqualTo(allHitCount - 1));
+
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-sensors");
+                TickUntil(engine, () => runtime.ScannerIncludeSensors, maximumFrames: 128);
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-ignore-assembly");
+                TickUntil(engine, () => !runtime.ScannerIgnoreAssembly, maximumFrames: 128);
+                runSequence = runtime.ScannerRunSequence;
+                ClickWhenPresent(engine, surfaceHost, "physics3d-scanner-run");
+                TickUntil(engine, () => runtime.ScannerRunSequence > runSequence, maximumFrames: 128);
+                Assert.That(runtime.GetQueryHitCount(0), Is.EqualTo(allHitCount + 1));
                 break;
             }
             case Physics3DShowcaseScene.MaterialHill:
@@ -1319,22 +1822,8 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             {
                 Character3DState initial = runtime.GetPlayerCharacterStateForTests();
                 Physics3DCharacterTraversalShowcaseConfig config = runtime.ActiveConfig.CharacterTraversal;
-                float attachReadyX = config.LadderCenterXCm - (config.AttachProbeDistanceCm * 0.9f);
-                int approachSteps = 0;
-                inputBackend.SetButton("<Keyboard>/w", pressed: true);
-                while (runtime.GetPlayerCharacterStateForTests().PositionCm.X < attachReadyX &&
-                       approachSteps < 300)
-                {
-                    Tick(engine);
-                    approachSteps++;
-                }
-
-                inputBackend.SetButton("<Keyboard>/w", pressed: false);
+                DriveTraversalCourseToLadder(engine, inputBackend, runtime, config);
                 Character3DState atLadder = runtime.GetPlayerCharacterStateForTests();
-                Assert.That(
-                    atLadder.PositionCm.X,
-                    Is.GreaterThanOrEqualTo(attachReadyX),
-                    $"The public W input did not reach the ladder within {approachSteps} fixed steps.");
 
                 inputBackend.SetButton("<Keyboard>/e", pressed: true);
                 Tick(engine);
@@ -1377,82 +1866,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             }
             case Physics3DShowcaseScene.RagdollLab:
             {
-                // Entry must finish Prepare -> simulation step -> Observe before any release/switch.
-                Assert.That(runtime.SceneStep, Is.GreaterThan(0));
-                Physics3DShowcasePanelState before = runtime.CapturePanelState();
-                Assert.That(before.RagdollSummary, Does.Contain("ACTIVE POSE").And.Contain("bones"));
-
-                int pendulumBodyIndex = FindRagdollPendulumBodyIndex(runtime);
-                Assert.That(
-                    runtime.TryGetBodyVisual(
-                        pendulumBodyIndex,
-                        out Physics3DBodyState pendulumBefore,
-                        out _,
-                        out _,
-                        out _,
-                        out _,
-                        out _),
-                    Is.True);
-
-                long stepBeforePendulum = runtime.SceneStep;
-                ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-pendulum");
-                TickUntil(
-                    engine,
-                    () => runtime.CapturePanelState().LastAction.Contains("pendulum is swinging", StringComparison.Ordinal),
-                    maximumFrames: 128);
-                WaitForObservedPhysicsStep(engine, runtime, simulation, scene);
-                Physics3DShowcasePanelState afterPendulum = runtime.CapturePanelState();
-                Assert.That(
-                    runtime.TryGetBodyVisual(
-                        pendulumBodyIndex,
-                        out Physics3DBodyState pendulumAfter,
-                        out _,
-                        out _,
-                        out _,
-                        out _,
-                        out _),
-                    Is.True);
-                Assert.Multiple(() =>
-                {
-                    Assert.That(runtime.SceneStep, Is.GreaterThan(stepBeforePendulum));
-                    Assert.That(afterPendulum.LastAction, Does.Contain("pendulum is swinging"));
-                    Assert.That(
-                        pendulumAfter.LinearVelocityCmPerSecond.X,
-                        Is.GreaterThan(pendulumBefore.LinearVelocityCmPerSecond.X + 1f),
-                        "Swing Pendulum must change the real pendulum body's velocity toward the mannequin.");
-                });
-
-                long stepBeforePose = runtime.SceneStep;
-                ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-active-pose");
-                TickUntil(engine, () => runtime.SceneStep > stepBeforePose, maximumFrames: 128);
-                Physics3DShowcasePanelState afterPose = runtime.CapturePanelState();
-                Assert.Multiple(() =>
-                {
-                    Assert.That(runtime.SceneStep, Is.GreaterThan(stepBeforePose));
-                    Assert.That(afterPose.RagdollSummary, Does.Contain("PASSIVE").And.Contain("bones"));
-                    Assert.That(afterPose.LastAction, Does.Contain("Active pose released"));
-                });
-
-                int ragdollBoneCount = runtime.ActiveConfig.RagdollLab.Bones.Length;
-                int dynamicBodiesBeforeRecovery = runtime.DynamicBodyCount;
-                int kinematicBodiesBeforeRecovery = runtime.KinematicBodyCount;
-                ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-recover");
-                TickUntil(
-                    engine,
-                    () => runtime.CapturePanelState().RagdollSummary.Contains("RECOVERED", StringComparison.Ordinal),
-                    maximumFrames: 128);
-                Physics3DShowcasePanelState afterRecovery = runtime.CapturePanelState();
-                Assert.Multiple(() =>
-                {
-                    Assert.That(afterRecovery.RagdollSummary, Does.Contain("RECOVERED").And.Contain("clearance passed"));
-                    Assert.That(afterRecovery.LastAction, Does.Contain("Clearance passed"));
-                    Assert.That(runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery - ragdollBoneCount));
-                    Assert.That(runtime.KinematicBodyCount, Is.EqualTo(kinematicBodiesBeforeRecovery + ragdollBoneCount));
-                });
-
-                // Leave only after Observe has completed for the latest Ragdoll action.
-                Assert.That(runtime.SceneStep, Is.GreaterThan(0));
-                Assert.That(runtime.ActiveScene, Is.EqualTo(Physics3DShowcaseScene.RagdollLab));
+                RunRagdollLabPlayerRoute(engine, runtime, simulation, surfaceHost);
                 break;
             }
             case Physics3DShowcaseScene.ConstraintForge:
@@ -1495,6 +1909,59 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         }
     }
 
+    private static Vector2 MoveTowardX(float currentX, float targetX)
+    {
+        float delta = targetX - currentX;
+        if (MathF.Abs(delta) <= 10f)
+        {
+            return Vector2.Zero;
+        }
+
+        return delta > 0f ? Vector2.UnitX : -Vector2.UnitX;
+    }
+
+    private static void DriveTraversalCourseToLadder(
+        GameEngine engine,
+        AcceptanceInputBackend inputBackend,
+        Physics3DShowcaseRuntime runtime,
+        Physics3DCharacterTraversalShowcaseConfig config)
+    {
+        float attachReadyX = config.LadderCenterXCm - (config.AttachProbeDistanceCm * 0.9f);
+        int approachSteps = 0;
+        while (runtime.GetPlayerCharacterStateForTests().PositionCm.X < attachReadyX &&
+               approachSteps < 300)
+        {
+            Character3DState character = runtime.GetPlayerCharacterStateForTests();
+            bool jump = runtime.CharacterRouteCheckpointIndex == 2 && character.IsGrounded;
+            SetCharacterKeyboardIntent(inputBackend, Vector2.UnitX, jump, traverse: false);
+            Tick(engine);
+            approachSteps++;
+        }
+
+        ClearCharacterKeyboardIntent(inputBackend);
+        Assert.That(
+            runtime.GetPlayerCharacterStateForTests().PositionCm.X,
+            Is.GreaterThanOrEqualTo(attachReadyX),
+            $"Public keyboard input did not reach the ladder within {approachSteps} fixed steps.");
+    }
+
+    private static void SetCharacterKeyboardIntent(
+        AcceptanceInputBackend inputBackend,
+        Vector2 move,
+        bool jump,
+        bool traverse)
+    {
+        inputBackend.SetButton("<Keyboard>/w", move.X > 0.5f);
+        inputBackend.SetButton("<Keyboard>/s", move.X < -0.5f);
+        inputBackend.SetButton("<Keyboard>/d", move.Y > 0.5f);
+        inputBackend.SetButton("<Keyboard>/a", move.Y < -0.5f);
+        inputBackend.SetButton("<Keyboard>/space", jump);
+        inputBackend.SetButton("<Keyboard>/e", traverse);
+    }
+
+    private static void ClearCharacterKeyboardIntent(AcceptanceInputBackend inputBackend)
+        => SetCharacterKeyboardIntent(inputBackend, Vector2.Zero, jump: false, traverse: false);
+
     private static void AssertWheelLabModeEvidence(
         Physics3DShowcaseRuntime runtime,
         Vehicle3DWheelKind expectedMode,
@@ -1523,6 +1990,131 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             Assert.That(visual.Mode, Is.EqualTo(expectedMode));
             Assert.That(float.IsFinite(visual.CompressionCm), Is.True);
         }
+    }
+
+    private static void RunRagdollLabPlayerRoute(
+        GameEngine engine,
+        Physics3DShowcaseRuntime runtime,
+        Physics3DSimulationSystem simulation,
+        IUiSurfaceHost surfaceHost)
+    {
+        // Entry must finish Prepare -> simulation step -> Observe before any release or mode switch.
+        Assert.That(runtime.SceneStep, Is.GreaterThan(0));
+        Physics3DShowcasePanelState before = runtime.CapturePanelState();
+        Assert.That(before.RagdollSummary, Does.Contain("ACTIVE POSE").And.Contain("bones"));
+
+        int pendulumBodyIndex = FindRagdollPendulumBodyIndex(runtime);
+        Assert.That(
+            runtime.TryGetBodyVisual(
+                pendulumBodyIndex,
+                out Physics3DBodyState pendulumBefore,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _),
+            Is.True);
+
+        long stepBeforePendulum = runtime.SceneStep;
+        ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-pendulum");
+        TickUntil(
+            engine,
+            () => runtime.CapturePanelState().LastAction.Contains("pendulum is swinging", StringComparison.Ordinal),
+            maximumFrames: 128);
+        WaitForObservedPhysicsStep(engine, runtime, simulation, Physics3DShowcaseScene.RagdollLab);
+        Physics3DShowcasePanelState afterPendulum = runtime.CapturePanelState();
+        Assert.That(
+            runtime.TryGetBodyVisual(
+                pendulumBodyIndex,
+                out Physics3DBodyState pendulumAfter,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _),
+            Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.SceneStep, Is.GreaterThan(stepBeforePendulum));
+            Assert.That(afterPendulum.LastAction, Does.Contain("pendulum is swinging"));
+            Assert.That(
+                pendulumAfter.LinearVelocityCmPerSecond.X,
+                Is.GreaterThan(pendulumBefore.LinearVelocityCmPerSecond.X + 1f),
+                "Swing Pendulum must change the real pendulum body's velocity toward the mannequin.");
+        });
+
+        TickUntil(
+            engine,
+            () => runtime.RagdollLabState.Phase == Physics3DRagdollLabPhase.ImpactConfirmed,
+            maximumFrames: 512);
+        Assert.That(
+            runtime.CapturePanelState().RagdollSummary,
+            Does.Contain("IMPACT CONFIRMED"),
+            "The public route must observe a real pendulum-to-bone contact before the mannequin tumbles.");
+
+        long stepBeforePose = runtime.SceneStep;
+        ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-active-pose");
+        TickUntil(
+            engine,
+            () => runtime.CapturePanelState().LastAction.Contains("Active pose released", StringComparison.Ordinal),
+            maximumFrames: 128);
+        WaitForObservedPhysicsStep(engine, runtime, simulation, Physics3DShowcaseScene.RagdollLab);
+        Physics3DShowcasePanelState afterPose = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.SceneStep, Is.GreaterThan(stepBeforePose));
+            Assert.That(afterPose.RagdollSummary, Does.Contain("PASSIVE"));
+            Assert.That(afterPose.LastAction, Does.Contain("Active pose released"));
+        });
+
+        int ragdollBoneCount = runtime.ActiveConfig.RagdollLab.Bones.Length;
+        int dynamicBodiesBeforeRecovery = runtime.DynamicBodyCount;
+        int kinematicBodiesBeforeRecovery = runtime.KinematicBodyCount;
+        ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-recover");
+        Tick(engine);
+        Physics3DShowcasePanelState rejectedRecovery = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.RagdollLabState.IsRecovered, Is.False);
+            Assert.That(runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery));
+            Assert.That(runtime.KinematicBodyCount, Is.EqualTo(kinematicBodiesBeforeRecovery));
+            Assert.That(
+                rejectedRecovery.LastAction,
+                Does.Contain("Recovery is not ready"),
+                $"Try Recovery produced phase {runtime.RagdollLabState.Phase} with action '{rejectedRecovery.LastAction}'.");
+        });
+
+        TickUntil(
+            engine,
+            () => runtime.RagdollLabState.Phase == Physics3DRagdollLabPhase.Recoverable,
+            maximumFrames: 2_048);
+        Physics3DRagdollLabShowcaseState ready = runtime.RagdollLabState;
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                ready.StairStepsDescended,
+                Is.GreaterThanOrEqualTo(runtime.ActiveConfig.RagdollLab.MinimumStairStepsDescended));
+            Assert.That(ready.SettledTicks, Is.EqualTo(runtime.ActiveConfig.RagdollLab.RequiredSettledTicks));
+            Assert.That(runtime.CapturePanelState().RagdollSummary, Does.Contain("RECOVERY READY"));
+        });
+
+        ClickWhenPresent(engine, surfaceHost, "physics3d-ragdoll-recover");
+        TickUntil(
+            engine,
+            () => runtime.CapturePanelState().RagdollSummary.Contains("RECOVERED", StringComparison.Ordinal),
+            maximumFrames: 128);
+        Physics3DShowcasePanelState afterRecovery = runtime.CapturePanelState();
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterRecovery.RagdollSummary, Does.Contain("RECOVERED").And.Contain("clearance passed"));
+            Assert.That(afterRecovery.LastAction, Does.Contain("Clearance passed"));
+            Assert.That(runtime.DynamicBodyCount, Is.EqualTo(dynamicBodiesBeforeRecovery - ragdollBoneCount));
+            Assert.That(runtime.KinematicBodyCount, Is.EqualTo(kinematicBodiesBeforeRecovery + ragdollBoneCount));
+        });
+
+        // Leave only after Observe has completed for the latest Ragdoll action.
+        Assert.That(runtime.SceneStep, Is.GreaterThan(0));
+        Assert.That(runtime.ActiveScene, Is.EqualTo(Physics3DShowcaseScene.RagdollLab));
     }
 
     private static void CaptureWheelLabPlayerEvidence(

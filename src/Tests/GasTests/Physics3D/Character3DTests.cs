@@ -64,6 +64,78 @@ public sealed class Character3DTests
         });
     }
 
+    [Test]
+    public void StationaryCharacter_RemainsSupportedAcrossThirtyHertzSteps()
+    {
+        using var world = CreateWorld(mobileCapacity: 2, staticCapacity: 1, solverSubstepCount: 1);
+        Physics3DShapeId floorShape = world.RegisterBoxShape(new Vector3(500f, 20f, 500f));
+        Physics3DShapeId capsuleShape = world.RegisterCapsuleShape(30f, 100f);
+        Physics3DShapeId anchorShape = world.RegisterSphereShape(1f);
+        Physics3DBodyId floor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Static,
+            floorShape,
+            new Vector3(0f, -10f, 0f)));
+        Physics3DBodyId anchor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Kinematic,
+            anchorShape,
+            new Vector3(0f, -10_000f, 0f)));
+        Physics3DBodyId body = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            capsuleShape,
+            new Vector3(0f, 82f, 0f)));
+        var characters = new Character3DControllerSet(world, capacity: 1, overlapHitCapacity: 16);
+        Character3DHandle character = characters.Register(body, anchor, CreateProfile());
+
+        for (int step = 0; step < 30; step++)
+        {
+            StepCharacter(world, characters, character, new Character3DIntent(Vector2.Zero, false));
+            Character3DState state = characters.GetState(character);
+            Assert.Multiple(() =>
+            {
+                Assert.That(state.IsGrounded, Is.True, $"Lost support at fixed step {step}.");
+                Assert.That(state.SupportBody, Is.EqualTo(floor));
+            });
+        }
+    }
+
+    [Test]
+    public void StationaryInput_InheritsConveyorSurfaceVelocityAcrossThirtyHertzSteps()
+    {
+        using var world = CreateWorld(mobileCapacity: 3, staticCapacity: 0, solverSubstepCount: 1);
+        Physics3DShapeId conveyorShape = world.RegisterBoxShape(new Vector3(1_000f, 20f, 500f));
+        Physics3DShapeId capsuleShape = world.RegisterCapsuleShape(30f, 100f);
+        Physics3DShapeId anchorShape = world.RegisterSphereShape(1f);
+        Physics3DBodyId conveyor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Kinematic,
+            conveyorShape,
+            new Vector3(0f, -10f, 0f),
+            Physics3DBodyContactPolicy.SurfaceVelocity(new Vector3(180f, 0f, 0f))));
+        Physics3DBodyId anchor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Kinematic,
+            anchorShape,
+            new Vector3(0f, -10_000f, 0f)));
+        Physics3DBodyId body = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            capsuleShape,
+            new Vector3(0f, 82f, 0f)));
+        var characters = new Character3DControllerSet(world, capacity: 1, overlapHitCapacity: 16);
+        Character3DHandle character = characters.Register(body, anchor, CreateProfile());
+
+        for (int step = 0; step < 30; step++)
+        {
+            StepCharacter(world, characters, character, new Character3DIntent(Vector2.Zero, false));
+        }
+
+        Character3DState state = characters.GetState(character);
+        Assert.Multiple(() =>
+        {
+            Assert.That(state.IsGrounded, Is.True);
+            Assert.That(state.SupportBody, Is.EqualTo(conveyor));
+            Assert.That(state.SupportVelocityCmPerSecond.X, Is.EqualTo(180f).Within(1e-3f));
+            Assert.That(state.PositionCm.X, Is.GreaterThan(100f));
+        });
+    }
+
     [TestCase(30f, true)]
     [TestCase(65f, false)]
     public void SupportProbe_FiltersGroundByConfiguredSlope(float slopeDegrees, bool expectedGrounded)
@@ -321,7 +393,8 @@ public sealed class Character3DTests
         int staticCapacity,
         int workerCount = 1,
         int contactPairCapacityPerWorker = 128,
-        int? actuationCommandCapacity = null)
+        int? actuationCommandCapacity = null,
+        int solverSubstepCount = 2)
         => new(new Physics3DWorldConfig
         {
             MobileBodyCapacity = mobileCapacity,
@@ -336,7 +409,7 @@ public sealed class Character3DTests
             WorkerCount = workerCount,
             FixedStepHz = 30,
             MaximumPhysicsStepsPerSourceTick = 1,
-            SolverSubstepCount = 2,
+            SolverSubstepCount = solverSubstepCount,
             SolverVelocityIterationCount = 8,
             GravityCmPerSecondSquared = new Vector3(0f, -981f, 0f),
             LinearDamping = 0f,

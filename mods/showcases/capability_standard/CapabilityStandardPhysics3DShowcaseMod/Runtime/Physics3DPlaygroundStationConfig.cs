@@ -13,9 +13,16 @@ internal sealed class Physics3DScannerRangeShowcaseConfig
     public float TargetSpacingCm { get; set; }
     public int TargetCount { get; set; }
     public Physics3DShowcaseQueryKind InitialQueryKind { get; set; }
+    public Physics3DShowcaseQueryResultMode InitialResultMode { get; set; }
     public int InitialDistancePresetIndex { get; set; }
     public int InitialLayerFilterIndex { get; set; }
+    public bool InitialIncludeSensors { get; set; }
+    public bool InitialIgnoreSelf { get; set; }
+    public bool InitialIgnoreAssembly { get; set; }
     public int CapsuleCastStartingOverlapTargetIndex { get; set; }
+    public int SensorTargetIndex { get; set; }
+    public uint SourceAssemblyId { get; set; }
+    public float SourceMemberOffsetCm { get; set; }
     public int CastPlaybackDurationTicks { get; set; }
     public int OverlapPulseCycleTicks { get; set; }
     public float OverlapPulseMaximumScale { get; set; }
@@ -40,11 +47,21 @@ internal sealed class Physics3DScannerRangeShowcaseConfig
         RequireFinitePositive(TargetSpacingCm, $"{path}.{nameof(TargetSpacingCm)}");
         if (TargetCount < 3) throw new InvalidOperationException($"{path}.{nameof(TargetCount)} must be at least three.");
         if (!Enum.IsDefined(InitialQueryKind)) throw new InvalidOperationException($"{path}.{nameof(InitialQueryKind)} is invalid.");
+        if (!Enum.IsDefined(InitialResultMode)) throw new InvalidOperationException($"{path}.{nameof(InitialResultMode)} is invalid.");
         if ((uint)CapsuleCastStartingOverlapTargetIndex >= (uint)TargetCount)
         {
             throw new InvalidOperationException(
                 $"{path}.{nameof(CapsuleCastStartingOverlapTargetIndex)} must select one authored target.");
         }
+        if ((uint)SensorTargetIndex >= (uint)TargetCount)
+        {
+            throw new InvalidOperationException($"{path}.{nameof(SensorTargetIndex)} must select one authored target.");
+        }
+        if (SourceAssemblyId == 0u)
+        {
+            throw new InvalidOperationException($"{path}.{nameof(SourceAssemblyId)} must be non-zero.");
+        }
+        RequireFinitePositive(SourceMemberOffsetCm, $"{path}.{nameof(SourceMemberOffsetCm)}");
         RequirePositive(CastPlaybackDurationTicks, $"{path}.{nameof(CastPlaybackDurationTicks)}");
         if (OverlapPulseCycleTicks < 2)
         {

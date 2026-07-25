@@ -21,13 +21,22 @@ internal sealed class Physics3DRagdollLabShowcaseConfig
     public int StairCount { get; set; }
     public float StairWidthCm { get; set; }
     public float StairDepthCm { get; set; }
+    public float TopLandingDepthCm { get; set; }
     public float StairHeightCm { get; set; }
     public float StairStartXCm { get; set; }
     public float RagdollStartHeightCm { get; set; }
     public float PendulumAnchorXCm { get; set; }
     public float PendulumAnchorYCm { get; set; }
     public float PendulumRopeLengthCm { get; set; }
+    public float PendulumRadiusCm { get; set; }
+    public float PendulumMass { get; set; }
     public float PendulumLaunchImpulse { get; set; }
+    public int ContactPairCapacity { get; set; }
+    public int PendulumImpactTimeoutTicks { get; set; }
+    public int MinimumStairStepsDescended { get; set; }
+    public float SettledLinearSpeedCmPerSecond { get; set; }
+    public float SettledAngularSpeedRadiansPerSecond { get; set; }
+    public int RequiredSettledTicks { get; set; }
     public Physics3DRagdollBoneShowcaseConfig[] Bones { get; set; } = Array.Empty<Physics3DRagdollBoneShowcaseConfig>();
 
     public void Validate(string path)
@@ -46,13 +55,33 @@ internal sealed class Physics3DRagdollLabShowcaseConfig
         RequirePositive(StairCount, $"{path}.{nameof(StairCount)}");
         RequireFinitePositive(StairWidthCm, $"{path}.{nameof(StairWidthCm)}");
         RequireFinitePositive(StairDepthCm, $"{path}.{nameof(StairDepthCm)}");
+        RequireFinitePositive(TopLandingDepthCm, $"{path}.{nameof(TopLandingDepthCm)}");
+        if (TopLandingDepthCm < StairDepthCm)
+        {
+            throw new InvalidOperationException(
+                $"{path}.{nameof(TopLandingDepthCm)} must be at least {path}.{nameof(StairDepthCm)}.");
+        }
         RequireFinitePositive(StairHeightCm, $"{path}.{nameof(StairHeightCm)}");
         RequireFinite(StairStartXCm, $"{path}.{nameof(StairStartXCm)}");
         RequireFinitePositive(RagdollStartHeightCm, $"{path}.{nameof(RagdollStartHeightCm)}");
         RequireFinite(PendulumAnchorXCm, $"{path}.{nameof(PendulumAnchorXCm)}");
         RequireFinitePositive(PendulumAnchorYCm, $"{path}.{nameof(PendulumAnchorYCm)}");
         RequireFinitePositive(PendulumRopeLengthCm, $"{path}.{nameof(PendulumRopeLengthCm)}");
+        RequireFinitePositive(PendulumRadiusCm, $"{path}.{nameof(PendulumRadiusCm)}");
+        RequireFinitePositive(PendulumMass, $"{path}.{nameof(PendulumMass)}");
         RequireFinitePositive(PendulumLaunchImpulse, $"{path}.{nameof(PendulumLaunchImpulse)}");
+        RequirePositive(ContactPairCapacity, $"{path}.{nameof(ContactPairCapacity)}");
+        RequirePositive(PendulumImpactTimeoutTicks, $"{path}.{nameof(PendulumImpactTimeoutTicks)}");
+        RequirePositive(MinimumStairStepsDescended, $"{path}.{nameof(MinimumStairStepsDescended)}");
+        if (MinimumStairStepsDescended >= StairCount)
+        {
+            throw new InvalidOperationException(
+                $"{path}.{nameof(MinimumStairStepsDescended)} must be less than {path}.{nameof(StairCount)}.");
+        }
+
+        RequireFiniteNonNegative(SettledLinearSpeedCmPerSecond, $"{path}.{nameof(SettledLinearSpeedCmPerSecond)}");
+        RequireFiniteNonNegative(SettledAngularSpeedRadiansPerSecond, $"{path}.{nameof(SettledAngularSpeedRadiansPerSecond)}");
+        RequirePositive(RequiredSettledTicks, $"{path}.{nameof(RequiredSettledTicks)}");
         if (Bones == null || Bones.Length < 2 || Bones.Length > 32)
         {
             throw new InvalidOperationException($"{path}.{nameof(Bones)} must contain between 2 and 32 bones.");
