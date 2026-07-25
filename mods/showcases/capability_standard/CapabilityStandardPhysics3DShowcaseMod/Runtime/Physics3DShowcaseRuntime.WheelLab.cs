@@ -1238,11 +1238,9 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
-        float fixedDeltaSeconds = RequirePhysicsWorld().FixedDeltaSeconds;
-        float throttleSeconds = config.TrialRecommendedThrottleTicks * fixedDeltaSeconds;
-        float brakeSeconds = config.TrialRecommendedBrakeTicks * fixedDeltaSeconds;
-        return $"Reference run: hold W for {throttleSeconds:0.0}s, steer with A/D across the blue bank, " +
-               $"then Space for up to {brakeSeconds:0.0}s in the green zone. Press Q only between runs.";
+        float brakeSeconds = config.TrialRecommendedBrakeTicks * RequirePhysicsWorld().FixedDeltaSeconds;
+        return $"Drive with W, steer with A/D across the blue bank, then release W and hold Space " +
+               $"for up to {brakeSeconds:0.0}s when the chassis enters the green zone. Press Q only between runs.";
     }
 
     internal bool TryGetWheelLabTrialResult(

@@ -41,6 +41,8 @@ internal sealed partial class Physics3DShowcaseRuntime
     private Physics3DBodyId _routeRotatingSurface;
     private Physics3DBodyId _routeConveyorSurface;
     private Physics3DBodyId _routeFinishSurface;
+    private Physics3DBodyId _routeRampSurface;
+    private Physics3DBodyId _routeFinalStepSurface;
     private Physics3DBodyId _routeWallDeckSurface;
     private int _playerBodyIndex = -1;
     private int _movingPlatformBodyIndex = -1;
@@ -49,6 +51,17 @@ internal sealed partial class Physics3DShowcaseRuntime
     private Vector3 _playerFacing = Vector3.UnitX;
     private bool _capturedJump;
     private bool _capturedTraverse;
+    private Physics3DBodyId _routeObservedSupport;
+    private int _routeObservedSupportTicks;
+    private Physics3DBodyId _routePreviousSupport;
+    private Vector3 _routePreviousSupportVelocity;
+    private bool _routeHasPreviousCharacterState;
+    private bool _movingPlatformInheritedVelocityObserved;
+    private bool _conveyorCarryTracking;
+    private int _conveyorCarryTicks;
+    private float _conveyorCarryStartXCm;
+    private bool _oneWayEnteredFromBelow;
+    private bool _oneWayPassedFromBelow;
     private Traversal3DState _lastTraversalState = Traversal3DState.NormalMovement;
     private Physics3DShowcaseRouteStatus _characterRouteStatus = Physics3DShowcaseRouteStatus.InProgress;
     private int _characterRouteCheckpointIndex;
@@ -85,7 +98,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             Physics3DShapeKind.Box,
             new Vector3(config.PlatformSizeXCm, config.PlatformSizeYCm, config.PlatformSizeZCm),
             0f,
-            new Vector3(config.MovingPlatformCenterXCm, config.MovingPlatformCenterYCm, 0f),
+            MovingPlatformPosition(config, config.MovingPlatformInitialPhaseRadians),
             Quaternion.Identity,
             Vector3.Zero,
             Vector3.Zero,
@@ -176,7 +189,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             config.RampLengthCm,
             config.RampHeightCm,
             config.RampWidthCm));
-        AddOwnedBody(
+        _routeRampSurface = AddOwnedBody(
             Physics3DBodyKind.Static,
             rampShape,
             Physics3DShapeKind.Box,
@@ -196,7 +209,7 @@ internal sealed partial class Physics3DShowcaseRuntime
                 config.StepDepthCm,
                 height,
                 config.StepWidthCm));
-            AddOwnedBody(
+            Physics3DBodyId step = AddOwnedBody(
                 Physics3DBodyKind.Static,
                 stepShape,
                 Physics3DShapeKind.Box,
@@ -208,6 +221,10 @@ internal sealed partial class Physics3DShowcaseRuntime
                 Vector3.Zero,
                 Physics3DContinuousDetectionMode.Discrete,
                 DynamicGold);
+            if (i == config.StepCount - 1)
+            {
+                _routeFinalStepSurface = step;
+            }
         }
 
         Physics3DShapeId platformShape = RequirePhysicsWorld().RegisterBoxShape(new Vector3(
@@ -221,7 +238,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             Physics3DShapeKind.Box,
             new Vector3(config.PlatformSizeXCm, config.PlatformSizeYCm, config.PlatformSizeZCm),
             0f,
-            new Vector3(config.MovingPlatformCenterXCm, config.MovingPlatformCenterYCm, 0f),
+            MovingPlatformPosition(config, config.MovingPlatformInitialPhaseRadians),
             Quaternion.Identity,
             Vector3.Zero,
             Vector3.Zero,
@@ -315,7 +332,8 @@ internal sealed partial class Physics3DShowcaseRuntime
             Vector3.Zero,
             Physics3DContinuousDetectionMode.Continuous,
             CharacterNormalColor,
-            config.CharacterMass);
+            config.CharacterMass,
+            material: CreateCharacterMaterial(config));
 
         _characterControllers = new Character3DControllerSet(
             RequirePhysicsWorld(),
@@ -336,6 +354,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         _lastTraversalState = Traversal3DState.NormalMovement;
         _characterRouteStatus = Physics3DShowcaseRouteStatus.InProgress;
         _characterRouteCheckpointIndex = 0;
+        ResetCharacterRouteEvidence();
         ActivateCharacterRouteCamera();
     }
 
@@ -453,6 +472,11 @@ internal sealed partial class Physics3DShowcaseRuntime
             return;
         }
 
+        if (_scene == Physics3DShowcaseScene.PlatformStation)
+        {
+            ObserveMovingPlatformDismount(in character, config);
+        }
+
         bool checkpointReached = _scene switch
         {
             Physics3DShowcaseScene.PlatformStation => PlatformCheckpointReached(in character),
@@ -461,6 +485,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         };
         if (!checkpointReached)
         {
+            RememberCharacterRouteState(in character);
             return;
         }
 
@@ -472,29 +497,159 @@ internal sealed partial class Physics3DShowcaseRuntime
             _lastAction = _scene == Physics3DShowcaseScene.PlatformStation
                 ? "Route complete: you crossed all four live platform surfaces. Restart Route to run it again."
                 : "Route complete: you reached the upper deck after both mantles. Restart Route to run it again.";
+            RememberCharacterRouteState(in character);
             return;
         }
 
         _lastAction = $"Checkpoint {_characterRouteCheckpointIndex}/{checkpointCount} complete. {CharacterRouteNextAction}";
+        RememberCharacterRouteState(in character);
     }
 
     private bool PlatformCheckpointReached(in Character3DState character)
     {
-        if (!character.IsGrounded)
+        Physics3DCharacterTraversalShowcaseConfig config = ActiveConfig.CharacterTraversal;
+        return _characterRouteCheckpointIndex switch
         {
-            return false;
-        }
-
-        Physics3DBodyId expectedSupport = _characterRouteCheckpointIndex switch
-        {
-            0 => _routeMovingSurface,
-            1 => _routeRotatingSurface,
-            2 => _routeConveyorSurface,
-            3 => _routeFinishSurface,
+            0 => HasStableMovingSupport(in character, _routeMovingSurface, config),
+            1 => _movingPlatformInheritedVelocityObserved &&
+                 HasStableMovingSupport(in character, _routeRotatingSurface, config),
+            2 => HasConveyorCarriedPlayer(in character, config),
+            3 => HasPassedThroughAndLandedOnOneWayPlatform(in character, config),
             _ => throw new InvalidOperationException(
                 $"Platform Station route checkpoint {_characterRouteCheckpointIndex} is outside its authored range.")
         };
-        return character.SupportBody == expectedSupport;
+    }
+
+    private bool HasStableMovingSupport(
+        in Character3DState character,
+        Physics3DBodyId expectedSupport,
+        Physics3DCharacterTraversalShowcaseConfig config)
+    {
+        if (!character.IsGrounded || character.SupportBody != expectedSupport)
+        {
+            ResetObservedSupport();
+            return false;
+        }
+
+        if (_routeObservedSupport != expectedSupport)
+        {
+            _routeObservedSupport = expectedSupport;
+            _routeObservedSupportTicks = 1;
+        }
+        else
+        {
+            _routeObservedSupportTicks++;
+        }
+
+        return _routeObservedSupportTicks >= config.PlatformStableSupportTicks &&
+               character.SupportVelocityCmPerSecond.Length() >= config.PlatformMinimumSupportSpeedCmPerSecond;
+    }
+
+    private bool HasConveyorCarriedPlayer(
+        in Character3DState character,
+        Physics3DCharacterTraversalShowcaseConfig config)
+    {
+        if (!character.IsGrounded ||
+            character.SupportBody != _routeConveyorSurface ||
+            _capturedPlayerMove.LengthSquared() > 1e-6f)
+        {
+            _conveyorCarryTracking = false;
+            _conveyorCarryTicks = 0;
+            return false;
+        }
+
+        if (!_conveyorCarryTracking)
+        {
+            _conveyorCarryTracking = true;
+            _conveyorCarryTicks = 1;
+            _conveyorCarryStartXCm = character.PositionCm.X;
+            return false;
+        }
+
+        _conveyorCarryTicks++;
+        return _conveyorCarryTicks >= config.PlatformConveyorCarryTicks &&
+               character.PositionCm.X - _conveyorCarryStartXCm >= config.PlatformConveyorCarryDistanceCm;
+    }
+
+    private bool HasPassedThroughAndLandedOnOneWayPlatform(
+        in Character3DState character,
+        Physics3DCharacterTraversalShowcaseConfig config)
+    {
+        float halfWidth = config.PlatformStationOneWaySizeXCm * 0.5f;
+        float halfDepth = config.PlatformStationOneWaySizeZCm * 0.5f;
+        bool withinPlatform =
+            MathF.Abs(character.PositionCm.X - config.PlatformStationOneWayCenterXCm) <= halfWidth &&
+            MathF.Abs(character.PositionCm.Z) <= halfDepth;
+        float platformBottom = config.PlatformStationOneWayCenterYCm - (config.DeckThicknessCm * 0.5f);
+        float platformTop = config.PlatformStationOneWayCenterYCm + (config.DeckThicknessCm * 0.5f);
+        if (withinPlatform &&
+            character.PositionCm.Y <= platformBottom + config.PlatformOneWayPassThroughClearanceCm)
+        {
+            _oneWayEnteredFromBelow = true;
+        }
+
+        if (_oneWayEnteredFromBelow &&
+            withinPlatform &&
+            character.PositionCm.Y >= platformTop + config.PlatformOneWayPassThroughClearanceCm)
+        {
+            _oneWayPassedFromBelow = true;
+        }
+
+        return _oneWayPassedFromBelow &&
+               character.IsGrounded &&
+               character.SupportBody == _routeFinishSurface;
+    }
+
+    private void ObserveMovingPlatformDismount(
+        in Character3DState character,
+        Physics3DCharacterTraversalShowcaseConfig config)
+    {
+        if (_movingPlatformInheritedVelocityObserved ||
+            !_routeHasPreviousCharacterState ||
+            _routePreviousSupport != _routeMovingSurface ||
+            character.IsGrounded)
+        {
+            return;
+        }
+
+        float supportSpeed = _routePreviousSupportVelocity.Length();
+        if (supportSpeed < config.PlatformMinimumSupportSpeedCmPerSecond)
+        {
+            return;
+        }
+
+        float retainedSpeed = Vector3.Dot(
+            character.LinearVelocityCmPerSecond,
+            _routePreviousSupportVelocity / supportSpeed);
+        _movingPlatformInheritedVelocityObserved =
+            retainedSpeed >= supportSpeed * config.PlatformInheritedVelocityRatio;
+    }
+
+    private void RememberCharacterRouteState(in Character3DState character)
+    {
+        _routePreviousSupport = character.IsGrounded ? character.SupportBody : default;
+        _routePreviousSupportVelocity = character.SupportVelocityCmPerSecond;
+        _routeHasPreviousCharacterState = true;
+    }
+
+    private void ResetObservedSupport()
+    {
+        _routeObservedSupport = default;
+        _routeObservedSupportTicks = 0;
+    }
+
+    private void ResetCharacterRouteEvidence()
+    {
+        ResetObservedSupport();
+        _routePreviousSupport = default;
+        _routePreviousSupportVelocity = Vector3.Zero;
+        _routeHasPreviousCharacterState = false;
+        _movingPlatformInheritedVelocityObserved = false;
+        _conveyorCarryTracking = false;
+        _conveyorCarryTicks = 0;
+        _conveyorCarryStartXCm = 0f;
+        _oneWayEnteredFromBelow = false;
+        _oneWayPassedFromBelow = false;
     }
 
     private bool TraversalCheckpointReached(
@@ -504,9 +659,9 @@ internal sealed partial class Physics3DShowcaseRuntime
     {
         return _characterRouteCheckpointIndex switch
         {
-            0 => character.PositionCm.X >= config.RampCenterXCm,
-            1 => character.PositionCm.X >= config.StepStartXCm + ((config.StepCount - 1) * config.StepDepthCm),
-            2 => character.PositionCm.X >= config.MovingPlatformCenterXCm,
+            0 => character.IsGrounded && character.SupportBody == _routeRampSurface,
+            1 => character.IsGrounded && character.SupportBody == _routeFinalStepSurface,
+            2 => character.IsGrounded && character.SupportBody == _routeMovingSurface,
             3 => traversal.SurfaceBody == _ladderSurface && traversal.State == Traversal3DState.Mantling,
             4 => traversal.SurfaceBody == _wallSurface && traversal.State == Traversal3DState.Mantling,
             5 => traversal.State == Traversal3DState.NormalMovement &&
@@ -586,10 +741,10 @@ internal sealed partial class Physics3DShowcaseRuntime
             {
                 Physics3DShowcaseScene.PlatformStation => _characterRouteCheckpointIndex switch
                 {
-                    0 => "Board the purple moving lift.",
-                    1 => "Land on the purple rotating platform.",
-                    2 => "Cross the gold conveyor without leaving the lane.",
-                    3 => "Land on the orange one-way finish platform.",
+                    0 => "Board the purple moving lift and ride until its motion is stable.",
+                    1 => "Jump off with the lift's speed and settle on the rotating platform.",
+                    2 => "Reach the gold conveyor, then release movement and let it carry you.",
+                    3 => "Drop below the orange platform, jump through it, then land on top.",
                     _ => throw new InvalidOperationException("Platform Station route progress is invalid.")
                 },
                 Physics3DShowcaseScene.TraversalCourse => _characterRouteCheckpointIndex switch
@@ -624,11 +779,9 @@ internal sealed partial class Physics3DShowcaseRuntime
         float step = _sceneStep + 1f;
         if (_movingPlatformBodyIndex >= 0)
         {
-            float phase = step * config.MovingPlatformSpeedRadiansPerStep;
-            Vector3 nextPosition = new(
-                config.MovingPlatformCenterXCm,
-                config.MovingPlatformCenterYCm + (MathF.Sin(phase) * config.MovingPlatformTravelCm),
-                MathF.Cos(phase) * config.MovingPlatformTravelCm * 0.35f);
+            float phase = config.MovingPlatformInitialPhaseRadians +
+                          (step * config.MovingPlatformSpeedRadiansPerStep);
+            Vector3 nextPosition = MovingPlatformPosition(config, phase);
             SetKinematicCourseNextPose(_movingPlatformBodyIndex, nextPosition, Quaternion.Identity);
         }
 
@@ -655,6 +808,14 @@ internal sealed partial class Physics3DShowcaseRuntime
         pose.AngularVelocity = current.AngularVelocityRadiansPerSecond;
     }
 
+    private static Vector3 MovingPlatformPosition(
+        Physics3DCharacterTraversalShowcaseConfig config,
+        float phaseRadians)
+        => new(
+            config.MovingPlatformCenterXCm + (MathF.Sin(phaseRadians) * config.MovingPlatformTravelCm),
+            config.MovingPlatformCenterYCm,
+            0f);
+
     internal void SetCharacterIntentForTests(Vector2 planarMove, bool jumpRequested, bool traverseRequested)
     {
         if (_scene is not (Physics3DShowcaseScene.PlatformStation or Physics3DShowcaseScene.TraversalCourse))
@@ -663,42 +824,6 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         StoreCharacterTraversalInput(planarMove, jumpRequested, traverseRequested);
-    }
-
-    internal void PlacePlayerOnPlatformCheckpointForTests(int checkpointIndex)
-    {
-        if (_scene != Physics3DShowcaseScene.PlatformStation)
-        {
-            throw new InvalidOperationException("Platform checkpoint placement is only valid in Platform Station.");
-        }
-
-        if (checkpointIndex != _characterRouteCheckpointIndex || (uint)checkpointIndex >= 4u)
-        {
-            throw new InvalidOperationException(
-                $"Platform checkpoint {checkpointIndex} cannot be placed while route progress is {_characterRouteCheckpointIndex}/4.");
-        }
-
-        Physics3DCharacterTraversalShowcaseConfig config = ActiveConfig.CharacterTraversal;
-        Physics3DBodyId support = checkpointIndex switch
-        {
-            0 => _routeMovingSurface,
-            1 => _routeRotatingSurface,
-            2 => _routeConveyorSurface,
-            3 => _routeFinishSurface,
-            _ => throw new InvalidOperationException($"Platform checkpoint {checkpointIndex} is not authored.")
-        };
-        float supportHeightCm = checkpointIndex < 2
-            ? config.PlatformSizeYCm
-            : config.DeckThicknessCm;
-        Physics3DBodyState supportState = RequirePhysicsWorld().GetBodyState(support);
-        Physics3DBodyState playerState = RequirePhysicsWorld().GetBodyState(_bodyIds[_playerBodyIndex]);
-        playerState.PositionCm = supportState.PositionCm +
-                                 new Vector3(0f, (supportHeightCm * 0.5f) + CharacterCenterHeightAboveFloor(config), 0f);
-        playerState.Orientation = Quaternion.Identity;
-        playerState.LinearVelocityCmPerSecond = supportState.LinearVelocityCmPerSecond;
-        playerState.AngularVelocityRadiansPerSecond = Vector3.Zero;
-        playerState.Awake = true;
-        RequirePhysicsWorld().SetBodyState(_bodyIds[_playerBodyIndex], in playerState);
     }
 
     internal Character3DState GetPlayerCharacterStateForTests()
@@ -795,12 +920,15 @@ internal sealed partial class Physics3DShowcaseRuntime
         _routeRotatingSurface = default;
         _routeConveyorSurface = default;
         _routeFinishSurface = default;
+        _routeRampSurface = default;
+        _routeFinalStepSurface = default;
         _routeWallDeckSurface = default;
         _playerBodyIndex = -1;
         _movingPlatformBodyIndex = -1;
         _rotatingPlatformBodyIndex = -1;
         _characterRouteCheckpointIndex = 0;
         _characterRouteStatus = Physics3DShowcaseRouteStatus.InProgress;
+        ResetCharacterRouteEvidence();
     }
 
     internal void SynchronizeCharacterRouteCameraAfterMapFocus()
@@ -860,6 +988,13 @@ internal sealed partial class Physics3DShowcaseRuntime
 
     private Traversal3DControllerSet RequireTraversalControllers() => _traversalControllers
         ?? throw new InvalidOperationException("Traversal3D controllers are unavailable for the selected scene.");
+
+    private Physics3DMaterial CreateCharacterMaterial(Physics3DCharacterTraversalShowcaseConfig config)
+        => new(
+            config.CharacterFrictionCoefficient,
+            ActiveConfig.MaximumRecoveryVelocityCmPerSecond,
+            ActiveConfig.SpringAngularFrequency,
+            ActiveConfig.SpringTwiceDampingRatio);
 
     private Character3DProfile CreateCharacterProfile(Physics3DCharacterTraversalShowcaseConfig config)
         => new(

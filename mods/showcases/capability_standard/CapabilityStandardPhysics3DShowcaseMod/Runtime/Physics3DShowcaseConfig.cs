@@ -181,9 +181,9 @@ internal sealed class Physics3DShowcaseConfig
         {
             throw new InvalidOperationException("The configured replay grid exceeds maximumBodies.");
         }
-        if (1L + (7L * ScannerRange.TargetCount) > MaximumBodies)
+        if (1L + (7L * (ScannerRange.TargetCount + 2L)) > MaximumBodies)
         {
-            throw new InvalidOperationException("The configured Scanner Range targets exceed maximumBodies.");
+            throw new InvalidOperationException("The configured Scanner Range targets and source assembly exceed maximumBodies.");
         }
         if (1L + (2L * MaterialHill.Lanes.Length) > MaximumBodies)
         {
@@ -613,12 +613,19 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
     public float RouteFailureMinimumYCm { get; set; }
     public float RouteMaximumLateralOffsetCm { get; set; }
     public float RouteCompletionHeightToleranceCm { get; set; }
+    public int PlatformStableSupportTicks { get; set; }
+    public float PlatformMinimumSupportSpeedCmPerSecond { get; set; }
+    public float PlatformInheritedVelocityRatio { get; set; }
+    public int PlatformConveyorCarryTicks { get; set; }
+    public float PlatformConveyorCarryDistanceCm { get; set; }
+    public float PlatformOneWayPassThroughClearanceCm { get; set; }
     public int ControllerCapacity { get; set; }
     public int BodySlotCapacity { get; set; }
     public int OverlapHitCapacity { get; set; }
     public float CharacterRadiusCm { get; set; }
     public float CharacterCylinderLengthCm { get; set; }
     public float CharacterMass { get; set; }
+    public float CharacterFrictionCoefficient { get; set; }
     public float MaximumGroundSpeedCmPerSecond { get; set; }
     public float MaximumGroundAccelerationCmPerSecondSquared { get; set; }
     public float MaximumAirSpeedCmPerSecond { get; set; }
@@ -683,6 +690,7 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
     public float MovingPlatformCenterXCm { get; set; }
     public float MovingPlatformCenterYCm { get; set; }
     public float MovingPlatformTravelCm { get; set; }
+    public float MovingPlatformInitialPhaseRadians { get; set; }
     public float MovingPlatformSpeedRadiansPerStep { get; set; }
     public float PlatformSizeXCm { get; set; }
     public float PlatformSizeYCm { get; set; }
@@ -722,6 +730,12 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
         RequireFinite(RouteFailureMinimumYCm, nameof(RouteFailureMinimumYCm));
         RequireFinitePositive(RouteMaximumLateralOffsetCm, nameof(RouteMaximumLateralOffsetCm));
         RequireFiniteNonNegative(RouteCompletionHeightToleranceCm, nameof(RouteCompletionHeightToleranceCm));
+        RequirePositive(PlatformStableSupportTicks, nameof(PlatformStableSupportTicks));
+        RequireFinitePositive(PlatformMinimumSupportSpeedCmPerSecond, nameof(PlatformMinimumSupportSpeedCmPerSecond));
+        RequireFiniteRange(PlatformInheritedVelocityRatio, 0.0001f, 1.0001f, nameof(PlatformInheritedVelocityRatio));
+        RequirePositive(PlatformConveyorCarryTicks, nameof(PlatformConveyorCarryTicks));
+        RequireFinitePositive(PlatformConveyorCarryDistanceCm, nameof(PlatformConveyorCarryDistanceCm));
+        RequireFiniteNonNegative(PlatformOneWayPassThroughClearanceCm, nameof(PlatformOneWayPassThroughClearanceCm));
         RequirePositive(ControllerCapacity, nameof(ControllerCapacity));
         RequirePositive(BodySlotCapacity, nameof(BodySlotCapacity));
         RequirePositive(OverlapHitCapacity, nameof(OverlapHitCapacity));
@@ -733,6 +747,7 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
         RequireFinitePositive(CharacterRadiusCm, nameof(CharacterRadiusCm));
         RequireFinitePositive(CharacterCylinderLengthCm, nameof(CharacterCylinderLengthCm));
         RequireFinitePositive(CharacterMass, nameof(CharacterMass));
+        RequireFiniteNonNegative(CharacterFrictionCoefficient, nameof(CharacterFrictionCoefficient));
         RequireFinitePositive(MaximumGroundSpeedCmPerSecond, nameof(MaximumGroundSpeedCmPerSecond));
         RequireFinitePositive(MaximumGroundAccelerationCmPerSecondSquared, nameof(MaximumGroundAccelerationCmPerSecondSquared));
         RequireFinitePositive(MaximumAirSpeedCmPerSecond, nameof(MaximumAirSpeedCmPerSecond));
@@ -804,6 +819,7 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
         RequireFinitePositive(StepHeightCm, nameof(StepHeightCm));
         RequireFinitePositive(StepWidthCm, nameof(StepWidthCm));
         RequireFinitePositive(MovingPlatformTravelCm, nameof(MovingPlatformTravelCm));
+        RequireFinite(MovingPlatformInitialPhaseRadians, nameof(MovingPlatformInitialPhaseRadians));
         RequireFinitePositive(MovingPlatformSpeedRadiansPerStep, nameof(MovingPlatformSpeedRadiansPerStep));
         RequireFinitePositive(PlatformSizeXCm, nameof(PlatformSizeXCm));
         RequireFinitePositive(PlatformSizeYCm, nameof(PlatformSizeYCm));

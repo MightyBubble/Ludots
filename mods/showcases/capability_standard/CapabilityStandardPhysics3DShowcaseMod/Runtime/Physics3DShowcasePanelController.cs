@@ -341,20 +341,32 @@ internal sealed class Physics3DShowcasePanelController
         int queryIndex = (int)state.ScannerQueryKind - 1;
         int hitCount = _runtime.GetQueryHitCount(queryIndex);
         int visibleHitCount = state.ScannerVisibleHitCount;
-        UiElementBuilder[] children = new UiElementBuilder[visibleHitCount + 3];
+        UiElementBuilder[] children = new UiElementBuilder[visibleHitCount + 4];
         children[0] = Metric(
             "selection",
-            $"{ScannerQueryLabel(state.ScannerQueryKind)} | {state.ScannerDistanceCm:0} cm | {state.ScannerLayerFilterName}");
+            $"{ScannerQueryLabel(state.ScannerQueryKind)} | {ScannerResultModeLabel(state.ScannerResultMode)} | " +
+            $"{state.ScannerDistanceCm:0} cm | {state.ScannerLayerFilterName}");
         children[1] = Metric(
+            "filters",
+            $"sensors {(state.ScannerIncludeSensors ? "ON" : "OFF")} | " +
+            $"ignore self {(state.ScannerIgnoreSelf ? "ON" : "OFF")} | " +
+            $"ignore assembly {(state.ScannerIgnoreAssembly ? "ON" : "OFF")}");
+        children[2] = Metric(
             "result",
             state.ScannerQueryFailed
                 ? "FAILED | result capacity exceeded; nothing was truncated"
                 : state.ScannerHasResult
-                    ? $"{ScannerPlaybackLabel(state.ScannerPlaybackStatus)} | {visibleHitCount}/{hitCount} numbered hit(s) visible"
+                    ? state.ScannerResultMode == Physics3DShowcaseQueryResultMode.Any
+                        ? state.ScannerAnyHit
+                            ? "BLOCKED | Any mode does not request a hit point"
+                            : "CLEAR | Any mode does not request hit details"
+                        : $"{ScannerPlaybackLabel(state.ScannerPlaybackStatus)} | {visibleHitCount}/{hitCount} numbered hit(s) visible"
                     : "READY | choose settings, then Play Scan");
-        children[2] = Metric(
+        children[3] = Metric(
             "playhead",
-            state.ScannerPlaybackStatus == Physics3DScannerPlaybackStatus.Pulsing
+            state.ScannerResultMode == Physics3DShowcaseQueryResultMode.Any && state.ScannerHasResult
+                ? "full path evaluated immediately"
+                : state.ScannerPlaybackStatus == Physics3DScannerPlaybackStatus.Pulsing
                 ? $"fixed tick {state.ScannerPlaybackTick} | overlap stays at the origin"
                 : $"fixed tick {state.ScannerPlaybackTick}/{state.ScannerPlaybackDurationTicks} | {state.ScannerPlaybackDistanceCm:0}/{state.ScannerDistanceCm:0} cm");
         for (int hitIndex = 0; hitIndex < visibleHitCount; hitIndex++)
@@ -367,7 +379,7 @@ internal sealed class Physics3DShowcasePanelController
             string normal = hit.Normal.LengthSquared() <= 1e-8f
                 ? "normal n/a"
                 : $"normal ({hit.Normal.X:0.00}, {hit.Normal.Y:0.00}, {hit.Normal.Z:0.00})";
-            children[hitIndex + 3] = Metric(
+            children[hitIndex + 4] = Metric(
                 $"#{hitIndex + 1}",
                 $"{hit.DistanceCm:0.0} cm | {normal} | start overlap {(hit.StartedOverlapping ? "YES" : "NO")}");
         }
@@ -381,7 +393,7 @@ internal sealed class Physics3DShowcasePanelController
         {
             Physics3DShowcaseScene.ScannerRange => Section(
                 "Goal",
-                Ui.Text("Play a scan, pause its 30 Hz motion, and use Single Step to reveal numbered hits in order. A red crossed number means the cast started inside that target.")
+                Ui.Text("Compare All, Closest, and Any casts, then toggle sensors and source filtering. Pause a scan and use Single Step to reveal ordered hits; a red crossed number means the cast started inside that target.")
                     .FontSize(11f).Color("#D7E2ED").WhiteSpace(UiWhiteSpace.Normal)),
             Physics3DShowcaseScene.WindTunnel => Section(
                 "Goal",
@@ -490,6 +502,12 @@ internal sealed class Physics3DShowcasePanelController
 
     private static UiElementBuilder BuildCharacterRouteEvidence(Physics3DShowcasePanelState state)
     {
+        if (state.FixedHz <= 0)
+        {
+            throw new InvalidOperationException($"Character route panel requires a positive fixed Hz, but received {state.FixedHz}.");
+        }
+
+        float secondsRemaining = state.CharacterRouteTicksRemaining / (float)state.FixedHz;
         string status = state.CharacterRouteStatus switch
         {
             Physics3DShowcaseRouteStatus.InProgress => "RUNNING",
@@ -502,7 +520,7 @@ internal sealed class Physics3DShowcasePanelController
             Metric("status", status),
             Metric("checkpoints", $"{state.CharacterRouteCheckpointIndex}/{state.CharacterRouteCheckpointCount}"),
             Metric("next", state.CharacterRouteNextAction),
-            Metric("time", $"{state.CharacterRouteTicksRemaining} fixed ticks remaining"));
+            Metric("time", $"{secondsRemaining:0.0} seconds remaining"));
     }
 
     private UiElementBuilder BuildScannerControls(Physics3DShowcasePanelState state)
@@ -546,11 +564,47 @@ internal sealed class Physics3DShowcasePanelController
                 _ => Enqueue(Physics3DShowcaseCommandKind.SetScannerLayerFilter, filterIndex));
         }
 
+        Physics3DShowcaseQueryResultMode[] resultModes = IsScannerOverlap(state.ScannerQueryKind)
+            ? new[] { Physics3DShowcaseQueryResultMode.All }
+            : Enum.GetValues<Physics3DShowcaseQueryResultMode>();
+        UiElementBuilder[] resultModeButtons = new UiElementBuilder[resultModes.Length];
+        for (int i = 0; i < resultModes.Length; i++)
+        {
+            Physics3DShowcaseQueryResultMode mode = resultModes[i];
+            resultModeButtons[i] = ActionButton(
+                ScannerResultModeLabel(mode),
+                state.ScannerResultMode == mode,
+                "#3F4F68",
+                $"physics3d-scanner-result-{mode.ToString().ToLowerInvariant()}",
+                _ => Enqueue(Physics3DShowcaseCommandKind.SetScannerResultMode, (int)mode));
+        }
+
         return Section(
             "Scanner controls",
             Ui.Row(kindButtons).Wrap().Gap(7f),
+            Ui.Row(resultModeButtons).Wrap().Gap(7f),
             Ui.Row(distanceButtons).Wrap().Gap(7f),
             Ui.Row(filterButtons).Wrap().Gap(7f),
+            Ui.Row(
+                    ActionButton(
+                        state.ScannerIncludeSensors ? "Sensors ON" : "Sensors OFF",
+                        state.ScannerIncludeSensors,
+                        "#4A3549",
+                        "physics3d-scanner-sensors",
+                        _ => Enqueue(Physics3DShowcaseCommandKind.ToggleScannerSensors)),
+                    ActionButton(
+                        state.ScannerIgnoreSelf ? "Ignore Self ON" : "Ignore Self OFF",
+                        state.ScannerIgnoreSelf,
+                        "#2A526A",
+                        "physics3d-scanner-ignore-self",
+                        _ => Enqueue(Physics3DShowcaseCommandKind.ToggleScannerIgnoreSelf)),
+                    ActionButton(
+                        state.ScannerIgnoreAssembly ? "Ignore Assembly ON" : "Ignore Assembly OFF",
+                        state.ScannerIgnoreAssembly,
+                        "#5B4424",
+                        "physics3d-scanner-ignore-assembly",
+                        _ => Enqueue(Physics3DShowcaseCommandKind.ToggleScannerIgnoreAssembly)))
+                .Wrap().Gap(7f),
             ActionButton(
                 state.ScannerHasResult ? "Replay Scan" : "Play Scan",
                 false,
@@ -615,6 +669,19 @@ internal sealed class Physics3DShowcasePanelController
         Physics3DShowcaseQueryKind.CapsuleOverlap => "Capsule Overlap",
         _ => throw new InvalidOperationException($"Unknown Scanner Range query kind '{kind}'.")
     };
+
+    private static string ScannerResultModeLabel(Physics3DShowcaseQueryResultMode mode) => mode switch
+    {
+        Physics3DShowcaseQueryResultMode.All => "All",
+        Physics3DShowcaseQueryResultMode.Closest => "Closest",
+        Physics3DShowcaseQueryResultMode.Any => "Any",
+        _ => throw new InvalidOperationException($"Unknown Scanner Range result mode '{mode}'.")
+    };
+
+    private static bool IsScannerOverlap(Physics3DShowcaseQueryKind kind) =>
+        kind is Physics3DShowcaseQueryKind.BoxOverlap or
+            Physics3DShowcaseQueryKind.SphereOverlap or
+            Physics3DShowcaseQueryKind.CapsuleOverlap;
 
     private static string ScannerPlaybackLabel(Physics3DScannerPlaybackStatus status) => status switch
     {
@@ -682,29 +749,65 @@ internal sealed class Physics3DShowcasePanelController
             return Ui.Panel();
         }
 
-        return Section(
-            "Ragdoll controls",
-            Ui.Row(
-                    ActionButton(
-                        "Swing Pendulum",
-                        false,
-                        "#5B4424",
-                        "physics3d-ragdoll-pendulum",
-                        _ => Enqueue(Physics3DShowcaseCommandKind.LaunchRagdollPendulum)),
-                    ActionButton(
-                        "Toggle Active Pose",
-                        false,
-                        "#285541",
-                        "physics3d-ragdoll-active-pose",
-                        _ => Enqueue(Physics3DShowcaseCommandKind.ToggleRagdollActivePose)),
-                    ActionButton(
-                        "Recover",
-                        false,
-                        "#315944",
-                        "physics3d-ragdoll-recover",
-                        _ => Enqueue(Physics3DShowcaseCommandKind.RecoverRagdoll)))
-                .Wrap()
-                .Gap(7f));
+        Physics3DRagdollLabShowcaseState ragdoll = state.RagdollLab;
+        UiElementBuilder poseButton = ActionButton(
+            ragdoll.ActivePoseEnabled ? "Release Active Pose" : "Enable Active Pose",
+            ragdoll.ActivePoseEnabled,
+            "#285541",
+            "physics3d-ragdoll-active-pose",
+            _ => Enqueue(Physics3DShowcaseCommandKind.ToggleRagdollActivePose));
+
+        return ragdoll.Phase switch
+        {
+            Physics3DRagdollLabPhase.Ready => Section(
+                "Ragdoll controls",
+                Ui.Row(
+                        ActionButton(
+                            "Swing Pendulum",
+                            false,
+                            "#5B4424",
+                            "physics3d-ragdoll-pendulum",
+                            _ => Enqueue(Physics3DShowcaseCommandKind.LaunchRagdollPendulum)),
+                        poseButton)
+                    .Wrap()
+                    .Gap(7f)),
+            Physics3DRagdollLabPhase.Recoverable or Physics3DRagdollLabPhase.RecoveryBlocked
+                when !ragdoll.ActivePoseEnabled => Section(
+                    "Ragdoll controls",
+                    Ui.Row(
+                            poseButton,
+                            ActionButton(
+                                ragdoll.Phase == Physics3DRagdollLabPhase.RecoveryBlocked
+                                    ? "Retry Recovery"
+                                    : "Recover",
+                                false,
+                                "#315944",
+                                "physics3d-ragdoll-recover",
+                                _ => Enqueue(Physics3DShowcaseCommandKind.RecoverRagdoll)))
+                        .Wrap()
+                        .Gap(7f)),
+            Physics3DRagdollLabPhase.ImpactConfirmed or
+            Physics3DRagdollLabPhase.Tumbling or
+            Physics3DRagdollLabPhase.Settling
+                when !ragdoll.ActivePoseEnabled => Section(
+                    "Ragdoll controls",
+                    Ui.Row(
+                            poseButton,
+                            ActionButton(
+                                "Try Recovery",
+                                false,
+                                "#315944",
+                                "physics3d-ragdoll-recover",
+                                _ => Enqueue(Physics3DShowcaseCommandKind.RecoverRagdoll)))
+                        .Wrap()
+                        .Gap(7f)),
+            Physics3DRagdollLabPhase.Recovered => Section(
+                "Ragdoll controls",
+                Metric("next", "Restart Station to run the stair fall again.")),
+            _ => Section(
+                "Ragdoll controls",
+                poseButton)
+        };
     }
 
     private UiElementBuilder BuildBenchmarkEvidence(Physics3DShowcasePanelState state)
@@ -715,7 +818,7 @@ internal sealed class Physics3DShowcasePanelController
             : $"P50 {scaleCity.StepP50Milliseconds:0.###} · P95 {scaleCity.StepP95Milliseconds:0.###} · " +
               $"P99 {scaleCity.StepP99Milliseconds:0.###} ms";
         string frameEvidence = scaleCity.FramePerformanceSampleCount == 0
-            ? "waiting for first complete frame"
+            ? "waiting for first complete fixed frame"
             : $"P50 {scaleCity.FullFrameP50Milliseconds:0.###} · P95 {scaleCity.FullFrameP95Milliseconds:0.###} · " +
               $"P99 {scaleCity.FullFrameP99Milliseconds:0.###} ms";
         return Section(
@@ -727,12 +830,12 @@ internal sealed class Physics3DShowcasePanelController
             Metric("activity", ScaleCityActivityLabel(in scaleCity)),
             Metric("window", $"{ScaleCityPerformanceStatusLabel(scaleCity.PerformanceStatus)} · " +
                              $"physics {scaleCity.PerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0} · " +
-                             $"complete {scaleCity.FramePerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0}"),
-            Metric("physics", physicsEvidence),
-            Metric("complete frame", frameEvidence),
+                             $"full frame {scaleCity.FramePerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0}"),
+            Metric("physics core", physicsEvidence),
+            Metric("complete fixed frame", frameEvidence),
             Metric("steady GC", $"main {scaleCity.FrameCallingThreadAllocatedBytesLastStep:N0} B · " +
                                 $"workers {scaleCity.PhysicsWorkerAllocatedBytesLastStep:N0} B"),
-            Metric("budget", $"P95 and P99 must both stay below {scaleCity.PerformanceBudgetMilliseconds:0.###} ms"));
+            Metric("budget", $"Complete-frame P95 and P99 must both stay below {scaleCity.PerformanceBudgetMilliseconds:0.###} ms"));
     }
 
     internal static string ScaleCityPerformanceStatusLabel(Physics3DScaleCityPerformanceStatus status) => status switch

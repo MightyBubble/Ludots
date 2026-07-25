@@ -20,6 +20,7 @@ public interface IPhysics3DWorld : IDisposable
     long StepIndex { get; }
     Physics3DStepMetrics LastStepMetrics { get; }
     float FixedDeltaSeconds { get; }
+    Vector3 GravityCmPerSecondSquared { get; }
 
     /// <summary>
     /// True after a Step advanced the Bepu simulation but failed contact finalization.

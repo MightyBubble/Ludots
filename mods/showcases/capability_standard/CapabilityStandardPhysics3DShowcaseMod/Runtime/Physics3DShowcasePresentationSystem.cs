@@ -91,8 +91,12 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
         bool scannerStateChanged = _runtime.ActiveScene == Physics3DShowcaseScene.ScannerRange &&
             (!_hasPanelState ||
              _panelState.ScannerQueryKind != _runtime.ScannerQueryKind ||
+             _panelState.ScannerResultMode != _runtime.ScannerResultMode ||
              _panelState.ScannerDistancePresetIndex != _runtime.ScannerDistancePresetIndex ||
              _panelState.ScannerLayerFilterIndex != _runtime.ScannerLayerFilterIndex ||
+             _panelState.ScannerIncludeSensors != _runtime.ScannerIncludeSensors ||
+             _panelState.ScannerIgnoreSelf != _runtime.ScannerIgnoreSelf ||
+             _panelState.ScannerIgnoreAssembly != _runtime.ScannerIgnoreAssembly ||
              _panelState.ScannerRunSequence != _runtime.ScannerRunSequence ||
              _panelState.ScannerPlaybackStatus != _runtime.ScannerPlaybackStatus ||
              _panelState.ScannerPlaybackTick != _runtime.ScannerPlaybackTick ||
@@ -323,6 +327,9 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
             Physics3DScannerPlaybackStatus.Failed => new Vector4(0.96f, 0.30f, 0.30f, 0.42f),
             Physics3DScannerPlaybackStatus.Playing => new Vector4(0.18f, 0.72f, 0.96f, 0.44f),
             Physics3DScannerPlaybackStatus.Pulsing => new Vector4(0.18f, 0.72f, 0.96f, 0.36f),
+            Physics3DScannerPlaybackStatus.Complete
+                when _runtime.ScannerResultMode == Physics3DShowcaseQueryResultMode.Any && _runtime.ScannerAnyHit =>
+                    new Vector4(0.96f, 0.30f, 0.30f, 0.54f),
             Physics3DScannerPlaybackStatus.Complete => new Vector4(0.20f, 0.90f, 0.62f, 0.38f),
             Physics3DScannerPlaybackStatus.Waiting => new Vector4(1.00f, 0.72f, 0.18f, 0.38f),
             _ => throw new InvalidOperationException(

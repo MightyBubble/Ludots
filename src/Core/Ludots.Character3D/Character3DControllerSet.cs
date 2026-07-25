@@ -17,6 +17,7 @@ public sealed class Character3DControllerSet
     private readonly Physics3DCapsuleCastQuery[] _supportProbeRequests;
     private readonly Physics3DBatchedShapeCastClosestResult[] _supportProbeResults;
     private readonly int[] _supportProbeSlots;
+    private readonly Physics3DShapeCastHit[] _supportProbeHits;
     private readonly byte[] _active;
     private readonly int[] _generations;
     private readonly Physics3DBodyId[] _bodies;
@@ -74,6 +75,7 @@ public sealed class Character3DControllerSet
         _supportProbeRequests = new Physics3DCapsuleCastQuery[capacity];
         _supportProbeResults = new Physics3DBatchedShapeCastClosestResult[capacity];
         _supportProbeSlots = new int[capacity];
+        _supportProbeHits = new Physics3DShapeCastHit[overlapHitCapacity];
         _active = new byte[capacity];
         _generations = new int[capacity];
         _bodies = new Physics3DBodyId[capacity];
@@ -249,7 +251,7 @@ public sealed class Character3DControllerSet
         }
 
         ValidateBatchBeforeMutation();
-        ExecuteSupportProbeBatch();
+        ExecuteSupportProbes();
         for (int slot = 0; slot < _capacity; slot++)
         {
             if (_active[slot] == 0)
@@ -323,7 +325,7 @@ public sealed class Character3DControllerSet
         }
     }
 
-    private void ExecuteSupportProbeBatch()
+    private void ExecuteSupportProbes()
     {
         int requestCount = 0;
         for (int slot = 0; slot < _capacity; slot++)
@@ -358,13 +360,36 @@ public sealed class Character3DControllerSet
             int slot = _supportProbeSlots[requestIndex];
             Physics3DBatchedShapeCastClosestResult result = _supportProbeResults[requestIndex];
             Physics3DShapeCastHit hit = result.Value;
-            bool walkable = result.Hit && hit.Normal.Y >= _minimumSupportNormalY[slot];
+            Physics3DBodyState characterState = _world.GetBodyState(_bodies[slot]);
+            bool walkable = result.Hit &&
+                            hit.Normal.Y >= _minimumSupportNormalY[slot] &&
+                            AllowsSupportProbe(in characterState, in hit);
+            if (result.Hit && !walkable)
+            {
+                Physics3DCapsuleCastQuery request = _supportProbeRequests[requestIndex];
+                Physics3DQueryFilter filter = request.Filter;
+                int hitCount = _world.CapsuleCast(
+                    request.CenterCm,
+                    request.RadiusCm,
+                    request.CylinderLengthCm,
+                    request.Orientation,
+                    request.Direction,
+                    request.MaximumDistanceCm,
+                    filter,
+                    _supportProbeHits);
+                walkable = TrySelectWalkableSupport(
+                    slot,
+                    in characterState,
+                    _supportProbeHits.AsSpan(0, hitCount),
+                    out hit);
+            }
+
             if (walkable)
             {
                 _supportBodies[slot] = hit.Body;
                 _supportPointsCm[slot] = hit.PositionCm;
                 _supportNormals[slot] = hit.Normal;
-                _supportVelocities[slot] = _world.GetBodyVelocityAtWorldPoint(hit.Body, hit.PositionCm);
+                _supportVelocities[slot] = GetSupportVelocity(hit.Body, hit.PositionCm);
                 _ticksSinceSupport[slot] = 0;
                 _locomotionModes[slot] = _hasVelocityOverrides[slot] != 0
                     ? Character3DLocomotionMode.Traversal
@@ -382,6 +407,74 @@ public sealed class Character3DControllerSet
                     : Character3DLocomotionMode.Airborne;
             }
         }
+    }
+
+    private bool TrySelectWalkableSupport(
+        int slot,
+        in Physics3DBodyState characterState,
+        ReadOnlySpan<Physics3DShapeCastHit> hits,
+        out Physics3DShapeCastHit support)
+    {
+        for (int hitIndex = 0; hitIndex < hits.Length; hitIndex++)
+        {
+            Physics3DShapeCastHit candidate = hits[hitIndex];
+            if (candidate.Normal.Y < _minimumSupportNormalY[slot] ||
+                !AllowsSupportProbe(in characterState, in candidate))
+            {
+                continue;
+            }
+
+            support = candidate;
+            return true;
+        }
+
+        support = default;
+        return false;
+    }
+
+    private bool AllowsSupportProbe(
+        in Physics3DBodyState characterState,
+        in Physics3DShapeCastHit candidate)
+    {
+        Physics3DBodyContactPolicy policy = _world.GetBodyContactPolicy(candidate.Body);
+        if (policy.Kind != Physics3DBodyContactPolicyKind.OneWayPlatform)
+        {
+            return true;
+        }
+
+        Physics3DBodyState platformState = _world.GetBodyState(candidate.Body);
+        Vector3 platformNormal = Vector3.Transform(policy.LocalPlatformNormal, platformState.Orientation);
+        if (Vector3.Dot(candidate.Normal, platformNormal) < policy.MinimumNormalAlignment)
+        {
+            return false;
+        }
+
+        float signedCenterDistance = Vector3.Dot(
+            characterState.PositionCm - platformState.PositionCm,
+            platformNormal);
+        if (signedCenterDistance < -policy.BackfaceToleranceCm)
+        {
+            return false;
+        }
+
+        Vector3 platformVelocity = _world.GetBodyVelocityAtWorldPoint(candidate.Body, candidate.PositionCm);
+        float relativeNormalSpeed = Vector3.Dot(
+            characterState.LinearVelocityCmPerSecond - platformVelocity,
+            platformNormal);
+        return relativeNormalSpeed <= policy.MaximumPassThroughRelativeSpeedCmPerSecond;
+    }
+
+    private Vector3 GetSupportVelocity(Physics3DBodyId body, Vector3 supportPointCm)
+    {
+        Vector3 velocity = _world.GetBodyVelocityAtWorldPoint(body, supportPointCm);
+        Physics3DBodyContactPolicy policy = _world.GetBodyContactPolicy(body);
+        if (policy.Kind != Physics3DBodyContactPolicyKind.SurfaceVelocity)
+        {
+            return velocity;
+        }
+
+        Physics3DBodyState state = _world.GetBodyState(body);
+        return velocity + Vector3.Transform(policy.LocalSurfaceVelocityCmPerSecond, state.Orientation);
     }
 
     private void PrepareCharacterActuation(int slot)
@@ -426,17 +519,24 @@ public sealed class Character3DControllerSet
                 float inheritedVerticalVelocity = _supportVelocities[slot].Y;
                 float targetVerticalVelocity = inheritedVerticalVelocity + _jumpSpeeds[slot];
                 acceleration.Y = (targetVerticalVelocity - bodyState.LinearVelocityCmPerSecond.Y) /
-                                 _world.FixedDeltaSeconds;
+                                 _world.FixedDeltaSeconds -
+                                 _world.GravityCmPerSecondSquared.Y;
                 _ticksSinceSupport[slot] = _coyoteTicks[slot] + 1;
                 _locomotionModes[slot] = Character3DLocomotionMode.Airborne;
             }
-            else if (supported && move.LengthSquared() > 1e-6f && CanStep(slot, in bodyState, desiredRelativeVelocity))
+            else if (supported)
             {
-                float targetVerticalVelocity = _supportVelocities[slot].Y + _stepAssistSpeeds[slot];
-                acceleration.Y = MathF.Max(
-                    acceleration.Y,
-                    (targetVerticalVelocity - bodyState.LinearVelocityCmPerSecond.Y) / _world.FixedDeltaSeconds);
-                _stepAssistActive[slot] = 1;
+                acceleration -= _world.GravityCmPerSecondSquared;
+                if (move.LengthSquared() > 1e-6f && CanStep(slot, in bodyState, desiredRelativeVelocity))
+                {
+                    float targetVerticalVelocity = _supportVelocities[slot].Y + _stepAssistSpeeds[slot];
+                    acceleration.Y = MathF.Max(
+                        acceleration.Y,
+                        (targetVerticalVelocity - bodyState.LinearVelocityCmPerSecond.Y) /
+                        _world.FixedDeltaSeconds -
+                        _world.GravityCmPerSecondSquared.Y);
+                    _stepAssistActive[slot] = 1;
+                }
             }
         }
 
