@@ -301,6 +301,16 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
         harness.Transport.ClearCounters();
 
         var samples = new long[measuredFrames];
+        var allocationSamples = new long[measuredFrames];
+        var interestPrepareSamples = new long[measuredFrames];
+        var interestValidationSamples = new long[measuredFrames];
+        var knowledgeCommitSamples = new long[measuredFrames];
+        var projectionSamples = new long[measuredFrames];
+        var channelBuildSamples = new long[measuredFrames];
+        var packetEncodeSamples = new long[measuredFrames];
+        var transportSendSamples = new long[measuredFrames];
+        var acknowledgementAndFlushSamples = new long[measuredFrames];
+        var unattributedSamples = new long[measuredFrames];
         var workerAllocatedBytes = new long[harness.Physics.WorkerCount];
         long maximumWorkerAllocatedBytes = 0;
         long allocatedBytes = 0;
@@ -320,7 +330,19 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             long started = Stopwatch.GetTimestamp();
             harness.Server.AfterAuthoritativeCommit(tick);
             samples[frame] = Stopwatch.GetTimestamp() - started;
-            allocatedBytes += GC.GetAllocatedBytesForCurrentThread() - allocationBefore;
+            allocationSamples[frame] = GC.GetAllocatedBytesForCurrentThread() - allocationBefore;
+            allocatedBytes += allocationSamples[frame];
+
+            AuthoritativeNetworkPublishMetrics metrics = harness.Server.LastPublishMetrics;
+            interestPrepareSamples[frame] = metrics.InterestPrepareElapsedTimestampTicks;
+            interestValidationSamples[frame] = metrics.InterestValidationElapsedTimestampTicks;
+            knowledgeCommitSamples[frame] = metrics.KnowledgeCommitElapsedTimestampTicks;
+            projectionSamples[frame] = metrics.ProjectionElapsedTimestampTicks;
+            channelBuildSamples[frame] = metrics.ChannelBuildElapsedTimestampTicks;
+            packetEncodeSamples[frame] = metrics.PacketEncodeElapsedTimestampTicks;
+            transportSendSamples[frame] = metrics.TransportSendElapsedTimestampTicks;
+            acknowledgementAndFlushSamples[frame] = metrics.AcknowledgementAndFlushElapsedTimestampTicks;
+            unattributedSamples[frame] = metrics.UnattributedElapsedTimestampTicks;
 
             harness.Physics.CopyLastParallelQueryWorkerAllocatedBytes(workerAllocatedBytes);
             for (int worker = 0; worker < workerAllocatedBytes.Length; worker++)
@@ -342,10 +364,42 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
         }
 
         samples.AsSpan().Sort();
+        interestPrepareSamples.AsSpan().Sort();
+        interestValidationSamples.AsSpan().Sort();
+        knowledgeCommitSamples.AsSpan().Sort();
+        projectionSamples.AsSpan().Sort();
+        channelBuildSamples.AsSpan().Sort();
+        packetEncodeSamples.AsSpan().Sort();
+        transportSendSamples.AsSpan().Sort();
+        acknowledgementAndFlushSamples.AsSpan().Sort();
+        unattributedSamples.AsSpan().Sort();
         double millisecondsPerTimestamp = 1_000d / Stopwatch.Frequency;
         double p95 = Percentile(samples, 0.95) * millisecondsPerTimestamp;
         double p99 = Percentile(samples, 0.99) * millisecondsPerTimestamp;
         double budgetMilliseconds = 1_000d / GateConfig.FixedStepHz;
+        int allocatedFrameCount = 0;
+        int firstAllocatedFrame = -1;
+        long maximumFrameAllocation = 0;
+        int maximumFrameAllocationIndex = -1;
+        for (int frame = 0; frame < allocationSamples.Length; frame++)
+        {
+            if (allocationSamples[frame] == 0)
+            {
+                continue;
+            }
+
+            allocatedFrameCount++;
+            if (firstAllocatedFrame < 0)
+            {
+                firstAllocatedFrame = frame;
+            }
+
+            if (allocationSamples[frame] > maximumFrameAllocation)
+            {
+                maximumFrameAllocation = allocationSamples[frame];
+                maximumFrameAllocationIndex = frame;
+            }
+        }
 
         TestContext.Out.WriteLine(
             $"Physics3D full-publish chain: {GateConfig.SeatCount} seats + {ordinaryBodyCount:N0} registered bodies, " +
@@ -356,6 +410,20 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             $"sends snapshotFragment={harness.Transport.GetSendCount(NetworkWireKind.SnapshotFragment)}, " +
             $"replicationPacket={harness.Transport.GetSendCount(NetworkWireKind.ReplicationPacket)}, " +
             $"fixedInputAck={harness.Transport.GetSendCount(NetworkWireKind.FixedInputAcknowledgement)}.");
+        TestContext.Out.WriteLine(
+            $"Publish stages P95: interest prepare/validate/knowledge=" +
+            $"{Percentile(interestPrepareSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(interestValidationSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(knowledgeCommitSamples, 0.95) * millisecondsPerTimestamp:F3}ms, " +
+            $"projection/channel/encode/send/ack-flush=" +
+            $"{Percentile(projectionSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(channelBuildSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(packetEncodeSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(transportSendSamples, 0.95) * millisecondsPerTimestamp:F3}/" +
+            $"{Percentile(acknowledgementAndFlushSamples, 0.95) * millisecondsPerTimestamp:F3}ms, " +
+            $"unattributed={Percentile(unattributedSamples, 0.95) * millisecondsPerTimestamp:F3}ms; " +
+            $"allocated frames={allocatedFrameCount}/{measuredFrames}, first allocated frame={firstAllocatedFrame}, " +
+            $"maximum frame allocation={maximumFrameAllocation}B at frame {maximumFrameAllocationIndex}.");
 
         Assert.Multiple(() =>
         {

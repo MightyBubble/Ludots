@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.FixedInput;
@@ -169,6 +170,7 @@ namespace Ludots.Core.Networking.Runtime
         public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
+        public AuthoritativeNetworkPublishMetrics LastPublishMetrics { get; private set; }
         public int FixedInputMissingAtDeadlineCount => _fixedInput.MissingAtDeadlineCount;
         public int FixedInputAcceptedCount => _fixedInput.AcceptedCount;
 
@@ -236,6 +238,7 @@ namespace Ludots.Core.Networking.Runtime
         public void AfterAuthoritativeCommit(uint committedTick)
         {
             EnsureOperational();
+            LastPublishMetrics = default;
             if (committedTick == 0 || committedTick > FixedInputWireCodec.MaxSimulationTick)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)committedTick));
@@ -304,14 +307,24 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
+            long publishStarted = Stopwatch.GetTimestamp();
             ReadOnlySpan<SessionSeatBinding> publishSeats = _publishSeats.AsSpan(0, publishSeatCount);
+            long stageStarted = Stopwatch.GetTimestamp();
             if (!_replicationInterest.TryPrepareBatch(publishSeats))
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, detail: publishSeatCount);
             }
+            long interestPrepareElapsed = Stopwatch.GetTimestamp() - stageStarted;
+            long interestValidationElapsed = 0;
+            long knowledgeCommitElapsed = 0;
+            long projectionElapsed = 0;
+            long channelBuildElapsed = 0;
+            long packetEncodeElapsed = 0;
+            long transportSendElapsed = 0;
 
             try
             {
+                stageStarted = Stopwatch.GetTimestamp();
                 for (int publishIndex = 0; publishIndex < publishSeats.Length; publishIndex++)
                 {
                     SessionSeatBinding binding = publishSeats[publishIndex];
@@ -332,8 +345,11 @@ namespace Ludots.Core.Networking.Runtime
                         }
                     }
                 }
+                interestValidationElapsed = Stopwatch.GetTimestamp() - stageStarted;
 
+                stageStarted = Stopwatch.GetTimestamp();
                 _replicationInterest.CommitPreparedKnowledge();
+                knowledgeCommitElapsed = Stopwatch.GetTimestamp() - stageStarted;
                 for (int publishIndex = 0; publishIndex < publishSeats.Length; publishIndex++)
                 {
                     SessionSeatBinding binding = publishSeats[publishIndex];
@@ -346,7 +362,11 @@ namespace Ludots.Core.Networking.Runtime
                     BuildAndSendReplication(
                         binding.Slot,
                         committedTick,
-                        handles);
+                        handles,
+                        ref projectionElapsed,
+                        ref channelBuildElapsed,
+                        ref packetEncodeElapsed,
+                        ref transportSendElapsed);
                 }
 
                 QueueFixedInputAcknowledgements();
@@ -356,8 +376,21 @@ namespace Ludots.Core.Networking.Runtime
                 _replicationInterest.CompletePreparedBatch();
             }
 
+            stageStarted = Stopwatch.GetTimestamp();
             FlushPendingFixedInputAcknowledgements();
             FlushOutbound();
+            long acknowledgementAndFlushElapsed = Stopwatch.GetTimestamp() - stageStarted;
+            LastPublishMetrics = new AuthoritativeNetworkPublishMetrics(
+                publishSeatCount,
+                Stopwatch.GetTimestamp() - publishStarted,
+                interestPrepareElapsed,
+                interestValidationElapsed,
+                knowledgeCommitElapsed,
+                projectionElapsed,
+                channelBuildElapsed,
+                packetEncodeElapsed,
+                transportSendElapsed,
+                acknowledgementAndFlushElapsed);
         }
 
         public void PumpReplicatedClient(float frameDeltaTime)
@@ -769,7 +802,14 @@ namespace Ludots.Core.Networking.Runtime
             PrepareFullSnapshot(seat);
         }
 
-        private void BuildAndSendReplication(int seat, uint committedTick, ReadOnlySpan<NetworkEntityHandle> interestHandles)
+        private void BuildAndSendReplication(
+            int seat,
+            uint committedTick,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ref long projectionElapsed,
+            ref long channelBuildElapsed,
+            ref long packetEncodeElapsed,
+            ref long transportSendElapsed)
         {
             AuthoritativeReplicationSeatRuntime runtime = GetReplicationRuntime(seat);
             ulong snapshotId = checked(++_nextSnapshotId);
@@ -811,12 +851,18 @@ namespace Ludots.Core.Networking.Runtime
                 }
             }
 
+            AuthoritativeReplicationBuildMetrics buildMetrics = runtime.Bridge.LastBuildMetrics;
+            projectionElapsed += buildMetrics.ProjectionElapsedTimestampTicks;
+            channelBuildElapsed += buildMetrics.ChannelBuildElapsedTimestampTicks;
+
             if (built != ReplicationBridgeResult.Success)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, _seatConnections[seat], detail: (int)built);
             }
 
+            long stageStarted = Stopwatch.GetTimestamp();
             NetworkWireCodecStatus encoded = ReplicationPacketWireCodec.TryEncode(runtime.Packet, _snapshotBuffer, out int snapshotBytes);
+            packetEncodeElapsed += Stopwatch.GetTimestamp() - stageStarted;
             if (encoded != NetworkWireCodecStatus.Success)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationEncodeRejected, _seatConnections[seat], codecStatus: encoded);
@@ -824,6 +870,7 @@ namespace Ludots.Core.Networking.Runtime
 
             bool full = runtime.Packet.Header.Kind == ReplicationPacketKind.Full;
             int framedLength = NetworkWireEnvelope.SizeInBytes + snapshotBytes;
+            stageStarted = Stopwatch.GetTimestamp();
             if (full || framedLength > _capacity.MaxDatagramPayloadBytes)
             {
                 SendSnapshotFragments(seat, snapshotId, _snapshotBuffer.AsSpan(0, snapshotBytes));
@@ -836,6 +883,7 @@ namespace Ludots.Core.Networking.Runtime
                     NetworkWireKind.ReplicationPacket,
                     _snapshotBuffer.AsSpan(0, snapshotBytes));
             }
+            transportSendElapsed += Stopwatch.GetTimestamp() - stageStarted;
 
             ulong disclosureSequence = _seatLastDisclosureSequences[seat];
             ReadOnlySpan<ReplicationDisclosureChange> disclosures = runtime.Packet.DisclosureChanges;

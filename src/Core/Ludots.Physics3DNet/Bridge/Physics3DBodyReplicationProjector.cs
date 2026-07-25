@@ -61,7 +61,7 @@ public sealed class Physics3DBodyReplicationProjector : IReplicationSchemaProjec
             return false;
         }
 
-        if (!Physics3DReplicationStateCodec.TryEncode(
+        if (!Physics3DReplicationStateCodec.TryEncodeValidated(
                 in bodyState,
                 body.Kind,
                 _quantization,

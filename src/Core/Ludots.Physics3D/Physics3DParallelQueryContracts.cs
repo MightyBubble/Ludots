@@ -52,4 +52,17 @@ public sealed class Physics3DReadQueryContext
             _overlapHits);
         return _overlapHits.AsSpan(0, count);
     }
+
+    public ReadOnlySpan<Physics3DOverlapHit> QueryBodyCentersInSphere(
+        Vector3 centerCm,
+        float radiusCm,
+        Physics3DQueryFilter filter)
+    {
+        int count = _queries.QueryBodyCentersInSphere(
+            centerCm,
+            radiusCm,
+            in filter,
+            _overlapHits);
+        return _overlapHits.AsSpan(0, count);
+    }
 }
