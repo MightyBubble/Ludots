@@ -1108,8 +1108,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void Transition(ClientStage next, AcceptanceProgressStage progressStage)
     {
         _clientStage = next;
-        _progress.Stage = progressStage;
-        _progress.Detail = next.ToString();
+        _progress.TransitionTo(progressStage, next.ToString());
         _substep = 0;
         _stageStartedTimestamp = Stopwatch.GetTimestamp();
         StartStep(next.ToString());
@@ -2232,8 +2231,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         RefreshEvidenceSnapshot();
         _evidence.Status = "passed";
         _evidence.CompletedAtUtc = DateTime.UtcNow.ToString("O");
-        _progress.Stage = AcceptanceProgressStage.Completed;
-        _progress.Detail = _clientStage.ToString();
+        _progress.TransitionTo(AcceptanceProgressStage.Completed, _clientStage.ToString());
         AcceptanceEvidenceWriter.WriteAtomic(_evidence, _evidencePath);
         _terminal = true;
     }
@@ -2251,8 +2249,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _evidence.Steps[^1].CompletedAtUtc = DateTime.UtcNow.ToString("O");
             _evidence.Steps[^1].Detail = exception.Message;
         }
-        _progress.Stage = AcceptanceProgressStage.Failed;
-        _progress.Detail = exception.Message;
+        _progress.TransitionTo(AcceptanceProgressStage.Failed, exception.Message);
         AcceptanceEvidenceWriter.WriteAtomic(_evidence, _evidencePath);
     }
 

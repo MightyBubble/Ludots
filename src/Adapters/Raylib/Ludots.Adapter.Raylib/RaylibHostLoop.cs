@@ -311,14 +311,45 @@ namespace Ludots.Adapter.Raylib
                 string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
                     ? null
                     : Path.GetFileName(screenshotTargetPath);
-                int[] screenshotFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+                string? rawScreenshotMilestones = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_MILESTONES");
+                string? rawScreenshotFrame = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME");
+                string? rawScreenshotFrames = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+                bool milestoneScreenshotMode = RaylibPresentationCaptureSequence.ValidateCaptureMode(
+                    rawScreenshotMilestones,
+                    rawScreenshotFrame,
+                    rawScreenshotFrames);
+
+                RaylibPresentationCaptureSequence? milestoneCaptureSequence = null;
+                if (milestoneScreenshotMode)
+                {
+                    if (!engine.TryGetService(
+                            CoreServiceKeys.PresentationCaptureMilestoneSource,
+                            out IPresentationCaptureMilestoneSource milestoneSource) ||
+                        milestoneSource == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Milestone screenshot capture requires the PresentationCaptureMilestoneSource service.");
+                    }
+
+                    milestoneCaptureSequence = RaylibPresentationCaptureSequence.Create(
+                        milestoneSource,
+                        screenshotTargetPath ?? string.Empty,
+                        rawScreenshotMilestones!);
+                }
+
+                int[] screenshotFrames = milestoneScreenshotMode
+                    ? Array.Empty<int>()
+                    : ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
                 int screenshotSequenceIndex = 0;
                 bool screenshotSequenceEnabled = screenshotFrames.Length > 0;
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName) &&
-                                         (!screenshotSequenceEnabled || screenshotFrames.Length > 0);
-                int screenshotFrame = screenshotSequenceEnabled
+                bool screenshotPending = milestoneCaptureSequence?.HasPending ??
+                                         (!string.IsNullOrWhiteSpace(screenshotFileName) &&
+                                          (!screenshotSequenceEnabled || screenshotFrames.Length > 0));
+                int screenshotFrame = milestoneScreenshotMode
+                    ? 0
+                    : screenshotSequenceEnabled
                     ? screenshotFrames[0]
-                    : int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
+                    : int.TryParse(rawScreenshotFrame, out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
@@ -712,7 +743,40 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame &&
+                        if (milestoneCaptureSequence != null &&
+                            milestoneCaptureSequence.TryPrepareCapture(
+                                frameIndex,
+                                out RaylibPresentationCaptureRequest milestoneCapture))
+                        {
+                            string? screenshotDirectory = Path.GetDirectoryName(milestoneCapture.Path);
+                            if (!string.IsNullOrWhiteSpace(screenshotDirectory))
+                            {
+                                Directory.CreateDirectory(screenshotDirectory);
+                            }
+
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"screenshot milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
+                            if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry milestoneMeshesForDiagnostics))
+                            {
+                                AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(milestoneMeshesForDiagnostics));
+                            }
+                            AppendPresentationFrameReceiptDiagnostics(engine, diagnosticPath);
+                            AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
+
+                            long screenshotStart = Stopwatch.GetTimestamp();
+                            TakeScreenshotAtomic(milestoneCapture.Path);
+                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
+                            milestoneCaptureSequence.CompleteCapture(in milestoneCapture);
+                            screenshotPending = milestoneCaptureSequence.HasPending;
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"screenshot-complete milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} file={Path.GetFileName(milestoneCapture.Path)}");
+                            Log.Info(in LogChannels.Engine, $"Captured runtime milestone screenshot: {milestoneCapture.Path}");
+                        }
+                        else if (milestoneCaptureSequence == null && screenshotPending && frameIndex >= screenshotFrame &&
                             runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotSequenceEnabled
@@ -974,6 +1038,40 @@ namespace Ludots.Adapter.Raylib
             return string.IsNullOrWhiteSpace(directory)
                 ? Path.GetFullPath(sequencedFileName)
                 : Path.Combine(directory, sequencedFileName);
+        }
+
+        private static void TakeScreenshotAtomic(string targetPath)
+        {
+            string fullTargetPath = Path.GetFullPath(targetPath);
+            string directory = Path.GetDirectoryName(fullTargetPath)
+                ?? throw new InvalidOperationException("Screenshot target path has no directory.");
+            Directory.CreateDirectory(directory);
+            string extension = Path.GetExtension(fullTargetPath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";
+            }
+
+            string temporaryPath = Path.Combine(
+                directory,
+                $".{Path.GetFileNameWithoutExtension(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp{extension}");
+            try
+            {
+                Rl.TakeScreenshot(temporaryPath);
+                if (!File.Exists(temporaryPath) || new FileInfo(temporaryPath).Length == 0)
+                {
+                    throw new IOException($"Raylib did not write a non-empty screenshot temporary file '{temporaryPath}'.");
+                }
+
+                File.Move(temporaryPath, fullTargetPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
         }
 
         private static SyntheticUiPlayback ReadSyntheticUiPlayback()

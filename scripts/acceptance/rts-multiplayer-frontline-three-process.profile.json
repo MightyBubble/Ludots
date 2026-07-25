@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -15,18 +15,18 @@
   "clientScreenshots": {
     "clientOne": {
       "path": "screens/client-a/frontline.png",
-      "frames": [
-        600,
-        6100,
-        7000
+      "milestones": [
+        "advancing",
+        "engaging",
+        "completed"
       ]
     },
     "clientTwo": {
       "path": "screens/client-b/frontline.png",
-      "frames": [
-        600,
-        6100,
-        7000
+      "milestones": [
+        "advancing",
+        "engaging",
+        "completed"
       ]
     }
   },
@@ -41,7 +41,7 @@
   "requiredPresentationReceipts": [
     {
       "role": "core",
-      "frames": [600],
+      "milestones": ["advancing"],
       "template": "rts.frontline.core.base",
       "minimumSubmitted": 1,
       "minimumOnscreen": 1,
@@ -50,7 +50,7 @@
     },
     {
       "role": "harvester",
-      "frames": [600],
+      "milestones": ["advancing"],
       "template": "rts.frontline.harvester.chassis",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
@@ -59,7 +59,7 @@
     },
     {
       "role": "infantry",
-      "frames": [600, 6100, 7000],
+      "milestones": ["advancing", "engaging"],
       "template": "rts.frontline.infantry.body",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
@@ -68,7 +68,7 @@
     },
     {
       "role": "crystal",
-      "frames": [600],
+      "milestones": ["advancing"],
       "template": "rts.frontline.crystal.center",
       "minimumSubmitted": 1,
       "minimumOnscreen": 1,
