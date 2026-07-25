@@ -6,6 +6,7 @@ using Ludots.Core.Hosting;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
@@ -295,8 +296,82 @@ internal enum AcceptanceProgressStage : byte
     Failed = 7,
 }
 
-internal sealed class AcceptanceProgress
+internal sealed class AcceptanceProgress : IPresentationCaptureMilestoneSource
 {
-    public AcceptanceProgressStage Stage { get; set; }
-    public string Detail { get; set; } = string.Empty;
+    private AcceptanceProgressStage _stage = AcceptanceProgressStage.Connecting;
+    private string _detail = string.Empty;
+    private uint _revision = 1;
+
+    public AcceptanceProgressStage Stage => _stage;
+
+    public string Detail => _detail;
+
+    public PresentationCaptureMilestoneSnapshot Current => new(
+        GetMilestoneId(_stage),
+        GetMilestoneOrder(_stage),
+        _revision);
+
+    public void TransitionTo(AcceptanceProgressStage stage, string detail)
+    {
+        detail ??= string.Empty;
+        int currentOrder = GetMilestoneOrder(_stage);
+        int nextOrder = GetMilestoneOrder(stage);
+        if (nextOrder < currentOrder)
+        {
+            throw new InvalidOperationException(
+                $"Acceptance progress cannot move backward from '{GetMilestoneId(_stage)}' to '{GetMilestoneId(stage)}'.");
+        }
+
+        if (stage == _stage && string.Equals(detail, _detail, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _revision = checked(_revision + 1);
+        _stage = stage;
+        _detail = detail;
+    }
+
+    public bool TryResolveOrder(string milestoneId, out int order)
+    {
+        order = milestoneId switch
+        {
+            "connecting" => 0,
+            "ready" => 1,
+            "gathering" => 2,
+            "training" => 3,
+            "advancing" => 4,
+            "engaging" => 5,
+            "completed" => 6,
+            "failed" => 7,
+            _ => -1,
+        };
+        return order >= 0;
+    }
+
+    private static string GetMilestoneId(AcceptanceProgressStage stage) => stage switch
+    {
+        AcceptanceProgressStage.Connecting => "connecting",
+        AcceptanceProgressStage.Ready => "ready",
+        AcceptanceProgressStage.Gathering => "gathering",
+        AcceptanceProgressStage.Training => "training",
+        AcceptanceProgressStage.Advancing => "advancing",
+        AcceptanceProgressStage.Engaging => "engaging",
+        AcceptanceProgressStage.Completed => "completed",
+        AcceptanceProgressStage.Failed => "failed",
+        _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown acceptance progress stage."),
+    };
+
+    private static int GetMilestoneOrder(AcceptanceProgressStage stage) => stage switch
+    {
+        AcceptanceProgressStage.Connecting => 0,
+        AcceptanceProgressStage.Ready => 1,
+        AcceptanceProgressStage.Gathering => 2,
+        AcceptanceProgressStage.Training => 3,
+        AcceptanceProgressStage.Advancing => 4,
+        AcceptanceProgressStage.Engaging => 5,
+        AcceptanceProgressStage.Completed => 6,
+        AcceptanceProgressStage.Failed => 7,
+        _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown acceptance progress stage."),
+    };
 }

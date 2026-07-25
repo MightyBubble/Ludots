@@ -18,6 +18,7 @@ $script:AcceptanceContaminatingEnvironmentVariables = @(
     "LUDOTS_TAKE_SCREENSHOT_PATH",
     "LUDOTS_TAKE_SCREENSHOT_FRAME",
     "LUDOTS_TAKE_SCREENSHOT_FRAMES",
+    "LUDOTS_TAKE_SCREENSHOT_MILESTONES",
     "LUDOTS_RAYLIB_DIAGNOSTIC_PATH",
     "LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES",
     "LUDOTS_RAYLIB_TIMING_SYSTEM_BREAKDOWN",
@@ -384,13 +385,17 @@ function New-ClientScreenshotCapture {
     }
     $targetPath = Resolve-ArtifactChildPath -ArtifactDirectory $ArtifactDirectory `
         -RelativePath ([string]$Configuration.path) -Owner "$ProcessName screenshot path"
-    $frames = @($Configuration.frames | ForEach-Object { [int]$_ })
-    if ($frames.Count -eq 0 -or @($frames | Where-Object { $_ -le 0 }).Count -ne 0) {
-        throw "Screenshot frames for '$ProcessName' must contain positive frame numbers."
+    $milestones = @($Configuration.milestones | ForEach-Object { [string]$_ })
+    if ($milestones.Count -eq 0) {
+        throw "Screenshot milestones for '$ProcessName' must not be empty."
     }
-    for ($index = 1; $index -lt $frames.Count; $index++) {
-        if ($frames[$index] -le $frames[$index - 1]) {
-            throw "Screenshot frames for '$ProcessName' must be strictly increasing."
+    $seenMilestones = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($milestone in $milestones) {
+        if ($milestone -cnotmatch '^[A-Za-z0-9._-]+$') {
+            throw "Screenshot milestone '$milestone' for '$ProcessName' must be a non-empty ASCII identifier."
+        }
+        if (-not $seenMilestones.Add($milestone)) {
+            throw "Screenshot milestone '$milestone' for '$ProcessName' is duplicated."
         }
     }
 
@@ -409,12 +414,14 @@ function New-ClientScreenshotCapture {
         -Owner "$ProcessName Raylib diagnostic path"
 
     $files = [System.Collections.Generic.List[object]]::new()
-    for ($index = 0; $index -lt $frames.Count; $index++) {
-        $fileName = "{0}_{1:000}_f{2:0000}{3}" -f $baseName, ($index + 1), $frames[$index], $extension
+    for ($index = 0; $index -lt $milestones.Count; $index++) {
+        $fileName = "{0}_{1:000}_{2}{3}" -f $baseName, ($index + 1), $milestones[$index], $extension
         $files.Add([pscustomobject]@{
             ProcessName = $ProcessName
-            Frame = $frames[$index]
+            Milestone = $milestones[$index]
+            MilestoneIndex = $index
             Path = [System.IO.Path]::Combine($directory, $fileName)
+            DiagnosticPath = $diagnosticPath
         })
     }
 
@@ -422,11 +429,11 @@ function New-ClientScreenshotCapture {
         ProcessName = $ProcessName
         TargetPath = $targetPath
         DiagnosticPath = $diagnosticPath
-        Frames = $frames
+        Milestones = $milestones
         Files = @($files)
         EnvironmentVariables = [ordered]@{
             LUDOTS_TAKE_SCREENSHOT_PATH = $targetPath
-            LUDOTS_TAKE_SCREENSHOT_FRAMES = ($frames -join ",")
+            LUDOTS_TAKE_SCREENSHOT_MILESTONES = ($milestones -join ",")
             LUDOTS_RAYLIB_DIAGNOSTIC_PATH = $diagnosticPath
         }
     }
@@ -437,13 +444,13 @@ function Get-RequiredDiagnosticCount {
         [Parameter(Mandatory = $true)][string]$Line,
         [Parameter(Mandatory = $true)][string]$Field,
         [Parameter(Mandatory = $true)][string]$ProcessName,
-        [Parameter(Mandatory = $true)][int]$Frame
+        [Parameter(Mandatory = $true)][string]$Milestone
     )
 
     $pattern = "(?:^|\s)$([regex]::Escape($Field))=(?<value>\d+)(?:\s|$)"
     $match = [regex]::Match($Line, $pattern, [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
     if (-not $match.Success) {
-        throw "Client '$ProcessName' Raylib diagnostic for screenshot frame $Frame lacks integer field '$Field'."
+        throw "Client '$ProcessName' Raylib diagnostic for screenshot milestone '$Milestone' lacks integer field '$Field'."
     }
 
     return [int]::Parse($match.Groups["value"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
@@ -466,32 +473,91 @@ function Read-ClientPresentationEvidence {
         throw "Client '$($Capture.ProcessName)' wrote an empty Raylib diagnostic: $diagnosticPath"
     }
 
-    $expectedFrames = @($Capture.Frames | ForEach-Object { [int]$_ })
-    $recordsByFrame = @{}
+    $expectedMilestones = @($Capture.Milestones | ForEach-Object { [string]$_ })
+    $completionByMilestone = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+    foreach ($line in $lines) {
+        if ($line -notmatch '(?:^|\s)screenshot-complete(?:\s|$)') {
+            continue
+        }
+        $completionMatch = [regex]::Match(
+            $line,
+            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+)\s*$',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+        if (-not $completionMatch.Success) {
+            throw "Client '$($Capture.ProcessName)' wrote a malformed screenshot completion diagnostic."
+        }
+        $milestone = $completionMatch.Groups["milestone"].Value
+        if (-not ($expectedMilestones -ccontains $milestone)) {
+            throw "Client '$($Capture.ProcessName)' wrote an unexpected screenshot completion for milestone '$milestone'."
+        }
+        if ($completionByMilestone.ContainsKey($milestone)) {
+            throw "Client '$($Capture.ProcessName)' wrote duplicate screenshot completion diagnostics for milestone '$milestone'."
+        }
+        $target = @($Capture.Files | Where-Object { [string]$_.Milestone -ceq $milestone })
+        if ($target.Count -ne 1) {
+            throw "Client '$($Capture.ProcessName)' has no unique screenshot target for milestone '$milestone'."
+        }
+        $expectedFile = [System.IO.Path]::GetFileName([string]$target[0].Path)
+        if ($completionMatch.Groups["file"].Value -cne $expectedFile) {
+            throw "Client '$($Capture.ProcessName)' milestone '$milestone' completion names file '$($completionMatch.Groups["file"].Value)' instead of '$expectedFile'."
+        }
+        $completionByMilestone[$milestone] = [ordered]@{
+            milestone = $milestone
+            milestoneOrder = [int]::Parse($completionMatch.Groups["order"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+            milestoneRevision = [uint32]::Parse($completionMatch.Groups["revision"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+            hostFrame = [int]::Parse($completionMatch.Groups["frame"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+            fileName = $expectedFile
+        }
+    }
+
+    $recordsByMilestone = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+    $nextExpectedIndex = 0
+    $previousOrder = -1
     for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
         $screenshotMatch = [regex]::Match(
             $lines[$lineIndex],
-            "(?:^|\s)screenshot frame=(?<frame>\d+)(?:\s|$)",
+            "(?:^|\s)screenshot milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+)(?:\s|$)",
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
         if (-not $screenshotMatch.Success) {
             continue
         }
 
+        $milestone = $screenshotMatch.Groups["milestone"].Value
+        if ($nextExpectedIndex -ge $expectedMilestones.Count -or
+            $milestone -cne $expectedMilestones[$nextExpectedIndex]) {
+            $expected = if ($nextExpectedIndex -lt $expectedMilestones.Count) { $expectedMilestones[$nextExpectedIndex] } else { "<none>" }
+            throw "Client '$($Capture.ProcessName)' wrote screenshot milestone '$milestone' out of order; expected '$expected'."
+        }
+        if ($recordsByMilestone.ContainsKey($milestone)) {
+            throw "Client '$($Capture.ProcessName)' wrote duplicate Raylib diagnostics for screenshot milestone '$milestone'."
+        }
+        $milestoneOrder = [int]::Parse(
+            $screenshotMatch.Groups["order"].Value,
+            [System.Globalization.CultureInfo]::InvariantCulture)
+        $milestoneRevision = [uint32]::Parse(
+            $screenshotMatch.Groups["revision"].Value,
+            [System.Globalization.CultureInfo]::InvariantCulture)
         $frame = [int]::Parse(
             $screenshotMatch.Groups["frame"].Value,
             [System.Globalization.CultureInfo]::InvariantCulture)
-        if (-not ($expectedFrames -contains $frame)) {
-            continue
+        if ($milestoneOrder -le $previousOrder) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has non-increasing order $milestoneOrder."
         }
-        if ($recordsByFrame.ContainsKey($frame)) {
-            throw "Client '$($Capture.ProcessName)' wrote duplicate Raylib diagnostics for screenshot frame $frame."
+        if (-not $completionByMilestone.ContainsKey($milestone)) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has no completion diagnostic."
+        }
+        $completion = $completionByMilestone[$milestone]
+        if ([int]$completion.milestoneOrder -ne $milestoneOrder -or
+            [uint32]$completion.milestoneRevision -ne $milestoneRevision -or
+            [int]$completion.hostFrame -ne $frame) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' start and completion metadata do not match."
         }
 
         $timingLine = $null
         $visualCountLine = $null
         $receiptLines = [System.Collections.Generic.List[string]]::new()
         for ($detailIndex = $lineIndex + 1; $detailIndex -lt $lines.Count; $detailIndex++) {
-            if ($lines[$detailIndex] -match '(?:^|\s)screenshot frame=') {
+            if ($lines[$detailIndex] -match '(?:^|\s)screenshot milestone=') {
                 break
             }
             if ($null -eq $timingLine -and $lines[$detailIndex] -match '(?:^|\s)timing frame=') {
@@ -507,26 +573,26 @@ function Read-ClientPresentationEvidence {
             }
         }
         if ($null -eq $timingLine -or $null -eq $visualCountLine) {
-            throw "Client '$($Capture.ProcessName)' screenshot frame $frame lacks its complete Raylib presentation diagnostics."
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' lacks its complete Raylib presentation diagnostics."
         }
 
         $visibleEntities = Get-RequiredDiagnosticCount -Line $timingLine -Field "visibleEntities" `
-            -ProcessName $Capture.ProcessName -Frame $frame
+            -ProcessName $Capture.ProcessName -Milestone $milestone
         $performerActive = Get-RequiredDiagnosticCount -Line $timingLine -Field "performerActive" `
-            -ProcessName $Capture.ProcessName -Frame $frame
+            -ProcessName $Capture.ProcessName -Milestone $milestone
         $primitiveRaw = Get-RequiredDiagnosticCount -Line $timingLine -Field "primitiveRaw" `
-            -ProcessName $Capture.ProcessName -Frame $frame
+            -ProcessName $Capture.ProcessName -Milestone $milestone
         $primitiveInstances = Get-RequiredDiagnosticCount -Line $timingLine -Field "primInstances" `
-            -ProcessName $Capture.ProcessName -Frame $frame
+            -ProcessName $Capture.ProcessName -Milestone $milestone
         $primitiveBatches = Get-RequiredDiagnosticCount -Line $timingLine -Field "primBatches" `
-            -ProcessName $Capture.ProcessName -Frame $frame
+            -ProcessName $Capture.ProcessName -Milestone $milestone
 
         $visualMatch = [regex]::Match(
             $visualCountLine,
             'prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)',
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
         if (-not $visualMatch.Success) {
-            throw "Client '$($Capture.ProcessName)' screenshot frame $frame has malformed prefab visual diagnostics."
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has malformed prefab visual diagnostics."
         }
         $prefabVisuals = 0
         foreach ($kind in @("mesh", "decal", "vfx", "surface")) {
@@ -536,7 +602,10 @@ function Read-ClientPresentationEvidence {
         }
 
         $observed = [ordered]@{
-            frame = $frame
+            milestone = $milestone
+            milestoneOrder = $milestoneOrder
+            milestoneRevision = $milestoneRevision
+            hostFrame = $frame
             visibleEntities = $visibleEntities
             activePerformers = $performerActive
             authoredPrimitives = $primitiveRaw
@@ -553,23 +622,23 @@ function Read-ClientPresentationEvidence {
             [pscustomobject]@{ Name = "prefab visuals"; Actual = $prefabVisuals; Minimum = [int]$Minimums.minimumPrefabVisuals }
         )) {
             if ($requirement.Actual -lt $requirement.Minimum) {
-                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has $($requirement.Actual) $($requirement.Name); expected at least $($requirement.Minimum). HUD-only screenshots are not accepted."
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has $($requirement.Actual) $($requirement.Name); expected at least $($requirement.Minimum). HUD-only screenshots are not accepted."
             }
         }
 
-        $receiptsByTemplate = @{}
+        $receiptsByTemplate = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
         foreach ($receiptLine in $receiptLines) {
             $receiptMatch = [regex]::Match(
                 $receiptLine,
                 '^\[[^\]]+\]\s+presentation-receipt template=(?<template>[A-Za-z0-9._:-]+) templateId=(?<templateId>[1-9]\d*) submitted=(?<submitted>[1-9]\d*) onscreen=(?<onscreen>\d+) minShortEdgePx=(?<shortEdge>\d+(?:\.\d+)?) minAreaPx2=(?<area>\d+(?:\.\d+)?)\s*$',
                 [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
             if (-not $receiptMatch.Success) {
-                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has malformed presentation receipt diagnostics."
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has malformed presentation receipt diagnostics."
             }
 
             $template = $receiptMatch.Groups["template"].Value
             if ($receiptsByTemplate.ContainsKey($template)) {
-                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has duplicate presentation receipts for template '$template'."
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has duplicate presentation receipts for template '$template'."
             }
 
             $receiptsByTemplate[$template] = [ordered]@{
@@ -582,12 +651,12 @@ function Read-ClientPresentationEvidence {
             }
         }
 
-        $requiredForFrame = @($RequiredReceipts | Where-Object { @($_.frames | ForEach-Object { [int]$_ }) -contains $frame })
+        $requiredForMilestone = @($RequiredReceipts | Where-Object { @($_.milestones | ForEach-Object { [string]$_ }) -ccontains $milestone })
         $observedRequiredReceipts = [System.Collections.Generic.List[object]]::new()
-        foreach ($requirement in $requiredForFrame) {
+        foreach ($requirement in $requiredForMilestone) {
             $template = [string]$requirement.template
             if (-not $receiptsByTemplate.ContainsKey($template)) {
-                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has no submitted presentation receipt for role '$($requirement.role)' (template '$template')."
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has no submitted presentation receipt for role '$($requirement.role)' (template '$template')."
             }
 
             $receipt = $receiptsByTemplate[$template]
@@ -598,7 +667,7 @@ function Read-ClientPresentationEvidence {
                 [pscustomobject]@{ Name = "minimum projected area pixels"; Actual = [double]$receipt.minimumAreaPx2; Minimum = [double]$requirement.minimumAreaPx2 }
             )) {
                 if ($threshold.Actual -lt $threshold.Minimum) {
-                    throw "Client '$($Capture.ProcessName)' screenshot frame $frame role '$($requirement.role)' has $($threshold.Actual) $($threshold.Name); expected at least $($threshold.Minimum)."
+                    throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' role '$($requirement.role)' has $($threshold.Actual) $($threshold.Name); expected at least $($threshold.Minimum)."
                 }
             }
 
@@ -614,19 +683,67 @@ function Read-ClientPresentationEvidence {
         }
         $observed["presentationReceipts"] = @($observedRequiredReceipts)
 
-        $recordsByFrame[$frame] = $observed
+        $recordsByMilestone[$milestone] = $observed
+        $previousOrder = $milestoneOrder
+        $nextExpectedIndex++
     }
 
-    foreach ($expectedFrame in $expectedFrames) {
-        if (-not $recordsByFrame.ContainsKey($expectedFrame)) {
-            throw "Client '$($Capture.ProcessName)' lacks Raylib presentation evidence for screenshot frame $expectedFrame."
+    foreach ($expectedMilestone in $expectedMilestones) {
+        if (-not $recordsByMilestone.ContainsKey($expectedMilestone)) {
+            throw "Client '$($Capture.ProcessName)' lacks Raylib presentation evidence for screenshot milestone '$expectedMilestone'."
         }
     }
 
     return [ordered]@{
         process = $Capture.ProcessName
         diagnostic = Get-FileEvidence -Path $diagnosticPath
-        frames = @($expectedFrames | ForEach-Object { $recordsByFrame[$_] })
+        milestones = @($expectedMilestones | ForEach-Object { $recordsByMilestone[$_] })
+    }
+}
+
+function Get-ScreenshotCompletionRecord {
+    param([Parameter(Mandatory = $true)]$Target)
+
+    $diagnosticPath = [string]$Target.DiagnosticPath
+    if (-not (Test-Path -LiteralPath $diagnosticPath -PathType Leaf)) {
+        return $null
+    }
+
+    $milestone = [string]$Target.Milestone
+    $expectedFile = [System.IO.Path]::GetFileName([string]$Target.Path)
+    $matches = [System.Collections.Generic.List[System.Text.RegularExpressions.Match]]::new()
+    foreach ($line in [System.IO.File]::ReadAllLines($diagnosticPath)) {
+        $isCompletionLine = $line -match '(?:^|\s)screenshot-complete(?:\s|$)'
+        $match = [regex]::Match(
+            $line,
+            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+)\s*$',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+        if ($isCompletionLine -and -not $match.Success) {
+            throw "Client '$($Target.ProcessName)' wrote a malformed screenshot completion diagnostic."
+        }
+        if ($match.Success -and $match.Groups["milestone"].Value -ceq $milestone) {
+            $matches.Add($match)
+        }
+    }
+    if ($matches.Count -eq 0) {
+        return $null
+    }
+    if ($matches.Count -ne 1) {
+        throw "Client '$($Target.ProcessName)' wrote duplicate screenshot completion diagnostics for milestone '$milestone'."
+    }
+    $completion = $matches[0]
+    if ($completion.Groups["file"].Value -cne $expectedFile) {
+        throw "Client '$($Target.ProcessName)' milestone '$milestone' completion names file '$($completion.Groups["file"].Value)' instead of '$expectedFile'."
+    }
+
+    return [pscustomobject]@{
+        ProcessName = [string]$Target.ProcessName
+        Milestone = $milestone
+        MilestoneOrder = [int]::Parse($completion.Groups["order"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+        MilestoneRevision = [uint32]::Parse($completion.Groups["revision"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+        HostFrame = [int]::Parse($completion.Groups["frame"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+        Path = [string]$Target.Path
+        DiagnosticPath = $diagnosticPath
     }
 }
 
@@ -644,21 +761,32 @@ function Wait-ForScreenshotEvidence {
     while ([DateTime]::UtcNow -lt $deadline) {
         Assert-OwnedProcessesAlive -OwnedProcesses $OwnedProcesses
         $ready = $true
+        $completionRecords = [System.Collections.Generic.List[object]]::new()
         foreach ($target in $all) {
             if (-not (Test-Path -LiteralPath $target.Path -PathType Leaf) -or
                 (Get-Item -LiteralPath $target.Path).Length -le 0) {
                 $ready = $false
                 break
             }
+            $completion = Get-ScreenshotCompletionRecord -Target $target
+            if ($null -eq $completion) {
+                $ready = $false
+                break
+            }
+            $completionRecords.Add($completion)
         }
-        if ($ready) { return $all }
+        if ($ready) { return @($completionRecords) }
         Start-Sleep -Milliseconds $PollMilliseconds
     }
 
     $missing = @($all | Where-Object {
         -not (Test-Path -LiteralPath $_.Path -PathType Leaf) -or (Get-Item -LiteralPath $_.Path).Length -le 0
-    } | ForEach-Object { "$($_.ProcessName):frame-$($_.Frame)" })
-    throw "Timed out after $TimeoutSeconds seconds waiting for client screenshots. Missing or empty: $($missing -join ', ')."
+    } | ForEach-Object { "$($_.ProcessName):$($_.Milestone)" })
+    $missingCompletions = @($all | Where-Object {
+        $null -eq (Get-ScreenshotCompletionRecord -Target $_)
+    } | ForEach-Object { "$($_.ProcessName):$($_.Milestone)-completion" })
+    $missingEvidence = @(@($missing) + @($missingCompletions) | Select-Object -Unique)
+    throw "Timed out after $TimeoutSeconds seconds waiting for client screenshots. Missing or empty: $($missingEvidence -join ', ')."
 }
 
 function Invoke-NativeTextCommand {
@@ -1520,7 +1648,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 3) {
+if ($profile.schemaVersion -ne 4) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -1557,32 +1685,33 @@ $requiredPresentationReceipts = @($profile.requiredPresentationReceipts)
 if ($requiredPresentationReceipts.Count -eq 0) {
     throw "requiredPresentationReceipts must declare at least one role-specific presentation requirement."
 }
-$configuredScreenshotFrames = @(
-    @($profile.clientScreenshots.clientOne.frames) + @($profile.clientScreenshots.clientTwo.frames) |
-        ForEach-Object { [int]$_ } |
-        Sort-Object -Unique)
-$requiredReceiptKeys = @{}
+$configuredScreenshotMilestones = @(
+    @($profile.clientScreenshots.clientOne.milestones) + @($profile.clientScreenshots.clientTwo.milestones) |
+        ForEach-Object { [string]$_ } |
+        Sort-Object -Unique -CaseSensitive)
+$requiredReceiptKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($requirement in $requiredPresentationReceipts) {
     $role = [string]$requirement.role
     $template = [string]$requirement.template
-    $frames = @($requirement.frames | ForEach-Object { [int]$_ })
+    $milestones = @($requirement.milestones | ForEach-Object { [string]$_ })
     if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template)) {
         throw "Every requiredPresentationReceipts entry must declare non-empty role and template values."
     }
-    if ($frames.Count -eq 0 -or @($frames | Where-Object { $_ -le 0 -or -not ($configuredScreenshotFrames -contains $_) }).Count -ne 0) {
-        throw "requiredPresentationReceipts role '$role' must target positive configured screenshot frames."
+    if ($milestones.Count -eq 0 -or @($milestones | Where-Object {
+        $_ -cnotmatch '^[A-Za-z0-9._-]+$' -or -not ($configuredScreenshotMilestones -ccontains $_)
+    }).Count -ne 0) {
+        throw "requiredPresentationReceipts role '$role' must target configured screenshot milestones."
     }
     foreach ($thresholdName in @("minimumSubmitted", "minimumOnscreen", "minimumShortEdgePx", "minimumAreaPx2")) {
         if ($null -eq $requirement.PSObject.Properties[$thresholdName] -or [double]$requirement.$thresholdName -le 0) {
             throw "requiredPresentationReceipts role '$role' must declare positive $thresholdName."
         }
     }
-    foreach ($frame in $frames) {
-        $key = "$frame`n$template"
-        if ($requiredReceiptKeys.ContainsKey($key)) {
-            throw "requiredPresentationReceipts duplicates template '$template' for screenshot frame $frame."
+    foreach ($milestone in $milestones) {
+        $key = "$milestone`n$template"
+        if (-not $requiredReceiptKeys.Add($key)) {
+            throw "requiredPresentationReceipts duplicates template '$template' for screenshot milestone '$milestone'."
         }
-        $requiredReceiptKeys[$key] = $true
     }
 }
 if ($script:FaultProfileValue -cne "normal" -and $script:FaultProfileValue -cne "unstable") {
@@ -1636,7 +1765,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 6
+    schemaVersion = 7
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -1671,13 +1800,13 @@ $manifest = [ordered]@{
                 process = $clientAScreenshotCapture.ProcessName
                 targetPath = $clientAScreenshotCapture.TargetPath
                 diagnosticPath = $clientAScreenshotCapture.DiagnosticPath
-                frames = @($clientAScreenshotCapture.Frames)
+                milestones = @($clientAScreenshotCapture.Milestones)
             }
             [ordered]@{
                 process = $clientBScreenshotCapture.ProcessName
                 targetPath = $clientBScreenshotCapture.TargetPath
                 diagnosticPath = $clientBScreenshotCapture.DiagnosticPath
-                frames = @($clientBScreenshotCapture.Frames)
+                milestones = @($clientBScreenshotCapture.Milestones)
             }
         )
         clientPresentation = $profile.clientPresentation
@@ -1944,7 +2073,10 @@ try {
     $manifest.screenshots = @($screenshotItems | ForEach-Object {
         [ordered]@{
             process = $_.ProcessName
-            frame = [int]$_.Frame
+            milestone = [string]$_.Milestone
+            milestoneOrder = [int]$_.MilestoneOrder
+            milestoneRevision = [uint32]$_.MilestoneRevision
+            hostFrame = [int]$_.HostFrame
             file = Get-FileEvidence -Path $_.Path
         }
     })
