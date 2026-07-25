@@ -1098,6 +1098,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         public bool HasEstablishedSession { get; set; }
         public bool IsAwaitingFullSnapshot { get; set; }
         public bool IsFaulted { get; set; }
+        public uint LastCommittedTick { get; set; }
         public float ReconnectWindowRemainingSeconds { get; set; } = 30f;
         public int RoundTripTimeMilliseconds { get; set; }
 

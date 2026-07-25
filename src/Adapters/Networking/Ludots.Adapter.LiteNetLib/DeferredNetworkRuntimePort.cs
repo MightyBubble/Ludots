@@ -57,6 +57,8 @@ internal sealed class DeferredNetworkRuntimePort :
 
     public bool IsFaulted => GetClientStatus().IsFaulted;
 
+    public uint LastCommittedTick => GetClientStatus().LastCommittedTick;
+
     public float ReconnectWindowRemainingSeconds => GetClientStatus().ReconnectWindowRemainingSeconds;
 
     public int RoundTripTimeMilliseconds => GetClientStatus().RoundTripTimeMilliseconds;

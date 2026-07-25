@@ -186,6 +186,8 @@ namespace Ludots.Core.Networking.Runtime
 
         bool IsFaulted { get; }
 
+        uint LastCommittedTick { get; }
+
         float ReconnectWindowRemainingSeconds { get; }
 
         int RoundTripTimeMilliseconds { get; }

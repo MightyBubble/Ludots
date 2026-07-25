@@ -492,11 +492,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     $"Client first observed trained infantry count {observedInfantryCount}; " +
                     $"expected exactly {firstTrainedInfantryCount} before queued training activation.");
             }
-            int committedTick = TryGetCommittedTick();
+            int committedTick = checked((int)_clientStatus!.LastCommittedTick);
             if (committedTick <= 0)
             {
                 throw new InvalidOperationException(
-                    "Client observed the first trained infantry without a positive replicated committed tick.");
+                    "Client observed the first trained infantry without a positive authoritative snapshot tick.");
             }
             _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick = committedTick;
             _evidence.Gameplay.FirstTrainedInfantryObservedCount = observedInfantryCount;
@@ -923,12 +923,18 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     $"Server first observed side {side} trained infantry count {infantryCount[side]}; " +
                     $"expected exactly {firstTrainedInfantryCount}.");
             }
-            if (match.CommittedTick <= 0)
+            if (!_engine.GameSession.SimulationTicks.IsExecuting)
             {
                 throw new InvalidOperationException(
-                    $"Server observed side {side} first trained infantry without a positive authoritative committed tick.");
+                    $"Server observed side {side} first trained infantry outside an authoritative simulation tick.");
             }
-            _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] = match.CommittedTick;
+            int authoritativeTick = _engine.GameSession.SimulationTicks.ExecutingTick;
+            if (authoritativeTick <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Server observed side {side} first trained infantry without a positive authoritative simulation tick.");
+            }
+            _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] = authoritativeTick;
         }
 
         _evidence.Gameplay.ObservedInfantryCountBySide[0] = infantryCount[0];

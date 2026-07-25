@@ -12,7 +12,11 @@ public sealed class DeferredNetworkRuntimePortTests
     public void ReplicatedClient_ActivatesExactlyOnce_AndPublishesRuntimeContracts()
     {
         int factoryCalls = 0;
-        var inner = new TestClientRuntime { InterpolationAlpha = 0.375f };
+        var inner = new TestClientRuntime
+        {
+            InterpolationAlpha = 0.375f,
+            LastCommittedTick = 709,
+        };
         using var deferred = new DeferredNetworkRuntimePort(
             NetworkProcessRole.ReplicatedClient,
             () =>
@@ -40,6 +44,7 @@ public sealed class DeferredNetworkRuntimePortTests
             Assert.That(factoryCalls, Is.EqualTo(1));
             Assert.That(inner.ActivationCount, Is.EqualTo(1));
             Assert.That(deferred.HasEstablishedSession, Is.True);
+            Assert.That(deferred.LastCommittedTick, Is.EqualTo(709));
             Assert.That(((IPresentationInterpolationSource)deferred).InterpolationAlpha, Is.EqualTo(0.375f));
             Assert.That(deferred.Capture().Role, Is.EqualTo(NetworkProcessRole.ReplicatedClient));
         });
@@ -118,6 +123,7 @@ public sealed class DeferredNetworkRuntimePortTests
         public bool HasEstablishedSession => true;
         public bool IsAwaitingFullSnapshot => false;
         public bool IsFaulted => false;
+        public uint LastCommittedTick { get; set; }
         public float ReconnectWindowRemainingSeconds => 30f;
         public int RoundTripTimeMilliseconds => 12;
         public float InterpolationAlpha { get; set; }
