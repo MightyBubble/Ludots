@@ -67,26 +67,61 @@ public sealed class Vehicle3DScaleTests
         _ = Stopwatch.GetElapsedTime(stopwatchWarmup);
         _ = GC.GetAllocatedBytesForCurrentThread();
         var samples = new double[120];
+        var setInputSamples = new double[samples.Length];
+        var prepareSamples = new double[samples.Length];
+        var physicsSamples = new double[samples.Length];
+        var observeSamples = new double[samples.Length];
+        var unattributedSamples = new double[samples.Length];
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
         long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        long setInputAllocatedBytes = 0;
+        long prepareAllocatedBytes = 0;
+        long physicsAllocatedBytes = 0;
+        long observeAllocatedBytes = 0;
         long backgroundWorkerAllocatedBytes = 0;
         int maximumPreparedCommands = 0;
         for (int step = 0; step < samples.Length; step++)
         {
             long timestamp = Stopwatch.GetTimestamp();
+            long stageTimestamp = timestamp;
+            long stageAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             for (int vehicleIndex = 0; vehicleIndex < vehicleIds.Length; vehicleIndex++)
             {
                 vehicles.SetInput(vehicleIds[vehicleIndex], input);
             }
 
+            setInputSamples[step] = Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds;
+            setInputAllocatedBytes += GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
+
+            stageTimestamp = Stopwatch.GetTimestamp();
+            stageAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             vehicles.PrepareFixedStep();
+            prepareSamples[step] = Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds;
+            prepareAllocatedBytes += GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
             int preparedCommands = physics.PendingActuationCommandCount;
+
+            stageTimestamp = Stopwatch.GetTimestamp();
+            stageAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             physics.Step();
+            physicsSamples[step] = Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds;
+            physicsAllocatedBytes += GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
             backgroundWorkerAllocatedBytes += physics.LastStepMetrics.Total.BackgroundWorkerAllocatedBytes;
+
+            stageTimestamp = Stopwatch.GetTimestamp();
+            stageAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             vehicles.ObserveFixedStep();
+            observeSamples[step] = Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds;
+            observeAllocatedBytes += GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
             samples[step] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
+            unattributedSamples[step] = Math.Max(
+                0d,
+                samples[step] -
+                setInputSamples[step] -
+                prepareSamples[step] -
+                physicsSamples[step] -
+                observeSamples[step]);
             maximumPreparedCommands = Math.Max(maximumPreparedCommands, preparedCommands);
         }
 
@@ -98,6 +133,13 @@ public sealed class Vehicle3DScaleTests
             $"Warmed {wheelKind}, vehicles={VehicleCount}, bodies={MobileBodyCount}, constraints={ConstraintCount}, " +
             $"P95={p95Milliseconds:F3}ms, P99={p99Milliseconds:F3}ms, " +
             $"allocated={allocatedBytes} bytes, workerAllocated={backgroundWorkerAllocatedBytes} bytes.");
+        TestContext.Out.WriteLine(
+            $"Stages P95/P99: SetInput={Percentile(setInputSamples, 0.95):F3}/{Percentile(setInputSamples, 0.99):F3}ms, " +
+            $"Prepare={Percentile(prepareSamples, 0.95):F3}/{Percentile(prepareSamples, 0.99):F3}ms, " +
+            $"Physics={Percentile(physicsSamples, 0.95):F3}/{Percentile(physicsSamples, 0.99):F3}ms, " +
+            $"Observe={Percentile(observeSamples, 0.95):F3}/{Percentile(observeSamples, 0.99):F3}ms, " +
+            $"Unattributed={Percentile(unattributedSamples, 0.95):F3}/{Percentile(unattributedSamples, 0.99):F3}ms; " +
+            $"allocated={setInputAllocatedBytes}/{prepareAllocatedBytes}/{physicsAllocatedBytes}/{observeAllocatedBytes} bytes.");
 
         Assert.Multiple(() =>
         {
