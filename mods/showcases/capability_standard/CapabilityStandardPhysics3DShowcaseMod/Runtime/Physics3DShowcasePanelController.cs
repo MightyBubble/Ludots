@@ -629,11 +629,15 @@ internal sealed class Physics3DShowcasePanelController
     private static UiElementBuilder BuildWheelLabEvidence(Physics3DShowcasePanelState state)
     {
         return Section(
-            "Driver telemetry",
-            Metric("vehicle", state.WheelSummary),
-            Metric("course", "YELLOW bumps · BROWN pothole · BLUE side slope · PURPLE platform · RED jump · GREEN brake"),
+            "Fair three-wheel route",
+            Metric("live", state.WheelSummary),
+            Metric("route", state.WheelRouteGuide),
+            Metric("physical", state.WheelPhysicalResult).Id("physics3d-wheel-result-physical"),
+            Metric("box", state.WheelBoxResult).Id("physics3d-wheel-result-box"),
+            Metric("scanning", state.WheelScanningResult).Id("physics3d-wheel-result-scanning"),
+            Metric("course", "YELLOW ramps · BROWN pothole · BLUE side slope · PURPLE platform · RED jump · GREEN brake"),
             Metric("debug", "Gold contact · green normal · cyan suspension · red slip"),
-            Metric("keys", "W/S throttle · A/D steer · Space brake · Q wheel type · R reset"));
+            Metric("keys", "W/S throttle · A/D steer · Space brake · Q next wheel · R retry"));
     }
 
     private UiElementBuilder BuildWheelLabControls(Physics3DShowcasePanelState state)
@@ -652,7 +656,7 @@ internal sealed class Physics3DShowcasePanelController
                     WheelModeButton("Scanning", Vehicle3DWheelKind.Scanning, mode))
                 .Wrap()
                 .Gap(7f),
-            Ui.Text("The chassis keeps its position and velocity while the complete wheel assembly changes.")
+            Ui.Text("Every wheel type starts from the same chassis and moving-platform state. Changing wheels mid-run marks that run VOID.")
                 .FontSize(10f)
                 .Color("#91A5BA")
                 .WhiteSpace(UiWhiteSpace.Normal));
@@ -873,12 +877,15 @@ internal sealed class Physics3DShowcasePanelController
                 Ui.Text(label)
                     .FontSize(10f)
                     .Color("#8196AC")
-                    .Width(58f),
+                    .Width(58f)
+                    .FlexShrink(0f),
                 Ui.Text(value)
                     .FontSize(11f)
                     .Color("#E2ECF6")
                     .WhiteSpace(UiWhiteSpace.Normal)
-                    .FlexGrow(1f))
+                    .FlexBasis(0f)
+                    .FlexGrow(1f)
+                    .FlexShrink(1f))
             .Gap(8f)
             .Align(UiAlignItems.Start);
     }

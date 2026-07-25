@@ -16,7 +16,7 @@ internal sealed partial class Physics3DShowcaseRuntime
     internal const string WheelResetAction = "Physics3D.VehicleReset";
 
     private const int WheelLabWheelCount = 4;
-    private const int WheelLabMaximumModeBodies = WheelLabWheelCount * 2;
+    private const int WheelLabMaximumModeBodies = WheelLabWheelCount;
     private const uint WheelLabGroundCategory = 1u << 20;
     private const uint WheelLabVehicleCategory = 1u << 21;
     private const uint WheelLabAssemblyId = 7301;
@@ -42,16 +42,16 @@ internal sealed partial class Physics3DShowcaseRuntime
     private static readonly Vector4 WheelLabBoxWheelColor = new(0.90f, 0.50f, 0.12f, 1f);
     private static readonly Vector4 WheelLabCarrierColor = new(0.30f, 0.34f, 0.40f, 0.35f);
 
-    private readonly Physics3DShapeId[] _wheelLabRoadShapes = new Physics3DShapeId[10];
+    private readonly Physics3DShapeId[] _wheelLabRoadShapes = new Physics3DShapeId[12];
     private readonly Physics3DBodyId[] _wheelLabModeBodies = new Physics3DBodyId[WheelLabMaximumModeBodies];
     private readonly Vehicle3DWheelId[] _wheelLabWheelIds = new Vehicle3DWheelId[WheelLabWheelCount];
     private readonly Vehicle3DWheelState[] _wheelLabWheelStates = new Vehicle3DWheelState[WheelLabWheelCount];
+    private Physics3DWheelLabTrialResult[] _wheelLabTrialResults = Array.Empty<Physics3DWheelLabTrialResult>();
 
     private Physics3DShapeId _wheelLabBumpShape;
     private Physics3DShapeId _wheelLabMovingPlatformShape;
     private Physics3DShapeId _wheelLabStopWallShape;
     private Physics3DShapeId _wheelLabChassisShape;
-    private Physics3DShapeId _wheelLabCarrierShape;
     private Physics3DShapeId _wheelLabPhysicalWheelShape;
     private Physics3DShapeId _wheelLabBoxWheelShape;
     private Vehicle3DWorld? _wheelLabVehicles;
@@ -60,6 +60,7 @@ internal sealed partial class Physics3DShowcaseRuntime
     private Vehicle3DWheelKind _wheelLabMode;
     private WheelLabCourseSection _wheelLabSection;
     private int _wheelLabModeBodyCount;
+    private int _wheelLabOwnedBodyStartIndex = -1;
     private int _wheelLabChassisBodyIndex = -1;
     private int _wheelLabMovingPlatformBodyIndex = -1;
     private int _wheelLabGroundedWheelCount;
@@ -69,6 +70,16 @@ internal sealed partial class Physics3DShowcaseRuntime
     private float _wheelLabSpeedKph;
     private float _wheelLabAverageCompressionCm;
     private float _wheelLabMaximumSlipCmPerSecond;
+    private Physics3DWheelLabTrialStatus _wheelLabTrialStatus;
+    private Physics3DBodyState _wheelLabTrialStartState;
+    private Physics3DBodyState _wheelLabTrialPlatformStartState;
+    private int _wheelLabTrialTick;
+    private long _wheelLabGroundedSamples;
+    private float _wheelLabTrialMaximumCompressionCm;
+    private float _wheelLabTrialMaximumSlipCmPerSecond;
+    private bool _wheelLabTrialBrakeMeasured;
+    private Vector3 _wheelLabTrialBrakePreviousPositionCm;
+    private float _wheelLabTrialBrakingDistanceCm;
     private bool _wheelLabNextModeRequested;
     private bool _wheelLabResetRequested;
     private bool _wheelLabHasObservedStep;
@@ -83,6 +94,9 @@ internal sealed partial class Physics3DShowcaseRuntime
     internal int WheelLabModeBodyCount => _wheelLabModeBodyCount;
     internal Physics3DBodyId WheelLabChassisBody => _wheelLabChassis;
     internal WheelLabCourseSection WheelLabSection => _wheelLabSection;
+    internal Physics3DWheelLabTrialStatus WheelLabTrialStatus => _wheelLabTrialStatus;
+    internal Physics3DBodyState WheelLabTrialStartState => _wheelLabTrialStartState;
+    internal Physics3DBodyState WheelLabTrialPlatformStartState => _wheelLabTrialPlatformStartState;
 
     internal Physics3DBodyState GetWheelLabChassisState()
     {
@@ -92,6 +106,19 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         return RequirePhysics3DChassisState();
+    }
+
+    internal void GetWheelLabMovingPlatformMotion(
+        out Physics3DBodyState bodyState,
+        out Physics3DPoseCm ecsPose)
+    {
+        if (_scene != Physics3DShowcaseScene.WheelLab || _wheelLabMovingPlatformBodyIndex < 0)
+        {
+            throw new InvalidOperationException("Wheel Lab platform motion is only available while Wheel Lab is active.");
+        }
+
+        bodyState = RequirePhysicsWorld().GetBodyState(_bodyIds[_wheelLabMovingPlatformBodyIndex]);
+        ecsPose = RequireEcsWorld().Get<Physics3DPoseCm>(_bodyEntities[_wheelLabMovingPlatformBodyIndex]);
     }
 
     internal void SetWheelLabInputForTests(in Vehicle3DInput input)
@@ -112,15 +139,23 @@ internal sealed partial class Physics3DShowcaseRuntime
         float roadWidth = config.RoadWidthCm;
         float thickness = config.RoadThicknessCm;
         _wheelLabRoadShapes[0] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.PotholeStartZCm - config.RoadStartZCm));
-        _wheelLabRoadShapes[1] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.PotholeEndZCm - config.PotholeStartZCm));
-        _wheelLabRoadShapes[2] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BankStartZCm - config.PotholeEndZCm));
-        _wheelLabRoadShapes[3] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BankEndZCm - config.BankStartZCm));
-        _wheelLabRoadShapes[4] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.PlatformGapStartZCm - config.BankEndZCm));
-        _wheelLabRoadShapes[5] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RampStartZCm - config.PlatformGapEndZCm));
-        _wheelLabRoadShapes[6] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RampEndZCm - config.RampStartZCm));
-        _wheelLabRoadShapes[7] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BrakeStartZCm - config.RampEndZCm));
-        _wheelLabRoadShapes[8] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BrakeEndZCm - config.BrakeStartZCm));
-        _wheelLabRoadShapes[9] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RoadEndZCm - config.BrakeEndZCm));
+        float potholeSlopeLength = MathF.Sqrt(
+            (config.PotholeTransitionLengthCm * config.PotholeTransitionLengthCm) +
+            (config.PotholeDepthCm * config.PotholeDepthCm));
+        _wheelLabRoadShapes[1] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, potholeSlopeLength));
+        _wheelLabRoadShapes[2] = world.RegisterBoxShape(new Vector3(
+            roadWidth,
+            thickness,
+            config.PotholeEndZCm - config.PotholeStartZCm - (config.PotholeTransitionLengthCm * 2f)));
+        _wheelLabRoadShapes[3] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, potholeSlopeLength));
+        _wheelLabRoadShapes[4] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BankStartZCm - config.PotholeEndZCm));
+        _wheelLabRoadShapes[5] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BankEndZCm - config.BankStartZCm));
+        _wheelLabRoadShapes[6] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.PlatformGapStartZCm - config.BankEndZCm));
+        _wheelLabRoadShapes[7] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RampStartZCm - config.PlatformGapEndZCm));
+        _wheelLabRoadShapes[8] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RampEndZCm - config.RampStartZCm));
+        _wheelLabRoadShapes[9] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BrakeStartZCm - config.RampEndZCm));
+        _wheelLabRoadShapes[10] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.BrakeEndZCm - config.BrakeStartZCm));
+        _wheelLabRoadShapes[11] = world.RegisterBoxShape(new Vector3(roadWidth, thickness, config.RoadEndZCm - config.BrakeEndZCm));
         _wheelLabBumpShape = world.RegisterBoxShape(new Vector3(config.BumpWidthCm, config.BumpHeightCm, config.BumpDepthCm));
         _wheelLabMovingPlatformShape = world.RegisterBoxShape(new Vector3(
             config.MovingPlatformWidthCm,
@@ -134,18 +169,36 @@ internal sealed partial class Physics3DShowcaseRuntime
             config.ChassisWidthCm,
             config.ChassisHeightCm,
             config.ChassisLengthCm));
-        _wheelLabCarrierShape = world.RegisterSphereShape(config.CarrierRadiusCm);
-        _wheelLabPhysicalWheelShape = world.RegisterSphereShape(config.WheelRadiusCm);
+        _wheelLabPhysicalWheelShape = world.RegisterCylinderShape(config.WheelRadiusCm, config.WheelWidthCm);
+        float boxWheelSideCm = WheelLabBoxWheelSideCm(config);
         _wheelLabBoxWheelShape = world.RegisterBoxShape(new Vector3(
             config.WheelWidthCm,
-            config.WheelRadiusCm * 2f,
-            config.WheelRadiusCm * 2f));
+            boxWheelSideCm,
+            boxWheelSideCm));
     }
 
     private void BuildWheelLabScene()
     {
         Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        _wheelLabOwnedBodyStartIndex = _bodyCount;
         BuildWheelLabCourse(config);
+        CreateWheelLabChassis(config);
+
+        _wheelLabMode = config.InitialWheelKind;
+        CreateWheelLabVehicle(config, _wheelLabMode, RequirePhysicsWorld().GetBodyState(_wheelLabChassis));
+        InitializeWheelLabComparison(config);
+        ResetWheelLabTrialTracking();
+        ResetWheelLabMovingPlatform();
+        _wheelLabSection = WheelLabCourseSection.Start;
+        _wheelLabHasObservedStep = false;
+        _wheelLabGroundedWheelCount = 0;
+        _wheelLabSpeedKph = 0f;
+        _wheelLabAverageCompressionCm = 0f;
+        _wheelLabMaximumSlipCmPerSecond = 0f;
+    }
+
+    private void CreateWheelLabChassis(Physics3DWheelLabShowcaseConfig config)
+    {
         _wheelLabChassisBodyIndex = _bodyCount;
         _wheelLabChassis = AddOwnedBody(
             Physics3DBodyKind.Dynamic,
@@ -162,75 +215,79 @@ internal sealed partial class Physics3DShowcaseRuntime
             config.ChassisMass,
             collisionLayer: WheelLabVehicleCollisionLayer,
             collisionSubgroup: CreateWheelLabCollisionSubgroup());
+    }
 
-        _wheelLabMode = config.InitialWheelKind;
-        CreateWheelLabVehicle(config, _wheelLabMode, RequirePhysicsWorld().GetBodyState(_wheelLabChassis));
-        _wheelLabSection = WheelLabCourseSection.Start;
-        _wheelLabHasObservedStep = false;
-        _wheelLabGroundedWheelCount = 0;
-        _wheelLabSpeedKph = 0f;
-        _wheelLabAverageCompressionCm = 0f;
-        _wheelLabMaximumSlipCmPerSecond = 0f;
+    private void InitializeWheelLabComparison(Physics3DWheelLabShowcaseConfig config)
+    {
+        _wheelLabTrialResults = new Physics3DWheelLabTrialResult[config.ComparisonResultCapacity];
+        StoreWheelLabTrialResult(Physics3DWheelLabTrialResult.NotRun(Vehicle3DWheelKind.Physical));
+        StoreWheelLabTrialResult(Physics3DWheelLabTrialResult.NotRun(Vehicle3DWheelKind.Box));
+        StoreWheelLabTrialResult(Physics3DWheelLabTrialResult.NotRun(Vehicle3DWheelKind.Scanning));
     }
 
     private void BuildWheelLabCourse(Physics3DWheelLabShowcaseConfig config)
     {
+        float potholeFloorStartZCm = config.PotholeStartZCm + config.PotholeTransitionLengthCm;
+        float potholeFloorEndZCm = config.PotholeEndZCm - config.PotholeTransitionLengthCm;
         AddWheelLabRoadSegment(0, config.RoadStartZCm, config.PotholeStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
-        AddWheelLabRoadSegment(1, config.PotholeStartZCm, config.PotholeEndZCm, -config.PotholeDepthCm, Quaternion.Identity, WheelLabPitColor);
-        AddWheelLabRoadSegment(2, config.PotholeEndZCm, config.BankStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabSlopedRoadSegment(
+            1,
+            config.PotholeStartZCm,
+            potholeFloorStartZCm,
+            0f,
+            -config.PotholeDepthCm,
+            WheelLabPitColor);
         AddWheelLabRoadSegment(
+            2,
+            potholeFloorStartZCm,
+            potholeFloorEndZCm,
+            -config.PotholeDepthCm,
+            Quaternion.Identity,
+            WheelLabPitColor);
+        AddWheelLabSlopedRoadSegment(
             3,
+            potholeFloorEndZCm,
+            config.PotholeEndZCm,
+            -config.PotholeDepthCm,
+            0f,
+            WheelLabPitColor);
+        AddWheelLabRoadSegment(4, config.PotholeEndZCm, config.BankStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabRoadSegment(
+            5,
             config.BankStartZCm,
             config.BankEndZCm,
             0f,
             Quaternion.CreateFromAxisAngle(Vector3.UnitZ, DegreesToRadians(config.BankAngleDegrees)),
             WheelLabBankColor);
-        AddWheelLabRoadSegment(4, config.BankEndZCm, config.PlatformGapStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabRoadSegment(6, config.BankEndZCm, config.PlatformGapStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
 
-        _wheelLabMovingPlatformBodyIndex = _bodyCount;
-        AddOwnedBody(
-            Physics3DBodyKind.Kinematic,
-            _wheelLabMovingPlatformShape,
-            Physics3DShapeKind.Box,
-            new Vector3(
-                config.MovingPlatformWidthCm,
-                config.MovingPlatformThicknessCm,
-                config.PlatformGapEndZCm - config.PlatformGapStartZCm),
-            0f,
-            new Vector3(0f, -config.MovingPlatformThicknessCm * 0.5f, Midpoint(config.PlatformGapStartZCm, config.PlatformGapEndZCm)),
-            Quaternion.Identity,
-            Vector3.Zero,
-            Vector3.Zero,
-            Physics3DContinuousDetectionMode.Passive,
-            WheelLabPlatformColor,
-            collisionLayer: WheelLabGroundCollisionLayer);
-
-        AddWheelLabRoadSegment(5, config.PlatformGapEndZCm, config.RampStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabRoadSegment(7, config.PlatformGapEndZCm, config.RampStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
         float rampAngle = DegreesToRadians(config.RampAngleDegrees);
         float rampLength = config.RampEndZCm - config.RampStartZCm;
         float rampCenterY = (MathF.Sin(rampAngle) * rampLength * 0.5f) -
                             (MathF.Cos(rampAngle) * config.RoadThicknessCm * 0.5f);
         AddWheelLabRoadSegment(
-            6,
+            8,
             config.RampStartZCm,
             config.RampEndZCm,
             rampCenterY + (config.RoadThicknessCm * 0.5f),
             Quaternion.CreateFromAxisAngle(Vector3.UnitX, -rampAngle),
             WheelLabRampColor);
-        AddWheelLabRoadSegment(7, config.RampEndZCm, config.BrakeStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
-        AddWheelLabRoadSegment(8, config.BrakeStartZCm, config.BrakeEndZCm, 0f, Quaternion.Identity, WheelLabBrakeColor);
-        AddWheelLabRoadSegment(9, config.BrakeEndZCm, config.RoadEndZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabRoadSegment(9, config.RampEndZCm, config.BrakeStartZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
+        AddWheelLabRoadSegment(10, config.BrakeStartZCm, config.BrakeEndZCm, 0f, Quaternion.Identity, WheelLabBrakeColor);
+        AddWheelLabRoadSegment(11, config.BrakeEndZCm, config.RoadEndZCm, 0f, Quaternion.Identity, WheelLabRoadColor);
 
         for (int i = 0; i < config.BumpCount; i++)
         {
+            float bumpRampAngle = MathF.Atan2(config.BumpHeightCm, config.BumpDepthCm);
             AddOwnedBody(
                 Physics3DBodyKind.Static,
                 _wheelLabBumpShape,
                 Physics3DShapeKind.Box,
                 new Vector3(config.BumpWidthCm, config.BumpHeightCm, config.BumpDepthCm),
                 0f,
-                new Vector3(0f, config.BumpHeightCm * 0.5f, config.FirstBumpZCm + (i * config.BumpSpacingCm)),
-                Quaternion.Identity,
+                new Vector3(0f, 0f, config.FirstBumpZCm + (i * config.BumpSpacingCm)),
+                Quaternion.CreateFromAxisAngle(Vector3.UnitX, -bumpRampAngle),
                 Vector3.Zero,
                 Vector3.Zero,
                 Physics3DContinuousDetectionMode.Discrete,
@@ -254,6 +311,29 @@ internal sealed partial class Physics3DShowcaseRuntime
             Physics3DContinuousDetectionMode.Discrete,
             DynamicRed,
             collisionLayer: WheelLabGroundCollisionLayer);
+
+        CreateWheelLabMovingPlatform(config);
+    }
+
+    private void CreateWheelLabMovingPlatform(Physics3DWheelLabShowcaseConfig config)
+    {
+        _wheelLabMovingPlatformBodyIndex = _bodyCount;
+        AddOwnedBody(
+            Physics3DBodyKind.Kinematic,
+            _wheelLabMovingPlatformShape,
+            Physics3DShapeKind.Box,
+            new Vector3(
+                config.MovingPlatformWidthCm,
+                config.MovingPlatformThicknessCm,
+                config.PlatformGapEndZCm - config.PlatformGapStartZCm),
+            0f,
+            new Vector3(0f, -config.MovingPlatformThicknessCm * 0.5f, Midpoint(config.PlatformGapStartZCm, config.PlatformGapEndZCm)),
+            Quaternion.Identity,
+            Vector3.Zero,
+            Vector3.Zero,
+            Physics3DContinuousDetectionMode.Passive,
+            WheelLabPlatformColor,
+            collisionLayer: WheelLabGroundCollisionLayer);
     }
 
     private void AddWheelLabRoadSegment(
@@ -274,6 +354,39 @@ internal sealed partial class Physics3DShowcaseRuntime
             0f,
             new Vector3(0f, topSurfaceYCm - (config.RoadThicknessCm * 0.5f), Midpoint(startZCm, endZCm)),
             orientation,
+            Vector3.Zero,
+            Vector3.Zero,
+            Physics3DContinuousDetectionMode.Discrete,
+            color,
+            collisionLayer: WheelLabGroundCollisionLayer);
+    }
+
+    private void AddWheelLabSlopedRoadSegment(
+        int shapeIndex,
+        float startZCm,
+        float endZCm,
+        float startSurfaceYCm,
+        float endSurfaceYCm,
+        Vector4 color)
+    {
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        float lengthCm = endZCm - startZCm;
+        float angle = MathF.Atan2(endSurfaceYCm - startSurfaceYCm, lengthCm);
+        float slopeLengthCm = MathF.Sqrt((lengthCm * lengthCm) +
+                                         ((endSurfaceYCm - startSurfaceYCm) *
+                                          (endSurfaceYCm - startSurfaceYCm)));
+        float centerSurfaceYCm = (startSurfaceYCm + endSurfaceYCm) * 0.5f;
+        float centerYCm = centerSurfaceYCm - (MathF.Cos(angle) * config.RoadThicknessCm * 0.5f);
+        float centerZCm = Midpoint(startZCm, endZCm) +
+                          (MathF.Sin(angle) * config.RoadThicknessCm * 0.5f);
+        AddOwnedBody(
+            Physics3DBodyKind.Static,
+            _wheelLabRoadShapes[shapeIndex],
+            Physics3DShapeKind.Box,
+            new Vector3(config.RoadWidthCm, config.RoadThicknessCm, slopeLengthCm),
+            0f,
+            new Vector3(0f, centerYCm, centerZCm),
+            Quaternion.CreateFromAxisAngle(Vector3.UnitX, -angle),
             Vector3.Zero,
             Vector3.Zero,
             Physics3DContinuousDetectionMode.Discrete,
@@ -311,35 +424,32 @@ internal sealed partial class Physics3DShowcaseRuntime
             Vector3 suspensionOffset = -Vector3.UnitY * config.SuspensionRestLengthCm;
             Vector3 bodyPosition = chassisState.PositionCm +
                                    Vector3.Transform(mount + suspensionOffset, chassisState.Orientation);
-            Physics3DBodyId carrier = AddWheelLabModeBody(
-                _wheelLabCarrierShape,
-                Physics3DShapeKind.Sphere,
-                new Vector3(config.CarrierRadiusCm * 2f),
-                bodyPosition,
-                chassisState.Orientation,
-                WheelLabCarrierColor,
-                config.CarrierMass);
             Physics3DShapeId wheelShape = mode == Vehicle3DWheelKind.Physical
                 ? _wheelLabPhysicalWheelShape
                 : _wheelLabBoxWheelShape;
             Physics3DShapeKind wheelShapeKind = mode == Vehicle3DWheelKind.Physical
-                ? Physics3DShapeKind.Sphere
+                ? Physics3DShapeKind.Cylinder
                 : Physics3DShapeKind.Box;
+            float boxWheelSideCm = WheelLabBoxWheelSideCm(config);
             Vector3 wheelVisualSize = mode == Vehicle3DWheelKind.Physical
-                ? new Vector3(config.WheelRadiusCm * 2f)
-                : new Vector3(config.WheelWidthCm, config.WheelRadiusCm * 2f, config.WheelRadiusCm * 2f);
+                ? new Vector3(config.WheelRadiusCm * 2f, config.WheelWidthCm, config.WheelRadiusCm * 2f)
+                : new Vector3(config.WheelWidthCm, boxWheelSideCm, boxWheelSideCm);
+            Quaternion wheelOrientation = mode == Vehicle3DWheelKind.Physical
+                ? Quaternion.Concatenate(
+                    Quaternion.CreateFromAxisAngle(Vector3.UnitZ, -MathF.PI * 0.5f),
+                    chassisState.Orientation)
+                : chassisState.Orientation;
             Physics3DBodyId wheel = AddWheelLabModeBody(
                 wheelShape,
                 wheelShapeKind,
                 wheelVisualSize,
                 bodyPosition,
-                chassisState.Orientation,
+                wheelOrientation,
                 mode == Vehicle3DWheelKind.Physical ? WheelLabPhysicalWheelColor : WheelLabBoxWheelColor,
                 config.WheelMass);
             descriptions[wheelIndex] = CreateWheelLabPhysicalDescription(
                 config,
                 mode,
-                carrier,
                 wheel,
                 mount,
                 steeringScale);
@@ -413,17 +523,20 @@ internal sealed partial class Physics3DShowcaseRuntime
             1f,
             WheelLabGroundQueryLayer);
 
+    private static float WheelLabBoxWheelSideCm(Physics3DWheelLabShowcaseConfig config)
+        => config.WheelRadiusCm * MathF.Sqrt(2f);
+
     private static Vehicle3DWheelDescription CreateWheelLabPhysicalDescription(
         Physics3DWheelLabShowcaseConfig config,
         Vehicle3DWheelKind mode,
-        Physics3DBodyId carrier,
         Physics3DBodyId wheel,
         Vector3 mount,
         float steeringScale)
-        => Vehicle3DWheelDescription.Physical(
+    {
+        float forceScale = mode == Vehicle3DWheelKind.Box ? config.BoxWheelForceScale : 1f;
+        return Vehicle3DWheelDescription.Physical(
             mode,
             Vehicle3DWheelQueryKind.Raycast,
-            carrier,
             wheel,
             mount,
             -Vector3.UnitY,
@@ -438,8 +551,8 @@ internal sealed partial class Physics3DShowcaseRuntime
             config.MaximumSuspensionForce,
             config.LongitudinalGrip,
             config.LateralGrip,
-            config.MaximumDriveForce,
-            config.MaximumBrakeForce,
+            config.MaximumDriveForce * forceScale,
+            config.MaximumBrakeForce * forceScale,
             config.MaximumLateralForce,
             config.MaximumWheelAngularSpeedRadiansPerSecond,
             steeringScale,
@@ -447,31 +560,23 @@ internal sealed partial class Physics3DShowcaseRuntime
             1f,
             WheelLabGroundQueryLayer,
             CreateWheelLabJointSettings(config));
+    }
 
     private static Vehicle3DWheelJointSettings CreateWheelLabJointSettings(Physics3DWheelLabShowcaseConfig config)
     {
         var alignment = new Physics3DSpringSettings(config.AlignmentSpringAngularFrequency, config.AlignmentSpringTwiceDampingRatio);
         var suspension = new Physics3DSpringSettings(config.JointSuspensionSpringAngularFrequency, config.JointSuspensionSpringTwiceDampingRatio);
         var limit = new Physics3DSpringSettings(config.LimitSpringAngularFrequency, config.LimitSpringTwiceDampingRatio);
-        var steering = new Physics3DSpringSettings(config.SteeringSpringAngularFrequency, config.SteeringSpringTwiceDampingRatio);
-        var hub = new Physics3DSpringSettings(config.HubSpringAngularFrequency, config.HubSpringTwiceDampingRatio);
         var lineServo = new Physics3DServoSettings(
             config.LineServoMaximumSpeed,
             config.LineServoBaseSpeed,
             config.LineServoMaximumForce);
-        var steeringServo = new Physics3DServoSettings(
-            config.SteeringServoMaximumSpeed,
-            config.SteeringServoBaseSpeed,
-            config.SteeringServoMaximumForce);
         var motor = new Physics3DMotorSettings(config.AxleMotorMaximumForce, config.AxleMotorSoftness);
         return new Vehicle3DWheelJointSettings(
             alignment,
             suspension,
             limit,
-            steering,
-            hub,
             lineServo,
-            steeringServo,
             motor);
     }
 
@@ -534,11 +639,19 @@ internal sealed partial class Physics3DShowcaseRuntime
             ResetWheelLabVehicle();
         }
 
+        if (_wheelLabTrialStatus == Physics3DWheelLabTrialStatus.Ready && HasWheelLabTrialStartInput())
+        {
+            BeginWheelLabTrial();
+        }
+
+        BeginWheelLabBrakingIfNeeded();
         AnimateWheelLabPlatform();
         Vehicle3DWorld vehicles = RequireWheelLabVehicles();
-        vehicles.SetInput(
-            _wheelLabVehicle,
-            new Vehicle3DInput(_wheelLabThrottle, _wheelLabBrake, _wheelLabSteering));
+        Vehicle3DInput input = _wheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
+            Physics3DWheelLabTrialStatus.Failed
+            ? default
+            : new Vehicle3DInput(_wheelLabThrottle, _wheelLabBrake, _wheelLabSteering);
+        vehicles.SetInput(_wheelLabVehicle, input);
         vehicles.PrepareFixedStep();
     }
 
@@ -567,12 +680,128 @@ internal sealed partial class Physics3DShowcaseRuntime
         _wheelLabMaximumSlipCmPerSecond = maximumSlip;
         _wheelLabSpeedKph = chassis.LinearVelocityCmPerSecond.Length() * 0.036f;
         _wheelLabHasObservedStep = true;
-        UpdateWheelLabCourseSection(chassis.PositionCm.Z);
-        if (chassis.PositionCm.Y < ActiveConfig.WheelLab.ResetBelowYCm)
+        if (_wheelLabTrialStatus == Physics3DWheelLabTrialStatus.Running)
         {
-            _wheelLabResetRequested = true;
-            _lastAction = "The vehicle left the course. It will return to the start on the next fixed step.";
+            UpdateWheelLabCourseSection(chassis.PositionCm.Z);
+            ObserveWheelLabTrial(in chassis, grounded, maximumSlip);
         }
+    }
+
+    private bool HasWheelLabTrialStartInput()
+    {
+        float deadZone = ActiveConfig.WheelLab.TrialInputDeadZone;
+        return _wheelLabThrottle > deadZone;
+    }
+
+    private void BeginWheelLabTrial()
+    {
+        Vehicle3DWheelKind mode = _wheelLabMode;
+        DestroyWheelLabVehicleAndModeBodies();
+        RestoreWheelLabAuthoredState(mode);
+        _wheelLabTrialStatus = Physics3DWheelLabTrialStatus.Running;
+        _wheelLabTrialStartState = RequirePhysics3DChassisState();
+        StoreWheelLabTrialResult(CreateWheelLabTrialResult(
+            Physics3DWheelLabTrialStatus.Running,
+            Physics3DWheelLabTrialReason.None));
+        _lastAction = $"{WheelLabModeName(mode)} run started from the shared course state.";
+    }
+
+    private void ObserveWheelLabTrial(
+        in Physics3DBodyState chassis,
+        int groundedWheelCount,
+        float maximumSlipCmPerSecond)
+    {
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        _wheelLabTrialTick++;
+        _wheelLabGroundedSamples += groundedWheelCount;
+        _wheelLabTrialMaximumSlipCmPerSecond = MathF.Max(
+            _wheelLabTrialMaximumSlipCmPerSecond,
+            maximumSlipCmPerSecond);
+        for (int i = 0; i < WheelLabWheelCount; i++)
+        {
+            _wheelLabTrialMaximumCompressionCm = MathF.Max(
+                _wheelLabTrialMaximumCompressionCm,
+                _wheelLabWheelStates[i].CompressionCm);
+        }
+
+        if (_wheelLabTrialBrakeMeasured)
+        {
+            Vector3 brakingDelta = chassis.PositionCm - _wheelLabTrialBrakePreviousPositionCm;
+            _wheelLabTrialBrakingDistanceCm += MathF.Sqrt(
+                (brakingDelta.X * brakingDelta.X) +
+                (brakingDelta.Z * brakingDelta.Z));
+            _wheelLabTrialBrakePreviousPositionCm = chassis.PositionCm;
+        }
+
+        if (chassis.PositionCm.Y < config.ResetBelowYCm)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Failed,
+                Physics3DWheelLabTrialReason.FellBelowCourse);
+            return;
+        }
+
+        if (MathF.Abs(chassis.PositionCm.X - config.SpawnXCm) > config.TrialMaximumLateralOffsetCm)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Failed,
+                Physics3DWheelLabTrialReason.LeftRoute);
+            return;
+        }
+
+        if (_wheelLabTrialBrakeMeasured &&
+            chassis.PositionCm.Z >= config.TrialCompletionMinimumZCm &&
+            chassis.PositionCm.Z <= config.BrakeEndZCm &&
+            _wheelLabSpeedKph <= config.TrialStopSpeedKph)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Succeeded,
+                Physics3DWheelLabTrialReason.None);
+            return;
+        }
+
+        if (chassis.PositionCm.Z > config.BrakeEndZCm)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Failed,
+                Physics3DWheelLabTrialReason.OvershotBrakingZone);
+            return;
+        }
+
+        if (_wheelLabTrialTick >= config.TrialTimeLimitTicks)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Failed,
+                Physics3DWheelLabTrialReason.TimeLimit);
+            return;
+        }
+
+        StoreWheelLabTrialResult(CreateWheelLabTrialResult(
+            Physics3DWheelLabTrialStatus.Running,
+            Physics3DWheelLabTrialReason.None));
+    }
+
+    private void BeginWheelLabBrakingIfNeeded()
+    {
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        if (_wheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running ||
+            _wheelLabTrialBrakeMeasured ||
+            _wheelLabBrake < config.TrialBrakeInputThreshold ||
+            _wheelLabSpeedKph < config.TrialMinimumBrakeStartSpeedKph)
+        {
+            return;
+        }
+
+        Physics3DBodyState chassis = RequirePhysics3DChassisState();
+        Vector3 positionCm = chassis.PositionCm;
+        if (positionCm.Z < config.BrakeStartZCm || positionCm.Z > config.BrakeEndZCm)
+        {
+            return;
+        }
+
+        _wheelLabTrialBrakeMeasured = true;
+        _wheelLabTrialBrakePreviousPositionCm = positionCm;
+        _wheelLabTrialBrakingDistanceCm = 0f;
     }
 
     private void AnimateWheelLabPlatform()
@@ -583,7 +812,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
-        float phase = (_sceneStep + 1f) * config.MovingPlatformRadiansPerStep;
+        float phase = (_wheelLabTrialTick + 1f) * config.MovingPlatformRadiansPerStep;
         Vector3 nextPosition = new(
             MathF.Sin(phase) * config.MovingPlatformTravelCm,
             -config.MovingPlatformThicknessCm * 0.5f,
@@ -591,11 +820,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         Quaternion nextOrientation = Quaternion.CreateFromAxisAngle(
             Vector3.UnitY,
             MathF.Sin(phase * 0.63f) * config.MovingPlatformMaximumYawRadians);
-        Physics3DBodyId body = _bodyIds[_wheelLabMovingPlatformBodyIndex];
-        RequirePhysicsWorld().SetKinematicNextPose(body, nextPosition, nextOrientation);
-        ref Physics3DPoseCm pose = ref RequireEcsWorld().Get<Physics3DPoseCm>(_bodyEntities[_wheelLabMovingPlatformBodyIndex]);
-        pose.Position = nextPosition;
-        pose.Orientation = nextOrientation;
+        SetKinematicCourseNextPose(_wheelLabMovingPlatformBodyIndex, nextPosition, nextOrientation);
     }
 
     private void SwitchWheelLabMode(Vehicle3DWheelKind mode)
@@ -616,33 +841,160 @@ internal sealed partial class Physics3DShowcaseRuntime
             return;
         }
 
-        Physics3DBodyState chassisState = RequirePhysics3DChassisState();
+        bool invalidated = _wheelLabTrialStatus == Physics3DWheelLabTrialStatus.Running;
+        if (invalidated)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Invalidated,
+                Physics3DWheelLabTrialReason.WheelTypeChanged);
+        }
+
         DestroyWheelLabVehicleAndModeBodies();
         _wheelLabMode = mode;
-        CreateWheelLabVehicle(ActiveConfig.WheelLab, mode, chassisState);
-        _wheelLabHasObservedStep = false;
-        _lastAction = WheelLabModeMessage(mode);
+        RestoreWheelLabAuthoredState(mode);
+        _lastAction = invalidated
+            ? $"Previous run void: wheel type changed. {WheelLabModeName(mode)} is ready at the shared start."
+            : $"{WheelLabModeName(mode)} is ready at the shared start.";
     }
 
     private void ResetWheelLabVehicle()
     {
+        bool invalidated = _wheelLabTrialStatus == Physics3DWheelLabTrialStatus.Running;
+        if (invalidated)
+        {
+            FinalizeWheelLabTrial(
+                Physics3DWheelLabTrialStatus.Invalidated,
+                Physics3DWheelLabTrialReason.ManualReset);
+        }
+
         Vehicle3DWheelKind mode = _wheelLabMode;
         DestroyWheelLabVehicleAndModeBodies();
+        RestoreWheelLabAuthoredState(mode);
+        _lastAction = invalidated
+            ? "Previous run void: the player reset mid-course. The selected wheel type is ready at the shared start."
+            : "Vehicle returned to the shared start with the selected wheel type unchanged.";
+    }
+
+    private void RestoreWheelLabAuthoredState(Vehicle3DWheelKind mode)
+    {
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        RemoveWheelLabOwnedBodies();
+        BuildWheelLabCourse(config);
+        CreateWheelLabChassis(config);
         Physics3DBodyState state = RequirePhysicsWorld().GetBodyState(_wheelLabChassis);
-        state.PositionCm = WheelLabSpawnPosition(ActiveConfig.WheelLab);
-        state.Orientation = Quaternion.Identity;
-        state.LinearVelocityCmPerSecond = Vector3.Zero;
-        state.AngularVelocityRadiansPerSecond = Vector3.Zero;
-        state.Awake = true;
-        SetBodyStateAndPose(_wheelLabChassisBodyIndex, in state);
         CreateWheelLabVehicle(ActiveConfig.WheelLab, mode, state);
+        ResetWheelLabMovingPlatform();
+        ResetWheelLabTrialTracking();
+    }
+
+    private void ResetWheelLabMovingPlatform()
+    {
+        if (_wheelLabMovingPlatformBodyIndex < 0)
+        {
+            throw new InvalidOperationException("Wheel Lab moving platform body is missing.");
+        }
+
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        Physics3DBodyState platform = RequirePhysicsWorld().GetBodyState(
+            _bodyIds[_wheelLabMovingPlatformBodyIndex]);
+        platform.PositionCm = new Vector3(
+            0f,
+            -config.MovingPlatformThicknessCm * 0.5f,
+            Midpoint(config.PlatformGapStartZCm, config.PlatformGapEndZCm));
+        platform.Orientation = Quaternion.Identity;
+        platform.LinearVelocityCmPerSecond = Vector3.Zero;
+        platform.AngularVelocityRadiansPerSecond = Vector3.Zero;
+        platform.Awake = true;
+        SetBodyStateAndPose(_wheelLabMovingPlatformBodyIndex, in platform);
+    }
+
+    private void ResetWheelLabTrialTracking()
+    {
+        _wheelLabTrialStatus = Physics3DWheelLabTrialStatus.Ready;
+        _wheelLabTrialStartState = RequirePhysics3DChassisState();
+        _wheelLabTrialPlatformStartState = RequirePhysicsWorld().GetBodyState(
+            _bodyIds[_wheelLabMovingPlatformBodyIndex]);
+        _wheelLabTrialTick = 0;
+        _wheelLabGroundedSamples = 0;
+        _wheelLabTrialMaximumCompressionCm = 0f;
+        _wheelLabTrialMaximumSlipCmPerSecond = 0f;
+        _wheelLabTrialBrakeMeasured = false;
+        _wheelLabTrialBrakePreviousPositionCm = default;
+        _wheelLabTrialBrakingDistanceCm = 0f;
         _wheelLabSection = WheelLabCourseSection.Start;
         _wheelLabHasObservedStep = false;
         _wheelLabGroundedWheelCount = 0;
         _wheelLabSpeedKph = 0f;
         _wheelLabAverageCompressionCm = 0f;
         _wheelLabMaximumSlipCmPerSecond = 0f;
-        _lastAction = "Vehicle returned to the start with the selected wheel type unchanged.";
+    }
+
+    private void FinalizeWheelLabTrial(
+        Physics3DWheelLabTrialStatus status,
+        Physics3DWheelLabTrialReason reason)
+    {
+        if (_wheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
+        {
+            throw new InvalidOperationException(
+                $"Wheel Lab cannot finalize trial state '{_wheelLabTrialStatus}' as '{status}'.");
+        }
+
+        if (status is not Physics3DWheelLabTrialStatus.Succeeded and
+            not Physics3DWheelLabTrialStatus.Failed and
+            not Physics3DWheelLabTrialStatus.Invalidated)
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), status, "Wheel Lab requires a terminal trial status.");
+        }
+
+        _wheelLabTrialStatus = status;
+        if (status == Physics3DWheelLabTrialStatus.Succeeded)
+        {
+            _wheelLabSection = WheelLabCourseSection.Finish;
+        }
+
+        Physics3DWheelLabTrialResult result = CreateWheelLabTrialResult(status, reason);
+        StoreWheelLabTrialResult(result);
+        _lastAction = status switch
+        {
+            Physics3DWheelLabTrialStatus.Succeeded =>
+                $"{WheelLabModeName(_wheelLabMode)} passed the shared route in {_wheelLabTrialTick} ticks.",
+            Physics3DWheelLabTrialStatus.Failed =>
+                $"{WheelLabModeName(_wheelLabMode)} failed the shared route: {WheelLabTrialReasonName(reason)}. Press R to retry.",
+            Physics3DWheelLabTrialStatus.Invalidated =>
+                $"{WheelLabModeName(_wheelLabMode)} run void: {WheelLabTrialReasonName(reason)}.",
+            _ => throw new InvalidOperationException($"Unsupported Wheel Lab terminal status '{status}'.")
+        };
+    }
+
+    private Physics3DWheelLabTrialResult CreateWheelLabTrialResult(
+        Physics3DWheelLabTrialStatus status,
+        Physics3DWheelLabTrialReason reason)
+    {
+        float groundedRatio = _wheelLabTrialTick > 0
+            ? (float)_wheelLabGroundedSamples / (_wheelLabTrialTick * (float)WheelLabWheelCount)
+            : 0f;
+        return new Physics3DWheelLabTrialResult(
+            _wheelLabMode,
+            status,
+            reason,
+            _wheelLabTrialTick,
+            _wheelLabTrialMaximumCompressionCm,
+            _wheelLabTrialMaximumSlipCmPerSecond,
+            groundedRatio,
+            _wheelLabTrialBrakingDistanceCm,
+            _wheelLabTrialBrakeMeasured);
+    }
+
+    private void StoreWheelLabTrialResult(in Physics3DWheelLabTrialResult result)
+    {
+        int slot = WheelLabResultSlot(result.WheelKind);
+        if ((uint)slot >= (uint)_wheelLabTrialResults.Length)
+        {
+            throw new InvalidOperationException(
+                $"Wheel Lab comparison result capacity {_wheelLabTrialResults.Length} cannot store slot {slot} for '{result.WheelKind}'.");
+        }
+
+        _wheelLabTrialResults[slot] = result;
     }
 
     private void DestroyWheelLabVehicleAndModeBodies()
@@ -655,6 +1007,24 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         _wheelLabModeBodyCount = 0;
+    }
+
+    private void RemoveWheelLabOwnedBodies()
+    {
+        if (_wheelLabOwnedBodyStartIndex < 0 || _wheelLabOwnedBodyStartIndex > _bodyCount)
+        {
+            throw new InvalidOperationException(
+                $"Wheel Lab owned-body start {_wheelLabOwnedBodyStartIndex} is invalid for body count {_bodyCount}.");
+        }
+
+        while (_bodyCount > _wheelLabOwnedBodyStartIndex)
+        {
+            RemoveLastWheelLabOwnedBody(_bodyIds[_bodyCount - 1]);
+        }
+
+        _wheelLabChassis = default;
+        _wheelLabChassisBodyIndex = -1;
+        _wheelLabMovingPlatformBodyIndex = -1;
     }
 
     private void RemoveLastWheelLabOwnedBody(Physics3DBodyId expectedBody)
@@ -678,12 +1048,21 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         RequireEcsWorld().Destroy(_bodyEntities[index]);
-        if (_bodyKinds[index] != Physics3DBodyKind.Dynamic)
+        switch (_bodyKinds[index])
         {
-            throw new InvalidOperationException("Wheel Lab mode bodies must remain dynamic until removal.");
+            case Physics3DBodyKind.Dynamic:
+                _dynamicBodyCount--;
+                break;
+            case Physics3DBodyKind.Kinematic:
+                _kinematicBodyCount--;
+                break;
+            case Physics3DBodyKind.Static:
+                _staticBodyCount--;
+                break;
+            default:
+                throw new InvalidOperationException("Wheel Lab trial-boundary body has an unsupported kind.");
         }
 
-        _dynamicBodyCount--;
         _bodyCount--;
         _bodyIds[index] = default;
         _bodyEntities[index] = default;
@@ -705,6 +1084,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         _wheelLabMode = default;
         _wheelLabSection = default;
         _wheelLabModeBodyCount = 0;
+        _wheelLabOwnedBodyStartIndex = -1;
         _wheelLabChassisBodyIndex = -1;
         _wheelLabMovingPlatformBodyIndex = -1;
         _wheelLabGroundedWheelCount = 0;
@@ -714,12 +1094,23 @@ internal sealed partial class Physics3DShowcaseRuntime
         _wheelLabSpeedKph = 0f;
         _wheelLabAverageCompressionCm = 0f;
         _wheelLabMaximumSlipCmPerSecond = 0f;
+        _wheelLabTrialStatus = Physics3DWheelLabTrialStatus.NotRun;
+        _wheelLabTrialStartState = default;
+        _wheelLabTrialPlatformStartState = default;
+        _wheelLabTrialTick = 0;
+        _wheelLabGroundedSamples = 0;
+        _wheelLabTrialMaximumCompressionCm = 0f;
+        _wheelLabTrialMaximumSlipCmPerSecond = 0f;
+        _wheelLabTrialBrakeMeasured = false;
+        _wheelLabTrialBrakePreviousPositionCm = default;
+        _wheelLabTrialBrakingDistanceCm = 0f;
         _wheelLabNextModeRequested = false;
         _wheelLabResetRequested = false;
         _wheelLabHasObservedStep = false;
         Array.Clear(_wheelLabModeBodies, 0, _wheelLabModeBodies.Length);
         Array.Clear(_wheelLabWheelIds, 0, _wheelLabWheelIds.Length);
         Array.Clear(_wheelLabWheelStates, 0, _wheelLabWheelStates.Length);
+        _wheelLabTrialResults = Array.Empty<Physics3DWheelLabTrialResult>();
     }
 
     private void ReleaseRegisteredWheelLabVehicle()
@@ -779,9 +1170,74 @@ internal sealed partial class Physics3DShowcaseRuntime
             return "Select Wheel Lab to drive the suspension course.";
         }
 
-        return $"{WheelLabModeName(_wheelLabMode)} · {_wheelLabGroundedWheelCount}/4 grounded · " +
+        return $"{WheelLabModeName(_wheelLabMode)} · {WheelLabTrialStatusName(_wheelLabTrialStatus)} {_wheelLabTrialTick}/{ActiveConfig.WheelLab.TrialTimeLimitTicks} · " +
+               $"{_wheelLabGroundedWheelCount}/4 grounded · " +
                $"{_wheelLabSpeedKph:0.0} km/h · {_wheelLabAverageCompressionCm:0.0} cm compression · " +
                $"{_wheelLabMaximumSlipCmPerSecond:0} cm/s slip";
+    }
+
+    internal string CreateWheelLabRouteGuide()
+    {
+        if (_scene != Physics3DShowcaseScene.WheelLab)
+        {
+            return "Select Wheel Lab to view the shared route.";
+        }
+
+        Physics3DWheelLabShowcaseConfig config = ActiveConfig.WheelLab;
+        float fixedDeltaSeconds = RequirePhysicsWorld().FixedDeltaSeconds;
+        float throttleSeconds = config.TrialRecommendedThrottleTicks * fixedDeltaSeconds;
+        float brakeSeconds = config.TrialRecommendedBrakeTicks * fixedDeltaSeconds;
+        return $"Reference run: hold W for {throttleSeconds:0.0}s, then Space for up to {brakeSeconds:0.0}s. " +
+               "Press Q only between runs.";
+    }
+
+    internal bool TryGetWheelLabTrialResult(
+        Vehicle3DWheelKind wheelKind,
+        out Physics3DWheelLabTrialResult result)
+    {
+        if (_scene != Physics3DShowcaseScene.WheelLab || _wheelLabTrialResults.Length == 0)
+        {
+            result = default;
+            return false;
+        }
+
+        int slot = WheelLabResultSlot(wheelKind);
+        if ((uint)slot >= (uint)_wheelLabTrialResults.Length)
+        {
+            throw new InvalidOperationException(
+                $"Wheel Lab comparison result capacity {_wheelLabTrialResults.Length} cannot read slot {slot} for '{wheelKind}'.");
+        }
+
+        result = _wheelLabTrialResults[slot];
+        return true;
+    }
+
+    internal string CreateWheelLabTrialResultSummary(Vehicle3DWheelKind wheelKind)
+    {
+        if (!TryGetWheelLabTrialResult(wheelKind, out Physics3DWheelLabTrialResult result))
+        {
+            return "NOT AVAILABLE";
+        }
+
+        if (result.Status == Physics3DWheelLabTrialStatus.NotRun)
+        {
+            return "NOT RUN · choose this wheel type, then use the shared route";
+        }
+
+        string outcome = result.Status switch
+        {
+            Physics3DWheelLabTrialStatus.Running => "LIVE",
+            Physics3DWheelLabTrialStatus.Succeeded => "PASS",
+            Physics3DWheelLabTrialStatus.Failed => "FAIL",
+            Physics3DWheelLabTrialStatus.Invalidated => "VOID",
+            _ => throw new InvalidOperationException($"Unsupported Wheel Lab result status '{result.Status}'.")
+        };
+        string brake = result.BrakeMeasured ? $"{result.BrakingDistanceCm:0} cm brake" : "brake not measured";
+        string reason = result.Status is Physics3DWheelLabTrialStatus.Failed or Physics3DWheelLabTrialStatus.Invalidated
+            ? $" · {WheelLabTrialReasonName(result.Reason)}"
+            : string.Empty;
+        return $"{outcome} · tick {result.CompletionTick} · {result.MaximumSuspensionCompressionCm:0.0} cm max travel · " +
+               $"{result.MaximumSlipCmPerSecond:0} cm/s max slip · {result.GroundedRatio:P0} contact · {brake}{reason}";
     }
 
     private void UpdateWheelLabCourseSection(float positionZCm)
@@ -808,13 +1264,9 @@ internal sealed partial class Physics3DShowcaseRuntime
         {
             next = WheelLabCourseSection.Jump;
         }
-        else if (positionZCm < config.BrakeEndZCm)
-        {
-            next = WheelLabCourseSection.Braking;
-        }
         else
         {
-            next = WheelLabCourseSection.Finish;
+            next = WheelLabCourseSection.Braking;
         }
         if (next == _wheelLabSection)
         {
@@ -824,7 +1276,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         _wheelLabSection = next;
         _lastAction = next switch
         {
-            WheelLabCourseSection.Bumps => "Hold throttle through the yellow speed bumps and watch suspension travel.",
+            WheelLabCourseSection.Bumps => "Hold throttle over the yellow approach ramps and watch suspension travel.",
             WheelLabCourseSection.Pothole => "The recessed brown lane exposes wheel drop and recovery.",
             WheelLabCourseSection.SideSlope => "Counter-steer across the blue side slope while lateral grip holds the line.",
             WheelLabCourseSection.MovingPlatform => "Cross the moving purple platform; tire velocity includes its contact-point motion.",
@@ -872,6 +1324,14 @@ internal sealed partial class Physics3DShowcaseRuntime
         _ => throw new InvalidOperationException($"Unsupported Wheel Lab wheel kind '{mode}'.")
     };
 
+    private static int WheelLabResultSlot(Vehicle3DWheelKind mode) => mode switch
+    {
+        Vehicle3DWheelKind.Physical => 0,
+        Vehicle3DWheelKind.Box => 1,
+        Vehicle3DWheelKind.Scanning => 2,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown Wheel Lab wheel kind.")
+    };
+
     private static string WheelLabModeName(Vehicle3DWheelKind mode) => mode switch
     {
         Vehicle3DWheelKind.Physical => "Physical Wheels",
@@ -888,6 +1348,29 @@ internal sealed partial class Physics3DShowcaseRuntime
         _ => throw new InvalidOperationException($"Unsupported Wheel Lab wheel kind '{mode}'.")
     };
 
+    private static string WheelLabTrialStatusName(Physics3DWheelLabTrialStatus status) => status switch
+    {
+        Physics3DWheelLabTrialStatus.NotRun => "NOT RUN",
+        Physics3DWheelLabTrialStatus.Ready => "READY",
+        Physics3DWheelLabTrialStatus.Running => "RUNNING",
+        Physics3DWheelLabTrialStatus.Succeeded => "PASS",
+        Physics3DWheelLabTrialStatus.Failed => "FAIL",
+        Physics3DWheelLabTrialStatus.Invalidated => "VOID",
+        _ => throw new InvalidOperationException($"Unsupported Wheel Lab trial status '{status}'.")
+    };
+
+    private static string WheelLabTrialReasonName(Physics3DWheelLabTrialReason reason) => reason switch
+    {
+        Physics3DWheelLabTrialReason.None => "completed",
+        Physics3DWheelLabTrialReason.WheelTypeChanged => "wheel type changed mid-run",
+        Physics3DWheelLabTrialReason.ManualReset => "manual reset mid-run",
+        Physics3DWheelLabTrialReason.FellBelowCourse => "vehicle fell below the course",
+        Physics3DWheelLabTrialReason.LeftRoute => "vehicle left the route",
+        Physics3DWheelLabTrialReason.OvershotBrakingZone => "vehicle passed the braking zone without stopping",
+        Physics3DWheelLabTrialReason.TimeLimit => "time limit reached",
+        _ => throw new InvalidOperationException($"Unsupported Wheel Lab trial reason '{reason}'.")
+    };
+
     private static float Midpoint(float a, float b) => (a + b) * 0.5f;
     private static float DegreesToRadians(float degrees) => degrees * (MathF.PI / 180f);
 }
@@ -902,6 +1385,74 @@ internal enum WheelLabCourseSection : byte
     Jump = 5,
     Braking = 6,
     Finish = 7
+}
+
+internal enum Physics3DWheelLabTrialStatus : byte
+{
+    NotRun = 0,
+    Ready = 1,
+    Running = 2,
+    Succeeded = 3,
+    Failed = 4,
+    Invalidated = 5
+}
+
+internal enum Physics3DWheelLabTrialReason : byte
+{
+    None = 0,
+    WheelTypeChanged = 1,
+    ManualReset = 2,
+    FellBelowCourse = 3,
+    LeftRoute = 4,
+    TimeLimit = 5,
+    OvershotBrakingZone = 6
+}
+
+internal readonly struct Physics3DWheelLabTrialResult
+{
+    public Physics3DWheelLabTrialResult(
+        Vehicle3DWheelKind wheelKind,
+        Physics3DWheelLabTrialStatus status,
+        Physics3DWheelLabTrialReason reason,
+        int completionTick,
+        float maximumSuspensionCompressionCm,
+        float maximumSlipCmPerSecond,
+        float groundedRatio,
+        float brakingDistanceCm,
+        bool brakeMeasured)
+    {
+        WheelKind = wheelKind;
+        Status = status;
+        Reason = reason;
+        CompletionTick = completionTick;
+        MaximumSuspensionCompressionCm = maximumSuspensionCompressionCm;
+        MaximumSlipCmPerSecond = maximumSlipCmPerSecond;
+        GroundedRatio = groundedRatio;
+        BrakingDistanceCm = brakingDistanceCm;
+        BrakeMeasured = brakeMeasured;
+    }
+
+    public Vehicle3DWheelKind WheelKind { get; }
+    public Physics3DWheelLabTrialStatus Status { get; }
+    public Physics3DWheelLabTrialReason Reason { get; }
+    public int CompletionTick { get; }
+    public float MaximumSuspensionCompressionCm { get; }
+    public float MaximumSlipCmPerSecond { get; }
+    public float GroundedRatio { get; }
+    public float BrakingDistanceCm { get; }
+    public bool BrakeMeasured { get; }
+
+    public static Physics3DWheelLabTrialResult NotRun(Vehicle3DWheelKind wheelKind)
+        => new(
+            wheelKind,
+            Physics3DWheelLabTrialStatus.NotRun,
+            Physics3DWheelLabTrialReason.None,
+            completionTick: 0,
+            maximumSuspensionCompressionCm: 0f,
+            maximumSlipCmPerSecond: 0f,
+            groundedRatio: 0f,
+            brakingDistanceCm: 0f,
+            brakeMeasured: false);
 }
 
 internal readonly struct Physics3DWheelLabDebugVisual

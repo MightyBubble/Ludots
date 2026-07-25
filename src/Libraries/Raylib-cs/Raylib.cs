@@ -408,6 +408,15 @@ namespace Raylib_cs
         public static extern void DrawSphere(Vector3 centerPos, float radius, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawCylinder(
+            Vector3 position,
+            float radiusTop,
+            float radiusBottom,
+            float height,
+            int slices,
+            Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawGrid(int slices, float spacing);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -490,6 +499,9 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Mesh GenMeshSphere(float radius, int rings, int slices);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Mesh GenMeshCylinder(float radius, float height, int slices);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Material LoadMaterialDefault();

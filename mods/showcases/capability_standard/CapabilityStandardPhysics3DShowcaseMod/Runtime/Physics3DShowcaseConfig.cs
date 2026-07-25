@@ -263,14 +263,25 @@ internal sealed class Physics3DWheelLabShowcaseConfig
     public int VehicleCapacity { get; set; }
     public int WheelCapacity { get; set; }
     public int QueryBatchCapacity { get; set; }
+    public int ComparisonResultCapacity { get; set; }
+    public int TrialTimeLimitTicks { get; set; }
+    public int TrialRecommendedThrottleTicks { get; set; }
+    public int TrialRecommendedBrakeTicks { get; set; }
     public Vehicle3DWheelKind InitialWheelKind { get; set; }
     public Vehicle3DWheelQueryKind ScanningQueryKind { get; set; }
+    public float TrialInputDeadZone { get; set; }
+    public float TrialMaximumLateralOffsetCm { get; set; }
+    public float TrialCompletionMinimumZCm { get; set; }
+    public float TrialStopSpeedKph { get; set; }
+    public float TrialBrakeInputThreshold { get; set; }
+    public float TrialMinimumBrakeStartSpeedKph { get; set; }
     public float RoadWidthCm { get; set; }
     public float RoadThicknessCm { get; set; }
     public float RoadStartZCm { get; set; }
     public float PotholeStartZCm { get; set; }
     public float PotholeEndZCm { get; set; }
     public float PotholeDepthCm { get; set; }
+    public float PotholeTransitionLengthCm { get; set; }
     public float BankStartZCm { get; set; }
     public float BankEndZCm { get; set; }
     public float BankAngleDegrees { get; set; }
@@ -302,8 +313,6 @@ internal sealed class Physics3DWheelLabShowcaseConfig
     public float SpawnXCm { get; set; }
     public float SpawnYCm { get; set; }
     public float SpawnZCm { get; set; }
-    public float CarrierRadiusCm { get; set; }
-    public float CarrierMass { get; set; }
     public float WheelRadiusCm { get; set; }
     public float WheelWidthCm { get; set; }
     public float WheelMass { get; set; }
@@ -321,6 +330,7 @@ internal sealed class Physics3DWheelLabShowcaseConfig
     public float LateralGrip { get; set; }
     public float MaximumDriveForce { get; set; }
     public float MaximumBrakeForce { get; set; }
+    public float BoxWheelForceScale { get; set; }
     public float MaximumLateralForce { get; set; }
     public float MaximumWheelAngularSpeedRadiansPerSecond { get; set; }
     public float AlignmentSpringAngularFrequency { get; set; }
@@ -329,16 +339,9 @@ internal sealed class Physics3DWheelLabShowcaseConfig
     public float JointSuspensionSpringTwiceDampingRatio { get; set; }
     public float LimitSpringAngularFrequency { get; set; }
     public float LimitSpringTwiceDampingRatio { get; set; }
-    public float SteeringSpringAngularFrequency { get; set; }
-    public float SteeringSpringTwiceDampingRatio { get; set; }
-    public float HubSpringAngularFrequency { get; set; }
-    public float HubSpringTwiceDampingRatio { get; set; }
     public float LineServoMaximumSpeed { get; set; }
     public float LineServoBaseSpeed { get; set; }
     public float LineServoMaximumForce { get; set; }
-    public float SteeringServoMaximumSpeed { get; set; }
-    public float SteeringServoBaseSpeed { get; set; }
-    public float SteeringServoMaximumForce { get; set; }
     public float AxleMotorMaximumForce { get; set; }
     public float AxleMotorSoftness { get; set; }
     public float ResetBelowYCm { get; set; }
@@ -354,6 +357,17 @@ internal sealed class Physics3DWheelLabShowcaseConfig
         RequireAtLeast(VehicleCapacity, 1, nameof(VehicleCapacity));
         RequireAtLeast(WheelCapacity, 4, nameof(WheelCapacity));
         RequireAtLeast(QueryBatchCapacity, 4, nameof(QueryBatchCapacity));
+        RequireAtLeast(ComparisonResultCapacity, 3, nameof(ComparisonResultCapacity));
+        RequireAtMost(ComparisonResultCapacity, 64, nameof(ComparisonResultCapacity));
+        RequireAtLeast(TrialTimeLimitTicks, 1, nameof(TrialTimeLimitTicks));
+        RequireAtMost(TrialTimeLimitTicks, 1_000_000, nameof(TrialTimeLimitTicks));
+        RequireAtLeast(TrialRecommendedThrottleTicks, 1, nameof(TrialRecommendedThrottleTicks));
+        RequireAtLeast(TrialRecommendedBrakeTicks, 1, nameof(TrialRecommendedBrakeTicks));
+        if ((long)TrialRecommendedThrottleTicks + TrialRecommendedBrakeTicks > TrialTimeLimitTicks)
+        {
+            throw new InvalidOperationException(
+                $"{parameterName} recommended throttle and brake ticks must fit inside trialTimeLimitTicks.");
+        }
         if (QueryBatchCapacity < WheelCapacity)
         {
             throw new InvalidOperationException($"{parameterName}.queryBatchCapacity must cover wheelCapacity.");
@@ -369,9 +383,21 @@ internal sealed class Physics3DWheelLabShowcaseConfig
             throw new InvalidOperationException($"{parameterName}.scanningQueryKind is invalid.");
         }
 
+        RequireUnitIntervalExclusiveUpper(TrialInputDeadZone, nameof(TrialInputDeadZone));
+        RequirePositive(TrialMaximumLateralOffsetCm, nameof(TrialMaximumLateralOffsetCm));
+        RequirePositive(TrialStopSpeedKph, nameof(TrialStopSpeedKph));
+        RequireUnitIntervalExclusiveLower(TrialBrakeInputThreshold, nameof(TrialBrakeInputThreshold));
+        RequireNonNegative(TrialMinimumBrakeStartSpeedKph, nameof(TrialMinimumBrakeStartSpeedKph));
+
         RequirePositive(RoadWidthCm, nameof(RoadWidthCm));
         RequirePositive(RoadThicknessCm, nameof(RoadThicknessCm));
         RequirePositive(PotholeDepthCm, nameof(PotholeDepthCm));
+        RequirePositive(PotholeTransitionLengthCm, nameof(PotholeTransitionLengthCm));
+        if ((PotholeTransitionLengthCm * 2f) >= PotholeEndZCm - PotholeStartZCm)
+        {
+            throw new InvalidOperationException(
+                $"{parameterName}.potholeTransitionLengthCm must leave a non-empty recessed floor.");
+        }
         RequireAngle(BankAngleDegrees, nameof(BankAngleDegrees));
         RequireAngle(RampAngleDegrees, nameof(RampAngleDegrees));
         if (!(RoadStartZCm < PotholeStartZCm &&
@@ -387,6 +413,13 @@ internal sealed class Physics3DWheelLabShowcaseConfig
               BrakeEndZCm < RoadEndZCm))
         {
             throw new InvalidOperationException($"{parameterName} course Z coordinates must be strictly ordered from start to finish.");
+        }
+
+        RequireFinite(TrialCompletionMinimumZCm, nameof(TrialCompletionMinimumZCm));
+        if (TrialCompletionMinimumZCm < BrakeStartZCm || TrialCompletionMinimumZCm > BrakeEndZCm)
+        {
+            throw new InvalidOperationException(
+                $"{parameterName}.trialCompletionMinimumZCm must remain inside the braking zone.");
         }
 
         RequireAtLeast(BumpCount, 1, nameof(BumpCount));
@@ -429,8 +462,6 @@ internal sealed class Physics3DWheelLabShowcaseConfig
             throw new InvalidOperationException($"{parameterName} moving platform must retain a full chassis-width crossing at maximum travel.");
         }
 
-        RequirePositive(CarrierRadiusCm, nameof(CarrierRadiusCm));
-        RequirePositive(CarrierMass, nameof(CarrierMass));
         RequirePositive(WheelRadiusCm, nameof(WheelRadiusCm));
         RequirePositive(WheelWidthCm, nameof(WheelWidthCm));
         RequirePositive(WheelMass, nameof(WheelMass));
@@ -459,20 +490,16 @@ internal sealed class Physics3DWheelLabShowcaseConfig
         RequireNonNegative(LateralGrip, nameof(LateralGrip));
         RequireNonNegative(MaximumDriveForce, nameof(MaximumDriveForce));
         RequireNonNegative(MaximumBrakeForce, nameof(MaximumBrakeForce));
+        RequirePositive(BoxWheelForceScale, nameof(BoxWheelForceScale));
         RequireNonNegative(MaximumLateralForce, nameof(MaximumLateralForce));
         RequireNonNegative(MaximumWheelAngularSpeedRadiansPerSecond, nameof(MaximumWheelAngularSpeedRadiansPerSecond));
 
         RequireSpring(AlignmentSpringAngularFrequency, AlignmentSpringTwiceDampingRatio, "alignmentSpring");
         RequireSpring(JointSuspensionSpringAngularFrequency, JointSuspensionSpringTwiceDampingRatio, "jointSuspensionSpring");
         RequireSpring(LimitSpringAngularFrequency, LimitSpringTwiceDampingRatio, "limitSpring");
-        RequireSpring(SteeringSpringAngularFrequency, SteeringSpringTwiceDampingRatio, "steeringSpring");
-        RequireSpring(HubSpringAngularFrequency, HubSpringTwiceDampingRatio, "hubSpring");
         RequirePositive(LineServoMaximumSpeed, nameof(LineServoMaximumSpeed));
         RequireNonNegative(LineServoBaseSpeed, nameof(LineServoBaseSpeed));
         RequirePositive(LineServoMaximumForce, nameof(LineServoMaximumForce));
-        RequirePositive(SteeringServoMaximumSpeed, nameof(SteeringServoMaximumSpeed));
-        RequireNonNegative(SteeringServoBaseSpeed, nameof(SteeringServoBaseSpeed));
-        RequirePositive(SteeringServoMaximumForce, nameof(SteeringServoMaximumForce));
         RequirePositive(AxleMotorMaximumForce, nameof(AxleMotorMaximumForce));
         RequirePositive(AxleMotorSoftness, nameof(AxleMotorSoftness));
         RequireFinite(ResetBelowYCm, nameof(ResetBelowYCm));
@@ -497,6 +524,14 @@ internal sealed class Physics3DWheelLabShowcaseConfig
         if (value < minimum)
         {
             throw new InvalidOperationException($"WheelLab showcase requires {name} >= {minimum}.");
+        }
+    }
+
+    private static void RequireAtMost(int value, int maximum, string name)
+    {
+        if (value > maximum)
+        {
+            throw new InvalidOperationException($"WheelLab showcase requires {name} <= {maximum}.");
         }
     }
 
@@ -529,6 +564,22 @@ internal sealed class Physics3DWheelLabShowcaseConfig
         if (!float.IsFinite(value) || value <= 0f || value >= 45f)
         {
             throw new InvalidOperationException($"WheelLab showcase requires {name} in (0, 45) degrees.");
+        }
+    }
+
+    private static void RequireUnitIntervalExclusiveUpper(float value, string name)
+    {
+        if (!float.IsFinite(value) || value < 0f || value >= 1f)
+        {
+            throw new InvalidOperationException($"WheelLab showcase requires {name} in [0, 1).");
+        }
+    }
+
+    private static void RequireUnitIntervalExclusiveLower(float value, string name)
+    {
+        if (!float.IsFinite(value) || value <= 0f || value > 1f)
+        {
+            throw new InvalidOperationException($"WheelLab showcase requires {name} in (0, 1].");
         }
     }
 

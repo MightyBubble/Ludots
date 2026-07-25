@@ -9,7 +9,8 @@ namespace Ludots.Core.Vehicle3D;
 /// </summary>
 public sealed class Vehicle3DWorld : IDisposable
 {
-    private const int ConstraintsPerPhysicalWheel = 7;
+    private const int ConstraintsPerPhysicalWheel = 5;
+    private const float ActiveDriveInputThreshold = 1e-5f;
 
     private readonly IPhysics3DWorld _physics;
     private readonly float _fixedDeltaSeconds;
@@ -22,6 +23,7 @@ public sealed class Vehicle3DWorld : IDisposable
     private readonly float[] _vehicleThrottle;
     private readonly float[] _vehicleBrake;
     private readonly float[] _vehicleSteering;
+    private readonly byte[] _vehicleDriveWakeRequests;
     private readonly long[] _vehicleInputStepIndices;
     private readonly Vector3[] _vehiclePositionsCm;
     private readonly Quaternion[] _vehicleOrientations;
@@ -32,8 +34,8 @@ public sealed class Vehicle3DWorld : IDisposable
     private readonly int[] _wheelVehicleSlots;
     private readonly Vehicle3DWheelKind[] _wheelKinds;
     private readonly Vehicle3DWheelQueryKind[] _wheelQueryKinds;
-    private readonly Physics3DBodyId[] _wheelCarrierBodies;
     private readonly Physics3DBodyId[] _wheelBodies;
+    private readonly Vector3[] _wheelLocalRotationAxes;
     private readonly Vector3[] _wheelLocalMountsCm;
     private readonly Vector3[] _wheelLocalSuspensionDirections;
     private readonly Vector3[] _wheelLocalForwardDirections;
@@ -55,12 +57,17 @@ public sealed class Vehicle3DWorld : IDisposable
     private readonly float[] _wheelDriveScale;
     private readonly float[] _wheelBrakeScale;
     private readonly Ludots.Core.Layers.LayerMask[] _wheelGroundLayers;
+    private readonly float[] _wheelAlignmentAngularFrequencies;
+    private readonly float[] _wheelAlignmentTwiceDampingRatios;
+    private readonly float[] _wheelAxleMotorMaximumForces;
+    private readonly float[] _wheelAxleMotorSoftnesses;
+    private readonly float[] _wheelAppliedSteeringAngles;
+    private readonly float[] _wheelAppliedMotorTargetSpeeds;
+    private readonly float[] _wheelAppliedMotorMaximumForces;
 
     private readonly Physics3DConstraintId[] _wheelLineConstraints;
     private readonly Physics3DConstraintId[] _wheelSuspensionServos;
     private readonly Physics3DConstraintId[] _wheelTravelLimits;
-    private readonly Physics3DConstraintId[] _wheelSteeringServos;
-    private readonly Physics3DConstraintId[] _wheelHubConstraints;
     private readonly Physics3DConstraintId[] _wheelAxleHinges;
     private readonly Physics3DConstraintId[] _wheelAxleMotors;
 
@@ -79,6 +86,7 @@ public sealed class Vehicle3DWorld : IDisposable
     private readonly Vector3[] _stageSuspensionDirections;
     private readonly Vector3[] _stageForwardDirections;
     private readonly Vector3[] _stageAxleDirections;
+    private readonly Vector3[] _stageRotationAxleDirections;
     private readonly byte[] _stageGrounded;
     private readonly Physics3DBodyId[] _stageGroundBodies;
     private readonly float[] _stageSuspensionLengthsCm;
@@ -134,6 +142,7 @@ public sealed class Vehicle3DWorld : IDisposable
         _vehicleThrottle = new float[vehicleCapacity];
         _vehicleBrake = new float[vehicleCapacity];
         _vehicleSteering = new float[vehicleCapacity];
+        _vehicleDriveWakeRequests = new byte[vehicleCapacity];
         _vehicleInputStepIndices = new long[vehicleCapacity];
         _vehiclePositionsCm = new Vector3[vehicleCapacity];
         _vehicleOrientations = new Quaternion[vehicleCapacity];
@@ -144,8 +153,8 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelVehicleSlots = new int[wheelCapacity];
         _wheelKinds = new Vehicle3DWheelKind[wheelCapacity];
         _wheelQueryKinds = new Vehicle3DWheelQueryKind[wheelCapacity];
-        _wheelCarrierBodies = new Physics3DBodyId[wheelCapacity];
         _wheelBodies = new Physics3DBodyId[wheelCapacity];
+        _wheelLocalRotationAxes = new Vector3[wheelCapacity];
         _wheelLocalMountsCm = new Vector3[wheelCapacity];
         _wheelLocalSuspensionDirections = new Vector3[wheelCapacity];
         _wheelLocalForwardDirections = new Vector3[wheelCapacity];
@@ -167,12 +176,17 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelDriveScale = new float[wheelCapacity];
         _wheelBrakeScale = new float[wheelCapacity];
         _wheelGroundLayers = new Ludots.Core.Layers.LayerMask[wheelCapacity];
+        _wheelAlignmentAngularFrequencies = new float[wheelCapacity];
+        _wheelAlignmentTwiceDampingRatios = new float[wheelCapacity];
+        _wheelAxleMotorMaximumForces = new float[wheelCapacity];
+        _wheelAxleMotorSoftnesses = new float[wheelCapacity];
+        _wheelAppliedSteeringAngles = new float[wheelCapacity];
+        _wheelAppliedMotorTargetSpeeds = new float[wheelCapacity];
+        _wheelAppliedMotorMaximumForces = new float[wheelCapacity];
 
         _wheelLineConstraints = new Physics3DConstraintId[wheelCapacity];
         _wheelSuspensionServos = new Physics3DConstraintId[wheelCapacity];
         _wheelTravelLimits = new Physics3DConstraintId[wheelCapacity];
-        _wheelSteeringServos = new Physics3DConstraintId[wheelCapacity];
-        _wheelHubConstraints = new Physics3DConstraintId[wheelCapacity];
         _wheelAxleHinges = new Physics3DConstraintId[wheelCapacity];
         _wheelAxleMotors = new Physics3DConstraintId[wheelCapacity];
 
@@ -191,6 +205,7 @@ public sealed class Vehicle3DWorld : IDisposable
         _stageSuspensionDirections = new Vector3[wheelCapacity];
         _stageForwardDirections = new Vector3[wheelCapacity];
         _stageAxleDirections = new Vector3[wheelCapacity];
+        _stageRotationAxleDirections = new Vector3[wheelCapacity];
         _stageGrounded = new byte[wheelCapacity];
         _stageGroundBodies = new Physics3DBodyId[wheelCapacity];
         _stageSuspensionLengthsCm = new float[wheelCapacity];
@@ -285,11 +300,10 @@ public sealed class Vehicle3DWorld : IDisposable
                 continue;
             }
 
-            RequireDynamicBody(description.CarrierBody, $"{nameof(wheels)}[{i}].{nameof(description.CarrierBody)}");
             RequireDynamicBody(description.WheelBody, $"{nameof(wheels)}[{i}].{nameof(description.WheelBody)}");
-            if (description.CarrierBody == chassisBody || description.WheelBody == chassisBody)
+            if (description.WheelBody == chassisBody)
             {
-                throw new ArgumentException("Physical carrier and wheel bodies must be distinct from the chassis body.", nameof(wheels));
+                throw new ArgumentException("A physical wheel body must be distinct from the chassis body.", nameof(wheels));
             }
 
             EnsurePhysicalBodiesAreUnique(wheels, i, in description);
@@ -463,6 +477,7 @@ public sealed class Vehicle3DWorld : IDisposable
 
         ValidateInputSubmissions();
         CacheAndValidateBodies();
+        KeepDrivenVehiclesAwake();
         BuildQueryBatches(out int rayCount, out int sphereCount);
         if (rayCount > 0)
         {
@@ -606,7 +621,6 @@ public sealed class Vehicle3DWorld : IDisposable
                 continue;
             }
 
-            RequireDynamicBodyAtRuntime(_wheelCarrierBodies[wheelSlot], "carrier", wheelSlot);
             RequireDynamicBodyAtRuntime(_wheelBodies[wheelSlot], "wheel", wheelSlot);
             RequireWheelConstraints(wheelSlot);
         }
@@ -640,6 +654,7 @@ public sealed class Vehicle3DWorld : IDisposable
             _stageSuspensionDirections[wheelSlot] = down;
             _stageForwardDirections[wheelSlot] = forward;
             _stageAxleDirections[wheelSlot] = axle;
+            _stageRotationAxleDirections[wheelSlot] = axle;
             ClearStagedWheelState(wheelSlot);
 
             if (_wheelQueryKinds[wheelSlot] == Vehicle3DWheelQueryKind.Raycast)
@@ -666,11 +681,12 @@ public sealed class Vehicle3DWorld : IDisposable
                 }
 
                 var filter = new Physics3DQueryFilter(_wheelGroundLayers[wheelSlot], _vehicleChassis[vehicleSlot]);
+                float radiusCm = _wheelRadiiCm[wheelSlot];
                 _sphereRequests[sphereCount] = new Physics3DSphereCastQuery(
-                    _stageOriginsCm[wheelSlot],
-                    _wheelRadiiCm[wheelSlot],
+                    _stageOriginsCm[wheelSlot] - (_stageSuspensionDirections[wheelSlot] * radiusCm),
+                    radiusCm,
                     _stageSuspensionDirections[wheelSlot],
-                    _wheelMaximumLengthsCm[wheelSlot],
+                    _wheelMaximumLengthsCm[wheelSlot] + radiusCm,
                     filter);
                 _sphereWheelSlots[sphereCount] = wheelSlot;
                 sphereCount++;
@@ -680,6 +696,36 @@ public sealed class Vehicle3DWorld : IDisposable
                 throw new InvalidOperationException(
                     $"Wheel slot {wheelSlot} has unsupported query kind '{_wheelQueryKinds[wheelSlot]}'.");
             }
+        }
+    }
+
+    private void KeepDrivenVehiclesAwake()
+    {
+        Array.Clear(_vehicleDriveWakeRequests);
+        for (int wheelSlot = 0; wheelSlot < _wheelActive.Length; wheelSlot++)
+        {
+            if (_wheelActive[wheelSlot] == 0 || !HasPhysicalWheel(wheelSlot))
+            {
+                continue;
+            }
+
+            int vehicleSlot = _wheelVehicleSlots[wheelSlot];
+            float wheelBrake = _vehicleBrake[vehicleSlot] * _wheelBrakeScale[wheelSlot];
+            float wheelThrottle = _vehicleThrottle[vehicleSlot] * _wheelDriveScale[wheelSlot];
+            if (wheelBrake <= 0f && MathF.Abs(wheelThrottle) > ActiveDriveInputThreshold)
+            {
+                _vehicleDriveWakeRequests[vehicleSlot] = 1;
+            }
+        }
+
+        for (int vehicleSlot = 0; vehicleSlot < _vehicleActive.Length; vehicleSlot++)
+        {
+            if (_vehicleActive[vehicleSlot] == 0 || _vehicleDriveWakeRequests[vehicleSlot] == 0)
+            {
+                continue;
+            }
+
+            _physics.SetBodyAwake(_vehicleChassis[vehicleSlot], true);
         }
     }
 
@@ -695,11 +741,11 @@ public sealed class Vehicle3DWorld : IDisposable
 
             if (HasPhysicalWheel(wheelSlot))
             {
-                Physics3DBodyState carrier = _physics.GetBodyState(_wheelCarrierBodies[wheelSlot]);
+                Physics3DBodyState chassis = _physics.GetBodyState(_vehicleChassis[_wheelVehicleSlots[wheelSlot]]);
                 Physics3DBodyState wheel = _physics.GetBodyState(_wheelBodies[wheelSlot]);
                 _stageAngularSpeeds[wheelSlot] = Vector3.Dot(
-                    wheel.AngularVelocityRadiansPerSecond - carrier.AngularVelocityRadiansPerSecond,
-                    _stageAxleDirections[wheelSlot]);
+                    wheel.AngularVelocityRadiansPerSecond - chassis.AngularVelocityRadiansPerSecond,
+                    _stageRotationAxleDirections[wheelSlot]);
             }
             else if (_stageGrounded[wheelSlot] == 0)
             {
@@ -712,14 +758,15 @@ public sealed class Vehicle3DWorld : IDisposable
             }
 
             Physics3DBodyId groundBody = _stageGroundBodies[wheelSlot];
-            if (groundBody == _wheelCarrierBodies[wheelSlot] || groundBody == _wheelBodies[wheelSlot])
+            if (groundBody == _wheelBodies[wheelSlot])
             {
                 throw new InvalidOperationException(
                     $"Wheel slot {wheelSlot} hit its own assembly body {groundBody}; ground query layers must exclude vehicle bodies.");
             }
 
             int vehicleSlot = _wheelVehicleSlots[wheelSlot];
-            Physics3DBodyId impulseBody = HasPhysicalWheel(wheelSlot)
+            bool physicalWheel = HasPhysicalWheel(wheelSlot);
+            Physics3DBodyId impulseBody = physicalWheel
                 ? _wheelBodies[wheelSlot]
                 : _vehicleChassis[vehicleSlot];
             Vector3 point = _stageContactPointsCm[wheelSlot];
@@ -741,12 +788,32 @@ public sealed class Vehicle3DWorld : IDisposable
                 _wheelMaximumSuspensionForce[wheelSlot]);
             float longitudinalSpeed = Vector3.Dot(relativeVelocity, forward);
             float lateralSpeed = Vector3.Dot(relativeVelocity, axle);
-            float driveForce = _vehicleThrottle[vehicleSlot] *
-                               _wheelDriveScale[wheelSlot] *
-                               _wheelMaximumDriveForce[wheelSlot];
-            float brakeLimit = _vehicleBrake[vehicleSlot] *
-                               _wheelBrakeScale[wheelSlot] *
-                               _wheelMaximumBrakeForce[wheelSlot];
+            _stageCompressionCm[wheelSlot] = compression;
+            _stageSlipVelocities[wheelSlot] = (forward * longitudinalSpeed) + (axle * lateralSpeed);
+            _stageLongitudinalSpeeds[wheelSlot] = longitudinalSpeed;
+            _stageLateralSpeeds[wheelSlot] = lateralSpeed;
+            _stageSuspensionForces[wheelSlot] = suspensionForce;
+
+            if (physicalWheel)
+            {
+                // Physical and box wheels are driven by the axle motor and Bepu contact friction.
+                // Their queries provide telemetry only; adding a tire impulse here would duplicate contact forces.
+                continue;
+            }
+
+            float wheelBrake = _vehicleBrake[vehicleSlot] * _wheelBrakeScale[wheelSlot];
+            float wheelThrottle = wheelBrake > 0f
+                ? 0f
+                : _vehicleThrottle[vehicleSlot] * _wheelDriveScale[wheelSlot];
+            float driveForceLimit = MathF.Abs(wheelThrottle) * _wheelMaximumDriveForce[wheelSlot];
+            float targetLongitudinalSpeed = wheelThrottle *
+                                            _wheelMaximumAngularSpeed[wheelSlot] *
+                                            _wheelRadiiCm[wheelSlot];
+            float driveForce = Math.Clamp(
+                (targetLongitudinalSpeed - longitudinalSpeed) * _wheelLongitudinalGrip[wheelSlot],
+                -driveForceLimit,
+                driveForceLimit);
+            float brakeLimit = wheelBrake * _wheelMaximumBrakeForce[wheelSlot];
             float brakeForce = Math.Clamp(
                 -longitudinalSpeed * _wheelLongitudinalGrip[wheelSlot],
                 -brakeLimit,
@@ -755,25 +822,13 @@ public sealed class Vehicle3DWorld : IDisposable
                 -lateralSpeed * _wheelLateralGrip[wheelSlot],
                 -_wheelMaximumLateralForce[wheelSlot],
                 _wheelMaximumLateralForce[wheelSlot]);
-            Vector3 force = (forward * (driveForce + brakeForce)) + (axle * lateralForce);
-            if (!HasPhysicalWheel(wheelSlot))
-            {
-                force -= down * suspensionForce;
-            }
-
+            Vector3 force = (forward * (driveForce + brakeForce)) +
+                            (axle * lateralForce) -
+                            (down * suspensionForce);
             Vector3 impulse = force * _fixedDeltaSeconds;
-            _stageCompressionCm[wheelSlot] = compression;
-            _stageSlipVelocities[wheelSlot] = (forward * longitudinalSpeed) + (axle * lateralSpeed);
-            _stageLongitudinalSpeeds[wheelSlot] = longitudinalSpeed;
-            _stageLateralSpeeds[wheelSlot] = lateralSpeed;
-            _stageSuspensionForces[wheelSlot] = suspensionForce;
             _stageImpulseBodies[wheelSlot] = impulseBody;
             _stageImpulses[wheelSlot] = impulse;
-
-            if (!HasPhysicalWheel(wheelSlot))
-            {
-                _stageAngularSpeeds[wheelSlot] = longitudinalSpeed / _wheelRadiiCm[wheelSlot];
-            }
+            _stageAngularSpeeds[wheelSlot] = longitudinalSpeed / _wheelRadiiCm[wheelSlot];
 
             if (impulse.LengthSquared() <= 1e-12f)
             {
@@ -804,28 +859,61 @@ public sealed class Vehicle3DWorld : IDisposable
             float steeringAngle = _vehicleSteering[vehicleSlot] *
                                   _wheelSteeringScale[wheelSlot] *
                                   _wheelMaximumSteeringAngles[wheelSlot];
-            Quaternion steeringTarget = Quaternion.CreateFromAxisAngle(
-                -_wheelLocalSuspensionDirections[wheelSlot],
-                steeringAngle);
-            _physics.UpdateAngularServoTarget(_wheelSteeringServos[wheelSlot], steeringTarget);
+            if (steeringAngle != _wheelAppliedSteeringAngles[wheelSlot])
+            {
+                Quaternion steeringRotation = Quaternion.CreateFromAxisAngle(
+                    -_wheelLocalSuspensionDirections[wheelSlot],
+                    steeringAngle);
+                Vector3 localAxle = Vector3.Normalize(Vector3.Cross(
+                    Vector3.Transform(_wheelLocalForwardDirections[wheelSlot], steeringRotation),
+                    _wheelLocalSuspensionDirections[wheelSlot]));
+                var alignmentSpring = new Physics3DSpringSettings(
+                    _wheelAlignmentAngularFrequencies[wheelSlot],
+                    _wheelAlignmentTwiceDampingRatios[wheelSlot]);
+                var hinge = new Physics3DAngularHingeDescription(
+                    localAxle,
+                    _wheelLocalRotationAxes[wheelSlot],
+                    alignmentSpring);
+                _physics.UpdateAngularHinge(_wheelAxleHinges[wheelSlot], hinge);
+                _wheelAppliedSteeringAngles[wheelSlot] = steeringAngle;
+            }
 
             float targetAngularSpeed;
-            if (_vehicleBrake[vehicleSlot] * _wheelBrakeScale[wheelSlot] > 0f)
+            float maximumMotorForce;
+            float wheelBrake = _vehicleBrake[vehicleSlot] * _wheelBrakeScale[wheelSlot];
+            float wheelThrottle = _vehicleThrottle[vehicleSlot] * _wheelDriveScale[wheelSlot];
+            if (wheelBrake > 0f)
             {
                 targetAngularSpeed = 0f;
+                maximumMotorForce = wheelBrake *
+                                    _wheelMaximumBrakeForce[wheelSlot] *
+                                    _wheelRadiiCm[wheelSlot];
             }
-            else if (MathF.Abs(_vehicleThrottle[vehicleSlot] * _wheelDriveScale[wheelSlot]) > 1e-5f)
+            else if (MathF.Abs(wheelThrottle) > ActiveDriveInputThreshold)
             {
-                targetAngularSpeed = _vehicleThrottle[vehicleSlot] *
-                                     _wheelDriveScale[wheelSlot] *
-                                     _wheelMaximumAngularSpeed[wheelSlot];
+                targetAngularSpeed = wheelThrottle * _wheelMaximumAngularSpeed[wheelSlot];
+                maximumMotorForce = MathF.Abs(wheelThrottle) *
+                                    _wheelMaximumDriveForce[wheelSlot] *
+                                    _wheelRadiiCm[wheelSlot];
             }
             else
             {
-                targetAngularSpeed = _stageAngularSpeeds[wheelSlot];
+                targetAngularSpeed = 0f;
+                maximumMotorForce = 0f;
             }
 
-            _physics.UpdateAngularAxisMotorTarget(_wheelAxleMotors[wheelSlot], targetAngularSpeed);
+            maximumMotorForce = MathF.Min(maximumMotorForce, _wheelAxleMotorMaximumForces[wheelSlot]);
+            if (targetAngularSpeed != _wheelAppliedMotorTargetSpeeds[wheelSlot] ||
+                maximumMotorForce != _wheelAppliedMotorMaximumForces[wheelSlot])
+            {
+                var motor = new Physics3DAngularAxisMotorDescription(
+                    _wheelLocalRotationAxes[wheelSlot],
+                    targetAngularSpeed,
+                    new Physics3DMotorSettings(maximumMotorForce, _wheelAxleMotorSoftnesses[wheelSlot]));
+                _physics.UpdateAngularAxisMotor(_wheelAxleMotors[wheelSlot], motor);
+                _wheelAppliedMotorTargetSpeeds[wheelSlot] = targetAngularSpeed;
+                _wheelAppliedMotorMaximumForces[wheelSlot] = maximumMotorForce;
+            }
         }
     }
 
@@ -881,16 +969,49 @@ public sealed class Vehicle3DWorld : IDisposable
         _stageGroundBodies[wheelSlot] = hit.Body;
         _stageSuspensionLengthsCm[wheelSlot] = MathF.Max(0f, hit.DistanceCm - _wheelRadiiCm[wheelSlot]);
         _stageContactPointsCm[wheelSlot] = hit.PositionCm;
-        _stageContactNormals[wheelSlot] = hit.Normal;
+        StageContactBasis(wheelSlot, hit.Normal);
     }
 
     private void StageShapeHit(int wheelSlot, in Physics3DShapeCastHit hit)
     {
         _stageGrounded[wheelSlot] = 1;
         _stageGroundBodies[wheelSlot] = hit.Body;
-        _stageSuspensionLengthsCm[wheelSlot] = MathF.Max(0f, hit.DistanceCm);
+        _stageSuspensionLengthsCm[wheelSlot] = MathF.Max(0f, hit.DistanceCm - _wheelRadiiCm[wheelSlot]);
         _stageContactPointsCm[wheelSlot] = hit.PositionCm;
-        _stageContactNormals[wheelSlot] = hit.Normal;
+        StageContactBasis(wheelSlot, hit.Normal);
+    }
+
+    private void StageContactBasis(int wheelSlot, Vector3 contactNormal)
+    {
+        float normalLengthSquared = contactNormal.LengthSquared();
+        if (!float.IsFinite(normalLengthSquared) || normalLengthSquared <= 1e-12f)
+        {
+            throw new InvalidOperationException(
+                $"Wheel slot {wheelSlot} received an invalid contact normal '{contactNormal}'.");
+        }
+
+        Vector3 normal = contactNormal / MathF.Sqrt(normalLengthSquared);
+        Vector3 chassisForward = _stageForwardDirections[wheelSlot];
+        Vector3 tangentForward = chassisForward - (normal * Vector3.Dot(chassisForward, normal));
+        float tangentLengthSquared = tangentForward.LengthSquared();
+        if (!float.IsFinite(tangentLengthSquared) || tangentLengthSquared <= 1e-12f)
+        {
+            throw new InvalidOperationException(
+                $"Wheel slot {wheelSlot} forward direction '{chassisForward}' is degenerate on contact normal '{normal}'.");
+        }
+
+        tangentForward /= MathF.Sqrt(tangentLengthSquared);
+        Vector3 tangentAxle = Vector3.Cross(normal, tangentForward);
+        float axleLengthSquared = tangentAxle.LengthSquared();
+        if (!float.IsFinite(axleLengthSquared) || axleLengthSquared <= 1e-12f)
+        {
+            throw new InvalidOperationException(
+                $"Wheel slot {wheelSlot} could not construct a contact-plane axle from normal '{normal}' and forward '{tangentForward}'.");
+        }
+
+        _stageContactNormals[wheelSlot] = normal;
+        _stageForwardDirections[wheelSlot] = tangentForward;
+        _stageAxleDirections[wheelSlot] = tangentAxle / MathF.Sqrt(axleLengthSquared);
     }
 
     private void ClearStagedWheelState(int wheelSlot)
@@ -919,7 +1040,6 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelVehicleSlots[wheelSlot] = vehicleSlot;
         _wheelKinds[wheelSlot] = description.Kind;
         _wheelQueryKinds[wheelSlot] = description.QueryKind;
-        _wheelCarrierBodies[wheelSlot] = description.CarrierBody;
         _wheelBodies[wheelSlot] = description.WheelBody;
         _wheelLocalMountsCm[wheelSlot] = description.LocalMountCm;
         _wheelLocalSuspensionDirections[wheelSlot] = description.LocalSuspensionDirection;
@@ -942,6 +1062,10 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelDriveScale[wheelSlot] = description.DriveScale;
         _wheelBrakeScale[wheelSlot] = description.BrakeScale;
         _wheelGroundLayers[wheelSlot] = description.GroundLayer;
+        _wheelAlignmentAngularFrequencies[wheelSlot] = description.Joint.AlignmentSpring.AngularFrequency;
+        _wheelAlignmentTwiceDampingRatios[wheelSlot] = description.Joint.AlignmentSpring.TwiceDampingRatio;
+        _wheelAxleMotorMaximumForces[wheelSlot] = description.Joint.AxleMotor.MaximumForce;
+        _wheelAxleMotorSoftnesses[wheelSlot] = description.Joint.AxleMotor.Softness;
     }
 
     private void CreatePhysicalWheelConstraints(
@@ -949,15 +1073,21 @@ public sealed class Vehicle3DWorld : IDisposable
         int wheelSlot,
         in Vehicle3DWheelDescription description)
     {
-        Physics3DBodyId carrier = description.CarrierBody;
         Physics3DBodyId wheel = description.WheelBody;
         Vector3 axle = Vector3.Normalize(Vector3.Cross(
             description.LocalForwardDirection,
             description.LocalSuspensionDirection));
+        Physics3DBodyState chassisState = _physics.GetBodyState(chassis);
+        Physics3DBodyState wheelState = _physics.GetBodyState(wheel);
+        Vector3 worldAxle = Vector3.Transform(axle, chassisState.Orientation);
+        Vector3 localWheelAxle = Vector3.Normalize(Vector3.Transform(
+            worldAxle,
+            Quaternion.Conjugate(wheelState.Orientation)));
+        _wheelLocalRotationAxes[wheelSlot] = localWheelAxle;
 
         _wheelLineConstraints[wheelSlot] = _physics.CreatePointOnLineServoConstraint(
             chassis,
-            carrier,
+            wheel,
             new Physics3DPointOnLineServoDescription(
                 description.LocalMountCm,
                 Vector3.Zero,
@@ -966,7 +1096,7 @@ public sealed class Vehicle3DWorld : IDisposable
                 description.Joint.AlignmentSpring));
         _wheelSuspensionServos[wheelSlot] = _physics.CreateLinearAxisServoConstraint(
             chassis,
-            carrier,
+            wheel,
             new Physics3DLinearAxisServoDescription(
                 description.LocalMountCm,
                 Vector3.Zero,
@@ -976,7 +1106,7 @@ public sealed class Vehicle3DWorld : IDisposable
                 description.Joint.SuspensionSpring));
         _wheelTravelLimits[wheelSlot] = _physics.CreateLinearAxisLimitConstraint(
             chassis,
-            carrier,
+            wheel,
             new Physics3DLinearAxisLimitDescription(
                 description.LocalMountCm,
                 Vector3.Zero,
@@ -984,35 +1114,20 @@ public sealed class Vehicle3DWorld : IDisposable
                 description.MinimumLengthCm,
                 description.MaximumLengthCm,
                 description.Joint.LimitSpring));
-        _wheelSteeringServos[wheelSlot] = _physics.CreateAngularServoConstraint(
-            chassis,
-            carrier,
-            new Physics3DAngularServoDescription(
-                Quaternion.Identity,
-                description.Joint.SteeringServo,
-                description.Joint.SteeringSpring));
-        _wheelHubConstraints[wheelSlot] = _physics.CreateBallSocketConstraint(
-            carrier,
-            wheel,
-            Vector3.Zero,
-            Vector3.Zero,
-            description.Joint.HubSpring);
         _wheelAxleHinges[wheelSlot] = _physics.CreateAngularHingeConstraint(
-            carrier,
+            chassis,
             wheel,
-            new Physics3DAngularHingeDescription(axle, axle, description.Joint.AlignmentSpring));
+            new Physics3DAngularHingeDescription(axle, localWheelAxle, description.Joint.AlignmentSpring));
         _wheelAxleMotors[wheelSlot] = _physics.CreateAngularAxisMotorConstraint(
-            carrier,
             wheel,
-            new Physics3DAngularAxisMotorDescription(axle, 0f, description.Joint.AxleMotor));
+            chassis,
+            new Physics3DAngularAxisMotorDescription(localWheelAxle, 0f, default));
     }
 
     private void DestroyWheelConstraints(int wheelSlot)
     {
         DestroyConstraint(_wheelAxleMotors[wheelSlot]);
         DestroyConstraint(_wheelAxleHinges[wheelSlot]);
-        DestroyConstraint(_wheelHubConstraints[wheelSlot]);
-        DestroyConstraint(_wheelSteeringServos[wheelSlot]);
         DestroyConstraint(_wheelTravelLimits[wheelSlot]);
         DestroyConstraint(_wheelSuspensionServos[wheelSlot]);
         DestroyConstraint(_wheelLineConstraints[wheelSlot]);
@@ -1034,8 +1149,6 @@ public sealed class Vehicle3DWorld : IDisposable
             _wheelLineConstraints[wheelSlot],
             _wheelSuspensionServos[wheelSlot],
             _wheelTravelLimits[wheelSlot],
-            _wheelSteeringServos[wheelSlot],
-            _wheelHubConstraints[wheelSlot],
             _wheelAxleHinges[wheelSlot],
             _wheelAxleMotors[wheelSlot]
         };
@@ -1062,12 +1175,9 @@ public sealed class Vehicle3DWorld : IDisposable
                 continue;
             }
 
-            if (current.CarrierBody == previous.CarrierBody ||
-                current.CarrierBody == previous.WheelBody ||
-                current.WheelBody == previous.CarrierBody ||
-                current.WheelBody == previous.WheelBody)
+            if (current.WheelBody == previous.WheelBody)
             {
-                throw new ArgumentException("Physical wheel carrier and wheel bodies must be unique within a vehicle.", nameof(descriptions));
+                throw new ArgumentException("Physical wheel bodies must be unique within a vehicle.", nameof(descriptions));
             }
         }
 
@@ -1078,10 +1188,7 @@ public sealed class Vehicle3DWorld : IDisposable
                 continue;
             }
 
-            if (current.CarrierBody == _wheelCarrierBodies[wheelSlot] ||
-                current.CarrierBody == _wheelBodies[wheelSlot] ||
-                current.WheelBody == _wheelCarrierBodies[wheelSlot] ||
-                current.WheelBody == _wheelBodies[wheelSlot])
+            if (current.WheelBody == _wheelBodies[wheelSlot])
             {
                 throw new InvalidOperationException($"A physical wheel body is already owned by wheel slot {wheelSlot}.");
             }
@@ -1112,8 +1219,8 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelVehicleSlots[wheelSlot] = -1;
         _wheelKinds[wheelSlot] = default;
         _wheelQueryKinds[wheelSlot] = default;
-        _wheelCarrierBodies[wheelSlot] = default;
         _wheelBodies[wheelSlot] = default;
+        _wheelLocalRotationAxes[wheelSlot] = default;
         _wheelLocalMountsCm[wheelSlot] = default;
         _wheelLocalSuspensionDirections[wheelSlot] = default;
         _wheelLocalForwardDirections[wheelSlot] = default;
@@ -1135,6 +1242,13 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelDriveScale[wheelSlot] = 0f;
         _wheelBrakeScale[wheelSlot] = 0f;
         _wheelGroundLayers[wheelSlot] = default;
+        _wheelAlignmentAngularFrequencies[wheelSlot] = 0f;
+        _wheelAlignmentTwiceDampingRatios[wheelSlot] = 0f;
+        _wheelAxleMotorMaximumForces[wheelSlot] = 0f;
+        _wheelAxleMotorSoftnesses[wheelSlot] = 0f;
+        _wheelAppliedSteeringAngles[wheelSlot] = 0f;
+        _wheelAppliedMotorTargetSpeeds[wheelSlot] = 0f;
+        _wheelAppliedMotorMaximumForces[wheelSlot] = 0f;
         _wheelGrounded[wheelSlot] = 0;
         _wheelSuspensionLengthsCm[wheelSlot] = 0f;
         _wheelCompressionCm[wheelSlot] = 0f;
@@ -1153,8 +1267,6 @@ public sealed class Vehicle3DWorld : IDisposable
         _wheelLineConstraints[wheelSlot] = default;
         _wheelSuspensionServos[wheelSlot] = default;
         _wheelTravelLimits[wheelSlot] = default;
-        _wheelSteeringServos[wheelSlot] = default;
-        _wheelHubConstraints[wheelSlot] = default;
         _wheelAxleHinges[wheelSlot] = default;
         _wheelAxleMotors[wheelSlot] = default;
     }

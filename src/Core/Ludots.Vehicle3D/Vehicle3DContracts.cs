@@ -119,29 +119,20 @@ public readonly struct Vehicle3DWheelJointSettings
         in Physics3DSpringSettings alignmentSpring,
         in Physics3DSpringSettings suspensionSpring,
         in Physics3DSpringSettings limitSpring,
-        in Physics3DSpringSettings steeringSpring,
-        in Physics3DSpringSettings hubSpring,
         in Physics3DServoSettings lineServo,
-        in Physics3DServoSettings steeringServo,
         in Physics3DMotorSettings axleMotor)
     {
         AlignmentSpring = alignmentSpring;
         SuspensionSpring = suspensionSpring;
         LimitSpring = limitSpring;
-        SteeringSpring = steeringSpring;
-        HubSpring = hubSpring;
         LineServo = lineServo;
-        SteeringServo = steeringServo;
         AxleMotor = axleMotor;
     }
 
     public Physics3DSpringSettings AlignmentSpring { get; }
     public Physics3DSpringSettings SuspensionSpring { get; }
     public Physics3DSpringSettings LimitSpring { get; }
-    public Physics3DSpringSettings SteeringSpring { get; }
-    public Physics3DSpringSettings HubSpring { get; }
     public Physics3DServoSettings LineServo { get; }
-    public Physics3DServoSettings SteeringServo { get; }
     public Physics3DMotorSettings AxleMotor { get; }
 }
 
@@ -150,7 +141,6 @@ public readonly struct Vehicle3DWheelDescription
     private Vehicle3DWheelDescription(
         Vehicle3DWheelKind kind,
         Vehicle3DWheelQueryKind queryKind,
-        Physics3DBodyId carrierBody,
         Physics3DBodyId wheelBody,
         Vector3 localMountCm,
         Vector3 localSuspensionDirection,
@@ -177,7 +167,6 @@ public readonly struct Vehicle3DWheelDescription
     {
         Kind = kind;
         QueryKind = queryKind;
-        CarrierBody = carrierBody;
         WheelBody = wheelBody;
         LocalMountCm = localMountCm;
         LocalSuspensionDirection = localSuspensionDirection;
@@ -205,7 +194,6 @@ public readonly struct Vehicle3DWheelDescription
 
     public Vehicle3DWheelKind Kind { get; }
     public Vehicle3DWheelQueryKind QueryKind { get; }
-    public Physics3DBodyId CarrierBody { get; }
     public Physics3DBodyId WheelBody { get; }
     public Vector3 LocalMountCm { get; }
     public Vector3 LocalSuspensionDirection { get; }
@@ -259,7 +247,6 @@ public readonly struct Vehicle3DWheelDescription
             Vehicle3DWheelKind.Scanning,
             queryKind,
             default,
-            default,
             localMountCm,
             localSuspensionDirection,
             localForwardDirection,
@@ -289,7 +276,6 @@ public readonly struct Vehicle3DWheelDescription
     public static Vehicle3DWheelDescription Physical(
         Vehicle3DWheelKind kind,
         Vehicle3DWheelQueryKind queryKind,
-        Physics3DBodyId carrierBody,
         Physics3DBodyId wheelBody,
         Vector3 localMountCm,
         Vector3 localSuspensionDirection,
@@ -322,7 +308,6 @@ public readonly struct Vehicle3DWheelDescription
         var description = new Vehicle3DWheelDescription(
             kind,
             queryKind,
-            carrierBody,
             wheelBody,
             localMountCm,
             localSuspensionDirection,
@@ -364,14 +349,14 @@ public readonly struct Vehicle3DWheelDescription
 
         if (HasPhysicalWheel)
         {
-            if (!CarrierBody.IsValid || !WheelBody.IsValid || CarrierBody == WheelBody)
+            if (!WheelBody.IsValid)
             {
-                throw new ArgumentException("Physical and Box wheels require distinct, valid carrier and wheel bodies.", parameterName);
+                throw new ArgumentException("Physical and Box wheels require a valid wheel body.", parameterName);
             }
         }
-        else if (CarrierBody.IsValid || WheelBody.IsValid)
+        else if (WheelBody.IsValid)
         {
-            throw new ArgumentException("Scanning wheels cannot own carrier or wheel bodies.", parameterName);
+            throw new ArgumentException("Scanning wheels cannot own wheel bodies.", parameterName);
         }
 
         Vehicle3DValidation.RequireFinite(LocalMountCm, $"{parameterName}.{nameof(LocalMountCm)}");
@@ -410,6 +395,30 @@ public readonly struct Vehicle3DWheelDescription
         Vehicle3DValidation.RequireUnitRange(SteeringScale, $"{parameterName}.{nameof(SteeringScale)}");
         Vehicle3DValidation.RequireUnitRange(DriveScale, $"{parameterName}.{nameof(DriveScale)}");
         Vehicle3DValidation.RequireUnitInterval(BrakeScale, $"{parameterName}.{nameof(BrakeScale)}");
+        if (HasPhysicalWheel)
+        {
+            Vehicle3DValidation.RequireNonNegative(
+                Joint.AxleMotor.MaximumForce,
+                $"{parameterName}.{nameof(Joint)}.{nameof(Joint.AxleMotor)}.{nameof(Joint.AxleMotor.MaximumForce)}");
+            Vehicle3DValidation.RequireNonNegative(
+                Joint.AxleMotor.Softness,
+                $"{parameterName}.{nameof(Joint)}.{nameof(Joint.AxleMotor)}.{nameof(Joint.AxleMotor.Softness)}");
+            float maximumLongitudinalForce = MathF.Max(
+                MaximumDriveForce * MathF.Abs(DriveScale),
+                MaximumBrakeForce * BrakeScale);
+            float requiredAxleMotorForce = maximumLongitudinalForce * RadiusCm;
+            Vehicle3DValidation.RequireNonNegative(
+                requiredAxleMotorForce,
+                $"{parameterName}.RequiredAxleMotorForce");
+            if (Joint.AxleMotor.MaximumForce < requiredAxleMotorForce)
+            {
+                throw new ArgumentException(
+                    $"Physical and Box wheel axle motor maximum force {Joint.AxleMotor.MaximumForce} must cover " +
+                    $"the maximum longitudinal tire torque {requiredAxleMotorForce} " +
+                    $"(max(drive, brake) force {maximumLongitudinalForce} * radius {RadiusCm}).",
+                    parameterName);
+            }
+        }
     }
 }
 
