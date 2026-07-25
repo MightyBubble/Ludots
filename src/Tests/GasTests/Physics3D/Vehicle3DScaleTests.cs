@@ -63,11 +63,15 @@ public sealed class Vehicle3DScaleTests
             StepVehicles(physics, vehicles, vehicleIds, input);
         }
 
+        long stopwatchWarmup = Stopwatch.GetTimestamp();
+        _ = Stopwatch.GetElapsedTime(stopwatchWarmup);
+        _ = GC.GetAllocatedBytesForCurrentThread();
         var samples = new double[120];
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
         long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        long backgroundWorkerAllocatedBytes = 0;
         int maximumPreparedCommands = 0;
         for (int step = 0; step < samples.Length; step++)
         {
@@ -80,6 +84,7 @@ public sealed class Vehicle3DScaleTests
             vehicles.PrepareFixedStep();
             int preparedCommands = physics.PendingActuationCommandCount;
             physics.Step();
+            backgroundWorkerAllocatedBytes += physics.LastStepMetrics.Total.BackgroundWorkerAllocatedBytes;
             vehicles.ObserveFixedStep();
             samples[step] = Stopwatch.GetElapsedTime(timestamp).TotalMilliseconds;
             maximumPreparedCommands = Math.Max(maximumPreparedCommands, preparedCommands);
@@ -91,7 +96,8 @@ public sealed class Vehicle3DScaleTests
         double fixedStepBudgetMilliseconds = physics.FixedDeltaSeconds * 1_000d;
         TestContext.Out.WriteLine(
             $"Warmed {wheelKind}, vehicles={VehicleCount}, bodies={MobileBodyCount}, constraints={ConstraintCount}, " +
-            $"P95={p95Milliseconds:F3}ms, P99={p99Milliseconds:F3}ms, allocated={allocatedBytes} bytes.");
+            $"P95={p95Milliseconds:F3}ms, P99={p99Milliseconds:F3}ms, " +
+            $"allocated={allocatedBytes} bytes, workerAllocated={backgroundWorkerAllocatedBytes} bytes.");
 
         Assert.Multiple(() =>
         {
@@ -102,6 +108,10 @@ public sealed class Vehicle3DScaleTests
             Assert.That(vehicles.ActiveWheelCount, Is.EqualTo(WheelCount));
             Assert.That(maximumPreparedCommands, Is.Zero, "Real wheels must not enqueue a second tire-force path.");
             Assert.That(allocatedBytes, Is.Zero);
+            Assert.That(
+                backgroundWorkerAllocatedBytes,
+                Is.Zero,
+                "Warmed Vehicle3D Physics3D workers allocated managed memory.");
             Assert.That(p95Milliseconds, Is.LessThan(fixedStepBudgetMilliseconds));
             Assert.That(p99Milliseconds, Is.LessThan(fixedStepBudgetMilliseconds));
         });
