@@ -383,7 +383,7 @@ internal sealed partial class Physics3DShowcaseRuntime
                 ObserveRagdollLabFixedStep(_sceneStep - 1);
                 break;
             case Physics3DShowcaseScene.ScaleCity:
-                RecordScaleCityPerformanceSample(RequireSimulation().MaximumStepMillisecondsLastUpdate);
+                RecordScaleCityPhysicsPerformanceSample(RequireSimulation().MaximumStepMillisecondsLastUpdate);
                 break;
             case Physics3DShowcaseScene.ScannerRange:
                 AdvanceScannerPlayback();

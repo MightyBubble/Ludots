@@ -1080,6 +1080,9 @@ public sealed class Physics3DShowcaseTests
         harness.CompletePreparedStep();
 
         Physics3DScaleCityShowcaseState initialStatus = harness.Runtime.ScaleCityState;
+        QueryDescription synchronizedPoseQuery = new QueryDescription()
+            .WithAll<Physics3DBodyCm, Physics3DPoseCm, PreviousPhysics3DPoseCm>();
+        int synchronizedPoseBodies = harness.EcsWorld.CountEntities(in synchronizedPoseQuery);
         Assert.That(
             harness.Runtime.TryGetBodyVisual(1, out Physics3DBodyState initialForeground, out _, out _, out _, out _, out _),
             Is.True);
@@ -1126,6 +1129,10 @@ public sealed class Physics3DShowcaseTests
             Assert.That(initialStatus.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Warming));
             Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(128));
             Assert.That(harness.Runtime.BodyCount, Is.EqualTo(129));
+            Assert.That(
+                synchronizedPoseBodies,
+                Is.EqualTo(initialStatus.InteractiveBodies + 1),
+                "Scale City background bodies must stay authoritative in Physics3D without duplicating every sparse pose into ECS.");
             Assert.That(peakContactPairs, Is.GreaterThan(0), "The foreground city never formed visible contacts.");
             Assert.That(interactiveRelaunchTotal, Is.GreaterThan(0), "The foreground launcher never advanced a wave.");
             Assert.That(sparseRecycleTotal, Is.GreaterThan(0), "The sparse stream never recycled a completed path.");
@@ -1178,39 +1185,46 @@ public sealed class Physics3DShowcaseTests
             replaySteps: 16);
         config.ScaleCity.InteractiveBodyLimit = 16;
         config.ScaleCity.PerformanceWindowSampleCount = 5;
-        config.BenchmarkRealTimeBudgetMilliseconds = 4.9f;
+        config.BenchmarkRealTimeBudgetMilliseconds = 5.5f;
 
         using var harness = new ShowcaseHarness(config, CreateWorldConfig(192, 32));
         harness.Simulation.Enabled = false;
         harness.SelectBenchmark(64);
         for (int sample = 1; sample <= 4; sample++)
         {
-            harness.Runtime.RecordScaleCityPerformanceSampleForTests(sample);
+            harness.Runtime.RecordScaleCityPerformanceSampleForTests(sample, sample + 2d);
         }
 
         Physics3DScaleCityShowcaseState warming = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
             Assert.That(warming.PerformanceSampleCount, Is.EqualTo(4));
+            Assert.That(warming.FramePerformanceSampleCount, Is.EqualTo(4));
             Assert.That(warming.PerformanceWindowCapacity, Is.EqualTo(5));
             Assert.That(warming.StepP50Milliseconds, Is.EqualTo(2.5d).Within(1e-9));
             Assert.That(warming.StepP95Milliseconds, Is.EqualTo(3.85d).Within(1e-9));
             Assert.That(warming.StepP99Milliseconds, Is.EqualTo(3.97d).Within(1e-9));
+            Assert.That(warming.FullFrameP50Milliseconds, Is.EqualTo(4.5d).Within(1e-9));
+            Assert.That(warming.FullFrameP95Milliseconds, Is.EqualTo(5.85d).Within(1e-9));
+            Assert.That(warming.FullFrameP99Milliseconds, Is.EqualTo(5.97d).Within(1e-9));
             Assert.That(warming.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Warming));
             Assert.That(
                 Physics3DShowcasePanelController.ScaleCityPerformanceStatusLabel(warming.PerformanceStatus),
                 Is.EqualTo("WARMING"));
         });
 
-        harness.Runtime.RecordScaleCityPerformanceSampleForTests(5d);
+        harness.Runtime.RecordScaleCityPerformanceSampleForTests(5d, 7d);
         Physics3DScaleCityShowcaseState p99OverBudget = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
             Assert.That(p99OverBudget.StepP50Milliseconds, Is.EqualTo(3d).Within(1e-9));
             Assert.That(p99OverBudget.StepP95Milliseconds, Is.EqualTo(4.8d).Within(1e-9));
             Assert.That(p99OverBudget.StepP99Milliseconds, Is.EqualTo(4.96d).Within(1e-9));
-            Assert.That(p99OverBudget.StepP95Milliseconds, Is.LessThan(config.BenchmarkRealTimeBudgetMilliseconds));
-            Assert.That(p99OverBudget.StepP99Milliseconds, Is.GreaterThan(config.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(p99OverBudget.StepP99Milliseconds, Is.LessThan(config.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(p99OverBudget.FullFrameP50Milliseconds, Is.EqualTo(5d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP95Milliseconds, Is.EqualTo(6.8d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP99Milliseconds, Is.EqualTo(6.96d).Within(1e-9));
+            Assert.That(p99OverBudget.FullFrameP99Milliseconds, Is.GreaterThan(config.BenchmarkRealTimeBudgetMilliseconds));
             Assert.That(p99OverBudget.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.OverBudget));
             Assert.That(
                 Physics3DShowcasePanelController.ScaleCityPerformanceStatusLabel(p99OverBudget.PerformanceStatus),
@@ -1220,9 +1234,10 @@ public sealed class Physics3DShowcaseTests
         harness.SelectBenchmark(96);
         Physics3DScaleCityShowcaseState afterScaleChange = harness.Runtime.ScaleCityState;
         Assert.That(afterScaleChange.PerformanceSampleCount, Is.Zero);
+        Assert.That(afterScaleChange.FramePerformanceSampleCount, Is.Zero);
         for (int sample = 0; sample < config.ScaleCity.PerformanceWindowSampleCount; sample++)
         {
-            harness.Runtime.RecordScaleCityPerformanceSampleForTests(4d);
+            harness.Runtime.RecordScaleCityPerformanceSampleForTests(4d, 4.5d);
         }
 
         Physics3DScaleCityShowcaseState passing = harness.Runtime.ScaleCityState;
@@ -1239,14 +1254,16 @@ public sealed class Physics3DShowcaseTests
                 Does.Contain("foreground launched").And.Contain("background recycled"));
         });
 
-        harness.Runtime.RecordScaleCityPerformanceSampleForTests(100d);
+        harness.Runtime.RecordScaleCityPerformanceSampleForTests(100d, 100d);
         Physics3DScaleCityShowcaseState rolledWindow = harness.Runtime.ScaleCityState;
         Assert.Multiple(() =>
         {
             Assert.That(rolledWindow.PerformanceSampleCount, Is.EqualTo(config.ScaleCity.PerformanceWindowSampleCount));
+            Assert.That(rolledWindow.FramePerformanceSampleCount, Is.EqualTo(config.ScaleCity.PerformanceWindowSampleCount));
             Assert.That(rolledWindow.StepP50Milliseconds, Is.EqualTo(4d).Within(1e-9));
             Assert.That(rolledWindow.StepP95Milliseconds, Is.EqualTo(80.8d).Within(1e-9));
             Assert.That(rolledWindow.StepP99Milliseconds, Is.EqualTo(96.16d).Within(1e-9));
+            Assert.That(rolledWindow.FullFrameP50Milliseconds, Is.EqualTo(4.5d).Within(1e-9));
             Assert.That(rolledWindow.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.OverBudget));
         });
 
@@ -1254,6 +1271,7 @@ public sealed class Physics3DShowcaseTests
         Assert.That(harness.Runtime.ScaleCityState, Is.EqualTo(Physics3DScaleCityShowcaseState.Empty));
         harness.SelectBenchmark(64);
         Assert.That(harness.Runtime.ScaleCityState.PerformanceSampleCount, Is.Zero);
+        Assert.That(harness.Runtime.ScaleCityState.FramePerformanceSampleCount, Is.Zero);
     }
 
     [Test]

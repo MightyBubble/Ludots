@@ -710,10 +710,14 @@ internal sealed class Physics3DShowcasePanelController
     private UiElementBuilder BuildBenchmarkEvidence(Physics3DShowcasePanelState state)
     {
         Physics3DScaleCityShowcaseState scaleCity = state.ScaleCity;
-        string percentileEvidence = scaleCity.PerformanceSampleCount == 0
+        string physicsEvidence = scaleCity.PerformanceSampleCount == 0
             ? "waiting for first fixed step"
             : $"P50 {scaleCity.StepP50Milliseconds:0.###} · P95 {scaleCity.StepP95Milliseconds:0.###} · " +
               $"P99 {scaleCity.StepP99Milliseconds:0.###} ms";
+        string frameEvidence = scaleCity.FramePerformanceSampleCount == 0
+            ? "waiting for first complete frame"
+            : $"P50 {scaleCity.FullFrameP50Milliseconds:0.###} · P95 {scaleCity.FullFrameP95Milliseconds:0.###} · " +
+              $"P99 {scaleCity.FullFrameP99Milliseconds:0.###} ms";
         return Section(
             "Scale City status",
             Metric("population", ScaleCityPopulationLabel(in scaleCity)),
@@ -722,8 +726,12 @@ internal sealed class Physics3DShowcasePanelController
                            $"{MathF.Abs(scaleCity.WindAccelerationXCmPerSecondSquared):0} cm/s²"),
             Metric("activity", ScaleCityActivityLabel(in scaleCity)),
             Metric("window", $"{ScaleCityPerformanceStatusLabel(scaleCity.PerformanceStatus)} · " +
-                             $"{scaleCity.PerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0} fixed steps"),
-            Metric("latency", percentileEvidence),
+                             $"physics {scaleCity.PerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0} · " +
+                             $"complete {scaleCity.FramePerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0}"),
+            Metric("physics", physicsEvidence),
+            Metric("complete frame", frameEvidence),
+            Metric("steady GC", $"main {scaleCity.FrameCallingThreadAllocatedBytesLastStep:N0} B · " +
+                                $"workers {scaleCity.PhysicsWorkerAllocatedBytesLastStep:N0} B"),
             Metric("budget", $"P95 and P99 must both stay below {scaleCity.PerformanceBudgetMilliseconds:0.###} ms"));
     }
 
