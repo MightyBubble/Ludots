@@ -314,6 +314,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_CallerParamsEntryCapacityOverflow_IsRejected()
+        {
+            string entries = string.Join(
+                ",",
+                Enumerable.Range(0, Ludots.Core.Gameplay.GAS.Components.EffectConfigParams.MAX_PARAMS + 1)
+                    .Select(i => $$"""{"key":"param.{{i}}","value":{{i}}}"""));
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "callerParams": [
+                          { "entries": [{{entries}}] }
+                        ],
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.callerParams[0].entries"));
+            That(ex.Message, Does.Contain("exceeded max"));
+        }
+
+        [Test]
         public void CompileAbility_GraphSignalUnknownGraph_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>

@@ -767,6 +767,16 @@ namespace Ludots.Core.Input.Orders
             InputOrderMapping mapping,
             in InputOrderActivationContext context)
         {
+            if (_isAiming &&
+                string.Equals(_aimingActionId, actionId, StringComparison.Ordinal) &&
+                (_aimingContext.Actor != context.Actor || _aimingContext.PlayerId != context.PlayerId))
+            {
+                RecordRejectedActivation(
+                    context.Actor,
+                    OrderSubmitResult.RejectedByRule);
+                return;
+            }
+
             // If already aiming a different skill, cancel old first
             if (_isAiming && _aimingActionId != actionId)
             {
@@ -788,6 +798,7 @@ namespace Ludots.Core.Input.Orders
             
             _aimingStateChangedHandler?.Invoke(true, mapping);
             EmitAimingPreviewOnEnter(mapping);
+            LastActivationResult = InputOrderActivationResult.EnteredAiming(context.Actor);
         }
 
         private void ExitAimingState()
@@ -2574,6 +2585,11 @@ namespace Ludots.Core.Input.Orders
                 if (effectiveMode != InteractionModeType.TargetFirst)
                 {
                     HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode, resolvedActor);
+                    if (LastActivationResult.State == InputOrderActivationState.Rejected)
+                    {
+                        return LastActivationResult;
+                    }
+
                     if (_isAiming && string.Equals(_aimingActionId, actionId, StringComparison.Ordinal))
                     {
                         LastActivationResult = InputOrderActivationResult.EnteredAiming(_aimingContext.Actor);
@@ -2650,6 +2666,13 @@ namespace Ludots.Core.Input.Orders
                 _explicitActivationPlayerId = previousPlayerId;
                 _hasExplicitActivationContext = previousHasContext;
             }
+        }
+
+        public InputOrderActivationResult RecordExternalActivationResult(in InputOrderActivationResult result)
+        {
+            _lastSubmittedOrderId = result.OrderId;
+            LastActivationResult = result;
+            return LastActivationResult;
         }
 
         private InputOrderActivationResult BuildActivationResult(

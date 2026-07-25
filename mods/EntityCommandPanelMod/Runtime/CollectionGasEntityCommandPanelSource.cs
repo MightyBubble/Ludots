@@ -169,17 +169,17 @@ namespace EntityCommandPanelMod.Runtime
                 slotIndex < 0 ||
                 !TryResolveCollection(context, out EntityCommandPanelCollectionQueryConfig config, out EntityCollectionHandle handle, out _))
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordActivationResult(InputOrderActivationResult.Rejected(
                     context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation);
+                    OrderSubmitResult.RejectedValidation));
             }
 
             BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
             if ((uint)slotIndex >= (uint)MaxAggregatedSlots)
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordActivationResult(InputOrderActivationResult.Rejected(
                     context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation);
+                    OrderSubmitResult.RejectedValidation));
             }
 
             int start = _memberStarts[slotIndex];
@@ -188,9 +188,9 @@ namespace EntityCommandPanelMod.Runtime
                 start < 0 ||
                 start + count > _memberScratch.Length)
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordActivationResult(InputOrderActivationResult.Rejected(
                     context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation);
+                    OrderSubmitResult.RejectedValidation));
             }
 
             InputOrderActivationResult firstAccepted = default;
@@ -201,9 +201,9 @@ namespace EntityCommandPanelMod.Runtime
             if (count > 1 &&
                 TryFindAimingMember(start, count, out Entity aimingActor))
             {
-                return InputOrderActivationResult.Rejected(
+                return RecordActivationResult(InputOrderActivationResult.Rejected(
                     aimingActor,
-                    OrderSubmitResult.RejectedByRule);
+                    OrderSubmitResult.RejectedByRule));
             }
 
             for (int i = 0; i < count; i++)
@@ -235,14 +235,22 @@ namespace EntityCommandPanelMod.Runtime
 
             if (hasRejected)
             {
-                return firstRejected;
+                return RecordActivationResult(firstRejected);
             }
 
-            return hasAccepted
+            return RecordActivationResult(hasAccepted
                 ? firstAccepted
                 : InputOrderActivationResult.Rejected(
                     context.TargetEntity,
-                    OrderSubmitResult.RejectedValidation);
+                    OrderSubmitResult.RejectedValidation));
+        }
+
+        private InputOrderActivationResult RecordActivationResult(in InputOrderActivationResult result)
+        {
+            InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
+            return mapping != null
+                ? mapping.RecordExternalActivationResult(in result)
+                : result;
         }
 
         private bool TryFindAimingMember(int start, int count, out Entity actor)

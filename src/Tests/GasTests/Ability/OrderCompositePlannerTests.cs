@@ -322,6 +322,67 @@ namespace Ludots.Tests.GAS
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
         }
 
+        [Test]
+        public void OrderContinuationSystem_WhenSubmitThrows_RestoresContinuationAndRetriesSameTerminalOutcome()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                Priority = 60,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
+            var completed = new OrderTerminalOutcome(
+                7,
+                MoveToOrderTypeId,
+                OrderTerminalState.Completed,
+                OrderFailureReason.None,
+                actor);
+            orderTypes.PublishTerminalResult(in completed);
+            const int lateRegisteredOrderTypeId = 200;
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, new Order
+            {
+                OrderId = 8,
+                OrderTypeId = lateRegisteredOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Queued,
+                Args = new OrderArgs { I0 = 0 }
+            }), Is.True);
+            var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
+            Assert.Catch<Exception>(() => system.Update(0f));
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.True);
+
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = lateRegisteredOrderTypeId,
+                Label = "Late Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            system.Update(0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            Assert.That(buffer.QueuedCount, Is.EqualTo(1));
+            Assert.That(buffer.GetQueued(0).Order.OrderId, Is.EqualTo(8));
+            Assert.That(
+                admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var outcome),
+                Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        }
+
         private static OrderQueue CreateOrderQueue(int capacity = 64)
         {
             return new OrderQueue(capacity, new OrderAdmissionResultBuffer(capacity, capacity));

@@ -270,6 +270,9 @@ namespace Ludots.Tests.GAS
             Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
             Assert.That(submitted.Count, Is.Zero);
             Assert.That(mapping.IsAiming, Is.False);
+            Assert.That(mapping.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(mapping.LastActivationResult.Actor, Is.EqualTo(activated.Actor));
+            Assert.That(mapping.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
         }
 
         [Test]

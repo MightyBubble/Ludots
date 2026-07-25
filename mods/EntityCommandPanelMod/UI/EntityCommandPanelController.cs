@@ -599,7 +599,7 @@ namespace EntityCommandPanelMod.UI
                 !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
             {
                 int slotIndex = slot.SlotIndex;
-                card.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
+                card.OnClick(_ => ActivateSlot(source!, in sourceContext, groupIndex, slotIndex));
             }
 
             return card;
@@ -857,7 +857,7 @@ namespace EntityCommandPanelMod.UI
                         .Gap(8f)
                         .Wrap(),
                     BuildCommandDeckGrid(sourceContext, state.GroupIndex, source, slotCount, slots, theme),
-                    BuildDeckFooter(statusCount, statuses, queueItemCount, queueItems, theme))
+                    BuildDeckFooter(statusCount, statuses, queueItemCount, queueItems, _runtime.LastActivationResult, theme))
                 .Id($"entity-command-panel-{state.Handle.Slot}")
                 .Width(Math.Max(360f, state.Size.WidthPx))
                 .Height(Math.Max(180f, state.Size.HeightPx))
@@ -1009,7 +1009,7 @@ namespace EntityCommandPanelMod.UI
             if (interactive)
             {
                 int slotIndex = slot.SlotIndex;
-                card.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
+                card.OnClick(_ => ActivateSlot(source!, in sourceContext, groupIndex, slotIndex));
             }
 
             return card;
@@ -1020,10 +1020,25 @@ namespace EntityCommandPanelMod.UI
             Span<EntityCommandPanelStatusView> statuses,
             int queueItemCount,
             Span<EntityCommandPanelQueueItemView> queueItems,
+            in InputOrderActivationResult lastActivationResult,
             in RtsHudTheme theme)
         {
             string footerText;
-            if (statusCount > 0)
+            if (lastActivationResult.State == InputOrderActivationState.Rejected)
+            {
+                footerText = $"Command failed: {lastActivationResult.Rejection}";
+            }
+            else if (lastActivationResult.State == InputOrderActivationState.EnteredAiming)
+            {
+                footerText = "Choose target";
+            }
+            else if (lastActivationResult.State == InputOrderActivationState.Submitted)
+            {
+                footerText = lastActivationResult.OrderId > 0
+                    ? $"Order {lastActivationResult.OrderId} submitted"
+                    : "Order submitted";
+            }
+            else if (statusCount > 0)
             {
                 footerText = $"{ResolveFriendlyStatusLabel(in statuses[0])} · {statuses[0].ProgressPermille / 10f:0.#}%";
             }
@@ -1335,10 +1350,25 @@ namespace EntityCommandPanelMod.UI
                 !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
             {
                 int slotIndex = slot.SlotIndex;
-                row.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
+                row.OnClick(_ => ActivateSlot(source!, in sourceContext, groupIndex, slotIndex));
             }
 
             return row;
+        }
+
+        private void ActivateSlot(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext sourceContext,
+            int groupIndex,
+            int slotIndex)
+        {
+            InputOrderActivationResult result = EntityCommandPanelSourceDispatch.ActivateSlot(
+                source,
+                in sourceContext,
+                groupIndex,
+                slotIndex);
+            _runtime.RecordActivationResult(in result);
+            _page.SetState(_ => new HostState(_runtime.Revision));
         }
 
         private static UiElementBuilder BuildSupplementalHeader(string title, string detail)

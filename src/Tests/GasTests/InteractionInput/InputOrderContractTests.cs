@@ -2562,6 +2562,66 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void ActivateMappedAction_SameActionDifferentActor_DoesNotOverwriteExistingAimingSession()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.AimCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Skill1",
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                    },
+                },
+            };
+            using var world = World.Create();
+            Entity actorA = world.Create();
+            Entity actorB = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config)
+            {
+                ConfirmActionId = "Confirm",
+                CancelActionId = "Cancel",
+                CommandActionId = "Command",
+            };
+            system.SetLocalPlayer(actorA, 1);
+            system.SetActorProvider((out Entity actor) => { actor = actorA; return true; });
+            system.SetActivationActorValidator((candidate, _) => world.IsAlive(candidate));
+            system.SetOrderTypeKeyResolver(_ => 7);
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 88 + submitted.Count);
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            InputOrderActivationResult entered = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(actorA, 1));
+            Assert.That(entered.State, Is.EqualTo(InputOrderActivationState.EnteredAiming));
+            Assert.That(entered.Actor, Is.EqualTo(actorA));
+
+            InputOrderActivationResult rejected = system.ActivateMappedAction(
+                "Skill1",
+                new InputOrderActivationContext(actorB, 1));
+            Assert.That(rejected.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(rejected.Actor, Is.EqualTo(actorB));
+            Assert.That(system.IsAiming, Is.True);
+
+            input.SetActionState("Confirm", Vector3.Zero, true, true, false);
+            system.Update(0f);
+
+            Assert.That(submitted.Count, Is.EqualTo(1));
+            Assert.That(submitted[0].Actor, Is.EqualTo(actorA));
+        }
+
+        [Test]
         public void ActivateMappedAction_RejectsMissingExplicitActor()
         {
             var input = new FrozenInputActionReader();

@@ -98,8 +98,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     count = continuation.Extract(triggerOrderId, extracted);
                 }
 
-                _processedCount++;
-
                 if (outcome.State != OrderTerminalState.Completed)
                 {
                     for (int i = 0; i < count; i++)
@@ -107,6 +105,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         Order removed = extracted[i];
                         OrderSpatialPayloadOps.Release(World, in removed);
                     }
+                    _processedCount++;
                     continue;
                 }
 
@@ -182,6 +181,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     CancelContinuationAdmissions(reservations, count);
                 }
+
+                _processedCount++;
             }
         }
 

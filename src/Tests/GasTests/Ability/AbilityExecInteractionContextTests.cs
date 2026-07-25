@@ -34,11 +34,14 @@ namespace Ludots.Tests.GAS
         private const int AbilityWithContextId = 9001;
         private const int AbilityWithoutContextId = 9002;
         private const int AbilityWithDanglingProfileId = 9003;
+        private const int AbilityWithTagSignalId = 9004;
+        private const int AbilityWithoutExplicitEndId = 9005;
         private const int CastOrderTypeId = 100;
         private const int WaitEventTagId = 5001;
         private const string ContextProfileName = "ctx.ability.test.confirm_targets";
         private const string AbilityTargetsCollectionKey = "collection.ability.test.targets";
         private const string StunTagName = "test.state.stunned";
+        private const string TerminalCapacityTagName = "test.exec.terminal_capacity_side_effect";
 
         [SetUp]
         public void SetUp()
@@ -197,7 +200,9 @@ namespace Ludots.Tests.GAS
             Assert.Throws<InvalidOperationException>(() => harness.ExecSystem.Update(0f));
 
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.True, "A result-capacity fault must not tear down the execution before its terminal outcome is recorded.");
-            Assert.That(world.Get<AbilityExecInstance>(actor).State, Is.EqualTo(AbilityExecRunState.Finished));
+            ref readonly var exec = ref world.Get<AbilityExecInstance>(actor);
+            Assert.That(exec.State, Is.EqualTo(AbilityExecRunState.Running));
+            Assert.That(exec.NextItemIndex, Is.EqualTo(1));
             Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
             Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
 
@@ -210,6 +215,95 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1));
             Assert.That(harness.OrderTypes.TerminalResults[0].OrderId, Is.EqualTo(7));
             Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExecNaturalFinish_WhenTerminalResultCapacityIsFull_LeavesOrderAndExecUntouchedForRetry()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, terminalResultCapacity: 1);
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.EventGate, tick: 0, tagId: WaitEventTagId);
+            harness.Definitions.Register(AbilityWithoutExplicitEndId, new AbilityDefinition { ExecSpec = spec });
+            Entity actor = harness.CreateCastingActor(AbilityWithoutExplicitEndId);
+
+            harness.ExecSystem.Update(0f);
+            Assert.That(world.Get<AbilityExecInstance>(actor).State, Is.EqualTo(AbilityExecRunState.GateWaiting));
+
+            harness.EventBus.Publish(new GameplayEvent { TagId = WaitEventTagId, Source = actor });
+            harness.EventBus.Update();
+            harness.ExecSystem.Update(0f);
+            ref readonly var readyToFinish = ref world.Get<AbilityExecInstance>(actor);
+            Assert.That(readyToFinish.State, Is.EqualTo(AbilityExecRunState.Running));
+            Assert.That(readyToFinish.NextItemIndex, Is.EqualTo(1));
+
+            var occupiedOrder = new Order { OrderId = 99, Actor = default, OrderTypeId = CastOrderTypeId };
+            var occupiedBuffer = OrderBuffer.CreateEmpty();
+            Entity occupiedActor = world.Create(
+                occupiedBuffer,
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new BlackboardSpatialBuffer());
+            occupiedOrder.Actor = occupiedActor;
+            ref var occupiedOrders = ref world.Get<OrderBuffer>(occupiedActor);
+            occupiedOrders.SetActiveDirect(in occupiedOrder, priority: 100);
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, occupiedActor, harness.OrderTypes), Is.True);
+
+            Assert.Throws<InvalidOperationException>(() => harness.ExecSystem.Update(0f));
+
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
+            ref readonly var blocked = ref world.Get<AbilityExecInstance>(actor);
+            Assert.That(blocked.State, Is.EqualTo(AbilityExecRunState.Running));
+            Assert.That(blocked.NextItemIndex, Is.EqualTo(1));
+            Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
+            Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
+
+            harness.OrderTypes.TerminalResults.Clear();
+            harness.ExecSystem.ResetSlice();
+            harness.ExecSystem.Update(0f);
+
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(harness.OrderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(harness.OrderTypes.TerminalResults[0].OrderId, Is.EqualTo(7));
+            Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExecTimeline_WhenTerminalResultCapacityIsFull_DoesNotApplyDueSideEffects()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, terminalResultCapacity: 1);
+            int sideEffectTagId = TagRegistry.Register(TerminalCapacityTagName);
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.TagSignal, tick: 0, tagId: sideEffectTagId);
+            spec.SetItem(1, ExecItemKind.End, tick: 0);
+            harness.Definitions.Register(AbilityWithTagSignalId, new AbilityDefinition { ExecSpec = spec });
+            Entity actor = harness.CreateCastingActor(AbilityWithTagSignalId);
+
+            var occupiedOrder = new Order { OrderId = 99, Actor = default, OrderTypeId = CastOrderTypeId };
+            var occupiedBuffer = OrderBuffer.CreateEmpty();
+            Entity occupiedActor = world.Create(
+                occupiedBuffer,
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new BlackboardSpatialBuffer());
+            occupiedOrder.Actor = occupiedActor;
+            ref var occupiedOrders = ref world.Get<OrderBuffer>(occupiedActor);
+            occupiedOrders.SetActiveDirect(in occupiedOrder, priority: 100);
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, occupiedActor, harness.OrderTypes), Is.True);
+
+            Assert.Throws<InvalidOperationException>(() => harness.ExecSystem.Update(0f));
+
+            Assert.That(world.Get<GameplayTagContainer>(actor).HasTag(sideEffectTagId), Is.False);
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
+            ref readonly var exec = ref world.Get<AbilityExecInstance>(actor);
+            Assert.That(exec.State, Is.EqualTo(AbilityExecRunState.Running));
+            Assert.That(exec.NextItemIndex, Is.Zero);
+            Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
+            Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
         }
 
         [Test]
@@ -306,6 +400,7 @@ namespace Ludots.Tests.GAS
             public GameplayEventBus EventBus = null!;
             public OrderTypeRegistry OrderTypes = null!;
             public GasPresentationEventBuffer PresentationEvents = null!;
+            public AbilityDefinitionRegistry Definitions = null!;
             public AbilityExecSystem ExecSystem = null!;
             public AbilityExecInteractionContextSystem ContextSystem = null!;
             public int CommandSourceKeyId;
@@ -413,6 +508,7 @@ namespace Ludots.Tests.GAS
                     EventBus = eventBus,
                     OrderTypes = orderTypes,
                     PresentationEvents = presentationEvents,
+                    Definitions = definitions,
                     ExecSystem = execSystem,
                     ContextSystem = new AbilityExecInteractionContextSystem(world, stack, contextProfiles, definitions),
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),

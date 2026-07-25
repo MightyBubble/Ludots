@@ -495,7 +495,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
                             float val = valNode.GetValue<JsonElement>().ValueKind == JsonValueKind.Number
                                 ? valNode.GetValue<float>()
                                 : float.Parse(valNode.GetValue<string>(), CultureInfo.InvariantCulture);
-                            cp.TryAddFloat(keyId, val);
+                            if (!cp.TryAddFloat(keyId, val))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries' exceeded max {EffectConfigParams.MAX_PARAMS} params.");
+                            }
                         }
                     }
                 }
