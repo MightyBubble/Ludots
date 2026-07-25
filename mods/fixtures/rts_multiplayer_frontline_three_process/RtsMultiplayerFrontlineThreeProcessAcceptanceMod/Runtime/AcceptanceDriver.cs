@@ -878,11 +878,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
         CaptureSeats(requireBothConnected: false);
         Span<float> coreHealth = stackalloc float[2];
         Span<int> coreCount = stackalloc int[2];
+        Span<int> pendingCoreDestroyCount = stackalloc int[2];
         Span<int> infantryCount = stackalloc int[2];
         foreach (ref Chunk chunk in _world.Query(in ServerCoreQuery))
         {
             ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
             ReadOnlySpan<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
+            ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 int side = participants[index].SideIndex;
@@ -892,6 +894,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 }
                 coreCount[side]++;
                 coreHealth[side] = attributes[index].GetCurrent(_healthAttributeId);
+                if (_world.Has<PresentationDestroyPending>(Unsafe.Add(ref first, index)))
+                {
+                    pendingCoreDestroyCount[side]++;
+                }
             }
         }
         foreach (ref Chunk chunk in _world.Query(in ServerInfantryQuery))
@@ -1009,11 +1015,19 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 "Authoritative Frontline completion did not preserve one atomic core-destruction resolution.");
         }
+        if (coreCount[winningSide] == 1 &&
+            coreCount[losingSide] == 1 &&
+            pendingCoreDestroyCount[winningSide] == 0 &&
+            pendingCoreDestroyCount[losingSide] == 1)
+        {
+            return;
+        }
         if (coreCount[winningSide] != 1 || coreCount[losingSide] != 0)
         {
             throw new InvalidOperationException(
                 $"Completed core-destruction match requires winner/loser core counts 1/0; observed " +
-                $"{coreCount[winningSide]}/{coreCount[losingSide]}.");
+                $"{coreCount[winningSide]}/{coreCount[losingSide]} with pending-destroy counts " +
+                $"{pendingCoreDestroyCount[winningSide]}/{pendingCoreDestroyCount[losingSide]}.");
         }
 
         float winningHealth = winningSide == 0
