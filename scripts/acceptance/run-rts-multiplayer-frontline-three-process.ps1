@@ -123,12 +123,13 @@ function Start-CapturedProcess {
         [void]$startInfo.Environment.Remove($variableName)
     }
     foreach ($entry in $EnvironmentVariables.GetEnumerator()) {
-        $name = [string]$entry.Key
-        $value = [string]$entry.Value
-        if ([string]::IsNullOrWhiteSpace($name) -or [string]::IsNullOrWhiteSpace($value)) {
+        $environmentVariableName = [string]$entry.Key
+        $environmentVariableValue = [string]$entry.Value
+        if ([string]::IsNullOrWhiteSpace($environmentVariableName) -or
+            [string]::IsNullOrWhiteSpace($environmentVariableValue)) {
             throw "Process '$Name' environment variable names and values must be non-empty."
         }
-        $startInfo.Environment[$name] = $value
+        $startInfo.Environment[$environmentVariableName] = $environmentVariableValue
     }
 
     $process = [System.Diagnostics.Process]::new()

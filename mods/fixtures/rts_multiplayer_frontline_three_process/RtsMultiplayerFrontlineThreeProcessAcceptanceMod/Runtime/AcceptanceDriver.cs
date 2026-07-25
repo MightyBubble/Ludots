@@ -144,10 +144,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _stageStartedTimestamp = _startedTimestamp;
         StartStep(_role == NetworkProcessRole.AuthoritativeServer ? "AuthoritativeMatch" : ClientStage.Connecting.ToString());
 
-        if (_role == NetworkProcessRole.ReplicatedClient)
-        {
-            BindClientServices();
-        }
     }
 
     public void Initialize()
@@ -210,28 +206,42 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void BindClientServices()
     {
-        _input = _engine.GetService(CoreServiceKeys.InputHandler)
+        if (_inputOrderMapping != null)
+        {
+            return;
+        }
+
+        PlayerInputHandler input = _engine.GetService(CoreServiceKeys.InputHandler)
             ?? throw new InvalidOperationException("Acceptance client requires PlayerInputHandler.");
-        _bindings = _engine.GetService(CoreServiceKeys.InteractionActionBindings)
+        InteractionActionBindings bindings = _engine.GetService(CoreServiceKeys.InteractionActionBindings)
             ?? throw new InvalidOperationException("Acceptance client requires interaction action bindings.");
-        _groundOverride = _engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
+        AuthoritativeGroundPointerOverride groundOverride = _engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
             ?? throw new InvalidOperationException("Acceptance client requires authoritative ground pointer override.");
-        _commandPort = _engine.GetService(CoreServiceKeys.ReplicatedClientCommandPort)
+        IReplicatedClientCommandPort commandPort = _engine.GetService(CoreServiceKeys.ReplicatedClientCommandPort)
             ?? throw new InvalidOperationException("Acceptance client requires the platform-neutral replicated command port.");
         INetworkRuntimePort runtimePort = _engine.GetService(CoreServiceKeys.NetworkRuntimePort)
             ?? throw new InvalidOperationException("Acceptance client requires the network runtime port.");
-        _clientStatus = runtimePort as IReplicatedClientRuntimeStatus
+        IReplicatedClientRuntimeStatus clientStatus = runtimePort as IReplicatedClientRuntimeStatus
             ?? throw new InvalidOperationException("Acceptance client runtime does not expose connection status.");
-        _collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+        EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Acceptance client requires the entity collection store.");
-        _projector = _engine.GetService(CoreServiceKeys.ScreenProjector)
+        IScreenProjector projector = _engine.GetService(CoreServiceKeys.ScreenProjector)
             ?? throw new InvalidOperationException("Acceptance client requires the platform-neutral screen projector.");
-        _inputOrderMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)
+        InputOrderMappingSystem inputOrderMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)
             ?? throw new InvalidOperationException("Acceptance client requires the active input-order mapping system.");
 
-        RequireInputAction(_bindings.ConfirmActionId);
-        RequireInputAction(_bindings.CommandActionId);
-        RequireInputAction(_bindings.PointerPositionActionId);
+        _input = input;
+        _bindings = bindings;
+        _groundOverride = groundOverride;
+        _commandPort = commandPort;
+        _clientStatus = clientStatus;
+        _collections = collections;
+        _projector = projector;
+        _inputOrderMapping = inputOrderMapping;
+
+        RequireInputAction(bindings.ConfirmActionId);
+        RequireInputAction(bindings.CommandActionId);
+        RequireInputAction(bindings.PointerPositionActionId);
         RequireInputAction(_frontline.ReadyActionId);
         RequireInputAction("SkillQ");
         RequireInputAction(CommandSourceModifierActionIds.Additive);
@@ -239,6 +249,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void UpdateClient()
     {
+        BindClientServices();
         TrackClientObservations();
         TrackPendingAdmissionProgress();
         EnforceClientStageTimeout();
