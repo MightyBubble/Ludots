@@ -182,6 +182,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         Activate(engine.World, physicsWorld, simulation, config);
         _engine = engine;
         SynchronizeCharacterRouteCameraAfterMapFocus();
+        SynchronizeWheelLabCameraAfterMapFocus();
         ActivateCharacterTraversalInput(engine.GetService(CoreServiceKeys.InputHandler));
         return Task.CompletedTask;
     }

@@ -245,6 +245,8 @@
     "deckThicknessCm": 40
   },
   "wheelLab": {
+    "cameraId": "Camera.Profile.Physics3DWheelLab",
+    "cameraTargetHeightOffsetCm": 80,
     "vehicleCapacity": 1,
     "wheelCapacity": 4,
     "queryBatchCapacity": 4,
