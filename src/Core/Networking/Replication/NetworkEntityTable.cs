@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Arch.Core;
 
 namespace Ludots.Core.Networking.Replication
@@ -68,6 +69,12 @@ namespace Ludots.Core.Networking.Replication
         public int Count => _count;
 
         public int AvailableCapacity => _freeCount;
+
+        public NetworkEntityReadPublication CreateReadPublication()
+        {
+            EnsureOwnerThread();
+            return new NetworkEntityReadPublication(this);
+        }
 
         public bool TryAllocate(Entity entity, out NetworkEntityHandle handle)
         {
@@ -219,6 +226,27 @@ namespace Ludots.Core.Networking.Replication
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool TryResolvePublished(NetworkEntityHandle handle, out Entity entity)
+        {
+            if (Volatile.Read(ref _snapshotPublicationDepth) <= 0)
+            {
+                throw new InvalidOperationException("Network entity read publication is not active.");
+            }
+
+            if (!handle.IsValid ||
+                (uint)handle.Slot >= (uint)_active.Length ||
+                !_active[handle.Slot] ||
+                _generations[handle.Slot] != handle.Generation)
+            {
+                entity = Entity.Null;
+                return false;
+            }
+
+            entity = _entities[handle.Slot];
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureOwnerThread()
         {
             if (Environment.CurrentManagedThreadId != _ownerThreadId)
@@ -317,6 +345,54 @@ namespace Ludots.Core.Networking.Replication
             value |= value >> 8;
             value |= value >> 16;
             return value + 1;
+        }
+    }
+
+    /// <summary>
+    /// Reusable publication window for concurrent read-only network-handle validation.
+    /// The authoritative owner opens and closes the window; lifecycle mutation is rejected while open.
+    /// </summary>
+    public sealed class NetworkEntityReadPublication
+    {
+        private readonly NetworkEntityTable _table;
+        private int _active;
+
+        internal NetworkEntityReadPublication(NetworkEntityTable table)
+        {
+            _table = table;
+        }
+
+        public void Enter()
+        {
+            if (Volatile.Read(ref _active) != 0)
+            {
+                throw new InvalidOperationException("Network entity read publication is already active.");
+            }
+
+            _table.EnterSnapshotPublication();
+            Volatile.Write(ref _active, 1);
+        }
+
+        public void Exit()
+        {
+            if (Volatile.Read(ref _active) == 0)
+            {
+                throw new InvalidOperationException("Network entity read publication is not active.");
+            }
+
+            Volatile.Write(ref _active, 0);
+            _table.ExitSnapshotPublication();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryResolve(NetworkEntityHandle handle, out Entity entity)
+        {
+            if (Volatile.Read(ref _active) == 0)
+            {
+                throw new InvalidOperationException("Network entity read publication is not active.");
+            }
+
+            return _table.TryResolvePublished(handle, out entity);
         }
     }
 }

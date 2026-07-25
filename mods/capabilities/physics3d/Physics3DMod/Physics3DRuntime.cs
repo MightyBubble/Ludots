@@ -93,6 +93,7 @@ internal sealed class Physics3DRuntime : IDisposable
             worldConfig.MaximumPhysicsStepsPerSourceTick);
         Physics3DNetworkPlayerLifecycle? players = null;
         Physics3DNetworkBodyRegistry? bodyRegistry = null;
+        Physics3DNetworkReplicatedBindingStore? replicatedBindings = null;
         Physics3DNetworkBodyRegistrySystem? bodyRegistrySystem = null;
         Physics3DAuthoritativeReplicationSeatRuntimeFactory? seatFactory = null;
         Physics3DNetworkAoiInterestPort? interest = null;
@@ -110,12 +111,16 @@ internal sealed class Physics3DRuntime : IDisposable
                 NetworkEntityTable entities = RequireService(engine, CoreServiceKeys.NetworkEntityTable);
                 KnowledgeProjectionStore knowledge = RequireService(engine, CoreServiceKeys.KnowledgeProjectionStore);
                 knowledge.ReserveRecords(physicsNetwork.KnowledgeRecordCapacity);
+                replicatedBindings = new Physics3DNetworkReplicatedBindingStore(
+                    world.BodySlotCapacity,
+                    entities.Capacity);
                 projectors = RequireService(engine, CoreServiceKeys.ReplicationSchemaProjectors);
                 RequireMutableSchemaSlot(projectors, physicsNetwork.ReplicationSchemaId);
                 bodyRegistry = new Physics3DNetworkBodyRegistry(
                     engine.World,
                     world,
                     entities,
+                    replicatedBindings,
                     engine.GameSession.SimulationTicks,
                     physicsNetwork.ReplicationSchemaId,
                     physicsNetwork.BodyRegistryCommandCapacity);
@@ -124,6 +129,7 @@ internal sealed class Physics3DRuntime : IDisposable
                     engine.World,
                     world,
                     entities,
+                    replicatedBindings,
                     knowledge,
                     network.PlayerCapacity,
                     physicsNetwork.ReplicationSchemaId,
@@ -139,10 +145,10 @@ internal sealed class Physics3DRuntime : IDisposable
                     network.BaselineCapacity,
                     network.DisclosureChangeLogCapacity);
                 interest = new Physics3DNetworkAoiInterestPort(
-                    engine.World,
                     world,
                     entities,
                     players,
+                    replicatedBindings,
                     knowledge,
                     network.ReplicationEntityCapacityPerSeat,
                     physicsNetwork.Aoi);
@@ -229,7 +235,7 @@ internal sealed class Physics3DRuntime : IDisposable
                 seatFactoryServiceSet = true;
                 engine.SetService(
                     CoreServiceKeys.AuthoritativeReplicationInterest,
-                    (IAuthoritativeReplicationInterestPort)interest!);
+                    (IAuthoritativeReplicationInterestBatchPort)interest!);
                 interestServiceSet = true;
             }
 
@@ -327,7 +333,7 @@ internal sealed class Physics3DRuntime : IDisposable
             RequireOwnedService(
                 _engine,
                 CoreServiceKeys.AuthoritativeReplicationInterest,
-                (IAuthoritativeReplicationInterestPort)_interest!);
+                (IAuthoritativeReplicationInterestBatchPort)_interest!);
         }
 
         if (_fixedInputSystem != null &&

@@ -824,7 +824,10 @@ public sealed class FixedInputRuntimeTests
                 commandIngress,
                 results,
                 new FixedControllerResolver(player),
-                new FixedReplicationInterest(handle),
+                new FixedReplicationInterest(
+                    sessions.SeatCapacity,
+                    capacity.ReplicationEntityCapacityPerSeat,
+                    handle),
                 replicationFactory,
                 fixedInput,
                 observer);
@@ -1150,24 +1153,78 @@ public sealed class FixedInputRuntimeTests
         }
     }
 
-    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestPort
+    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestBatchPort
     {
+        private readonly SessionSeatBinding[] _preparedSeats;
         private readonly NetworkEntityHandle[] _handles;
-        public FixedReplicationInterest(params NetworkEntityHandle[] handles) => _handles = handles;
+        private readonly int _entityCapacityPerSeat;
 
-        public bool TryCopyInterest(
-            in SessionSeatBinding seat,
-            Span<NetworkEntityHandle> destination,
-            out int count)
+        private int _preparedSeatCount;
+        private bool _prepared;
+
+        public FixedReplicationInterest(
+            int seatCapacity,
+            int entityCapacityPerSeat,
+            params NetworkEntityHandle[] handles)
         {
-            count = _handles.Length;
-            if (destination.Length < count)
+            _preparedSeats = new SessionSeatBinding[seatCapacity];
+            _entityCapacityPerSeat = entityCapacityPerSeat;
+            _handles = handles;
+        }
+
+        public int SeatCapacity => _preparedSeats.Length;
+        public int EntityCapacityPerSeat => _entityCapacityPerSeat;
+
+        public bool TryPrepareBatch(ReadOnlySpan<SessionSeatBinding> seats)
+        {
+            if (_prepared || seats.Length > _preparedSeats.Length || _handles.Length > _entityCapacityPerSeat)
             {
                 return false;
             }
 
-            _handles.CopyTo(destination);
+            seats.CopyTo(_preparedSeats);
+            _preparedSeatCount = seats.Length;
+            _prepared = true;
             return true;
+        }
+
+        public bool TryGetPreparedInterest(
+            in SessionSeatBinding seat,
+            out ReadOnlySpan<NetworkEntityHandle> handles)
+        {
+            if (_prepared)
+            {
+                for (int i = 0; i < _preparedSeatCount; i++)
+                {
+                    if (_preparedSeats[i].Equals(seat))
+                    {
+                        handles = _handles;
+                        return true;
+                    }
+                }
+            }
+
+            handles = default;
+            return false;
+        }
+
+        public void CommitPreparedKnowledge()
+        {
+            if (!_prepared)
+            {
+                throw new InvalidOperationException("No replication interest batch is prepared.");
+            }
+        }
+
+        public void CompletePreparedBatch()
+        {
+            if (!_prepared)
+            {
+                throw new InvalidOperationException("No replication interest batch is prepared.");
+            }
+
+            _preparedSeatCount = 0;
+            _prepared = false;
         }
     }
 
