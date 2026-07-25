@@ -965,6 +965,12 @@ public sealed class Vehicle3DWorld : IDisposable
 
     private void StageRayHit(int wheelSlot, in Physics3DRaycastHit hit)
     {
+        if (!HasUsableContactNormal(hit.Normal))
+        {
+            // A hit without a finite non-zero normal cannot form a contact basis. Reject it.
+            return;
+        }
+
         _stageGrounded[wheelSlot] = 1;
         _stageGroundBodies[wheelSlot] = hit.Body;
         _stageSuspensionLengthsCm[wheelSlot] = MathF.Max(0f, hit.DistanceCm - _wheelRadiiCm[wheelSlot]);
@@ -974,6 +980,13 @@ public sealed class Vehicle3DWorld : IDisposable
 
     private void StageShapeHit(int wheelSlot, in Physics3DShapeCastHit hit)
     {
+        // Physics3D shape casts report OnHitAtZeroT overlaps as Hit=true with Normal=0.
+        // That is not a usable wheel contact; reject it instead of inventing a substitute normal.
+        if (!HasUsableContactNormal(hit.Normal))
+        {
+            return;
+        }
+
         _stageGrounded[wheelSlot] = 1;
         _stageGroundBodies[wheelSlot] = hit.Body;
         _stageSuspensionLengthsCm[wheelSlot] = MathF.Max(0f, hit.DistanceCm - _wheelRadiiCm[wheelSlot]);
@@ -981,16 +994,21 @@ public sealed class Vehicle3DWorld : IDisposable
         StageContactBasis(wheelSlot, hit.Normal);
     }
 
-    private void StageContactBasis(int wheelSlot, Vector3 contactNormal)
+    private static bool HasUsableContactNormal(Vector3 contactNormal)
     {
         float normalLengthSquared = contactNormal.LengthSquared();
-        if (!float.IsFinite(normalLengthSquared) || normalLengthSquared <= 1e-12f)
+        return float.IsFinite(normalLengthSquared) && normalLengthSquared > 1e-12f;
+    }
+
+    private void StageContactBasis(int wheelSlot, Vector3 contactNormal)
+    {
+        if (!HasUsableContactNormal(contactNormal))
         {
             throw new InvalidOperationException(
                 $"Wheel slot {wheelSlot} received an invalid contact normal '{contactNormal}'.");
         }
 
-        Vector3 normal = contactNormal / MathF.Sqrt(normalLengthSquared);
+        Vector3 normal = contactNormal / MathF.Sqrt(contactNormal.LengthSquared());
         Vector3 chassisForward = _stageForwardDirections[wheelSlot];
         Vector3 tangentForward = chassisForward - (normal * Vector3.Dot(chassisForward, normal));
         float tangentLengthSquared = tangentForward.LengthSquared();
