@@ -55,6 +55,18 @@ public sealed class Physics3DNetworkClockValidatorTests
     }
 
     [Test]
+    public void Validate_AllRatesMatchingAtTwentyHz_StillFailsTheNetworkContract()
+    {
+        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Physics3DNetworkClockValidator.Validate(
+                engineFixedHz: 20,
+                networkSimulationTickRateHz: 20,
+                physicsFixedStepHz: 20,
+                maximumPhysicsStepsPerSourceTick: 1))!;
+        Assert.That(ex.ActualValue, Is.EqualTo(20));
+    }
+
+    [Test]
     public void Validate_PhysicsFixedStepHzMismatch_Fails()
     {
         ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(() =>

@@ -7,6 +7,7 @@ using Ludots.Core.Networking.FixedInput;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Physics3D;
+using Ludots.Core.Physics3DNet;
 using Ludots.Core.Physics3DNet.Bridge;
 using Ludots.Core.Physics3DNet.Client;
 using Ludots.Core.Physics3DNet.Input;
@@ -72,11 +73,7 @@ internal sealed class Physics3DRuntime : IDisposable
                 engine.ConfigCatalog,
                 engine.ConfigConflictReport,
                 network);
-            if (network.SimulationTickRateHz != sourceFixedStepHz || worldConfig.FixedStepHz != sourceFixedStepHz)
-            {
-                throw new InvalidOperationException(
-                    $"Physics3D, networking, and engine fixed-step rates must agree; got physics {worldConfig.FixedStepHz}Hz, networking {network.SimulationTickRateHz}Hz, engine {sourceFixedStepHz}Hz.");
-            }
+            Physics3DNetworkClockValidator.Validate(sourceFixedStepHz, network, worldConfig);
 
             if (worldConfig.MobileBodyCapacity < network.PlayerCapacity)
             {
