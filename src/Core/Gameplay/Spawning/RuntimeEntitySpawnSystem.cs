@@ -1202,11 +1202,6 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned, int cachedTemplateOnSpawnEffectId)
         {
-            if (_effectRequests == null)
-            {
-                return;
-            }
-
             int effectTemplateId = request.OnSpawnEffectTemplateId > 0
                 ? request.OnSpawnEffectTemplateId
                 : cachedTemplateOnSpawnEffectId;
@@ -1232,10 +1227,16 @@ namespace Ludots.Core.Gameplay.Spawning
                 return;
             }
 
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime spawn '{request.Kind}' materialized an OnSpawn effect without an EffectRequestQueue.");
+            }
+
             useSpawnedAsSource = request.OnSpawnEffectTemplateId <= 0;
             _effectRequests.Publish(new EffectRequest
             {
-                RootId = 0,
+                RootId = request.RootId,
                 Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
                 TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,

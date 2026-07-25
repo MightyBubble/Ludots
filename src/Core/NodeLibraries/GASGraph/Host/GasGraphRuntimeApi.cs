@@ -656,6 +656,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             // Convert EffectArgs to CallerParams
             var req = new Ludots.Core.Gameplay.GAS.EffectRequest
             {
+                RootId = _hasEffectContext ? _currentEffectContext.RootId : 0,
                 Source = caster,
                 Target = target,
                 TargetContext = default,
@@ -692,7 +693,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             TargetResolverContextMapping mapping = RequireTargetDispatchPresets().Get(payloadPresetId);
             TargetResolverFanOutHelper.PublishResolvedTargets(
-                rootId: 0,
+                rootId: _hasEffectContext ? _currentEffectContext.RootId : 0,
                 source,
                 target,
                 targetContext,

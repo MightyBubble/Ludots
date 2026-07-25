@@ -46,6 +46,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // Scratch buffer for collected listener actions
         private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[32];
         private int[] _scratchRegisterCountsByGraphId = new int[64];
+        private bool _executionActive;
 
         public EffectPhaseExecutor(
             GraphProgramRegistry programs,
@@ -81,8 +82,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPresetType presetType,
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
+            using var execution = EnterTopLevelExecution();
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, effectEntity, in context, targetPos, phase, behavior, presetType, effectTagId: 0, effectTemplateId: 0, in mergedParams, builtinRuntime);
+            byte validationResult = 0;
+            ExecutePhase(
+                world,
+                api,
+                effectEntity,
+                in context,
+                targetPos,
+                phase,
+                in behavior,
+                presetType,
+                effectTagId: 0,
+                effectTemplateId: 0,
+                in mergedParams,
+                builtinRuntime,
+                randomSeed: 0,
+                trackValidationResult: false,
+                ref validationResult);
         }
 
         /// <summary>
@@ -101,8 +119,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int effectTemplateId,
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
+            using var execution = EnterTopLevelExecution();
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, effectEntity, in context, targetPos, phase, behavior, presetType, effectTagId, effectTemplateId, in mergedParams, builtinRuntime);
+            byte validationResult = 0;
+            ExecutePhase(
+                world,
+                api,
+                effectEntity,
+                in context,
+                targetPos,
+                phase,
+                in behavior,
+                presetType,
+                effectTagId,
+                effectTemplateId,
+                in mergedParams,
+                builtinRuntime,
+                randomSeed: 0,
+                trackValidationResult: false,
+                ref validationResult);
         }
 
         public void ExecutePhase(
@@ -120,6 +155,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             BuiltinHandlerExecutionContext? builtinRuntime = null,
             uint randomSeed = 0)
         {
+            using var execution = EnterTopLevelExecution();
             byte validationResult = 0;
             ExecutePhase(
                 world,
@@ -179,7 +215,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // ④ Dispatch Phase Listeners
             if (effectTagId != 0 || effectTemplateId != 0)
             {
-                DispatchListeners(world, api, effectEntity, in context, targetPos, phase, effectTagId, effectTemplateId, randomSeed, trackValidationResult, ref validationResult);
+                DispatchListeners(
+                    world,
+                    api,
+                    effectEntity,
+                    in context,
+                    targetPos,
+                    phase,
+                    effectTagId,
+                    effectTemplateId,
+                    in mergedParams,
+                    builtinRuntime,
+                    randomSeed,
+                    trackValidationResult,
+                    ref validationResult);
             }
         }
 
@@ -201,6 +250,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             BuiltinHandlerExecutionContext? builtinRuntime = null,
             uint randomSeed = 0)
         {
+            using var execution = EnterTopLevelExecution();
             byte validationResult = 1;
             ExecutePhase(
                 world,
@@ -283,6 +333,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             int effectTagId,
             int effectTemplateId,
+            in EffectConfigParams mergedParams,
+            BuiltinHandlerExecutionContext? builtinRuntime,
             uint randomSeed,
             bool trackValidationResult,
             ref byte validationResult)
@@ -338,7 +390,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if ((action.Flags & PhaseListenerActionFlags.ExecuteGraph) != 0 && action.GraphProgramId > 0)
                 {
-                    ExecuteGraph(world, api, effectEntity, in context, targetPos, action.GraphProgramId, effectTemplateId, phase, default, null, randomSeed, trackValidationResult, ref validationResult);
+                    ExecuteGraph(world, api, effectEntity, in context, targetPos, action.GraphProgramId, effectTemplateId, phase, in mergedParams, builtinRuntime, randomSeed, trackValidationResult, ref validationResult);
                 }
 
                 if ((action.Flags & PhaseListenerActionFlags.PublishEvent) != 0 && action.EventTagId != 0 && _eventBus != null)
@@ -383,10 +435,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos,
             EffectPhaseId phase,
             int effectTagId,
-            int effectTemplateId)
+            int effectTemplateId,
+            in EffectConfigParams mergedParams,
+            BuiltinHandlerExecutionContext? builtinRuntime)
         {
+            using var execution = EnterTopLevelExecution();
             byte validationResult = 0;
-            DispatchListeners(world, api, effectEntity, in context, targetPos, phase, effectTagId, effectTemplateId, 0, trackValidationResult: false, ref validationResult);
+            DispatchListeners(
+                world,
+                api,
+                effectEntity,
+                in context,
+                targetPos,
+                phase,
+                effectTagId,
+                effectTemplateId,
+                in mergedParams,
+                builtinRuntime,
+                0,
+                trackValidationResult: false,
+                ref validationResult);
         }
 
         /// <summary>
@@ -401,6 +469,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos,
             int graphProgramId)
         {
+            using var execution = EnterTopLevelExecution();
             var context = new EffectContext
             {
                 Source = caster,
@@ -409,6 +478,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             };
             byte validationResult = 0;
             ExecuteGraph(world, api, Entity.Null, in context, targetPos, graphProgramId, 0, EffectPhaseId.OnApply, default, null, 0, trackValidationResult: false, ref validationResult);
+        }
+
+        private ExecutionScope EnterTopLevelExecution()
+        {
+            if (_executionActive)
+            {
+                throw new InvalidOperationException(
+                    "EffectPhaseExecutor does not support reentrant execution because graph registers and effect invocation context are shared.");
+            }
+
+            _executionActive = true;
+            return new ExecutionScope(this);
+        }
+
+        private readonly struct ExecutionScope : IDisposable
+        {
+            private readonly EffectPhaseExecutor _owner;
+
+            public ExecutionScope(EffectPhaseExecutor owner)
+            {
+                _owner = owner;
+            }
+
+            public void Dispose()
+            {
+                _owner._executionActive = false;
+            }
         }
 
         private void ExecuteGraph(

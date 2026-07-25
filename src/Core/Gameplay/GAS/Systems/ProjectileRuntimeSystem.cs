@@ -25,17 +25,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public ProjectileRuntimeSystem(World world, EffectRequestQueue effectRequests, ISpatialQueryService spatialQueries) : base(world)
         {
-            _effectRequests = effectRequests;
+            _effectRequests = effectRequests ?? throw new ArgumentNullException(nameof(effectRequests));
             _spatialQueries = spatialQueries;
         }
 
         public override void Update(in float dt)
         {
-            if (_effectRequests == null)
-            {
-                return;
-            }
-
             _toDestroy.Clear();
             _toDestroySet.Clear();
             Fix64 deltaTime = Fix64.FromFloat(dt);
@@ -343,7 +338,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var request = new EffectRequest
             {
-                RootId = 0,
+                RootId = projectile.RootId,
                 Source = projectile.Source,
                 Target = target,
                 TargetContext = Entity.Null,

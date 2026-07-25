@@ -382,3 +382,73 @@ does not require a Core enum.
 | Add Layer 1 | None |
 | Add Layer 2 | None |
 | Forbidden | Per-Mod spawn counter; new placement mode; wall-clock/random seed; silent overlap fallback |
+
+## Follow-up Review - Async Effect Root Propagation
+
+- **Task / Issue**: #709 - preserve effect roots across asynchronous spawn and projectile carriers
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: The change extends existing fixed-size carrier structs with the
+effect root already owned by `EffectContext`; it adds no handler, graph op,
+preset switch, schema, registry, or parallel runtime pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Carry the parent root through deferred materialization | 0 | Existing `RuntimeEntitySpawnRequest` and `RuntimeEntitySpawnSystem` |
+| Carry the parent root through projectile travel | 0 | Existing `ProjectileState` and `ProjectileRuntimeSystem` |
+| Publish derived effects under the same root | 0 | Existing `EffectRequestQueue` |
+
+### 3. Reuse list
+
+- Handlers: existing `CreateUnit` and `CreateProjectile` built-in handlers.
+- Queues / Systems: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`,
+  `ProjectileRuntimeSystem`, and `EffectRequestQueue`.
+- Resolvers / Registries: existing effect template and entity template registries.
+- Existing presets / graphs: unchanged; all existing compositions inherit the fix.
+
+### 4. New Layer 0 ops
+
+N/A. No new operation is introduced; this repairs context propagation through
+the existing asynchronous carriers.
+
+### 5. Transaction boundary
+
+No new rollback boundary is introduced. Spawn queue admission, materialization,
+projectile travel, and effect request publication retain their current ownership.
+Configured derived effects fail explicitly when their required queue is absent.
+
+### 6. Config SSOT
+
+Behavior remains in existing effect and entity templates. New JSON schema:
+**NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps or graph wiring**. It does not add a
+Core enum or a parallel asynchronous effect carrier.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | `EffectContext.RootId`; existing spawn and projectile carriers; `EffectRequestQueue` |
+| Add Layer 0 op | None |
+| Add Layer 1 | None |
+| Add Layer 2 | None |
+| Forbidden | Fresh child roots for derived effects; silent missing effect queue; Mod-private carrier |

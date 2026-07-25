@@ -473,6 +473,7 @@ namespace Ludots.Tests.GAS
                     Target = target,
                     TargetContext = default,
                 };
+                EffectConfigParams mergedParams = default;
 
                 executor.DispatchPhaseListeners(
                     world,
@@ -482,7 +483,9 @@ namespace Ludots.Tests.GAS
                     targetPos: default,
                     phase: EffectPhaseId.OnApply,
                     effectTagId: 1,
-                    effectTemplateId: 1);
+                    effectTemplateId: 1,
+                    mergedParams: in mergedParams,
+                    builtinRuntime: null);
 
                 That(budget.PhaseListenerDispatchDropped, Is.EqualTo(16));
             }

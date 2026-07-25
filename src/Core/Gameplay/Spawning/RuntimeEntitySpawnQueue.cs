@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.Spawning
     public struct RuntimeEntitySpawnRequest
     {
         public RuntimeEntitySpawnKind Kind;
+        public int RootId;
         public Entity Source;
         public Entity TargetContext;
         public Fix64Vec2 WorldPositionCm;

@@ -554,6 +554,101 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ExecutorDispatch_ListenerGraphBuiltin_ReceivesEffectContextAndMergedConfig()
+        {
+            using var world = World.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity effect = world.Create();
+
+            const int graphId = 2;
+            const int templateId = 2305;
+            const int configKeyId = 201;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
+                },
+            });
+
+            var listenerBuffer = new EffectPhaseListenerBuffer();
+            That(listenerBuffer.TryAdd(
+                listenTagId: 0,
+                listenEffectId: templateId,
+                phase: EffectPhaseId.OnApply,
+                scope: PhaseListenerScope.Target,
+                flags: PhaseListenerActionFlags.ExecuteGraph,
+                graphProgramId: graphId,
+                eventTagId: 0,
+                priority: 50,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listenerBuffer);
+
+            var templateParams = new EffectConfigParams();
+            That(templateParams.TryAddInt(configKeyId, 11), Is.True);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(templateId, new EffectTemplateData
+            {
+                ConfigParams = templateParams,
+            });
+
+            Entity receivedEffect = Entity.Null;
+            int receivedRootId = 0;
+            int receivedConfigValue = 0;
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity effectEntity, ref EffectContext effectContext, in EffectConfigParams config, in EffectTemplateData _) =>
+                {
+                    receivedEffect = effectEntity;
+                    receivedRootId = effectContext.RootId;
+                    That(config.TryGetInt(configKeyId, out receivedConfigValue), Is.True);
+                });
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var api = new GasGraphRuntimeApi(world);
+            var context = new EffectContext
+            {
+                RootId = 47,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+            };
+            var callerParams = new EffectConfigParams();
+            That(callerParams.TryAddInt(configKeyId, 29), Is.True);
+            var mergedParams = templateParams;
+            mergedParams.MergeFrom(in callerParams);
+            var runtime = new BuiltinHandlerExecutionContext();
+            var behavior = new EffectPhaseGraphBindings();
+
+            executor.ExecutePhase(
+                world,
+                api,
+                effect,
+                in context,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: templateId,
+                in mergedParams,
+                runtime);
+
+            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedRootId, Is.EqualTo(47));
+            That(receivedConfigValue, Is.EqualTo(29));
+        }
+
+        [Test]
         public void ExecutorDispatch_PublishesEvent_OnCasterBuffer()
         {
             var world = World.Create();

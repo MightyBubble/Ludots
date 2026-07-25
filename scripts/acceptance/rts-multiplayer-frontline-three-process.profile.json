@@ -17,16 +17,16 @@
       "path": "screens/client-a/frontline.png",
       "frames": [
         600,
-        2200,
-        3600
+        5200,
+        6100
       ]
     },
     "clientTwo": {
       "path": "screens/client-b/frontline.png",
       "frames": [
         600,
-        2200,
-        3600
+        5200,
+        6100
       ]
     }
   },

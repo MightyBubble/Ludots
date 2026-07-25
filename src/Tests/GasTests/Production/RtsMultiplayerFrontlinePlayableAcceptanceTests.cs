@@ -285,7 +285,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
         AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f);
-        int startingInfantry = CountNamed(world, "Infantry");
+        List<Entity> startingInfantryEntities = FindTemplateEntities(engine, "rts_frontline_infantry");
+        int startingInfantry = startingInfantryEntities.Count;
         OrderSubmitResult firstResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order first);
         OrderSubmitResult secondResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order second);
         Assert.Multiple(() =>
@@ -331,6 +332,18 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
         TickUntil(engine, () => CountNamed(world, "Infantry") == startingInfantry + 2, 8,
             "The second squad should finish after its own eight-second training time.");
+
+        List<Entity> trainedInfantry = FindTemplateEntities(engine, "rts_frontline_infantry")
+            .Where(entity => !startingInfantryEntities.Contains(entity))
+            .ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(trainedInfantry, Has.Count.EqualTo(2));
+            Assert.That(
+                world.Get<WorldPositionCm>(trainedInfantry[1]),
+                Is.Not.EqualTo(world.Get<WorldPositionCm>(trainedInfantry[0])),
+                "Two sequentially trained infantry must remain independently selectable at distinct positions.");
+        });
     }
 
     [Test]
@@ -1122,6 +1135,22 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             }
         });
         return count;
+    }
+
+    private static List<Entity> FindTemplateEntities(GameEngine engine, string templateId)
+    {
+        int templateKeyId = engine.MapLoader.EntityTemplateKeys.GetId(templateId);
+        Assert.That(templateKeyId, Is.GreaterThan(0), $"Template key '{templateId}' must be registered.");
+        var entities = new List<Entity>();
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+        engine.World.Query(in query, (Entity entity, ref EntityTemplateKeyRef keyRef) =>
+        {
+            if (keyRef.TemplateKeyId == templateKeyId)
+            {
+                entities.Add(entity);
+            }
+        });
+        return entities;
     }
 
     private static Entity FindRuntimeTemplateEntity(GameEngine engine, string templateId)

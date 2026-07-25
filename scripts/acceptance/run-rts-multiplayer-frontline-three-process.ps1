@@ -315,7 +315,7 @@ function Add-ManifestProcess {
 }
 
 function Get-Sha256Hex {
-    param([Parameter(Mandatory = $true)][byte[]]$Bytes)
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][byte[]]$Bytes)
 
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
     try {
@@ -1689,6 +1689,15 @@ try {
             file = Get-FileEvidence -Path $_.Path
         }
     })
+    foreach ($processName in @($screenshotTargets | ForEach-Object { $_.ProcessName } | Select-Object -Unique)) {
+        $processHashes = @($manifest.screenshots |
+            Where-Object { $_.process -eq $processName } |
+            ForEach-Object { $_.file.sha256 } |
+            Select-Object -Unique)
+        if ($processHashes.Count -le 1) {
+            throw "Client '$processName' screenshots are identical across all configured gameplay stages."
+        }
+    }
     $manifest.status = "verification-complete"
     $verificationReached = $true
 }

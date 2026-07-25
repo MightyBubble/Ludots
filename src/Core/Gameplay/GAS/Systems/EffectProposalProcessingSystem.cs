@@ -855,7 +855,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             // damage is dealt, draw a card" or "thorns: reflect damage on hit".
                             if (_phaseExecutor != null && _graphApi != null)
                             {
-                                SetMergedConfigContext(in tpl, in e);
+                                var mergedConfig = BuildMergedConfig(in tpl, in e);
+                                if (_graphApiHost != null && mergedConfig.Count > 0)
+                                {
+                                    _graphApiHost.SetConfigContext(in mergedConfig);
+                                }
                                 var listenerContext = new EffectContext
                                 {
                                     RootId = e.RootId,
@@ -870,7 +874,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     default,
                                     EffectPhaseId.OnApply,
                                     tpl.TagId,
-                                    e.TemplateId);
+                                    e.TemplateId,
+                                    in mergedConfig,
+                                    builtinRuntime: null);
                                 ClearConfigContext();
                             }
 
@@ -1272,20 +1278,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_graphApiHost != null && tpl.ConfigParams.Count > 0)
             {
                 _graphApiHost.SetConfigContext(in tpl.ConfigParams);
-            }
-        }
-
-        private void SetMergedConfigContext(in EffectTemplateData tpl, in EffectProposal proposal)
-        {
-            if (_graphApiHost == null)
-            {
-                return;
-            }
-
-            var merged = BuildMergedConfig(in tpl, in proposal);
-            if (merged.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in merged);
             }
         }
 

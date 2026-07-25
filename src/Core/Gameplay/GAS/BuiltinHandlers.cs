@@ -223,6 +223,7 @@ namespace Ludots.Core.Gameplay.GAS
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Assembly,
+                RootId = context.RootId,
                 Source = context.Source,
                 TargetContext = context.TargetContext,
                 Projectile = new ProjectileState
@@ -239,6 +240,7 @@ namespace Ludots.Core.Gameplay.GAS
                     CollisionRelationFilter = proj.CollisionRelationFilter,
                     CollisionExcludeSource = (byte)(proj.CollisionExcludeSource ? 1 : 0),
                     MaxHitCount = proj.MaxHitCount,
+                    RootId = context.RootId,
                     Source = context.Source,
                     Target = context.Target,
                     LaunchOriginCm = launchOrigin,
@@ -299,6 +301,7 @@ namespace Ludots.Core.Gameplay.GAS
                 var request = new RuntimeEntitySpawnRequest
                 {
                     Kind = unit.UseTemplateSpawn ? RuntimeEntitySpawnKind.Template : RuntimeEntitySpawnKind.UnitType,
+                    RootId = context.RootId,
                     Source = context.Source,
                     TargetContext = context.TargetContext,
                     WorldPositionCm = origin + offsetCm,
@@ -857,10 +860,8 @@ namespace Ludots.Core.Gameplay.GAS
             unchecked
             {
                 uint seed = (uint)source.Id * 73856093u;
-                seed ^= (uint)source.WorldId * 19349663u;
                 seed ^= (uint)source.Version * 83492791u;
                 seed ^= (uint)effectEntity.Id * 2654435761u;
-                seed ^= (uint)effectEntity.WorldId * 2246822519u;
                 seed ^= (uint)effectEntity.Version * 3266489917u;
                 seed ^= (uint)rootId * 1597334677u;
                 seed ^= (uint)(index + 1) * 668265263u;
