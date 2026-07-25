@@ -16,7 +16,8 @@ public enum Physics3DShapeKind : byte
 {
     Box = 1,
     Sphere = 2,
-    Capsule = 3
+    Capsule = 3,
+    Cylinder = 4
 }
 
 public enum Physics3DContinuousDetectionMode : byte

@@ -103,7 +103,9 @@ public sealed class Physics3DAdvancedConstraintTests
             new Physics3DAngularServoDescription(Quaternion.Identity, Servo, Spring));
 
         world.UpdateLinearAxisServoTarget(linear, 25f);
-        world.UpdateAngularAxisMotorTarget(motor, 4f);
+        world.UpdateAngularAxisMotor(
+            motor,
+            new Physics3DAngularAxisMotorDescription(Vector3.UnitX, 4f, Motor));
         world.UpdateAngularServoTarget(servo, Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.75f));
         for (int i = 0; i < 10; i++)
         {
@@ -174,6 +176,19 @@ public sealed class Physics3DAdvancedConstraintTests
             bodyA,
             bodyB,
             new Physics3DAngularHingeDescription(Vector3.UnitX, Vector3.UnitX, Spring));
+        Physics3DConstraintId motor = world.CreateAngularAxisMotorConstraint(
+            bodyA,
+            bodyB,
+            new Physics3DAngularAxisMotorDescription(Vector3.UnitX, 0f, Motor));
+        Assert.Throws<InvalidOperationException>(() => world.UpdateAngularHinge(
+            motor,
+            new Physics3DAngularHingeDescription(Vector3.UnitX, Vector3.UnitX, Spring)));
+        Assert.Throws<InvalidOperationException>(() => world.UpdateAngularAxisMotor(
+            hinge,
+            new Physics3DAngularAxisMotorDescription(Vector3.UnitX, 1f, Motor)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => world.UpdateAngularHinge(
+            hinge,
+            new Physics3DAngularHingeDescription(Vector3.Zero, Vector3.UnitX, Spring)));
         Assert.Throws<InvalidOperationException>(() => world.UpdateAngularAxisMotorTarget(hinge, 1f));
         Assert.Throws<ArgumentOutOfRangeException>(() => world.UpdateAngularServoTarget(hinge, default));
     }

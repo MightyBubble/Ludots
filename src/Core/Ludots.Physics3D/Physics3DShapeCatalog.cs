@@ -72,6 +72,22 @@ internal sealed class Physics3DShapeCatalog
         return new Physics3DShapeId(index);
     }
 
+    public Physics3DShapeId RegisterCylinder(float radiusCm, float lengthCm)
+    {
+        Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
+        Physics3DValidation.RequireFinitePositive(lengthCm, nameof(lengthCm));
+        var parameters = new Vector3(radiusCm, lengthCm, 0f);
+        int existingIndex = Find(Physics3DShapeKind.Cylinder, parameters);
+        if (existingIndex > 0)
+        {
+            return new Physics3DShapeId(existingIndex);
+        }
+
+        int index = Allocate(Physics3DShapeKind.Cylinder, parameters);
+        _typedIndices[index] = _simulation.Shapes.Add(new Cylinder(radiusCm, lengthCm));
+        return new Physics3DShapeId(index);
+    }
+
     public TypedIndex RequireTypedIndex(Physics3DShapeId id)
     {
         Require(id);
@@ -88,6 +104,7 @@ internal sealed class Physics3DShapeCatalog
             Physics3DShapeKind.Box => new Box(parameters.X, parameters.Y, parameters.Z).ComputeInertia(mass),
             Physics3DShapeKind.Sphere => new Sphere(parameters.X).ComputeInertia(mass),
             Physics3DShapeKind.Capsule => new Capsule(parameters.X, parameters.Y).ComputeInertia(mass),
+            Physics3DShapeKind.Cylinder => new Cylinder(parameters.X, parameters.Y).ComputeInertia(mass),
             _ => throw new InvalidOperationException($"Physics3D shape '{id}' has an unknown kind.")
         };
     }

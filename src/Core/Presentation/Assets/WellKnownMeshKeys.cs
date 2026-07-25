@@ -4,5 +4,6 @@ namespace Ludots.Core.Presentation.Assets
     {
         public const string Cube = "cube";
         public const string Sphere = "sphere";
+        public const string Cylinder = "cylinder";
     }
 }
