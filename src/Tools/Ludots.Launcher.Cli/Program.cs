@@ -301,7 +301,7 @@ static async Task<int> RunRecordedLaunchAsync(
         return buildExitCode;
     }
 
-    var appBuild = await service.BuildAppAsync(resolveResult.Plan.AdapterId);
+    var appBuild = await service.PrepareAppForLaunchAsync(resolveResult.Plan);
     Console.WriteLine(appBuild.Output);
     if (!appBuild.Ok)
     {
