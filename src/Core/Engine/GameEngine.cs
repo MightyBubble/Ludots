@@ -1709,6 +1709,9 @@ namespace Ludots.Core.Engine
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
+            SetService(
+                CoreServiceKeys.SpatialPartitionMembership,
+                (ISpatialPartitionMembership)_spatialPartitionUpdateSystem);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
             RegisterSystem(

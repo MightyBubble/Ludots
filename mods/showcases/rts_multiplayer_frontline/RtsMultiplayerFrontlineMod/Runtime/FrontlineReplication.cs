@@ -402,6 +402,7 @@ internal sealed class FrontlineClientTemplateFactory
         RequireComponent(template, "WorldPositionCm");
         RequireComponent(template, "VisualTransform");
         RequireComponent(template, "CullState");
+        RequireComponent(template, "CommandSourceSelectableTag");
         RequireComponent(template, "CommandSourceSelectableState");
         RequireComponent(template, ReplicationSchemaComponent);
         if (spec.HasHealth || spec.HasCrystals)
@@ -617,6 +618,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
             !world.Has<PreviousWorldPositionCm>(entity) ||
             !world.Has<VisualTransform>(entity) ||
             !world.Has<CullState>(entity) ||
+            !world.Has<CommandSourceSelectableTag>(entity) ||
             !world.Has<CommandSourceSelectableState>(entity) ||
             ((_spec.HasHealth || _spec.HasCrystals) && !world.Has<AttributeBuffer>(entity)) ||
             (_spec.HasOwner &&

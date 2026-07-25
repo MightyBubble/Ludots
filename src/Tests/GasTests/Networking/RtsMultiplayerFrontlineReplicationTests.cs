@@ -17,6 +17,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Networking.Commands;
@@ -30,8 +31,12 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -334,6 +339,136 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(engine.World.Get<CommandSourceSelectableState>(mirror).Enabled, Is.True);
         Assert.That(engine.World.Get<AbilityStateBuffer>(mirror).Get(0).AbilityId,
             Is.EqualTo(AbilityIdRegistry.GetId("Ability.Rts.Frontline.TrainInfantry")));
+    }
+
+    [Test]
+    [Description(
+        "Feature: A replicated client can see and select battlefield mirrors\n" +
+        "  Given the client network pump receives a visible Frontline harvester\n" +
+        "  When one complete client frame creates it and a later frame moves it\n" +
+        "  Then the harvester remains in the formal spatial index, visible, and selectable\n" +
+        "  When a later snapshot conceals the harvester\n" +
+        "  Then the spatial index no longer contains the destroyed mirror")]
+    public void GivenReplicatedClientPump_WhenMirrorIsCreatedMovedAndReleased_ThenSpatialVisibilityLifecycleStaysConsistent()
+    {
+        var runtimePort = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(runtimePort);
+        engine.LoadStartupMap();
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec spec = FrontlineReplication.CreateSpecs(config.Replication)
+            [(int)FrontlineReplicationKind.Harvester];
+        Assert.That(
+            engine.CurrentMapSession!.PlayerEntityLookup.TryGet(config.Sides[0].PlayerId, out Entity viewer),
+            Is.True);
+        engine.SetService(CoreServiceKeys.LocalPlayerId, config.Sides[0].PlayerId);
+        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+        IViewController view = engine.GetService(CoreServiceKeys.ViewController)
+            ?? throw new InvalidOperationException("Frontline replication test requires a view controller.");
+        engine.SetService(
+            CoreServiceKeys.ScreenProjector,
+            (IScreenProjector)new CoreScreenProjector(engine.GameSession.Camera, view));
+        engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(new CameraCullingSystem(
+            engine.World,
+            engine.GameSession.Camera,
+            engine.SpatialQueries,
+            view,
+            cullingConfig: engine.MergedConfig!.Presentation.CameraCulling));
+        engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+        {
+            Id = "Rts.Frontline",
+            BlendDurationSeconds = 0f,
+            ReplaceActiveStack = true,
+            ResetRuntimeState = true,
+        });
+        engine.Tick(1f / 60f);
+
+        NetworkRuntimeConfig network = engine.MergedConfig!.Networking;
+        ClientReplicationSchemaApplierRegistry appliers = engine.GetService(CoreServiceKeys.ClientReplicationSchemaAppliers)
+            ?? throw new InvalidOperationException("Frontline replication test requires client schema appliers.");
+        appliers.Freeze();
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("Frontline replication test requires knowledge projection.");
+        var bridge = new ClientWorldReplicationBridge(
+            engine.World,
+            network.NetworkEntityCapacity,
+            sessionEpoch: 17,
+            appliers,
+            engine.GetService(CoreServiceKeys.SpatialPartitionMembership)
+                ?? throw new InvalidOperationException("Frontline replication test requires spatial membership."),
+            knowledge,
+            viewer);
+        runtimePort.Bridge = bridge;
+
+        var channel = new AuthoritativeReplicationChannel(
+            network.NetworkEntityCapacity,
+            network.BaselineCapacity,
+            new ReplicationDisclosureChangeLog(network.DisclosureChangeLogCapacity));
+        var packet = new ReplicationPacketBuffer(network.ReplicationPacketEntityCapacity);
+        var handle = new NetworkEntityHandle(25, 1);
+        var values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(15000, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        var states = new[] { new ReplicatedEntityState(handle, spec.SchemaId, revision: 1, in values) };
+        var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+        Assert.That(channel.BuildFull(17, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.AfterPacketApplied = () =>
+        {
+            Assert.That(bridge.TryResolve(handle, out Entity appliedMirror), Is.True);
+            engine.World.Get<CullState>(appliedMirror).IsVisible = false;
+        };
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+        runtimePort.AfterPacketApplied = null;
+        Assert.That(runtimePort.LastBridgeResult, Is.EqualTo(ReplicationBridgeResult.Success));
+        Assert.That(bridge.TryResolve(handle, out Entity mirror), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Has<SpatialCellRef>(mirror), Is.True);
+            Assert.That(engine.World.Has<SpatialPartitionExcluded>(mirror), Is.False);
+            Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.True);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(15000, 15000)), Is.True);
+            Assert.That(ResolveMirrorAtProjectedCenter(engine, viewer, mirror), Is.EqualTo(mirror));
+        });
+
+        values = new ReplicationStateVector(
+            FrontlineReplicationPayload.PackInts(16500, 15000),
+            FrontlineReplicationPayload.PackFloats(120f, 0f),
+            FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId),
+            spec.SupportedValidBits);
+        states[0] = new ReplicatedEntityState(handle, spec.SchemaId, revision: 2, in values);
+        Assert.That(channel.BuildDelta(17, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.World.Get<WorldPositionCm>(mirror).Value,
+                Is.EqualTo(WorldPositionCm.FromCm(16500, 15000).Value));
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(15000, 15000)), Is.False);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(16500, 15000)), Is.True);
+            Assert.That(engine.World.Get<CullState>(mirror).IsVisible, Is.True);
+            Assert.That(ResolveMirrorAtProjectedCenter(engine, viewer, mirror), Is.EqualTo(mirror));
+        });
+
+        var remembered = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.Known) };
+        Assert.That(channel.BuildDelta(17, 3, 3, 2, states, remembered, packet), Is.EqualTo(ReplicationBuildResult.Success));
+        runtimePort.PendingPacket = packet;
+        engine.Tick(1f / 60f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bridge.TryResolve(handle, out _), Is.False);
+            Assert.That(engine.World.IsAlive(mirror), Is.False);
+            Assert.That(SpatialQueryContains(engine, mirror, new WorldCmInt2(16500, 15000)), Is.False);
+        });
     }
 
     [Test]
@@ -1191,6 +1326,43 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(ReadOverlayStrings(overlay), Does.Contain(expected));
     }
 
+    private static bool SpatialQueryContains(GameEngine engine, Entity expected, WorldCmInt2 center)
+    {
+        Span<Entity> candidates = stackalloc Entity[32];
+        WorldAabbCm bounds = WorldAabbCm.FromCenterRadius(center, radiusCm: 200);
+        SpatialQueryResult result = engine.SpatialQueries.QueryAabb(in bounds, candidates);
+        Assert.That(result.Overflowed, Is.False);
+        for (int i = 0; i < result.Count; i++)
+        {
+            if (candidates[i] == expected)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Entity ResolveMirrorAtProjectedCenter(GameEngine engine, Entity viewer, Entity mirror)
+    {
+        IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+            ?? throw new InvalidOperationException("Frontline replication test requires a screen projector.");
+        if (!SpatialBoundsUtility.TryProjectScreenBounds(engine.World, mirror, projector, out ScreenRect bounds))
+        {
+            throw new InvalidOperationException("Frontline mirror did not project into the active camera.");
+        }
+
+        Vector2 pointer = new(
+            (bounds.MinX + bounds.MaxX) * 0.5f,
+            (bounds.MinY + bounds.MaxY) * 0.5f);
+        return CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+            engine.World,
+            engine.GlobalContext,
+            viewer,
+            pointer,
+            radiusPixels: 1f);
+    }
+
     private static GameEngine CreateStartedReplicatedClientEngine(TestClientRuntimePort? runtimePort = null)
     {
         GameEngine engine = CreateStartedEngine(
@@ -1330,12 +1502,28 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         public float ReconnectWindowRemainingSeconds { get; set; } = 30f;
         public int RoundTripTimeMilliseconds { get; set; }
         public float InterpolationAlpha => 0f;
+        public ClientWorldReplicationBridge? Bridge { get; set; }
+        public ReplicationPacketBuffer? PendingPacket { get; set; }
+        public Action? AfterPacketApplied { get; set; }
+        public ReplicationBridgeResult LastBridgeResult { get; private set; } = ReplicationBridgeResult.InvalidInput;
 
         public void Activate() { }
         public void PumpTransport() { }
         public void BeforeAuthoritativeTick(uint executingTick) { }
         public void AfterAuthoritativeCommit(uint committedTick) { }
-        public void PumpReplicatedClient(float frameDeltaTime) { }
+        public void PumpReplicatedClient(float frameDeltaTime)
+        {
+            if (PendingPacket == null)
+            {
+                return;
+            }
+
+            ClientWorldReplicationBridge bridge = Bridge
+                ?? throw new InvalidOperationException("A pending replication packet requires a client world bridge.");
+            LastBridgeResult = bridge.Apply(PendingPacket);
+            PendingPacket = null;
+            AfterPacketApplied?.Invoke();
+        }
         public void Dispose() { }
     }
 

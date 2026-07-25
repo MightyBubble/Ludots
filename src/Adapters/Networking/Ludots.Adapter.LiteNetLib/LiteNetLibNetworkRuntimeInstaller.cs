@@ -10,6 +10,7 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Adapter.LiteNetLib;
 
@@ -196,6 +197,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
                     engine.World,
                     config.NetworkEntityCapacity,
                     appliers,
+                    Require(engine, CoreServiceKeys.SpatialPartitionMembership),
                     knowledge,
                     () => engine.GetService(CoreServiceKeys.LocalPlayerEntity)),
                 new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));

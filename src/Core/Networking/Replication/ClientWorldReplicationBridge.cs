@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Networking.Replication
 {
@@ -40,6 +41,7 @@ namespace Ludots.Core.Networking.Replication
         private readonly World _world;
         private readonly ClientReplicationMirror _mirror;
         private readonly ClientReplicationSchemaApplierRegistry _appliers;
+        private readonly ISpatialPartitionMembership _spatialMembership;
         private readonly KnowledgeProjectionStore _knowledge;
         private readonly Entity _viewer;
         private readonly bool[] _active;
@@ -63,11 +65,13 @@ namespace Ludots.Core.Networking.Replication
             int entityCapacity,
             ulong sessionEpoch,
             ClientReplicationSchemaApplierRegistry appliers,
+            ISpatialPartitionMembership spatialMembership,
             KnowledgeProjectionStore knowledge,
             Entity viewer)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _appliers = appliers ?? throw new ArgumentNullException(nameof(appliers));
+            _spatialMembership = spatialMembership ?? throw new ArgumentNullException(nameof(spatialMembership));
             _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
             if (entityCapacity <= 0)
             {
@@ -130,6 +134,7 @@ namespace Ludots.Core.Networking.Replication
             var identity = new ReplicationMirrorIdentity(handle);
             var state = default(ReplicationMirrorState);
             CommitExistingBinding(entity, in identity, in state);
+            _spatialMembership.Synchronize(entity);
             _active[slot] = true;
             _owned[slot] = false;
             _generations[slot] = handle.Generation;
@@ -498,6 +503,7 @@ namespace Ludots.Core.Networking.Replication
                         applier.Apply(_world, entity, in state);
                         _world.Set(entity, in identity);
                         _world.Set(entity, in mirrorState);
+                        _spatialMembership.Synchronize(entity);
                         PublishVisibleKnowledge(entity);
                         _schemas[slot] = state.SchemaId;
                         break;
@@ -526,6 +532,7 @@ namespace Ludots.Core.Networking.Replication
                         _generations[slot] = state.Entity.Generation;
                         _schemas[slot] = state.SchemaId;
                         _entities[slot] = entity;
+                        _spatialMembership.Synchronize(entity);
                         PublishVisibleKnowledge(entity);
                         break;
                     }
@@ -542,6 +549,7 @@ namespace Ludots.Core.Networking.Replication
             Entity entity = _entities[slot];
             if (_owned[slot])
             {
+                _spatialMembership.Remove(entity);
                 _world.Destroy(entity);
             }
             else
@@ -558,6 +566,7 @@ namespace Ludots.Core.Networking.Replication
                 }
 
                 _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
+                _spatialMembership.Synchronize(entity);
             }
 
             _knowledge.Remove(_viewer, entity);

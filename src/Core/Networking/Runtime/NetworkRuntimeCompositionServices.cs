@@ -9,6 +9,7 @@ using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Transport;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Networking.Runtime
 {
@@ -645,6 +646,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly World _world;
         private readonly int _entityCapacity;
         private readonly ClientReplicationSchemaApplierRegistry _appliers;
+        private readonly ISpatialPartitionMembership _spatialMembership;
         private readonly KnowledgeProjectionStore _knowledge;
         private readonly Func<Entity> _viewerResolver;
 
@@ -652,6 +654,7 @@ namespace Ludots.Core.Networking.Runtime
             World world,
             int entityCapacity,
             ClientReplicationSchemaApplierRegistry appliers,
+            ISpatialPartitionMembership spatialMembership,
             KnowledgeProjectionStore knowledge,
             Func<Entity> viewerResolver)
         {
@@ -662,6 +665,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _appliers = appliers ?? throw new ArgumentNullException(nameof(appliers));
+            _spatialMembership = spatialMembership ?? throw new ArgumentNullException(nameof(spatialMembership));
             _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
             _viewerResolver = viewerResolver ?? throw new ArgumentNullException(nameof(viewerResolver));
             if (!appliers.IsFrozen)
@@ -690,6 +694,7 @@ namespace Ludots.Core.Networking.Runtime
                 _entityCapacity,
                 sessionEpoch,
                 _appliers,
+                _spatialMembership,
                 _knowledge,
                 viewer);
         }

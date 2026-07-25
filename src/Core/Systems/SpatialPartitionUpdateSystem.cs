@@ -10,7 +10,7 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Systems
 {
-    public sealed class SpatialPartitionUpdateSystem : BaseSystem<World, float>
+    public sealed class SpatialPartitionUpdateSystem : BaseSystem<World, float>, ISpatialPartitionMembership
     {
         private const int SpatialCellEdgeEpsilonCm = 1;
 
@@ -55,6 +55,41 @@ namespace Ludots.Core.Systems
             World.InlineEntityQuery<MoveJob, WorldPositionCm, SpatialCellRef>(in _trackedQuery, ref moveJob);
         }
 
+        public void Synchronize(Entity entity)
+        {
+            RequireLiveEntity(entity);
+            if (!World.TryGet(entity, out WorldPositionCm position) ||
+                World.Has<PresentationStaticTransform>(entity) ||
+                World.Has<SpatialPartitionExcluded>(entity) ||
+                World.Has<PresentationDestroyPending>(entity))
+            {
+                Remove(entity);
+                return;
+            }
+
+            if (World.Has<SpatialCellRef>(entity))
+            {
+                ref SpatialCellRef cellRef = ref World.Get<SpatialCellRef>(entity);
+                SynchronizeTracked(_partition, in _spec, entity, in position, ref cellRef);
+                return;
+            }
+
+            SpatialCellRef created = CreateMembership(_partition, in _spec, entity, in position);
+            World.Add(entity, in created);
+        }
+
+        public void Remove(Entity entity)
+        {
+            RequireLiveEntity(entity);
+            if (!World.TryGet(entity, out SpatialCellRef cellRef))
+            {
+                return;
+            }
+
+            RemoveTracked(_partition, entity, in cellRef);
+            World.Remove<SpatialCellRef>(entity);
+        }
+
         private void RemoveSpatialRefs(in QueryDescription queryDescription)
         {
             foreach (ref var chunk in World.Query(in queryDescription))
@@ -66,10 +101,7 @@ namespace Ludots.Core.Systems
                 {
                     var entity = Unsafe.Add(ref entityFirst, index);
                     ref SpatialCellRef cellRef = ref refs[index];
-                    if (cellRef.Initialized != 0)
-                    {
-                        _partition.Remove(entity, cellRef.CellX, cellRef.CellY);
-                    }
+                    RemoveTracked(_partition, entity, in cellRef);
 
                     _commandBuffer.Remove<SpatialCellRef>(in entity);
                 }
@@ -91,11 +123,12 @@ namespace Ludots.Core.Systems
                 foreach (var index in chunk)
                 {
                     var entity = Unsafe.Add(ref entityFirst, index);
-                    var worldCm = positions[index].Value.ToWorldCmInt2();
-                    if (!_spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, _spec);
-                    (int cx, int cy) = WorldToCell(worldCm, _spec.GridCellSizeCm);
-                    _partition.Add(entity, cx, cy);
-                    _commandBuffer.Add(entity, new SpatialCellRef { CellX = cx, CellY = cy, Initialized = 1 });
+                    SpatialCellRef created = CreateMembership(
+                        _partition,
+                        in _spec,
+                        entity,
+                        in positions[index]);
+                    _commandBuffer.Add(entity, created);
                 }
             }
 
@@ -112,31 +145,65 @@ namespace Ludots.Core.Systems
 
             public void Update(Entity entity, ref WorldPositionCm pos, ref SpatialCellRef cellRef)
             {
-                var worldCm = pos.Value.ToWorldCmInt2();
-                if (!Spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, Spec);
+                SynchronizeTracked(Partition, in Spec, entity, in pos, ref cellRef);
+            }
+        }
 
-                if (cellRef.Initialized == 0)
-                {
-                    (int initialCellX, int initialCellY) = WorldToCell(worldCm, Spec.GridCellSizeCm);
-                    Partition.Add(entity, initialCellX, initialCellY);
-                    cellRef.CellX = initialCellX;
-                    cellRef.CellY = initialCellY;
-                    cellRef.Initialized = 1;
-                    return;
-                }
+        private static SpatialCellRef CreateMembership(
+            ISpatialPartitionWorld partition,
+            in WorldSizeSpec spec,
+            Entity entity,
+            in WorldPositionCm position)
+        {
+            WorldCmInt2 worldCm = position.Value.ToWorldCmInt2();
+            if (!spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
+            (int cellX, int cellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
+            partition.Add(entity, cellX, cellY);
+            return new SpatialCellRef { CellX = cellX, CellY = cellY, Initialized = 1 };
+        }
 
-                if (IsInsideCell(worldCm, cellRef.CellX, cellRef.CellY, Spec.GridCellSizeCm))
-                {
-                    return;
-                }
+        private static void SynchronizeTracked(
+            ISpatialPartitionWorld partition,
+            in WorldSizeSpec spec,
+            Entity entity,
+            in WorldPositionCm position,
+            ref SpatialCellRef cellRef)
+        {
+            WorldCmInt2 worldCm = position.Value.ToWorldCmInt2();
+            if (!spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
 
-                (int nextCellX, int nextCellY) = WorldToCell(worldCm, Spec.GridCellSizeCm);
-                if (cellRef.CellX == nextCellX && cellRef.CellY == nextCellY) return;
+            if (cellRef.Initialized == 0)
+            {
+                (int initialCellX, int initialCellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
+                partition.Add(entity, initialCellX, initialCellY);
+                cellRef.CellX = initialCellX;
+                cellRef.CellY = initialCellY;
+                cellRef.Initialized = 1;
+                return;
+            }
 
-                Partition.Remove(entity, cellRef.CellX, cellRef.CellY);
-                Partition.Add(entity, nextCellX, nextCellY);
-                cellRef.CellX = nextCellX;
-                cellRef.CellY = nextCellY;
+            if (IsInsideCell(worldCm, cellRef.CellX, cellRef.CellY, spec.GridCellSizeCm))
+            {
+                return;
+            }
+
+            (int nextCellX, int nextCellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
+            if (cellRef.CellX == nextCellX && cellRef.CellY == nextCellY) return;
+
+            partition.Remove(entity, cellRef.CellX, cellRef.CellY);
+            partition.Add(entity, nextCellX, nextCellY);
+            cellRef.CellX = nextCellX;
+            cellRef.CellY = nextCellY;
+        }
+
+        private static void RemoveTracked(
+            ISpatialPartitionWorld partition,
+            Entity entity,
+            in SpatialCellRef cellRef)
+        {
+            if (cellRef.Initialized != 0)
+            {
+                partition.Remove(entity, cellRef.CellX, cellRef.CellY);
             }
         }
 
@@ -162,6 +229,15 @@ namespace Ludots.Core.Systems
         {
             throw new InvalidOperationException(
                 $"SPATIAL.ERR.WorldPositionOutOfBounds entity={entity.Id}:{entity.WorldId} pos=({worldCm.X},{worldCm.Y}) bounds={spec.Bounds} cell={spec.GridCellSizeCm}");
+        }
+
+        private void RequireLiveEntity(Entity entity)
+        {
+            if (entity == Entity.Null || !World.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    $"SPATIAL.ERR.MembershipRequiresLiveEntity entity={entity.Id}:{entity.WorldId}");
+            }
         }
     }
 }

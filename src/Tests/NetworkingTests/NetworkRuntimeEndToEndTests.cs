@@ -11,6 +11,7 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Transport;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Networking;
@@ -1691,10 +1692,18 @@ public sealed class NetworkRuntimeEndToEndTests
                 _entityCapacity,
                 sessionEpoch,
                 appliers,
+                new TestSpatialPartitionMembership(),
                 _knowledge,
                 _viewer);
             return Bridge;
         }
+    }
+
+    private sealed class TestSpatialPartitionMembership : ISpatialPartitionMembership
+    {
+        public void Synchronize(Entity entity) { }
+
+        public void Remove(Entity entity) { }
     }
 
     private sealed class FixedControllerResolver : IAuthoritativeSeatControllerResolver

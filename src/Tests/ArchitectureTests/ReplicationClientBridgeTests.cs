@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Replication;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using System.Runtime.CompilerServices;
 
@@ -225,6 +226,7 @@ namespace Ludots.Tests.Architecture
                 1,
                 7,
                 appliers,
+                new TestSpatialPartitionMembership(),
                 new KnowledgeProjectionStore(initialCapacity: 1),
                 viewer);
             var handle = new NetworkEntityHandle(0, 1);
@@ -317,6 +319,7 @@ namespace Ludots.Tests.Architecture
                 entityCapacity,
                 sessionEpoch,
                 appliers,
+                new TestSpatialPartitionMembership(),
                 knowledge,
                 viewer);
         }
@@ -336,6 +339,13 @@ namespace Ludots.Tests.Architecture
             public TestAppliedState(long value) => Value = value;
 
             public readonly long Value;
+        }
+
+        private sealed class TestSpatialPartitionMembership : ISpatialPartitionMembership
+        {
+            public void Synchronize(Entity entity) { }
+
+            public void Remove(Entity entity) { }
         }
 
         private sealed class TestSchemaApplier : IClientReplicationSchemaApplier

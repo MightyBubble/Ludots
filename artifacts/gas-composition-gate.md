@@ -452,3 +452,79 @@ Core enum or a parallel asynchronous effect carrier.
 | Add Layer 1 | None |
 | Add Layer 2 | None |
 | Forbidden | Fresh child roots for derived effects; silent missing effect queue; Mod-private carrier |
+
+## Follow-up Review - Replicated Mirror Spatial Membership
+
+- **Task / Issue**: #709 - keep replicated client mirrors visible and selectable
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the change attaches the existing spatial membership rule to
+the existing client mirror create/update/release transaction; it adds no
+gameplay profile, preset switch, graph op, schema, or materialization pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Derive a cell from `WorldPositionCm` | 0 | Shared Core spatial membership synchronizer |
+| Upsert mirror membership after snapshot apply | 1 | Existing client replication commit boundary |
+| Remove mirror membership before destruction | 1 | Existing client mirror release boundary |
+| Prove visibility and player selection | 3 | Existing Frontline replication tests and three-process acceptance Mod |
+
+### 3. Reuse list
+
+- Handlers: N/A; no GAS handler changes.
+- Queues / Systems: existing `SpatialPartitionUpdateSystem`, replicated-client
+  network pump, camera culling, presentation lifecycle, and command-source
+  pointer resolution.
+- Resolvers / Registries: existing `ISpatialPartitionWorld`,
+  `ISpatialQueryService`, coordinate conversion, mirror schema registry, and
+  Frontline client replication appliers.
+- Existing presets / graphs: N/A; gameplay composition is unchanged.
+
+### 4. New Layer 0 ops
+
+N/A in the GAS lifecycle model. The shared spatial synchronizer repairs an
+existing derived-state invariant and does not create, morph, consume, or
+materialize an entity.
+
+### 5. Transaction boundary
+
+Every committed mirror create or position update must have matching spatial
+membership before local input and presentation run. Every mirror release must
+remove membership before `World.Destroy`; a half-applied page remains rejected
+by the existing replication transaction.
+
+### 6. Config SSOT
+
+Spatial coordinates continue to come from `WorldPositionCm` and the existing
+partition coordinate converter. New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next gameplay Mod variant changes **graph wiring or effect steps**; all
+replicated mirrors reuse this Core spatial lifecycle without a new Core enum.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Spatial partition world; coordinate conversion; `SpatialPartitionUpdateSystem`; client mirror commit/release; camera culling; pointer resolver |
+| Add Layer 0 op | None in GAS/entity materialization |
+| Add Layer 1 | Shared spatial-membership invariant at mirror commit and release boundaries |
+| Add Layer 2 | None |
+| Forbidden | `SpatialPartitionExcluded` bypass; forced-visible mirrors; authoritative client simulation; Frontline-specific indexing; silent stale membership |
