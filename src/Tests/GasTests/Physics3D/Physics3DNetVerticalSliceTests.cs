@@ -501,7 +501,7 @@ public sealed class Physics3DNetVerticalSliceTests
     }
 
     [Test]
-    public void AoiInterest_RejectsUnsortedOrOverCapacityInterest_WithoutPartialSuccess()
+    public void AoiInterest_RejectsOverCapacityOrUnknownSeat_WithoutPartialKnowledgeCommit()
     {
         using World ecs = World.Create();
         using var physics = new Physics3DWorld(new Physics3DWorldConfig
@@ -531,11 +531,15 @@ public sealed class Physics3DNetVerticalSliceTests
             MaterialCombineMode = Physics3DMaterialCombineMode.GeometricMean,
         });
         var entities = new NetworkEntityTable(capacity: 2);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(
+            physics.BodySlotCapacity,
+            entities.Capacity);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 4);
         using var lifecycle = new Physics3DNetworkPlayerLifecycle(
             ecs,
             physics,
             entities,
+            bindings,
             knowledge,
             seatCapacity: 2,
             ReplicationSchemaId,
@@ -559,23 +563,27 @@ public sealed class Physics3DNetVerticalSliceTests
         SessionSeatBinding second = Seat(1);
         Assert.That(lifecycle.TryResolveController(in first, out _), Is.True);
         Assert.That(lifecycle.TryResolveController(in second, out _), Is.True);
-        var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
+        using var interest = new Physics3DNetworkAoiInterestPort(
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
-            replicationEntityCapacityPerSeat: 2,
+            replicationEntityCapacityPerSeat: 1,
             new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
 
-        var tooSmall = new NetworkEntityHandle[1];
-        Assert.That(interest.TryCopyInterest(in first, tooSmall, out int required), Is.False);
-        Assert.That(required, Is.EqualTo(2));
-        Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.DestinationCapacityExceeded));
+        int knowledgeCountBefore = knowledge.RecordCount;
+        Span<SessionSeatBinding> firstBatch = stackalloc SessionSeatBinding[1] { first };
+        Assert.That(interest.TryPrepareBatch(firstBatch), Is.False);
+        Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.PerSeatCapacityExceeded));
+        Assert.That(interest.FailedSeatSlot, Is.EqualTo(first.Slot));
+        Assert.That(knowledge.RecordCount, Is.EqualTo(knowledgeCountBefore));
 
         SessionSeatBinding unknown = Seat(0, generation: 9);
-        Assert.That(interest.TryCopyInterest(in unknown, tooSmall, out _), Is.False);
+        Span<SessionSeatBinding> unknownBatch = stackalloc SessionSeatBinding[1] { unknown };
+        Assert.That(interest.TryPrepareBatch(unknownBatch), Is.False);
         Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.UnknownSeat));
+        Assert.That(knowledge.RecordCount, Is.EqualTo(knowledgeCountBefore));
     }
 
     [Test]

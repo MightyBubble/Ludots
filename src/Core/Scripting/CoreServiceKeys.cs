@@ -287,7 +287,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IFixedInputPayloadSource> FixedInputPayloadSource = new("FixedInputPayloadSource");
         public static readonly ServiceKey<ReplicatedClientFixedInputClock> ReplicatedClientFixedInputClock =
             new("ReplicatedClientFixedInputClock");
-        public static readonly ServiceKey<IAuthoritativeReplicationInterestPort> AuthoritativeReplicationInterest = new("AuthoritativeReplicationInterest");
+        public static readonly ServiceKey<IAuthoritativeReplicationInterestBatchPort> AuthoritativeReplicationInterest = new("AuthoritativeReplicationInterest");
         public static readonly ServiceKey<IAuthoritativeSeatControllerResolver> AuthoritativeSeatControllerResolver = new("AuthoritativeSeatControllerResolver");
         public static readonly ServiceKey<IAuthoritativeReplicationSeatRuntimeFactory> AuthoritativeReplicationSeatRuntimeFactory = new("AuthoritativeReplicationSeatRuntimeFactory");
         public static readonly ServiceKey<AuthoritativeFixedInputIngress> AuthoritativeFixedInputIngress = new("AuthoritativeFixedInputIngress");

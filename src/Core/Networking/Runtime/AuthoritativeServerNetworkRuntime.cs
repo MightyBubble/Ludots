@@ -24,7 +24,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
-        private readonly IAuthoritativeReplicationInterestPort _replicationInterest;
+        private readonly IAuthoritativeReplicationInterestBatchPort _replicationInterest;
         private readonly IAuthoritativeReplicationSeatRuntimeFactory _replicationSeatFactory;
         private readonly AuthoritativeReplicationSeatRuntime?[] _replicationSeats;
         private readonly AuthoritativeFixedInputIngress _fixedInput;
@@ -48,7 +48,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly int[] _ackHistoryWriteIndices;
         private readonly CommandFragmentReassembler[] _commandReassemblers;
         private readonly NetworkCommandWireEntry[] _commandEntries;
-        private readonly NetworkEntityHandle[] _interestHandles;
+        private readonly SessionSeatBinding[] _publishSeats;
         private readonly SessionSeatBinding[] _expiredSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
@@ -81,7 +81,7 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandIngress commands,
             NetworkCommandAdmissionResultBuffer commandResults,
             IAuthoritativeSeatControllerResolver controllers,
-            IAuthoritativeReplicationInterestPort replicationInterest,
+            IAuthoritativeReplicationInterestBatchPort replicationInterest,
             IAuthoritativeReplicationSeatRuntimeFactory replicationSeatFactory,
             AuthoritativeFixedInputIngress fixedInput,
             INetworkRuntimeObserver observer)
@@ -106,9 +106,11 @@ namespace Ludots.Core.Networking.Runtime
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
             if (sessions.SeatCapacity != replicationSeatFactory.SeatCapacity ||
+                sessions.SeatCapacity != replicationInterest.SeatCapacity ||
                 sessions.SeatCapacity > capacity.ConnectionCapacity ||
                 replicationSeatFactory.GlobalEntityCapacity != capacity.GlobalEntityCapacity ||
-                replicationSeatFactory.ReplicationEntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat)
+                replicationSeatFactory.ReplicationEntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat ||
+                replicationInterest.EntityCapacityPerSeat != capacity.ReplicationEntityCapacityPerSeat)
             {
                 throw new ArgumentException(
                     "Session, replication-seat factory, connection, global entity, and per-seat capacities must agree.",
@@ -148,7 +150,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _commandEntries = new NetworkCommandWireEntry[capacity.MaxCommandEntries];
-            _interestHandles = new NetworkEntityHandle[capacity.ReplicationEntityCapacityPerSeat];
+            _publishSeats = new SessionSeatBinding[seats];
             _expiredSeats = new SessionSeatBinding[seats];
             _pendingAdmissions = new NetworkCommandAdmissionOutcome[commandResults.Capacity];
             _pendingAdmissionActive = new bool[commandResults.Capacity];
@@ -252,13 +254,12 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _lastCommittedTick = committedTick;
-            QueueFixedInputAcknowledgements();
-            FlushPendingFixedInputAcknowledgements();
 
             if (committedTick % (uint)_capacity.StatePublishIntervalTicks != 0)
             {
-                FlushOutbound();
+                QueueFixedInputAcknowledgements();
                 FlushPendingFixedInputAcknowledgements();
+                FlushOutbound();
                 return;
             }
 
@@ -270,11 +271,13 @@ namespace Ludots.Core.Networking.Runtime
 
             if (!anyConnected)
             {
-                FlushOutbound();
+                QueueFixedInputAcknowledgements();
                 FlushPendingFixedInputAcknowledgements();
+                FlushOutbound();
                 return;
             }
 
+            int publishSeatCount = 0;
             for (int seat = 0; seat < _seatStates.Length; seat++)
             {
                 if (_seatStates[seat] != SeatConnected)
@@ -290,32 +293,71 @@ namespace Ludots.Core.Networking.Runtime
                     continue;
                 }
 
-                SessionSeatBinding binding = GetSeatBinding(seat);
-                if (!_replicationInterest.TryCopyInterest(in binding, _interestHandles, out int interestCount) ||
-                    (uint)interestCount > (uint)_interestHandles.Length)
-                {
-                    Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, _seatConnections[seat], detail: interestCount);
-                }
+                _publishSeats[publishSeatCount++] = GetSeatBinding(seat);
+            }
 
-                for (int i = 0; i < interestCount; i++)
+            if (publishSeatCount == 0)
+            {
+                QueueFixedInputAcknowledgements();
+                FlushPendingFixedInputAcknowledgements();
+                FlushOutbound();
+                return;
+            }
+
+            ReadOnlySpan<SessionSeatBinding> publishSeats = _publishSeats.AsSpan(0, publishSeatCount);
+            if (!_replicationInterest.TryPrepareBatch(publishSeats))
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, detail: publishSeatCount);
+            }
+
+            try
+            {
+                for (int publishIndex = 0; publishIndex < publishSeats.Length; publishIndex++)
                 {
-                    NetworkEntityHandle handle = _interestHandles[i];
-                    if (!handle.IsValid ||
-                        (uint)handle.Slot >= (uint)_capacity.GlobalEntityCapacity ||
-                        (i > 0 && handle.Slot <= _interestHandles[i - 1].Slot))
+                    SessionSeatBinding binding = publishSeats[publishIndex];
+                    if (!_replicationInterest.TryGetPreparedInterest(in binding, out ReadOnlySpan<NetworkEntityHandle> handles) ||
+                        handles.Length > _capacity.ReplicationEntityCapacityPerSeat)
                     {
-                        Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, _seatConnections[seat], detail: i);
+                        Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, _seatConnections[binding.Slot], detail: handles.Length);
+                    }
+
+                    for (int i = 0; i < handles.Length; i++)
+                    {
+                        NetworkEntityHandle handle = handles[i];
+                        if (!handle.IsValid ||
+                            (uint)handle.Slot >= (uint)_capacity.GlobalEntityCapacity ||
+                            (i > 0 && handle.Slot <= handles[i - 1].Slot))
+                        {
+                            Fail(NetworkRuntimeFaultCode.ReplicationInputRejected, _seatConnections[binding.Slot], detail: i);
+                        }
                     }
                 }
 
-                BuildAndSendReplication(
-                    seat,
-                    committedTick,
-                    _interestHandles.AsSpan(0, interestCount));
+                _replicationInterest.CommitPreparedKnowledge();
+                for (int publishIndex = 0; publishIndex < publishSeats.Length; publishIndex++)
+                {
+                    SessionSeatBinding binding = publishSeats[publishIndex];
+                    if (!_replicationInterest.TryGetPreparedInterest(in binding, out ReadOnlySpan<NetworkEntityHandle> handles))
+                    {
+                        throw new InvalidOperationException(
+                            $"Prepared replication interest for seat {binding.Slot}:{binding.Generation} changed after validation.");
+                    }
+
+                    BuildAndSendReplication(
+                        binding.Slot,
+                        committedTick,
+                        handles);
+                }
+
+                QueueFixedInputAcknowledgements();
+            }
+            finally
+            {
+                _replicationInterest.CompletePreparedBatch();
             }
 
-            FlushOutbound();
             FlushPendingFixedInputAcknowledgements();
+            FlushOutbound();
         }
 
         public void PumpReplicatedClient(float frameDeltaTime)

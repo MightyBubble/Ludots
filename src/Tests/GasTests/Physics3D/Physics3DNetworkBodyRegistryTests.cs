@@ -25,11 +25,13 @@ public sealed class Physics3DNetworkBodyRegistryTests
         using var physics = CreatePhysics(mobileCapacity: 1, staticCapacity: bodyCount);
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         var entities = new NetworkEntityTable(bodyCount);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         var ticks = new AuthoritativeSimulationTickState();
         using var registry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             entities,
+            bindings,
             ticks,
             SchemaId,
             commandCapacity: bodyCount);
@@ -104,11 +106,13 @@ public sealed class Physics3DNetworkBodyRegistryTests
         using var physics = CreatePhysics(mobileCapacity: 1, staticCapacity: 2);
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         var entities = new NetworkEntityTable(1);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         var ticks = new AuthoritativeSimulationTickState();
         using var registry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             entities,
+            bindings,
             ticks,
             SchemaId,
             commandCapacity: 1);
@@ -156,11 +160,13 @@ public sealed class Physics3DNetworkBodyRegistryTests
         using var physics = CreatePhysics(mobileCapacity: 2, staticCapacity: 2);
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         var entities = new NetworkEntityTable(4);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         var ticks = new AuthoritativeSimulationTickState();
         using var registry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             entities,
+            bindings,
             ticks,
             SchemaId,
             commandCapacity: 4);
@@ -219,12 +225,14 @@ public sealed class Physics3DNetworkBodyRegistryTests
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         var ticks = new AuthoritativeSimulationTickState();
         var fullTable = new NetworkEntityTable(1);
+        var fullBindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, fullTable.Capacity);
         Entity foreign = ecs.Create();
         Assert.That(fullTable.TryAllocate(foreign, out _), Is.True);
         var capacityRegistry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             fullTable,
+            fullBindings,
             ticks,
             SchemaId,
             commandCapacity: 1);
@@ -246,11 +254,13 @@ public sealed class Physics3DNetworkBodyRegistryTests
         Assert.Throws<InvalidOperationException>(capacityRegistry.Dispose);
 
         var table = new NetworkEntityTable(1);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, table.Capacity);
         var mismatchTicks = new AuthoritativeSimulationTickState();
         var registry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             table,
+            bindings,
             mismatchTicks,
             SchemaId,
             commandCapacity: 1);
@@ -270,16 +280,18 @@ public sealed class Physics3DNetworkBodyRegistryTests
         using var physics = CreatePhysics(mobileCapacity: 2, staticCapacity: 1);
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         var entities = new NetworkEntityTable(8);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 4);
         var ticks = new AuthoritativeSimulationTickState();
         using var registry = new Physics3DNetworkBodyRegistry(
             ecs,
             physics,
             entities,
+            bindings,
             ticks,
             SchemaId,
             commandCapacity: 8);
-        using var players = CreatePlayers(ecs, physics, entities, knowledge, seatCapacity: 1);
+        using var players = CreatePlayers(ecs, physics, entities, bindings, knowledge, seatCapacity: 1);
         SessionSeatBinding firstSeat = Seat(generation: 1);
         Assert.That(players.TryResolveController(in firstSeat, out Entity firstViewer), Is.True);
         Entity target = CreateBody(
@@ -290,10 +302,10 @@ public sealed class Physics3DNetworkBodyRegistryTests
             new Vector3(1_000f, 0f, 0f));
         ApplySingleRegistration(registry, ticks, target, tick: 1);
         using var aoi = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             players,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 4,
             new Physics3DNetworkAoiConfig
@@ -303,12 +315,12 @@ public sealed class Physics3DNetworkBodyRegistryTests
             });
         Span<NetworkEntityHandle> interest = stackalloc NetworkEntityHandle[4];
 
-        Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int farCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in firstSeat, interest, out int farCount), Is.True);
         Assert.That(farCount, Is.EqualTo(1));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.False);
 
         SetPose(ecs, physics, target, new Vector3(100f, 0f, 0f));
-        Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int nearCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in firstSeat, interest, out int nearCount), Is.True);
         Assert.That(nearCount, Is.EqualTo(2));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out KnowledgeDisclosureRecord entered), Is.True);
         Assert.Multiple(() =>
@@ -319,23 +331,23 @@ public sealed class Physics3DNetworkBodyRegistryTests
         });
 
         SetPose(ecs, physics, target, new Vector3(150f, 0f, 0f));
-        Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int updatedCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in firstSeat, interest, out int updatedCount), Is.True);
         Assert.That(updatedCount, Is.EqualTo(2));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out KnowledgeDisclosureRecord updated), Is.True);
         Assert.That(updated.Revision, Is.EqualTo(entered.Revision));
 
         SetPose(ecs, physics, target, new Vector3(1_000f, 0f, 0f));
-        Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out int exitedCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in firstSeat, interest, out int exitedCount), Is.True);
         Assert.That(exitedCount, Is.EqualTo(1));
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.False);
 
         SetPose(ecs, physics, target, new Vector3(100f, 0f, 0f));
-        Assert.That(aoi.TryCopyInterest(in firstSeat, interest, out _), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in firstSeat, interest, out _), Is.True);
         Assert.That(knowledge.TryGet(firstViewer, target, 0, out _), Is.True);
         Assert.That(players.TryRelease(in firstSeat), Is.True);
         SessionSeatBinding secondSeat = Seat(generation: 2);
         Assert.That(players.TryResolveController(in secondSeat, out Entity secondViewer), Is.True);
-        Assert.That(aoi.TryCopyInterest(in secondSeat, interest, out int reconnectCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in secondSeat, interest, out int reconnectCount), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(reconnectCount, Is.EqualTo(2));
@@ -348,7 +360,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
         Assert.That(players.TryResolveController(in thirdSeat, out Entity thirdViewer), Is.True);
         _ = GC.GetAllocatedBytesForCurrentThread();
         long reconnectBefore = GC.GetAllocatedBytesForCurrentThread();
-        bool reconnectSucceeded = aoi.TryCopyInterest(in thirdSeat, interest, out int secondReconnectCount);
+        bool reconnectSucceeded = TryPublishSingleSeat(aoi, in thirdSeat, interest, out int secondReconnectCount);
         long reconnectAllocated = GC.GetAllocatedBytesForCurrentThread() - reconnectBefore;
         Assert.Multiple(() =>
         {
@@ -362,7 +374,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
 
         for (int warmup = 0; warmup < 32; warmup++)
         {
-            Assert.That(aoi.TryCopyInterest(in thirdSeat, interest, out int warmCount), Is.True);
+            Assert.That(TryPublishSingleSeat(aoi, in thirdSeat, interest, out int warmCount), Is.True);
             Assert.That(warmCount, Is.EqualTo(2));
         }
 
@@ -372,7 +384,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
         int countTotal = 0;
         for (int iteration = 0; iteration < 128; iteration++)
         {
-            succeeded &= aoi.TryCopyInterest(in thirdSeat, interest, out int count);
+            succeeded &= TryPublishSingleSeat(aoi, in thirdSeat, interest, out int count);
             countTotal += count;
         }
 
@@ -390,7 +402,7 @@ public sealed class Physics3DNetworkBodyRegistryTests
         ticks.Begin(2);
         Assert.That(registry.TryApplyPendingStructuralChanges(), Is.True);
         ticks.Commit(2);
-        Assert.That(aoi.TryCopyInterest(in thirdSeat, interest, out int afterReleaseCount), Is.True);
+        Assert.That(TryPublishSingleSeat(aoi, in thirdSeat, interest, out int afterReleaseCount), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(afterReleaseCount, Is.EqualTo(1));
@@ -427,11 +439,13 @@ public sealed class Physics3DNetworkBodyRegistryTests
         World world,
         IPhysics3DWorld physics,
         NetworkEntityTable entities,
+        Physics3DNetworkReplicatedBindingStore bindings,
         KnowledgeProjectionStore knowledge,
         int seatCapacity) => new(
         world,
         physics,
         entities,
+        bindings,
         knowledge,
         seatCapacity,
         SchemaId,
@@ -451,6 +465,44 @@ public sealed class Physics3DNetworkBodyRegistryTests
             RowSpacingCm = 500f,
             Columns = seatCapacity,
         });
+
+    private static bool TryPublishSingleSeat(
+        Physics3DNetworkAoiInterestPort interest,
+        in SessionSeatBinding seat,
+        Span<NetworkEntityHandle> destination,
+        out int count)
+    {
+        Span<SessionSeatBinding> seats = stackalloc SessionSeatBinding[1] { seat };
+        if (!interest.TryPrepareBatch(seats))
+        {
+            count = 0;
+            return false;
+        }
+
+        try
+        {
+            if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles))
+            {
+                count = 0;
+                return false;
+            }
+
+            count = handles.Length;
+            if (handles.Length > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Prepared AOI count {handles.Length} exceeds test destination capacity {destination.Length}.");
+            }
+
+            handles.CopyTo(destination);
+            interest.CommitPreparedKnowledge();
+            return true;
+        }
+        finally
+        {
+            interest.CompletePreparedBatch();
+        }
+    }
 
     private static SessionSeatBinding Seat(uint generation) =>
         new(slot: 0, generation, new PlayerId(1));

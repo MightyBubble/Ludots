@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using Arch.Core;
 using BepuPhysics;
 using BepuPhysics.Collidables;
@@ -23,10 +25,17 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     private readonly Physics3DConstraintStore _constraints;
     private readonly Physics3DShapeCatalog _shapes;
     private readonly Physics3DQueryEngine _queries;
+    private readonly Physics3DReadQueryContext[] _parallelQueryContexts;
+    private readonly long[] _parallelQueryAllocatedBytes;
+    private readonly Exception?[] _parallelQueryExceptions;
+    private readonly int[] _parallelQueryExceptionItems;
+    private readonly Action<int> _parallelQueryWorker;
     private readonly Physics3DActuationCommandBuffer _actuationCommands;
     private readonly bool _supportsContactSurfaceVelocity;
     private readonly Physics3DContactSurfaceTimestepper? _productionTimestepper;
     private bool _isStepping;
+    private IPhysics3DParallelQueryBatch? _activeParallelQueryBatch;
+    private int _parallelQueryNextItem;
     private bool _disposed;
     private Exception? _terminalFault;
 
@@ -105,6 +114,19 @@ public sealed class Physics3DWorld : IPhysics3DWorld
             simulation.Deterministic = true;
             _shapes = new Physics3DShapeCatalog(simulation, config.ShapeCapacity);
             _queries = new Physics3DQueryEngine(simulation, bufferPool, _bodies);
+            _parallelQueryContexts = new Physics3DReadQueryContext[config.WorkerCount];
+            for (int worker = 0; worker < _parallelQueryContexts.Length; worker++)
+            {
+                _parallelQueryContexts[worker] = new Physics3DReadQueryContext(
+                    _queries,
+                    threadDispatcher.GetThreadMemoryPool(worker),
+                    _bodies.TotalCapacity);
+            }
+
+            _parallelQueryAllocatedBytes = new long[config.WorkerCount];
+            _parallelQueryExceptions = new Exception?[config.WorkerCount];
+            _parallelQueryExceptionItems = new int[config.WorkerCount];
+            _parallelQueryWorker = ExecuteParallelQueryWorker;
             _bufferPool = bufferPool;
             _simulation = simulation;
         }
@@ -129,6 +151,7 @@ public sealed class Physics3DWorld : IPhysics3DWorld
     public int ActuationCommandCapacity => _actuationCommands.Capacity;
     public int PendingActuationCommandCount => _actuationCommands.Count;
     public int WorkerCount => _threadDispatcher.ThreadCount;
+    public int BodySlotCapacity => _bodies.TotalCapacity;
     public long StepIndex { get; private set; }
     public Physics3DStepMetrics LastStepMetrics { get; private set; }
     public float FixedDeltaSeconds => _config.FixedDeltaSeconds;
@@ -1240,6 +1263,74 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         return _queries.OverlapCapsule(centerCm, radiusCm, cylinderLengthCm, orientation, filter, hits);
     }
 
+    public void ExecuteParallelQueries(IPhysics3DParallelQueryBatch batch)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(batch);
+        if (_isStepping)
+        {
+            throw new InvalidOperationException("Physics3D cannot execute read queries while stepping.");
+        }
+
+        if (_activeParallelQueryBatch is not null)
+        {
+            throw new InvalidOperationException("Physics3D parallel read queries are not reentrant.");
+        }
+
+        int itemCount = batch.ItemCount;
+        if (itemCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(batch), itemCount, "Parallel query item count must be positive.");
+        }
+
+        Array.Clear(_parallelQueryAllocatedBytes);
+        Array.Clear(_parallelQueryExceptions);
+        Array.Fill(_parallelQueryExceptionItems, int.MaxValue);
+        _parallelQueryNextItem = -1;
+        _activeParallelQueryBatch = batch;
+        try
+        {
+            _threadDispatcher.DispatchWorkers(
+                _parallelQueryWorker,
+                Math.Min(itemCount, _parallelQueryContexts.Length));
+        }
+        finally
+        {
+            _activeParallelQueryBatch = null;
+        }
+
+        int failedWorker = -1;
+        int failedItem = int.MaxValue;
+        for (int worker = 0; worker < _parallelQueryExceptions.Length; worker++)
+        {
+            if (_parallelQueryExceptions[worker] is not null &&
+                _parallelQueryExceptionItems[worker] < failedItem)
+            {
+                failedWorker = worker;
+                failedItem = _parallelQueryExceptionItems[worker];
+            }
+        }
+
+        if (failedWorker >= 0)
+        {
+            ExceptionDispatchInfo.Capture(_parallelQueryExceptions[failedWorker]!).Throw();
+        }
+    }
+
+    public int CopyLastParallelQueryWorkerAllocatedBytes(Span<long> destination)
+    {
+        ThrowIfDisposed();
+        if (destination.Length < _parallelQueryAllocatedBytes.Length)
+        {
+            throw new Physics3DCapacityExceededException(
+                "parallel-query worker allocation metrics",
+                destination.Length);
+        }
+
+        _parallelQueryAllocatedBytes.CopyTo(destination);
+        return _parallelQueryAllocatedBytes.Length;
+    }
+
     public void Step()
     {
         ThrowIfDisposed();
@@ -1394,6 +1485,31 @@ public sealed class Physics3DWorld : IPhysics3DWorld
             config.WorkerCount,
             config.ThreadMemoryPoolBlockAllocationSize,
             config.MemoryPoolExpectedPooledResourceCount);
+    }
+
+    private void ExecuteParallelQueryWorker(int workerIndex)
+    {
+        long allocationBefore = GC.GetAllocatedBytesForCurrentThread();
+        int itemIndex = int.MaxValue;
+        try
+        {
+            IPhysics3DParallelQueryBatch batch = _activeParallelQueryBatch
+                ?? throw new InvalidOperationException("Physics3D has no active parallel query batch.");
+            while ((itemIndex = Interlocked.Increment(ref _parallelQueryNextItem)) < batch.ItemCount)
+            {
+                batch.Execute(itemIndex, _parallelQueryContexts[workerIndex]);
+            }
+        }
+        catch (Exception exception)
+        {
+            _parallelQueryExceptionItems[workerIndex] = itemIndex;
+            _parallelQueryExceptions[workerIndex] = exception;
+        }
+        finally
+        {
+            _parallelQueryAllocatedBytes[workerIndex] =
+                GC.GetAllocatedBytesForCurrentThread() - allocationBefore;
+        }
     }
 
     private void ValidateBodyDescription(in Physics3DBodyDescription description)
