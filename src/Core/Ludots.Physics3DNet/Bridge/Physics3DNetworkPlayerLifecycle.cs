@@ -7,6 +7,7 @@ using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Transport;
 using Ludots.Core.Physics3D;
+using Ludots.Core.Physics3DNet.Client;
 
 namespace Ludots.Core.Physics3DNet.Bridge;
 
@@ -474,6 +475,13 @@ public sealed class Physics3DNetworkPlayerLifecycleObserver : INetworkRuntimeObs
 
 public sealed class Physics3DClientNetworkRuntimeObserver : INetworkRuntimeObserver
 {
+    private readonly Physics3DReplicatedClientConvergence _convergence;
+
+    public Physics3DClientNetworkRuntimeObserver(Physics3DReplicatedClientConvergence convergence)
+    {
+        _convergence = convergence ?? throw new ArgumentNullException(nameof(convergence));
+    }
+
     public void OnFault(in NetworkRuntimeFault fault) { }
 
     public void OnServerSeatConnected(in SessionSeatBinding seat, bool reconnected) { }
@@ -482,7 +490,13 @@ public sealed class Physics3DClientNetworkRuntimeObserver : INetworkRuntimeObser
 
     public void OnServerSeatReleased(in SessionSeatBinding seat) { }
 
-    public void OnClientHandshake(in SessionHandshakeResponse response) { }
+    public void OnClientHandshake(in SessionHandshakeResponse response)
+    {
+        if (!response.Accepted)
+        {
+            _convergence.AbortSession();
+        }
+    }
 
     public void OnClientAdmission(in Ludots.Core.Networking.Commands.NetworkCommandAdmissionOutcome outcome) { }
 
@@ -492,5 +506,8 @@ public sealed class Physics3DClientNetworkRuntimeObserver : INetworkRuntimeObser
         in SessionSeatBinding seat,
         in ReplicationPacketHeader header) { }
 
-    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch) { }
+    public void OnClientReplicationTornDown(in SessionSeatBinding seat, ulong sessionEpoch)
+    {
+        _convergence.Teardown(in seat, sessionEpoch);
+    }
 }

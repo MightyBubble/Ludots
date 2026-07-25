@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Numerics;
+using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -14,7 +16,9 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Physics3D;
+using Ludots.Core.Physics3DNet;
 using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Client;
 using Ludots.Core.Physics3DNet.Input;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -194,6 +198,9 @@ public sealed class Physics3DModTests
             Assert.That(
                 engine.GetService(CoreServiceKeys.NetworkRuntimeObserverBridge),
                 Is.TypeOf<Physics3DClientNetworkRuntimeObserver>());
+            Assert.That(
+                engine.GetService(CoreServiceKeys.FixedInputPayloadSource),
+                Is.SameAs(engine.GetService(Physics3DNetworkServiceKeys.ClientConvergence)));
             Assert.That(engine.TryGetService(CoreServiceKeys.AuthoritativeSeatControllerResolver, out _), Is.False);
             Assert.That(
                 GetSystems(engine, SystemGroup.InputCollection).Exists(
@@ -203,6 +210,8 @@ public sealed class Physics3DModTests
 
         runtime.Dispose();
         Assert.That(engine.TryGetService(CoreServiceKeys.NetworkRuntimeObserverBridge, out _), Is.False);
+        Assert.That(engine.TryGetService(CoreServiceKeys.FixedInputPayloadSource, out _), Is.False);
+        Assert.That(engine.TryGetService(Physics3DNetworkServiceKeys.ClientConvergence, out _), Is.False);
     }
 
     private static GameEngine CreateEngine()
@@ -230,6 +239,15 @@ public sealed class Physics3DModTests
         engine.SetService(
             CoreServiceKeys.ClientReplicationSchemaAppliers,
             new ClientReplicationSchemaApplierRegistry(network.ReplicationSchemaCapacity));
+        if (role == NetworkProcessRole.ReplicatedClient)
+        {
+            engine.SetService(
+                Physics3DNetworkServiceKeys.ClientInputSource,
+                (IPhysics3DClientInputSource)new StubClientInputSource());
+            engine.SetService(
+                Physics3DNetworkServiceKeys.LocalPredictionDriver,
+                (IPhysics3DLocalPredictionDriver)new StubPredictionDriver());
+        }
         return engine;
     }
 
@@ -273,6 +291,7 @@ public sealed class Physics3DModTests
         FixedInputSchemaId = 1,
         FixedInputFramePayloadBytes = Physics3DFixedInputFrameCodec.PayloadBytes,
         FixedInputMaxFutureTicks = 4,
+        FixedInputLeadTicks = 1,
         FixedInputMaxFramesPerBatch = 4,
         FixedInputPendingFrameCapacity = 8,
         SnapshotChunkCapacity = 512,
@@ -332,5 +351,32 @@ public sealed class Physics3DModTests
         }
 
         throw new DirectoryNotFoundException("Could not locate repository root from the Physics3D test output directory.");
+    }
+
+    private sealed class StubClientInputSource : IPhysics3DClientInputSource
+    {
+        public bool TrySampleMovement(uint targetTick, out Vector2 movement)
+        {
+            movement = Vector2.Zero;
+            return targetTick > 0;
+        }
+    }
+
+    private sealed class StubPredictionDriver : IPhysics3DLocalPredictionDriver
+    {
+        public bool Supports(Physics3DNetLocalDrivenKind kind) =>
+            kind is Physics3DNetLocalDrivenKind.Character or Physics3DNetLocalDrivenKind.Vehicle;
+
+        public bool TryStep(
+            Entity entity,
+            Physics3DBodyId body,
+            Physics3DNetLocalDrivenKind kind,
+            uint targetTick,
+            in Physics3DFixedInputFrame input,
+            out Physics3DBodyState predictedState)
+        {
+            predictedState = default;
+            return false;
+        }
     }
 }

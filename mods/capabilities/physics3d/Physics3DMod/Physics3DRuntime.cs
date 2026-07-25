@@ -8,6 +8,7 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Physics3D;
 using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Client;
 using Ludots.Core.Physics3DNet.Input;
 using Ludots.Core.Scripting;
 
@@ -26,6 +27,7 @@ internal sealed class Physics3DRuntime : IDisposable
     private Physics3DNetworkAoiInterestPort? _interest;
     private INetworkRuntimeObserver? _observer;
     private Physics3DAuthoritativeFixedInputSystem? _fixedInputSystem;
+    private Physics3DReplicatedClientConvergence? _clientConvergence;
 
     public Task EnsureInstalledAsync(ScriptContext context)
     {
@@ -103,6 +105,7 @@ internal sealed class Physics3DRuntime : IDisposable
         ClientReplicationSchemaApplierRegistry? appliers = null;
         IReplicationSchemaProjector? projector = null;
         IClientReplicationSchemaApplier? applier = null;
+        Physics3DReplicatedClientConvergence? clientConvergence = null;
 
         if (network != null && physicsNetwork != null)
         {
@@ -179,12 +182,27 @@ internal sealed class Physics3DRuntime : IDisposable
             {
                 appliers = RequireService(engine, CoreServiceKeys.ClientReplicationSchemaAppliers);
                 RequireMutableSchemaSlot(appliers, physicsNetwork.ReplicationSchemaId);
-                observer = new Physics3DClientNetworkRuntimeObserver();
+                IPhysics3DClientInputSource clientInput = RequireService(
+                    engine,
+                    Physics3DNetworkServiceKeys.ClientInputSource);
+                IPhysics3DLocalPredictionDriver predictionDriver = RequireService(
+                    engine,
+                    Physics3DNetworkServiceKeys.LocalPredictionDriver);
+                clientConvergence = new Physics3DReplicatedClientConvergence(
+                    engine.World,
+                    world,
+                    physicsNetwork.ClientConvergence,
+                    network.GlobalNetworkEntityCapacity,
+                    network.ReplicationEntityCapacityPerSeat,
+                    clientInput,
+                    predictionDriver);
+                observer = new Physics3DClientNetworkRuntimeObserver(clientConvergence);
                 applier = new Physics3DClientBodyReplicationApplier(
                     world,
                     physicsNetwork.ReplicationSchemaId,
                     physicsNetwork.Quantization,
-                    physicsNetwork.PlayerBody);
+                    physicsNetwork.PlayerBody,
+                    clientConvergence);
             }
         }
 
@@ -198,6 +216,9 @@ internal sealed class Physics3DRuntime : IDisposable
         bool interestServiceSet = false;
         bool observerServiceSet = false;
         bool bodyRegistryServiceSet = false;
+        bool clientConvergenceRegistered = false;
+        bool clientConvergenceServiceSet = false;
+        bool fixedInputPayloadSourceServiceSet = false;
         try
         {
             engine.RegisterSystem(system, SystemGroup.InputCollection);
@@ -214,6 +235,12 @@ internal sealed class Physics3DRuntime : IDisposable
                     fixedInputSystem,
                     SystemGroup.InputCollection);
                 fixedInputRegistered = true;
+            }
+
+            if (clientConvergence != null)
+            {
+                engine.RegisterPresentationSystem(clientConvergence);
+                clientConvergenceRegistered = true;
             }
 
             engine.SetService(Physics3DServiceKeys.World, (IPhysics3DWorld)world);
@@ -238,6 +265,13 @@ internal sealed class Physics3DRuntime : IDisposable
                     (IAuthoritativeReplicationInterestBatchPort)interest!);
                 interestServiceSet = true;
             }
+            else if (role == NetworkProcessRole.ReplicatedClient)
+            {
+                engine.SetService(Physics3DNetworkServiceKeys.ClientConvergence, clientConvergence!);
+                clientConvergenceServiceSet = true;
+                engine.SetService(CoreServiceKeys.FixedInputPayloadSource, (IFixedInputPayloadSource)clientConvergence!);
+                fixedInputPayloadSourceServiceSet = true;
+            }
 
             if (observer != null)
             {
@@ -261,6 +295,8 @@ internal sealed class Physics3DRuntime : IDisposable
         }
         catch
         {
+            if (fixedInputPayloadSourceServiceSet) engine.RemoveService(CoreServiceKeys.FixedInputPayloadSource);
+            if (clientConvergenceServiceSet) engine.RemoveService(Physics3DNetworkServiceKeys.ClientConvergence);
             if (observerServiceSet) engine.RemoveService(CoreServiceKeys.NetworkRuntimeObserverBridge);
             if (interestServiceSet) engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationInterest);
             if (seatFactoryServiceSet) engine.RemoveService(CoreServiceKeys.AuthoritativeReplicationSeatRuntimeFactory);
@@ -269,11 +305,13 @@ internal sealed class Physics3DRuntime : IDisposable
             if (simulationSystemServiceSet) engine.RemoveService(Physics3DServiceKeys.SimulationSystem);
             if (worldServiceSet) engine.RemoveService(Physics3DServiceKeys.World);
             if (fixedInputRegistered) engine.UnregisterSystem(fixedInputSystem!, SystemGroup.InputCollection);
+            if (clientConvergenceRegistered) engine.UnregisterPresentationSystem(clientConvergence!);
             if (bodyRegistrySystemRegistered) engine.UnregisterSystem(bodyRegistrySystem!, SystemGroup.RuntimeEntityBinding);
             if (simulationRegistered) engine.UnregisterSystem(system, SystemGroup.InputCollection);
             interest?.Dispose();
             bodyRegistry?.Dispose();
             players?.Dispose();
+            clientConvergence?.Dispose();
             world.Dispose();
             throw;
         }
@@ -289,6 +327,7 @@ internal sealed class Physics3DRuntime : IDisposable
         _interest = interest;
         _observer = observer;
         _fixedInputSystem = fixedInputSystem;
+        _clientConvergence = clientConvergence;
         return Task.CompletedTask;
     }
 
@@ -314,6 +353,18 @@ internal sealed class Physics3DRuntime : IDisposable
         if (_observer != null)
         {
             RequireOwnedService(_engine, CoreServiceKeys.NetworkRuntimeObserverBridge, _observer);
+        }
+
+        if (_clientConvergence != null)
+        {
+            RequireOwnedService(
+                _engine,
+                Physics3DNetworkServiceKeys.ClientConvergence,
+                _clientConvergence);
+            RequireOwnedService(
+                _engine,
+                CoreServiceKeys.FixedInputPayloadSource,
+                (IFixedInputPayloadSource)_clientConvergence);
         }
 
         if (_networkRole == NetworkProcessRole.AuthoritativeServer)
@@ -348,6 +399,12 @@ internal sealed class Physics3DRuntime : IDisposable
             throw new InvalidOperationException("Physics3DMod network body registry system was not registered during unload.");
         }
 
+        if (_clientConvergence != null &&
+            !_engine.UnregisterPresentationSystem(_clientConvergence))
+        {
+            throw new InvalidOperationException("Physics3DMod client convergence presentation system was not registered during unload.");
+        }
+
         if (!_engine.UnregisterSystem(_system, SystemGroup.InputCollection))
         {
             throw new InvalidOperationException("Physics3DMod simulation system was not registered during unload.");
@@ -356,6 +413,13 @@ internal sealed class Physics3DRuntime : IDisposable
         if (_observer != null && !_engine.RemoveService(CoreServiceKeys.NetworkRuntimeObserverBridge))
         {
             throw new InvalidOperationException("Physics3DMod network observer service was not registered during unload.");
+        }
+
+        if (_clientConvergence != null &&
+            (!_engine.RemoveService(CoreServiceKeys.FixedInputPayloadSource) ||
+             !_engine.RemoveService(Physics3DNetworkServiceKeys.ClientConvergence)))
+        {
+            throw new InvalidOperationException("Physics3DMod client convergence services were not registered during unload.");
         }
 
         if (_networkRole == NetworkProcessRole.AuthoritativeServer &&
@@ -376,8 +440,10 @@ internal sealed class Physics3DRuntime : IDisposable
         _interest?.Dispose();
         _bodyRegistry?.Dispose();
         _players?.Dispose();
+        _clientConvergence?.Dispose();
         _world.Dispose();
         _fixedInputSystem = null;
+        _clientConvergence = null;
         _observer = null;
         _interest = null;
         _seatFactory = null;
@@ -393,6 +459,13 @@ internal sealed class Physics3DRuntime : IDisposable
     private static void ValidateRoleServicesAbsent(GameEngine engine, NetworkProcessRole role)
     {
         RequireServiceAbsent(engine, CoreServiceKeys.NetworkRuntimeObserverBridge);
+        if (role == NetworkProcessRole.ReplicatedClient)
+        {
+            RequireServiceAbsent(engine, Physics3DNetworkServiceKeys.ClientConvergence);
+            RequireServiceAbsent(engine, CoreServiceKeys.FixedInputPayloadSource);
+            return;
+        }
+
         if (role != NetworkProcessRole.AuthoritativeServer)
         {
             return;

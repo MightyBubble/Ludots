@@ -248,9 +248,19 @@ namespace Ludots.Core.Networking.Replication
             }
 
             _mirror.CommitValidated(packet);
-            CommitBatch();
-            _lastAppliedContext = _pendingContext;
-            return ReplicationBridgeResult.Success;
+            try
+            {
+                _appliers.NotifyBatchCommitBeginning();
+                CommitBatch();
+                _lastAppliedContext = _pendingContext;
+                _appliers.NotifyBatchEnded(committed: true);
+                return ReplicationBridgeResult.Success;
+            }
+            catch
+            {
+                _appliers.NotifyBatchEnded(committed: false);
+                throw;
+            }
         }
 
         /// <summary>
@@ -632,6 +642,7 @@ namespace Ludots.Core.Networking.Replication
 
         private ReplicationBridgeResult ValidateBatchApplications()
         {
+            _appliers.NotifyBatchValidationBeginning(in _pendingContext);
             for (int i = 0; i < _batchCount; i++)
             {
                 switch (_batchKinds[i])
@@ -644,6 +655,7 @@ namespace Ludots.Core.Networking.Replication
                             in _pendingContext);
                         if (validation != ReplicationBridgeResult.Success)
                         {
+                            _appliers.NotifyBatchEnded(committed: false);
                             return validation;
                         }
 
@@ -655,11 +667,13 @@ namespace Ludots.Core.Networking.Replication
                         ReplicatedEntityState state = _batchStates[i];
                         if (!_appliers.TryGet(state.SchemaId, out IClientReplicationSchemaApplier applier))
                         {
+                            _appliers.NotifyBatchEnded(committed: false);
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
                         if (!applier.CanApply(_world, _entities[lane], in state, in _pendingContext))
                         {
+                            _appliers.NotifyBatchEnded(committed: false);
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
@@ -670,19 +684,28 @@ namespace Ludots.Core.Networking.Replication
                         ReplicatedEntityState state = _batchStates[i];
                         if (!_appliers.TryGet(state.SchemaId, out IClientReplicationSchemaApplier applier))
                         {
+                            _appliers.NotifyBatchEnded(committed: false);
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
                         if (!applier.CanCreate(_world, in state, in _pendingContext))
                         {
+                            _appliers.NotifyBatchEnded(committed: false);
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
                         break;
                     }
                     default:
+                        _appliers.NotifyBatchEnded(committed: false);
                         return ReplicationBridgeResult.InvalidPacket;
                 }
+            }
+
+            if (!_appliers.CanCommitBatchValidation())
+            {
+                _appliers.NotifyBatchEnded(committed: false);
+                return ReplicationBridgeResult.SchemaApplyRejected;
             }
 
             return ReplicationBridgeResult.Success;
