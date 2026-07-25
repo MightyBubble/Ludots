@@ -481,6 +481,12 @@ internal sealed class Physics3DWheelLabShowcaseConfig
             throw new InvalidOperationException($"{parameterName} wheel track/base must fit the authored chassis and road.");
         }
 
+        if (RampAngleDegrees < 6f)
+        {
+            throw new InvalidOperationException(
+                $"{parameterName}.rampAngleDegrees must be at least 6 so the authored ramp can unload wheel contacts.");
+        }
+
         RequireNonNegative(SuspensionMinimumLengthCm, nameof(SuspensionMinimumLengthCm));
         RequirePositive(SuspensionRestLengthCm, nameof(SuspensionRestLengthCm));
         RequirePositive(SuspensionMaximumLengthCm, nameof(SuspensionMaximumLengthCm));
