@@ -8,137 +8,60 @@
     "ref": "origin/main",
     "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
   },
-  "remote_pr_head_before_repair": "49a81360eb48d38e3f0b966e2926ee423328fcf8",
-  "verified_runtime_repair_head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
-  "remote_alignment": {
-    "branch_ref": "refs/heads/codex/issues-649-651-ordering",
-    "pull_ref": "refs/pull/660/head",
-    "head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
-    "verified": true
-  },
-  "verdict": "pass_local_final_gate",
+  "remote_pr_head_before_repair": "ffb352fdb58318279518f9d9b366ce6c304d2b6a",
+  "verified_runtime_repair_commit": "2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8",
+  "verdict": "pass_local_gate_pending_push_checks",
   "remote_checks": {
-    "status": "pass",
-    "head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
-    "source_of_truth": "gh pr checks 660 --repo MightyBubble/Ludots",
-    "checks": [
-      {
-        "name": "validate",
-        "workflow": "docs-governance",
-        "result": "pass"
-      },
-      {
-        "name": "verify",
-        "workflow": "solution-verify",
-        "result": "pass"
-      },
-      {
-        "name": "verify",
-        "workflow": "camera-baseline",
-        "result": "pass"
-      },
-      {
-        "name": "Record ${{ matrix.adapter }} evidence",
-        "workflow": "MassNavigation 10K final evidence",
-        "result": "skipped_by_workflow"
-      }
-    ]
-  },
-  "merge_state": {
-    "mergeable": true,
-    "mergeable_state": "blocked",
-    "merge_state_status": "BLOCKED",
-    "status_check_rollup": "success",
-    "observed_blocker": "repository merge policy / OwnerOnlyWrites ruleset, not a code or CI failure"
+    "status": "pending_post_push",
+    "source_of_truth": "PR #660 body, issue #689, and gh pr checks 660 --repo MightyBubble/Ludots after push"
   },
   "scope": [
-    "batch EntityIntake admission-capacity transactions",
-    "runtime capacity fail-fast validation",
-    "pending retry failed terminal outcomes",
-    "AbilityExec terminal event capacity and structural command ordering",
-    "AbilityExec hot-path World.Add/Remove architecture guard",
-    "CompositeOrderPlanner not-applicable versus typed rejection outcomes",
-    "collection command-panel multi-member aiming typed rejection",
-    "runtime entity spawn single and batch preflight before dequeue",
-    "runtime entity spawn explicit MembershipTarget links without requiring authored Team",
-    "ArchitectureTests Windows output-drain cleanup stability"
+    "AbilityExec terminal capacity preflight before authority state mutation",
+    "AbilityExec missing service and invalid explicit target typed failure",
+    "AbilityExec caller params fixed-capacity fail-fast",
+    "OrderContinuation cursor restoration on submit exception",
+    "Input same-action different-actor aiming rejection",
+    "Entity command panel activation result recording and feedback"
   ],
-  "packets": {
-    "required_present": [
-      "artifacts/gas-composition-gate.md",
-      "artifacts/ci-audit/pr660/result.md",
-      "artifacts/ci-audit/pr660/result.json"
-    ],
-    "blocked_packets": [],
-    "missing_packets": [],
-    "scoped_out": [
-      {
-        "name": "visual review packets",
-        "reason": "current repair is headless runtime transaction validation"
-      },
-      {
-        "name": "handoff packet",
-        "reason": "current repair is direct branch consolidation; this audit result is the reviewer-ready evidence packet"
-      }
-    ]
-  },
   "evidence": [
     {
-      "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --nologo",
+      "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
       "passed": 188,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests\" --nologo",
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~InputOrderAbilityAuditTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
-      "passed": 198,
+      "passed": 95,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~GasExecutionBudgetTests\" --nologo --logger \"console;verbosity=minimal\"",
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
-      "passed": 34,
+      "passed": 56,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests\" --nologo --logger \"console;verbosity=minimal\"",
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
-      "passed": 7,
+      "passed": 49,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~RuntimeEntitySpawnSystem_SingleUnitTypeMissingTeamRepresentative\" --nologo --logger \"console;verbosity=minimal\"",
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~GasExecutionBudgetTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
-      "passed": 1,
+      "passed": 73,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~RuntimeEntitySpawnSystem_BatchTemplateExplicitMembershipWithoutTeam_LinksEverySpawnedEntity\" --nologo --logger \"console;verbosity=minimal\"",
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~InputOrderAbilityAuditTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
-      "passed": 1,
+      "passed": 105,
       "failed": 0
     },
     {
-      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~OrderBufferSystem_BatchEntityAdmissionCapacityMiss\" --nologo --logger \"console;verbosity=minimal\"",
-      "result": "pass",
-      "passed": 9,
-      "failed": 0
-    },
-    {
-      "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly\" --nologo --logger \"console;verbosity=minimal\"",
-      "result": "pass",
-      "passed": 1,
-      "failed": 0
-    },
-    {
-      "command": "dotnet test src\\Tests\\PresentationTests\\PresentationTests.csproj -c Debug --no-build --filter \"<MassNavigation PR acceptance presentationFilter>\" -v minimal",
-      "result": "pass",
-      "passed": 10,
-      "failed": 0
-    },
-    {
-      "command": "git diff --check origin/main...HEAD",
+      "command": "git diff --check",
       "result": "pass"
     }
   ],

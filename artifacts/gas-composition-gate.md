@@ -2,6 +2,79 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 / #689 Transaction Closeout - AbilityExec and Input Repair - 2026-07-25
+
+- **Task / Issue**: Close the remaining PR #660 audit blockers against #689: AbilityExec terminal capacity atomicity, same-action aiming actor isolation, continuation retry cursor restoration, command-panel activation feedback, missing service no-fallback behavior, and caller param capacity fail-fast.
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex.
+- **Verified runtime repair commit**: `2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8`.
+- **Remote checks**: pending until this commit and its evidence follow-up are pushed; PR #660 body and issue #689 record the exact pushed head after push.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing GAS order/input execution boundaries.
+
+Result: PASS.
+
+Reason: The repair reuses existing `AbilityExecSystem`, `OrderSubmitter`, `OrderContinuationSystem`, `InputOrderMappingSystem`, `EntityCommandPanelRuntime`, `CollectionGasEntityCommandPanelSource`, and `AbilityExecLoader`. It adds no graph op, effect preset enum, gameplay profile field, registry, loader family, fallback path, compatibility bypass, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| AbilityExec terminal-capacity preflight | N/A | Existing `AbilityExecSystem` and `OrderSubmitter.CountTerminalResultsRequiredForFinalize` |
+| Missing effect/event/graph service handling | N/A | Existing AbilityExec failure path and terminal result buffer |
+| Fixed caller params capacity | N/A | Existing `EffectConfigParams` and `AbilityExecLoader` |
+| Continuation retry cursor ownership | N/A | Existing `OrderContinuationSystem` |
+| Same-action aiming actor isolation | N/A | Existing `InputOrderMappingSystem` aiming session |
+| Command-panel activation feedback | N/A | Existing entity command panel runtime/controller |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `AbilityExecSystem`, `OrderContinuationSystem`, `OrderTerminalResultBuffer`, `GasPresentationEventBuffer`.
+- Resolvers / Registries: `AbilityDefinitionRegistry`, `OrderTypeRegistry`, existing input mapping actor resolution and command-panel source dispatch.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+AbilityExec now reserves the terminal result and presentation event capacity required by finish, fail, interrupt, and natural timeline exhaustion before mutating execution state or publishing terminal presentation. Missing effect/event/graph services and invalid explicit targets move the execution into the same typed failure path rather than silently skipping work. Caller params overflow fails at load or execution before publishing a partial effect request.
+
+Continuation processing increments its terminal-result cursor only after the continuation branch has either safely released non-completed follow-ups or successfully submitted completed follow-ups. Command-panel activation results are retained in runtime state and pushed into active input mapping state so a rejected multi-actor aiming activation is observable.
+
+### 6. Config SSOT
+
+Behavior remains in existing ability exec specs, order type registry data, input mapping data, command panel sources, and fixed runtime capacities.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, input, ability, effect, graph, or panel runtime added
+- [x] No fallback or silent service-missing path added
+- [x] No accepted order path without terminal-result ownership added
+- [x] No direct hot-path `World.Add/Remove<AbilityExecInstance>` added
+- [x] Capacity failure occurs before the repaired authority state changes
+
+### 8. Verification
+
+- `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --nologo --logger "console;verbosity=minimal"`: PASS, 188/188.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests" --nologo --logger "console;verbosity=minimal"`: PASS, 95/95.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 56/56.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests" --nologo --logger "console;verbosity=minimal"`: PASS, 49/49.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 73/73.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~InputOrderAbilityAuditTests" --nologo --logger "console;verbosity=minimal"`: PASS, 105/105 after final AbilityExec start-failure tightening.
+- `git diff --check`: PASS.
+
+### 9. Next variant test
+
+A new ability, input, or command-panel variant changes data and continues through the same AbilityExec, order finalization, input aiming, and command-panel activation-result contracts. It must not add a fallback branch, alternate runtime, or hidden capacity pool.
+
 ## PR #660 / #689 Final Gate Repair - Order Runtime Transactions - 2026-07-25
 
 - **Task / Issue**: Close #689 gate blockers for PR #660 current head, covering order admission capacity, pending retry terminal outcomes, AbilityExec structural mutation rules, move-then-cast rejection semantics, collection command-panel aiming, runtime spawn transaction boundaries, and runtime capacity validation.
