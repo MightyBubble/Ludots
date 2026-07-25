@@ -243,6 +243,13 @@ internal sealed class Physics3DConstraintForgeShowcaseConfig
     public float ServoMaximumForce { get; set; }
     public float MotorMaximumForce { get; set; }
     public float MotorSoftness { get; set; }
+    public int ObservationDurationTicks { get; set; }
+    public float MinimumSliderTravelCm { get; set; }
+    public float MinimumDoorSpeedRadiansPerSecond { get; set; }
+    public float MinimumServoAngleRadians { get; set; }
+    public float LabelOffsetYCm { get; set; }
+    public float LabelHeightCm { get; set; }
+    public float LabelThicknessCm { get; set; }
     public bool InitialDriveEnabled { get; set; }
     public Physics3DShowcaseDriveDirection InitialDriveDirection { get; set; }
 
@@ -275,6 +282,16 @@ internal sealed class Physics3DConstraintForgeShowcaseConfig
         RequireFinitePositive(ServoMaximumForce, $"{path}.{nameof(ServoMaximumForce)}");
         RequireFinitePositive(MotorMaximumForce, $"{path}.{nameof(MotorMaximumForce)}");
         RequireFiniteNonNegative(MotorSoftness, $"{path}.{nameof(MotorSoftness)}");
+        if (ObservationDurationTicks <= 0)
+        {
+            throw new InvalidOperationException($"{path}.{nameof(ObservationDurationTicks)} must be greater than zero.");
+        }
+        RequireFinitePositive(MinimumSliderTravelCm, $"{path}.{nameof(MinimumSliderTravelCm)}");
+        RequireFinitePositive(MinimumDoorSpeedRadiansPerSecond, $"{path}.{nameof(MinimumDoorSpeedRadiansPerSecond)}");
+        RequireFinitePositive(MinimumServoAngleRadians, $"{path}.{nameof(MinimumServoAngleRadians)}");
+        RequireFinitePositive(LabelOffsetYCm, $"{path}.{nameof(LabelOffsetYCm)}");
+        RequireFinitePositive(LabelHeightCm, $"{path}.{nameof(LabelHeightCm)}");
+        RequireFinitePositive(LabelThicknessCm, $"{path}.{nameof(LabelThicknessCm)}");
         if (!Enum.IsDefined(InitialDriveDirection))
         {
             throw new InvalidOperationException($"{path}.{nameof(InitialDriveDirection)} is invalid.");

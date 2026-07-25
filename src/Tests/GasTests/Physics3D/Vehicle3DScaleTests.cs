@@ -33,7 +33,7 @@ public sealed class Vehicle3DScaleTests
             MobileBodyCount,
             staticCapacity: 1,
             ConstraintCount,
-            workerCount: 4);
+            workerCount: 1);
         Physics3DShapeId floorShape = physics.RegisterBoxShape(new Vector3(500_000f, 20f, 500_000f));
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(210f, 60f, 320f));
         Physics3DShapeId wheelShape = wheelKind == Vehicle3DWheelKind.Physical
@@ -81,6 +81,8 @@ public sealed class Vehicle3DScaleTests
         long physicsAllocatedBytes = 0;
         long observeAllocatedBytes = 0;
         long backgroundWorkerAllocatedBytes = 0;
+        int firstAllocatingPhysicsSample = -1;
+        Physics3DStepMetrics firstAllocatingPhysicsMetrics = default;
         int maximumPreparedCommands = 0;
         for (int step = 0; step < samples.Length; step++)
         {
@@ -106,7 +108,13 @@ public sealed class Vehicle3DScaleTests
             stageAllocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             physics.Step();
             physicsSamples[step] = Stopwatch.GetElapsedTime(stageTimestamp).TotalMilliseconds;
-            physicsAllocatedBytes += GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
+            long physicsStepAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - stageAllocatedBefore;
+            physicsAllocatedBytes += physicsStepAllocatedBytes;
+            if (physicsStepAllocatedBytes != 0 && firstAllocatingPhysicsSample < 0)
+            {
+                firstAllocatingPhysicsSample = step;
+                firstAllocatingPhysicsMetrics = physics.LastStepMetrics;
+            }
             backgroundWorkerAllocatedBytes += physics.LastStepMetrics.Total.BackgroundWorkerAllocatedBytes;
 
             stageTimestamp = Stopwatch.GetTimestamp();
@@ -140,6 +148,21 @@ public sealed class Vehicle3DScaleTests
             $"Observe={Percentile(observeSamples, 0.95):F3}/{Percentile(observeSamples, 0.99):F3}ms, " +
             $"Unattributed={Percentile(unattributedSamples, 0.95):F3}/{Percentile(unattributedSamples, 0.99):F3}ms; " +
             $"allocated={setInputAllocatedBytes}/{prepareAllocatedBytes}/{physicsAllocatedBytes}/{observeAllocatedBytes} bytes.");
+        if (firstAllocatingPhysicsSample >= 0)
+        {
+            TestContext.Out.WriteLine(
+                $"First allocating Physics3D sample={firstAllocatingPhysicsSample}, " +
+                $"step={firstAllocatingPhysicsMetrics.StepIndex}, " +
+                $"stages command={firstAllocatingPhysicsMetrics.CommandReplay.CallingThreadAllocatedBytes}, " +
+                $"sleep={firstAllocatingPhysicsMetrics.Sleep.CallingThreadAllocatedBytes}, " +
+                $"predict={firstAllocatingPhysicsMetrics.PredictBounds.CallingThreadAllocatedBytes}, " +
+                $"collision={firstAllocatingPhysicsMetrics.CollisionDetection.CallingThreadAllocatedBytes}, " +
+                $"surface={firstAllocatingPhysicsMetrics.ContactSurface.CallingThreadAllocatedBytes}, " +
+                $"solve={firstAllocatingPhysicsMetrics.Solve.CallingThreadAllocatedBytes}, " +
+                $"optimize={firstAllocatingPhysicsMetrics.Optimize.CallingThreadAllocatedBytes}, " +
+                $"finalize={firstAllocatingPhysicsMetrics.ContactFinalize.CallingThreadAllocatedBytes}, " +
+                $"total={firstAllocatingPhysicsMetrics.Total.CallingThreadAllocatedBytes} bytes.");
+        }
 
         Assert.Multiple(() =>
         {

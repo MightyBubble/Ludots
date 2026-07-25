@@ -411,10 +411,10 @@ namespace Ludots.Adapter.Raylib
                             UiInputFrameResult uiInput;
                             if (setup.InputPlayback != null)
                             {
-                                uiInput = new UiInputFrameResult(
-                                    Handled: playbackUiHandled,
-                                    PointerCaptured: false,
-                                    WheelCaptured: false);
+                                uiInput = UpdatePlaybackUiInput(
+                                    uiRoot,
+                                    setup.InputPlayback,
+                                    playbackUiHandled);
                             }
                             else
                             {
@@ -1290,7 +1290,10 @@ namespace Ludots.Adapter.Raylib
 
         private static bool ClickUiElement(UIRoot uiRoot, string elementId)
         {
-            UiNode node = uiRoot.Scene?.FindByElementId(elementId)
+            UiScene scene = uiRoot.Scene
+                ?? throw new InvalidOperationException(
+                    $"Raylib input playback cannot click UI element '{elementId}' before the UI scene is mounted.");
+            UiNode node = scene.FindByElementId(elementId)
                 ?? throw new InvalidOperationException(
                     $"Raylib input playback could not find UI element '{elementId}'.");
             UiRect rect = node.LayoutRect;
@@ -1300,8 +1303,9 @@ namespace Ludots.Adapter.Raylib
                     $"Raylib input playback UI element '{elementId}' has no visible layout bounds.");
             }
 
-            float x = rect.X + (rect.Width * 0.5f);
-            float y = rect.Y + (rect.Height * 0.5f);
+            Vector2 screenCenter = ResolveUiScreenCenter(node);
+            float x = screenCenter.X;
+            float y = screenCenter.Y;
             uiRoot.HandleInput(new PointerEvent
             {
                 DeviceType = InputDeviceType.Mouse,
@@ -1328,7 +1332,116 @@ namespace Ludots.Adapter.Raylib
                 X = x,
                 Y = y
             });
-            return downHandled || upHandled;
+            if (downHandled || upHandled)
+            {
+                return true;
+            }
+
+            UiNode? hitNode = scene.HitTest(x, y);
+            throw new InvalidOperationException(
+                $"Raylib input playback UI element '{elementId}' is not clickable at its current visible position: " +
+                $"rect=({rect.X:0.##},{rect.Y:0.##},{rect.Width:0.##},{rect.Height:0.##}), " +
+                $"screenCenter=({x:0.##},{y:0.##}), " +
+                $"hit='{hitNode?.ElementId ?? hitNode?.TagName ?? "none"}'. " +
+                "Author pointer and wheel events that bring the control into view before clicking it.");
+        }
+
+        private static Vector2 ResolveUiScreenCenter(UiNode node)
+        {
+            var path = new List<UiNode>();
+            for (UiNode? current = node; current != null; current = current.Parent)
+            {
+                path.Add(current);
+            }
+
+            Matrix3x2 transform = Matrix3x2.Identity;
+            for (int i = path.Count - 1; i >= 0; i--)
+            {
+                UiNode current = path[i];
+                UiStyle style = current.RenderStyle;
+                if (style.Transform.HasOperations)
+                {
+                    transform *= UiTransformMath.CreateMatrix(style, current.LayoutRect);
+                }
+
+                if (i == 0)
+                {
+                    UiRect rect = current.LayoutRect;
+                    return Vector2.Transform(
+                        new Vector2(
+                            rect.X + (rect.Width * 0.5f),
+                            rect.Y + (rect.Height * 0.5f)),
+                        transform);
+                }
+
+                if (style.Overflow == UiOverflow.Scroll)
+                {
+                    transform *= Matrix3x2.CreateTranslation(
+                        -current.ScrollOffsetX,
+                        -current.ScrollOffsetY);
+                }
+            }
+
+            throw new InvalidOperationException("Raylib input playback UI element is detached from the mounted scene.");
+        }
+
+        private static UiInputFrameResult UpdatePlaybackUiInput(
+            UIRoot uiRoot,
+            RaylibInputPlayback playback,
+            bool clickHandled)
+        {
+            Vector2 pointer = playback.GetMousePosition();
+            bool hasPointer = float.IsFinite(pointer.X) && float.IsFinite(pointer.Y) &&
+                pointer.X >= 0f && pointer.Y >= 0f;
+            if (playback.PointerChangedThisFrame)
+            {
+                if (!hasPointer)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib input playback pointer must be inside the non-negative UI plane, actual=({pointer.X},{pointer.Y}).");
+                }
+
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    X = pointer.X,
+                    Y = pointer.Y
+                });
+            }
+
+            float wheel = playback.GetMouseWheel();
+            bool wheelHandled = false;
+            if (Math.Abs(wheel) > float.Epsilon)
+            {
+                if (!hasPointer)
+                {
+                    throw new InvalidOperationException(
+                        "Raylib input playback requires an authored pointer position before a wheel event can reach the UI.");
+                }
+
+                wheelHandled = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Scroll,
+                    X = pointer.X,
+                    Y = pointer.Y,
+                    DeltaX = 0f,
+                    DeltaY = -wheel * 120f
+                });
+                if (!wheelHandled)
+                {
+                    throw new InvalidOperationException(
+                        $"Raylib input playback wheel event was not handled at pointer=({pointer.X:0.##},{pointer.Y:0.##}), value={wheel:0.##}.");
+                }
+            }
+
+            return new UiInputFrameResult(
+                Handled: clickHandled || wheelHandled,
+                PointerCaptured: false,
+                WheelCaptured: wheelHandled);
         }
 
         private static bool ShouldForwardUiPointerMove(float x, float y)

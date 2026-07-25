@@ -49,6 +49,7 @@ internal sealed class Physics3DShowcaseConfig
     public float MaximumRecoveryVelocityCmPerSecond { get; set; }
     public float SpringAngularFrequency { get; set; }
     public float SpringTwiceDampingRatio { get; set; }
+    public Physics3DStationCameraShowcaseConfig[] StationCameraPoses { get; set; } = Array.Empty<Physics3DStationCameraShowcaseConfig>();
     public Physics3DScannerRangeShowcaseConfig ScannerRange { get; set; } = new();
     public Physics3DMaterialHillShowcaseConfig MaterialHill { get; set; } = new();
     public Physics3DWindTunnelShowcaseConfig WindTunnel { get; set; } = new();
@@ -168,6 +169,7 @@ internal sealed class Physics3DShowcaseConfig
         RequireFiniteNonNegative(MaximumRecoveryVelocityCmPerSecond, nameof(MaximumRecoveryVelocityCmPerSecond));
         RequireFinitePositive(SpringAngularFrequency, nameof(SpringAngularFrequency));
         RequireFiniteNonNegative(SpringTwiceDampingRatio, nameof(SpringTwiceDampingRatio));
+        ValidateStationCameraPoses();
         ScannerRange.Validate(nameof(ScannerRange));
         MaterialHill.Validate(nameof(MaterialHill));
         WindTunnel.Validate(nameof(WindTunnel));
@@ -230,6 +232,50 @@ internal sealed class Physics3DShowcaseConfig
     {
         float normalizedAge = ageSteps / (float)cycleSteps;
         return 4f * arcHeightCm * normalizedAge * (1f - normalizedAge);
+    }
+
+    internal Physics3DStationCameraShowcaseConfig GetStationCameraPose(Physics3DShowcaseScene scene)
+    {
+        for (int i = 0; i < StationCameraPoses.Length; i++)
+        {
+            Physics3DStationCameraShowcaseConfig pose = StationCameraPoses[i];
+            if (pose.Scene == scene)
+            {
+                return pose;
+            }
+        }
+
+        throw new InvalidOperationException($"Physics3D showcase has no authored camera pose for {scene}.");
+    }
+
+    private void ValidateStationCameraPoses()
+    {
+        Physics3DShowcaseScene[] scenes = Enum.GetValues<Physics3DShowcaseScene>();
+        if (StationCameraPoses.Length != scenes.Length)
+        {
+            throw new InvalidOperationException(
+                $"Physics3D showcase requires exactly one station camera pose for each of its {scenes.Length} scenes.");
+        }
+
+        for (int poseIndex = 0; poseIndex < StationCameraPoses.Length; poseIndex++)
+        {
+            Physics3DStationCameraShowcaseConfig pose = StationCameraPoses[poseIndex]
+                ?? throw new InvalidOperationException($"stationCameraPoses[{poseIndex}] cannot be null.");
+            pose.Validate($"stationCameraPoses[{poseIndex}]");
+            for (int previousIndex = 0; previousIndex < poseIndex; previousIndex++)
+            {
+                if (StationCameraPoses[previousIndex].Scene == pose.Scene)
+                {
+                    throw new InvalidOperationException(
+                        $"Physics3D showcase has duplicate station camera poses for {pose.Scene}.");
+                }
+            }
+        }
+
+        for (int sceneIndex = 0; sceneIndex < scenes.Length; sceneIndex++)
+        {
+            _ = GetStationCameraPose(scenes[sceneIndex]);
+        }
     }
 
     private static void RequirePositive(int value, string name)
@@ -643,6 +689,8 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
     public float UprightAnchorRadiusCm { get; set; }
     public float UprightAnchorParkingYCm { get; set; }
     public float AttachProbeDistanceCm { get; set; }
+    public float AttachProbeRadiusCm { get; set; }
+    public float SurfaceClearanceCm { get; set; }
     public float AttachSpeedCmPerSecond { get; set; }
     public float ClimbSpeedCmPerSecond { get; set; }
     public float LateralClimbSpeedCmPerSecond { get; set; }
@@ -766,6 +814,8 @@ internal sealed class Physics3DCharacterTraversalShowcaseConfig
             throw new InvalidOperationException($"CharacterTraversal showcase requires finite {nameof(UprightAnchorParkingYCm)}.");
         }
         RequireFinitePositive(AttachProbeDistanceCm, nameof(AttachProbeDistanceCm));
+        RequireFinitePositive(AttachProbeRadiusCm, nameof(AttachProbeRadiusCm));
+        RequireFinitePositive(SurfaceClearanceCm, nameof(SurfaceClearanceCm));
         RequireFinitePositive(AttachSpeedCmPerSecond, nameof(AttachSpeedCmPerSecond));
         RequireFinitePositive(ClimbSpeedCmPerSecond, nameof(ClimbSpeedCmPerSecond));
         RequireFinitePositive(LateralClimbSpeedCmPerSecond, nameof(LateralClimbSpeedCmPerSecond));

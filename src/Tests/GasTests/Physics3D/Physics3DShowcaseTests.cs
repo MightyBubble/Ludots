@@ -518,16 +518,42 @@ public sealed class Physics3DShowcaseTests
             harness.Step();
         }
 
+        Span<long> allocationsByStep = stackalloc long[30];
+        long physicsCallingThreadAllocated = 0L;
+        long physicsWorkerAllocated = 0L;
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 30; i++)
         {
+            long stepBefore = GC.GetAllocatedBytesForCurrentThread();
             harness.Step();
+            allocationsByStep[i] = GC.GetAllocatedBytesForCurrentThread() - stepBefore;
+            Physics3DStageMetrics physicsStep = harness.PhysicsWorld.LastStepMetrics.Total;
+            physicsCallingThreadAllocated += physicsStep.CallingThreadAllocatedBytes;
+            physicsWorkerAllocated += physicsStep.BackgroundWorkerAllocatedBytes;
         }
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        int firstAllocatedStep = -1;
+        long maximumStepAllocation = 0L;
+        for (int i = 0; i < allocationsByStep.Length; i++)
+        {
+            if (allocationsByStep[i] <= 0L)
+            {
+                continue;
+            }
+
+            firstAllocatedStep = firstAllocatedStep < 0 ? i : firstAllocatedStep;
+            maximumStepAllocation = Math.Max(maximumStepAllocation, allocationsByStep[i]);
+        }
 
         Assert.Multiple(() =>
         {
-            Assert.That(allocated, Is.Zero);
+            Assert.That(
+                allocated,
+                Is.Zero,
+                $"Scanner playback allocated on the calling thread: first step {firstAllocatedStep}, " +
+                $"maximum step allocation {maximumStepAllocation}B.");
+            Assert.That(physicsCallingThreadAllocated, Is.Zero);
+            Assert.That(physicsWorkerAllocated, Is.Zero);
             Assert.That(harness.Runtime.ScannerPlaybackStatus, Is.EqualTo(Physics3DScannerPlaybackStatus.Playing));
         });
     }
@@ -803,7 +829,19 @@ public sealed class Physics3DShowcaseTests
             Assert.That(harness.PhysicsWorld.ActiveConstraintCount, Is.EqualTo(expectedConstraintCount));
             Assert.That(harness.Runtime.ActiveScene, Is.EqualTo(Physics3DShowcaseScene.ConstraintForge));
             Assert.That(harness.Simulation.TotalPhysicsSteps, Is.EqualTo(121));
+            Assert.That(
+                harness.Runtime.CapturePanelState().ConstraintChallengeStatus,
+                Is.EqualTo(Physics3DShowcaseChallengeStatus.Complete));
         });
+
+        for (int labelIndex = 0; labelIndex < harness.Runtime.ConstraintForgeExhibitLabelCount; labelIndex++)
+        {
+            Assert.That(
+                harness.Runtime.TryGetConstraintForgeExhibitLabel(labelIndex, out int number, out Vector3 positionCm),
+                Is.True);
+            Assert.That(number, Is.EqualTo(labelIndex + 1));
+            Assert.That(positionCm.Y, Is.GreaterThan(0f));
+        }
     }
 
     [Test]
@@ -1607,6 +1645,81 @@ public sealed class Physics3DShowcaseTests
     }
 
     [Test]
+    public void Feature_PlatformStation_GuidedRun_CompletesTheSameFourPhysicalCheckpointsAsManualInput()
+    {
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 1_200,
+            benchmarkPresets: new[] { 100, 200, 500, 1_000 },
+            replaySteps: 30);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(1_300, 256));
+        AssertGuidedCharacterRouteCompletes(
+            harness,
+            Physics3DShowcaseScene.PlatformStation,
+            config.CharacterTraversal.PlatformRouteTimeLimitTicks);
+    }
+
+    [Test]
+    public void Feature_TraversalCourse_GuidedRun_CompletesTheSameSixPhysicalCheckpointsAsManualInput()
+    {
+        Physics3DShowcaseConfig config = CreateShowcaseConfig(
+            maximumBodies: 1_200,
+            benchmarkPresets: new[] { 100, 200, 500, 1_000 },
+            replaySteps: 30);
+        using var harness = new ShowcaseHarness(config, CreateWorldConfig(1_300, 256));
+        AssertGuidedCharacterRouteCompletes(
+            harness,
+            Physics3DShowcaseScene.TraversalCourse,
+            config.CharacterTraversal.TraversalRouteTimeLimitTicks);
+    }
+
+    private static void AssertGuidedCharacterRouteCompletes(
+        ShowcaseHarness harness,
+        Physics3DShowcaseScene scene,
+        int maximumSteps)
+    {
+        harness.SelectScene(scene);
+        harness.Runtime.EnqueueCommand(new Physics3DShowcaseCommand(
+            Physics3DShowcaseCommandKind.ToggleCharacterRouteGuide));
+        int fixedSteps = 0;
+        for (;
+             fixedSteps < maximumSteps &&
+             harness.Runtime.CharacterRouteStatus == Physics3DShowcaseRouteStatus.InProgress;
+             fixedSteps++)
+        {
+            harness.Step();
+        }
+
+        Character3DState character = harness.Runtime.GetPlayerCharacterStateForTests();
+        Traversal3DStatus traversal = harness.Runtime.GetPlayerTraversalStatusForTests();
+        Physics3DShowcasePanelState panel = harness.Runtime.CapturePanelState();
+        string failure =
+            $"{scene} guide stopped at {harness.Runtime.CharacterRouteCheckpointIndex}/" +
+            $"{harness.Runtime.CharacterRouteCheckpointCount} after {fixedSteps} fixed steps. " +
+            $"last='{panel.LastAction}', " +
+            $"position={character.PositionCm}, velocity={character.LinearVelocityCmPerSecond}, " +
+            $"grounded={character.IsGrounded}, support={character.SupportBody}, " +
+            $"traversal={traversal.State}, traversalSurface={traversal.SurfaceBody}.";
+        TestContext.Out.WriteLine(
+            $"{scene} guided route completed after {fixedSteps} fixed steps. " +
+            $"position={character.PositionCm}, velocity={character.LinearVelocityCmPerSecond}, " +
+            $"grounded={character.IsGrounded}, support={character.SupportBody}, " +
+            $"traversal={traversal.State}, traversalSurface={traversal.SurfaceBody}.");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                harness.Runtime.CharacterRouteStatus,
+                Is.EqualTo(Physics3DShowcaseRouteStatus.Completed),
+                failure);
+            Assert.That(
+                harness.Runtime.CharacterRouteCheckpointIndex,
+                Is.EqualTo(harness.Runtime.CharacterRouteCheckpointCount),
+                failure);
+            Assert.That(panel.CharacterRouteGuideActive, Is.False, failure);
+        });
+    }
+
+    [Test]
     public void BenchmarkScene_RemainsVisiblyInMotionInsteadOfOnlyDroppingOnce()
     {
         Physics3DShowcaseConfig config = CreateShowcaseConfig(
@@ -1724,7 +1837,7 @@ public sealed class Physics3DShowcaseTests
         {
             Assert.That(initialStatus.InteractiveBodies, Is.EqualTo(config.ScaleCity.InteractiveBodyLimit));
             Assert.That(initialStatus.SparseBodies, Is.EqualTo(128 - config.ScaleCity.InteractiveBodyLimit));
-            Assert.That(initialStatus.PhysicsPerformanceSampleCount, Is.EqualTo(1));
+            Assert.That(initialStatus.PerformanceSampleCount, Is.EqualTo(1));
             Assert.That(initialStatus.FramePerformanceSampleCount, Is.EqualTo(1));
             Assert.That(initialStatus.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Warming));
             Assert.That(harness.Runtime.DynamicBodyCount, Is.EqualTo(128));

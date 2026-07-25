@@ -42,7 +42,8 @@ internal enum Physics3DShowcaseCommandKind : byte
     SetScannerResultMode = 22,
     ToggleScannerSensors = 23,
     ToggleScannerIgnoreSelf = 24,
-    ToggleScannerIgnoreAssembly = 25
+    ToggleScannerIgnoreAssembly = 25,
+    ToggleCharacterRouteGuide = 26
 }
 
 internal readonly struct Physics3DShowcaseCommand

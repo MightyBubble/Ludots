@@ -346,6 +346,72 @@ public sealed class Physics3DWorldTests
     }
 
     [Test]
+    public void CurrentContactQuery_UsesFinalizedGenerationalPairsSymmetricallyWithoutAllocating()
+    {
+        using var world = new Physics3DWorld(CreateConfig(mobileCapacity: 2, staticCapacity: 1, workerCount: 1));
+        Physics3DShapeId floorShape = world.RegisterBoxShape(new Vector3(2_000f, 20f, 2_000f));
+        Physics3DShapeId sphereShape = world.RegisterSphereShape(20f);
+        Physics3DBodyId floor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Static,
+            floorShape,
+            new Vector3(0f, -10f, 0f)));
+        Physics3DBodyId sphere = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            sphereShape,
+            new Vector3(0f, 20f, 0f)));
+        Physics3DBodyId distant = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            sphereShape,
+            new Vector3(5_000f, 20f, 0f)));
+
+        world.Step();
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.HasCurrentContact(floor, sphere), Is.True);
+            Assert.That(world.HasCurrentContact(sphere, floor), Is.True);
+            Assert.That(world.HasCurrentContact(floor, distant), Is.False);
+            Assert.That(world.HasCurrentContact(floor, floor), Is.False);
+        });
+
+        for (int iteration = 0; iteration < 64; iteration++)
+        {
+            _ = world.HasCurrentContact(floor, sphere);
+            _ = world.HasCurrentContact(floor, distant);
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        bool observed = false;
+        for (int iteration = 0; iteration < 128; iteration++)
+        {
+            observed |= world.HasCurrentContact(floor, sphere);
+            observed |= world.HasCurrentContact(floor, distant);
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.Multiple(() =>
+        {
+            Assert.That(observed, Is.True);
+            Assert.That(allocated, Is.Zero);
+        });
+
+        world.DestroyBody(sphere);
+        Assert.Throws<InvalidOperationException>(() => world.HasCurrentContact(floor, sphere));
+        Physics3DBodyId replacement = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            sphereShape,
+            new Vector3(5_000f, 100f, 0f)));
+        Assert.Multiple(() =>
+        {
+            Assert.That(replacement.Slot, Is.EqualTo(sphere.Slot));
+            Assert.That(replacement.Generation, Is.Not.EqualTo(sphere.Generation));
+            Assert.That(world.HasCurrentContact(floor, replacement), Is.False);
+        });
+    }
+
+    [Test]
     public void ContactEvents_TrackBeginStayAndEndAcrossSleepingAndDestruction()
     {
         using var world = new Physics3DWorld(CreateConfig(mobileCapacity: 1, staticCapacity: 1, workerCount: 2));

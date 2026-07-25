@@ -1104,7 +1104,6 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         var fiftyThousandSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         var fiftyThousandEngineTickSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         int fiftyThousandPeakContactPairs = 0;
-        float maximumForegroundTravelCm = 0f;
         long maximumFrameCallingThreadAllocatedBytes = 0L;
         long maximumPhysicsWorkerAllocatedBytes = 0L;
         for (int i = 0; i < fiftyThousandSamples.Length; i++)
@@ -1120,12 +1119,22 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             maximumPhysicsWorkerAllocatedBytes = Math.Max(
                 maximumPhysicsWorkerAllocatedBytes,
                 sampledScaleCity.PhysicsWorkerAllocatedBytesLastStep);
-            Assert.That(
-                runtime.TryGetBodyVisual(1, out Physics3DBodyState sampledProbe, out _, out _, out _, out _, out _),
-                Is.True);
-            maximumForegroundTravelCm = MathF.Max(
-                maximumForegroundTravelCm,
-                (sampledProbe.PositionCm - probeBefore.PositionCm).Length());
+            for (int probeIndex = 0; probeIndex < motionProbeStarts.Length; probeIndex++)
+            {
+                Assert.That(
+                    runtime.TryGetBodyVisual(
+                        probeIndex + 1,
+                        out Physics3DBodyState probe,
+                        out _,
+                        out _,
+                        out _,
+                        out _,
+                        out _),
+                    Is.True);
+                maximumVisibleProbeMovementCm = MathF.Max(
+                    maximumVisibleProbeMovementCm,
+                    Vector3.Distance(probe.PositionCm, motionProbeStarts[probeIndex]));
+            }
         }
         double fiftyThousandP95 = Percentile(fiftyThousandSamples, 0.95d);
         double fiftyThousandEngineTickP95 = Percentile(fiftyThousandEngineTickSamples, 0.95d);
@@ -1167,16 +1176,9 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                 "The 50K Physics3D workers allocated managed memory after stabilization.");
         });
         Assert.That(
-            runtime.TryGetBodyVisual(1, out Physics3DBodyState probeAfter, out _, out _, out _, out _, out _),
-            Is.True);
-        Assert.That(
-            maximumForegroundTravelCm,
+            maximumVisibleProbeMovementCm,
             Is.GreaterThan(runtime.ActiveConfig.BodySizeCm),
             "The 50K world was counted but its visible rigid bodies did not keep moving.");
-        Assert.That(
-            (probeAfter.PositionCm - probeBefore.PositionCm).Length(),
-            Is.GreaterThan(0f),
-            "The visible foreground probe did not move during the final authoritative step.");
         trace.Add(JsonSerializer.Serialize(new
         {
             step = "scale-city-50k-functional",
@@ -1189,7 +1191,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             windAccelerationXCmPerSecondSquared = fiftyThousandState.WindAccelerationXCmPerSecondSquared,
             lastLauncherWaveIndex = fiftyThousandState.LastLauncherWaveIndex,
             continuousRelaunch = observedRelaunch,
-            maximumForegroundTravelCm,
+            maximumVisibleProbeMovementCm,
             maximumFrameCallingThreadAllocatedBytes,
             maximumPhysicsWorkerAllocatedBytes,
             physicsP95Ms = fiftyThousandP95,

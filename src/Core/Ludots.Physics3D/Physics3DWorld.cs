@@ -931,6 +931,14 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         return _contacts.CopyEventsTo(destination);
     }
 
+    public bool HasCurrentContact(Physics3DBodyId bodyA, Physics3DBodyId bodyB)
+    {
+        ThrowIfDisposed();
+        int slotA = _bodies.RequireSlot(bodyA);
+        int slotB = _bodies.RequireSlot(bodyB);
+        return slotA != slotB && _contacts.ContainsPersistentPair(bodyA, bodyB);
+    }
+
     public int Raycast(
         Vector3 originCm,
         Vector3 direction,
