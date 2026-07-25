@@ -1158,6 +1158,99 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
 
     [Test]
     [Description(
+        "Feature: Retained HUD text refreshes when its visible wording changes\n" +
+        "  Given the room status line uses a stable retained overlay identity\n" +
+        "  When the visible wording moves from battlefield synchronizing to battle started\n" +
+        "  Then that stable identity keeps its id and advances DirtySerial\n" +
+        "  And later command and connection wording changes also advance DirtySerial")]
+    public void GivenRetainedDynamicHudText_WhenVisiblePayloadChanges_ThenDirtySerialAdvances()
+    {
+        var status = new TestClientRuntimePort
+        {
+            ConnectionState = ReplicatedClientConnectionState.Connected,
+            HasEstablishedSession = true,
+            IsAwaitingFullSnapshot = true,
+            RoundTripTimeMilliseconds = 12,
+        };
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        var commands = new TestClientCommandPort();
+        NetworkRuntimeStateObserver observer = CreateObserver(config);
+        InstallClientFeedbackServices(engine, config, status, commands, observer);
+        var room = new NetworkRoomSnapshotHeader(
+            new SessionEpoch(7),
+            revision: 1,
+            committedTick: 300,
+            countdownRemainingTicks: 0,
+            seatCount: 2,
+            connectedSeatCount: 2,
+            readySeatCount: 2,
+            NetworkRoomPhase.Started);
+        NetworkRoomSeatSnapshot[] seats =
+        {
+            new(0, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(1)),
+            new(1, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(2)),
+        };
+        observer.OnClientRoomSnapshot(in room, seats);
+
+        var presentation = new FrontlinePresentationSystem(engine, runtime);
+        ScreenOverlayBuffer overlay = RequireOverlay(engine);
+
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem syncRoom = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(overlay.GetString(syncRoom.StringId), Is.EqualTo(config.Hud.SynchronizingBattlefieldText));
+        Assert.That(syncRoom.DirtySerial, Is.GreaterThan(0));
+
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem syncRoomAgain = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(syncRoomAgain.DirtySerial, Is.EqualTo(syncRoom.DirtySerial));
+
+        status.IsAwaitingFullSnapshot = false;
+        AddMatchMirror(engine, runtime, RunningSnapshot(sideTwoConnected: true));
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem battleRoom = RequireOverlayTextItem(overlay, stableId: 71402);
+        Assert.That(overlay.GetString(battleRoom.StringId), Is.EqualTo(config.Hud.BattleStartedText));
+        Assert.That(battleRoom.DirtySerial, Is.GreaterThan(0));
+        Assert.That(battleRoom.DirtySerial, Is.Not.EqualTo(syncRoom.DirtySerial));
+
+        ScreenOverlayItem smoothConnection = RequireOverlayTextItem(overlay, stableId: 71415);
+        Assert.That(overlay.GetString(smoothConnection.StringId), Is.EqualTo(config.Hud.SmoothConnectionText));
+        Assert.That(smoothConnection.DirtySerial, Is.EqualTo(battleRoom.DirtySerial));
+
+        status.RoundTripTimeMilliseconds = config.Hud.DelayedRoundTripThresholdMilliseconds;
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem delayedConnection = RequireOverlayTextItem(overlay, stableId: 71415);
+        Assert.That(overlay.GetString(delayedConnection.StringId), Is.EqualTo(config.Hud.DelayedConnectionText));
+        Assert.That(delayedConnection.DirtySerial, Is.GreaterThan(0));
+        Assert.That(delayedConnection.DirtySerial, Is.Not.EqualTo(smoothConnection.DirtySerial));
+
+        commands.SubmissionRevision = 1;
+        commands.LastSubmittedBatchSequence = 42;
+        commands.LastSubmitResult = ReplicatedClientCommandSubmitResult.Submitted;
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem sendingCommand = RequireOverlayTextItem(overlay, stableId: 71414);
+        Assert.That(overlay.GetString(sendingCommand.StringId), Is.EqualTo(config.Hud.CommandSendingText));
+        Assert.That(sendingCommand.DirtySerial, Is.GreaterThan(0));
+        Assert.That(sendingCommand.DirtySerial, Is.Not.EqualTo(delayedConnection.DirtySerial));
+
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+        overlay.Clear();
+        presentation.Update(0f);
+        ScreenOverlayItem acceptedCommand = RequireOverlayTextItem(overlay, stableId: 71414);
+        Assert.That(overlay.GetString(acceptedCommand.StringId), Is.EqualTo(config.Hud.CommandAcceptedText));
+        Assert.That(acceptedCommand.DirtySerial, Is.GreaterThan(0));
+        Assert.That(acceptedCommand.DirtySerial, Is.Not.EqualTo(sendingCommand.DirtySerial));
+    }
+
+    [Test]
+    [Description(
         "Feature: A joining player receives immediate connection feedback\n" +
         "  Given the client has not received its first room snapshot\n" +
         "  When the HUD first appears\n" +
@@ -1220,6 +1313,19 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             .Where(item => item.Kind == ScreenOverlayItemKind.Text)
             .Select(item => overlay.GetString(item.StringId) ?? string.Empty)
             .ToArray();
+    }
+
+    private static ScreenOverlayItem RequireOverlayTextItem(ScreenOverlayBuffer overlay, int stableId)
+    {
+        foreach (ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind == ScreenOverlayItemKind.Text && item.StableId == stableId)
+            {
+                return item;
+            }
+        }
+
+        throw new InvalidOperationException($"Expected retained overlay text with stable id {stableId}.");
     }
 
     private static void InstallClientFeedbackServices(
