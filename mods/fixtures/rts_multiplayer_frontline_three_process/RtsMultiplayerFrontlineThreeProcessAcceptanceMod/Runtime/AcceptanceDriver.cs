@@ -93,6 +93,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool _serverInitializedGameplay;
     private bool _battlePointsDerived;
     private bool _terminal;
+    private ServerCoreTeardownStage _serverCoreTeardownStage;
+    private long _serverCoreTeardownStartedTimestamp;
     private Entity _trackedHarvester = Entity.Null;
     private Entity _attackTarget = Entity.Null;
     private WorldCmInt2 _meetingPoint;
@@ -1015,32 +1017,61 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 "Authoritative Frontline completion did not preserve one atomic core-destruction resolution.");
         }
-        if (coreCount[winningSide] == 1 &&
-            coreCount[losingSide] == 1 &&
-            pendingCoreDestroyCount[winningSide] == 0 &&
-            pendingCoreDestroyCount[losingSide] == 1)
-        {
-            return;
-        }
-        if (coreCount[winningSide] != 1 || coreCount[losingSide] != 0)
-        {
-            throw new InvalidOperationException(
-                $"Completed core-destruction match requires winner/loser core counts 1/0; observed " +
-                $"{coreCount[winningSide]}/{coreCount[losingSide]} with pending-destroy counts " +
-                $"{pendingCoreDestroyCount[winningSide]}/{pendingCoreDestroyCount[losingSide]}.");
-        }
-
         float winningHealth = winningSide == 0
             ? resolution.SideOneCoreHealth
             : resolution.SideTwoCoreHealth;
         float losingHealth = losingSide == 0
             ? resolution.SideOneCoreHealth
             : resolution.SideTwoCoreHealth;
-        if (winningHealth <= 0f || losingHealth > 0f || !Approximately(coreHealth[winningSide], winningHealth))
+        if (winningHealth <= 0f || losingHealth > 0f ||
+            coreCount[winningSide] != 1 ||
+            !Approximately(coreHealth[winningSide], winningHealth))
         {
             throw new InvalidOperationException(
                 $"Authoritative Frontline resolution has invalid final core health: winner={winningHealth}, loser={losingHealth}.");
         }
+
+        if (coreCount[losingSide] == 1)
+        {
+            if (coreHealth[losingSide] > 0f ||
+                pendingCoreDestroyCount[winningSide] != 0 ||
+                pendingCoreDestroyCount[losingSide] > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Completed core-destruction match has invalid teardown state: health={coreHealth[winningSide]}/{coreHealth[losingSide]}, " +
+                    $"pending={pendingCoreDestroyCount[winningSide]}/{pendingCoreDestroyCount[losingSide]}.");
+            }
+
+            ServerCoreTeardownStage observedStage = pendingCoreDestroyCount[losingSide] == 0
+                ? ServerCoreTeardownStage.OutcomeCommitted
+                : ServerCoreTeardownStage.DestroyPending;
+            if (observedStage < _serverCoreTeardownStage)
+            {
+                throw new InvalidOperationException(
+                    $"Authoritative losing-core teardown regressed from {_serverCoreTeardownStage} to {observedStage}.");
+            }
+            if (_serverCoreTeardownStartedTimestamp == 0)
+            {
+                _serverCoreTeardownStartedTimestamp = Stopwatch.GetTimestamp();
+            }
+            _serverCoreTeardownStage = observedStage;
+            if (ElapsedSeconds(_serverCoreTeardownStartedTimestamp) > _plan.StageTimeoutSeconds.Attack)
+            {
+                throw new TimeoutException(
+                    $"Authoritative losing core remained in {_serverCoreTeardownStage} longer than " +
+                    $"{_plan.StageTimeoutSeconds.Attack} seconds after the core-destruction outcome.");
+            }
+            return;
+        }
+
+        if (coreCount[losingSide] != 0 || pendingCoreDestroyCount[winningSide] != 0)
+        {
+            throw new InvalidOperationException(
+                $"Completed core-destruction match requires winner/loser core counts 1/0; observed " +
+                $"{coreCount[winningSide]}/{coreCount[losingSide]} with pending-destroy counts " +
+                $"{pendingCoreDestroyCount[winningSide]}/{pendingCoreDestroyCount[losingSide]}.");
+        }
+        _serverCoreTeardownStage = ServerCoreTeardownStage.Destroyed;
 
         _evidence.Gameplay.ObservedCoreHealthBySide[0] = resolution.SideOneCoreHealth;
         _evidence.Gameplay.ObservedCoreHealthBySide[1] = resolution.SideTwoCoreHealth;
@@ -2390,6 +2421,14 @@ internal sealed class AcceptanceDriver : ISystem<float>
         None = 0,
         PressQueued = 1,
         ReleaseQueued = 2,
+    }
+
+    private enum ServerCoreTeardownStage : byte
+    {
+        None = 0,
+        OutcomeCommitted = 1,
+        DestroyPending = 2,
+        Destroyed = 3,
     }
 
     private readonly record struct GestureState(
