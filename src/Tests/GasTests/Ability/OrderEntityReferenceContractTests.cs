@@ -10,7 +10,7 @@ namespace Ludots.Tests.GAS
     public sealed class OrderEntityReferenceContractTests
     {
         [Test]
-        public void ParameterlessConstructor_InitializesOptionalEntityReferencesToCanonicalNull()
+        public void Order_ParameterlessConstructor_InitializesOptionalEntityReferencesToNull()
         {
             var order = new Order();
 
@@ -121,6 +121,42 @@ namespace Ludots.Tests.GAS
                     stepRateHz: 30))!;
             Assert.That(submitError.Message, Does.Contain(nameof(Order.TargetContext)));
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+        }
+
+        [Test]
+        public void OrderSubmitter_TargetlessOrder_DoesNotWriteEntityBlackboardEntry()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new BlackboardEntityBuffer());
+            var registry = new OrderTypeRegistry();
+            registry.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 1,
+                EntityBlackboardKey = OrderBlackboardKeys.Generic_TargetEntity,
+            });
+            var order = new Order
+            {
+                OrderTypeId = 1,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+            };
+
+            OrderSubmitResult result = OrderSubmitter.Submit(
+                world,
+                actor,
+                in order,
+                registry,
+                orderRuleRegistry: null,
+                currentStep: 0,
+                stepRateHz: 30);
+
+            BlackboardEntityBuffer entities = world.Get<BlackboardEntityBuffer>(actor);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.EqualTo(OrderSubmitResult.Activated));
+                Assert.That(entities.HasKey(OrderBlackboardKeys.Generic_TargetEntity), Is.False);
+                Assert.That(entities.Count, Is.Zero);
+            });
         }
     }
 }

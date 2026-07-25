@@ -96,6 +96,11 @@ namespace Ludots.Core.Networking.Runtime
                 return Complete(ReplicatedClientCommandSubmitResult.EmptyBatch);
             }
 
+            for (int i = 0; i < orders.Length; i++)
+            {
+                OrderEntityReferenceContract.Validate(in orders[i], nameof(ReplicatedClientCommandPort));
+            }
+
             if (_runtime.State != ReplicatedClientConnectionState.Connected ||
                 _runtime.SessionEpoch.IsEmpty)
             {

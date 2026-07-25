@@ -64,6 +64,110 @@ public sealed class NetworkRuntimeEndToEndTests
     }
 
     [Test]
+    public void ReplicatedClientCommandPort_DefaultOptionalEntityReferences_FailFastAtSubmissionBoundary()
+    {
+        using World world = World.Create();
+        var transport = new InMemoryTransport(new ConnectionId(31));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 3, 1, 4 });
+        using ReplicatedClientNetworkRuntime client = CreateClientRuntime(
+            world,
+            transport,
+            observer,
+            protocol,
+            fingerprint,
+            out _);
+        var schemas = new NetworkCommandSchemaRegistry();
+        schemas.Register(new NetworkCommandSchema(
+            TestOrderTypeId,
+            NetworkCommandTargetKind.None,
+            allowArg0: false,
+            allowArg1: false,
+            NetworkCommandSubmitModeMask.Immediate,
+            KnowledgePositionAccess.None));
+        schemas.Freeze();
+        var commands = new ReplicatedClientCommandPort(world, client, schemas, maxActorsPerBatch: 1);
+        Entity actor = world.Create();
+        var invalidOrders = new[]
+        {
+            (Field: nameof(Order.Target), Order: new Order { Actor = actor, OrderTypeId = TestOrderTypeId, Target = default }),
+            (Field: nameof(Order.TargetContext), Order: new Order { Actor = actor, OrderTypeId = TestOrderTypeId, TargetContext = default }),
+            (Field: nameof(Order.CommandSource), Order: new Order { Actor = actor, OrderTypeId = TestOrderTypeId, CommandSource = default }),
+        };
+
+        foreach ((string field, Order invalidOrder) in invalidOrders)
+        {
+            Order candidate = invalidOrder;
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => commands.Submit(in candidate),
+                field)!;
+            Assert.That(error.Message, Does.Contain(field));
+            Assert.That(error.Message, Does.Contain("Entity.Null"));
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(commands.SubmissionRevision, Is.Zero);
+            Assert.That(transport.LastClientCommandBatchSequence, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void ReplicatedClientCommandPort_NoneTarget_SubmitsCanonicalTargetlessOrder()
+    {
+        using World world = World.Create();
+        var transport = new InMemoryTransport(new ConnectionId(32));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 2, 7, 1, 8 });
+        using ReplicatedClientNetworkRuntime client = CreateClientRuntime(
+            world,
+            transport,
+            observer,
+            protocol,
+            fingerprint,
+            out ClientBridgeFactory factory);
+        ConnectAndAccept(client, transport, protocol, fingerprint, seatGeneration: 1, tokenLow: 40, nextClientBatchSequence: 1);
+        var actorHandle = new NetworkEntityHandle(0, 1);
+        EnqueueFullReplication(transport, sessionEpoch: 9, tick: 1, snapshotId: 1, actorHandle, revision: 1);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.That(factory.Bridge!.TryResolve(actorHandle, out Entity actor), Is.True);
+
+        var schemas = new NetworkCommandSchemaRegistry();
+        schemas.Register(new NetworkCommandSchema(
+            TestOrderTypeId,
+            NetworkCommandTargetKind.None,
+            allowArg0: false,
+            allowArg1: false,
+            NetworkCommandSubmitModeMask.Immediate,
+            KnowledgePositionAccess.None));
+        schemas.Freeze();
+        var commands = new ReplicatedClientCommandPort(world, client, schemas, maxActorsPerBatch: 1);
+        var order = new Order
+        {
+            Actor = actor,
+            OrderTypeId = TestOrderTypeId,
+            SubmitMode = OrderSubmitMode.Immediate,
+        };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(order.Target, Is.EqualTo(Entity.Null));
+            Assert.That(order.TargetContext, Is.EqualTo(Entity.Null));
+            Assert.That(order.CommandSource, Is.EqualTo(Entity.Null));
+            Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+        });
+        Assert.That(commands.Submit(in order), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(commands.LastSubmittedBatchSequence, Is.EqualTo(1));
+            Assert.That(transport.LastClientCommandBatchSequence, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public void TwoRuntimePorts_HandshakeCommandsRecoverDroppedDeltaContinueReplicatingReconnectAndReleaseSeat()
     {
         using World serverWorld = World.Create();
@@ -1226,6 +1330,30 @@ public sealed class NetworkRuntimeEndToEndTests
                 nextClientBatchSequence));
         client.PumpTransport();
         Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+    }
+
+    private static ReplicatedClientNetworkRuntime CreateClientRuntime(
+        World world,
+        InMemoryTransport transport,
+        RecordingObserver observer,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint,
+        out ClientBridgeFactory factory)
+    {
+        NetworkRuntimeCapacity capacity = Capacity();
+        factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        return new ReplicatedClientNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            factory,
+            observer);
     }
 
     private static void EnqueueFullReplication(
