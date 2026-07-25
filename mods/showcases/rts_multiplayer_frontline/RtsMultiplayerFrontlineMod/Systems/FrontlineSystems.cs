@@ -569,6 +569,13 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
     private string _connectionStatusText = string.Empty;
     private string _opponentStatusText = string.Empty;
     private string _commandStatusText = string.Empty;
+    private int _dynamicDirtySerial = 1;
+    private bool _hasPublishedDynamicPayload;
+    private string _publishedRoomStatusText = string.Empty;
+    private string _publishedSideStatusText = string.Empty;
+    private string _publishedConnectionStatusText = string.Empty;
+    private string _publishedOpponentStatusText = string.Empty;
+    private string _publishedCommandStatusText = string.Empty;
 
     public FrontlinePresentationSystem(GameEngine engine, FrontlineRuntime runtime)
     {
@@ -613,6 +620,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             : _roomStatusText;
         RefreshNetworkStatus(in snapshot, hud);
         RefreshCommandStatus(hud);
+        RefreshDynamicDirtySerial(visibleRoomStatusText);
+        int dynamicDirtySerial = _dynamicDirtySerial;
         FrontlineHudLayoutConfig layout = hud.Layout;
         int statusX = layout.X + layout.Padding;
         int statusY = layout.Y + layout.Padding - 2;
@@ -636,7 +645,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             layout.StatusFontSize,
             Accent,
             stableId: 71402,
-            dirtySerial: 1);
+            dirtySerial: dynamicDirtySerial);
         statusY += layout.LineHeight;
         _overlay.AddText(instructionX, instructionY, hud.Objective, layout.StatusFontSize, Accent, stableId: 71404, dirtySerial: 1);
         instructionY += layout.TitleFontSize + 6;
@@ -651,34 +660,34 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             statusY += layout.LineHeight;
             if (_sideStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _sideStatusText, layout.BodyFontSize, Text, stableId: 71403, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _sideStatusText, layout.BodyFontSize, Text, stableId: 71403, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_connectionStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71412, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71412, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_opponentStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71413, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71413, dirtySerial: dynamicDirtySerial);
             }
         }
         else
         {
             if (_commandStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _commandStatusText, layout.BodyFontSize, Accent, stableId: 71414, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _commandStatusText, layout.BodyFontSize, Accent, stableId: 71414, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_connectionStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71415, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _connectionStatusText, layout.BodyFontSize, Accent, stableId: 71415, dirtySerial: dynamicDirtySerial);
                 statusY += layout.LineHeight;
             }
             if (_opponentStatusText.Length > 0)
             {
-                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71416, dirtySerial: 1);
+                _overlay.AddText(statusX, statusY, _opponentStatusText, layout.BodyFontSize, Accent, stableId: 71416, dirtySerial: dynamicDirtySerial);
             }
         }
 
@@ -903,6 +912,33 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
     private static string ResolveLobbyState(bool connected, bool ready, FrontlineHudConfig hud) =>
         !connected ? hud.DisconnectedText : ready ? hud.ReadyText : hud.NotReadyText;
+
+    private void RefreshDynamicDirtySerial(string visibleRoomStatusText)
+    {
+        if (_hasPublishedDynamicPayload &&
+            _publishedRoomStatusText == visibleRoomStatusText &&
+            _publishedSideStatusText == _sideStatusText &&
+            _publishedConnectionStatusText == _connectionStatusText &&
+            _publishedOpponentStatusText == _opponentStatusText &&
+            _publishedCommandStatusText == _commandStatusText)
+        {
+            return;
+        }
+
+        if (_hasPublishedDynamicPayload)
+        {
+            _dynamicDirtySerial = _dynamicDirtySerial == int.MaxValue
+                ? 1
+                : _dynamicDirtySerial + 1;
+        }
+
+        _hasPublishedDynamicPayload = true;
+        _publishedRoomStatusText = visibleRoomStatusText;
+        _publishedSideStatusText = _sideStatusText;
+        _publishedConnectionStatusText = _connectionStatusText;
+        _publishedOpponentStatusText = _opponentStatusText;
+        _publishedCommandStatusText = _commandStatusText;
+    }
 
     private void RefreshNetworkStatus(in FrontlineMatchSnapshot snapshot, FrontlineHudConfig hud)
     {
