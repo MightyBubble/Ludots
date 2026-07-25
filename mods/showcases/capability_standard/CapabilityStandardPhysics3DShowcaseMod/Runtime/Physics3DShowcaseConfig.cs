@@ -260,6 +260,8 @@ internal sealed class Physics3DShowcaseConfig
 
 internal sealed class Physics3DWheelLabShowcaseConfig
 {
+    public string CameraId { get; set; } = string.Empty;
+    public float CameraTargetHeightOffsetCm { get; set; }
     public int VehicleCapacity { get; set; }
     public int WheelCapacity { get; set; }
     public int QueryBatchCapacity { get; set; }
@@ -354,6 +356,12 @@ internal sealed class Physics3DWheelLabShowcaseConfig
 
     public void Validate(string parameterName)
     {
+        if (string.IsNullOrWhiteSpace(CameraId))
+        {
+            throw new InvalidOperationException($"{parameterName} requires an explicit cameraId.");
+        }
+
+        RequireFinite(CameraTargetHeightOffsetCm, nameof(CameraTargetHeightOffsetCm));
         RequireAtLeast(VehicleCapacity, 1, nameof(VehicleCapacity));
         RequireAtLeast(WheelCapacity, 4, nameof(WheelCapacity));
         RequireAtLeast(QueryBatchCapacity, 4, nameof(QueryBatchCapacity));

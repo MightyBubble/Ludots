@@ -2,13 +2,10 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Character3D;
-using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Layers;
 using Ludots.Core.Physics3D;
-using Ludots.Core.Scripting;
 using Ludots.Core.Traversal3D;
 
 namespace CapabilityStandardPhysics3DShowcaseMod.Runtime;
@@ -827,25 +824,10 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         string cameraId = ActiveConfig.CharacterTraversal.CharacterCameraId;
-        VirtualCameraRegistry registry = _engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
-            ?? throw new InvalidOperationException("Physics3D character routes require VirtualCameraRegistry.");
-        VirtualCameraDefinition definition = registry.Get(cameraId);
-        if (definition.TargetSource != VirtualCameraTargetSource.FollowTarget ||
-            definition.FollowMode != CameraFollowMode.AlwaysFollow)
-        {
-            throw new InvalidOperationException(
-                $"Physics3D character route camera '{cameraId}' must use FollowTarget and AlwaysFollow.");
-        }
-
-        _engine.GameSession.Camera.ResetVirtualCameras();
-        _engine.GameSession.Camera.ActivateVirtualCamera(
+        _characterCameraActive = ActivateStationFollowCamera(
             cameraId,
-            blendDurationSeconds: 0f,
-            followTarget: new DirectTransformFollowTarget(CapturePlayerCameraTarget),
-            snapToFollowTargetWhenAvailable: true,
-            resetRuntimeState: true);
-        _engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
-        _characterCameraActive = true;
+            CapturePlayerCameraTarget,
+            "character route");
     }
 
     private CameraTargetTransformSnapshot CapturePlayerCameraTarget()
@@ -869,42 +851,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             return;
         }
 
-        GameEngine engine = _engine
-            ?? throw new InvalidOperationException("Physics3D character route lost GameEngine before camera release.");
-        var cameraConfig = engine.CurrentMapSession?.MapConfig?.DefaultCamera
-            ?? throw new InvalidOperationException("Physics3D character route requires map DefaultCamera for release.");
-        if (string.IsNullOrWhiteSpace(cameraConfig.VirtualCameraId))
-        {
-            throw new InvalidOperationException("Physics3D character route requires an explicit default virtual camera id.");
-        }
-
-        VirtualCameraRegistry registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
-            ?? throw new InvalidOperationException("Physics3D character route requires VirtualCameraRegistry for release.");
-        VirtualCameraDefinition definition = registry.Get(cameraConfig.VirtualCameraId);
-        engine.GameSession.Camera.ResetVirtualCameras();
-        engine.GameSession.Camera.ActivateVirtualCamera(
-            cameraConfig.VirtualCameraId,
-            blendDurationSeconds: 0f,
-            followTarget: CameraFollowTargetFactory.Build(
-                engine.World,
-                engine.GlobalContext,
-                definition.FollowTargetKind,
-                Entity.Null,
-                definition.FollowCollectionKey),
-            snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
-            resetRuntimeState: true);
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
-        {
-            VirtualCameraId = cameraConfig.VirtualCameraId,
-            TargetCm = cameraConfig.TargetXCm.HasValue || cameraConfig.TargetYCm.HasValue
-                ? new Vector2(cameraConfig.TargetXCm ?? 0f, cameraConfig.TargetYCm ?? 0f)
-                : null,
-            Yaw = cameraConfig.Yaw,
-            Pitch = cameraConfig.Pitch,
-            DistanceCm = cameraConfig.DistanceCm,
-            FovYDeg = cameraConfig.FovYDeg
-        });
-        engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+        RestoreDefaultCamera("character route");
         _characterCameraActive = false;
     }
 

@@ -44,5 +44,29 @@
     "followTargetKind": "None",
     "snapToFollowTargetWhenAvailable": true,
     "allowUserInput": true
+  },
+  {
+    "id": "Camera.Profile.Physics3DWheelLab",
+    "displayName": "Physics3D Wheel Lab Camera",
+    "priority": 220,
+    "rigKind": "Orbit",
+    "targetSource": "FollowTarget",
+    "distanceCm": 2400,
+    "pitch": 32,
+    "fovYDeg": 52,
+    "yaw": 180,
+    "minDistanceCm": 1600,
+    "maxDistanceCm": 4000,
+    "minPitchDeg": 22,
+    "maxPitchDeg": 55,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 500,
+    "followMode": "AlwaysFollow",
+    "followTargetKind": "None",
+    "snapToFollowTargetWhenAvailable": true,
+    "allowUserInput": true
   }
 ]

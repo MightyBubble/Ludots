@@ -37,6 +37,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
     private const string MapId = "capability_standard_physics3d_showcase";
     private const string CameraId = "Camera.Profile.Physics3DLab";
     private const string CharacterRouteCameraId = "Camera.Profile.Physics3DCharacterRoute";
+    private const string WheelLabCameraId = "Camera.Profile.Physics3DWheelLab";
     private const string PanelElementId = "capability-standard-physics3d-panel";
     private const int FixedHz = 30;
     private const double FixedStepBudgetMilliseconds = 1000d / FixedHz;
@@ -354,6 +355,155 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         });
 
         // When the player leaves the character station, the map overview camera is restored explicitly.
+        ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.ScannerRange));
+        TickUntil(
+            engine,
+            () => runtime.ActiveScene == Physics3DShowcaseScene.ScannerRange &&
+                  engine.GameSession.Camera.IsVirtualCameraActive(CameraId),
+            maximumFrames: 128);
+        Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
+    }
+
+    [Test]
+    public void Feature_WheelLab_Scenario_PlayerKeepsEveryWheelTypeInViewAcrossTheCompleteCourse()
+    {
+        // Given the player enters Wheel Lab through the formal launcher path.
+        string repoRoot = FindRepoRoot();
+        LauncherLaunchPlan plan = ResolveLaunchPlan(repoRoot);
+        using GameEngine engine = CreateEngine(repoRoot, plan, out AcceptanceInputBackend inputBackend);
+        engine.LoadEntryMap(MapId);
+        Tick(engine);
+        var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as Physics3DShowcaseRuntime
+            ?? throw new InvalidOperationException("Physics3D showcase runtime is missing.");
+        IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("Acceptance UI surface host is missing.");
+        ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.WheelLab));
+        TickUntil(
+            engine,
+            () => runtime.ActiveScene == Physics3DShowcaseScene.WheelLab &&
+                  engine.GameSession.Camera.IsVirtualCameraActive(WheelLabCameraId),
+            maximumFrames: 128);
+
+        Physics3DWheelLabShowcaseConfig config = runtime.ActiveConfig.WheelLab;
+        Vehicle3DWheelKind[] wheelKinds =
+        {
+            Vehicle3DWheelKind.Physical,
+            Vehicle3DWheelKind.Box,
+            Vehicle3DWheelKind.Scanning
+        };
+
+        // When the player uses the same W/A/D and Space route for every wheel type.
+        for (int run = 0; run < wheelKinds.Length; run++)
+        {
+            Assert.That(runtime.WheelLabMode, Is.EqualTo(wheelKinds[run]));
+            bool[] visitedSections = new bool[Enum.GetValues<WheelLabCourseSection>().Length];
+            float maximumCameraErrorCm = 0f;
+            int minimumGroundedWheelCount = 4;
+            bool sawGroundContact = false;
+            visitedSections[(int)runtime.WheelLabSection] = true;
+
+            inputBackend.SetButton("<Keyboard>/d", pressed: true);
+            Tick(engine);
+            inputBackend.SetButton("<Keyboard>/d", pressed: false);
+            inputBackend.SetButton("<Keyboard>/a", pressed: true);
+            Tick(engine);
+            inputBackend.SetButton("<Keyboard>/a", pressed: false);
+            for (int settleTick = 0; settleTick < 4; settleTick++)
+            {
+                Tick(engine);
+            }
+
+            CaptureWheelLabPlayerEvidence(
+                engine,
+                runtime,
+                visitedSections,
+                ref maximumCameraErrorCm,
+                ref minimumGroundedWheelCount,
+                ref sawGroundContact);
+            Assert.That(runtime.WheelLabTrialStatus, Is.EqualTo(Physics3DWheelLabTrialStatus.Ready),
+                "Steering at the start must not begin or invalidate the shared trial.");
+
+            inputBackend.SetButton("<Keyboard>/w", pressed: true);
+            for (int tick = 0; tick < config.TrialRecommendedThrottleTicks; tick++)
+            {
+                Tick(engine);
+                CaptureWheelLabPlayerEvidence(
+                    engine,
+                    runtime,
+                    visitedSections,
+                    ref maximumCameraErrorCm,
+                    ref minimumGroundedWheelCount,
+                    ref sawGroundContact);
+            }
+
+            inputBackend.SetButton("<Keyboard>/w", pressed: false);
+            inputBackend.SetButton("<Keyboard>/a", pressed: false);
+            inputBackend.SetButton("<Keyboard>/d", pressed: false);
+            inputBackend.SetButton("<Keyboard>/space", pressed: true);
+            for (int tick = 0; tick < config.TrialRecommendedBrakeTicks; tick++)
+            {
+                Tick(engine);
+                CaptureWheelLabPlayerEvidence(
+                    engine,
+                    runtime,
+                    visitedSections,
+                    ref maximumCameraErrorCm,
+                    ref minimumGroundedWheelCount,
+                    ref sawGroundContact);
+            }
+
+            inputBackend.SetButton("<Keyboard>/space", pressed: false);
+            Tick(engine);
+            CaptureWheelLabPlayerEvidence(
+                engine,
+                runtime,
+                visitedSections,
+                ref maximumCameraErrorCm,
+                ref minimumGroundedWheelCount,
+                ref sawGroundContact);
+
+            Assert.That(
+                runtime.TryGetWheelLabTrialResult(wheelKinds[run], out Physics3DWheelLabTrialResult result),
+                Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Status, Is.EqualTo(Physics3DWheelLabTrialStatus.Succeeded),
+                    $"{wheelKinds[run]} did not complete the public Wheel Lab route: {result.Reason}.");
+                Assert.That(result.MaximumSuspensionCompressionCm, Is.GreaterThan(0f));
+                Assert.That(result.MaximumSlipCmPerSecond, Is.GreaterThan(0f));
+                Assert.That(result.GroundedRatio, Is.GreaterThan(0f));
+                Assert.That(result.BrakeMeasured, Is.True);
+                Assert.That(result.BrakingDistanceCm, Is.GreaterThan(0f));
+                Assert.That(sawGroundContact, Is.True);
+                Assert.That(minimumGroundedWheelCount, Is.LessThan(4),
+                    "The jump must visibly unload at least one wheel contact marker.");
+                Assert.That(maximumCameraErrorCm, Is.LessThanOrEqualTo(1f),
+                    "The Wheel Lab camera must stay attached to the chassis while WASD drives the vehicle.");
+            });
+            for (int section = (int)WheelLabCourseSection.Start;
+                 section <= (int)WheelLabCourseSection.Finish;
+                 section++)
+            {
+                Assert.That(
+                    visitedSections[section],
+                    Is.True,
+                    $"{wheelKinds[run]} did not expose Wheel Lab section {(WheelLabCourseSection)section} to the player.");
+            }
+
+            if (run + 1 < wheelKinds.Length)
+            {
+                inputBackend.SetButton("<Keyboard>/q", pressed: true);
+                Tick(engine);
+                inputBackend.SetButton("<Keyboard>/q", pressed: false);
+                TickUntil(
+                    engine,
+                    () => runtime.WheelLabMode == wheelKinds[run + 1],
+                    maximumFrames: 128);
+                Assert.That(engine.GameSession.Camera.IsVirtualCameraActive(WheelLabCameraId), Is.True);
+            }
+        }
+
+        // Then leaving the station restores the authored overview camera with no stale follow target.
         ClickWhenPresent(engine, surfaceHost, SceneButtonId(Physics3DShowcaseScene.ScannerRange));
         TickUntil(
             engine,
@@ -836,6 +986,16 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             Assert.That(camera.GetProperty("distanceCm").GetInt32(), Is.EqualTo(7_000));
             Assert.That(camera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"));
             Assert.That(camera.GetProperty("enableGrabDrag").GetBoolean(), Is.True);
+            JsonElement wheelCamera = cameras.RootElement
+                .EnumerateArray()
+                .Single(candidate => candidate.GetProperty("id").GetString() == WheelLabCameraId);
+            Assert.Multiple(() =>
+            {
+                Assert.That(wheelCamera.GetProperty("targetSource").GetString(), Is.EqualTo("FollowTarget"));
+                Assert.That(wheelCamera.GetProperty("followMode").GetString(), Is.EqualTo("AlwaysFollow"));
+                Assert.That(wheelCamera.GetProperty("panMode").GetString(), Is.EqualTo("None"));
+                Assert.That(wheelCamera.GetProperty("enableGrabDrag").GetBoolean(), Is.False);
+            });
         }
 
         using (JsonDocument config = JsonDocument.Parse(File.ReadAllText(
@@ -848,6 +1008,9 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             Assert.That(root.GetProperty("chainLinkCount").GetInt32(), Is.EqualTo(14));
             Assert.That(root.GetProperty("queryHitCapacity").GetInt32(), Is.EqualTo(128));
             Assert.That(root.GetProperty("replaySteps").GetInt32(), Is.EqualTo(54));
+            Assert.That(
+                root.GetProperty("wheelLab").GetProperty("cameraId").GetString(),
+                Is.EqualTo(WheelLabCameraId));
             Assert.That(root.GetProperty("replayGridSize").GetInt32(), Is.EqualTo(6));
             Assert.That(root.GetProperty("replayBodySpacingCm").GetInt32(), Is.EqualTo(180));
             Assert.That(root.GetProperty("replayCenterXCm").GetInt32(), Is.EqualTo(1_000));
@@ -1359,6 +1522,44 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                 Is.True);
             Assert.That(visual.Mode, Is.EqualTo(expectedMode));
             Assert.That(float.IsFinite(visual.CompressionCm), Is.True);
+        }
+    }
+
+    private static void CaptureWheelLabPlayerEvidence(
+        GameEngine engine,
+        Physics3DShowcaseRuntime runtime,
+        bool[] visitedSections,
+        ref float maximumCameraErrorCm,
+        ref int minimumGroundedWheelCount,
+        ref bool sawGroundContact)
+    {
+        visitedSections[(int)runtime.WheelLabSection] = true;
+        Physics3DBodyState chassis = runtime.GetWheelLabChassisState();
+        Vector2? followTarget = engine.GameSession.Camera.FollowTargetPositionCm;
+        if (!followTarget.HasValue)
+        {
+            throw new InvalidOperationException("Wheel Lab camera lost its chassis follow target during the public route.");
+        }
+
+        maximumCameraErrorCm = MathF.Max(
+            maximumCameraErrorCm,
+            Vector2.Distance(followTarget.Value, new Vector2(chassis.PositionCm.X, chassis.PositionCm.Z)));
+        minimumGroundedWheelCount = Math.Min(minimumGroundedWheelCount, runtime.WheelLabGroundedWheelCount);
+        for (int wheelIndex = 0; wheelIndex < 4; wheelIndex++)
+        {
+            if (!runtime.TryGetWheelLabDebugVisual(wheelIndex, out Physics3DWheelLabDebugVisual visual))
+            {
+                throw new InvalidOperationException($"Wheel Lab lost debug feedback for wheel {wheelIndex}.");
+            }
+
+            sawGroundContact |= visual.Grounded;
+            if (visual.Grounded &&
+                (!float.IsFinite(visual.ContactPointCm.X) ||
+                 !float.IsFinite(visual.ContactPointCm.Y) ||
+                 !float.IsFinite(visual.ContactPointCm.Z)))
+            {
+                throw new InvalidOperationException($"Wheel Lab wheel {wheelIndex} published a non-finite contact marker.");
+            }
         }
     }
 
