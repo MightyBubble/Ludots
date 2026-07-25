@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.ActionLoops;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -630,25 +631,34 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
             _evidence.Gameplay.MoveStartPositions = CaptureSelectedPositions();
             DeriveBattlePoints();
-            BeginGroundCommand("MoveToMeeting", _meetingPoint);
+            RequestCameraFocus(_meetingPoint);
             _substep = 2;
             return;
         }
         if (_substep == 2)
         {
-            if (!AdvanceGesture())
+            if (!TryBeginFocusedGroundCommand("MoveToMeeting", _meetingPoint))
             {
                 return;
             }
             _substep = 3;
+            return;
         }
         if (_substep == 3)
+        {
+            if (!AdvanceGesture())
+            {
+                return;
+            }
+            _substep = 4;
+        }
+        if (_substep == 4)
         {
             if (!TryCompletePendingCommand())
             {
                 return;
             }
-            _substep = 4;
+            _substep = 5;
         }
         if (!AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm) ||
             !HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm))
@@ -731,27 +741,36 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 return;
             }
             _evidence.Gameplay.EnemyInfantryEnteredVision = true;
-            BeginGroundCommand("MoveToSiege", _siegePoint);
+            RequestCameraFocus(_siegePoint);
             _substep = 1;
             return;
         }
         if (_substep == 1)
         {
-            if (!AdvanceGesture())
+            if (!TryBeginFocusedGroundCommand("MoveToSiege", _siegePoint))
             {
                 return;
             }
             _substep = 2;
+            return;
         }
         if (_substep == 2)
         {
-            if (!TryCompletePendingCommand())
+            if (!AdvanceGesture())
             {
                 return;
             }
             _substep = 3;
         }
         if (_substep == 3)
+        {
+            if (!TryCompletePendingCommand())
+            {
+                return;
+            }
+            _substep = 4;
+        }
+        if (_substep == 4)
         {
             if (!AreSelectedActorsNear(_siegePoint, _plan.Battle.ArrivalToleranceCm))
             {
@@ -1226,6 +1245,30 @@ internal sealed class AcceptanceDriver : ISystem<float>
     {
         Vector2 screen = _projector!.WorldToScreen(new Vector3(target.X * 0.01f, 0f, target.Y * 0.01f));
         RequireFiniteScreenPoint(screen, actionName);
+        BeginGroundCommand(actionName, target, screen);
+    }
+
+    private void RequestCameraFocus(WorldCmInt2 target)
+    {
+        _engine.SetService(
+            CoreServiceKeys.CameraPoseRequest,
+            new CameraPoseRequest { TargetCm = new Vector2(target.X, target.Y) });
+    }
+
+    private bool TryBeginFocusedGroundCommand(string actionName, WorldCmInt2 target)
+    {
+        Vector2 screen = _projector!.WorldToScreen(new Vector3(target.X * 0.01f, 0f, target.Y * 0.01f));
+        if (!float.IsFinite(screen.X) || !float.IsFinite(screen.Y))
+        {
+            return false;
+        }
+
+        BeginGroundCommand(actionName, target, screen);
+        return true;
+    }
+
+    private void BeginGroundCommand(string actionName, WorldCmInt2 target, Vector2 screen)
+    {
         BeginPointerGesture(
             _bindings!.CommandActionId,
             screen,
