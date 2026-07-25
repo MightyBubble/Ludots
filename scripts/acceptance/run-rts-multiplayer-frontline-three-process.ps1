@@ -1637,6 +1637,27 @@ function Assert-UdpPortAvailable {
     }
 }
 
+function Assert-DistinctClientMilestoneScreenshots {
+    param([Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Screenshots)
+
+    $items = @($Screenshots)
+    foreach ($processName in @($items | ForEach-Object { [string]$_.process } | Select-Object -Unique)) {
+        $processItems = @($items | Where-Object { [string]$_.process -ceq $processName })
+        $duplicateGroups = @($processItems |
+            Group-Object -Property { [string]$_.file.sha256 } |
+            Where-Object { $_.Count -gt 1 })
+        if ($duplicateGroups.Count -eq 0) {
+            continue
+        }
+
+        $duplicates = @($duplicateGroups | ForEach-Object {
+            $milestones = @($_.Group | ForEach-Object { [string]$_.milestone })
+            "[$($milestones -join ', ')]"
+        })
+        throw "Client '$processName' duplicates pixel evidence across gameplay milestones: $($duplicates -join '; ')."
+    }
+}
+
 if ($LoadPresentationEvidenceFunctionsOnly) {
     return
 }
@@ -2080,15 +2101,7 @@ try {
             file = Get-FileEvidence -Path $_.Path
         }
     })
-    foreach ($processName in @($screenshotTargets | ForEach-Object { $_.ProcessName } | Select-Object -Unique)) {
-        $processHashes = @($manifest.screenshots |
-            Where-Object { $_.process -eq $processName } |
-            ForEach-Object { $_.file.sha256 } |
-            Select-Object -Unique)
-        if ($processHashes.Count -le 1) {
-            throw "Client '$processName' screenshots are identical across all configured gameplay stages."
-        }
-    }
+    Assert-DistinctClientMilestoneScreenshots -Screenshots $manifest.screenshots
     $manifest.clientPresentation = @(
         Read-ClientPresentationEvidence -Capture $clientAScreenshotCapture -Minimums $profile.clientPresentation `
             -RequiredReceipts $requiredPresentationReceipts

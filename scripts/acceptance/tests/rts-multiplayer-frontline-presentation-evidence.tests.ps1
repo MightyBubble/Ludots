@@ -112,6 +112,18 @@ try {
             milestones = @("engaging", "engaging")
         })
     }
+    Assert-FailsWith -ExpectedMessage "duplicates pixel evidence" -Action {
+        Assert-DistinctClientMilestoneScreenshots -Screenshots @(
+            [pscustomobject]@{ process = "client-a"; milestone = "advancing"; file = [pscustomobject]@{ sha256 = "same" } }
+            [pscustomobject]@{ process = "client-a"; milestone = "engaging"; file = [pscustomobject]@{ sha256 = "same" } }
+            [pscustomobject]@{ process = "client-a"; milestone = "completed"; file = [pscustomobject]@{ sha256 = "different" } }
+        )
+    }
+    Assert-DistinctClientMilestoneScreenshots -Screenshots @(
+        [pscustomobject]@{ process = "client-a"; milestone = "advancing"; file = [pscustomobject]@{ sha256 = "one" } }
+        [pscustomobject]@{ process = "client-a"; milestone = "engaging"; file = [pscustomobject]@{ sha256 = "two" } }
+        [pscustomobject]@{ process = "client-a"; milestone = "completed"; file = [pscustomobject]@{ sha256 = "three" } }
+    )
 
     $passDirectory = Join-Path $fixtureRoot "pass"
     [System.IO.Directory]::CreateDirectory($passDirectory) | Out-Null

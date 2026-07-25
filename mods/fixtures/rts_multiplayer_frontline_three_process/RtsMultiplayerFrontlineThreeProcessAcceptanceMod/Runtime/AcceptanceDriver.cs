@@ -608,7 +608,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _evidence.Gameplay.PostTrainingCrystals = (int)MathF.Round(crystals);
         _evidence.Gameplay.TrainedInfantryCount = infantryCount;
         CompleteStep("The selected core completed one immediate and one queued training order with exact replicated costs and units.");
-        Transition(ClientStage.Advancing, AcceptanceProgressStage.Advancing);
+        Transition(ClientStage.Advancing, AcceptanceProgressStage.Training);
     }
 
     private void UpdateAdvancing()
@@ -662,8 +662,21 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             _substep = 5;
         }
-        if (!AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm) ||
-            !HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm))
+        if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm))
+        {
+            return;
+        }
+        if (_progress.Stage == AcceptanceProgressStage.Training)
+        {
+            _progress.TransitionTo(AcceptanceProgressStage.Advancing, "Selected infantry are visibly advancing.");
+            return;
+        }
+        if (_progress.Stage != AcceptanceProgressStage.Advancing)
+        {
+            throw new InvalidOperationException(
+                $"Advancing player evidence requires progress stage Advancing; observed {_progress.Stage}.");
+        }
+        if (!AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm))
         {
             return;
         }
@@ -671,7 +684,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _evidence.Gameplay.MoveEndPositions = CaptureSelectedPositions();
         _meetingReachedTimestamp = Stopwatch.GetTimestamp();
         CompleteStep("Selected infantry moved to a meeting point derived from the two public crystal fields.");
-        Transition(ClientStage.Engaging, AcceptanceProgressStage.Engaging);
+        Transition(ClientStage.Engaging, AcceptanceProgressStage.Advancing);
     }
 
     private void UpdateEngaging()

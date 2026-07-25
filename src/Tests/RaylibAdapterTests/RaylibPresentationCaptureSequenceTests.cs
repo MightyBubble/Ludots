@@ -54,6 +54,7 @@ public sealed class RaylibPresentationCaptureSequenceTests
     [TestCase("formed,,battle", "non-empty ASCII identifier")]
     [TestCase("formed,battle,formed", "configured more than once")]
     [TestCase("battle,formed", "does not follow configured order")]
+    [TestCase("formed,result", "must immediately follow")]
     [TestCase("formed,not-known", "unknown")]
     [TestCase("formed,bad milestone", "non-empty ASCII identifier")]
     public void InvalidConfiguration_FailsBeforeCapture(string configured, string expectedMessage)
@@ -162,6 +163,7 @@ public sealed class RaylibPresentationCaptureSequenceTests
             ["setup"] = 0,
             ["formed"] = 1,
             ["battle"] = 2,
+            ["result"] = 3,
         },
         new PresentationCaptureMilestoneSnapshot("setup", 0, 1));
 

@@ -105,6 +105,11 @@ internal sealed class RaylibPresentationCaptureSequence
                 throw new InvalidOperationException(
                     $"Presentation capture milestone '{milestone}' has order {order}, which does not follow configured order {previousOrder}.");
             }
+            if (i > 0 && order != previousOrder + 1)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation capture milestone '{milestone}' has order {order}; configured milestones must immediately follow order {previousOrder}.");
+            }
 
             milestones[i] = milestone;
             orders[i] = order;
