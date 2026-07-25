@@ -214,7 +214,13 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Always use Queued mode regardless of modifiers.
         /// </summary>
-        AlwaysQueued = 3
+        AlwaysQueued = 3,
+
+        /// <summary>
+        /// Use PersistentQueued mode when the queue modifier is held, Immediate otherwise.
+        /// Intended for explicit player-authored command queues that must outlive input buffering windows.
+        /// </summary>
+        PersistentQueueOnModifier = 4
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -3,7 +3,7 @@
     "profileId": "rts_duel_v1",
     "referenceTransport": "LiteNetLib/2.1.4",
     "protocolMajor": 1,
-    "protocolMinor": 2,
+    "protocolMinor": 3,
     "playerCapacity": 2,
     "simulationTickRateHz": 30,
     "statePublishRateHz": 10,
@@ -67,7 +67,7 @@
         "targetKind": "None",
         "allowArg0": true,
         "allowArg1": false,
-        "allowedSubmitModes": ["Immediate", "Queued"],
+        "allowedSubmitModes": ["Immediate", "Queued", "PersistentQueued"],
         "requiredTargetPositionAccess": "None"
       },
       {

@@ -11,7 +11,7 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
 internal sealed class AcceptanceEvidence
 {
-    public int SchemaVersion { get; set; } = 3;
+    public int SchemaVersion { get; set; } = 4;
     public string Status { get; set; } = "running";
     public string Role { get; set; } = string.Empty;
     public string? Failure { get; set; }
@@ -125,6 +125,7 @@ internal sealed class AcceptanceAdmissionTransitionEvidence
     public int AdmissionBatchIndex { get; set; }
     public long ObservedInputRevision { get; set; }
     public int ObservedCommittedTick { get; set; }
+    public int AuthoritativeCommittedTick { get; set; }
 }
 
 internal sealed class AcceptanceActorAdmissionEvidence

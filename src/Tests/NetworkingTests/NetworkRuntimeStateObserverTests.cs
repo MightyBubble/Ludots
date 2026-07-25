@@ -374,7 +374,8 @@ public sealed class NetworkRuntimeStateObserverTests
             admissionBatchIndex,
             stage,
             result,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 10);
 
     private static SessionHandshakeResponse AcceptedHandshake(ulong sessionEpoch, uint seatGeneration = 1)
     {

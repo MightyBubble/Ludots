@@ -409,7 +409,8 @@ namespace Ludots.Tests.GAS
                   },
                   "input": {
                     "castModeOverride": "SmartCast",
-                    "targetType": "None"
+                    "targetType": "None",
+                    "modifierBehavior": "PersistentQueueOnModifier"
                   }
                 }
                 """)!.AsObject();
@@ -424,6 +425,10 @@ namespace Ludots.Tests.GAS
             That(definition.InputBindingOverride.CastModeOverride, Is.EqualTo(InteractionModeType.SmartCast));
             That(definition.InputBindingOverride.HasTargetType, Is.True);
             That(definition.InputBindingOverride.TargetType, Is.EqualTo(OrderTargetType.None));
+            That(definition.InputBindingOverride.HasModifierBehavior, Is.True);
+            That(
+                definition.InputBindingOverride.ModifierBehavior,
+                Is.EqualTo(ModifierSubmitBehavior.PersistentQueueOnModifier));
         }
 
         [Test]
@@ -451,6 +456,36 @@ namespace Ludots.Tests.GAS
                     "GAS/abilities.json"))!;
 
             That(error.Message, Does.Contain("input.targetType"));
+        }
+
+        [TestCase("QueueEventually")]
+        [TestCase("999")]
+        public void AbilityExecLoader_CompileAbility_RejectsUnknownModifierBehavior(string modifierBehavior)
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": {
+                    "clockId": "FixedFrame",
+                    "items": [
+                      { "kind": "End", "tick": 0 }
+                    ]
+                  },
+                  "input": {
+                    "modifierBehavior": "QueueOnModifier"
+                  }
+                }
+                """)!.AsObject();
+            obj["input"]!.AsObject()["modifierBehavior"] = modifierBehavior;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(
+                    obj,
+                    "Ability.Test.InvalidModifierBehavior",
+                    "GAS/abilities.json"))!;
+
+            That(error.Message, Does.Contain("input.modifierBehavior"));
+            That(error.Message, Does.Contain(modifierBehavior));
         }
 
         [Test]

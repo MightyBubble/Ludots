@@ -43,7 +43,8 @@ public sealed class NetworkWireCodecAllocationTests
             1,
             1,
             OrderSubmitResult.Queued,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 9);
         var ack = new NetworkSnapshotAcknowledgement(1, 1, 10);
         var resync = new NetworkResyncRequired(1, NetworkResyncReason.BaselineExpired, 11, 2);
 

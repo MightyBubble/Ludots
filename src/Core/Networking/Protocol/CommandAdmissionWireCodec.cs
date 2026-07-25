@@ -9,10 +9,10 @@ namespace Ludots.Core.Networking.Protocol
     /// </summary>
     public static class CommandAdmissionWireCodec
     {
-        // sessionEpoch u64 | clientBatchSequence u64 | targetTick i32 | actorCount i32 |
+        // sessionEpoch u64 | clientBatchSequence u64 | targetTick i32 | committedTick i32 | actorCount i32 |
         // orderId i32 | admissionBatchId i32 | admissionBatchIndex u16 | reserved u16 |
         // stage u8 | result u8 | isReplay u8 | reserved u8
-        public const int SizeInBytes = 8 + 8 + 4 + 4 + 4 + 4 + 2 + 2 + 1 + 1 + 1 + 1;
+        public const int SizeInBytes = 8 + 8 + 4 + 4 + 4 + 4 + 4 + 2 + 2 + 1 + 1 + 1 + 1;
 
         public static NetworkWireCodecStatus TryEncode(
             ulong sessionEpoch,
@@ -29,6 +29,7 @@ namespace Ludots.Core.Networking.Protocol
             if (sessionEpoch == 0 ||
                 outcome.SeatSlot < 0 ||
                 outcome.PlayerId <= 0 ||
+                !NetworkCommandAdmissionOutcome.IsValidCommittedTick(outcome.Stage, outcome.CommittedTick) ||
                 outcome.ActorCount < 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
@@ -43,6 +44,7 @@ namespace Ludots.Core.Networking.Protocol
             if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, sessionEpoch) ||
                 !NetworkWireBinary.TryWriteUInt64(destination, ref offset, outcome.ClientBatchSequence) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.TargetTick) ||
+                !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.CommittedTick) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.ActorCount) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.OrderId) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.AdmissionBatchId) ||
@@ -76,6 +78,7 @@ namespace Ludots.Core.Networking.Protocol
             if (!NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong sessionEpoch) ||
                 !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong clientBatchSequence) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int targetTick) ||
+                !NetworkWireBinary.TryReadInt32(source, ref offset, out int committedTick) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int actorCount) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int orderId) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int admissionBatchId) ||
@@ -109,6 +112,9 @@ namespace Ludots.Core.Networking.Protocol
                 sessionEpoch != expectedSessionEpoch ||
                 authenticatedSeat.Slot < 0 ||
                 authenticatedSeat.PlayerId <= 0 ||
+                !NetworkCommandAdmissionOutcome.IsValidCommittedTick(
+                    (OrderAdmissionStage)stageByte,
+                    committedTick) ||
                 actorCount < 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
@@ -124,7 +130,8 @@ namespace Ludots.Core.Networking.Protocol
                 admissionBatchIndex,
                 (OrderAdmissionStage)stageByte,
                 (OrderSubmitResult)resultByte,
-                isReplay: replayByte == 1);
+                isReplay: replayByte == 1,
+                committedTick: committedTick);
             return NetworkWireCodecStatus.Success;
         }
 

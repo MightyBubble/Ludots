@@ -36,16 +36,16 @@ public sealed class NetworkCommandIngressTests
         NetworkCommandWireEntry secondArrival = WorldCommand(actorTwoHandle, x: 200);
         NetworkCommandBatchHeader secondHeader = Batch(sequence: 1, targetTick: 12, entryCount: 1);
         Assert.That(
-            harness.Ingress.Schedule(in seatTwo, in secondHeader, serverTick: 10, new[] { secondArrival }).Result,
+            harness.Ingress.Schedule(in seatTwo, in secondHeader, serverTick: 10, committedTick: 9, new[] { secondArrival }).Result,
             Is.EqualTo(OrderSubmitResult.NetworkScheduled));
         NetworkCommandWireEntry firstArrival = WorldCommand(actorOneHandle, x: 100);
         NetworkCommandBatchHeader firstHeader = Batch(sequence: 1, targetTick: 12, entryCount: 1);
         Assert.That(
-            harness.Ingress.Schedule(in seatOne, in firstHeader, serverTick: 10, new[] { firstArrival }).Result,
+            harness.Ingress.Schedule(in seatOne, in firstHeader, serverTick: 10, committedTick: 9, new[] { firstArrival }).Result,
             Is.EqualTo(OrderSubmitResult.NetworkScheduled));
 
-        Assert.That(harness.Ingress.DrainScheduled(serverTick: 11), Is.Zero);
-        Assert.That(harness.Ingress.DrainScheduled(serverTick: 12), Is.EqualTo(2));
+        Assert.That(harness.Ingress.DrainScheduled(serverTick: 11, committedTick: 10), Is.Zero);
+        Assert.That(harness.Ingress.DrainScheduled(serverTick: 12, committedTick: 11), Is.EqualTo(2));
         Span<Order> first = stackalloc Order[1];
         Span<Order> second = stackalloc Order[1];
         Assert.That(harness.Orders.TryDequeueBatch(first, out int firstCount), Is.True);
@@ -89,6 +89,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in firstHeader,
             serverTick: 10,
+            committedTick: 9,
             new[] { staleEntry });
         NetworkCommandWireEntry foreignEntry = WorldCommand(foreignHandle, x: 2);
         NetworkCommandBatchHeader secondHeader = Batch(2, 10, 1);
@@ -96,6 +97,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in secondHeader,
             serverTick: 10,
+            committedTick: 9,
             new[] { foreignEntry });
 
         Assert.Multiple(() =>
@@ -129,6 +131,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in firstHeader,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
         harness.Knowledge.Upsert(
             player,
@@ -149,13 +152,14 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in secondHeader,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
 
         Assert.Multiple(() =>
         {
             Assert.That(unknown.Result, Is.EqualTo(OrderSubmitResult.NetworkTargetNotKnown));
             Assert.That(visible.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
-            Assert.That(harness.Ingress.DrainScheduled(10), Is.EqualTo(1));
+            Assert.That(harness.Ingress.DrainScheduled(serverTick: 10, committedTick: 9), Is.EqualTo(1));
         });
         Span<Order> orders = stackalloc Order[1];
         Assert.That(harness.Orders.TryDequeueBatch(orders, out int count), Is.True);
@@ -180,18 +184,20 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in firstHeader,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
 
         Assert.That(harness.Ingress.UnbindSeat(in seat), Is.True);
         NetworkCommandBatchHeader disconnectedHeader = Batch(2, 12, 1);
         Assert.That(
-            harness.Ingress.Schedule(in seat, in disconnectedHeader, 10, new[] { entry }).Result,
+            harness.Ingress.Schedule(in seat, in disconnectedHeader, serverTick: 10, committedTick: 9, new[] { entry }).Result,
             Is.EqualTo(OrderSubmitResult.NetworkInvalidConnectionSeat));
         harness.Ingress.RebindSeat(in seat, player, serverTick: 11);
         NetworkCommandAdmissionOutcome replay = harness.Ingress.Schedule(
             in seat,
             in firstHeader,
             serverTick: 11,
+            committedTick: 10,
             new[] { entry });
 
         Assert.Multiple(() =>
@@ -199,7 +205,8 @@ public sealed class NetworkCommandIngressTests
             Assert.That(accepted.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
             Assert.That(replay.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
             Assert.That(replay.IsReplay, Is.True);
-            Assert.That(harness.Ingress.DrainScheduled(12), Is.EqualTo(1));
+            Assert.That(replay.CommittedTick, Is.EqualTo(9));
+            Assert.That(harness.Ingress.DrainScheduled(serverTick: 12, committedTick: 11), Is.EqualTo(1));
             Assert.That(harness.Orders.Count, Is.EqualTo(1));
         });
     }
@@ -219,9 +226,9 @@ public sealed class NetworkCommandIngressTests
         NetworkCommandBatchHeader firstHeader = Batch(1, 12, 1);
         NetworkCommandBatchHeader secondHeader = Batch(2, 12, 1);
 
-        NetworkCommandAdmissionOutcome first = harness.Ingress.Schedule(in seat, in firstHeader, 10, new[] { entry });
-        NetworkCommandAdmissionOutcome full = harness.Ingress.Schedule(in seat, in secondHeader, 10, new[] { entry });
-        NetworkCommandAdmissionOutcome replay = harness.Ingress.Schedule(in seat, in secondHeader, 10, new[] { entry });
+        NetworkCommandAdmissionOutcome first = harness.Ingress.Schedule(in seat, in firstHeader, serverTick: 10, committedTick: 9, new[] { entry });
+        NetworkCommandAdmissionOutcome full = harness.Ingress.Schedule(in seat, in secondHeader, serverTick: 10, committedTick: 9, new[] { entry });
+        NetworkCommandAdmissionOutcome replay = harness.Ingress.Schedule(in seat, in secondHeader, serverTick: 10, committedTick: 9, new[] { entry });
 
         Assert.Multiple(() =>
         {
@@ -260,6 +267,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in header,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
 
         Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.NetworkCommandSchemaMismatch));
@@ -290,6 +298,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in header,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
 
         Assert.Multiple(() =>
@@ -319,9 +328,9 @@ public sealed class NetworkCommandIngressTests
         NetworkCommandWireEntry entry = WorldCommand(actorHandle, x: 10);
         NetworkCommandBatchHeader header = Batch(1, 10, 1);
         Assert.That(
-            harness.Ingress.Schedule(in seat, in header, 10, new[] { entry }).Result,
+            harness.Ingress.Schedule(in seat, in header, serverTick: 10, committedTick: 9, new[] { entry }).Result,
             Is.EqualTo(OrderSubmitResult.NetworkScheduled));
-        Assert.That(harness.Ingress.DrainScheduled(10), Is.EqualTo(1));
+        Assert.That(harness.Ingress.DrainScheduled(serverTick: 10, committedTick: 9), Is.EqualTo(1));
         Assert.That(harness.Results.TryRead(out _), Is.True);
         Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome rejected), Is.True);
         Assert.Multiple(() =>
@@ -351,11 +360,13 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in header,
             serverTick: 10,
+            committedTick: 9,
             new[] { originalEntry });
         NetworkCommandAdmissionOutcome mismatch = harness.Ingress.Schedule(
             in seat,
             in header,
             serverTick: 10,
+            committedTick: 9,
             new[] { alteredEntry });
 
         Assert.Multiple(() =>
@@ -389,9 +400,9 @@ public sealed class NetworkCommandIngressTests
         };
 
         Assert.That(
-            harness.Ingress.Schedule(in seat, in header, serverTick: 10, entries).Result,
+            harness.Ingress.Schedule(in seat, in header, serverTick: 10, committedTick: 9, entries).Result,
             Is.EqualTo(OrderSubmitResult.NetworkScheduled));
-        Assert.That(harness.Ingress.DrainScheduled(10), Is.EqualTo(1));
+        Assert.That(harness.Ingress.DrainScheduled(serverTick: 10, committedTick: 9), Is.EqualTo(1));
         Assert.That(harness.Results.TryRead(out _), Is.True);
         Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome global), Is.True);
         Span<Order> admitted = stackalloc Order[2];
@@ -408,7 +419,8 @@ public sealed class NetworkCommandIngressTests
             admissionBatchIndex: 0,
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Queued,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 10);
         var firstActivated = new NetworkCommandAdmissionOutcome(
             in seat,
             clientBatchSequence: 1,
@@ -419,7 +431,8 @@ public sealed class NetworkCommandIngressTests
             admissionBatchIndex: 0,
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 11);
         var secondRejected = new NetworkCommandAdmissionOutcome(
             in seat,
             clientBatchSequence: 1,
@@ -430,7 +443,8 @@ public sealed class NetworkCommandIngressTests
             admissionBatchIndex: 1,
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.InsufficientResources,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 10);
         harness.Ingress.RecordEntityAdmission(in firstQueued);
         harness.Ingress.RecordEntityAdmission(in firstActivated);
         harness.Ingress.RecordEntityAdmission(in secondRejected);
@@ -439,6 +453,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in header,
             serverTick: 10,
+            committedTick: 9,
             entries);
         Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome replayGlobal), Is.True);
         Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome replayFirst), Is.True);
@@ -448,10 +463,13 @@ public sealed class NetworkCommandIngressTests
             Assert.That(global.Result, Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(replay.IsReplay, Is.True);
             Assert.That(replayGlobal.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(replayGlobal.CommittedTick, Is.EqualTo(9));
             Assert.That(replayFirst.Result, Is.EqualTo(OrderSubmitResult.Activated));
             Assert.That(replayFirst.AdmissionBatchIndex, Is.Zero);
             Assert.That(replaySecond.Result, Is.EqualTo(OrderSubmitResult.InsufficientResources));
             Assert.That(replaySecond.AdmissionBatchIndex, Is.EqualTo(1));
+            Assert.That(replayFirst.CommittedTick, Is.EqualTo(11));
+            Assert.That(replaySecond.CommittedTick, Is.EqualTo(10));
             Assert.That(replayGlobal.IsReplay, Is.True);
             Assert.That(replayFirst.IsReplay, Is.True);
             Assert.That(replaySecond.IsReplay, Is.True);
@@ -476,6 +494,7 @@ public sealed class NetworkCommandIngressTests
             in seat,
             in exhausted,
             serverTick: 10,
+            committedTick: 9,
             new[] { entry });
 
         Assert.Multiple(() =>
@@ -545,8 +564,8 @@ public sealed class NetworkCommandIngressTests
     {
         entries[0] = WorldCommand(actor, tick);
         NetworkCommandBatchHeader header = Batch(sequence, tick, 1);
-        if (harness.Ingress.Schedule(in seat, in header, tick, entries).Result != OrderSubmitResult.NetworkScheduled ||
-            harness.Ingress.DrainScheduled(tick) != 1 ||
+        if (harness.Ingress.Schedule(in seat, in header, tick, tick - 1, entries).Result != OrderSubmitResult.NetworkScheduled ||
+            harness.Ingress.DrainScheduled(tick, tick - 1) != 1 ||
             !harness.Orders.TryDequeueBatch(drainedOrders, out int count) ||
             count != 1 ||
             !harness.Results.TryRead(out NetworkCommandAdmissionOutcome scheduled) ||

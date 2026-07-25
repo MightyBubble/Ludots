@@ -74,6 +74,7 @@ namespace Ludots.Core.Networking.Runtime
 
         private uint _currentTick;
         private uint _lastCommittedTick;
+        private bool _authoritativeTickOpen;
         private ulong _nextSnapshotId;
         private ulong _lastPublishedRoomRevision;
         private bool _disposed;
@@ -209,7 +210,6 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             FlushAdmissionResults();
-            FlushEntityAdmissionResults();
             while (_datagrams.TryReceive(
                 _receiveBuffer,
                 out int bytesReceived,
@@ -218,7 +218,6 @@ namespace Ludots.Core.Networking.Runtime
             {
                 ProcessDatagram(connection, channel, _receiveBuffer.AsSpan(0, bytesReceived));
                 FlushAdmissionResults();
-                FlushEntityAdmissionResults();
             }
 
             FlushPendingAdmissions();
@@ -229,24 +228,30 @@ namespace Ludots.Core.Networking.Runtime
         public void BeforeAuthoritativeTick(uint executingTick)
         {
             EnsureOperational();
-            if (executingTick < _currentTick)
+            if (_authoritativeTickOpen ||
+                executingTick <= _currentTick ||
+                executingTick <= _lastCommittedTick)
             {
                 Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: unchecked((int)executingTick));
             }
 
             _currentTick = executingTick;
+            _authoritativeTickOpen = true;
             ExpireDisconnectedSeats(executingTick);
             PublishRoomSnapshotIfChanged();
-            _commands.DrainScheduled(checked((int)executingTick));
+            _commands.DrainScheduled(
+                checked((int)executingTick),
+                checked((int)_lastCommittedTick));
             FlushAdmissionResults();
-            FlushEntityAdmissionResults();
             FlushPendingAdmissions();
         }
 
         public void AfterAuthoritativeCommit(uint committedTick)
         {
             EnsureOperational();
-            if (committedTick < _lastCommittedTick)
+            if (!_authoritativeTickOpen ||
+                committedTick != _currentTick ||
+                committedTick <= _lastCommittedTick)
             {
                 Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)committedTick));
             }
@@ -259,6 +264,7 @@ namespace Ludots.Core.Networking.Runtime
             }
             PublishRoomSnapshotIfChanged();
             FlushEntityAdmissionResults();
+            _authoritativeTickOpen = false;
             FlushPendingAdmissions();
             bool scheduledPublish = committedTick % (uint)_capacity.StatePublishIntervalTicks == 0;
             bool anyConnected = false;
@@ -673,6 +679,7 @@ namespace Ludots.Core.Networking.Runtime
                 in commandSeat,
                 in header,
                 checked((int)_currentTick),
+                checked((int)_lastCommittedTick),
                 _commandEntries.AsSpan(0, entryCount));
             if (outcome.Result == Ludots.Core.Gameplay.GAS.Orders.OrderSubmitResult.NetworkAdmissionBackpressured)
             {
@@ -1032,6 +1039,14 @@ namespace Ludots.Core.Networking.Runtime
         {
             while (_commandResults.TryRead(out NetworkCommandAdmissionOutcome outcome))
             {
+                int lastCommittedTick = checked((int)_lastCommittedTick);
+                if ((!outcome.IsReplay && outcome.CommittedTick != lastCommittedTick) ||
+                    (outcome.IsReplay && outcome.CommittedTick > lastCommittedTick))
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: outcome.CommittedTick);
+                }
                 RecordBatchCorrelation(in outcome);
                 EnqueuePendingAdmission(in outcome);
             }
@@ -1039,6 +1054,11 @@ namespace Ludots.Core.Networking.Runtime
 
         private void FlushEntityAdmissionResults()
         {
+            if (!_authoritativeTickOpen || _lastCommittedTick != _currentTick)
+            {
+                Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)_lastCommittedTick));
+            }
+
             while (_entityResults.TryRead(out OrderAdmissionOutcome entityOutcome))
             {
                 if (entityOutcome.AdmissionSource == OrderAdmissionSource.Local)
@@ -1110,7 +1130,8 @@ namespace Ludots.Core.Networking.Runtime
                     entityOutcome.AdmissionBatchIndex,
                     OrderAdmissionStage.EntityIntake,
                     entityOutcome.Result,
-                    isReplay: false);
+                    isReplay: false,
+                    committedTick: checked((int)_lastCommittedTick));
                 if (_batchCorrelationDeliver[correlation])
                 {
                     _commands.RecordEntityAdmission(in outcome);
@@ -1321,10 +1342,11 @@ namespace Ludots.Core.Networking.Runtime
                 }
 
                 NetworkCommandSeat commandSeat = ToCommandSeat(in binding);
-                if (!_commands.TryReleaseSeat(in commandSeat))
+                if (!_commands.TryReleaseSeat(in commandSeat, checked((int)_lastCommittedTick)))
                 {
                     Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seat);
                 }
+                FlushAdmissionResults();
 
                 if (_seatLastDisclosureSequences[seat] != 0)
                 {

@@ -579,7 +579,7 @@ namespace CoreInputMod.Systems
             return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
         }
 
-        private sealed class SkillMappingOverrideResolver
+        internal sealed class SkillMappingOverrideResolver
         {
             private readonly World _world;
             private readonly AbilityDefinitionRegistry _abilityDefinitions;
@@ -640,6 +640,11 @@ namespace CoreInputMod.Systems
                 if (inputOverride.HasTargetType)
                 {
                     overrideMapping.TargetType = inputOverride.TargetType;
+                }
+
+                if (inputOverride.HasModifierBehavior)
+                {
+                    overrideMapping.ModifierBehavior = inputOverride.ModifierBehavior;
                 }
 
                 if (inputOverride.HasAutoTargetPolicy)

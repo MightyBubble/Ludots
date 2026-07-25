@@ -922,8 +922,8 @@ function Assert-GameplayEvidence {
     $expectedOutcome = if ($winningSide -eq 0) { "SideOneVictory" } elseif ($winningSide -eq 1) { "SideTwoVictory" } else { throw "Unsupported expected winning side $winningSide." }
     foreach ($item in $all) {
         $evidence = $item.Value
-        if ([int]$evidence.schemaVersion -ne 3 -or [string]$evidence.status -cne "passed") {
-            throw "Evidence '$($item.Name)' did not pass schema version 3."
+        if ([int]$evidence.schemaVersion -ne 4 -or [string]$evidence.status -cne "passed") {
+            throw "Evidence '$($item.Name)' did not pass schema version 4."
         }
         if ([int]$evidence.faultCount -ne 0) { throw "Evidence '$($item.Name)' reported $($evidence.faultCount) network faults." }
         if ([string]$evidence.planFingerprint -cne $PlanFingerprint) {
@@ -1163,10 +1163,13 @@ function Assert-GameplayEvidence {
         if ($queuedTrainingActivations.Count -ne 1) {
             throw "Client evidence '$($item.Name)' queued training must contain exactly one EntityIntake:Activated transition."
         }
-        $queueActivatedObservedTick = [int]$queuedTrainingActivations[0].observedCommittedTick
-        if ($queueActivatedObservedTick -lt $firstTrainedInfantryObservedTick -or
-            $queueActivatedObservedTick -lt $serverSpawnTick) {
-            throw "Client evidence '$($item.Name)' activated queued training before the first infantry authoritative spawn was replicated."
+        if ($null -eq $queuedTrainingActivations[0].PSObject.Properties["authoritativeCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' queued training activation lacks an authoritative committed tick."
+        }
+        $queueActivatedAuthoritativeTick = [int]$queuedTrainingActivations[0].authoritativeCommittedTick
+        if ($queueActivatedAuthoritativeTick -lt $serverSpawnTick -or
+            $queueActivatedAuthoritativeTick -gt $firstTrainedInfantryObservedTick) {
+            throw "Client evidence '$($item.Name)' queued training activation is outside the authoritative spawn-to-client-observation interval."
         }
 
         $meetingCommands = @($commands | Where-Object { [string]$_.action -ceq "MoveToMeeting" })

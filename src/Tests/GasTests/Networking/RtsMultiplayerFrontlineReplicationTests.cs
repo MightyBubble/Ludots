@@ -1013,7 +1013,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             admissionBatchIndex: 0,
             stage,
             result,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 300);
         observer.OnClientAdmission(in outcome);
     }
 

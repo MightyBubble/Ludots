@@ -27,7 +27,8 @@ namespace Ludots.Core.Networking.Commands
             int orderId,
             int admissionBatchId,
             OrderSubmitResult result,
-            bool isReplay)
+            bool isReplay,
+            int committedTick)
             : this(
                 in seat,
                 clientBatchSequence,
@@ -38,7 +39,8 @@ namespace Ludots.Core.Networking.Commands
                 admissionBatchIndex: 0,
                 DeriveStage(result),
                 result,
-                isReplay)
+                isReplay,
+                committedTick)
         {
         }
 
@@ -52,11 +54,16 @@ namespace Ludots.Core.Networking.Commands
             ushort admissionBatchIndex,
             OrderAdmissionStage stage,
             OrderSubmitResult result,
-            bool isReplay)
+            bool isReplay,
+            int committedTick)
         {
             if (!IsKnownStage(stage))
             {
                 throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown order admission stage.");
+            }
+            if (!IsValidCommittedTick(stage, committedTick))
+            {
+                throw new ArgumentOutOfRangeException(nameof(committedTick));
             }
 
             SeatSlot = seat.Slot;
@@ -71,6 +78,7 @@ namespace Ludots.Core.Networking.Commands
             Stage = stage;
             Result = result;
             IsReplay = isReplay;
+            CommittedTick = committedTick;
         }
 
         public int SeatSlot { get; }
@@ -85,6 +93,11 @@ namespace Ludots.Core.Networking.Commands
         public OrderAdmissionStage Stage { get; }
         public OrderSubmitResult Result { get; }
         public bool IsReplay { get; }
+        public int CommittedTick { get; }
+
+        internal static bool IsValidCommittedTick(OrderAdmissionStage stage, int committedTick) =>
+            committedTick >= 0 &&
+            (stage != OrderAdmissionStage.EntityIntake || committedTick > 0);
 
         public NetworkCommandAdmissionOutcome AsReplay()
         {
@@ -99,7 +112,8 @@ namespace Ludots.Core.Networking.Commands
                 AdmissionBatchIndex,
                 Stage,
                 Result,
-                isReplay: true);
+                isReplay: true,
+                committedTick: CommittedTick);
         }
 
         private static OrderAdmissionStage DeriveStage(OrderSubmitResult result) =>

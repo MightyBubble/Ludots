@@ -249,11 +249,13 @@ public sealed class NetworkRuntimeEndToEndTests
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
         Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+        Assert.That(scheduled.CommittedTick, Is.EqualTo(10));
 
         server.BeforeAuthoritativeTick(11);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
         Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(queued.CommittedTick, Is.EqualTo(10));
         Span<Order> admitted = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
         Assert.That(admittedCount, Is.EqualTo(2));
@@ -272,6 +274,21 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(commandHarness.EntityResults.TryWrite(in secondActivated), Is.True);
         server.PumpTransport();
         client.PumpTransport();
+        Assert.That(
+            clientAdmissions.TryRead(out _),
+            Is.False,
+            "Entity admission outcomes must remain private until their authoritative tick commits.");
+
+        serverWorld.Set(first, new TestReplicatedData(2, 99));
+        ulong droppedSnapshotId = clientFactory.Bridge!.LastSnapshotId + 1;
+        transport.DropNextServerDatagram(capacity.StateChannel, NetworkWireKind.ReplicationPacket);
+        server.AfterAuthoritativeCommit(11);
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.DroppedServerDatagrams, Is.EqualTo(1));
+            Assert.That(transport.ServerReplicationPacketSendCount, Is.EqualTo(1));
+        });
+        client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityQueued), Is.True);
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome secondEntityActivated), Is.True);
         Assert.Multiple(() =>
@@ -279,10 +296,30 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(firstEntityQueued.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
             Assert.That(firstEntityQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(firstEntityQueued.AdmissionBatchIndex, Is.Zero);
+            Assert.That(firstEntityQueued.CommittedTick, Is.EqualTo(11));
             Assert.That(secondEntityActivated.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
             Assert.That(secondEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
             Assert.That(secondEntityActivated.AdmissionBatchIndex, Is.EqualTo(1));
+            Assert.That(secondEntityActivated.CommittedTick, Is.EqualTo(11));
         });
+        int fragmentsWithUnacknowledgedDelta = transport.ServerSnapshotFragmentCount;
+        server.PumpTransport();
+        Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
+
+        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingScheduled), Is.True);
+        Assert.That(pendingScheduled.ClientBatchSequence, Is.EqualTo(2));
+        Assert.That(pendingScheduled.CommittedTick, Is.EqualTo(11));
+        server.BeforeAuthoritativeTick(12);
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingQueued), Is.True);
+        Assert.That(pendingQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(pendingQueued.CommittedTick, Is.EqualTo(11));
+        Span<Order> abandonedOrders = stackalloc Order[2];
+        Assert.That(commandHarness.Orders.TryDequeueBatch(abandonedOrders, out int abandonedCount), Is.True);
+        Assert.That(abandonedCount, Is.EqualTo(2));
 
         var firstActivated = new OrderAdmissionOutcome(
             in admitted[0],
@@ -291,26 +328,10 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(commandHarness.EntityResults.TryWrite(in firstActivated), Is.True);
         server.PumpTransport();
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityActivated), Is.True);
-        Assert.Multiple(() =>
-        {
-            Assert.That(firstEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
-            Assert.That(firstEntityActivated.AdmissionBatchIndex, Is.Zero);
-            Assert.That(firstEntityActivated.ClientBatchSequence, Is.EqualTo(1));
-        });
-
-        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
-        server.PumpTransport();
-        client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingScheduled), Is.True);
-        Assert.That(pendingScheduled.ClientBatchSequence, Is.EqualTo(2));
-        server.BeforeAuthoritativeTick(12);
-        client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingQueued), Is.True);
-        Assert.That(pendingQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
-        Span<Order> abandonedOrders = stackalloc Order[2];
-        Assert.That(commandHarness.Orders.TryDequeueBatch(abandonedOrders, out int abandonedCount), Is.True);
-        Assert.That(abandonedCount, Is.EqualTo(2));
+        Assert.That(
+            clientAdmissions.TryRead(out _),
+            Is.False,
+            "A later activation must wait for the later authoritative tick to commit.");
 
         commandHarness.GameplayGate.CompleteMatch();
         Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
@@ -323,32 +344,18 @@ public sealed class NetworkRuntimeEndToEndTests
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome completed), Is.True);
         Assert.That(completed.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
-
-        serverWorld.Set(first, new TestReplicatedData(2, 99));
-        ulong droppedSnapshotId = clientFactory.Bridge!.LastSnapshotId + 1;
-        transport.DropNextServerDatagram(capacity.StateChannel, NetworkWireKind.ReplicationPacket);
-        server.AfterAuthoritativeCommit(11);
-        Assert.Multiple(() =>
-        {
-            Assert.That(transport.DroppedServerDatagrams, Is.EqualTo(1));
-            Assert.That(transport.ServerReplicationPacketSendCount, Is.EqualTo(1));
-        });
-        int fragmentsWithUnacknowledgedDelta = transport.ServerSnapshotFragmentCount;
-        server.AfterAuthoritativeCommit(11);
-        Assert.Multiple(() =>
-        {
-            Assert.That(transport.ServerSnapshotFragmentCount, Is.EqualTo(fragmentsWithUnacknowledgedDelta));
-            Assert.That(
-                transport.ServerReplicationPacketSendCount,
-                Is.EqualTo(1),
-                "The server must not build a second delta from the same unacknowledged baseline.");
-        });
-        client.PumpTransport();
-        server.PumpTransport();
-        Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
+        Assert.That(completed.CommittedTick, Is.EqualTo(11));
 
         server.AfterAuthoritativeCommit(12);
         client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityActivated), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(firstEntityActivated.AdmissionBatchIndex, Is.Zero);
+            Assert.That(firstEntityActivated.ClientBatchSequence, Is.EqualTo(1));
+            Assert.That(firstEntityActivated.CommittedTick, Is.EqualTo(12));
+        });
         client.PumpReplicatedClient(0f);
         Assert.Multiple(() =>
         {
@@ -381,7 +388,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(observer.Faults, Is.Zero, "A late acknowledgement for the discarded delta is stale, not a session fault.");
 
         serverWorld.Set(first, new TestReplicatedData(3, 100));
-        server.AfterAuthoritativeCommit(12);
+        server.BeforeAuthoritativeTick(13);
+        server.AfterAuthoritativeCommit(13);
         client.PumpTransport();
         client.PumpReplicatedClient(0f);
         server.PumpTransport();
@@ -434,8 +442,8 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(commandPort.LastSubmitResult, Is.EqualTo(ReplicatedClientCommandSubmitResult.SnapshotUnavailable));
         });
 
-        server.BeforeAuthoritativeTick(12);
-        server.AfterAuthoritativeCommit(12);
+        server.BeforeAuthoritativeTick(14);
+        server.AfterAuthoritativeCommit(14);
         client.PumpTransport();
         client.PumpReplicatedClient(0f);
         Assert.Multiple(() =>
@@ -467,9 +475,13 @@ public sealed class NetworkRuntimeEndToEndTests
         transport.Disconnect();
         server.PumpTransport();
         client.PumpTransport();
-        server.BeforeAuthoritativeTick(13);
+        server.BeforeAuthoritativeTick(15);
+        server.AfterAuthoritativeCommit(15);
         Assert.That(observer.SeatReleases, Is.Zero);
         server.BeforeAuthoritativeTick(16);
+        server.AfterAuthoritativeCommit(16);
+        Assert.That(observer.SeatReleases, Is.Zero);
+        server.BeforeAuthoritativeTick(17);
 
         var abandonedFirst = new OrderAdmissionOutcome(
             in abandonedOrders[0],
@@ -481,7 +493,7 @@ public sealed class NetworkRuntimeEndToEndTests
             OrderSubmitResult.Cancelled);
         Assert.That(commandHarness.EntityResults.TryWrite(in abandonedFirst), Is.True);
         Assert.That(commandHarness.EntityResults.TryWrite(in abandonedSecond), Is.True);
-        server.PumpTransport();
+        server.AfterAuthoritativeCommit(17);
 
         Assert.Multiple(() =>
         {
@@ -490,6 +502,38 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(server.IsFaulted, Is.False);
             Assert.That(client.IsFaulted, Is.False);
         });
+    }
+
+    [Test]
+    public void ServerRuntime_RejectsDuplicateCommitAndOpeningNextTickBeforeCommit()
+    {
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("authoritative_tick_lifecycle"u8);
+
+        var duplicateObserver = new RecordingObserver();
+        using (HandshakeServerHarness duplicateHarness = CreateHandshakeServerHarness(
+                   new InMemoryTransport(new ConnectionId(21)),
+                   duplicateObserver,
+                   protocol,
+                   fingerprint))
+        {
+            duplicateHarness.Server.BeforeAuthoritativeTick(10);
+            duplicateHarness.Server.AfterAuthoritativeCommit(10);
+            NetworkRuntimeException duplicate = Assert.Throws<NetworkRuntimeException>(
+                () => duplicateHarness.Server.AfterAuthoritativeCommit(10))!;
+            Assert.That(duplicate.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+        }
+
+        var openTickObserver = new RecordingObserver();
+        using HandshakeServerHarness openTickHarness = CreateHandshakeServerHarness(
+            new InMemoryTransport(new ConnectionId(22)),
+            openTickObserver,
+            protocol,
+            fingerprint);
+        openTickHarness.Server.BeforeAuthoritativeTick(10);
+        NetworkRuntimeException skippedCommit = Assert.Throws<NetworkRuntimeException>(
+            () => openTickHarness.Server.BeforeAuthoritativeTick(11))!;
+        Assert.That(skippedCommit.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.SessionContractViolation));
     }
 
     [Test]

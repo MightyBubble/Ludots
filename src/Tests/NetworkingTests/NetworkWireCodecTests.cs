@@ -281,7 +281,8 @@ public sealed class NetworkWireCodecTests
             orderId: 12,
             admissionBatchId: 3,
             OrderSubmitResult.Queued,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 49);
 
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
         Assert.That(CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
@@ -292,6 +293,7 @@ public sealed class NetworkWireCodecTests
         Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Queued));
         Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
         Assert.That(decoded.IsReplay, Is.False);
+        Assert.That(decoded.CommittedTick, Is.EqualTo(49));
     }
 
     [Test]
@@ -308,7 +310,8 @@ public sealed class NetworkWireCodecTests
             admissionBatchIndex: 1,
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 51);
 
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
         Assert.That(
@@ -323,7 +326,74 @@ public sealed class NetworkWireCodecTests
             Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Activated));
             Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo(1));
             Assert.That(decoded.OrderId, Is.EqualTo(13));
+            Assert.That(decoded.CommittedTick, Is.EqualTo(51));
+            Assert.That(decoded.AsReplay().CommittedTick, Is.EqualTo(51));
+            Assert.That(decoded.AsReplay().IsReplay, Is.True);
         });
+    }
+
+    [Test]
+    public void EntityAdmissionOutcome_RejectsMissingNegativeAndTruncatedCommittedTick()
+    {
+        var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => new NetworkCommandAdmissionOutcome(
+                    in seat,
+                    clientBatchSequence: 4,
+                    targetTick: 50,
+                    actorCount: 1,
+                    orderId: 13,
+                    admissionBatchId: 3,
+                    admissionBatchIndex: 0,
+                    OrderAdmissionStage.EntityIntake,
+                    OrderSubmitResult.Activated,
+                    isReplay: false,
+                    committedTick: 0),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => new NetworkCommandAdmissionOutcome(
+                    in seat,
+                    clientBatchSequence: 4,
+                    targetTick: 50,
+                    actorCount: 1,
+                    orderId: 13,
+                    admissionBatchId: 3,
+                    OrderSubmitResult.Queued,
+                    isReplay: false,
+                    committedTick: -1),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+        });
+
+        var valid = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 4,
+            targetTick: 50,
+            actorCount: 1,
+            orderId: 13,
+            admissionBatchId: 3,
+            admissionBatchIndex: 0,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated,
+            isReplay: false,
+            committedTick: 51);
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(
+            CommandAdmissionWireCodec.TryEncode(7, in valid, buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer[..^1], 7, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.MalformedLength));
+
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(20, sizeof(int)), 0);
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(20, sizeof(int)), -1);
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
     }
 
     [Test]
@@ -338,7 +408,8 @@ public sealed class NetworkWireCodecTests
             orderId: 12,
             admissionBatchId: 3,
             OrderSubmitResult.Queued,
-            isReplay: false);
+            isReplay: false,
+            committedTick: 49);
 
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
         Assert.That(CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
@@ -370,7 +441,8 @@ public sealed class NetworkWireCodecTests
                 admissionBatchIndex: 1,
                 OrderAdmissionStage.EntityIntake,
                 result,
-                isReplay: false);
+                isReplay: false,
+                committedTick: 51);
             Assert.That(
                 CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _),
                 Is.EqualTo(NetworkWireCodecStatus.Success));

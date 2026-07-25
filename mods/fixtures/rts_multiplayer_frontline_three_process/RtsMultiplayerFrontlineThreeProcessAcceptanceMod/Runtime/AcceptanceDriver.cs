@@ -557,8 +557,16 @@ internal sealed class AcceptanceDriver : ISystem<float>
             {
                 return;
             }
-            ValidateTrainingAdmission(requireEntityQueue: true);
             _substep = 6;
+        }
+        if (_substep == 6)
+        {
+            if (_evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0)
+            {
+                return;
+            }
+            ValidateTrainingAdmission(requireEntityQueue: true);
+            _substep = 7;
         }
 
         float crystals = ReadAttribute(core, _crystalAttributeId);
@@ -1157,10 +1165,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             AcceptanceAdmissionTransitionEvidence activated = command.AdmissionHistory[activatedIndex];
             if (_evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0 ||
-                activated.ObservedCommittedTick < _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick)
+                activated.AuthoritativeCommittedTick <= 0 ||
+                activated.AuthoritativeCommittedTick > _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick)
             {
                 throw new InvalidOperationException(
-                    "Queued infantry training activated before the first trained infantry was visible in replicated state.");
+                    "Queued infantry training lacks a causal authoritative activation tick before the first trained infantry observation.");
             }
         }
         else if (queuedIndex >= 0)
@@ -1304,11 +1313,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return false;
         }
         TrackPendingAdmissionProgress();
-        if (string.Equals(_pendingCommandAction, "QueueTrainInfantry", StringComparison.Ordinal) &&
-            _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0)
-        {
-            return false;
-        }
         if (summary.PlayerId != _localPlayerId || summary.SeatSlot != _evidence.SeatSlot)
         {
             throw new InvalidOperationException(
@@ -1420,13 +1424,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
         for (int i = _pendingAdmissionHistory.Count; i < progressCount; i++)
         {
             NetworkCommandAdmissionOutcome outcome = _admissionProgressScratch[i];
-            if (string.Equals(_pendingCommandAction, "QueueTrainInfantry", StringComparison.Ordinal) &&
-                outcome.Stage == OrderAdmissionStage.EntityIntake &&
-                outcome.Result == OrderSubmitResult.Activated &&
-                _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0)
-            {
-                break;
-            }
             _pendingAdmissionHistory.Add(new AcceptanceAdmissionTransitionEvidence
             {
                 Stage = outcome.Stage.ToString(),
@@ -1434,6 +1431,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 AdmissionBatchIndex = outcome.AdmissionBatchIndex,
                 ObservedInputRevision = _input!.UpdateRevision,
                 ObservedCommittedTick = TryGetCommittedTick(),
+                AuthoritativeCommittedTick = outcome.CommittedTick,
             });
         }
     }

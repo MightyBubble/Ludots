@@ -2288,7 +2288,10 @@ namespace Ludots.Core.Input.Orders
                 ModifierSubmitBehavior.QueueOnModifier => queueModifierHeld ? OrderSubmitMode.Queued : OrderSubmitMode.Immediate,
                 ModifierSubmitBehavior.AlwaysImmediate => OrderSubmitMode.Immediate,
                 ModifierSubmitBehavior.AlwaysQueued => OrderSubmitMode.Queued,
-                _ => OrderSubmitMode.Immediate
+                ModifierSubmitBehavior.PersistentQueueOnModifier => queueModifierHeld
+                    ? OrderSubmitMode.PersistentQueued
+                    : OrderSubmitMode.Immediate,
+                _ => throw new InvalidOperationException($"Unsupported modifier submit behavior '{behavior}'.")
             };
         }
         

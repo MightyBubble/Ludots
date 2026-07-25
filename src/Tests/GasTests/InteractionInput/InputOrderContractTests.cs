@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
+using CoreInputMod.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -154,6 +155,83 @@ namespace Ludots.Tests.GAS
                 Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
                 Assert.That(submitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
             });
+        }
+
+        [Test]
+        public void PersistentQueueOnModifier_NormalCommandIsImmediateAndShiftCommandIsPersistentQueued()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        ModifierBehavior = ModifierSubmitBehavior.PersistentQueueOnModifier,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            bool shiftHeld = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetQueueModifierProvider(() => shiftHeld);
+            system.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+
+            system.Update(0f);
+            shiftHeld = true;
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+                Assert.That(submitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.PersistentQueued));
+            });
+        }
+
+        [Test]
+        public void UnknownModifierSubmitBehavior_IsRejectedInsteadOfFallingBackToImmediate()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        ModifierBehavior = (ModifierSubmitBehavior)999,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetOrderSubmitHandler((in Order _) => { });
+
+            Assert.That(
+                () => system.Update(0f),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("Unsupported modifier submit behavior '999'"));
         }
 
         [Test]
@@ -888,6 +966,59 @@ namespace Ludots.Tests.GAS
                 Assert.That(submitted[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
                 Assert.That(submitted[0].Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.None));
             });
+        }
+
+        [Test]
+        public void CoreInputSkillOverride_PersistentQueueOnModifier_EmitsPersistentQueuedOrder()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(abilityId: 77);
+            Entity actor = world.Create(abilities);
+            var definitions = new AbilityDefinitionRegistry();
+            var definition = new AbilityDefinition
+            {
+                HasInputBindingOverride = true,
+                InputBindingOverride = new AbilityInputBindingOverride
+                {
+                    HasModifierBehavior = true,
+                    ModifierBehavior = ModifierSubmitBehavior.PersistentQueueOnModifier,
+                },
+            };
+            definitions.Register(77, in definition);
+
+            var resolver = new LocalOrderSourceHelper.SkillMappingOverrideResolver(world, definitions);
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, playerId: 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetQueueModifierProvider(() => true);
+            system.SetSkillMappingOverrideProvider(resolver.TryResolve);
+            system.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.PersistentQueued));
         }
 
         [Test]

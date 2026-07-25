@@ -27,7 +27,8 @@
     },
     "input": {
       "castModeOverride": "SmartCast",
-      "targetType": "None"
+      "targetType": "None",
+      "modifierBehavior": "PersistentQueueOnModifier"
     },
     "presentation": {
       "displayName": "Train Infantry",
