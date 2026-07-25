@@ -254,7 +254,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkCommandAdmissionResultBuffer admissions = Require(
             engine,
             CoreServiceKeys.NetworkCommandAdmissionResults);
-        IAuthoritativeReplicationInterestPort replicationInterest = Require(
+        IAuthoritativeReplicationInterestBatchPort replicationInterest = Require(
             engine,
             CoreServiceKeys.AuthoritativeReplicationInterest);
 

@@ -95,15 +95,28 @@ namespace Ludots.Core.Networking.Runtime
     }
 
     /// <summary>
-    /// Copies one seat's strictly slot-ordered authoritative interest set into caller-owned fixed storage.
-    /// The port selects spatial or gameplay interest; Core remains the sole owner of disclosure and baseline semantics.
+    /// Prepares an immutable, strictly ordered interest batch before any knowledge mutation or replication send.
+    /// A successful prepare guarantees that CommitPreparedKnowledge cannot fail for an expected capacity condition.
     /// </summary>
-    public interface IAuthoritativeReplicationInterestPort
+    public interface IAuthoritativeReplicationInterestBatchPort
     {
-        bool TryCopyInterest(
+        int SeatCapacity { get; }
+
+        int EntityCapacityPerSeat { get; }
+
+        bool TryPrepareBatch(ReadOnlySpan<SessionSeatBinding> seats);
+
+        bool TryGetPreparedInterest(
             in SessionSeatBinding seat,
-            Span<NetworkEntityHandle> destination,
-            out int count);
+            out ReadOnlySpan<NetworkEntityHandle> handles);
+
+        void CommitPreparedKnowledge();
+
+        /// <summary>
+        /// Releases the prepared batch. Calling before the knowledge commit cancels it without mutation;
+        /// calling after the commit completes it. Calling without a prepared batch is invalid.
+        /// </summary>
+        void CompletePreparedBatch();
     }
 
     /// <summary>

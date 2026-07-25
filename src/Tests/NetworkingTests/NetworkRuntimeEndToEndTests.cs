@@ -61,13 +61,17 @@ public sealed class NetworkRuntimeEndToEndTests
         var capacity = Capacity(simulationTickRateHz: 30, statePublishRateHz: 10);
         var transport = new InMemoryTransport(new ConnectionId(11));
         var observer = new RecordingObserver();
-        var interest = new FixedReplicationInterest(commandHarness.FirstHandle, commandHarness.SecondHandle);
         var sessions = new AuthoritativeSessionRegistry(
             seatCapacity: 1,
             new SessionEpoch(77),
             protocol,
             fingerprint,
             reconnectWindowTicks: 2);
+        var interest = new FixedReplicationInterest(
+            sessions.SeatCapacity,
+            capacity.ReplicationEntityCapacityPerSeat,
+            commandHarness.FirstHandle,
+            commandHarness.SecondHandle);
         var tickState = new AuthoritativeSimulationTickState();
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
@@ -319,13 +323,16 @@ public sealed class NetworkRuntimeEndToEndTests
         var protocol = new ProtocolVersion(1, 0);
         var transport = new InMemoryTransport(new ConnectionId(17));
         var observer = new RecordingObserver();
-        var interest = new FixedReplicationInterest(commandHarness.FirstHandle);
         var sessions = new AuthoritativeSessionRegistry(
             seatCapacity: 1,
             new SessionEpoch(77),
             protocol,
             fingerprint,
             reconnectWindowTicks: 2);
+        var interest = new FixedReplicationInterest(
+            sessions.SeatCapacity,
+            capacity.ReplicationEntityCapacityPerSeat,
+            commandHarness.FirstHandle);
         var tickState = new AuthoritativeSimulationTickState();
         var fixedInput = new AuthoritativeFixedInputIngress(
             capacity.CreateFixedInputProtocolConfig(sessions.SessionEpoch.Value, sessions.SeatCapacity),
@@ -1265,31 +1272,97 @@ public sealed class NetworkRuntimeEndToEndTests
         }
     }
 
-    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestPort
+    private sealed class FixedReplicationInterest : IAuthoritativeReplicationInterestBatchPort
     {
+        private readonly SessionSeatBinding[] _preparedSeats;
+        private readonly int _entityCapacityPerSeat;
         private NetworkEntityHandle[] _handles;
-        public FixedReplicationInterest(params NetworkEntityHandle[] handles) => _handles = handles;
 
-        public void Replace(params NetworkEntityHandle[] handles) => _handles = handles;
+        private int _preparedSeatCount;
+        private bool _prepared;
+
+        public FixedReplicationInterest(
+            int seatCapacity,
+            int entityCapacityPerSeat,
+            params NetworkEntityHandle[] handles)
+        {
+            _preparedSeats = new SessionSeatBinding[seatCapacity];
+            _entityCapacityPerSeat = entityCapacityPerSeat;
+            _handles = handles;
+        }
+
+        public int SeatCapacity => _preparedSeats.Length;
+        public int EntityCapacityPerSeat => _entityCapacityPerSeat;
+
+        public void Replace(params NetworkEntityHandle[] handles)
+        {
+            if (_prepared)
+            {
+                throw new InvalidOperationException("Cannot replace interest while a batch is prepared.");
+            }
+
+            _handles = handles;
+        }
 
         public int CopyCalls { get; private set; }
         public SessionSeatBinding LastSeat { get; private set; }
 
-        public bool TryCopyInterest(
-            in SessionSeatBinding seat,
-            Span<NetworkEntityHandle> destination,
-            out int count)
+        public bool TryPrepareBatch(ReadOnlySpan<SessionSeatBinding> seats)
         {
-            CopyCalls++;
-            LastSeat = seat;
-            count = _handles.Length;
-            if (destination.Length < count)
+            if (_prepared || seats.Length > _preparedSeats.Length || _handles.Length > _entityCapacityPerSeat)
             {
                 return false;
             }
 
-            _handles.CopyTo(destination);
+            seats.CopyTo(_preparedSeats);
+            _preparedSeatCount = seats.Length;
+            _prepared = true;
+            CopyCalls += seats.Length;
+            if (seats.Length > 0)
+            {
+                LastSeat = seats[^1];
+            }
+
             return true;
+        }
+
+        public bool TryGetPreparedInterest(
+            in SessionSeatBinding seat,
+            out ReadOnlySpan<NetworkEntityHandle> handles)
+        {
+            if (_prepared)
+            {
+                for (int i = 0; i < _preparedSeatCount; i++)
+                {
+                    if (_preparedSeats[i].Equals(seat))
+                    {
+                        handles = _handles;
+                        return true;
+                    }
+                }
+            }
+
+            handles = default;
+            return false;
+        }
+
+        public void CommitPreparedKnowledge()
+        {
+            if (!_prepared)
+            {
+                throw new InvalidOperationException("No replication interest batch is prepared.");
+            }
+        }
+
+        public void CompletePreparedBatch()
+        {
+            if (!_prepared)
+            {
+                throw new InvalidOperationException("No replication interest batch is prepared.");
+            }
+
+            _preparedSeatCount = 0;
+            _prepared = false;
         }
     }
 

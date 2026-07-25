@@ -17,6 +17,7 @@ public interface IPhysics3DWorld : IDisposable
     int ActuationCommandCapacity { get; }
     int PendingActuationCommandCount { get; }
     int WorkerCount { get; }
+    int BodySlotCapacity { get; }
     long StepIndex { get; }
     Physics3DStepMetrics LastStepMetrics { get; }
     float FixedDeltaSeconds { get; }
@@ -172,6 +173,8 @@ public interface IPhysics3DWorld : IDisposable
     int OverlapSphere(Vector3 centerCm, float radiusCm, in Physics3DQueryFilter filter, Span<Physics3DOverlapHit> hits);
     int OverlapCapsule(Vector3 centerCm, float radiusCm, float cylinderLengthCm, Quaternion orientation, in LayerMask queryLayer, Span<Physics3DOverlapHit> hits);
     int OverlapCapsule(Vector3 centerCm, float radiusCm, float cylinderLengthCm, Quaternion orientation, in Physics3DQueryFilter filter, Span<Physics3DOverlapHit> hits);
+    void ExecuteParallelQueries(IPhysics3DParallelQueryBatch batch);
+    int CopyLastParallelQueryWorkerAllocatedBytes(Span<long> destination);
     void Step();
     ulong ComputeObservableBodyStateHash();
 }

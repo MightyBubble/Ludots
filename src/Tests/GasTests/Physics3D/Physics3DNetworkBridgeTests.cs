@@ -98,6 +98,7 @@ public sealed class Physics3DNetworkBridgeTests
             ecs,
             physics,
             entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
             knowledge,
             seatCapacity: 2,
             spawnSpacingCm: 1_000f);
@@ -119,16 +120,16 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(factory.TryAcquire(in viewerSeat, viewer, out AuthoritativeReplicationSeatRuntime? runtime), Is.True);
         Assert.That(runtime, Is.Not.Null);
         var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 4,
             new Physics3DNetworkAoiConfig { RadiusCm = 200f, GlobalEntityCapacity = 4 });
         Span<NetworkEntityHandle> handles = stackalloc NetworkEntityHandle[4];
 
-        Assert.That(interest.TryCopyInterest(in viewerSeat, handles, out int farCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, handles, out int farCount), Is.True);
         Assert.That(farCount, Is.EqualTo(1));
         Assert.That(
             runtime!.Bridge.BuildFull(
@@ -142,7 +143,7 @@ public sealed class Physics3DNetworkBridgeTests
             Is.EqualTo(ReplicationBridgeResult.Success));
 
         MoveEntity(ecs, physics, target, new Vector3(100f, 0f, 0f));
-        Assert.That(interest.TryCopyInterest(in viewerSeat, handles, out int nearCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, handles, out int nearCount), Is.True);
         Assert.That(nearCount, Is.EqualTo(2));
         Assert.That(
             runtime.Bridge.BuildDelta(
@@ -159,7 +160,7 @@ public sealed class Physics3DNetworkBridgeTests
             change => change.Kind == ReplicationDisclosureChangeKind.Reveal));
 
         MoveEntity(ecs, physics, target, new Vector3(1_000f, 0f, 0f));
-        Assert.That(interest.TryCopyInterest(in viewerSeat, handles, out int leftCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, handles, out int leftCount), Is.True);
         Assert.That(leftCount, Is.EqualTo(1));
         Assert.That(
             runtime.Bridge.BuildDelta(
@@ -187,6 +188,7 @@ public sealed class Physics3DNetworkBridgeTests
             ecs,
             physics,
             entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
             knowledge,
             seatCapacity: 2,
             spawnSpacingCm: 1_000f);
@@ -195,10 +197,10 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(lifecycle.TryResolveController(in viewerSeat, out _), Is.True);
         Assert.That(lifecycle.TryResolveController(in targetSeat, out Entity target), Is.True);
         using var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 4,
             new Physics3DNetworkAoiConfig { RadiusCm = 200f, GlobalEntityCapacity = 4 });
@@ -207,68 +209,72 @@ public sealed class Physics3DNetworkBridgeTests
         Physics3DPoseCm stalePose = ecs.Get<Physics3DPoseCm>(target);
         stalePose.Position = new Vector3(100f, 0f, 0f);
         ecs.Set(target, stalePose);
-        Assert.That(interest.TryCopyInterest(in viewerSeat, destination, out int physicallyFarCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, destination, out int physicallyFarCount), Is.True);
         Assert.That(physicallyFarCount, Is.EqualTo(1));
 
         Physics3DBodyCm targetBody = ecs.Get<Physics3DBodyCm>(target);
         Physics3DBodyState physicalState = physics.GetBodyState(targetBody.Id);
         physicalState.PositionCm = stalePose.Position;
         physics.SetBodyState(targetBody.Id, in physicalState);
-        Assert.That(interest.TryCopyInterest(in viewerSeat, destination, out int physicallyNearCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, destination, out int physicallyNearCount), Is.True);
         Assert.That(physicallyNearCount, Is.EqualTo(2));
     }
 
     [Test]
-    public void AoiInterest_CapacityAndUnknownSeatFailWithoutPartialSuccess()
+    public void AoiInterest_PerSeatCapacityAndUnknownSeatFailWithoutPartialSuccess_AndUnregisteredBodyIsIgnored()
     {
         using World ecs = World.Create();
         using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 2));
         var entities = new NetworkEntityTable(capacity: 2);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 4);
-        using var lifecycle = CreateLifecycle(ecs, physics, entities, knowledge, seatCapacity: 2, spawnSpacingCm: 10f);
+        using var lifecycle = CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 2,
+            spawnSpacingCm: 10f);
         SessionSeatBinding first = Seat(slot: 0, generation: 1);
         SessionSeatBinding second = Seat(slot: 1, generation: 1);
         Assert.That(lifecycle.TryResolveController(in first, out _), Is.True);
         Assert.That(lifecycle.TryResolveController(in second, out _), Is.True);
         using var perSeatInterest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 1,
             new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
-        Span<NetworkEntityHandle> enoughDestination = stackalloc NetworkEntityHandle[2];
+        Span<SessionSeatBinding> batch = stackalloc SessionSeatBinding[1] { first };
+        int knowledgeCountBeforeFailure = knowledge.RecordCount;
         Assert.That(
-            perSeatInterest.TryCopyInterest(in first, enoughDestination, out int perSeatRequired),
+            perSeatInterest.TryPrepareBatch(batch),
             Is.False);
         Assert.Multiple(() =>
         {
-            Assert.That(perSeatRequired, Is.EqualTo(2));
+            Assert.That(perSeatInterest.LastOverlapHitCount, Is.EqualTo(2));
             Assert.That(
                 perSeatInterest.LastFailure,
                 Is.EqualTo(Physics3DNetworkAoiFailure.PerSeatCapacityExceeded));
+            Assert.That(knowledge.RecordCount, Is.EqualTo(knowledgeCountBeforeFailure));
         });
 
         using var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 2,
             new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = 2 });
 
-        var tooSmall = new NetworkEntityHandle[1];
-        Assert.Multiple(() =>
-        {
-            Assert.That(interest.TryCopyInterest(in first, tooSmall, out int required), Is.False);
-            Assert.That(required, Is.EqualTo(2));
-            Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.DestinationCapacityExceeded));
-            SessionSeatBinding unknown = Seat(slot: 0, generation: 9);
-            Assert.That(interest.TryCopyInterest(in unknown, tooSmall, out _), Is.False);
-            Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.UnknownSeat));
-        });
+        SessionSeatBinding unknown = Seat(slot: 0, generation: 9);
+        batch[0] = unknown;
+        Assert.That(interest.TryPrepareBatch(batch), Is.False);
+        Assert.That(interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.UnknownSeat));
+        Assert.That(knowledge.RecordCount, Is.EqualTo(knowledgeCountBeforeFailure));
 
         Physics3DShapeId shape = physics.RegisterBoxShape(new Vector3(10f));
         Entity unregistered = ecs.Create();
@@ -284,12 +290,9 @@ public sealed class Physics3DNetworkBridgeTests
             LayerMask.All,
             CreateBodyConfig().Material,
             Physics3DContinuousDetectionMode.Discrete));
-        Assert.That(
-            interest.TryCopyInterest(in first, enoughDestination, out _),
-            Is.False);
-        Assert.That(
-            interest.LastFailure,
-            Is.EqualTo(Physics3DNetworkAoiFailure.OverlapScratchCapacityExceeded));
+        Span<NetworkEntityHandle> destination = stackalloc NetworkEntityHandle[2];
+        Assert.That(TryPublishSingleSeat(interest, in first, destination, out int selectedCount), Is.True);
+        Assert.That(selectedCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -298,8 +301,14 @@ public sealed class Physics3DNetworkBridgeTests
         using World serverEcs = World.Create();
         using var serverPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 2);
-        var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
-        using var lifecycle = CreateLifecycle(serverEcs, serverPhysics, entities, knowledge, seatCapacity: 1);
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: 2);
+        using var lifecycle = CreateLifecycle(
+            serverEcs,
+            serverPhysics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out Entity serverEntity), Is.True);
         MoveEntity(serverEcs, serverPhysics, serverEntity, new Vector3(123.37f, 45.62f, -89.11f));
@@ -316,14 +325,24 @@ public sealed class Physics3DNetworkBridgeTests
             baselineCapacity: 2,
             disclosureChangeLogCapacity: 4);
         Assert.That(factory.TryAcquire(in seat, serverEntity, out AuthoritativeReplicationSeatRuntime? runtime), Is.True);
-        Span<NetworkEntityHandle> interest = stackalloc NetworkEntityHandle[1] { handle };
+        using var aoi = new Physics3DNetworkAoiInterestPort(
+            serverPhysics,
+            entities,
+            lifecycle,
+            bindings,
+            knowledge,
+            replicationEntityCapacityPerSeat: 2,
+            new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = entities.Capacity });
+        Span<NetworkEntityHandle> interest = stackalloc NetworkEntityHandle[2];
+        Assert.That(TryPublishSingleSeat(aoi, in seat, interest, out int interestCount), Is.True);
+        Assert.That(interestCount, Is.EqualTo(1));
         Assert.That(
             runtime!.Bridge.BuildFull(
                 runtime.Channel,
                 SessionEpoch,
                 tick: 1,
                 snapshotId: 1,
-                interest,
+                interest[..interestCount],
                 runtime.Projection,
                 runtime.Packet),
             Is.EqualTo(ReplicationBridgeResult.Success));
@@ -384,8 +403,14 @@ public sealed class Physics3DNetworkBridgeTests
         using World ecs = World.Create();
         using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 2);
-        var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
-        using var lifecycle = CreateLifecycle(ecs, physics, entities, knowledge, seatCapacity: 1);
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: 2);
+        using var lifecycle = CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out Entity player), Is.True);
         var projectors = CreateProjectors(physics);
@@ -406,6 +431,17 @@ public sealed class Physics3DNetworkBridgeTests
 
         Assert.That(lifecycle.TryGetNetworkHandle(in seat, out NetworkEntityHandle playerHandle), Is.True);
         MoveEntity(ecs, physics, player, new Vector3(10_000_000f, 0f, 0f));
+        using var aoi = new Physics3DNetworkAoiInterestPort(
+            physics,
+            entities,
+            lifecycle,
+            bindings,
+            knowledge,
+            replicationEntityCapacityPerSeat: 2,
+            new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = entities.Capacity });
+        Span<NetworkEntityHandle> prepared = stackalloc NetworkEntityHandle[2];
+        Assert.That(TryPublishSingleSeat(aoi, in seat, prepared, out int preparedCount), Is.True);
+        Assert.That(preparedCount, Is.EqualTo(1));
         Span<NetworkEntityHandle> known = stackalloc NetworkEntityHandle[1] { playerHandle };
         Assert.That(bridge.Project(known, currentTick: 1, projection), Is.EqualTo(ReplicationBridgeResult.ProjectionFailed));
     }
@@ -564,7 +600,13 @@ public sealed class Physics3DNetworkBridgeTests
         using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 1);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
-        using var lifecycle = CreateLifecycle(ecs, physics, entities, knowledge, seatCapacity: 1);
+        using var lifecycle = CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out _), Is.True);
         lifecycle.OnSeatConnected(in seat, reconnected: false);
@@ -626,16 +668,22 @@ public sealed class Physics3DNetworkBridgeTests
         using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var entities = new NetworkEntityTable(capacity: 2);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 1);
-        using var lifecycle = CreateLifecycle(ecs, physics, entities, knowledge, seatCapacity: 1);
+        using var lifecycle = CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 1);
         SessionSeatBinding seat = Seat(slot: 0, generation: 1);
         Assert.That(lifecycle.TryResolveController(in seat, out _), Is.True);
         lifecycle.OnSeatConnected(in seat, reconnected: false);
 
         var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat: 1,
             new Physics3DNetworkAoiConfig { RadiusCm = 100f, GlobalEntityCapacity = entities.Capacity });
@@ -660,12 +708,12 @@ public sealed class Physics3DNetworkBridgeTests
             });
 
         ticks.Begin(1);
-        Assert.That(interest.TryCopyInterest(in seat, handles, out int warmCount), Is.True);
+        Assert.That(TryPublishSingleSeat(interest, in seat, handles, out int warmCount), Is.True);
         Assert.That(warmCount, Is.EqualTo(1));
         Assert.That(consumer.TryConsume(1), Is.EqualTo(Physics3DFixedInputConsumeResult.Success));
         for (int iteration = 0; iteration < 64; iteration++)
         {
-            Assert.That(interest.TryCopyInterest(in seat, handles, out warmCount), Is.True);
+            Assert.That(TryPublishSingleSeat(interest, in seat, handles, out warmCount), Is.True);
         }
 
         _ = GC.GetAllocatedBytesForCurrentThread();
@@ -673,7 +721,7 @@ public sealed class Physics3DNetworkBridgeTests
         long aoiBefore = GC.GetAllocatedBytesForCurrentThread();
         for (int iteration = 0; iteration < 64; iteration++)
         {
-            aoiSucceeded &= interest.TryCopyInterest(in seat, handles, out int count) && count == 1;
+            aoiSucceeded &= TryPublishSingleSeat(interest, in seat, handles, out int count) && count == 1;
         }
 
         long aoiAllocated = GC.GetAllocatedBytesForCurrentThread() - aoiBefore;
@@ -770,13 +818,13 @@ public sealed class Physics3DNetworkBridgeTests
     [Test]
     [NonParallelizable]
     public void AoiInterest_150SeatsAnd10KRegisteredBodies_ReportsBroadphaseTailLatencyAndZeroAllocation()
-        => RunAoiBroadphaseScale(ordinaryBodyCount: 10_000, measuredRounds: 30);
+        => RunAoiBroadphaseScale(ordinaryBodyCount: 10_000, measuredRounds: 128);
 
     [Test]
     [Explicit("150-seat and 25K registered-body AOI broadphase pressure measurement.")]
     [NonParallelizable]
     public void AoiInterest_150SeatsAnd25KRegisteredBodies_ReportsBroadphaseTailLatencyAndZeroAllocation()
-        => RunAoiBroadphaseScale(ordinaryBodyCount: 25_000, measuredRounds: 10);
+        => RunAoiBroadphaseScale(ordinaryBodyCount: 25_000, measuredRounds: 128);
 
     private static void RunAoiBroadphaseScale(int ordinaryBodyCount, int measuredRounds)
     {
@@ -784,6 +832,7 @@ public sealed class Physics3DNetworkBridgeTests
         const int globalEntityCapacity = 100_000;
         const int replicationEntityCapacityPerSeat = 512;
         const int fixedStepHz = 30;
+        const int queryWorkerCount = 3;
         const int clusterColumns = 15;
         const float clusterSpacingCm = 10_000f;
         const float interestRadiusCm = 1_000f;
@@ -804,14 +853,17 @@ public sealed class Physics3DNetworkBridgeTests
         using World ecs = World.Create();
         using var physics = new Physics3DWorld(CreateWorldConfig(
             mobileCapacity: seatCount,
-            staticBodyCapacity: ordinaryBodyCount));
+            staticBodyCapacity: ordinaryBodyCount,
+            workerCount: queryWorkerCount));
         var entities = new NetworkEntityTable(capacity: globalEntityCapacity);
+        var bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         var knowledge = new KnowledgeProjectionStore(
             initialCapacity: seatCount * replicationEntityCapacityPerSeat);
         using var lifecycle = new Physics3DNetworkPlayerLifecycle(
             ecs,
             physics,
             entities,
+            bindings,
             knowledge,
             seatCount,
             SchemaId,
@@ -828,6 +880,7 @@ public sealed class Physics3DNetworkBridgeTests
             ecs,
             physics,
             entities,
+            bindings,
             simulationTicks,
             SchemaId,
             commandCapacity: ordinaryBodyCount);
@@ -901,10 +954,10 @@ public sealed class Physics3DNetworkBridgeTests
         simulationTicks.Commit(1);
 
         using var interest = new Physics3DNetworkAoiInterestPort(
-            ecs,
             physics,
             entities,
             lifecycle,
+            bindings,
             knowledge,
             replicationEntityCapacityPerSeat,
             new Physics3DNetworkAoiConfig
@@ -912,43 +965,45 @@ public sealed class Physics3DNetworkBridgeTests
                 RadiusCm = interestRadiusCm,
                 GlobalEntityCapacity = globalEntityCapacity,
             });
-        var destination = new NetworkEntityHandle[replicationEntityCapacityPerSeat];
         int maximumSelectedCount = 0;
         for (int seatIndex = 0; seatIndex < seatCount; seatIndex++)
         {
             maximumSelectedCount = Math.Max(maximumSelectedCount, expectedSelectedCounts[seatIndex]);
         }
 
-        if (destination.Length < maximumSelectedCount)
+        if (replicationEntityCapacityPerSeat < maximumSelectedCount)
         {
             throw new InvalidOperationException(
-                $"AOI per-seat destination capacity {destination.Length} is below selected count {maximumSelectedCount}.");
+                $"AOI per-seat capacity {replicationEntityCapacityPerSeat} is below selected count {maximumSelectedCount}.");
         }
 
         for (int round = 0; round < warmupRounds; round++)
         {
-            for (int seatIndex = 0; seatIndex < seatCount; seatIndex++)
+            if (!TryPublishBatch(
+                    interest,
+                    seats,
+                    expectedSelectedCounts,
+                    out int failedWarmupSeat,
+                    out int warmupCount))
             {
-                if (!interest.TryCopyInterest(in seats[seatIndex], destination, out int selectedCount) ||
-                    selectedCount != expectedSelectedCounts[seatIndex])
-                {
-                    throw new InvalidOperationException(
-                        $"AOI warmup failed at round {round}, seat {seatIndex}: " +
-                        $"failure={interest.LastFailure}, selected={selectedCount}, " +
-                        $"expected={expectedSelectedCounts[seatIndex]}.");
-                }
+                throw new InvalidOperationException(
+                    $"AOI warmup failed at round {round}, seat {failedWarmupSeat}: " +
+                    $"failure={interest.LastFailure}, selected={warmupCount}, " +
+                    $"expected={expectedSelectedCounts[failedWarmupSeat]}.");
             }
         }
 
-        var seatCallSamples = new long[checked(seatCount * measuredRounds)];
         var fullRoundSamples = new long[measuredRounds];
-        int sampleIndex = 0;
+        var prepareSamples = new long[measuredRounds];
+        var validationSamples = new long[measuredRounds];
+        var commitSamples = new long[measuredRounds];
+        var workerAllocatedBytes = new long[physics.WorkerCount];
         int failedRound = -1;
         int failedSeat = -1;
         int failedCount = -1;
         int failedExpectedCount = -1;
         int maximumBroadphaseHitCount = 0;
-        long totalBroadphaseHitCount = 0;
+        long maximumWorkerAllocatedBytes = 0;
         Physics3DNetworkAoiFailure failure = Physics3DNetworkAoiFailure.None;
         _ = Stopwatch.GetTimestamp();
         _ = GC.GetAllocatedBytesForCurrentThread();
@@ -956,66 +1011,69 @@ public sealed class Physics3DNetworkBridgeTests
         for (int round = 0; round < measuredRounds; round++)
         {
             long roundStarted = Stopwatch.GetTimestamp();
-            for (int seatIndex = 0; seatIndex < seatCount; seatIndex++)
+            bool published = TryPublishBatch(
+                interest,
+                seats,
+                expectedSelectedCounts,
+                out int currentFailedSeat,
+                out int selectedCount,
+                out prepareSamples[round],
+                out validationSamples[round],
+                out commitSamples[round]);
+            fullRoundSamples[round] = Stopwatch.GetTimestamp() - roundStarted;
+            maximumBroadphaseHitCount = Math.Max(maximumBroadphaseHitCount, interest.LastOverlapHitCount);
+            physics.CopyLastParallelQueryWorkerAllocatedBytes(workerAllocatedBytes);
+            for (int worker = 0; worker < workerAllocatedBytes.Length; worker++)
             {
-                long started = Stopwatch.GetTimestamp();
-                bool copied = interest.TryCopyInterest(
-                    in seats[seatIndex],
-                    destination,
-                    out int selectedCount);
-                maximumBroadphaseHitCount = Math.Max(
-                    maximumBroadphaseHitCount,
-                    interest.LastOverlapHitCount);
-                totalBroadphaseHitCount += interest.LastOverlapHitCount;
-                seatCallSamples[sampleIndex++] = Stopwatch.GetTimestamp() - started;
-                if ((!copied || selectedCount != expectedSelectedCounts[seatIndex]) && failedRound < 0)
-                {
-                    failedRound = round;
-                    failedSeat = seatIndex;
-                    failedCount = selectedCount;
-                    failedExpectedCount = expectedSelectedCounts[seatIndex];
-                    failure = interest.LastFailure;
-                }
+                maximumWorkerAllocatedBytes = Math.Max(maximumWorkerAllocatedBytes, workerAllocatedBytes[worker]);
             }
 
-            fullRoundSamples[round] = Stopwatch.GetTimestamp() - roundStarted;
+            if (!published && failedRound < 0)
+            {
+                failedRound = round;
+                failedSeat = currentFailedSeat;
+                failedCount = selectedCount;
+                failedExpectedCount = currentFailedSeat >= 0
+                    ? expectedSelectedCounts[currentFailedSeat]
+                    : -1;
+                failure = interest.LastFailure;
+            }
         }
 
         long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocationBefore;
-        seatCallSamples.AsSpan().Sort();
         fullRoundSamples.AsSpan().Sort();
+        prepareSamples.AsSpan().Sort();
+        validationSamples.AsSpan().Sort();
+        commitSamples.AsSpan().Sort();
         double millisecondsPerTimestamp = 1_000d / Stopwatch.Frequency;
-        double seatCallP95Milliseconds = Percentile(seatCallSamples, 0.95) * millisecondsPerTimestamp;
-        double seatCallP99Milliseconds = Percentile(seatCallSamples, 0.99) * millisecondsPerTimestamp;
         double fullRoundP95Milliseconds = Percentile(fullRoundSamples, 0.95) * millisecondsPerTimestamp;
         double fullRoundP99Milliseconds = Percentile(fullRoundSamples, 0.99) * millisecondsPerTimestamp;
+        double prepareP95Milliseconds = Percentile(prepareSamples, 0.95) * millisecondsPerTimestamp;
+        double validationP95Milliseconds = Percentile(validationSamples, 0.95) * millisecondsPerTimestamp;
+        double commitP95Milliseconds = Percentile(commitSamples, 0.95) * millisecondsPerTimestamp;
         double fixedStepBudgetMilliseconds = 1_000d / fixedStepHz;
         TestContext.Out.WriteLine(
-            $"Physics3D AOI broadphase: 150 seats + {ordinaryBodyCount:N0} registered bodies, " +
-            $"{measuredRounds} measured rounds, {sampleIndex:N0} seat calls, " +
-            $"selected-per-seat max={maximumSelectedCount}/{destination.Length}, " +
-            $"broadphase-hits max={maximumBroadphaseHitCount}, total={totalBroadphaseHitCount:N0}, " +
-            $"seat-call P95={seatCallP95Milliseconds:F3}ms, P99={seatCallP99Milliseconds:F3}ms, " +
-            $"full-round P95={fullRoundP95Milliseconds:F3}ms, P99={fullRoundP99Milliseconds:F3}ms, " +
+            $"Physics3D batched AOI broadphase: 150 seats + {ordinaryBodyCount:N0} registered bodies, " +
+            $"{measuredRounds} measured batches, " +
+            $"selected-per-seat max={maximumSelectedCount}/{replicationEntityCapacityPerSeat}, " +
+            $"broadphase-hits max={maximumBroadphaseHitCount}, " +
+            $"batch P95={fullRoundP95Milliseconds:F3}ms, P99={fullRoundP99Milliseconds:F3}ms, " +
+            $"prepare/validate/commit P95={prepareP95Milliseconds:F3}/{validationP95Milliseconds:F3}/{commitP95Milliseconds:F3}ms, " +
             $"budget={fixedStepBudgetMilliseconds:F3}ms, " +
-            $"calling-thread allocations={allocatedBytes}B.");
+            $"calling-thread allocations={allocatedBytes}B, " +
+            $"maximum worker allocation={maximumWorkerAllocatedBytes}B.");
 
         Assert.Multiple(() =>
         {
-            Assert.That(sampleIndex, Is.EqualTo(seatCount * measuredRounds));
             Assert.That(
                 failedRound,
                 Is.EqualTo(-1),
                 $"AOI failed at round {failedRound}, seat {failedSeat}: " +
                 $"failure={failure}, selected={failedCount}, expected={failedExpectedCount}.");
-            Assert.That(destination.Length, Is.GreaterThanOrEqualTo(maximumSelectedCount));
+            Assert.That(replicationEntityCapacityPerSeat, Is.GreaterThanOrEqualTo(maximumSelectedCount));
             Assert.That(registry.Count, Is.EqualTo(ordinaryBodyCount));
-            Assert.That(interest.OverlapScratchCapacity, Is.EqualTo(globalEntityCapacity));
+            Assert.That(interest.OverlapScratchCapacity, Is.EqualTo(physics.BodySlotCapacity));
             Assert.That(maximumBroadphaseHitCount, Is.EqualTo(maximumSelectedCount));
-            Assert.That(
-                totalBroadphaseHitCount,
-                Is.LessThan(checked((long)seatCount * measuredRounds * ordinaryBodyCount)),
-                "AOI query surfaced the global registered-body set instead of local broadphase hits.");
             Assert.That(
                 fullRoundP95Milliseconds,
                 Is.LessThanOrEqualTo(fixedStepBudgetMilliseconds),
@@ -1028,7 +1086,122 @@ public sealed class Physics3DNetworkBridgeTests
                 allocatedBytes,
                 Is.Zero,
                 $"AOI 150 seats + {ordinaryBodyCount:N0} bodies allocated on the calling thread after warmup.");
+            Assert.That(
+                maximumWorkerAllocatedBytes,
+                Is.Zero,
+                $"AOI 150 seats + {ordinaryBodyCount:N0} bodies allocated on a fixed query worker after warmup.");
         });
+    }
+
+    private static bool TryPublishSingleSeat(
+        Physics3DNetworkAoiInterestPort interest,
+        in SessionSeatBinding seat,
+        Span<NetworkEntityHandle> destination,
+        out int count)
+    {
+        Span<SessionSeatBinding> seats = stackalloc SessionSeatBinding[1] { seat };
+        if (!interest.TryPrepareBatch(seats))
+        {
+            count = 0;
+            return false;
+        }
+
+        try
+        {
+            if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles))
+            {
+                count = 0;
+                return false;
+            }
+
+            count = handles.Length;
+            if (handles.Length > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Prepared AOI count {handles.Length} exceeds test destination capacity {destination.Length}.");
+            }
+
+            handles.CopyTo(destination);
+            interest.CommitPreparedKnowledge();
+            return true;
+        }
+        finally
+        {
+            interest.CompletePreparedBatch();
+        }
+    }
+
+    private static bool TryPublishBatch(
+        Physics3DNetworkAoiInterestPort interest,
+        ReadOnlySpan<SessionSeatBinding> seats,
+        ReadOnlySpan<int> expectedCounts,
+        out int failedSeat,
+        out int selectedCount) => TryPublishBatch(
+            interest,
+            seats,
+            expectedCounts,
+            out failedSeat,
+            out selectedCount,
+            out _,
+            out _,
+            out _);
+
+    private static bool TryPublishBatch(
+        Physics3DNetworkAoiInterestPort interest,
+        ReadOnlySpan<SessionSeatBinding> seats,
+        ReadOnlySpan<int> expectedCounts,
+        out int failedSeat,
+        out int selectedCount,
+        out long prepareTimestampTicks,
+        out long validationTimestampTicks,
+        out long commitTimestampTicks)
+    {
+        if (seats.Length != expectedCounts.Length)
+        {
+            throw new ArgumentException("AOI batch seats and expected counts must have the same length.");
+        }
+
+        long prepareStarted = Stopwatch.GetTimestamp();
+        if (!interest.TryPrepareBatch(seats))
+        {
+            prepareTimestampTicks = Stopwatch.GetTimestamp() - prepareStarted;
+            validationTimestampTicks = 0;
+            commitTimestampTicks = 0;
+            failedSeat = interest.FailedSeatSlot;
+            selectedCount = -1;
+            return false;
+        }
+
+        prepareTimestampTicks = Stopwatch.GetTimestamp() - prepareStarted;
+        validationTimestampTicks = 0;
+        commitTimestampTicks = 0;
+        try
+        {
+            long validationStarted = Stopwatch.GetTimestamp();
+            for (int index = 0; index < seats.Length; index++)
+            {
+                SessionSeatBinding seat = seats[index];
+                if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles) ||
+                    handles.Length != expectedCounts[index])
+                {
+                    failedSeat = seat.Slot;
+                    selectedCount = handles.Length;
+                    return false;
+                }
+            }
+
+            validationTimestampTicks = Stopwatch.GetTimestamp() - validationStarted;
+            long commitStarted = Stopwatch.GetTimestamp();
+            interest.CommitPreparedKnowledge();
+            commitTimestampTicks = Stopwatch.GetTimestamp() - commitStarted;
+            failedSeat = -1;
+            selectedCount = -1;
+            return true;
+        }
+        finally
+        {
+            interest.CompletePreparedBatch();
+        }
     }
 
     private static Physics3DNetworkPlayerLifecycle CreateLifecycle(
@@ -1037,12 +1210,30 @@ public sealed class Physics3DNetworkBridgeTests
         NetworkEntityTable entities,
         KnowledgeProjectionStore knowledge,
         int seatCapacity,
+        float spawnSpacingCm = 500f) => CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out _,
+            knowledge,
+            seatCapacity,
+            spawnSpacingCm);
+
+    private static Physics3DNetworkPlayerLifecycle CreateLifecycle(
+        World ecs,
+        IPhysics3DWorld physics,
+        NetworkEntityTable entities,
+        out Physics3DNetworkReplicatedBindingStore bindings,
+        KnowledgeProjectionStore knowledge,
+        int seatCapacity,
         float spawnSpacingCm = 500f)
     {
+        bindings = new Physics3DNetworkReplicatedBindingStore(physics.BodySlotCapacity, entities.Capacity);
         return new Physics3DNetworkPlayerLifecycle(
             ecs,
             physics,
             entities,
+            bindings,
             knowledge,
             seatCapacity,
             SchemaId,
@@ -1173,7 +1364,8 @@ public sealed class Physics3DNetworkBridgeTests
 
     private static Physics3DWorldConfig CreateWorldConfig(
         int mobileCapacity,
-        int staticBodyCapacity = 1) => new()
+        int staticBodyCapacity = 1,
+        int workerCount = 1) => new()
     {
         MobileBodyCapacity = mobileCapacity,
         StaticBodyCapacity = staticBodyCapacity,
@@ -1184,7 +1376,7 @@ public sealed class Physics3DNetworkBridgeTests
         ConstraintCountPerBodyEstimate = 4,
         ContactPairCapacityPerWorker = 32,
         ActuationCommandCapacity = Math.Max(8, mobileCapacity * 4),
-        WorkerCount = 1,
+        WorkerCount = workerCount,
         FixedStepHz = 30,
         MaximumPhysicsStepsPerSourceTick = 1,
         SolverSubstepCount = 1,
