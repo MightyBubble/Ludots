@@ -18,10 +18,16 @@ internal readonly record struct Physics3DScaleCityShowcaseState(
     int PulseCount,
     int PulsedForegroundBodiesLastPulse,
     int PerformanceSampleCount,
+    int FramePerformanceSampleCount,
     int PerformanceWindowCapacity,
     double StepP50Milliseconds,
     double StepP95Milliseconds,
     double StepP99Milliseconds,
+    double FullFrameP50Milliseconds,
+    double FullFrameP95Milliseconds,
+    double FullFrameP99Milliseconds,
+    long FrameCallingThreadAllocatedBytesLastStep,
+    long PhysicsWorkerAllocatedBytesLastStep,
     double PerformanceBudgetMilliseconds,
     Physics3DScaleCityPerformanceStatus PerformanceStatus)
 {
@@ -36,10 +42,16 @@ internal readonly record struct Physics3DScaleCityShowcaseState(
         PulseCount: 0,
         PulsedForegroundBodiesLastPulse: 0,
         PerformanceSampleCount: 0,
+        FramePerformanceSampleCount: 0,
         PerformanceWindowCapacity: 0,
         StepP50Milliseconds: 0d,
         StepP95Milliseconds: 0d,
         StepP99Milliseconds: 0d,
+        FullFrameP50Milliseconds: 0d,
+        FullFrameP95Milliseconds: 0d,
+        FullFrameP99Milliseconds: 0d,
+        FrameCallingThreadAllocatedBytesLastStep: 0L,
+        PhysicsWorkerAllocatedBytesLastStep: 0L,
         PerformanceBudgetMilliseconds: 0d,
         PerformanceStatus: Physics3DScaleCityPerformanceStatus.Warming);
 

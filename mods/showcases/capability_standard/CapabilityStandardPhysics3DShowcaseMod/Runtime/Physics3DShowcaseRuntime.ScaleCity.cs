@@ -19,11 +19,23 @@ internal sealed partial class Physics3DShowcaseRuntime
     private float _scaleCityWindAccelerationXCmPerSecondSquared;
     private double[] _scaleCityPerformanceSamples = Array.Empty<double>();
     private double[] _scaleCityPerformanceSortWorkspace = Array.Empty<double>();
+    private double[] _scaleCityFramePerformanceSamples = Array.Empty<double>();
+    private double[] _scaleCityFramePerformanceSortWorkspace = Array.Empty<double>();
     private int _scaleCityPerformanceSampleCount;
     private int _scaleCityPerformanceNextSampleIndex;
+    private int _scaleCityFramePerformanceSampleCount;
+    private int _scaleCityFramePerformanceNextSampleIndex;
     private double _scaleCityStepP50Milliseconds;
     private double _scaleCityStepP95Milliseconds;
     private double _scaleCityStepP99Milliseconds;
+    private double _scaleCityFrameP50Milliseconds;
+    private double _scaleCityFrameP95Milliseconds;
+    private double _scaleCityFrameP99Milliseconds;
+    private long _scaleCityFrameStartTimestamp;
+    private long _scaleCityFrameStartAllocatedBytes;
+    private long _scaleCityFrameCallingThreadAllocatedBytesLastStep;
+    private long _scaleCityPhysicsWorkerAllocatedBytesLastStep;
+    private bool _scaleCityFrameMeasurementPending;
 
     internal Physics3DScaleCityShowcaseState ScaleCityState
     {
@@ -36,10 +48,11 @@ internal sealed partial class Physics3DShowcaseRuntime
 
             double budgetMilliseconds = ActiveConfig.BenchmarkRealTimeBudgetMilliseconds;
             Physics3DScaleCityPerformanceStatus performanceStatus =
-                _scaleCityPerformanceSampleCount < _scaleCityPerformanceSamples.Length
+                _scaleCityPerformanceSampleCount < _scaleCityPerformanceSamples.Length ||
+                _scaleCityFramePerformanceSampleCount < _scaleCityFramePerformanceSamples.Length
                     ? Physics3DScaleCityPerformanceStatus.Warming
-                    : _scaleCityStepP95Milliseconds < budgetMilliseconds &&
-                      _scaleCityStepP99Milliseconds < budgetMilliseconds
+                    : _scaleCityFrameP95Milliseconds <= budgetMilliseconds &&
+                      _scaleCityFrameP99Milliseconds <= budgetMilliseconds
                         ? Physics3DScaleCityPerformanceStatus.Pass
                         : Physics3DScaleCityPerformanceStatus.OverBudget;
             return new Physics3DScaleCityShowcaseState(
@@ -53,23 +66,32 @@ internal sealed partial class Physics3DShowcaseRuntime
                 PulseCount: _scaleCityPulseCount,
                 PulsedForegroundBodiesLastPulse: _scaleCityPulsedForegroundBodiesLastPulse,
                 PerformanceSampleCount: _scaleCityPerformanceSampleCount,
+                FramePerformanceSampleCount: _scaleCityFramePerformanceSampleCount,
                 PerformanceWindowCapacity: _scaleCityPerformanceSamples.Length,
                 StepP50Milliseconds: _scaleCityStepP50Milliseconds,
                 StepP95Milliseconds: _scaleCityStepP95Milliseconds,
                 StepP99Milliseconds: _scaleCityStepP99Milliseconds,
+                FullFrameP50Milliseconds: _scaleCityFrameP50Milliseconds,
+                FullFrameP95Milliseconds: _scaleCityFrameP95Milliseconds,
+                FullFrameP99Milliseconds: _scaleCityFrameP99Milliseconds,
+                FrameCallingThreadAllocatedBytesLastStep: _scaleCityFrameCallingThreadAllocatedBytesLastStep,
+                PhysicsWorkerAllocatedBytesLastStep: _scaleCityPhysicsWorkerAllocatedBytesLastStep,
                 PerformanceBudgetMilliseconds: budgetMilliseconds,
                 PerformanceStatus: performanceStatus);
         }
     }
 
-    internal void RecordScaleCityPerformanceSampleForTests(double elapsedMilliseconds)
+    internal void RecordScaleCityPerformanceSampleForTests(
+        double physicsStepMilliseconds,
+        double fullFrameMilliseconds)
     {
         if (!_isActive || _scene != Physics3DShowcaseScene.ScaleCity)
         {
             throw new InvalidOperationException("Scale City performance samples require an active Scale City scene.");
         }
 
-        RecordScaleCityPerformanceSample(elapsedMilliseconds);
+        RecordScaleCityPhysicsPerformanceSample(physicsStepMilliseconds);
+        RecordScaleCityFramePerformanceSample(fullFrameMilliseconds);
     }
 
     internal bool IsScaleCitySparseBody(Physics3DBodyId body)
@@ -205,7 +227,8 @@ internal sealed partial class Physics3DShowcaseRuntime
                 linearVelocity,
                 angularVelocity,
                 Physics3DContinuousDetectionMode.Passive,
-                color);
+                color,
+                synchronizePoseToEcs: false);
         }
 
         _benchmarkBodies = bodyCount;
@@ -220,20 +243,68 @@ internal sealed partial class Physics3DShowcaseRuntime
 
         _scaleCityPerformanceSamples = new double[capacity];
         _scaleCityPerformanceSortWorkspace = new double[capacity];
+        _scaleCityFramePerformanceSamples = new double[capacity];
+        _scaleCityFramePerformanceSortWorkspace = new double[capacity];
     }
 
     private void ResetScaleCityPerformanceWindow()
     {
         _scaleCityPerformanceSampleCount = 0;
         _scaleCityPerformanceNextSampleIndex = 0;
+        _scaleCityFramePerformanceSampleCount = 0;
+        _scaleCityFramePerformanceNextSampleIndex = 0;
         _scaleCityStepP50Milliseconds = 0d;
         _scaleCityStepP95Milliseconds = 0d;
         _scaleCityStepP99Milliseconds = 0d;
+        _scaleCityFrameP50Milliseconds = 0d;
+        _scaleCityFrameP95Milliseconds = 0d;
+        _scaleCityFrameP99Milliseconds = 0d;
+        _scaleCityFrameStartTimestamp = 0;
+        _scaleCityFrameStartAllocatedBytes = 0L;
+        _scaleCityFrameCallingThreadAllocatedBytesLastStep = 0L;
+        _scaleCityPhysicsWorkerAllocatedBytesLastStep = 0L;
+        _scaleCityFrameMeasurementPending = false;
         Array.Clear(_scaleCityPerformanceSamples, 0, _scaleCityPerformanceSamples.Length);
         Array.Clear(_scaleCityPerformanceSortWorkspace, 0, _scaleCityPerformanceSortWorkspace.Length);
+        Array.Clear(_scaleCityFramePerformanceSamples, 0, _scaleCityFramePerformanceSamples.Length);
+        Array.Clear(_scaleCityFramePerformanceSortWorkspace, 0, _scaleCityFramePerformanceSortWorkspace.Length);
     }
 
-    private void RecordScaleCityPerformanceSample(double elapsedMilliseconds)
+    private void RecordScaleCityPhysicsPerformanceSample(double elapsedMilliseconds)
+    {
+        RecordScaleCityPerformanceSample(
+            elapsedMilliseconds,
+            _scaleCityPerformanceSamples,
+            _scaleCityPerformanceSortWorkspace,
+            ref _scaleCityPerformanceSampleCount,
+            ref _scaleCityPerformanceNextSampleIndex,
+            out _scaleCityStepP50Milliseconds,
+            out _scaleCityStepP95Milliseconds,
+            out _scaleCityStepP99Milliseconds);
+    }
+
+    private void RecordScaleCityFramePerformanceSample(double elapsedMilliseconds)
+    {
+        RecordScaleCityPerformanceSample(
+            elapsedMilliseconds,
+            _scaleCityFramePerformanceSamples,
+            _scaleCityFramePerformanceSortWorkspace,
+            ref _scaleCityFramePerformanceSampleCount,
+            ref _scaleCityFramePerformanceNextSampleIndex,
+            out _scaleCityFrameP50Milliseconds,
+            out _scaleCityFrameP95Milliseconds,
+            out _scaleCityFrameP99Milliseconds);
+    }
+
+    private static void RecordScaleCityPerformanceSample(
+        double elapsedMilliseconds,
+        double[] samples,
+        double[] sortWorkspace,
+        ref int sampleCount,
+        ref int nextSampleIndex,
+        out double p50Milliseconds,
+        out double p95Milliseconds,
+        out double p99Milliseconds)
     {
         if (!double.IsFinite(elapsedMilliseconds) || elapsedMilliseconds < 0d)
         {
@@ -241,59 +312,87 @@ internal sealed partial class Physics3DShowcaseRuntime
                 $"Scale City performance sample must be finite and non-negative, but was {elapsedMilliseconds}.");
         }
 
-        _scaleCityPerformanceSamples[_scaleCityPerformanceNextSampleIndex] = elapsedMilliseconds;
-        _scaleCityPerformanceNextSampleIndex++;
-        if (_scaleCityPerformanceNextSampleIndex == _scaleCityPerformanceSamples.Length)
+        if (samples.Length == 0 || sortWorkspace.Length != samples.Length)
         {
-            _scaleCityPerformanceNextSampleIndex = 0;
+            throw new InvalidOperationException("Scale City performance storage must be initialized before recording samples.");
         }
 
-        if (_scaleCityPerformanceSampleCount < _scaleCityPerformanceSamples.Length)
+        samples[nextSampleIndex] = elapsedMilliseconds;
+        nextSampleIndex++;
+        if (nextSampleIndex == samples.Length)
         {
-            _scaleCityPerformanceSampleCount++;
+            nextSampleIndex = 0;
         }
 
-        Array.Copy(
-            _scaleCityPerformanceSamples,
-            _scaleCityPerformanceSortWorkspace,
-            _scaleCityPerformanceSampleCount);
-        SortScaleCityPerformanceWorkspace();
-        _scaleCityStepP50Milliseconds = ScaleCityPercentile(0.50d);
-        _scaleCityStepP95Milliseconds = ScaleCityPercentile(0.95d);
-        _scaleCityStepP99Milliseconds = ScaleCityPercentile(0.99d);
-    }
-
-    private void SortScaleCityPerformanceWorkspace()
-    {
-        for (int index = 1; index < _scaleCityPerformanceSampleCount; index++)
+        if (sampleCount < samples.Length)
         {
-            double value = _scaleCityPerformanceSortWorkspace[index];
+            sampleCount++;
+        }
+
+        Array.Copy(samples, sortWorkspace, sampleCount);
+        for (int index = 1; index < sampleCount; index++)
+        {
+            double value = sortWorkspace[index];
             int insertionIndex = index;
             while (insertionIndex > 0 &&
-                   _scaleCityPerformanceSortWorkspace[insertionIndex - 1] > value)
+                   sortWorkspace[insertionIndex - 1] > value)
             {
-                _scaleCityPerformanceSortWorkspace[insertionIndex] =
-                    _scaleCityPerformanceSortWorkspace[insertionIndex - 1];
+                sortWorkspace[insertionIndex] = sortWorkspace[insertionIndex - 1];
                 insertionIndex--;
             }
 
-            _scaleCityPerformanceSortWorkspace[insertionIndex] = value;
+            sortWorkspace[insertionIndex] = value;
         }
+
+        p50Milliseconds = ScaleCityPercentile(sortWorkspace, sampleCount, 0.50d);
+        p95Milliseconds = ScaleCityPercentile(sortWorkspace, sampleCount, 0.95d);
+        p99Milliseconds = ScaleCityPercentile(sortWorkspace, sampleCount, 0.99d);
     }
 
-    private double ScaleCityPercentile(double percentile)
+    private static double ScaleCityPercentile(double[] sortedSamples, int sampleCount, double percentile)
     {
-        if (_scaleCityPerformanceSampleCount == 0)
+        if (sampleCount == 0)
         {
             return 0d;
         }
 
-        double index = (_scaleCityPerformanceSampleCount - 1) * percentile;
+        double index = (sampleCount - 1) * percentile;
         int lowerIndex = (int)index;
-        int upperIndex = Math.Min(lowerIndex + 1, _scaleCityPerformanceSampleCount - 1);
+        int upperIndex = Math.Min(lowerIndex + 1, sampleCount - 1);
         double fraction = index - lowerIndex;
-        double lower = _scaleCityPerformanceSortWorkspace[lowerIndex];
-        return lower + ((_scaleCityPerformanceSortWorkspace[upperIndex] - lower) * fraction);
+        double lower = sortedSamples[lowerIndex];
+        return lower + ((sortedSamples[upperIndex] - lower) * fraction);
+    }
+
+    private void BeginScaleCityFrameMeasurement()
+    {
+        _scaleCityFrameStartTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        _scaleCityFrameStartAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+        _scaleCityFrameMeasurementPending = true;
+    }
+
+    private void CompleteScaleCityFrameMeasurement()
+    {
+        if (!_scaleCityFrameMeasurementPending)
+        {
+            return;
+        }
+
+        long elapsedTicks = System.Diagnostics.Stopwatch.GetTimestamp() - _scaleCityFrameStartTimestamp;
+        _scaleCityFrameCallingThreadAllocatedBytesLastStep =
+            GC.GetAllocatedBytesForCurrentThread() - _scaleCityFrameStartAllocatedBytes;
+        _scaleCityPhysicsWorkerAllocatedBytesLastStep =
+            RequirePhysicsWorld().LastStepMetrics.Total.BackgroundWorkerAllocatedBytes;
+        _scaleCityFrameMeasurementPending = false;
+        double elapsedMilliseconds = elapsedTicks * 1000d / System.Diagnostics.Stopwatch.Frequency;
+        RecordScaleCityFramePerformanceSample(elapsedMilliseconds);
+    }
+
+    private void CancelScaleCityFrameMeasurement()
+    {
+        _scaleCityFrameMeasurementPending = false;
+        _scaleCityFrameStartTimestamp = 0;
+        _scaleCityFrameStartAllocatedBytes = 0L;
     }
 
     private void PrepareScaleCityFixedStep()
@@ -462,7 +561,9 @@ internal sealed partial class Physics3DShowcaseRuntime
                         AngularVelocityRadiansPerSecond = angularVelocity,
                         Awake = true
                     };
-                    SetBodyStateAndPose(_scaleCityFirstSparseBodyIndex + sparseIndex, in state);
+                    RequirePhysicsWorld().SetBodyState(
+                        _bodyIds[_scaleCityFirstSparseBodyIndex + sparseIndex],
+                        in state);
                     _scaleCitySparseRecycledBodiesLastStep++;
                 }
             }

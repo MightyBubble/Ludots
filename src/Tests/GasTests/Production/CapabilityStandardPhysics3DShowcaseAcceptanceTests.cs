@@ -663,25 +663,60 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
         int visibleBodyLimit = runtime.ActiveConfig.VisibleBodyLimit;
         TickUntil(engine, () => runtime.VisibleBodyCount == visibleBodyLimit, maximumFrames: 128);
         Assert.That(runtime.VisibleBodyCount, Is.EqualTo(visibleBodyLimit));
-        for (int i = 0; i < 10; i++)
+        int requiredZeroAllocationFrames = runtime.ActiveConfig.BenchmarkCycleSteps;
+        int maximumStabilitySearchFrames = checked(requiredZeroAllocationFrames * 3);
+        int consecutiveZeroAllocationFrames = 0;
+        for (int i = 0;
+             i < maximumStabilitySearchFrames && consecutiveZeroAllocationFrames < requiredZeroAllocationFrames;
+             i++)
         {
             TickUntilNextPhysicsStep(engine, simulation);
+            Physics3DScaleCityShowcaseState stability = runtime.ScaleCityState;
+            consecutiveZeroAllocationFrames =
+                stability.FrameCallingThreadAllocatedBytesLastStep == 0L &&
+                stability.PhysicsWorkerAllocatedBytesLastStep == 0L
+                    ? consecutiveZeroAllocationFrames + 1
+                    : 0;
         }
+        Assert.That(
+            consecutiveZeroAllocationFrames,
+            Is.EqualTo(requiredZeroAllocationFrames),
+            $"50K Scale City did not reach {requiredZeroAllocationFrames} consecutive zero-allocation frames " +
+            $"within {maximumStabilitySearchFrames} authoritative steps.");
 
         Assert.That(
             runtime.TryGetBodyVisual(1, out Physics3DBodyState probeBefore, out _, out _, out _, out _, out _),
             Is.True);
         bool observedRelaunch = false;
-        var fiftyThousandSamples = new double[30];
+        var fiftyThousandSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
+        var fiftyThousandEngineTickSamples = new double[runtime.ActiveConfig.ScaleCity.PerformanceWindowSampleCount];
         int fiftyThousandPeakContactPairs = 0;
+        float maximumForegroundTravelCm = 0f;
+        long maximumFrameCallingThreadAllocatedBytes = 0L;
+        long maximumPhysicsWorkerAllocatedBytes = 0L;
         for (int i = 0; i < fiftyThousandSamples.Length; i++)
         {
-            TickUntilNextPhysicsStep(engine, simulation);
+            fiftyThousandEngineTickSamples[i] = TickUntilNextPhysicsStep(engine, simulation);
             fiftyThousandSamples[i] = simulation.PhysicsUpdateMillisecondsLastUpdate;
             fiftyThousandPeakContactPairs = Math.Max(fiftyThousandPeakContactPairs, world.ContactPairCount);
             observedRelaunch |= runtime.BenchmarkRecycledBodiesLastStep > 0;
+            Physics3DScaleCityShowcaseState sampledScaleCity = runtime.ScaleCityState;
+            maximumFrameCallingThreadAllocatedBytes = Math.Max(
+                maximumFrameCallingThreadAllocatedBytes,
+                sampledScaleCity.FrameCallingThreadAllocatedBytesLastStep);
+            maximumPhysicsWorkerAllocatedBytes = Math.Max(
+                maximumPhysicsWorkerAllocatedBytes,
+                sampledScaleCity.PhysicsWorkerAllocatedBytesLastStep);
+            Assert.That(
+                runtime.TryGetBodyVisual(1, out Physics3DBodyState sampledProbe, out _, out _, out _, out _, out _),
+                Is.True);
+            maximumForegroundTravelCm = MathF.Max(
+                maximumForegroundTravelCm,
+                (sampledProbe.PositionCm - probeBefore.PositionCm).Length());
         }
         double fiftyThousandP95 = Percentile(fiftyThousandSamples, 0.95d);
+        double fiftyThousandEngineTickP95 = Percentile(fiftyThousandEngineTickSamples, 0.95d);
+        double fiftyThousandEngineTickP99 = Percentile(fiftyThousandEngineTickSamples, 0.99d);
         Physics3DScaleCityShowcaseState fiftyThousandState =
             AssertScaleCityContactEvidence(runtime, world, expectedBodies: 50_000);
         int fiftyThousandSteadyContactPairs = fiftyThousandState.ContactPairs;
@@ -689,15 +724,46 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             fiftyThousandP95,
             Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds),
             $"50K Scale City Physics3D P95 {fiftyThousandP95:0.###}ms exceeds the configured 30Hz budget.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(fiftyThousandState.PerformanceStatus, Is.EqualTo(Physics3DScaleCityPerformanceStatus.Pass));
+            Assert.That(
+                fiftyThousandState.FullFrameP95Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(
+                fiftyThousandState.FullFrameP99Milliseconds,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(
+                fiftyThousandEngineTickP95,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+            Assert.That(
+                fiftyThousandEngineTickP99,
+                Is.LessThanOrEqualTo(runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds));
+        });
         Assert.That(fiftyThousandPeakContactPairs, Is.GreaterThan(0), "Scale City foreground never produced real contacts.");
         Assert.That(observedRelaunch, Is.True, "Scale City never relaunched an authored wave.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                maximumFrameCallingThreadAllocatedBytes,
+                Is.Zero,
+                "The 50K complete authoritative frame allocated managed memory on the calling thread after stabilization.");
+            Assert.That(
+                maximumPhysicsWorkerAllocatedBytes,
+                Is.Zero,
+                "The 50K Physics3D workers allocated managed memory after stabilization.");
+        });
         Assert.That(
             runtime.TryGetBodyVisual(1, out Physics3DBodyState probeAfter, out _, out _, out _, out _, out _),
             Is.True);
         Assert.That(
-            (probeAfter.PositionCm - probeBefore.PositionCm).Length(),
+            maximumForegroundTravelCm,
             Is.GreaterThan(runtime.ActiveConfig.BodySizeCm),
             "The 50K world was counted but its visible rigid bodies did not keep moving.");
+        Assert.That(
+            (probeAfter.PositionCm - probeBefore.PositionCm).Length(),
+            Is.GreaterThan(0f),
+            "The visible foreground probe did not move during the final authoritative step.");
         trace.Add(JsonSerializer.Serialize(new
         {
             step = "scale-city-50k-functional",
@@ -710,10 +776,17 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             windAccelerationXCmPerSecondSquared = fiftyThousandState.WindAccelerationXCmPerSecondSquared,
             lastLauncherWaveIndex = fiftyThousandState.LastLauncherWaveIndex,
             continuousRelaunch = observedRelaunch,
+            maximumForegroundTravelCm,
+            maximumFrameCallingThreadAllocatedBytes,
+            maximumPhysicsWorkerAllocatedBytes,
             physicsP95Ms = fiftyThousandP95,
+            completeFrameP95Ms = fiftyThousandState.FullFrameP95Milliseconds,
+            completeFrameP99Ms = fiftyThousandState.FullFrameP99Milliseconds,
+            engineTickP95Ms = fiftyThousandEngineTickP95,
+            engineTickP99Ms = fiftyThousandEngineTickP99,
             peakContactPairs = fiftyThousandPeakContactPairs,
             steadyContactPairs = fiftyThousandSteadyContactPairs,
-            budget = fiftyThousandP95 <= runtime.ActiveConfig.BenchmarkRealTimeBudgetMilliseconds
+            budget = fiftyThousandState.PerformanceStatus == Physics3DScaleCityPerformanceStatus.Pass
                 ? "realtime"
                 : "over-30hz-budget"
         }));

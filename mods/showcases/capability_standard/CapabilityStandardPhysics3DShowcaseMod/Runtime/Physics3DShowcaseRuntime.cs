@@ -237,6 +237,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
 
     internal void PrepareFixedStep()
     {
+        CancelScaleCityFrameMeasurement();
         if (!_isActive)
         {
             return;
@@ -258,6 +259,11 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             return;
         }
 
+        if (_scene == Physics3DShowcaseScene.ScaleCity)
+        {
+            BeginScaleCityFrameMeasurement();
+        }
+
         CaptureCharacterTraversalInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         CaptureWheelLabInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         PrepareSceneForPhysicsStep();
@@ -275,6 +281,15 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         {
             _sceneStep++;
             ObserveSceneAfterPhysicsStep();
+        }
+
+        if (_scene == Physics3DShowcaseScene.ScaleCity && steps > 0)
+        {
+            CompleteScaleCityFrameMeasurement();
+        }
+        else
+        {
+            CancelScaleCityFrameMeasurement();
         }
     }
 
@@ -827,7 +842,8 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         Physics3DBodyContactPolicy contactPolicy = default,
         LayerMask? collisionLayer = null,
         Physics3DCollisionSubgroup collisionSubgroup = default,
-        Physics3DMaterial? material = null)
+        Physics3DMaterial? material = null,
+        bool synchronizePoseToEcs = true)
     {
         if (_bodyCount >= _bodyIds.Length)
         {
@@ -835,16 +851,20 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         }
 
         World ecsWorld = RequireEcsWorld();
-        Entity entity = ecsWorld.Create(
-            new Physics3DBodyCm { Id = default, Kind = bodyKind },
-            new Physics3DPoseCm
-            {
-                Position = positionCm,
-                Orientation = orientation,
-                LinearVelocity = linearVelocityCmPerSecond,
-                AngularVelocity = angularVelocityRadiansPerSecond
-            },
-            new PreviousPhysics3DPoseCm { Position = positionCm, Orientation = orientation });
+        Entity entity = Entity.Null;
+        if (synchronizePoseToEcs)
+        {
+            entity = ecsWorld.Create(
+                new Physics3DBodyCm { Id = default, Kind = bodyKind },
+                new Physics3DPoseCm
+                {
+                    Position = positionCm,
+                    Orientation = orientation,
+                    LinearVelocity = linearVelocityCmPerSecond,
+                    AngularVelocity = angularVelocityRadiansPerSecond
+                },
+                new PreviousPhysics3DPoseCm { Position = positionCm, Orientation = orientation });
+        }
 
         Physics3DBodyId body;
         try
@@ -866,11 +886,18 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         }
         catch
         {
-            ecsWorld.Destroy(entity);
+            if (ecsWorld.IsAlive(entity))
+            {
+                ecsWorld.Destroy(entity);
+            }
+
             throw;
         }
 
-        ecsWorld.Set(entity, new Physics3DBodyCm { Id = body, Kind = bodyKind });
+        if (synchronizePoseToEcs)
+        {
+            ecsWorld.Set(entity, new Physics3DBodyCm { Id = body, Kind = bodyKind });
+        }
         int index = _bodyCount++;
         _bodyIds[index] = body;
         _bodyEntities[index] = entity;
