@@ -71,10 +71,24 @@ internal static class LiteNetLibContentFingerprintComposer
         return content;
     }
 
-    internal static bool IsCoreResolverOwnedAssembly(Assembly assembly)
+    internal static ManagedAssemblyResolverScope GetLoadedDependencyResolverScope(
+        ManagedAssemblyResolverScope sourceScope,
+        Assembly loadedDependency)
     {
-        ArgumentNullException.ThrowIfNull(assembly);
-        return BuildCoreHostAssemblyCatalog(typeof(GameEngine).Assembly).Contains(assembly);
+        ArgumentNullException.ThrowIfNull(loadedDependency);
+        // Loading location identifies the executed bytes; the root graph owns resolver policy.
+        return sourceScope;
+    }
+
+    internal static IReadOnlyList<string> ReadGameplayAssemblyReferenceNames(byte[] assemblyBytes)
+    {
+        ArgumentNullException.ThrowIfNull(assemblyBytes);
+        HashSet<string> runtimeFrameworkAssemblies = GetRuntimeFrameworkAssemblyNames();
+        return ReadManagedAssemblyReferences(assemblyBytes, "Managed assembly reference test input")
+            .Select(static reference => reference.Name ?? string.Empty)
+            .Where(name => !IsExcludedAssemblyReference(name, runtimeFrameworkAssemblies))
+            .OrderBy(static name => name, StringComparer.Ordinal)
+            .ToArray();
     }
 
     internal static ContentFingerprint ComposeFromHostContent(
@@ -198,7 +212,6 @@ internal static class LiteNetLibContentFingerprintComposer
         IReadOnlyList<Assembly> loadedAssemblies = modLoader.LoadedAssemblies;
         Assembly coreAssembly = typeof(GameEngine).Assembly;
         List<Assembly> coreAssemblyCatalog = BuildCoreHostAssemblyCatalog(coreAssembly);
-        var coreHostAssemblies = new HashSet<Assembly>(coreAssemblyCatalog);
         List<Assembly> modAssemblyCatalog = BuildAssemblyCatalog(
             loadedAssemblies,
             coreAssemblyCatalog);
@@ -216,12 +229,23 @@ internal static class LiteNetLibContentFingerprintComposer
             coreAssembly,
             coreBytes,
             "Ludots Core assembly",
-            ManagedAssemblyResolverScope.Core,
-            coreHostAssemblies);
+            ManagedAssemblyResolverScope.Core);
         content.Add(new ContentFingerprintContent(
             "assemblies/gameplay/core/Ludots.Core.dll",
             coreBytes));
         EnqueueOnce(coreNode, pending, seenMvids);
+        AddAssemblySearchRoot(coreAssemblyPath, coreResolvers, coreSearchDirectories);
+        DrainManagedAssemblyClosure(
+            content,
+            pending,
+            seenMvids,
+            runtimeFrameworkAssemblies,
+            coreAssemblyCatalog,
+            modAssemblyCatalog,
+            coreResolvers,
+            coreSearchDirectories,
+            modResolvers,
+            modSearchDirectories);
 
         for (int i = 0; i < managedRoots.Count; i++)
         {
@@ -257,8 +281,7 @@ internal static class LiteNetLibContentFingerprintComposer
                 loadedMain,
                 executedBytes,
                 $"Loaded mod assembly '{root.ModId}'",
-                ManagedAssemblyResolverScope.ModPlan,
-                coreHostAssemblies);
+                ManagedAssemblyResolverScope.ModPlan);
             content.Add(new ContentFingerprintContent(
                 $"assemblies/gameplay/mods/{root.ModId}/{LogicalAssemblyFileName(loadedMain)}",
                 executedBytes));
@@ -267,8 +290,31 @@ internal static class LiteNetLibContentFingerprintComposer
             AddSearchDirectory(modSearchDirectories, Path.GetDirectoryName(root.MainFullPath));
         }
 
-        AddAssemblySearchRoot(coreAssemblyPath, coreResolvers, coreSearchDirectories);
+        DrainManagedAssemblyClosure(
+            content,
+            pending,
+            seenMvids,
+            runtimeFrameworkAssemblies,
+            coreAssemblyCatalog,
+            modAssemblyCatalog,
+            coreResolvers,
+            coreSearchDirectories,
+            modResolvers,
+            modSearchDirectories);
+    }
 
+    private static void DrainManagedAssemblyClosure(
+        List<ContentFingerprintContent> content,
+        Queue<ManagedAssemblyNode> pending,
+        HashSet<Guid> seenMvids,
+        IReadOnlySet<string> runtimeFrameworkAssemblies,
+        IReadOnlyList<Assembly> coreAssemblyCatalog,
+        IReadOnlyList<Assembly> modAssemblyCatalog,
+        IReadOnlyList<AssemblyDependencyResolver> coreResolvers,
+        IReadOnlyList<string> coreSearchDirectories,
+        IReadOnlyList<AssemblyDependencyResolver> modResolvers,
+        IReadOnlyList<string> modSearchDirectories)
+    {
         while (pending.Count > 0)
         {
             ManagedAssemblyNode source = pending.Dequeue();
@@ -279,22 +325,20 @@ internal static class LiteNetLibContentFingerprintComposer
             {
                 AssemblyName reference = references[i];
                 string referenceName = reference.Name ?? string.Empty;
-                if (runtimeFrameworkAssemblies.Contains(referenceName) ||
-                    IsNonGameplayAssembly(referenceName))
+                if (IsExcludedAssemblyReference(referenceName, runtimeFrameworkAssemblies))
                 {
                     continue;
                 }
 
                 ManagedAssemblyNode dependency = ResolveManagedAssemblyNode(
-                    source.Scope,
+                    source,
                     reference,
                     coreAssemblyCatalog,
                     modAssemblyCatalog,
                     coreResolvers,
                     coreSearchDirectories,
                     modResolvers,
-                    modSearchDirectories,
-                    coreHostAssemblies);
+                    modSearchDirectories);
                 if (!seenMvids.Add(dependency.Mvid))
                 {
                     continue;
@@ -310,20 +354,21 @@ internal static class LiteNetLibContentFingerprintComposer
     }
 
     private static ManagedAssemblyNode ResolveManagedAssemblyNode(
-        ManagedAssemblyResolverScope scope,
+        ManagedAssemblyNode source,
         AssemblyName reference,
         IReadOnlyList<Assembly> coreAssemblyCatalog,
         IReadOnlyList<Assembly> modAssemblyCatalog,
         IReadOnlyList<AssemblyDependencyResolver> coreResolvers,
         IReadOnlyList<string> coreSearchDirectories,
         IReadOnlyList<AssemblyDependencyResolver> modResolvers,
-        IReadOnlyList<string> modSearchDirectories,
-        IReadOnlySet<Assembly> coreHostAssemblies)
+        IReadOnlyList<string> modSearchDirectories)
     {
+        ManagedAssemblyResolverScope scope = source.Scope;
         IReadOnlyList<Assembly> assemblyCatalog = scope == ManagedAssemblyResolverScope.Core
             ? coreAssemblyCatalog
             : modAssemblyCatalog;
-        Assembly? loaded = FindLoadedAssembly(assemblyCatalog, reference);
+        Assembly? loaded = FindLoadedAssembly(source.SourceLoadContext?.Assemblies, reference) ??
+            FindLoadedAssembly(assemblyCatalog, reference);
         if (loaded != null)
         {
             byte[] bytes;
@@ -338,7 +383,8 @@ internal static class LiteNetLibContentFingerprintComposer
                     coreResolvers,
                     coreSearchDirectories,
                     modResolvers,
-                    modSearchDirectories);
+                    modSearchDirectories,
+                    loaded.ManifestModule.ModuleVersionId);
                 bytes = ReadRequiredPhysicalFile(path, $"Gameplay dependency '{reference.FullName}'");
             }
 
@@ -346,8 +392,7 @@ internal static class LiteNetLibContentFingerprintComposer
                 loaded,
                 bytes,
                 $"Gameplay dependency '{reference.FullName}'",
-                scope,
-                coreHostAssemblies);
+                GetLoadedDependencyResolverScope(scope, loaded));
         }
 
         string sourcePath = ResolveRequiredAssemblyPath(
@@ -356,7 +401,8 @@ internal static class LiteNetLibContentFingerprintComposer
             coreResolvers,
             coreSearchDirectories,
             modResolvers,
-            modSearchDirectories);
+            modSearchDirectories,
+            requiredMvid: null);
         byte[] sourceBytes = ReadRequiredPhysicalFile(
             sourcePath,
             $"Gameplay dependency '{reference.FullName}'");
@@ -374,8 +420,7 @@ internal static class LiteNetLibContentFingerprintComposer
         Assembly loadedAssembly,
         byte[] bytes,
         string description,
-        ManagedAssemblyResolverScope scope,
-        IReadOnlySet<Assembly> coreHostAssemblies)
+        ManagedAssemblyResolverScope scope)
     {
         Guid loadedMvid;
         try
@@ -401,9 +446,8 @@ internal static class LiteNetLibContentFingerprintComposer
             sourceMvid,
             bytes,
             loadedAssembly.GetReferencedAssemblies(),
-            coreHostAssemblies.Contains(loadedAssembly)
-                ? ManagedAssemblyResolverScope.Core
-                : scope);
+            scope,
+            AssemblyLoadContext.GetLoadContext(loadedAssembly));
     }
 
     private static ManagedAssemblyNode CreateFileAssemblyNode(
@@ -416,7 +460,8 @@ internal static class LiteNetLibContentFingerprintComposer
             ReadManagedAssemblyMvid(bytes, description),
             bytes,
             ReadManagedAssemblyReferences(bytes, description),
-            scope);
+            scope,
+            SourceLoadContext: null);
 
     private static Assembly FindLoadedModMain(
         IReadOnlyList<Assembly> loadedAssemblies,
@@ -456,12 +501,16 @@ internal static class LiteNetLibContentFingerprintComposer
     }
 
     private static Assembly? FindLoadedAssembly(
-        IReadOnlyList<Assembly> assemblyCatalog,
+        IEnumerable<Assembly>? assemblyCatalog,
         AssemblyName reference)
     {
-        for (int i = 0; i < assemblyCatalog.Count; i++)
+        if (assemblyCatalog == null)
         {
-            Assembly candidate = assemblyCatalog[i];
+            return null;
+        }
+
+        foreach (Assembly candidate in assemblyCatalog)
+        {
             if (AssemblyName.ReferenceMatchesDefinition(reference, candidate.GetName()))
             {
                 return candidate;
@@ -471,19 +520,21 @@ internal static class LiteNetLibContentFingerprintComposer
         return null;
     }
 
-    private static string ResolveRequiredAssemblyPath(
+    internal static string ResolveRequiredAssemblyPath(
         ManagedAssemblyResolverScope scope,
         AssemblyName assemblyName,
         IReadOnlyList<AssemblyDependencyResolver> coreResolvers,
         IReadOnlyList<string> coreSearchDirectories,
         IReadOnlyList<AssemblyDependencyResolver> modResolvers,
-        IReadOnlyList<string> modSearchDirectories)
+        IReadOnlyList<string> modSearchDirectories,
+        Guid? requiredMvid)
     {
         if (scope == ManagedAssemblyResolverScope.ModPlan &&
             TryResolveAssemblyPath(
                 modResolvers,
                 modSearchDirectories,
                 assemblyName,
+                requiredMvid,
                 out string? modPath))
         {
             return modPath;
@@ -493,6 +544,7 @@ internal static class LiteNetLibContentFingerprintComposer
                 coreResolvers,
                 coreSearchDirectories,
                 assemblyName,
+                requiredMvid,
                 out string? corePath))
         {
             return corePath;
@@ -506,12 +558,14 @@ internal static class LiteNetLibContentFingerprintComposer
         IReadOnlyList<AssemblyDependencyResolver> resolvers,
         IReadOnlyList<string> searchDirectories,
         AssemblyName assemblyName,
+        Guid? requiredMvid,
         out string path)
     {
         for (int i = 0; i < resolvers.Count; i++)
         {
             string? resolvedPath = resolvers[i].ResolveAssemblyToPath(assemblyName);
-            if (!string.IsNullOrWhiteSpace(resolvedPath))
+            if (!string.IsNullOrWhiteSpace(resolvedPath) &&
+                IsMatchingAssemblySource(resolvedPath, assemblyName, requiredMvid))
             {
                 path = Path.GetFullPath(resolvedPath);
                 return true;
@@ -529,8 +583,7 @@ internal static class LiteNetLibContentFingerprintComposer
                     continue;
                 }
 
-                AssemblyName candidateIdentity = AssemblyName.GetAssemblyName(candidate);
-                if (AssemblyName.ReferenceMatchesDefinition(assemblyName, candidateIdentity))
+                if (IsMatchingAssemblySource(candidate, assemblyName, requiredMvid))
                 {
                     path = Path.GetFullPath(candidate);
                     return true;
@@ -540,6 +593,23 @@ internal static class LiteNetLibContentFingerprintComposer
 
         path = string.Empty;
         return false;
+    }
+
+    private static bool IsMatchingAssemblySource(
+        string candidatePath,
+        AssemblyName requestedIdentity,
+        Guid? requiredMvid)
+    {
+        AssemblyName candidateIdentity = AssemblyName.GetAssemblyName(candidatePath);
+        if (!AssemblyName.ReferenceMatchesDefinition(requestedIdentity, candidateIdentity))
+        {
+            return false;
+        }
+
+        return !requiredMvid.HasValue ||
+            ReadManagedAssemblyMvid(
+                ReadRequiredPhysicalFile(candidatePath, $"Managed assembly candidate '{candidatePath}'"),
+                $"Managed assembly candidate '{candidatePath}'") == requiredMvid.Value;
     }
 
     private static List<Assembly> BuildAssemblyCatalog(
@@ -595,16 +665,33 @@ internal static class LiteNetLibContentFingerprintComposer
         for (int i = 0; i < paths.Length; i++)
         {
             string fullPath = Path.GetFullPath(paths[i]);
-            string relative = Path.GetRelativePath(sharedFrameworkRoot, fullPath);
-            if (relative != ".." &&
-                !relative.StartsWith("../", StringComparison.Ordinal) &&
-                !relative.StartsWith("..\\", StringComparison.Ordinal))
+            if (IsPathWithinRoot(sharedFrameworkRoot, fullPath))
             {
                 names.Add(Path.GetFileNameWithoutExtension(fullPath));
             }
         }
 
         return names;
+    }
+
+    internal static bool IsSharedFrameworkAssemblyPath(
+        string runtimeDirectory,
+        string candidateAssemblyPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(candidateAssemblyPath);
+        return IsPathWithinRoot(
+            GetRequiredSharedFrameworkRoot(Path.GetFullPath(runtimeDirectory)),
+            Path.GetFullPath(candidateAssemblyPath));
+    }
+
+    private static bool IsPathWithinRoot(string rootPath, string candidatePath)
+    {
+        string relative = Path.GetRelativePath(rootPath, candidatePath);
+        return relative != ".." &&
+            !Path.IsPathRooted(relative) &&
+            !relative.StartsWith("../", StringComparison.Ordinal) &&
+            !relative.StartsWith("..\\", StringComparison.Ordinal);
     }
 
     private static string GetRequiredSharedFrameworkRoot(string runtimeDirectory)
@@ -641,6 +728,12 @@ internal static class LiteNetLibContentFingerprintComposer
 
         return false;
     }
+
+    private static bool IsExcludedAssemblyReference(
+        string assemblyName,
+        IReadOnlySet<string> runtimeFrameworkAssemblies) =>
+        runtimeFrameworkAssemblies.Contains(assemblyName) ||
+        IsNonGameplayAssembly(assemblyName);
 
     private static void EnqueueOnce(
         ManagedAssemblyNode node,
@@ -1060,9 +1153,10 @@ internal static class LiteNetLibContentFingerprintComposer
         Guid Mvid,
         byte[] Bytes,
         AssemblyName[] References,
-        ManagedAssemblyResolverScope Scope);
+        ManagedAssemblyResolverScope Scope,
+        AssemblyLoadContext? SourceLoadContext);
 
-    private enum ManagedAssemblyResolverScope : byte
+    internal enum ManagedAssemblyResolverScope : byte
     {
         Core = 0,
         ModPlan = 1,

@@ -1,4 +1,7 @@
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
 using Ludots.Adapter.LiteNetLib;
 using Ludots.Core.Hosting;
@@ -188,28 +191,118 @@ public sealed class LiteNetLibContentFingerprintComposerTests
     }
 
     [Test]
-    public void LoadedAssemblyResolverScope_FollowsHostOrIsolatedLoadOwnership()
+    public void PlatformAssemblyBoundary_PrunesARealManagedReferenceEdge()
     {
-        Assembly defaultLoaded = typeof(LiteNetLibContentFingerprintComposerTests).Assembly;
-        Assert.That(
-            LiteNetLibContentFingerprintComposer.IsCoreResolverOwnedAssembly(defaultLoaded),
-            Is.True);
+        byte[] rootAssembly = BuildManagedAssembly(
+            "Gameplay.Root",
+            Guid.NewGuid(),
+            "Ludots.Presentation.Skia",
+            "System.Runtime",
+            "Arch");
 
-        var isolatedContext = new AssemblyLoadContext(
-            $"{nameof(LoadedAssemblyResolverScope_FollowsHostOrIsolatedLoadOwnership)}-{Guid.NewGuid():N}",
-            isCollectible: true);
-        try
+        IReadOnlyList<string> gameplayReferences = LiteNetLibContentFingerprintComposer
+            .ReadGameplayAssemblyReferenceNames(rootAssembly);
+
+        Assert.That(gameplayReferences, Is.EqualTo(new[] { "Arch" }));
+    }
+
+    [Test]
+    public void SharedFrameworkBoundary_CoversEveryFrameworkUnderTheRuntimeSharedRoot()
+    {
+        string sharedRoot = Path.Combine(_testRoot, "dotnet", "shared");
+        string runtimeDirectory = Path.Combine(sharedRoot, "Microsoft.NETCore.App", "8.0.25");
+        string aspNetAssembly = Path.Combine(
+            sharedRoot,
+            "Microsoft.AspNetCore.App",
+            "8.0.25",
+            "Microsoft.Extensions.DependencyInjection.dll");
+        string windowsDesktopAssembly = Path.Combine(
+            sharedRoot,
+            "Microsoft.WindowsDesktop.App",
+            "8.0.25",
+            "PresentationCore.dll");
+        string applicationAssembly = Path.Combine(_testRoot, "game", "Gameplay.Rules.dll");
+
+        Assert.Multiple(() =>
         {
-            using Stream assemblyBytes = File.OpenRead(defaultLoaded.Location);
-            Assembly isolated = isolatedContext.LoadFromStream(assemblyBytes);
             Assert.That(
-                LiteNetLibContentFingerprintComposer.IsCoreResolverOwnedAssembly(isolated),
+                LiteNetLibContentFingerprintComposer.IsSharedFrameworkAssemblyPath(
+                    runtimeDirectory,
+                    aspNetAssembly),
+                Is.True);
+            Assert.That(
+                LiteNetLibContentFingerprintComposer.IsSharedFrameworkAssemblyPath(
+                    runtimeDirectory,
+                    windowsDesktopAssembly),
+                Is.True);
+            Assert.That(
+                LiteNetLibContentFingerprintComposer.IsSharedFrameworkAssemblyPath(
+                    runtimeDirectory,
+                    applicationAssembly),
                 Is.False);
-        }
-        finally
+        });
+    }
+
+    [Test]
+    public void ResolverScope_BindsCoreAndLocationlessModDependenciesToTheirActualSources()
+    {
+        string coreDirectory = Path.Combine(_testRoot, "host");
+        string firstModDirectory = Path.Combine(_testRoot, "mods", "First");
+        string secondModDirectory = Path.Combine(_testRoot, "mods", "Second");
+        Directory.CreateDirectory(coreDirectory);
+        Directory.CreateDirectory(firstModDirectory);
+        Directory.CreateDirectory(secondModDirectory);
+
+        const string dependencyName = "Shared.Gameplay.Dependency";
+        Guid coreMvid = Guid.NewGuid();
+        Guid firstModMvid = Guid.NewGuid();
+        Guid secondModMvid = Guid.NewGuid();
+        string corePath = WriteManagedAssembly(coreDirectory, dependencyName, coreMvid);
+        WriteManagedAssembly(firstModDirectory, dependencyName, firstModMvid);
+        string secondModPath = WriteManagedAssembly(secondModDirectory, dependencyName, secondModMvid);
+        AssemblyName reference = AssemblyName.GetAssemblyName(corePath);
+        var noResolvers = Array.Empty<AssemblyDependencyResolver>();
+
+        string resolvedCore = LiteNetLibContentFingerprintComposer.ResolveRequiredAssemblyPath(
+            LiteNetLibContentFingerprintComposer.ManagedAssemblyResolverScope.Core,
+            reference,
+            noResolvers,
+            new[] { coreDirectory },
+            noResolvers,
+            new[] { firstModDirectory, secondModDirectory },
+            requiredMvid: null);
+        string resolvedSecondMod = LiteNetLibContentFingerprintComposer.ResolveRequiredAssemblyPath(
+            LiteNetLibContentFingerprintComposer.ManagedAssemblyResolverScope.ModPlan,
+            reference,
+            noResolvers,
+            new[] { coreDirectory },
+            noResolvers,
+            new[] { firstModDirectory, secondModDirectory },
+            secondModMvid);
+
+        Assert.Multiple(() =>
         {
-            isolatedContext.Unload();
-        }
+            Assert.That(resolvedCore, Is.EqualTo(Path.GetFullPath(corePath)));
+            Assert.That(resolvedSecondMod, Is.EqualTo(Path.GetFullPath(secondModPath)));
+        });
+    }
+
+    [Test]
+    public void LoadedModDependency_PreloadedInDefaultContext_KeepsModResolverScope()
+    {
+        Assembly preloadedModDependency = typeof(LiteNetLibContentFingerprintComposerTests).Assembly;
+        Assert.That(
+            AssemblyLoadContext.GetLoadContext(preloadedModDependency),
+            Is.SameAs(AssemblyLoadContext.Default));
+
+        LiteNetLibContentFingerprintComposer.ManagedAssemblyResolverScope scope =
+            LiteNetLibContentFingerprintComposer.GetLoadedDependencyResolverScope(
+                LiteNetLibContentFingerprintComposer.ManagedAssemblyResolverScope.ModPlan,
+                preloadedModDependency);
+
+        Assert.That(
+            scope,
+            Is.EqualTo(LiteNetLibContentFingerprintComposer.ManagedAssemblyResolverScope.ModPlan));
     }
 
     private ContentFingerprint Compose(
@@ -260,6 +353,62 @@ public sealed class LiteNetLibContentFingerprintComposerTests
 
     private static ContentFingerprintContent ManagedAssembly(string logicalPath, params byte[] bytes) =>
         new(logicalPath, bytes);
+
+    private static string WriteManagedAssembly(string directory, string assemblyName, Guid mvid)
+    {
+        string path = Path.Combine(directory, assemblyName + ".dll");
+        File.WriteAllBytes(path, BuildManagedAssembly(assemblyName, mvid));
+        return path;
+    }
+
+    private static byte[] BuildManagedAssembly(
+        string assemblyName,
+        Guid mvid,
+        params string[] referencedAssemblies)
+    {
+        var metadata = new MetadataBuilder();
+        metadata.AddModule(
+            generation: 0,
+            moduleName: metadata.GetOrAddString(assemblyName + ".dll"),
+            mvid: metadata.GetOrAddGuid(mvid),
+            encId: default,
+            encBaseId: default);
+        metadata.AddAssembly(
+            name: metadata.GetOrAddString(assemblyName),
+            version: new Version(1, 0, 0, 0),
+            culture: default,
+            publicKey: default,
+            flags: (AssemblyFlags)0,
+            hashAlgorithm: AssemblyHashAlgorithm.None);
+        for (int i = 0; i < referencedAssemblies.Length; i++)
+        {
+            metadata.AddAssemblyReference(
+                name: metadata.GetOrAddString(referencedAssemblies[i]),
+                version: new Version(1, 0, 0, 0),
+                culture: default,
+                publicKeyOrToken: default,
+                flags: (AssemblyFlags)0,
+                hashValue: default);
+        }
+
+        metadata.AddTypeDefinition(
+            attributes: TypeAttributes.NotPublic,
+            @namespace: default,
+            name: metadata.GetOrAddString("<Module>"),
+            baseType: default,
+            fieldList: MetadataTokens.FieldDefinitionHandle(1),
+            methodList: MetadataTokens.MethodDefinitionHandle(1));
+
+        var peBuilder = new ManagedPEBuilder(
+            new PEHeaderBuilder(
+                imageCharacteristics: Characteristics.ExecutableImage | Characteristics.Dll),
+            new MetadataRootBuilder(metadata),
+            new BlobBuilder(),
+            flags: CorFlags.ILOnly);
+        var image = new BlobBuilder();
+        peBuilder.Serialize(image);
+        return image.ToArray();
+    }
 
     private sealed record TestHost(
         IVirtualFileSystem Vfs,
