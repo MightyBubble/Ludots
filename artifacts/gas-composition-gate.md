@@ -2,6 +2,77 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 / #689 Final Gate Repair - Order Runtime Transactions - 2026-07-25
+
+- **Task / Issue**: Close #689 gate blockers for PR #660 current head, covering order admission capacity, pending retry terminal outcomes, AbilityExec structural mutation rules, move-then-cast rejection semantics, collection command-panel aiming, runtime spawn transaction boundaries, and runtime capacity validation.
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing GAS order/input/spawn execution boundaries.
+
+Result: PASS.
+
+Reason: The repair reuses existing `OrderQueue`, `OrderAdmissionResultBuffer`, `OrderBufferSystem`, `OrderSubmitter`, `OrderContinuationSystem`, `AbilityExecSystem`, `CompositeOrderPlanner`, `InputOrderMappingSystem`, `GasEntityCommandPanelSource`, `CollectionGasEntityCommandPanelSource`, `RuntimeEntitySpawnSystem`, and `GasRuntimeCapacityConfig`. It adds no graph op, effect preset enum, gameplay profile field, loader, registry, fallback path, compatibility bypass, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Batch EntityIntake admission-capacity rejection | N/A | Existing `OrderAdmissionResultBuffer` rejection area and `OrderBufferSystem` batch intake |
+| Runtime capacity fail-fast validation | N/A | Existing `GasRuntimeCapacityConfig.Validate` and default `assets/Configs/game.json` |
+| Pending retry terminal outcome | N/A | Existing `OrderSubmitter.Preview`, `OrderSubmitter.Submit`, and `OrderTerminalResultBuffer` |
+| AbilityExec hot-path structural mutation guard | N/A | Existing `CommandBuffer` playback plus ArchitectureTests guard |
+| Move-then-cast plan outcome split | N/A | Existing `CompositeOrderPlanner` |
+| Collection command panel multi-member aiming rejection | N/A | Existing command panel source and input mapping activation result |
+| Runtime spawn single/batch preflight | N/A | Existing `RuntimeEntitySpawnSystem` relationship, receipt, presentation, and effect queues |
+| Windows launcher output-drain test cleanup stability | N/A | Existing ArchitectureTests cleanup helper |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, `AbilityExecSystem`, `RuntimeEntitySpawnSystem`.
+- Resolvers / Registries: `OrderTypeRegistry`, `OrderRuleRegistry`, `AbilityDefinitionRegistry`, `AbilityAggregationProfileRegistry`, existing relationship/team/ownership services.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Batch EntityIntake checks whole-batch result capacity before any per-row reservation. If regular result capacity is missing but rejection capacity can hold the batch, the system dequeues the whole batch, publishes `RejectedAdmissionCapacity` for every existing `OrderId`, releases payloads, and stops. If rejection capacity is also missing, it fails fast without dequeueing.
+
+Pending retry now reserves admission and failed-terminal capacity before clearing pending or releasing payload. AbilityExec publishes terminal presentation events before queuing structural removal, and direct `World.Add/Remove<AbilityExecInstance>` is guarded out of the GAS hot path. Runtime spawn single and batch paths preflight relationship, owner/team, receipt, presentation, and on-spawn effect capacity before dequeue.
+
+### 6. Config SSOT
+
+Runtime capacity remains in `assets/Configs/game.json` and is validated by `GasRuntimeCapacityConfig.Validate`. `orderAdmissionResultCapacity` must cover the same generation's GlobalIntake + EntityIntake worst case, and `orderAdmissionRejectionCapacity` must cover a full queued batch rejection.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, input, ability, spawn, or effect runtime added
+- [x] No compatibility fallback or silent bypass added
+- [x] No accepted order path without terminal-result ownership remains in the repaired paths
+- [x] No capacity failure path mutates authority before required capacity is reserved in the repaired paths
+- [x] No direct `World.Add/Remove<AbilityExecInstance>` remains in the guarded GAS hot path
+
+### 8. Verification
+
+- `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --nologo`: PASS, 188/188.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests" --nologo`: PASS, 198/198.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 34/34.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 7/7.
+- `git diff --check origin/main...HEAD`: PASS.
+
+### 9. Next variant test
+
+A new Mod order, input, ability, or runtime spawn variant changes data, graph wiring, or effect steps and continues through the same admission, terminal, command-panel activation, and spawn preflight contracts. It must not add a Core gameplay enum, fallback path, alternate order/spawn runtime, or hot-path structural mutation.
+
 ## PR #660 Final Integration Addendum - Runtime Spawn Batch Preflight - 2026-07-25
 
 - **Task / Issue**: Close the final PR #660 integration residual where template batch spawn could drain multiple requests before verifying receipt/on-spawn success-signal capacity for the whole batch.

@@ -198,6 +198,14 @@ namespace EntityCommandPanelMod.Runtime
             bool hasAccepted = false;
             bool hasRejected = false;
 
+            if (count > 1 &&
+                TryFindAimingMember(start, count, out Entity aimingActor))
+            {
+                return InputOrderActivationResult.Rejected(
+                    aimingActor,
+                    OrderSubmitResult.RejectedByRule);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 EntityCommandPanelAggregationMember member = _memberScratch[start + i];
@@ -235,6 +243,22 @@ namespace EntityCommandPanelMod.Runtime
                 : InputOrderActivationResult.Rejected(
                     context.TargetEntity,
                     OrderSubmitResult.RejectedValidation);
+        }
+
+        private bool TryFindAimingMember(int start, int count, out Entity actor)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                EntityCommandPanelAggregationMember member = _memberScratch[start + i];
+                if (_gasSource.WouldEnterUiAiming(member.Owner, member.SlotIndex))
+                {
+                    actor = member.Owner;
+                    return true;
+                }
+            }
+
+            actor = Entity.Null;
+            return false;
         }
 
         public int CopyAggregationMembers(

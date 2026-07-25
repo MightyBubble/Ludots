@@ -1,52 +1,57 @@
-# CI Audit Gate - PR #660
+# CI Audit Gate - PR #660 / #689 Final Repair
 
-- Date: 2026-07-24
+- Date: 2026-07-25
 - Worktree: `C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415`
 - Branch: `codex/issues-649-651-ordering`
 - Base checked: `origin/main` at `5712a4eef4cdb1011cc0694d52e77de95bfe4aaa`
-- PR head before local repair: `086d3f4f35079eaab417bfea166335e5ba9c9b9d`
+- Remote PR head before this repair pass: `a829bdfe6df33b864908d397c6b1c2ee935fa6a9`
 
 ## Gate Summary
 
-Local pre-push audit: PASS.
+Local final audit: PASS.
 
-Remote GitHub checks are not asserted by this file because the repair commit had not been pushed when this audit was written. After push, `gh pr checks 660` remains the merge source of truth.
+This file records the current repair scope and local gate evidence. The exact pushed head is recorded in the PR body and #689 after push; this artifact is committed with the final repair changes and must not be read as evidence for older heads such as `086d3f4`, `b822b83`, or `a829bdfe`.
 
 ## Scope
 
-This audit covers the PR #660 final mergeability repair:
+This audit covers the #689 blockers for PR #660:
 
-- map board runtime capacity data and legacy map field removal
-- ability input and target-collection gate enqueue failures
-- response-chain capacity and prompt queue fail-fast behavior
-- GAS graph blackboard write fail-fast behavior
-- local `solution-verify.yml` slices that are runnable before push
+- batch `EntityIntake` admission-capacity handling is whole-batch transactional
+- runtime capacity config fails fast when admission result/rejection capacity cannot cover worst case
+- pending retry rejection publishes failed terminal outcome before clearing pending
+- AbilityExec terminal interrupt/finish/fail paths reserve presentation capacity before state removal
+- AbilityExec hot path has an architecture guard against direct `World.Add/Remove<AbilityExecInstance>`
+- move-then-cast planning distinguishes not-applicable from typed rejection
+- collection command-panel multi-member aiming rejects explicitly instead of opening one actor's aiming
+- runtime spawn single and batch requests preflight relationship, owner/team, receipt, presentation, and effect capacity before dequeue
+- required ArchitectureTests cleanup no longer flakes on Windows descendant process directory locks
 
-Visual review packets are explicitly scoped out for this repair because the changed behavior is headless engine/data validation. Existing showcase visual artifacts are historical evidence for the PR, not new current-scope blockers.
+Visual review packets are scoped out for this headless runtime repair. No gameplay visuals, showcase layout, or player-facing asset changed in this pass.
 
 ## Packet And Artifact Check
 
-- Required current-scope GAS self-review artifact: `artifacts/gas-composition-gate.md` - present.
-- Required current-scope CI audit artifacts: `artifacts/ci-audit/pr660/result.md` and `artifacts/ci-audit/pr660/result.json` - present.
+- Required current-scope GAS self-review artifact: `artifacts/gas-composition-gate.md` - present and updated for #689.
+- Required current-scope CI audit artifacts: `artifacts/ci-audit/pr660/result.md` and `artifacts/ci-audit/pr660/result.json` - present and updated.
 - Current-scope blocked packets: none found under `artifacts`.
-- Current-scope PR #660 hook packet: not present; scoped out because this repair is a direct branch repair and this result file is the reviewer-ready evidence packet.
 - Visual review / handoff packets: not required for this current headless repair scope.
 
 ## Evidence
 
-- `dotnet test src\Tests\GasTests\GasTests.csproj --filter "FullyQualifiedName~ResponseWindowRobustnessTests|FullyQualifiedName~GraphFailFastAndCapacityTests|FullyQualifiedName~EffectPhaseArchitectureTests|FullyQualifiedName~InteractionSelectionConvergenceTests" -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 80/80.
-- `dotnet test src\Tests\GasTests\GasTests.csproj --filter FullyQualifiedName~MapAssets_GridAndNodeGraphBoards_DeclarePositiveLoadedChunkCapacity -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 1/1.
-- `dotnet test src\Tests\PresentationTests\PresentationTests.csproj --filter FullyQualifiedName~Showcase_UnchangedRelationshipRevisionDoesNotRepeat10kDomainResolution -c Debug --no-restore --logger "console;verbosity=minimal" -clp:ErrorsOnly -m:1`: PASS, 1/1.
-- `dotnet build` for every `src\Tests\**\*.csproj`, then `dotnet build src\Tools\ModdingSmoke\ModdingTest.csproj -c Debug`: PASS.
-- Architecture guard slice from `solution-verify.yml`: PASS, ArchitectureTests 41/41 and GasTests 39/39.
-- MassNavigation PR acceptance slice from `solution-verify.yml`: PASS, ArchitectureTests 1/1 and PresentationTests 10/10.
-- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" --logger "console;verbosity=minimal"`: PASS, 166/166.
-- `dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj -c Debug --no-build --filter "TestCategory=raylib-field" --logger "console;verbosity=minimal"`: PASS, 4/4.
-- `git diff --check`: PASS.
-- `rg -n "WidthInTiles|HeightInTiles" mods assets src -g "*.json"`: no matches.
+- `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --nologo`: PASS, 188/188.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests" --nologo`: PASS, 198/198.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 34/34.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 7/7.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~RuntimeEntitySpawnSystem_SingleUnitTypeMissingTeamRepresentative" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~OrderBufferSystem_BatchEntityAdmissionCapacityMiss" --nologo --logger "console;verbosity=minimal"`: PASS, 9/9.
+- `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
+- `git diff --check origin/main...HEAD`: PASS.
 
 ## Notes
 
-The first full `TestCategory=ci-gate` attempt failed four Fog benchmark throughput thresholds while functionality and zero-allocation assertions passed. The four failing Fog benchmarks immediately passed when isolated, and the full `ci-gate` slice then passed 166/166. This is recorded as local performance noise, not ignored evidence.
+Three unrelated artifact files were dirty before this repair and are intentionally excluded from this evidence commit:
+
+- `artifacts/benchmarks/entity-query-tactics-showcase/benchmark-report.md`
+- `artifacts/showcases/capability-standard-physics2d-stress/acceptance.md`
+- `artifacts/showcases/capability-standard-physics2d-stress/keyframes.jsonl`
 
 ci.audit.completed

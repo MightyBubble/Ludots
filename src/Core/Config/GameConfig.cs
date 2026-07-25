@@ -141,6 +141,21 @@ namespace Ludots.Core.Config
                     "GameConfig.gasRuntimeCapacity.orderAdmissionRejectionCapacity must be positive.");
             }
 
+            long requiredAdmissionResults = checked((long)OrderQueueCapacity * 2L);
+            if (OrderAdmissionResultCapacity < requiredAdmissionResults)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionResultCapacity must be at least " +
+                    "orderQueueCapacity * 2 so the same generation can retain GlobalIntake and EntityIntake outcomes.");
+            }
+
+            if (OrderAdmissionRejectionCapacity < OrderQueueCapacity)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionRejectionCapacity must be at least " +
+                    "orderQueueCapacity so a full queued batch can publish typed admission-capacity rejections.");
+            }
+
             if (DeferredTriggerActiveEntityCapacity <= 0)
             {
                 throw new System.InvalidOperationException(

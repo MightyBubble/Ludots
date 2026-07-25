@@ -937,6 +937,34 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly()
+        {
+            var repoRoot = FindRepoRoot();
+            string file = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Systems", "AbilityExecSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing GAS hot-path source file {file}");
+            var forbiddenCall = new Regex(
+                @"\b(?:base\.)?World\.(?:Add|Remove)\s*(?:<|\()",
+                RegexOptions.Compiled | RegexOptions.CultureInvariant);
+            var hits = new List<string>();
+            string[] lines = File.ReadAllLines(file);
+            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            {
+                string line = lines[lineIndex];
+                if (forbiddenCall.IsMatch(line))
+                {
+                    hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {line.Trim()}");
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "AbilityExecSystem is a GAS hot path; structural changes must go through its command buffer:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue244_EntityAssociationAdr_UsesIssueSsotAndDoesNotCreateRepositoryAdr()
         {
             var repoRoot = FindRepoRoot();

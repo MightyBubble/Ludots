@@ -40,6 +40,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[] _templateBatchRequests = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[BatchEntityScratchCapacity];
+        private readonly SpawnRelationshipPlan[] _batchRelationshipPlans = new SpawnRelationshipPlan[BatchEntityScratchCapacity];
         private readonly Entity[] _performerBatchOwners = new Entity[BatchEntityScratchCapacity];
         private readonly int[] _performerBatchScopeIds = new int[BatchEntityScratchCapacity];
         private readonly int[] _performerBatchStableIds = new int[BatchEntityScratchCapacity];
@@ -60,6 +61,26 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
+
+        private readonly struct SpawnRelationshipPlan
+        {
+            public SpawnRelationshipPlan(
+                Entity ownershipSource,
+                Entity membershipTarget,
+                Entity implicitMemberOfTarget)
+            {
+                OwnershipSource = ownershipSource;
+                MembershipTarget = membershipTarget;
+                ImplicitMemberOfTarget = implicitMemberOfTarget;
+            }
+
+            public Entity OwnershipSource { get; }
+            public Entity MembershipTarget { get; }
+            public Entity ImplicitMemberOfTarget { get; }
+            public bool HasOwnershipSource => OwnershipSource != Entity.Null;
+            public bool HasMembershipTarget => MembershipTarget != Entity.Null;
+            public bool HasImplicitMemberOfTarget => ImplicitMemberOfTarget != Entity.Null;
+        }
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -145,20 +166,20 @@ namespace Ludots.Core.Gameplay.Spawning
                         continue;
                     }
 
-                    PreflightSingleSpawnSuccessSignals(in peek);
+                    SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
                     if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
                     {
                         break;
                     }
 
                     var singleRequest = _batchRequests[0];
-                    var spawnedSingle = SpawnTemplate(singleRequest);
+                    var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
                     PublishSpawnReceipt(in singleRequest, spawnedSingle);
                     PublishOnSpawnEffect(in singleRequest, spawnedSingle);
                     continue;
                 }
 
-                PreflightSingleSpawnSuccessSignals(in peek);
+                SpawnRelationshipPlan relationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
                 if (!_requests.TryDequeue(out var request))
                 {
                     break;
@@ -166,9 +187,9 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 var spawned = request.Kind switch
                 {
-                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request),
-                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request),
-                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request),
+                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
+                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
+                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
                     _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
                 };
 
@@ -177,7 +198,7 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request)
+        private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
             if (request.UnitTypeId <= 0)
             {
@@ -189,13 +210,6 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
             }
-
-            PreflightSingleSpawnRelationships(
-                "Runtime unit spawn",
-                in request,
-                templateAuthorsTeam: false,
-                templateTeam: default,
-                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
 
             var entity = World.Create(
                 new WorldPositionCm { Value = request.WorldPositionCm },
@@ -215,11 +229,11 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
             return entity;
         }
 
-        private Entity SpawnTemplate(in RuntimeEntitySpawnRequest request)
+        private Entity SpawnTemplate(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
             if (string.IsNullOrWhiteSpace(request.TemplateId))
             {
@@ -227,15 +241,6 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
-            EntityTemplate template = _cachedTemplates[request.TemplateId];
-            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
-            PreflightSingleSpawnRelationships(
-                $"Runtime template '{request.TemplateId}'",
-                in request,
-                templateAuthorsTeam,
-                in templateTeam,
-                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
-
             var builder = _builder
                 .UseTemplate(request.TemplateId)
                 .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
@@ -258,7 +263,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
             TryBootstrapPerformer(entity, request.TemplateId);
             return entity;
         }
@@ -318,6 +323,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
             bool hasRequestOnSpawnEffect = false;
             bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
+            bool templateAuthorsRelationshipDomainIdentity = TemplateAuthorsRelationshipDomainIdentity(template);
 
             for (int i = 0; i < count; i++)
             {
@@ -325,7 +331,12 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
             }
 
-            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
+            PreflightTemplateBatchRelationships(
+                templateId,
+                templateAuthorsTeam,
+                in templateTeam,
+                templateAuthorsRelationshipDomainIdentity,
+                count);
             PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
 
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
@@ -338,6 +349,69 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException(
                     $"Runtime template batch '{templateId}' requires EffectRequestQueue for on-spawn effects.");
             }
+        }
+
+        private SpawnRelationshipPlan PreflightSingleSpawnBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            SpawnRelationshipPlan relationshipPlan = request.Kind switch
+            {
+                RuntimeEntitySpawnKind.UnitType => PreflightSingleUnitTypeBeforeDrain(in request),
+                RuntimeEntitySpawnKind.Template => PreflightSingleTemplateBeforeDrain(in request),
+                RuntimeEntitySpawnKind.Assembly => PreflightSingleAssemblyBeforeDrain(in request),
+                _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
+            };
+
+            PreflightSingleSpawnSuccessSignals(in request);
+            return relationshipPlan;
+        }
+
+        private SpawnRelationshipPlan PreflightSingleUnitTypeBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.UnitTypeId <= 0)
+            {
+                throw new InvalidOperationException("Runtime unit spawn requires a positive UnitTypeId.");
+            }
+
+            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
+            }
+
+            return PreflightSingleSpawnRelationships(
+                "Runtime unit spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+        }
+
+        private SpawnRelationshipPlan PreflightSingleTemplateBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TemplateId))
+            {
+                throw new InvalidOperationException("Runtime template spawn requires a non-empty TemplateId.");
+            }
+
+            EnsureTemplateLoaded(request.TemplateId);
+            EntityTemplate template = _cachedTemplates[request.TemplateId];
+            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
+            return PreflightSingleSpawnRelationships(
+                $"Runtime template '{request.TemplateId}'",
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
+        }
+
+        private SpawnRelationshipPlan PreflightSingleAssemblyBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            return PreflightSingleSpawnRelationships(
+                "Runtime assembly spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
         }
 
         private bool TrySpawnTemplateBatch(string templateId, EntityTemplate template, int count)
@@ -380,20 +454,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
             }
 
-            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
-            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
-
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
-            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
-            {
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + count);
-            }
-            else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
-            {
-                throw new InvalidOperationException(
-                    $"Runtime template batch '{templateId}' requires EffectRequestQueue for on-spawn effects.");
-            }
-
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
                 TemplateBatchSpawnFeatures.PresentationLifecycleState;
@@ -468,7 +529,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     }
 
                     TryLinkOwnershipEdge(entity);
-                    TryLinkExplicitRelationships(in request, entity);
+                    ApplyRelationshipPlan(in _batchRelationshipPlans[i], entity);
 
                     if (publishSpawnedEvent)
                     {
@@ -552,15 +613,8 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
-        private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
+        private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
-            PreflightSingleSpawnRelationships(
-                "Runtime assembly spawn",
-                in request,
-                templateAuthorsTeam: false,
-                templateTeam: default,
-                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
-
             var entity = base.World.Create();
 
             if (request.HasProjectileState != 0)
@@ -581,7 +635,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
             return entity;
         }
 
@@ -764,45 +818,22 @@ namespace Ludots.Core.Gameplay.Spawning
             OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
         }
 
-        private void TryLinkExplicitRelationships(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void ApplyRelationshipPlan(in SpawnRelationshipPlan plan, Entity entity)
         {
-            if (request.HasOwnershipSource != 0)
+            if (plan.HasOwnershipSource)
             {
-                if (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource))
-                {
-                    throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
-                }
-
-                _ownership.EnsureOwnership(request.OwnershipSource, entity);
+                _ownership!.EnsureOwnership(plan.OwnershipSource, entity);
             }
 
-            if (request.HasMembershipTarget != 0)
+            if (plan.HasMembershipTarget)
             {
-                if (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget))
-                {
-                    throw new InvalidOperationException(
-                        "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
-                }
-
-                _relationships.EnsureLink(entity, request.MembershipTarget, _memberOfTypeId);
+                _relationships!.EnsureLink(entity, plan.MembershipTarget, _memberOfTypeId);
                 return;
             }
 
-            if (_relationships != null &&
-                _teamLookup != null &&
-                _memberOfTypeId >= 0 &&
-                World.TryGet(entity, out Team team) &&
-                team.Id > 0 &&
-                !World.Has<PlayerIdentity>(entity) &&
-                !World.Has<TeamIdentity>(entity))
+            if (plan.HasImplicitMemberOfTarget)
             {
-                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !IsAliveInCurrentWorld(teamRep))
-                {
-                    throw new InvalidOperationException(
-                        $"Runtime spawned entity {entity.Id} authors Team {team.Id}, but no live team relationship representative exists.");
-                }
-
-                _relationships.EnsureLink(entity, teamRep, _memberOfTypeId);
+                _relationships!.EnsureLink(entity, plan.ImplicitMemberOfTarget, _memberOfTypeId);
             }
         }
 
@@ -810,29 +841,18 @@ namespace Ludots.Core.Gameplay.Spawning
             string templateId,
             bool templateAuthorsTeam,
             in Team templateTeam,
+            bool authorsRelationshipDomainIdentity,
             int count)
         {
             for (int i = 0; i < count; i++)
             {
                 ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
-                PreflightExplicitRelationship(in request);
-
-                int teamId = ResolveTemplateFinalTeamId(
+                _batchRelationshipPlans[i] = PreflightSpawnRelationships(
                     $"Runtime template batch '{templateId}'",
                     in request,
-                    templateAuthorsTeam ? templateTeam.Id : 0);
-                if (request.HasMembershipTarget != 0)
-                {
-                    PreflightMembershipTargetMatchesTeam(templateId, in request, teamId);
-                    continue;
-                }
-
-                if (teamId <= 0)
-                {
-                    continue;
-                }
-
-                PreflightImplicitMemberOfTarget($"Runtime template batch '{templateId}'", teamId);
+                    templateAuthorsTeam,
+                    in templateTeam,
+                    authorsRelationshipDomainIdentity);
             }
         }
 
@@ -852,7 +872,22 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void PreflightSingleSpawnRelationships(
+        private SpawnRelationshipPlan PreflightSingleSpawnRelationships(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            bool templateAuthorsTeam,
+            in Team templateTeam,
+            bool authorsRelationshipDomainIdentity)
+        {
+            return PreflightSpawnRelationships(
+                context,
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                authorsRelationshipDomainIdentity);
+        }
+
+        private SpawnRelationshipPlan PreflightSpawnRelationships(
             string context,
             in RuntimeEntitySpawnRequest request,
             bool templateAuthorsTeam,
@@ -864,26 +899,30 @@ namespace Ludots.Core.Gameplay.Spawning
                 context,
                 in request,
                 templateAuthorsTeam ? templateTeam.Id : 0);
+            Entity ownershipSource = request.HasOwnershipSource != 0
+                ? request.OwnershipSource
+                : Entity.Null;
             if (teamId <= 0)
             {
-                return;
+                return new SpawnRelationshipPlan(ownershipSource, Entity.Null, Entity.Null);
             }
 
             if (request.HasMembershipTarget != 0)
             {
                 PreflightMembershipTargetMatchesTeam(context, in request, teamId);
-                return;
+                return new SpawnRelationshipPlan(ownershipSource, request.MembershipTarget, Entity.Null);
             }
 
             if (authorsRelationshipDomainIdentity)
             {
-                return;
+                return new SpawnRelationshipPlan(ownershipSource, Entity.Null, Entity.Null);
             }
 
-            PreflightImplicitMemberOfTarget(context, teamId);
+            Entity implicitMemberOfTarget = PreflightImplicitMemberOfTarget(context, teamId);
+            return new SpawnRelationshipPlan(ownershipSource, Entity.Null, implicitMemberOfTarget);
         }
 
-        private void PreflightImplicitMemberOfTarget(string context, int teamId)
+        private Entity PreflightImplicitMemberOfTarget(string context, int teamId)
         {
             if (_relationships == null || _teamLookup == null || !HasRegisteredMemberOfRelationshipType())
             {
@@ -896,6 +935,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException(
                     $"{context} authors Team {teamId}, but no live team relationship representative exists.");
             }
+
+            return teamRepresentative;
         }
 
         private bool IsAliveInCurrentWorld(Entity entity)
@@ -911,7 +952,7 @@ namespace Ludots.Core.Gameplay.Spawning
         }
 
         private void PreflightMembershipTargetMatchesTeam(
-            string templateId,
+            string context,
             in RuntimeEntitySpawnRequest request,
             int teamId)
         {
@@ -923,13 +964,13 @@ namespace Ludots.Core.Gameplay.Spawning
             if (!World.TryGet(request.MembershipTarget, out TeamIdentity targetTeam))
             {
                 throw new InvalidOperationException(
-                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
+                    $"{context} authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
             }
 
             if (targetTeam.TeamId != teamId)
             {
                 throw new InvalidOperationException(
-                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
+                    $"{context} authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
             }
         }
 

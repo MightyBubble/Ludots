@@ -2,6 +2,8 @@ using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
@@ -58,6 +60,18 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresAdmissionResultsForGlobalAndEntityIntake()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.OrderQueueCapacity = 64;
+            config.OrderAdmissionResultCapacity = 64;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("orderAdmissionResultCapacity"));
+            Assert.That(ex.Message, Does.Contain("orderQueueCapacity * 2"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveEffectFanOutCommandCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -75,6 +89,18 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
             Assert.That(ex.Message, Does.Contain("orderAdmissionRejectionCapacity"));
+        }
+
+        [Test]
+        public void GasRuntimeCapacity_RequiresAdmissionRejectionsForFullQueuedBatch()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.OrderQueueCapacity = 64;
+            config.OrderAdmissionRejectionCapacity = 63;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("orderAdmissionRejectionCapacity"));
+            Assert.That(ex.Message, Does.Contain("orderQueueCapacity"));
         }
 
         [Test]
@@ -125,6 +151,22 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
             Assert.That(ex.Message, Does.Contain("graphOutputValueCapacity"));
+        }
+
+        [Test]
+        public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
+        {
+            string repoRoot = FindRepoRoot();
+            string configPath = Path.Combine(repoRoot, "assets", "Configs", "game.json");
+            string json = File.ReadAllText(configPath);
+            GameConfig config = JsonSerializer.Deserialize<GameConfig>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+            Assert.DoesNotThrow(() => config.GasRuntimeCapacity.Validate());
+            Assert.That(
+                config.GasRuntimeCapacity.OrderAdmissionResultCapacity,
+                Is.GreaterThanOrEqualTo(config.GasRuntimeCapacity.OrderQueueCapacity * 2));
         }
 
         [Test]
@@ -970,7 +1012,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 EffectFanOutCommandCapacity = 64,
                 OrderQueueCapacity = 64,
                 ResponseChainOrderQueueCapacity = 64,
-                OrderAdmissionResultCapacity = 64,
+                OrderAdmissionResultCapacity = 128,
                 OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,
                 DeferredTriggerActiveEntityCapacity = 64,
@@ -980,6 +1022,26 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
             };
+        }
+
+        private static string FindRepoRoot()
+        {
+            var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (directory != null)
+            {
+                string gitPath = Path.Combine(directory.FullName, ".git");
+                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "Configs", "game.json");
+                if ((File.Exists(gitPath) || Directory.Exists(gitPath)) &&
+                    File.Exists(defaultConfigPath) &&
+                    Directory.Exists(Path.Combine(directory.FullName, "mods")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate repository root from test directory.");
         }
 
         private static int CountGasPresentationEvents(

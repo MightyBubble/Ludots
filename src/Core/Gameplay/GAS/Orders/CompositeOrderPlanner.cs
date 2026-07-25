@@ -14,6 +14,29 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     /// </summary>
     public sealed class CompositeOrderPlanner
     {
+        private enum MoveThenCastPlanState : byte
+        {
+            NotApplicable = 0,
+            Planned = 1,
+            Rejected = 2
+        }
+
+        private readonly struct MoveThenCastPlanResult
+        {
+            public MoveThenCastPlanResult(MoveThenCastPlanState state, OrderSubmitResult rejection)
+            {
+                State = state;
+                Rejection = rejection;
+            }
+
+            public MoveThenCastPlanState State { get; }
+            public OrderSubmitResult Rejection { get; }
+
+            public static MoveThenCastPlanResult NotApplicable() => new(MoveThenCastPlanState.NotApplicable, default);
+            public static MoveThenCastPlanResult Planned() => new(MoveThenCastPlanState.Planned, default);
+            public static MoveThenCastPlanResult Rejected(OrderSubmitResult rejection) => new(MoveThenCastPlanState.Rejected, rejection);
+        }
+
         private readonly World _world;
         private readonly OrderQueue _incomingOrders;
         private readonly AbilityDefinitionRegistry? _abilities;
@@ -36,10 +59,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public OrderSubmitResult Submit(in Order order)
         {
-            if (!TryBuildMoveThenCastPlan(in order, out var primaryMove, out var followUpCast))
+            MoveThenCastPlanResult plan = BuildMoveThenCastPlan(in order, out var primaryMove, out var followUpCast);
+            if (plan.State == MoveThenCastPlanState.NotApplicable)
             {
                 var passthrough = order;
                 return _incomingOrders.SubmitAssigned(ref passthrough);
+            }
+
+            if (plan.State == MoveThenCastPlanState.Rejected)
+            {
+                OrderSpatialPayloadOps.Release(_world, in order);
+                return plan.Rejection;
             }
 
             if (!_world.IsAlive(order.Actor))
@@ -103,7 +133,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             for (int i = 0; i < orders.Length; i++)
             {
-                if (TryBuildMoveThenCastPlan(in orders[i], out _, out _))
+                MoveThenCastPlanResult plan = BuildMoveThenCastPlan(in orders[i], out _, out _);
+                if (plan.State == MoveThenCastPlanState.Rejected)
+                {
+                    return plan.Rejection;
+                }
+
+                if (plan.State == MoveThenCastPlanState.Planned)
                 {
                     throw new InvalidOperationException(
                         "CompositeOrderPlanner cannot split a shared order batch into move-then-cast continuations without breaking the shared OrderId boundary.");
@@ -117,7 +153,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             for (int i = 0; i < orders.Length; i++)
             {
-                if (TryBuildMoveThenCastPlan(in orders[i], out _, out _))
+                MoveThenCastPlanResult plan = BuildMoveThenCastPlan(in orders[i], out _, out _);
+                if (plan.State == MoveThenCastPlanState.Rejected)
+                {
+                    return plan.Rejection;
+                }
+
+                if (plan.State == MoveThenCastPlanState.Planned)
                 {
                     throw new InvalidOperationException(
                         "CompositeOrderPlanner cannot split a clustered command batch into move-then-cast continuations.");
@@ -127,33 +169,58 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return _incomingOrders.TryEnqueueClusteredBatch(orders);
         }
 
-        private bool TryBuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)
+        private MoveThenCastPlanResult BuildMoveThenCastPlan(in Order order, out Order moveOrder, out Order followUpCast)
         {
             moveOrder = default;
             followUpCast = default;
 
-            if (_abilities == null ||
-                _castAbilityOrderTypeId <= 0 ||
-                _moveToOrderTypeId <= 0 ||
-                order.OrderTypeId != _castAbilityOrderTypeId ||
-                !_world.IsAlive(order.Actor))
+            if (order.OrderTypeId != _castAbilityOrderTypeId)
             {
-                return false;
+                return MoveThenCastPlanResult.NotApplicable();
             }
 
-            if (!TryResolveCastRangeCm(in order, out float castRangeCm) ||
-                castRangeCm <= 0f ||
-                !TryResolvePlanningOrigin(in order, out var actorWorldCm) ||
-                !TryResolveCastTargetWorldCm(in order, out var targetWorldCm) ||
-                !TryResolveMoveAnchor(actorWorldCm, targetWorldCm, castRangeCm, out var moveAnchorWorldCm))
+            if (_castAbilityOrderTypeId <= 0 ||
+                _moveToOrderTypeId <= 0 ||
+                _abilities == null)
             {
-                return false;
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidOrderType);
+            }
+
+            if (!_world.IsAlive(order.Actor))
+            {
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            MoveThenCastPlanResult rangeResult = ResolveCastRangeCm(in order, out float castRangeCm);
+            if (rangeResult.State != MoveThenCastPlanState.Planned)
+            {
+                return rangeResult;
+            }
+
+            if (castRangeCm <= 0f)
+            {
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
+            }
+
+            if (!TryResolvePlanningOrigin(in order, out var actorWorldCm))
+            {
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
+            }
+
+            if (!TryResolveCastTargetWorldCm(in order, out var targetWorldCm))
+            {
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
+            }
+
+            if (!TryResolveMoveAnchor(actorWorldCm, targetWorldCm, castRangeCm, out var moveAnchorWorldCm))
+            {
+                return MoveThenCastPlanResult.NotApplicable();
             }
 
             moveOrder = CreateMoveOrder(in order, moveAnchorWorldCm);
             followUpCast = order;
             followUpCast.SubmitMode = OrderSubmitMode.Queued;
-            return true;
+            return MoveThenCastPlanResult.Planned();
         }
 
         private Order CreateMoveOrder(in Order castOrder, Vector3 moveAnchorWorldCm)
@@ -175,19 +242,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             };
         }
 
-        private bool TryResolveCastRangeCm(in Order order, out float rangeCm)
+        private MoveThenCastPlanResult ResolveCastRangeCm(in Order order, out float rangeCm)
         {
             rangeCm = 0f;
             if (order.Args.I0 < 0 ||
                 !_world.Has<AbilityStateBuffer>(order.Actor))
             {
-                return false;
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
 
             ref var abilities = ref _world.Get<AbilityStateBuffer>(order.Actor);
             if ((uint)order.Args.I0 >= (uint)abilities.Count)
             {
-                return false;
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
 
             bool hasForm = _world.Has<AbilityFormSlotBuffer>(order.Actor);
@@ -199,15 +266,21 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, order.Args.I0);
 
             if (slot.AbilityId <= 0 ||
-                !_abilities!.TryGet(slot.AbilityId, out var definition) ||
-                !definition.HasTargeting ||
+                !_abilities!.TryGet(slot.AbilityId, out var definition))
+            {
+                return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidOrderType);
+            }
+
+            if (!definition.HasTargeting ||
                 ShouldBypassMoveThenCastPlanning(in definition))
             {
-                return false;
+                return MoveThenCastPlanResult.NotApplicable();
             }
 
             rangeCm = definition.Targeting.CastRangeCm;
-            return rangeCm > 0f;
+            return rangeCm > 0f
+                ? MoveThenCastPlanResult.Planned()
+                : MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
         }
 
         private static bool ShouldBypassMoveThenCastPlanning(in AbilityDefinition definition)

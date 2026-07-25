@@ -1317,6 +1317,53 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_SingleUnitTypeMissingTeamRepresentative_DoesNotDrainRequest()
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = UnitTypeRegistry.Register("TestWolfMissingTeamRep");
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.UnitType,
+                WorldPositionCm = Fix64Vec2.FromInt(420, 840),
+                UnitTypeId = unitTypeId,
+                TeamIdOverride = 7,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("no live team relationship representative"));
+            That(requests.Count, Is.EqualTo(1), "Relationship preflight failure must leave the single spawn request retryable.");
+            int spawnCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Unit:TestWolfMissingTeamRep", StringComparison.Ordinal))
+                {
+                    spawnCount++;
+                }
+            });
+            That(spawnCount, Is.EqualTo(0));
+            UnitTypeRegistry.Clear();
+        }
+
+        [Test]
         public void RuntimeEntitySpawnReceiptQueue_ChannelOperations_DoNotConsumeOtherChannels()
         {
             var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);

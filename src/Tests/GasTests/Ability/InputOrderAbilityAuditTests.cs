@@ -442,6 +442,47 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void OrderBufferSystem_BatchEntityAdmissionCapacityMiss_DequeuesAndPublishesEveryRejectedOrder()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(2, 4);
+            results.BeginLogicStep();
+            var incoming = new OrderQueue(64, results);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 2, AllowQueuedMode = true });
+            Entity first = world.Create(OrderBuffer.CreateEmpty());
+            Entity second = world.Create(OrderBuffer.CreateEmpty());
+            Entity firstSource = world.Create();
+            Entity secondSource = world.Create();
+            var batch = new[]
+            {
+                new Order { Actor = first, CommandSource = firstSource, OrderTypeId = 2, SubmitMode = OrderSubmitMode.Immediate },
+                new Order { Actor = second, CommandSource = secondSource, OrderTypeId = 2, SubmitMode = OrderSubmitMode.Immediate },
+            };
+            That(incoming.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+            That(results.CurrentGenerationCount, Is.EqualTo(2), "GlobalIntake occupied the regular result capacity.");
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                incoming);
+
+            Assert.DoesNotThrow(() => intake.Update(0f));
+
+            That(incoming.Count, Is.Zero, "The rejected batch is fully drained so it cannot throw again next frame.");
+            That(world.Get<OrderBuffer>(first).HasActive, Is.False);
+            That(world.Get<OrderBuffer>(second).HasActive, Is.False);
+            That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out var firstOutcome), Is.True);
+            That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.EntityIntake, out var secondOutcome), Is.True);
+            That(firstOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(secondOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
+            That(results.ReservedCount, Is.Zero);
+        }
+
+        [Test]
         public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
         {
             var results = new OrderAdmissionResultBuffer(4, 4);
@@ -1128,6 +1169,127 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             ref OrderBuffer bufferAfter = ref world.Get<OrderBuffer>(actor);
             That(bufferAfter.HasActive, Is.True);
             That(bufferAfter.ActiveOrder.Order.OrderId, Is.EqualTo(302));
+        }
+
+        [Test]
+        public void OrderBufferSystem_PendingRetryFailure_PublishesTypedAdmissionAndTerminalOutcome()
+        {
+            using var world = World.Create();
+            const int orderTypeId = 43;
+            const int spatialKey = 3;
+            var results = new OrderAdmissionResultBuffer(8, 8);
+            results.BeginLogicStep();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 20,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var pending = new Order
+            {
+                OrderId = 401,
+                Actor = actor,
+                OrderTypeId = orderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(5f, 0f, 7f),
+                    },
+                },
+            };
+            buffer.SetPending(in pending, priority: 20, expireStep: -1, insertStep: 0);
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                closeEntityIntakeOnUpdate: false);
+
+            Assert.DoesNotThrow(() => intake.NotifyOrderComplete(actor));
+
+            That(buffer.HasPending, Is.False);
+            That(buffer.HasActive, Is.False);
+            That(results.TryGet(401, OrderAdmissionStage.EntityIntake, out var outcome), Is.True);
+            That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedMissingBlackboard));
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(401));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionMissingBlackboard));
+        }
+
+        [Test]
+        public void OrderBufferSystem_PendingRetryFailureTerminalCapacityMiss_KeepsPendingForRetry()
+        {
+            using var world = World.Create();
+            const int orderTypeId = 44;
+            const int spatialKey = 5;
+            var results = new OrderAdmissionResultBuffer(8, 8);
+            results.BeginLogicStep();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 1);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = orderTypeId,
+                Priority = 20,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 4,
+                SpatialBlackboardKey = spatialKey,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+            Entity terminalOccupant = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer terminalOccupantBuffer = ref world.Get<OrderBuffer>(terminalOccupant);
+            var terminalFiller = new Order { OrderId = 402, Actor = terminalOccupant, OrderTypeId = orderTypeId };
+            That(terminalOccupantBuffer.Enqueue(in terminalFiller, priority: 1, expireStep: -1, insertStep: 0), Is.True);
+            OrderSubmitter.CancelAll(world, terminalOccupant, orderTypes);
+            That(terminalResults.Count, Is.EqualTo(1));
+
+            Entity actor = world.Create(OrderBuffer.CreateEmpty());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            var pending = new Order
+            {
+                OrderId = 403,
+                Actor = actor,
+                OrderTypeId = orderTypeId,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(9f, 0f, 11f),
+                    },
+                },
+            };
+            buffer.SetPending(in pending, priority: 20, expireStep: -1, insertStep: 0);
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                closeEntityIntakeOnUpdate: false);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                intake.NotifyOrderComplete(actor))!;
+
+            That(error.Message, Does.Contain("ORDER.TERMINAL.ERR.ResultCapacityExceeded"));
+            That(buffer.HasPending, Is.True);
+            That(buffer.PendingOrder.Order.OrderId, Is.EqualTo(403));
+            That(buffer.HasActive, Is.False);
+            That(results.TryGet(403, OrderAdmissionStage.EntityIntake, out _), Is.False);
+            That(terminalResults.Count, Is.EqualTo(1));
         }
 
         [Test]

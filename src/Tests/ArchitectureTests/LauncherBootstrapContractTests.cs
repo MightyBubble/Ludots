@@ -48,12 +48,38 @@ namespace Ludots.Tests.Architecture
             }
             finally
             {
-                await Task.Delay(1_600);
-                if (Directory.Exists(tempDirectory))
-                {
-                    Directory.Delete(tempDirectory, recursive: true);
-                }
+                await DeleteDirectoryWithRetryAsync(tempDirectory, TimeSpan.FromSeconds(5));
             }
+        }
+
+        private static async Task DeleteDirectoryWithRetryAsync(string directory, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            Exception? lastFailure = null;
+            while (DateTime.UtcNow <= deadline)
+            {
+                try
+                {
+                    if (Directory.Exists(directory))
+                    {
+                        Directory.Delete(directory, recursive: true);
+                    }
+
+                    return;
+                }
+                catch (IOException ex)
+                {
+                    lastFailure = ex;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    lastFailure = ex;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new IOException($"Failed to delete temporary test directory '{directory}'.", lastFailure);
         }
 
         [Test]

@@ -322,6 +322,26 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return written + reserved + count <= items.Length;
         }
 
+        internal bool CanRecordCapacityFailures(OrderAdmissionStage stage, int count)
+        {
+            if (count < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(count));
+            }
+            if (count == 0)
+            {
+                return true;
+            }
+
+            ThrowIfTerminalFaulted();
+            bool writePending = ShouldWritePending(stage);
+            int rejectionCount = writePending ? _pendingRejectionCount : _currentRejectionCount;
+            OrderAdmissionOutcome[] rejections = writePending
+                ? _pendingRejections
+                : _currentRejections;
+            return rejectionCount + count <= rejections.Length;
+        }
+
         internal void RecordCapacityFailures(ReadOnlySpan<Order> orders, OrderAdmissionStage stage)
         {
             if (orders.IsEmpty)

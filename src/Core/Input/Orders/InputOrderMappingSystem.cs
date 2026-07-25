@@ -2416,6 +2416,50 @@ namespace Ludots.Core.Input.Orders
             return null;
         }
 
+        public bool WouldEnterUiAiming(string actionId, Entity actor)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_mappingsByActionId.TryGetValue(actionId, out var mapping))
+            {
+                return false;
+            }
+
+            var effectiveMapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
+                ? overrideMapping
+                : mapping;
+            if (effectiveMapping.IsSkillMapping &&
+                _skillMappingOverrideProvider != null &&
+                actor != Entity.Null &&
+                _skillMappingOverrideProvider(actor, effectiveMapping, out var overrideFromAbility))
+            {
+                effectiveMapping = overrideFromAbility;
+            }
+
+            if (!effectiveMapping.IsSkillMapping)
+            {
+                return false;
+            }
+
+            var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
+            if (effectiveMode == InteractionModeType.SmartCastWithIndicator ||
+                effectiveMode == InteractionModeType.PressReleaseAimCast)
+            {
+                effectiveMode = InteractionModeType.AimCast;
+            }
+
+            if (effectiveMode == InteractionModeType.TargetFirst)
+            {
+                return false;
+            }
+
+            if (effectiveMapping.TargetType == OrderTargetType.Vector)
+            {
+                return true;
+            }
+
+            return effectiveMode == InteractionModeType.AimCast;
+        }
+
         public IEnumerable<string> GetMappedActionIds()
         {
             for (int i = 0; i < _orderedMappings.Length; i++)

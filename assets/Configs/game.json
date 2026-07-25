@@ -14,7 +14,7 @@
     "effectFanOutCommandCapacity": 16384,
     "orderQueueCapacity": 4096,
     "responseChainOrderQueueCapacity": 4096,
-    "orderAdmissionResultCapacity": 4096,
+    "orderAdmissionResultCapacity": 8192,
     "orderAdmissionRejectionCapacity": 4096,
     "orderTerminalResultCapacity": 4096,
     "deferredTriggerActiveEntityCapacity": 16384,

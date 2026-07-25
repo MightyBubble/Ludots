@@ -120,6 +120,83 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompositeOrderPlanner_OutOfRangeCastWithMissingAbilityDefinition_ReturnsTypedRejection()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId + 1);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+
+            var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.RejectedInvalidOrderType));
+            Assert.That(orderQueue.Count, Is.Zero);
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_OutOfRangeCastWithoutAuthoritativeActorPosition_ReturnsTypedRejection()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                abilities,
+                OrderBuffer.CreateEmpty());
+
+            var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.RejectedValidation));
+            Assert.That(orderQueue.Count, Is.Zero);
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_OutOfRangeCastWithoutResolvableTarget_ReturnsTypedRejection()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+            var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+            castOrder.Args.Spatial = default;
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.RejectedValidation));
+            Assert.That(orderQueue.Count, Is.Zero);
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
         public void OrderContinuationSystem_QueuesFollowUpAheadOfLaterQueuedCommands()
         {
             using var world = World.Create();

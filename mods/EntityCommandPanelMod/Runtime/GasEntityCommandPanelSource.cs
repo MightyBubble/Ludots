@@ -723,6 +723,27 @@ namespace EntityCommandPanelMod.Runtime
                 preferUiAiming: true);
         }
 
+        public bool WouldEnterUiAiming(Entity target, int slotIndex)
+        {
+            if (slotIndex < 0 ||
+                !_engine.World.IsAlive(target) ||
+                !_engine.World.Has<AbilityStateBuffer>(target))
+            {
+                return false;
+            }
+
+            InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
+            if (inputMapping == null ||
+                (uint)slotIndex >= (uint)_skillActionIds.Length)
+            {
+                return false;
+            }
+
+            inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, slotIndex + 1));
+            string actionId = _skillActionIds[slotIndex] ?? string.Empty;
+            return inputMapping.WouldEnterUiAiming(actionId, target);
+        }
+
         private bool CanActivateProgressionRequirement(Entity target, int slotIndex)
         {
             ref readonly var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);

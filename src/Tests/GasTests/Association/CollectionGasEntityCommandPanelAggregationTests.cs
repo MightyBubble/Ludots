@@ -175,6 +175,35 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ActivateSlot_MultiMemberSmartCast_SubmitsEveryMember()
+        {
+            using var engine = CreateEngineWithCommandPanelMod();
+            var fixture = SelectionFixture.Create(engine);
+
+            var submitted = new List<Order>();
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.SmartCast);
+            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetActorProvider((out Entity actor) =>
+            {
+                actor = fixture.CollectionOwner;
+                return true;
+            });
+            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
+
+            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
+            var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
+            var slots = new EntityCommandPanelSlotView[8];
+            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
+            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
+
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(submitted.Count, Is.EqualTo(3));
+            Assert.That(mapping.IsAiming, Is.False);
+        }
+
+        [Test]
         public void ActivateSlot_MemberFailureReturnsTypedRejectionWithoutDroppingOtherMembers()
         {
             using var engine = CreateEngineWithCommandPanelMod();
@@ -211,6 +240,36 @@ namespace Ludots.Tests.GAS
             Assert.That(activated.OrderId, Is.GreaterThan(0));
             Assert.That(submitted.Count, Is.EqualTo(3),
                 "one member failing must not silently collapse the aggregate command back to the representative unit.");
+        }
+
+        [Test]
+        public void ActivateSlot_MultiMemberAiming_ReturnsTypedRejectionWithoutOpeningSingleActorAiming()
+        {
+            using var engine = CreateEngineWithCommandPanelMod();
+            var fixture = SelectionFixture.Create(engine);
+
+            var submitted = new List<Order>();
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.AimCast);
+            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetActorProvider((out Entity actor) =>
+            {
+                actor = fixture.CollectionOwner;
+                return true;
+            });
+            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
+
+            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
+            var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
+            var slots = new EntityCommandPanelSlotView[8];
+            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
+            Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId));
+
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 1);
+
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
+            Assert.That(submitted.Count, Is.Zero);
+            Assert.That(mapping.IsAiming, Is.False);
         }
 
         [Test]
@@ -416,11 +475,13 @@ namespace Ludots.Tests.GAS
             return source;
         }
 
-        private static InputOrderMappingSystem CreateMappingSystem(List<Order> submitted)
+        private static InputOrderMappingSystem CreateMappingSystem(
+            List<Order> submitted,
+            InteractionModeType interactionMode = InteractionModeType.TargetFirst)
         {
             var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = interactionMode,
                 Mappings = new List<InputOrderMapping>
                 {
                     CreateSkillMapping("SkillQ", 0),

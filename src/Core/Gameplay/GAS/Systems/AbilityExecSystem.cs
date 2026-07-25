@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -41,6 +42,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
         private readonly ProgressionRequirementEvaluator _progressionRequirements;
+        private readonly CommandBuffer _structuralCommands = new();
 
         private readonly int _castAbilityOrderTypeId;
         private readonly int _castAbilityStartOrderTypeId;
@@ -156,6 +158,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (workUnits >= MaxWorkUnitsPerSlice)
                     {
+                        PlaybackStructuralCommands();
                         PublishRuntimeState();
                         return false;
                     }
@@ -361,10 +364,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     EnsurePresentationEventCapacity(2, GasPresentationEventKind.CastStarted);
-                    if (!World.Has<AbilityExecInstance>(actor))
-                    {
-                        World.Add(actor, new AbilityExecInstance());
-                    }
 
                     GasClockId defaultClockId = startSpec.ClockId != 0 ? startSpec.ClockId : GasClockId.Step;
 
@@ -379,32 +378,37 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
-                    ref var exec = ref World.Get<AbilityExecInstance>(actor);
-                    exec.OrderId = orderId;
-                    exec.AbilitySlot = slotIndex;
-                    exec.AbilityId = slot.AbilityId;
-                    exec.Target = targetEntity;
-                    exec.TargetContext = targetContext;
-                    exec.TargetPosCm = targetPosCm;
-                    exec.HasTargetPos = (byte)(hasTargetPos ? 1 : 0);
-                    exec.TargetOriginPosCm = targetOriginPosCm;
-                    exec.HasTargetOriginPos = (byte)(hasTargetOriginPos ? 1 : 0);
-                    exec.State = AbilityExecRunState.Running;
-                    exec.TerminalFailureReason = OrderFailureReason.None;
-                    exec.CurrentTick = 0;
-                    exec.StartAbsoluteTick = ClockNow(defaultClockId, actor);
-                    exec.NextItemIndex = 0;
-                    exec.GateDeadline = 0;
-                    exec.WaitTagId = 0;
-                    exec.WaitRequestId = 0;
-                    exec.ActiveClockId = defaultClockId;
-                    exec.IsToggleDeactivating = false;
-                    exec.PendingProgressionUseRequirement = (byte)(pendingProgressionUseRequirement ? 1 : 0);
-                    exec.PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0;
+                    var exec = new AbilityExecInstance
+                    {
+                        OrderId = orderId,
+                        AbilitySlot = slotIndex,
+                        AbilityId = slot.AbilityId,
+                        Target = targetEntity,
+                        TargetContext = targetContext,
+                        TargetPosCm = targetPosCm,
+                        HasTargetPos = (byte)(hasTargetPos ? 1 : 0),
+                        TargetOriginPosCm = targetOriginPosCm,
+                        HasTargetOriginPos = (byte)(hasTargetOriginPos ? 1 : 0),
+                        State = AbilityExecRunState.Running,
+                        TerminalFailureReason = OrderFailureReason.None,
+                        CurrentTick = 0,
+                        StartAbsoluteTick = ClockNow(defaultClockId, actor),
+                        NextItemIndex = 0,
+                        GateDeadline = 0,
+                        WaitTagId = 0,
+                        WaitRequestId = 0,
+                        ActiveClockId = defaultClockId,
+                        IsToggleDeactivating = false,
+                        PendingProgressionUseRequirement = (byte)(pendingProgressionUseRequirement ? 1 : 0),
+                        PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0,
+                    };
+                    _structuralCommands.Add(actor, exec);
 
                     PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, slot.AbilityId);
                 }
             }
+
+            PlaybackStructuralCommands();
 
             // Phase 2: Advance all active exec instances
             if (!_sliceActive)
@@ -424,6 +428,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 if (workUnits >= MaxWorkUnitsPerSlice)
                 {
+                    PlaybackStructuralCommands();
                     PublishRuntimeState();
                     return false;
                 }
@@ -443,8 +448,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (instance.OrderId > 0 && !IsExecutionOrderCurrent(actor, instance.OrderId))
                 {
                     AbilityExecInstance cancelledInstance = instance;
-                    World.Remove<AbilityExecInstance>(actor);
+                    EnsurePresentationEventCapacity(1, GasPresentationEventKind.CastInterrupted);
                     PublishCastTerminalEvent(actor, in cancelledInstance, GasPresentationEventKind.CastInterrupted);
+                    _structuralCommands.Remove<AbilityExecInstance>(in actor);
                     workUnits++;
                     LastSliceProcessed++;
                     continue;
@@ -622,8 +628,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
-                    World.Remove<AbilityExecInstance>(actor);
-
                     if (terminalInstance.State != AbilityExecRunState.Failed)
                     {
                         var finishKind = terminalInstance.State == AbilityExecRunState.Interrupted
@@ -631,6 +635,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             : GasPresentationEventKind.CastFinished;
                         PublishCastTerminalEvent(actor, in terminalInstance, finishKind);
                     }
+
+                    _structuralCommands.Remove<AbilityExecInstance>(in actor);
                 }
                 else
                 {
@@ -642,6 +648,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             _sliceActive = false;
+            PlaybackStructuralCommands();
             PublishRuntimeState();
             return true;
         }
@@ -850,7 +857,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            World.Remove<AbilityExecInstance>(actor);
             _presentationEvents?.Publish(new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.CastFailed,
@@ -860,6 +866,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 AbilityId = instance.AbilityId,
                 FailReason = presentationReason
             });
+            _structuralCommands.Remove<AbilityExecInstance>(in actor);
         }
 
         private void MarkActiveExecutionFailed(
@@ -1466,29 +1473,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // If there's a deactivate timeline, execute it
             if (toggleSpec.DeactivateExecSpec.ItemCount > 0)
             {
-                if (!World.Has<AbilityExecInstance>(actor))
+                var exec = new AbilityExecInstance
                 {
-                    World.Add(actor, new AbilityExecInstance());
-                }
-                
-                ref var exec = ref World.Get<AbilityExecInstance>(actor);
-                exec.OrderId = orderId;
-                exec.AbilitySlot = slotIndex;
-                exec.AbilityId = abilityId;
-                exec.Target = targetEntity;
-                exec.TargetContext = default;
-                exec.State = AbilityExecRunState.Running;
-                exec.TerminalFailureReason = OrderFailureReason.None;
-                exec.CurrentTick = 0;
-                exec.StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor);
-                exec.NextItemIndex = 0;
-                exec.GateDeadline = 0;
-                exec.WaitTagId = 0;
-                exec.WaitRequestId = 0;
-                exec.ActiveClockId = toggleSpec.DeactivateExecSpec.ClockId;
-                exec.IsToggleDeactivating = true;
-                exec.PendingProgressionUseRequirement = 0;
-                exec.PendingProgressionRequirementId = 0;
+                    OrderId = orderId,
+                    AbilitySlot = slotIndex,
+                    AbilityId = abilityId,
+                    Target = targetEntity,
+                    TargetContext = default,
+                    State = AbilityExecRunState.Running,
+                    TerminalFailureReason = OrderFailureReason.None,
+                    CurrentTick = 0,
+                    StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor),
+                    NextItemIndex = 0,
+                    GateDeadline = 0,
+                    WaitTagId = 0,
+                    WaitRequestId = 0,
+                    ActiveClockId = toggleSpec.DeactivateExecSpec.ClockId,
+                    IsToggleDeactivating = true,
+                    PendingProgressionUseRequirement = 0,
+                    PendingProgressionRequirementId = 0,
+                };
+                _structuralCommands.Add(actor, exec);
                 
                 PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, abilityId);
             }
@@ -1571,6 +1576,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
 
+        private void PlaybackStructuralCommands()
+        {
+            if (_structuralCommands.Size > 0)
+            {
+                _structuralCommands.Playback(World);
+            }
+        }
+
         private int ClockNow(GasClockId clockId, Entity actor)
         {
             return GasClockRuntime.Now(World, _clock, clockId, actor, "Ability execution clock");
@@ -1611,5 +1624,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        public override void Dispose()
+        {
+            _structuralCommands.Dispose();
+            base.Dispose();
+        }
     }
 }
