@@ -36,6 +36,7 @@ namespace Ludots.Client.Raylib.Rendering
         private bool _initialized;
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
+        private Mesh _cylinderMesh;
         private Shader _shader;
         private Material _material;
         private int _locColDiffuse;
@@ -43,6 +44,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
+        private readonly List<Batch> _cylinderBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
@@ -395,6 +397,12 @@ namespace Ludots.Client.Raylib.Rendering
             if (kind == PrimitiveMeshKind.Sphere)
             {
                 AddInstance(_sphereBatches, key, matrix);
+                return;
+            }
+
+            if (kind == PrimitiveMeshKind.Cylinder)
+            {
+                AddInstance(_cylinderBatches, key, matrix);
                 return;
             }
 
@@ -856,6 +864,10 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Sphere, rayColor);
             }
+            else if (kind == PrimitiveMeshKind.Cylinder)
+            {
+                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Cylinder, rayColor);
+            }
         }
 
         private static void DrawTransformedPrimitive(in RaylibMatrix transform, PrimitiveMeshKind kind, Color color)
@@ -872,6 +884,10 @@ namespace Ludots.Client.Raylib.Rendering
                 else if (kind == PrimitiveMeshKind.Sphere)
                 {
                     Rl.DrawSphere(Vector3.Zero, 0.5f, color);
+                }
+                else if (kind == PrimitiveMeshKind.Cylinder)
+                {
+                    Rl.DrawCylinder(Vector3.Zero, 0.5f, 0.5f, 1f, 16, color);
                 }
             }
             finally
@@ -1714,7 +1730,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 switch (descriptor.Type)
                 {
-                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere or PrimitiveMeshKind.Cylinder:
                         SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color);
                         break;
                     case MeshAssetType.Model:
@@ -1987,6 +2003,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             FlushMeshBatches(_cubeBatches, ref totalInstances, ref batches, ref _cubeMesh);
             FlushMeshBatches(_sphereBatches, ref totalInstances, ref batches, ref _sphereMesh);
+            FlushMeshBatches(_cylinderBatches, ref totalInstances, ref batches, ref _cylinderMesh);
 
             LastInstancedInstances += totalInstances;
             LastInstancedBatches += batches;
@@ -2054,6 +2071,15 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
             }
             Rl.UploadMesh(ref _sphereMesh, false);
+
+            _cylinderMesh = Rl.GenMeshCylinder(0.5f, 1f, 16);
+            if (_cylinderMesh.colors == null)
+            {
+                int bytes = _cylinderMesh.vertexCount * 4;
+                _cylinderMesh.colors = (byte*)Rl.MemAlloc(bytes);
+                for (int i = 0; i < bytes; i++) _cylinderMesh.colors[i] = 255;
+            }
+            Rl.UploadMesh(ref _cylinderMesh, false);
 
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
@@ -2154,6 +2180,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
+            if (_cylinderMesh.vertexCount > 0) Rl.UnloadMesh(_cylinderMesh);
             _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);

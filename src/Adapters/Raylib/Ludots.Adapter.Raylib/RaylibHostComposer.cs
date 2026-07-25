@@ -25,7 +25,8 @@ namespace Ludots.Adapter.Raylib
         GameConfig Config,
         UIRoot UiRoot,
         SkiaUiRenderer Renderer,
-        IBrowserRuntime? BrowserRuntime);
+        IBrowserRuntime? BrowserRuntime,
+        RaylibInputPlayback? InputPlayback);
 
     internal static class RaylibHostComposer
     {
@@ -78,7 +79,10 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            IInputBackend inputBackend = new RaylibInputBackend();
+            RaylibInputPlayback? inputPlayback = RaylibInputPlayback.LoadFromEnvironment();
+            IInputBackend inputBackend = inputPlayback is null
+                ? new RaylibInputBackend()
+                : inputPlayback;
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
             if (config.StartupInputContexts != null)
             {
@@ -95,7 +99,7 @@ namespace Ludots.Adapter.Raylib
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime, inputPlayback);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)

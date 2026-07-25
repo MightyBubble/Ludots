@@ -11,6 +11,72 @@ namespace Ludots.Tests.Architecture
     public class LauncherBootstrapContractTests
     {
         [Test]
+        public async Task PrepareAppForLaunchAsync_Never_SkipsBuildWhenAssemblyExists()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-app-never-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateIsolatedLauncher(repoRoot, tempDirectory);
+                var plan = launcher.Resolve(
+                    new[] { "mod:LudotsCoreMod" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                var assemblyPath = Path.Combine(tempDirectory, "ready-app.dll");
+                File.WriteAllBytes(assemblyPath, new byte[] { 1 });
+
+                LauncherBuildResult result = await launcher.PrepareAppForLaunchAsync(
+                    plan with { AppAssemblyPath = assemblyPath });
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(result.Ok, Is.True);
+                    Assert.That(result.ExitCode, Is.Zero);
+                    Assert.That(result.Output, Does.Contain("skipped by request"));
+                });
+            }
+            finally
+            {
+                Directory.Delete(tempDirectory, recursive: true);
+            }
+        }
+
+        [Test]
+        public async Task PrepareAppForLaunchAsync_Never_FailsWhenAssemblyIsMissing()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-app-missing-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var launcher = CreateIsolatedLauncher(repoRoot, tempDirectory);
+                var plan = launcher.Resolve(
+                    new[] { "mod:LudotsCoreMod" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                var missingAssemblyPath = Path.Combine(tempDirectory, "missing-app.dll");
+
+                LauncherBuildResult result = await launcher.PrepareAppForLaunchAsync(
+                    plan with { AppAssemblyPath = missingAssemblyPath });
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(result.Ok, Is.False);
+                    Assert.That(result.ExitCode, Is.Not.Zero);
+                    Assert.That(result.Output, Does.Contain("Application assembly is missing"));
+                    Assert.That(result.Output, Does.Contain(missingAssemblyPath));
+                });
+            }
+            finally
+            {
+                Directory.Delete(tempDirectory, recursive: true);
+            }
+        }
+
+        [Test]
         public async Task RunProcessAsync_ReturnsWithoutHanging_WhenDescendantKeepsRedirectedOutputOpen()
         {
             if (!OperatingSystem.IsWindows())
@@ -54,6 +120,20 @@ namespace Ludots.Tests.Architecture
                     Directory.Delete(tempDirectory, recursive: true);
                 }
             }
+        }
+
+        private static LauncherService CreateIsolatedLauncher(string repoRoot, string tempDirectory)
+        {
+            string preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+            string userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+            File.WriteAllText(preferencesPath, "{}");
+            File.WriteAllText(userConfigPath, "{}");
+            return new LauncherService(
+                repoRoot,
+                Path.Combine(repoRoot, "launcher.config.json"),
+                Path.Combine(repoRoot, "launcher.presets.json"),
+                preferencesPath,
+                userConfigPath);
         }
 
         [Test]

@@ -19,6 +19,7 @@
 - [实体仿真工作流拆分](entity-simulation-workstreams.md)
 - [实体仿真阶段验收](entity-simulation-uat.md)
 - [能力标准 Showcase](capability-standard-showcases.md)
+- [Physics3D 固定 30Hz 大规模物理与未来联机边界实施计划](physics3d-30hz-scale-delivery-plan.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
 - [Structure Collision Surfaces](structure-collision-surfaces.md)

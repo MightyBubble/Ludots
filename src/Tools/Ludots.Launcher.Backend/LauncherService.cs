@@ -331,6 +331,39 @@ public sealed class LauncherService
         return new LauncherBuildResult(platformId, dotnetBuild.ExitCode == 0, dotnetBuild.ExitCode, output.ToString());
     }
 
+    public async Task<LauncherBuildResult> PrepareAppForLaunchAsync(LauncherLaunchPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!string.Equals(
+                plan.BuildMode,
+                LauncherBuildMode.Never.ToString(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return await BuildAppAsync(plan.AdapterId);
+        }
+
+        if (!File.Exists(plan.AppAssemblyPath))
+        {
+            return new LauncherBuildResult(
+                plan.AdapterId,
+                false,
+                1,
+                $"Application assembly is missing while build mode is never: {plan.AppAssemblyPath}");
+        }
+
+        if (string.Equals(plan.AdapterId, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase) &&
+            !Directory.Exists(plan.Adapter.ClientDistributionDirectory))
+        {
+            return new LauncherBuildResult(
+                plan.AdapterId,
+                false,
+                1,
+                $"Web client distribution is missing while build mode is never: {plan.Adapter.ClientDistributionDirectory}");
+        }
+
+        return new LauncherBuildResult(plan.AdapterId, true, 0, "Application build skipped by request.");
+    }
+
     public string WriteGameJson(string platformId, IEnumerable<string> modIds)
     {
         var selectors = modIds
@@ -402,7 +435,7 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        var appBuild = await PrepareAppForLaunchAsync(resolveResult.Plan);
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
