@@ -66,6 +66,11 @@ internal sealed partial class Physics3DShowcaseRuntime
     private Physics3DShowcaseRouteStatus _characterRouteStatus = Physics3DShowcaseRouteStatus.InProgress;
     private int _characterRouteCheckpointIndex;
     private bool _characterCameraActive;
+    private bool _characterRouteGuideActive;
+    private bool _characterRouteGuideGapJumped;
+    private bool _characterRouteGuideOneWaySideLaneReached;
+    private bool _characterRouteGuideOneWayUndersideReached;
+    private bool _characterRouteGuideOneWayJumpStarted;
 
     private void BuildPlatformStationScene()
     {
@@ -404,6 +409,234 @@ internal sealed partial class Physics3DShowcaseRuntime
         _capturedTraverse = false;
     }
 
+    private void ApplyCharacterRouteGuideInput()
+    {
+        if (!_characterRouteGuideActive)
+        {
+            return;
+        }
+
+        if (_scene is not (Physics3DShowcaseScene.PlatformStation or Physics3DShowcaseScene.TraversalCourse))
+        {
+            throw new InvalidOperationException("Character route guide is active outside a character route scene.");
+        }
+
+        if (_characterRouteStatus != Physics3DShowcaseRouteStatus.InProgress)
+        {
+            _characterRouteGuideActive = false;
+            return;
+        }
+
+        _capturedJump = false;
+        _capturedTraverse = false;
+        if (_scene == Physics3DShowcaseScene.PlatformStation)
+        {
+            ApplyPlatformRouteGuideInput();
+        }
+        else
+        {
+            ApplyTraversalRouteGuideInput();
+        }
+    }
+
+    private void ApplyPlatformRouteGuideInput()
+    {
+        Physics3DCharacterTraversalShowcaseConfig config = ActiveConfig.CharacterTraversal;
+        Character3DState character = RequireCharacterControllers().GetState(_playerCharacter);
+        Vector2 move = Vector2.Zero;
+        bool jump = false;
+        float targetToleranceCm = config.SkinWidthCm;
+        switch (_characterRouteCheckpointIndex)
+        {
+            case 0:
+                if (!(character.IsGrounded && character.SupportBody == _routeMovingSurface))
+                {
+                    Physics3DBodyState platform = RequirePhysicsWorld().GetBodyState(_routeMovingSurface);
+                    move = RouteGuideMoveTowardX(character.PositionCm.X, platform.PositionCm.X, targetToleranceCm);
+                    float startDeckJumpXCm = config.PlatformStationStartXCm +
+                        (config.PlatformStationStartDeckSizeXCm * 0.5f) -
+                        (config.CharacterRadiusCm * 2f);
+                    float boardingReachCm = (config.PlatformSizeXCm * 0.5f) + config.CharacterRadiusCm;
+                    jump = character.IsGrounded &&
+                        (character.PositionCm.X >= startDeckJumpXCm ||
+                         MathF.Abs(character.PositionCm.X - platform.PositionCm.X) <= boardingReachCm);
+                }
+                break;
+            case 1:
+                if (character.IsGrounded && character.SupportBody == _routeMovingSurface)
+                {
+                    Physics3DBodyState platform = RequirePhysicsWorld().GetBodyState(_routeMovingSurface);
+                    float movingPlatformDismountXCm = config.MovingPlatformCenterXCm +
+                        config.MovingPlatformTravelCm - (config.CharacterRadiusCm * 2f);
+                    move = RouteGuideMoveTowardX(character.PositionCm.X, platform.PositionCm.X, targetToleranceCm);
+                    jump = MathF.Abs(character.PositionCm.X - platform.PositionCm.X) <= config.CharacterRadiusCm &&
+                        platform.PositionCm.X >= movingPlatformDismountXCm &&
+                        character.SupportVelocityCmPerSecond.X >= config.PlatformMinimumSupportSpeedCmPerSecond;
+                }
+                else if (character.IsGrounded && character.SupportBody == _routeRotatingSurface)
+                {
+                    move = Vector2.Zero;
+                }
+                else
+                {
+                    float rotatingRideXCm = config.RotatingPlatformCenterXCm -
+                        config.RotatingPlatformRadiusCm + (config.CharacterRadiusCm * 2f);
+                    move = RouteGuideMoveTowardX(character.PositionCm.X, rotatingRideXCm, targetToleranceCm);
+                }
+                break;
+            case 2:
+                if (!(character.IsGrounded && character.SupportBody == _routeConveyorSurface))
+                {
+                    float conveyorCenterXCm = config.RotatingPlatformCenterXCm +
+                        config.PlatformStationConveyorOffsetXCm;
+                    move = RouteGuideMoveTowardX(character.PositionCm.X, conveyorCenterXCm, targetToleranceCm);
+                    jump = character.IsGrounded && character.SupportBody == _routeRotatingSurface;
+                }
+                break;
+            case 3:
+                float oneWaySideLaneZ = (config.PlatformStationOneWaySizeZCm * 0.5f) +
+                    config.CharacterRadiusCm + config.PlatformOneWayPassThroughClearanceCm;
+                float oneWayHalfWidth = config.PlatformStationOneWaySizeXCm * 0.5f;
+                float oneWayHalfDepth = config.PlatformStationOneWaySizeZCm * 0.5f;
+                float oneWayBottom = config.PlatformStationOneWayCenterYCm -
+                    (config.DeckThicknessCm * 0.5f);
+                bool withinOneWay =
+                    MathF.Abs(character.PositionCm.X - config.PlatformStationOneWayCenterXCm) <= oneWayHalfWidth &&
+                    MathF.Abs(character.PositionCm.Z) <= oneWayHalfDepth;
+                _characterRouteGuideOneWaySideLaneReached |= character.PositionCm.Z >= oneWaySideLaneZ;
+                _characterRouteGuideOneWayUndersideReached |=
+                    _characterRouteGuideOneWaySideLaneReached &&
+                    withinOneWay &&
+                    character.IsGrounded &&
+                    character.PositionCm.Y <= oneWayBottom + config.PlatformOneWayPassThroughClearanceCm;
+
+                if (!_characterRouteGuideOneWaySideLaneReached)
+                {
+                    move = Vector2.UnitY;
+                }
+                else if (!_characterRouteGuideOneWayUndersideReached &&
+                         MathF.Abs(character.PositionCm.X - config.PlatformStationOneWayCenterXCm) > targetToleranceCm)
+                {
+                    move = RouteGuideMoveTowardX(
+                        character.PositionCm.X,
+                        config.PlatformStationOneWayCenterXCm,
+                        targetToleranceCm);
+                }
+                else if (!_characterRouteGuideOneWayUndersideReached)
+                {
+                    move = -Vector2.UnitY;
+                }
+                else if (!_characterRouteGuideOneWayJumpStarted && character.IsGrounded)
+                {
+                    jump = true;
+                    _characterRouteGuideOneWayJumpStarted = true;
+                }
+                else if (_characterRouteGuideOneWayJumpStarted &&
+                         character.IsGrounded &&
+                         !_oneWayPassedFromBelow)
+                {
+                    _characterRouteGuideOneWayJumpStarted = false;
+                }
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Character route guide received invalid Platform Station checkpoint {_characterRouteCheckpointIndex}.");
+        }
+
+        StoreCharacterTraversalInput(move, jump, traverseRequested: false);
+    }
+
+    private void ApplyTraversalRouteGuideInput()
+    {
+        Physics3DCharacterTraversalShowcaseConfig config = ActiveConfig.CharacterTraversal;
+        Character3DState character = RequireCharacterControllers().GetState(_playerCharacter);
+        Traversal3DStatus traversal = RequireTraversalControllers().GetStatus(_playerTraversal);
+        if (traversal.State == Traversal3DState.Attached)
+        {
+            StoreCharacterTraversalInput(Vector2.Zero, jumpRequested: false, traverseRequested: false);
+            return;
+        }
+
+        if (traversal.State is Traversal3DState.Climbing or Traversal3DState.LedgeHang or Traversal3DState.Mantling)
+        {
+            StoreCharacterTraversalInput(Vector2.UnitY, jumpRequested: false, traverseRequested: false);
+            return;
+        }
+
+        Vector2 move = Vector2.Zero;
+        bool jump = false;
+        bool traverseRequested = false;
+        if (_characterRouteCheckpointIndex <= 2)
+        {
+            move = Vector2.UnitX;
+            jump = _characterRouteCheckpointIndex == 2 && character.IsGrounded;
+        }
+        else if (_characterRouteCheckpointIndex == 3)
+        {
+            float ladderAttachReadyXCm = config.LadderCenterXCm -
+                config.AttachProbeDistanceCm + config.SkinWidthCm;
+            if (character.PositionCm.X < ladderAttachReadyXCm)
+            {
+                move = Vector2.UnitX;
+            }
+            else
+            {
+                traverseRequested = true;
+            }
+        }
+        else if (_characterRouteCheckpointIndex == 4)
+        {
+            float wallAttachReadyXCm = config.WallCenterXCm -
+                config.AttachProbeDistanceCm + config.SkinWidthCm;
+            if (character.PositionCm.X < wallAttachReadyXCm)
+            {
+                move = Vector2.UnitX;
+                float gapJumpXCm = config.LadderDeckCenterXCm +
+                    (config.LadderDeckLengthCm * 0.5f) -
+                    (config.CharacterRadiusCm * 2f);
+                jump = !_characterRouteGuideGapJumped &&
+                    character.IsGrounded &&
+                    character.PositionCm.X >= gapJumpXCm;
+                _characterRouteGuideGapJumped |= jump;
+            }
+            else
+            {
+                traverseRequested = true;
+            }
+        }
+
+        StoreCharacterTraversalInput(move, jump, traverseRequested);
+    }
+
+    private static Vector2 RouteGuideMoveTowardX(float currentXCm, float targetXCm, float toleranceCm)
+    {
+        float deltaCm = targetXCm - currentXCm;
+        if (MathF.Abs(deltaCm) <= toleranceCm)
+        {
+            return Vector2.Zero;
+        }
+
+        return deltaCm > 0f ? Vector2.UnitX : -Vector2.UnitX;
+    }
+
+    private void ToggleCharacterRouteGuide()
+    {
+        if (_scene is not (Physics3DShowcaseScene.PlatformStation or Physics3DShowcaseScene.TraversalCourse))
+        {
+            throw new InvalidOperationException("Guided Run is only available in Platform Station and Traversal Course.");
+        }
+
+        if (_characterRouteStatus != Physics3DShowcaseRouteStatus.InProgress)
+        {
+            throw new InvalidOperationException("Restart the route before enabling Guided Run.");
+        }
+
+        _characterRouteGuideActive = !_characterRouteGuideActive;
+        _lastAction = _characterRouteGuideActive
+            ? "Guided Run started through the same character input and physical checkpoints as manual play."
+            : "Guided Run stopped; manual character input is active.";
+    }
+
     private void ObserveCharacterTraversalStep()
     {
         Character3DControllerSet characters = RequireCharacterControllers();
@@ -494,6 +727,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         if (_characterRouteCheckpointIndex >= checkpointCount)
         {
             _characterRouteStatus = Physics3DShowcaseRouteStatus.Completed;
+            _characterRouteGuideActive = false;
             _lastAction = _scene == Physics3DShowcaseScene.PlatformStation
                 ? "Route complete: you crossed all four live platform surfaces. Restart Route to run it again."
                 : "Route complete: you reached the upper deck after both mantles. Restart Route to run it again.";
@@ -650,6 +884,11 @@ internal sealed partial class Physics3DShowcaseRuntime
         _conveyorCarryStartXCm = 0f;
         _oneWayEnteredFromBelow = false;
         _oneWayPassedFromBelow = false;
+        _characterRouteGuideActive = false;
+        _characterRouteGuideGapJumped = false;
+        _characterRouteGuideOneWaySideLaneReached = false;
+        _characterRouteGuideOneWayUndersideReached = false;
+        _characterRouteGuideOneWayJumpStarted = false;
     }
 
     private bool TraversalCheckpointReached(
@@ -681,6 +920,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         _characterRouteStatus = Physics3DShowcaseRouteStatus.Failed;
+        _characterRouteGuideActive = false;
         _lastAction = $"Route failed: {reason}";
     }
 
@@ -1019,6 +1259,8 @@ internal sealed partial class Physics3DShowcaseRuntime
     private static Traversal3DProfile CreateTraversalProfile(Physics3DCharacterTraversalShowcaseConfig config)
         => new(
             config.AttachProbeDistanceCm,
+            config.AttachProbeRadiusCm,
+            config.SurfaceClearanceCm,
             config.AttachSpeedCmPerSecond,
             config.ClimbSpeedCmPerSecond,
             config.LateralClimbSpeedCmPerSecond,

@@ -10,6 +10,24 @@ namespace CapabilityStandardPhysics3DShowcaseMod.Runtime;
 
 internal sealed partial class Physics3DShowcaseRuntime
 {
+    private void ApplyStationCameraPose(Physics3DShowcaseScene scene)
+    {
+        GameEngine engine = _engine
+            ?? throw new InvalidOperationException($"Physics3D {scene} lost GameEngine before camera activation.");
+        Physics3DStationCameraShowcaseConfig pose = ActiveConfig.GetStationCameraPose(scene);
+        RestoreDefaultCamera(SceneTitle(scene));
+        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        {
+            TargetCm = new Vector2(pose.TargetXCm, pose.TargetZCm),
+            TargetHeightCm = pose.TargetHeightCm,
+            Yaw = pose.Yaw,
+            Pitch = pose.Pitch,
+            DistanceCm = pose.DistanceCm,
+            FovYDeg = pose.FovYDeg
+        });
+        engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+    }
+
     private bool ActivateStationFollowCamera(
         string cameraId,
         Func<CameraTargetTransformSnapshot> targetProvider,

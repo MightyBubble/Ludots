@@ -55,6 +55,7 @@ internal sealed class RaylibInputPlayback : IInputBackend
     private int _nextEventIndex;
     private int _lastFrame = -1;
     private Vector2 _pointerPosition = new(-1f, -1f);
+    private bool _pointerChanged;
     private float _wheel;
 
     private RaylibInputPlayback(RaylibInputPlaybackEventConfig[] events)
@@ -109,6 +110,7 @@ internal sealed class RaylibInputPlayback : IInputBackend
         }
 
         _lastFrame = frame;
+        _pointerChanged = false;
         _wheel = 0f;
         if (_nextEventIndex < _events.Length && _events[_nextEventIndex].Frame < frame)
         {
@@ -131,6 +133,7 @@ internal sealed class RaylibInputPlayback : IInputBackend
                     break;
                 case RaylibInputPlaybackEventKind.Pointer:
                     _pointerPosition = new Vector2(playbackEvent.X!.Value, playbackEvent.Y!.Value);
+                    _pointerChanged = true;
                     break;
                 case RaylibInputPlaybackEventKind.Wheel:
                     _wheel = playbackEvent.Value!.Value;
@@ -184,6 +187,8 @@ internal sealed class RaylibInputPlayback : IInputBackend
     public Vector2 GetMousePosition() => _pointerPosition;
 
     public float GetMouseWheel() => _wheel;
+
+    internal bool PointerChangedThisFrame => _pointerChanged;
 
     public void EnableIME(bool enable)
     {

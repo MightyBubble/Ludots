@@ -36,6 +36,8 @@ internal sealed partial class Physics3DShowcaseRuntime
     private int _materialHillStableTicks;
     private Physics3DShowcaseWindZone _windTunnelZone;
     private Physics3DShowcaseDriveDirection _windTunnelDirection;
+    private Physics3DShowcaseChallengeStatus _windTunnelComparisonStatus;
+    private int _windTunnelComparisonTicks;
 
     internal int MaterialHillImpulseSubmissionCount => _materialHillImpulseSubmissionCount;
     internal Physics3DMaterialHillShowcaseState MaterialHillState
@@ -331,6 +333,8 @@ internal sealed partial class Physics3DShowcaseRuntime
         AddFloor();
         _windTunnelZone = config.InitialZone;
         _windTunnelDirection = config.InitialDirection;
+        _windTunnelComparisonStatus = Physics3DShowcaseChallengeStatus.Running;
+        _windTunnelComparisonTicks = 0;
         RebuildWindTunnelFields();
         Vector3 steadyCenter = new(config.SteadyCenterXCm, config.ZoneCenterYCm, 0f);
         Vector3 gustCenter = new(config.GustCenterXCm, config.ZoneCenterYCm, 0f);
@@ -352,6 +356,30 @@ internal sealed partial class Physics3DShowcaseRuntime
         fields.Apply(awakeBodies, world);
     }
 
+    private void ObserveWindTunnelStep()
+    {
+        if (_windTunnelComparisonStatus != Physics3DShowcaseChallengeStatus.Running)
+        {
+            return;
+        }
+
+        Physics3DWindTunnelShowcaseConfig config = ActiveConfig.WindTunnel;
+        _windTunnelComparisonTicks++;
+        if (_windTunnelComparisonTicks < config.ComparisonDurationTicks)
+        {
+            return;
+        }
+
+        GetWindTunnelTravelCm((int)_windTunnelZone, out float lightTravelCm, out float heavyTravelCm);
+        float leadCm = lightTravelCm - heavyTravelCm;
+        _windTunnelComparisonStatus = leadCm >= config.MinimumLightLeadCm
+            ? Physics3DShowcaseChallengeStatus.Complete
+            : Physics3DShowcaseChallengeStatus.Failed;
+        _lastAction = _windTunnelComparisonStatus == Physics3DShowcaseChallengeStatus.Complete
+            ? $"Wind comparison complete. The light object led the heavy object by {leadCm:0} cm after {config.ComparisonDurationTicks} fixed steps."
+            : $"Wind comparison failed. The light-object lead was {leadCm:0} cm; {config.MinimumLightLeadCm:0} cm is required.";
+    }
+
     private void ReleaseEnvironmentLabScene()
     {
         _materialHillImpulsePending = false;
@@ -369,6 +397,8 @@ internal sealed partial class Physics3DShowcaseRuntime
         _windTunnelFields?.Clear();
         _windTunnelZone = default;
         _windTunnelDirection = Physics3DShowcaseDriveDirection.Forward;
+        _windTunnelComparisonStatus = Physics3DShowcaseChallengeStatus.Ready;
+        _windTunnelComparisonTicks = 0;
     }
 
     private string CreateMaterialHillSummary()
@@ -396,8 +426,9 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         GetWindTunnelTravelCm((int)_windTunnelZone, out float lightTravel, out float heavyTravel);
-        return $"{WindZoneLabel(_windTunnelZone)} | {DriveDirectionLabel(_windTunnelDirection)} | " +
-               $"light {lightTravel:0} cm / heavy {heavyTravel:0} cm";
+        return $"{ChallengeStatusLabel(_windTunnelComparisonStatus)} | {WindZoneLabel(_windTunnelZone)} | " +
+               $"{DriveDirectionLabel(_windTunnelDirection)} | light {lightTravel:0} cm / heavy {heavyTravel:0} cm | " +
+               $"lead {lightTravel - heavyTravel:0} cm";
     }
 
     internal static string ChallengeStatusLabel(Physics3DShowcaseChallengeStatus status) => status switch
@@ -562,6 +593,8 @@ internal sealed partial class Physics3DShowcaseRuntime
         }
 
         _windTunnelZone = (Physics3DShowcaseWindZone)value;
+        _windTunnelComparisonStatus = Physics3DShowcaseChallengeStatus.Ready;
+        _windTunnelComparisonTicks = 0;
         _lastAction = $"Selected {WindZoneLabel(_windTunnelZone)}. Relaunch the pair to compare from the same start.";
     }
 
@@ -572,6 +605,8 @@ internal sealed partial class Physics3DShowcaseRuntime
             ? Physics3DShowcaseDriveDirection.Reverse
             : Physics3DShowcaseDriveDirection.Forward;
         RebuildWindTunnelFields();
+        _windTunnelComparisonStatus = Physics3DShowcaseChallengeStatus.Ready;
+        _windTunnelComparisonTicks = 0;
         _lastAction = $"All formal wind fields now run {DriveDirectionLabel(_windTunnelDirection)}. " +
             "Relaunch the selected pair for a clean comparison.";
     }
@@ -590,6 +625,8 @@ internal sealed partial class Physics3DShowcaseRuntime
             _windTunnelHeavyBodies[zoneIndex],
             _windTunnelHeavyStartPositionsCm[zoneIndex],
             "heavy");
+        _windTunnelComparisonStatus = Physics3DShowcaseChallengeStatus.Running;
+        _windTunnelComparisonTicks = 0;
         _lastAction = $"Relaunched the {WindZoneLabel(_windTunnelZone)} light and heavy pair with zero initial velocity.";
     }
 

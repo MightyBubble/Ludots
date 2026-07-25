@@ -20,6 +20,8 @@ public sealed class Traversal3DControllerSet
     private readonly Character3DHandle[] _characterHandles;
     private readonly Physics3DBodyId[] _characterBodies;
     private readonly float[] _attachProbeDistances;
+    private readonly float[] _attachProbeRadii;
+    private readonly float[] _surfaceClearances;
     private readonly float[] _attachSpeeds;
     private readonly float[] _climbSpeeds;
     private readonly float[] _lateralSpeeds;
@@ -86,6 +88,8 @@ public sealed class Traversal3DControllerSet
         _characterHandles = new Character3DHandle[capacity];
         _characterBodies = new Physics3DBodyId[capacity];
         _attachProbeDistances = new float[capacity];
+        _attachProbeRadii = new float[capacity];
+        _surfaceClearances = new float[capacity];
         _attachSpeeds = new float[capacity];
         _climbSpeeds = new float[capacity];
         _lateralSpeeds = new float[capacity];
@@ -164,6 +168,14 @@ public sealed class Traversal3DControllerSet
         profile.Validate(nameof(profile));
         Character3DGeometry geometry = _characters.GetGeometry(character);
         RequireLiveBody(geometry.Body, nameof(character));
+        if (profile.AttachProbeRadiusCm > geometry.RadiusCm)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(profile),
+                profile.AttachProbeRadiusCm,
+                $"Traversal attach probe radius must not exceed character radius {geometry.RadiusCm}cm.");
+        }
+
         int slot = FindFreeSlot();
         if (slot < 0)
         {
@@ -181,6 +193,8 @@ public sealed class Traversal3DControllerSet
         _characterHandles[slot] = character;
         _characterBodies[slot] = geometry.Body;
         _attachProbeDistances[slot] = profile.AttachProbeDistanceCm;
+        _attachProbeRadii[slot] = profile.AttachProbeRadiusCm;
+        _surfaceClearances[slot] = profile.SurfaceClearanceCm;
         _attachSpeeds[slot] = profile.AttachSpeedCmPerSecond;
         _climbSpeeds[slot] = profile.ClimbSpeedCmPerSecond;
         _lateralSpeeds[slot] = profile.LateralSpeedCmPerSecond;
@@ -338,7 +352,7 @@ public sealed class Traversal3DControllerSet
             _surfaceNormals[slot] = NormalizeHorizontal(hit.Normal, _facingDirections[slot]);
             Character3DState character = _characters.GetState(_characterHandles[slot]);
             _targetPositions[slot] = character.PositionCm +
-                                     (_facingDirections[slot] * MathF.Max(0f, hit.DistanceCm - 2f));
+                                     (_facingDirections[slot] * MathF.Max(0f, hit.DistanceCm - _surfaceClearances[slot]));
             SubmitTargetPosition(slot, character.PositionCm, _targetPositions[slot], _attachSpeeds[slot]);
             return;
         }
@@ -462,7 +476,7 @@ public sealed class Traversal3DControllerSet
         var filter = new Physics3DQueryFilter(geometry.QueryLayer, geometry.Body, includeSensors: true);
         bool found = _world.SphereCastClosest(
             state.PositionCm,
-            MathF.Min(geometry.RadiusCm * 0.45f, 18f),
+            _attachProbeRadii[slot],
             _facingDirections[slot],
             _attachProbeDistances[slot],
             filter,
@@ -524,7 +538,7 @@ public sealed class Traversal3DControllerSet
         }
 
         mantleTarget = top.PositionCm +
-                        (Vector3.UnitY * (geometry.HalfHeightCm + 2f)) +
+                        (Vector3.UnitY * (geometry.HalfHeightCm + _surfaceClearances[slot])) +
                         (inward * _mantleForwards[slot]);
         int landingOverlaps = _world.OverlapCapsule(
             mantleTarget,
@@ -545,7 +559,7 @@ public sealed class Traversal3DControllerSet
         }
 
         hangTarget = top.PositionCm +
-                     (_surfaceNormals[slot] * (geometry.RadiusCm + 2f)) -
+                     (_surfaceNormals[slot] * (geometry.RadiusCm + _surfaceClearances[slot])) -
                      (Vector3.UnitY * (geometry.HalfHeightCm * 0.35f));
         return true;
     }

@@ -85,6 +85,7 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
         EmitQueries();
         EmitWindTunnelSelection();
         EmitWheelLabDebug();
+        EmitConstraintForgeLabels();
         float refreshInterval = 1f / _runtime.ActiveConfig.PanelRefreshHz;
         _panelRefreshAccumulator += t;
         bool sceneChanged = _hasPanelState && _panelState.Scene != _runtime.ActiveScene;
@@ -582,14 +583,22 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                     : new Vector4(0.34f, 0.54f, 0.62f, 0.72f),
                 stableId);
 
-            float markerDiameterCm = wheel.Mode == Vehicle3DWheelKind.Scanning
-                ? wheel.WheelRadiusCm * 2f
-                : config.DebugContactMarkerDiameterCm;
-            Vector4 markerColor = wheel.Mode == Vehicle3DWheelKind.Scanning
-                ? new Vector4(0.20f, 0.72f, 0.96f, config.DebugScanningWheelAlpha)
-                : new Vector4(0.70f, 0.78f, 0.86f, 0.75f);
+            float markerDiameterCm = wheel.Mode switch
+            {
+                Vehicle3DWheelKind.Physical => wheel.WheelRadiusCm * 0.8f,
+                Vehicle3DWheelKind.Box => wheel.WheelRadiusCm * 1.5f,
+                Vehicle3DWheelKind.Scanning => wheel.WheelRadiusCm * 2f,
+                _ => throw new InvalidOperationException($"Unsupported Wheel Lab visual mode '{wheel.Mode}'.")
+            };
+            Vector4 markerColor = wheel.Mode switch
+            {
+                Vehicle3DWheelKind.Physical => new Vector4(0.82f, 0.90f, 0.96f, 0.95f),
+                Vehicle3DWheelKind.Box => new Vector4(1f, 0.52f, 0.08f, 0.58f),
+                Vehicle3DWheelKind.Scanning => new Vector4(0.20f, 0.72f, 0.96f, config.DebugScanningWheelAlpha),
+                _ => throw new InvalidOperationException($"Unsupported Wheel Lab visual mode '{wheel.Mode}'.")
+            };
             AddPrimitive(
-                _sphereMeshId,
+                wheel.Mode == Vehicle3DWheelKind.Box ? _cubeMeshId : _sphereMeshId,
                 ToMeters(wheel.WheelCenterCm),
                 Quaternion.Identity,
                 ToMeters(new Vector3(markerDiameterCm)),
@@ -630,6 +639,32 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                 config.DebugLineThicknessCm,
                 new Vector4(0.98f, 0.24f, 0.20f, 0.95f),
                 stableId + 4);
+        }
+    }
+
+    private void EmitConstraintForgeLabels()
+    {
+        if (_runtime.ActiveScene != Physics3DShowcaseScene.ConstraintForge)
+        {
+            return;
+        }
+
+        Physics3DConstraintForgeShowcaseConfig config = _runtime.ActiveConfig.ConstraintForge;
+        for (int labelIndex = 0; labelIndex < _runtime.ConstraintForgeExhibitLabelCount; labelIndex++)
+        {
+            if (!_runtime.TryGetConstraintForgeExhibitLabel(labelIndex, out int number, out Vector3 positionCm))
+            {
+                throw new InvalidOperationException($"Constraint Forge exhibit label {labelIndex} is unavailable.");
+            }
+
+            EmitSevenSegmentDigit(
+                number,
+                positionCm,
+                config.LabelHeightCm,
+                config.LabelHeightCm * 0.58f,
+                config.LabelThicknessCm,
+                new Vector4(1f, 0.82f, 0.18f, 1f),
+                990_000 + (labelIndex * 7));
         }
     }
 

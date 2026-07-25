@@ -20,6 +20,10 @@ internal sealed partial class Physics3DShowcaseRuntime
     {
         ClearOwnedScene();
         ResetSceneDiagnostics();
+        if (_stationCameraEnabled)
+        {
+            ApplyStationCameraPose(_scene);
+        }
         switch (_scene)
         {
             case Physics3DShowcaseScene.ScannerRange:
@@ -211,6 +215,10 @@ internal sealed partial class Physics3DShowcaseRuntime
                 Vector3.Zero,
                 Physics3DContinuousDetectionMode.Passive,
                 i == 0 ? KinematicColor : DynamicBlue);
+            if (i == 0)
+            {
+                _forgeLabelBodies[0] = _bodyIds[index];
+            }
             if (previous >= 0)
             {
                 AddOwnedConstraint(RequirePhysicsWorld().CreateBallSocketConstraint(
@@ -240,6 +248,10 @@ internal sealed partial class Physics3DShowcaseRuntime
                 Vector3.Zero,
                 Physics3DContinuousDetectionMode.Passive,
                 i == 0 ? KinematicColor : DynamicGold);
+            if (i == 0)
+            {
+                _forgeLabelBodies[1] = _bodyIds[index];
+            }
             if (previous >= 0)
             {
                 AddOwnedConstraint(RequirePhysicsWorld().CreateHingeConstraint(
@@ -272,6 +284,10 @@ internal sealed partial class Physics3DShowcaseRuntime
                 Vector3.Zero,
                 Physics3DContinuousDetectionMode.Passive,
                 DynamicGreen);
+            if (pair == 0)
+            {
+                _forgeLabelBodies[2] = _bodyIds[bodyAIndex];
+            }
             int bodyBIndex = _bodyCount;
             AddOwnedBody(
                 Physics3DBodyKind.Dynamic,
@@ -407,6 +423,12 @@ internal sealed partial class Physics3DShowcaseRuntime
         {
             case Physics3DShowcaseScene.MaterialHill:
                 ObserveMaterialHillStep();
+                break;
+            case Physics3DShowcaseScene.WindTunnel:
+                ObserveWindTunnelStep();
+                break;
+            case Physics3DShowcaseScene.ConstraintForge:
+                ObserveConstraintForgeStep();
                 break;
             case Physics3DShowcaseScene.ReplayTheater:
                 ObserveDeterminismStep();

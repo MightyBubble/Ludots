@@ -225,6 +225,7 @@ public sealed class Physics3DEnvironmentLabShowcaseTests
             Assert.That(relaunched.WindDirection, Is.EqualTo(Physics3DShowcaseDriveDirection.Reverse));
             Assert.That(relaunched.WindLightTravelCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(relaunched.WindHeavyTravelCm, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(relaunched.WindComparisonStatus, Is.EqualTo(Physics3DShowcaseChallengeStatus.Running));
             Assert.That(relaunched.LastAction, Does.Contain("Relaunched").And.Contain("Vortex"));
             Assert.That(harness.Runtime.TryGetWindTunnelZoneVisual(out _, out _, out Vector3 direction), Is.True);
             Assert.That(direction.Z, Is.LessThan(0f));
@@ -237,6 +238,9 @@ public sealed class Physics3DEnvironmentLabShowcaseTests
         Assert.Multiple(() =>
         {
             Assert.That(moved.WindSummary, Does.Contain("Vortex").And.Contain("REVERSE"));
+            Assert.That(moved.WindComparisonStatus, Is.EqualTo(Physics3DShowcaseChallengeStatus.Complete));
+            Assert.That(moved.WindComparisonTicksRemaining, Is.Zero);
+            Assert.That(moved.WindSummary, Does.StartWith("COMPLETE"));
             Assert.That(moved.WindLightTravelCm, Is.GreaterThan(moved.WindHeavyTravelCm));
             Assert.That(moved.WindHeavyTravelCm, Is.GreaterThan(0f));
         });
@@ -250,6 +254,7 @@ public sealed class Physics3DEnvironmentLabShowcaseTests
             Assert.That(reset.WindDirection, Is.EqualTo(config.WindTunnel.InitialDirection));
             Assert.That(reset.WindLightTravelCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(reset.WindHeavyTravelCm, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(reset.WindComparisonStatus, Is.EqualTo(Physics3DShowcaseChallengeStatus.Running));
             Assert.That(reset.LastAction, Does.Contain("Reset Wind Tunnel"));
         });
         harness.CompletePreparedStep();

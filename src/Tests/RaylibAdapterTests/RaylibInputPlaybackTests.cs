@@ -125,6 +125,53 @@ public sealed class RaylibInputPlaybackTests
         }
     }
 
+    [Test]
+    public void Playback_ExposesAuthoredPointerChangesAndOneFrameWheelDeltas()
+    {
+        string path = WritePlayback(
+            """
+            {
+              "version": 1,
+              "events": [
+                { "frame": 1, "kind": "Pointer", "x": 300, "y": 700 },
+                { "frame": 2, "kind": "Wheel", "value": -6 }
+              ]
+            }
+            """);
+
+        try
+        {
+            RaylibInputPlayback playback = RaylibInputPlayback.Load(path);
+            playback.AdvanceFrame(0, _ => true);
+            Assert.That(playback.PointerChangedThisFrame, Is.False);
+
+            playback.AdvanceFrame(1, _ => true);
+            Assert.Multiple(() =>
+            {
+                Assert.That(playback.PointerChangedThisFrame, Is.True);
+                Assert.That(playback.GetMousePosition().X, Is.EqualTo(300f));
+                Assert.That(playback.GetMousePosition().Y, Is.EqualTo(700f));
+                Assert.That(playback.GetMouseWheel(), Is.EqualTo(0f));
+            });
+
+            playback.AdvanceFrame(2, _ => true);
+            Assert.Multiple(() =>
+            {
+                Assert.That(playback.PointerChangedThisFrame, Is.False);
+                Assert.That(playback.GetMousePosition().X, Is.EqualTo(300f));
+                Assert.That(playback.GetMouseWheel(), Is.EqualTo(-6f));
+            });
+
+            playback.AdvanceFrame(3, _ => true);
+            Assert.That(playback.GetMouseWheel(), Is.EqualTo(0f));
+            playback.EnsureComplete(3);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static string WritePlayback(string json)
     {
         string path = Path.Combine(Path.GetTempPath(), $"ludots-raylib-input-{Guid.NewGuid():N}.json");

@@ -6,6 +6,9 @@ namespace CapabilityStandardPhysics3DShowcaseMod.Runtime;
 
 internal sealed partial class Physics3DShowcaseRuntime
 {
+    private const int ConstraintForgeExhibitCount = 7;
+
+    private readonly Physics3DBodyId[] _forgeLabelBodies = new Physics3DBodyId[ConstraintForgeExhibitCount];
     private Physics3DConstraintId _forgeLinearServo;
     private Physics3DConstraintId _forgeAxisMotor;
     private Physics3DConstraintId _forgeAngularServo;
@@ -19,6 +22,12 @@ internal sealed partial class Physics3DShowcaseRuntime
     private float _forgeLinearTargetCm;
     private float _forgeMotorTargetSpeed;
     private float _forgeAngularTargetRadians;
+    private Physics3DShowcaseChallengeStatus _forgeChallengeStatus;
+    private int _forgeObservationTicks;
+    private float _forgeInitialSliderOffsetCm;
+    private float _forgeMaximumSliderTravelCm;
+    private float _forgeMaximumDoorSpeedRadiansPerSecond;
+    private float _forgeMaximumServoAngleRadians;
 
     private void BuildConstraintForgeScene()
     {
@@ -32,6 +41,12 @@ internal sealed partial class Physics3DShowcaseRuntime
             ? config.AxisMotorSpeedRadiansPerSecond * (float)_forgeDriveDirection
             : 0f;
         _forgeAngularTargetRadians = 0f;
+        _forgeChallengeStatus = Physics3DShowcaseChallengeStatus.Running;
+        _forgeObservationTicks = 0;
+        _forgeMaximumSliderTravelCm = 0f;
+        _forgeMaximumDoorSpeedRadiansPerSecond = 0f;
+        _forgeMaximumServoAngleRadians = 0f;
+        Array.Clear(_forgeLabelBodies);
 
         BuildConstraintForgeLegacyExhibits();
         Physics3DSpringSettings spring = CreateSpring();
@@ -127,6 +142,14 @@ internal sealed partial class Physics3DShowcaseRuntime
                 new Vector3(0f, config.AxisMotorSpeedRadiansPerSecond, 0f),
                 motor)));
 
+        if (!TryGetConstraintForgePlayerState(
+                out _forgeInitialSliderOffsetCm,
+                out _,
+                out _))
+        {
+            throw new InvalidOperationException("Constraint Forge could not capture its authored observation baseline.");
+        }
+
         for (int i = 0; i < _constraintCount; i++)
         {
             if (!RequirePhysicsWorld().ContainsConstraint(_constraintIds[i]))
@@ -164,6 +187,50 @@ internal sealed partial class Physics3DShowcaseRuntime
         physics.UpdateAngularServoTarget(
             _forgeAngularServo,
             Quaternion.CreateFromAxisAngle(Vector3.UnitZ, _forgeAngularTargetRadians));
+    }
+
+    private void ObserveConstraintForgeStep()
+    {
+        if (_forgeChallengeStatus != Physics3DShowcaseChallengeStatus.Running || !_forgeDriveEnabled)
+        {
+            return;
+        }
+
+        if (!TryGetConstraintForgePlayerState(
+                out float sliderOffsetCm,
+                out float doorAngularSpeedRadiansPerSecond,
+                out float servoAngleRadians))
+        {
+            throw new InvalidOperationException("Constraint Forge lost its player-visible observation state.");
+        }
+
+        _forgeObservationTicks++;
+        _forgeMaximumSliderTravelCm = MathF.Max(
+            _forgeMaximumSliderTravelCm,
+            MathF.Abs(sliderOffsetCm - _forgeInitialSliderOffsetCm));
+        _forgeMaximumDoorSpeedRadiansPerSecond = MathF.Max(
+            _forgeMaximumDoorSpeedRadiansPerSecond,
+            MathF.Abs(doorAngularSpeedRadiansPerSecond));
+        _forgeMaximumServoAngleRadians = MathF.Max(
+            _forgeMaximumServoAngleRadians,
+            MathF.Abs(servoAngleRadians));
+
+        Physics3DConstraintForgeShowcaseConfig config = ActiveConfig.ConstraintForge;
+        if (_forgeObservationTicks < config.ObservationDurationTicks)
+        {
+            return;
+        }
+
+        bool passed = _forgeMaximumSliderTravelCm >= config.MinimumSliderTravelCm &&
+                      _forgeMaximumDoorSpeedRadiansPerSecond >= config.MinimumDoorSpeedRadiansPerSecond &&
+                      _forgeMaximumServoAngleRadians >= config.MinimumServoAngleRadians;
+        _forgeChallengeStatus = passed
+            ? Physics3DShowcaseChallengeStatus.Complete
+            : Physics3DShowcaseChallengeStatus.Failed;
+        _lastAction = passed
+            ? "Constraint Forge complete. The slider, powered door, and angular servo all demonstrated real constrained motion."
+            : $"Constraint Forge failed its motion check: slider {_forgeMaximumSliderTravelCm:0.0} cm, " +
+              $"door {_forgeMaximumDoorSpeedRadiansPerSecond:0.00} rad/s, servo {_forgeMaximumServoAngleRadians:0.00} rad.";
     }
 
     private void ToggleConstraintForgeDrive()
@@ -225,7 +292,8 @@ internal sealed partial class Physics3DShowcaseRuntime
         {
             throw new InvalidOperationException("Constraint Forge player state is unavailable while the station is active.");
         }
-        return $"{(_forgeDriveEnabled ? "RUNNING" : "PAUSED")} {DriveDirectionLabel(_forgeDriveDirection)} | " +
+        return $"{ChallengeStatusLabel(_forgeChallengeStatus)} | {(_forgeDriveEnabled ? "RUNNING" : "PAUSED")} " +
+               $"{DriveDirectionLabel(_forgeDriveDirection)} | " +
                $"door {doorAngularSpeedRadiansPerSecond:0.00} rad/s | " +
                $"slider {sliderOffsetCm:0} cm (target {_forgeLinearTargetCm:0}) | " +
                $"servo {servoAngleRadians:0.00} rad";
@@ -252,6 +320,31 @@ internal sealed partial class Physics3DShowcaseRuntime
         sliderOffsetCm = Vector3.Dot(carriage.PositionCm - anchor.PositionCm, Vector3.UnitY);
         doorAngularSpeedRadiansPerSecond = door.AngularVelocityRadiansPerSecond.Y;
         servoAngleRadians = 2f * MathF.Atan2(gimbal.Orientation.Z, gimbal.Orientation.W);
+        return true;
+    }
+
+    internal int ConstraintForgeExhibitLabelCount => ConstraintForgeExhibitCount;
+
+    internal bool TryGetConstraintForgeExhibitLabel(int labelIndex, out int number, out Vector3 positionCm)
+    {
+        if (_scene != Physics3DShowcaseScene.ConstraintForge ||
+            (uint)labelIndex >= ConstraintForgeExhibitCount)
+        {
+            number = 0;
+            positionCm = default;
+            return false;
+        }
+
+        Physics3DBodyId body = _forgeLabelBodies[labelIndex];
+        IPhysics3DWorld physics = RequirePhysicsWorld();
+        if (!body.IsValid || !physics.ContainsBody(body))
+        {
+            throw new InvalidOperationException($"Constraint Forge label {labelIndex + 1} lost its exhibit body.");
+        }
+
+        number = labelIndex + 1;
+        positionCm = physics.GetBodyState(body).PositionCm +
+                     new Vector3(0f, ActiveConfig.ConstraintForge.LabelOffsetYCm, 0f);
         return true;
     }
 
@@ -291,6 +384,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             Physics3DContinuousDetectionMode.Passive,
             KinematicColor,
             collisionSubgroup: subgroup);
+        _forgeLabelBodies[3 + exhibitIndex] = anchor;
         exhibit = AddOwnedBody(
             Physics3DBodyKind.Dynamic,
             _plankShape,

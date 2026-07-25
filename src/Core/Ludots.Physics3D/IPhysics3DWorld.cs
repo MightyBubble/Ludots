@@ -134,6 +134,11 @@ public interface IPhysics3DWorld : IDisposable
     int CopyContactEvents(Span<Physics3DContactEvent> destination);
 
     /// <summary>
+    /// Returns whether the latest finalized Physics3D step contains this body pair.
+    /// </summary>
+    bool HasCurrentContact(Physics3DBodyId bodyA, Physics3DBodyId bodyB);
+
+    /// <summary>
     /// Collects all matching ray hits ordered by distance, then body slot.
     /// </summary>
     int Raycast(Vector3 originCm, Vector3 direction, float maximumDistanceCm, in LayerMask queryLayer, Span<Physics3DRaycastHit> hits);

@@ -215,7 +215,13 @@ internal sealed class Physics3DShowcasePanelController
                 Ui.Row(
                         ActionButton(state.Paused ? "Resume" : "Pause", state.Paused, "#4A3549", "physics3d-action-pause", _ => Enqueue(Physics3DShowcaseCommandKind.TogglePause)),
                         ActionButton("Single Step", state.Paused, "#2A526A", "physics3d-action-single-step", _ => Enqueue(Physics3DShowcaseCommandKind.SingleStep)),
-                        ActionButton("Restart Route", false, "#315944", "physics3d-route-restart", _ => Enqueue(Physics3DShowcaseCommandKind.Reset)))
+                        ActionButton("Restart Route", false, "#315944", "physics3d-route-restart", _ => Enqueue(Physics3DShowcaseCommandKind.Reset)),
+                        ActionButton(
+                            state.CharacterRouteGuideActive ? "Stop Guide" : "Guided Run",
+                            state.CharacterRouteGuideActive,
+                            "#285541",
+                            "physics3d-route-guide",
+                            _ => Enqueue(Physics3DShowcaseCommandKind.ToggleCharacterRouteGuide)))
                     .Wrap()
                     .Gap(7f));
         }
@@ -302,6 +308,7 @@ internal sealed class Physics3DShowcasePanelController
         {
             return Section(
                 "Wind response",
+                Metric("status", $"{Physics3DShowcaseRuntime.ChallengeStatusLabel(state.WindComparisonStatus)} · {state.WindComparisonTicksRemaining} fixed steps left"),
                 Metric("zone", $"{Physics3DShowcaseRuntime.WindZoneLabel(state.WindZone)} | {Physics3DShowcaseRuntime.DriveDirectionLabel(state.WindDirection)}"),
                 Metric("light", $"{state.WindLightTravelCm:0} cm from launch"),
                 Metric("heavy", $"{state.WindHeavyTravelCm:0} cm from launch"));
@@ -321,6 +328,10 @@ internal sealed class Physics3DShowcasePanelController
         {
             return Section(
                 "Drive response",
+                Metric("result", $"{Physics3DShowcaseRuntime.ChallengeStatusLabel(state.ConstraintChallengeStatus)} · {state.ConstraintObservationTicksRemaining} driven steps left"),
+                Metric("1 / 2 / 3", "ball-socket chain · hinge bridge · welded pairs"),
+                Metric("4 / 5", "line servo + limit · powered hinge door"),
+                Metric("6 / 7", "swing/twist servo · angular motor"),
                 Metric("state", state.ConstraintDriveEnabled ? "RUNNING" : "PAUSED"),
                 Metric("direction", Physics3DShowcaseRuntime.DriveDirectionLabel(state.ConstraintDriveDirection)),
                 Metric("motion", state.ConstraintSummary));
@@ -455,12 +466,17 @@ internal sealed class Physics3DShowcasePanelController
 
     private UiElementBuilder BuildMaterialHillControls(Physics3DShowcasePanelState state)
     {
-        string label = state.MaterialHill.Status == Physics3DShowcaseChallengeStatus.Ready
-            ? "Push Crates"
-            : "Push Again";
+        bool ready = state.MaterialHill.Status == Physics3DShowcaseChallengeStatus.Ready;
+        string label = ready ? "Push Crates" : "Reset Station to Run Again";
         return Section(
             "Operation",
-            ActionButton(label, false, "#5B4424", "physics3d-action-impact", _ => Enqueue(Physics3DShowcaseCommandKind.Impact)));
+            ActionButton(
+                label,
+                false,
+                "#5B4424",
+                "physics3d-action-impact",
+                _ => Enqueue(Physics3DShowcaseCommandKind.Impact),
+                disabled: !ready));
     }
 
     private UiElementBuilder BuildReplayControls(Physics3DShowcasePanelState state)
@@ -813,6 +829,13 @@ internal sealed class Physics3DShowcasePanelController
     private UiElementBuilder BuildBenchmarkEvidence(Physics3DShowcasePanelState state)
     {
         Physics3DScaleCityShowcaseState scaleCity = state.ScaleCity;
+        string cityMotion = state.Paused
+            ? "PAUSED · press Resume to continue the city"
+            : $"RUNNING · {scaleCity.InteractiveRelaunchedBodiesLastStep:N0} foreground launched · " +
+              $"{scaleCity.SparseRecycledBodiesLastStep:N0} background recycled";
+        string pulseEvidence = scaleCity.PulseCount == 0
+            ? "not fired yet · use City Pulse to shove the visible foreground"
+            : $"pulse {scaleCity.PulseCount:N0} hit {scaleCity.PulsedForegroundBodiesLastPulse:N0} visible bodies";
         string physicsEvidence = scaleCity.PerformanceSampleCount == 0
             ? "waiting for first fixed step"
             : $"P50 {scaleCity.StepP50Milliseconds:0.###} · P95 {scaleCity.StepP95Milliseconds:0.###} · " +
@@ -822,20 +845,21 @@ internal sealed class Physics3DShowcasePanelController
             : $"P50 {scaleCity.FullFrameP50Milliseconds:0.###} · P95 {scaleCity.FullFrameP95Milliseconds:0.###} · " +
               $"P99 {scaleCity.FullFrameP99Milliseconds:0.###} ms";
         return Section(
-            "Scale City status",
-            Metric("population", ScaleCityPopulationLabel(in scaleCity)),
-            Metric("contacts", $"{scaleCity.ContactPairs:N0} active pairs"),
+            "Scale City",
+            Metric("city motion", cityMotion),
+            Metric("last pulse", pulseEvidence),
+            Metric("active bodies", $"{scaleCity.TotalBodies:N0} total · {ScaleCityPopulationLabel(in scaleCity)}"),
+            Metric("foreground collisions", $"{scaleCity.ContactPairs:N0} active pairs"),
             Metric("wind", $"{ScaleCityWindDirectionLabel(scaleCity.WindAccelerationXCmPerSecondSquared)} · " +
                            $"{MathF.Abs(scaleCity.WindAccelerationXCmPerSecondSquared):0} cm/s²"),
-            Metric("activity", ScaleCityActivityLabel(in scaleCity)),
-            Metric("window", $"{ScaleCityPerformanceStatusLabel(scaleCity.PerformanceStatus)} · " +
+            Metric("30 Hz proof", $"{ScaleCityPerformanceStatusLabel(scaleCity.PerformanceStatus)} · " +
                              $"physics {scaleCity.PerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0} · " +
                              $"full frame {scaleCity.FramePerformanceSampleCount:N0}/{scaleCity.PerformanceWindowCapacity:N0}"),
-            Metric("physics core", physicsEvidence),
-            Metric("complete fixed frame", frameEvidence),
-            Metric("steady GC", $"main {scaleCity.FrameCallingThreadAllocatedBytesLastStep:N0} B · " +
+            Metric("full-frame timing", frameEvidence),
+            Metric("physics timing", physicsEvidence),
+            Metric("steady allocations", $"main {scaleCity.FrameCallingThreadAllocatedBytesLastStep:N0} B · " +
                                 $"workers {scaleCity.PhysicsWorkerAllocatedBytesLastStep:N0} B"),
-            Metric("budget", $"Complete-frame P95 and P99 must both stay below {scaleCity.PerformanceBudgetMilliseconds:0.###} ms"));
+            Metric("frame limit", $"P95 and P99 must both stay below {scaleCity.PerformanceBudgetMilliseconds:0.###} ms"));
     }
 
     internal static string ScaleCityPerformanceStatusLabel(Physics3DScaleCityPerformanceStatus status) => status switch
@@ -1017,10 +1041,12 @@ internal sealed class Physics3DShowcasePanelController
         bool active,
         string activeBackground,
         string elementId,
-        Action<Ludots.UI.Runtime.Actions.UiActionContext> onClick)
+        Action<Ludots.UI.Runtime.Actions.UiActionContext> onClick,
+        bool disabled = false)
     {
         return Ui.Button(label, onClick)
             .Id(elementId)
+            .Disabled(disabled)
             .Padding(9f, 7f)
             .Radius(8f)
             .Background(active ? activeBackground : "#202F40")

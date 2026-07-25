@@ -353,6 +353,7 @@ public sealed class WheelLabShowcaseTests
                 $"compression={diagnostic.MaximumSuspensionCompressionCm:F3} cm, " +
                 $"slip={diagnostic.MaximumSlipCmPerSecond:F3} cm/s, " +
                 $"grounded={diagnostic.GroundedRatio:P2}, brake={diagnostic.BrakingDistanceCm:F3} cm, " +
+                $"throttleTicks={observations[run].ThrottleTicks}, brakeTicks={observations[run].BrakeTicks}, " +
                 $"steerYaw={observations[run].SteeringYawDeltaRadians:F4} rad, " +
                 $"airborneTicks={observations[run].MaximumConsecutiveAirborneTicks}, " +
                 $"peakCompression={observations[run].PeakCompressionCm:F3} cm");
@@ -838,10 +839,13 @@ public sealed class WheelLabShowcaseTests
     private static void RunRecommendedTrial(WheelLabHarness harness)
     {
         Physics3DWheelLabShowcaseConfig config = harness.Runtime.ActiveConfig.WheelLab;
+        int throttleTicks = 0;
+        int brakeTicks = 0;
         harness.Runtime.SetWheelLabInputForTests(new Vehicle3DInput(throttle: 1f, brake: 0f, steering: 0f));
         for (int i = 0; i < config.TrialRecommendedThrottleTicks; i++)
         {
             harness.Step();
+            throttleTicks++;
             if (harness.Runtime.WheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
             {
                 break;
@@ -858,12 +862,17 @@ public sealed class WheelLabShowcaseTests
         for (int i = 0; i < config.TrialRecommendedBrakeTicks; i++)
         {
             harness.Step();
+            brakeTicks++;
             if (harness.Runtime.WheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
                 Physics3DWheelLabTrialStatus.Failed)
             {
                 break;
             }
         }
+
+        TestContext.WriteLine(
+            $"{harness.Runtime.WheelLabMode} straight route: throttleTicks={throttleTicks}, " +
+            $"brakeTicks={brakeTicks}, status={harness.Runtime.WheelLabTrialStatus}.");
 
         Assert.That(
             harness.Runtime.WheelLabTrialStatus,
@@ -1045,6 +1054,7 @@ public sealed class WheelLabShowcaseTests
             }
 
             TickEngine(engine, 1);
+            observation.ThrottleTicks++;
             ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
             if (runtime.WheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
             {
@@ -1078,6 +1088,7 @@ public sealed class WheelLabShowcaseTests
         for (int tick = 0; tick < brakeTicks; tick++)
         {
             TickEngine(engine, 1);
+            observation.BrakeTicks++;
             ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
             if (runtime.WheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
                 Physics3DWheelLabTrialStatus.Failed)
@@ -1356,6 +1367,8 @@ public sealed class WheelLabShowcaseTests
         public bool UsedSteerRight;
         public bool UsedDrive;
         public bool UsedBrake;
+        public int ThrottleTicks;
+        public int BrakeTicks;
         public float SteeringYawDeltaRadians;
         public float PeakCompressionCm;
         public bool SawSuspensionCompress;

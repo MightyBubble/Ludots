@@ -149,6 +149,8 @@ internal sealed class Physics3DWindTunnelShowcaseConfig
     public float VortexRadiusCm { get; set; }
     public float VortexTangentialSpeedCmPerSecond { get; set; }
     public float VortexAxialSpeedCmPerSecond { get; set; }
+    public int ComparisonDurationTicks { get; set; }
+    public float MinimumLightLeadCm { get; set; }
     public Physics3DShowcaseWindZone InitialZone { get; set; }
     public Physics3DShowcaseDriveDirection InitialDirection { get; set; }
 
@@ -186,6 +188,8 @@ internal sealed class Physics3DWindTunnelShowcaseConfig
         Physics3DMaterialHillShowcaseConfig.RequireFinitePositive(VortexRadiusCm, $"{path}.{nameof(VortexRadiusCm)}");
         Physics3DMaterialHillShowcaseConfig.RequireFinitePositive(VortexTangentialSpeedCmPerSecond, $"{path}.{nameof(VortexTangentialSpeedCmPerSecond)}");
         Physics3DMaterialHillShowcaseConfig.RequireFinite(VortexAxialSpeedCmPerSecond, $"{path}.{nameof(VortexAxialSpeedCmPerSecond)}");
+        RequirePositive(ComparisonDurationTicks, $"{path}.{nameof(ComparisonDurationTicks)}");
+        Physics3DMaterialHillShowcaseConfig.RequireFinitePositive(MinimumLightLeadCm, $"{path}.{nameof(MinimumLightLeadCm)}");
         if (!Enum.IsDefined(InitialZone)) throw new InvalidOperationException($"{path}.{nameof(InitialZone)} is invalid.");
         if (!Enum.IsDefined(InitialDirection)) throw new InvalidOperationException($"{path}.{nameof(InitialDirection)} is invalid.");
     }

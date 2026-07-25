@@ -81,6 +81,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
     private bool _manualStepRequestedThisTick;
     private bool _inputContextActive;
     private bool _isActive;
+    private bool _stationCameraEnabled;
     private Physics3DShowcaseQueryKind _scannerQueryKind;
     private Physics3DShowcaseQueryResultMode _scannerResultMode;
     private int _scannerDistancePresetIndex;
@@ -190,8 +191,16 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             ?? throw new InvalidOperationException("Physics3D showcase requires Physics3DServiceKeys.World.");
         Physics3DSimulationSystem simulation = engine.GetService(Physics3DServiceKeys.SimulationSystem)
             ?? throw new InvalidOperationException("Physics3D showcase requires Physics3DServiceKeys.SimulationSystem.");
-        Activate(engine.World, physicsWorld, simulation, config);
         _engine = engine;
+        try
+        {
+            Activate(engine.World, physicsWorld, simulation, config, stationCameraEnabled: true);
+        }
+        catch
+        {
+            _engine = null;
+            throw;
+        }
         SynchronizeCharacterRouteCameraAfterMapFocus();
         SynchronizeWheelLabCameraAfterMapFocus();
         ActivateCharacterTraversalInput(engine.GetService(CoreServiceKeys.InputHandler));
@@ -226,7 +235,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         Physics3DSimulationSystem simulation,
         Physics3DShowcaseConfig config)
     {
-        Activate(ecsWorld, physicsWorld, simulation, config);
+        Activate(ecsWorld, physicsWorld, simulation, config, stationCameraEnabled: false);
     }
 
     internal void EnqueueCommand(in Physics3DShowcaseCommand command)
@@ -276,6 +285,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         }
 
         CaptureCharacterTraversalInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
+        ApplyCharacterRouteGuideInput();
         CaptureWheelLabInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         PrepareSceneForPhysicsStep();
     }
@@ -406,8 +416,17 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             WindDirection: _windTunnelDirection,
             WindLightTravelCm: windLightTravelCm,
             WindHeavyTravelCm: windHeavyTravelCm,
+            WindComparisonStatus: _windTunnelComparisonStatus,
+            WindComparisonTicksRemaining: _scene == Physics3DShowcaseScene.WindTunnel
+                ? Math.Max(0, ActiveConfig.WindTunnel.ComparisonDurationTicks - _windTunnelComparisonTicks)
+                : 0,
             ConstraintDriveEnabled: _forgeDriveEnabled,
             ConstraintDriveDirection: _forgeDriveDirection,
+            ConstraintChallengeStatus: _forgeChallengeStatus,
+            ConstraintObservationTicksRemaining: _scene == Physics3DShowcaseScene.ConstraintForge
+                ? Math.Max(0, ActiveConfig.ConstraintForge.ObservationDurationTicks - _forgeObservationTicks)
+                : 0,
+            CharacterRouteGuideActive: _characterRouteGuideActive,
             CharacterRouteStatus: _characterRouteStatus,
             CharacterRouteCheckpointIndex: _scene is Physics3DShowcaseScene.PlatformStation or Physics3DShowcaseScene.TraversalCourse
                 ? CharacterRouteCheckpointIndex
@@ -589,7 +608,8 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         World ecsWorld,
         IPhysics3DWorld physicsWorld,
         Physics3DSimulationSystem simulation,
-        Physics3DShowcaseConfig config)
+        Physics3DShowcaseConfig config,
+        bool stationCameraEnabled)
     {
         ArgumentNullException.ThrowIfNull(ecsWorld);
         ArgumentNullException.ThrowIfNull(physicsWorld);
@@ -612,6 +632,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         _physicsWorld = physicsWorld;
         _simulation = simulation;
         _config = config;
+        _stationCameraEnabled = stationCameraEnabled;
         EnsureStorage(config);
         RegisterCommonShapes(config);
         _benchmarkBodies = config.BenchmarkDefaultBodies;
@@ -637,6 +658,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         _commandCount = 0;
         _ecsWorld = null;
         _engine = null;
+        _stationCameraEnabled = false;
         _physicsWorld = null;
         _simulation = null;
         _config = null;
@@ -840,6 +862,9 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
                 break;
             case Physics3DShowcaseCommandKind.ReverseConstraintDrive:
                 ReverseConstraintForgeDrive();
+                break;
+            case Physics3DShowcaseCommandKind.ToggleCharacterRouteGuide:
+                ToggleCharacterRouteGuide();
                 break;
             default:
                 throw new InvalidOperationException($"Unknown Physics3D showcase command '{command.Kind}'.");
