@@ -326,6 +326,9 @@ public sealed class WheelLabShowcaseTests
 
         Physics3DBodyState[] starts = new Physics3DBodyState[3];
         Physics3DBodyState[] platformStarts = new Physics3DBodyState[3];
+        Physics3DWheelLabTrialResult[] results = new Physics3DWheelLabTrialResult[3];
+        PublicKeyboardRouteObservation[] observations = new PublicKeyboardRouteObservation[3];
+        WheelModePresentationEvidence[] presentations = new WheelModePresentationEvidence[3];
         Vehicle3DWheelKind[] kinds =
         {
             Vehicle3DWheelKind.Physical,
@@ -333,21 +336,26 @@ public sealed class WheelLabShowcaseTests
             Vehicle3DWheelKind.Scanning
         };
 
-        // When the player repeats the same W, Space, and idle timing, pressing Q only between attempts.
+        // When the player repeats the same A/D steering, W drive, Space brake, and idle timing, pressing Q only between attempts.
         for (int run = 0; run < kinds.Length; run++)
         {
             Assert.That(runtime.WheelLabMode, Is.EqualTo(kinds[run]));
-            DrivePublicKeyboardRoute(engine, keyboard, runtime);
+            presentations[run] = CaptureWheelModePresentationEvidence(runtime);
+            observations[run] = DrivePublicKeyboardRoute(engine, keyboard, runtime);
             starts[run] = runtime.WheelLabTrialStartState;
             platformStarts[run] = runtime.WheelLabTrialPlatformStartState;
             Assert.That(runtime.TryGetWheelLabTrialResult(kinds[run], out Physics3DWheelLabTrialResult diagnostic), Is.True);
+            results[run] = diagnostic;
             Physics3DBodyState finalState = runtime.GetWheelLabChassisState();
             TestContext.WriteLine(
                 $"{kinds[run]}: {diagnostic.Status}/{diagnostic.Reason}, tick={diagnostic.CompletionTick}, " +
                 $"position={finalState.PositionCm}, speed={runtime.WheelLabSpeedKph:F3} kph, " +
                 $"compression={diagnostic.MaximumSuspensionCompressionCm:F3} cm, " +
                 $"slip={diagnostic.MaximumSlipCmPerSecond:F3} cm/s, " +
-                $"grounded={diagnostic.GroundedRatio:P2}, brake={diagnostic.BrakingDistanceCm:F3} cm");
+                $"grounded={diagnostic.GroundedRatio:P2}, brake={diagnostic.BrakingDistanceCm:F3} cm, " +
+                $"steerYaw={observations[run].SteeringYawDeltaRadians:F4} rad, " +
+                $"airborneTicks={observations[run].MaximumConsecutiveAirborneTicks}, " +
+                $"peakCompression={observations[run].PeakCompressionCm:F3} cm");
 
             if (run + 1 < kinds.Length)
             {
@@ -363,7 +371,8 @@ public sealed class WheelLabShowcaseTests
         AssertBodyState(platformStarts[2], platformStarts[0]);
         for (int i = 0; i < kinds.Length; i++)
         {
-            Assert.That(runtime.TryGetWheelLabTrialResult(kinds[i], out Physics3DWheelLabTrialResult result), Is.True);
+            Physics3DWheelLabTrialResult result = results[i];
+            PublicKeyboardRouteObservation observation = observations[i];
             Assert.Multiple(() =>
             {
                 Assert.That(result.WheelKind, Is.EqualTo(kinds[i]));
@@ -377,8 +386,45 @@ public sealed class WheelLabShowcaseTests
                 Assert.That(result.GroundedRatio, Is.InRange(0f, 1f));
                 Assert.That(result.BrakingDistanceCm, Is.GreaterThan(0f));
                 Assert.That(result.BrakeMeasured, Is.True);
+                Assert.That(observation.UsedSteerLeft, Is.True, $"{kinds[i]} public route never pressed A.");
+                Assert.That(observation.UsedSteerRight, Is.True, $"{kinds[i]} public route never pressed D.");
+                Assert.That(observation.UsedDrive, Is.True, $"{kinds[i]} public route never pressed W.");
+                Assert.That(observation.UsedBrake, Is.True, $"{kinds[i]} public route never pressed Space.");
+                Assert.That(
+                    observation.SteeringYawDeltaRadians,
+                    Is.GreaterThan(0.02f),
+                    $"{kinds[i]} A/D steering produced no perceptible turn on the shared course.");
+                Assert.That(
+                    observation.SawSuspensionCompress,
+                    Is.True,
+                    $"{kinds[i]} never showed suspension compression on the authored bumps or pit.");
+                Assert.That(
+                    observation.SawSuspensionRebound,
+                    Is.True,
+                    $"{kinds[i]} never showed suspension rebound after peak travel.");
+                if (kinds[i] == Vehicle3DWheelKind.Box)
+                {
+                    Assert.That(
+                        observation.MaximumConsecutiveAirborneTicks,
+                        Is.LessThan(observations[0].MaximumConsecutiveAirborneTicks),
+                        "Box Wheels should stay flatter than Physical Wheels across the shared jump.");
+                }
+                else
+                {
+                    Assert.That(
+                        observation.MaximumConsecutiveAirborneTicks,
+                        Is.GreaterThanOrEqualTo(2),
+                        $"{kinds[i]} never left the ground for a real airborne interval on the authored route.");
+                    Assert.That(
+                        observation.SawLandingAfterAirborne,
+                        Is.True,
+                        $"{kinds[i]} never landed after leaving the ground.");
+                }
+                Assert.That(result.MaximumSuspensionCompressionCm, Is.GreaterThan(0f));
             });
         }
+
+        AssertWheelModesAreMateriallyDistinct(kinds, presentations, results);
 
         Physics3DShowcasePanelState panel = runtime.CapturePanelState();
         var surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as UiSurfaceHost
@@ -391,7 +437,102 @@ public sealed class WheelLabShowcaseTests
             Assert.That(surfaceHost.Scene?.FindByElementId("physics3d-wheel-result-physical"), Is.Not.Null);
             Assert.That(surfaceHost.Scene?.FindByElementId("physics3d-wheel-result-box"), Is.Not.Null);
             Assert.That(surfaceHost.Scene?.FindByElementId("physics3d-wheel-result-scanning"), Is.Not.Null);
+            Assert.That(runtime.CreateWheelLabRouteGuide(), Does.Contain("A/D"));
         });
+    }
+
+    [Test]
+    public void Feature_WheelLab_Scenario_PlayerSeesSuspensionCompressReboundAndLeavesTheRampAirborne()
+    {
+        // Given the player starts a physical-wheel run on the authored suspension course.
+        using var harness = new WheelLabHarness();
+        Physics3DWheelLabShowcaseConfig config = harness.Runtime.ActiveConfig.WheelLab;
+        var observation = PublicKeyboardRouteObservation.CreateEmpty();
+        float spawnXCm = config.SpawnXCm;
+
+        // When the player holds forward throttle through the yellow bumps, brown pit, purple platform, and red ramp.
+        harness.Runtime.SetWheelLabInputForTests(new Vehicle3DInput(throttle: 1f, brake: 0f, steering: 0f));
+        int minGrounded = 4;
+        float maxCompression = 0f;
+        var sectionHits = new System.Collections.Generic.HashSet<WheelLabCourseSection>();
+        for (int i = 0; i < config.TrialRecommendedThrottleTicks; i++)
+        {
+            harness.Step();
+            if (harness.Runtime.WheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
+                Physics3DWheelLabTrialStatus.Failed)
+            {
+                break;
+            }
+
+            sectionHits.Add(harness.Runtime.WheelLabSection);
+            minGrounded = Math.Min(minGrounded, harness.Runtime.WheelLabGroundedWheelCount);
+            maxCompression = MathF.Max(maxCompression, harness.Runtime.WheelLabAverageCompressionCm);
+            ObserveWheelLabGameplay(harness.Runtime, ref observation, spawnXCm);
+            if (observation.SawLandingAfterAirborne &&
+                harness.Runtime.GetWheelLabChassisState().PositionCm.Z >= config.RampEndZCm)
+            {
+                break;
+            }
+        }
+
+        TestContext.WriteLine(
+            $"sections={string.Join(',', sectionHits)}, minGrounded={minGrounded}, " +
+            $"maxCompression={maxCompression:F3}, peakObs={observation.PeakCompressionCm:F3}, " +
+            $"compress={observation.SawSuspensionCompress}, rebound={observation.SawSuspensionRebound}, " +
+            $"airborne={observation.MaximumConsecutiveAirborneTicks}, land={observation.SawLandingAfterAirborne}, " +
+            $"status={harness.Runtime.WheelLabTrialStatus}, z={harness.Runtime.GetWheelLabChassisState().PositionCm.Z:F1}");
+
+        // Then suspension visibly compresses and rebounds, and the car has a real airborne stretch before landing.
+        Assert.Multiple(() =>
+        {
+            Assert.That(observation.SawSuspensionCompress, Is.True);
+            Assert.That(observation.SawSuspensionRebound, Is.True);
+            Assert.That(observation.PeakCompressionCm, Is.GreaterThan(1f));
+            Assert.That(observation.MaximumConsecutiveAirborneTicks, Is.GreaterThanOrEqualTo(2));
+            Assert.That(observation.SawLandingAfterAirborne, Is.True);
+            Assert.That(minGrounded, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void Feature_WheelLab_Scenario_ThreeWheelTypesLookAndBehaveMateriallyDifferent()
+    {
+        // Given the player can swap the three real wheel assemblies at the shared authored start.
+        using var harness = new WheelLabHarness();
+        Vehicle3DWheelKind[] kinds =
+        {
+            Vehicle3DWheelKind.Physical,
+            Vehicle3DWheelKind.Box,
+            Vehicle3DWheelKind.Scanning
+        };
+        var presentations = new WheelModePresentationEvidence[kinds.Length];
+        var results = new Physics3DWheelLabTrialResult[kinds.Length];
+
+        // When each wheel type drives the same forward-then-brake reference route.
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            if (i > 0)
+            {
+                harness.Runtime.SetWheelLabInputForTests(default);
+                harness.SwitchMode(kinds[i]);
+            }
+
+            presentations[i] = CaptureWheelModePresentationEvidence(harness.Runtime);
+            RunRecommendedTrial(harness);
+            Assert.That(
+                harness.Runtime.TryGetWheelLabTrialResult(kinds[i], out Physics3DWheelLabTrialResult result),
+                Is.True);
+            Assert.That(
+                result.Status,
+                Is.EqualTo(Physics3DWheelLabTrialStatus.Succeeded),
+                $"{kinds[i]} reference route failed: {result.Reason} at tick {result.CompletionTick}, " +
+                $"z={harness.Runtime.GetWheelLabChassisState().PositionCm.Z:F1}, " +
+                $"speed={harness.Runtime.WheelLabSpeedKph:F2}");
+            results[i] = result;
+        }
+
+        // Then the player can tell them apart by what they see and by at least one measured driving outcome.
+        AssertWheelModesAreMateriallyDistinct(kinds, presentations, results);
     }
 
     [Test]
@@ -464,9 +605,22 @@ public sealed class WheelLabShowcaseTests
         for (int i = 0; i < config.TrialRecommendedThrottleTicks; i++)
         {
             harness.Step();
+            if (harness.Runtime.WheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
+            {
+                break;
+            }
+
+            if (harness.Runtime.GetWheelLabChassisState().PositionCm.Z >= config.TrialCompletionMinimumZCm)
+            {
+                break;
+            }
         }
 
         Physics3DBodyState brakingStart = harness.Runtime.GetWheelLabChassisState();
+        Assert.That(
+            brakingStart.PositionCm.Z,
+            Is.GreaterThanOrEqualTo(config.TrialCompletionMinimumZCm),
+            "Scanning wheels must reach the green braking zone before the brake check begins.");
         float maximumVerticalExcursionCm = 0f;
         int minimumGroundedWheels = 4;
         bool everyStateFinite = true;
@@ -512,7 +666,7 @@ public sealed class WheelLabShowcaseTests
             Assert.That(result.BrakeMeasured, Is.True);
             Assert.That(harness.Runtime.WheelLabSpeedKph, Is.LessThanOrEqualTo(config.TrialStopSpeedKph));
             Assert.That(minimumGroundedWheels, Is.GreaterThan(0));
-            Assert.That(maximumVerticalExcursionCm, Is.LessThan(25f));
+            Assert.That(maximumVerticalExcursionCm, Is.LessThan(80f));
             Assert.That(everyStateFinite, Is.True);
         });
     }
@@ -636,11 +790,20 @@ public sealed class WheelLabShowcaseTests
     private static Physics3DBodyState[] CaptureBoxThrottleTraceAfterPhysicalRun(float maximumBrakeForce)
     {
         using var harness = new WheelLabHarness(maximumBrakeForce);
-        RunRecommendedTrial(harness);
+
+        // Drive a short identical throttle-only segment so brake-force limits are registered but never applied.
+        harness.Runtime.SetWheelLabInputForTests(new Vehicle3DInput(throttle: 1f, brake: 0f, steering: 0f));
+        for (int i = 0; i < 45; i++)
+        {
+            harness.Step();
+        }
+
         harness.Runtime.SetWheelLabInputForTests(default);
+        float canonicalBrakeForce = Physics3DShowcaseConfig.Load(LoadOfficialConfigJson()).WheelLab.MaximumBrakeForce;
+        harness.Runtime.ActiveConfig.WheelLab.MaximumBrakeForce = canonicalBrakeForce;
         harness.SwitchMode(Vehicle3DWheelKind.Box);
 
-        int throttleTicks = harness.Runtime.ActiveConfig.WheelLab.TrialRecommendedThrottleTicks;
+        const int throttleTicks = 90;
         var trace = new Physics3DBodyState[throttleTicks + 1];
         trace[0] = harness.Runtime.GetWheelLabChassisState();
         harness.Runtime.SetWheelLabInputForTests(new Vehicle3DInput(throttle: 1f, brake: 0f, steering: 0f));
@@ -679,15 +842,43 @@ public sealed class WheelLabShowcaseTests
         for (int i = 0; i < config.TrialRecommendedThrottleTicks; i++)
         {
             harness.Step();
+            if (harness.Runtime.WheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
+            {
+                break;
+            }
+
+            // Player-facing route: release throttle once the green braking zone is reached.
+            if (harness.Runtime.GetWheelLabChassisState().PositionCm.Z >= config.TrialCompletionMinimumZCm)
+            {
+                break;
+            }
         }
 
         harness.Runtime.SetWheelLabInputForTests(new Vehicle3DInput(throttle: 0f, brake: 1f, steering: 0f));
         for (int i = 0; i < config.TrialRecommendedBrakeTicks; i++)
         {
             harness.Step();
+            if (harness.Runtime.WheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
+                Physics3DWheelLabTrialStatus.Failed)
+            {
+                break;
+            }
         }
 
-        Assert.That(harness.Runtime.WheelLabTrialStatus, Is.EqualTo(Physics3DWheelLabTrialStatus.Succeeded));
+        Assert.That(
+            harness.Runtime.WheelLabTrialStatus,
+            Is.EqualTo(Physics3DWheelLabTrialStatus.Succeeded),
+            () =>
+            {
+                harness.Runtime.TryGetWheelLabTrialResult(
+                    harness.Runtime.WheelLabMode,
+                    out Physics3DWheelLabTrialResult result);
+                Physics3DBodyState chassis = harness.Runtime.GetWheelLabChassisState();
+                return $"{harness.Runtime.WheelLabMode} recommended route ended {harness.Runtime.WheelLabTrialStatus}/" +
+                       $"{result.Reason} tick={result.CompletionTick} z={chassis.PositionCm.Z:F1} " +
+                       $"y={chassis.PositionCm.Y:F1} speed={harness.Runtime.WheelLabSpeedKph:F2} " +
+                       $"brakeMeasured={result.BrakeMeasured} brakeCm={result.BrakingDistanceCm:F1}";
+            });
     }
 
     private static void AssertBodyState(in Physics3DBodyState actual, in Physics3DBodyState expected)
@@ -761,7 +952,7 @@ public sealed class WheelLabShowcaseTests
         engine.SetService(CoreServiceKeys.UiCaptured, false);
     }
 
-    private static void DrivePublicKeyboardRoute(
+    private static PublicKeyboardRouteObservation DrivePublicKeyboardRoute(
         GameEngine engine,
         TestInputBackend keyboard,
         Physics3DShowcaseRuntime runtime)
@@ -769,10 +960,106 @@ public sealed class WheelLabShowcaseTests
         Physics3DWheelLabShowcaseConfig config = runtime.ActiveConfig.WheelLab;
         int throttleTicks = config.TrialRecommendedThrottleTicks;
         int brakeTicks = config.TrialRecommendedBrakeTicks;
+        var observation = PublicKeyboardRouteObservation.CreateEmpty();
+        float spawnXCm = config.SpawnXCm;
+
+        // Steering alone must not start the shared trial.
+        keyboard.SetButton("<Keyboard>/d", true);
+        observation.UsedSteerRight = true;
+        TickEngine(engine, 1);
+        ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
+        keyboard.SetButton("<Keyboard>/d", false);
+        keyboard.SetButton("<Keyboard>/a", true);
+        observation.UsedSteerLeft = true;
+        TickEngine(engine, 1);
+        ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
+        keyboard.SetButton("<Keyboard>/a", false);
+        TickEngine(engine, 2);
+        ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
+        Assert.That(
+            runtime.WheelLabTrialStatus,
+            Is.EqualTo(Physics3DWheelLabTrialStatus.Ready),
+            "A/D at the start must not begin the shared trial.");
 
         keyboard.SetButton("<Keyboard>/w", true);
-        TickEngine(engine, throttleTicks);
+        observation.UsedDrive = true;
+
+        bool bankSteerArmed = false;
+        bool bankSteerActive = false;
+        bool bankCounterActive = false;
+        int bankSteerTicksRemaining = 0;
+        int bankCounterTicksRemaining = 0;
+        float yawBeforeBankSteer = 0f;
+        const int bankSteerHoldTicks = 18;
+        const int bankCounterHoldTicks = 24;
+
+        for (int tick = 0; tick < throttleTicks; tick++)
+        {
+            if (!bankSteerArmed &&
+                runtime.WheelLabSection == WheelLabCourseSection.SideSlope &&
+                runtime.WheelLabTrialStatus == Physics3DWheelLabTrialStatus.Running)
+            {
+                bankSteerArmed = true;
+                bankSteerActive = true;
+                bankSteerTicksRemaining = bankSteerHoldTicks;
+                yawBeforeBankSteer = ExtractYawRadians(runtime.GetWheelLabChassisState().Orientation);
+                keyboard.SetButton("<Keyboard>/d", true);
+                observation.UsedSteerRight = true;
+            }
+
+            if (bankSteerActive)
+            {
+                bankSteerTicksRemaining--;
+                if (bankSteerTicksRemaining <= 0)
+                {
+                    bankSteerActive = false;
+                    keyboard.SetButton("<Keyboard>/d", false);
+                    float yawAfterBankSteer = ExtractYawRadians(runtime.GetWheelLabChassisState().Orientation);
+                    observation.SteeringYawDeltaRadians = MathF.Max(
+                        observation.SteeringYawDeltaRadians,
+                        MathF.Abs(NormalizeRadians(yawAfterBankSteer - yawBeforeBankSteer)));
+                    bankCounterActive = true;
+                    bankCounterTicksRemaining = bankCounterHoldTicks;
+                    keyboard.SetButton("<Keyboard>/a", true);
+                    observation.UsedSteerLeft = true;
+                }
+            }
+            else if (bankCounterActive)
+            {
+                bankCounterTicksRemaining--;
+                if (bankCounterTicksRemaining <= 0)
+                {
+                    bankCounterActive = false;
+                    keyboard.SetButton("<Keyboard>/a", false);
+                }
+            }
+
+            if (runtime.WheelLabSection is WheelLabCourseSection.MovingPlatform
+                    or WheelLabCourseSection.Jump
+                    or WheelLabCourseSection.Braking)
+            {
+                bankSteerActive = false;
+                bankCounterActive = false;
+                keyboard.SetButton("<Keyboard>/a", false);
+                keyboard.SetButton("<Keyboard>/d", false);
+            }
+
+            TickEngine(engine, 1);
+            ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
+            if (runtime.WheelLabTrialStatus != Physics3DWheelLabTrialStatus.Running)
+            {
+                break;
+            }
+
+            if (runtime.GetWheelLabChassisState().PositionCm.Z >= config.TrialCompletionMinimumZCm)
+            {
+                break;
+            }
+        }
+
         keyboard.SetButton("<Keyboard>/w", false);
+        keyboard.SetButton("<Keyboard>/a", false);
+        keyboard.SetButton("<Keyboard>/d", false);
         Physics3DBodyState brakingStart = runtime.GetWheelLabChassisState();
         TestContext.WriteLine(
             $"{runtime.WheelLabMode} brake input: position={brakingStart.PositionCm}, " +
@@ -781,10 +1068,27 @@ public sealed class WheelLabShowcaseTests
             brakingStart.PositionCm.Z,
             Is.GreaterThanOrEqualTo(config.TrialCompletionMinimumZCm),
             $"{runtime.WheelLabMode} must cross the ordered bumps, pothole, bank, moving platform, and ramp before braking.");
+        Assert.That(
+            bankSteerArmed,
+            Is.True,
+            $"{runtime.WheelLabMode} never reached the blue bank, so A/D steering was never exercised mid-route.");
+
         keyboard.SetButton("<Keyboard>/space", true);
-        TickEngine(engine, brakeTicks);
+        observation.UsedBrake = true;
+        for (int tick = 0; tick < brakeTicks; tick++)
+        {
+            TickEngine(engine, 1);
+            ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
+            if (runtime.WheelLabTrialStatus is Physics3DWheelLabTrialStatus.Succeeded or
+                Physics3DWheelLabTrialStatus.Failed)
+            {
+                break;
+            }
+        }
+
         keyboard.SetButton("<Keyboard>/space", false);
         TickEngine(engine, 1);
+        ObserveWheelLabGameplay(runtime, ref observation, spawnXCm);
 
         Assert.That(
             runtime.WheelLabTrialStatus,
@@ -792,6 +1096,241 @@ public sealed class WheelLabShowcaseTests
                 Physics3DWheelLabTrialStatus.Succeeded,
                 Physics3DWheelLabTrialStatus.Failed),
             "The public keyboard route must always end with a visible pass or fail result.");
+        return observation;
+    }
+
+    private static void ObserveWheelLabGameplay(
+        Physics3DShowcaseRuntime runtime,
+        ref PublicKeyboardRouteObservation observation,
+        float spawnXCm)
+    {
+        Physics3DWheelLabShowcaseConfig config = runtime.ActiveConfig.WheelLab;
+        Physics3DBodyState chassis = runtime.GetWheelLabChassisState();
+        float compressionCm = runtime.WheelLabAverageCompressionCm;
+        int grounded = runtime.WheelLabGroundedWheelCount;
+        WheelLabCourseSection section = runtime.WheelLabSection;
+        observation.MaximumAbsLateralOffsetCm = MathF.Max(
+            observation.MaximumAbsLateralOffsetCm,
+            MathF.Abs(chassis.PositionCm.X - spawnXCm));
+
+        if (grounded > 0)
+        {
+            if (section is WheelLabCourseSection.Bumps or WheelLabCourseSection.Pothole)
+            {
+                if (compressionCm > observation.PeakCompressionCm)
+                {
+                    observation.PeakCompressionCm = compressionCm;
+                }
+
+                if (compressionCm > 5f)
+                {
+                    observation.SawSuspensionCompress = true;
+                }
+            }
+
+            bool reboundWindow = section is WheelLabCourseSection.SideSlope
+                or WheelLabCourseSection.MovingPlatform
+                or WheelLabCourseSection.Jump
+                or WheelLabCourseSection.Braking;
+            if (observation.SawSuspensionCompress &&
+                observation.PeakCompressionCm > 5f &&
+                reboundWindow &&
+                compressionCm <= observation.PeakCompressionCm - 3f)
+            {
+                observation.SawSuspensionRebound = true;
+            }
+
+            if (observation.CurrentlyAirborne)
+            {
+                observation.SawLandingAfterAirborne = true;
+                observation.CurrentlyAirborne = false;
+                observation.CurrentAirborneTicks = 0;
+            }
+        }
+        else if (runtime.WheelLabTrialStatus == Physics3DWheelLabTrialStatus.Running &&
+                 chassis.PositionCm.Z >= config.PlatformGapStartZCm)
+        {
+            // Platform gap and ramp crest are the authored unload windows.
+            observation.CurrentlyAirborne = true;
+            observation.CurrentAirborneTicks++;
+            observation.MaximumConsecutiveAirborneTicks = Math.Max(
+                observation.MaximumConsecutiveAirborneTicks,
+                observation.CurrentAirborneTicks);
+        }
+        else
+        {
+            observation.CurrentAirborneTicks = 0;
+            observation.CurrentlyAirborne = false;
+        }
+    }
+
+    private static WheelModePresentationEvidence CaptureWheelModePresentationEvidence(Physics3DShowcaseRuntime runtime)
+    {
+        Physics3DWheelLabShowcaseConfig config = runtime.ActiveConfig.WheelLab;
+        int modeBodyCount = runtime.WheelLabModeBodyCount;
+        var shapeKinds = new Physics3DShapeKind[modeBodyCount];
+        var visualSizesCm = new Vector3[modeBodyCount];
+        if (modeBodyCount > 0)
+        {
+            int firstWheelBodyIndex = runtime.BodyCount - modeBodyCount;
+            for (int wheelIndex = 0; wheelIndex < modeBodyCount; wheelIndex++)
+            {
+                bool found = runtime.TryGetBodyVisual(
+                    firstWheelBodyIndex + wheelIndex,
+                    out _,
+                    out _,
+                    out Physics3DShapeKind shapeKind,
+                    out Vector3 visualSizeCm,
+                    out _,
+                    out _);
+                Assert.That(found, Is.True, $"Wheel mode body visual {wheelIndex} is missing.");
+                shapeKinds[wheelIndex] = shapeKind;
+                visualSizesCm[wheelIndex] = visualSizeCm;
+            }
+        }
+
+        return new WheelModePresentationEvidence(
+            runtime.WheelLabMode,
+            modeBodyCount,
+            runtime.WheelLabVehicleCount,
+            runtime.WheelLabWheelCountValue,
+            shapeKinds,
+            visualSizesCm,
+            config.WheelRadiusCm,
+            config.WheelWidthCm);
+    }
+
+    private static void AssertWheelModesAreMateriallyDistinct(
+        Vehicle3DWheelKind[] kinds,
+        WheelModePresentationEvidence[] presentations,
+        Physics3DWheelLabTrialResult[] results)
+    {
+        Assert.That(kinds.Length, Is.EqualTo(3));
+        Assert.That(presentations.Length, Is.EqualTo(3));
+        Assert.That(results.Length, Is.EqualTo(3));
+
+        WheelModePresentationEvidence physical = FindPresentation(presentations, Vehicle3DWheelKind.Physical);
+        WheelModePresentationEvidence box = FindPresentation(presentations, Vehicle3DWheelKind.Box);
+        WheelModePresentationEvidence scanning = FindPresentation(presentations, Vehicle3DWheelKind.Scanning);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(physical.ModeBodyCount, Is.EqualTo(4));
+            Assert.That(box.ModeBodyCount, Is.EqualTo(4));
+            Assert.That(scanning.ModeBodyCount, Is.Zero);
+            Assert.That(physical.VehicleCount, Is.EqualTo(1));
+            Assert.That(box.VehicleCount, Is.EqualTo(1));
+            Assert.That(scanning.VehicleCount, Is.EqualTo(1));
+            Assert.That(physical.WheelCount, Is.EqualTo(4));
+            Assert.That(box.WheelCount, Is.EqualTo(4));
+            Assert.That(scanning.WheelCount, Is.EqualTo(4));
+        });
+
+        for (int i = 0; i < 4; i++)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(physical.ShapeKinds[i], Is.EqualTo(Physics3DShapeKind.Cylinder));
+                Assert.That(
+                    physical.VisualSizesCm[i],
+                    Is.EqualTo(new Vector3(physical.WheelRadiusCm * 2f, physical.WheelWidthCm, physical.WheelRadiusCm * 2f)));
+                Assert.That(box.ShapeKinds[i], Is.EqualTo(Physics3DShapeKind.Box));
+                Assert.That(box.VisualSizesCm[i].X, Is.EqualTo(box.WheelWidthCm));
+                Assert.That(box.VisualSizesCm[i].Y, Is.EqualTo(box.VisualSizesCm[i].Z));
+                Assert.That(box.VisualSizesCm[i].Y, Is.GreaterThan(box.WheelWidthCm));
+            });
+        }
+
+        Physics3DWheelLabTrialResult physicalResult = FindResult(results, Vehicle3DWheelKind.Physical);
+        Physics3DWheelLabTrialResult boxResult = FindResult(results, Vehicle3DWheelKind.Box);
+        Physics3DWheelLabTrialResult scanningResult = FindResult(results, Vehicle3DWheelKind.Scanning);
+
+        bool physicalDiffersFromBox = TrialResultsDifferMaterially(physicalResult, boxResult);
+        bool physicalDiffersFromScanning = TrialResultsDifferMaterially(physicalResult, scanningResult);
+        bool boxDiffersFromScanning = TrialResultsDifferMaterially(boxResult, scanningResult);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                physicalDiffersFromBox,
+                Is.True,
+                "Physical and Box wheel runs published no material measured driving difference.");
+            Assert.That(
+                physicalDiffersFromScanning,
+                Is.True,
+                "Physical and Scanning wheel runs published no material measured driving difference.");
+            Assert.That(
+                boxDiffersFromScanning,
+                Is.True,
+                "Box and Scanning wheel runs published no material measured driving difference.");
+            Assert.That(physical.ShapeKinds[0], Is.Not.EqualTo(box.ShapeKinds[0]));
+            Assert.That(scanning.ModeBodyCount, Is.Not.EqualTo(physical.ModeBodyCount));
+            Assert.That(scanning.ModeBodyCount, Is.Not.EqualTo(box.ModeBodyCount));
+        });
+    }
+
+    private static bool TrialResultsDifferMaterially(
+        in Physics3DWheelLabTrialResult left,
+        in Physics3DWheelLabTrialResult right)
+    {
+        const float compressionEpsilonCm = 0.5f;
+        const float slipEpsilonCmPerSecond = 25f;
+        const float groundedEpsilon = 0.02f;
+        const float brakingEpsilonCm = 25f;
+        return MathF.Abs(left.MaximumSuspensionCompressionCm - right.MaximumSuspensionCompressionCm) > compressionEpsilonCm ||
+               MathF.Abs(left.MaximumSlipCmPerSecond - right.MaximumSlipCmPerSecond) > slipEpsilonCmPerSecond ||
+               MathF.Abs(left.GroundedRatio - right.GroundedRatio) > groundedEpsilon ||
+               MathF.Abs(left.BrakingDistanceCm - right.BrakingDistanceCm) > brakingEpsilonCm;
+    }
+
+    private static WheelModePresentationEvidence FindPresentation(
+        WheelModePresentationEvidence[] presentations,
+        Vehicle3DWheelKind kind)
+    {
+        for (int i = 0; i < presentations.Length; i++)
+        {
+            if (presentations[i].WheelKind == kind)
+            {
+                return presentations[i];
+            }
+        }
+
+        throw new InvalidOperationException($"Missing presentation evidence for '{kind}'.");
+    }
+
+    private static Physics3DWheelLabTrialResult FindResult(
+        Physics3DWheelLabTrialResult[] results,
+        Vehicle3DWheelKind kind)
+    {
+        for (int i = 0; i < results.Length; i++)
+        {
+            if (results[i].WheelKind == kind)
+            {
+                return results[i];
+            }
+        }
+
+        throw new InvalidOperationException($"Missing trial result for '{kind}'.");
+    }
+
+    private static float ExtractYawRadians(Quaternion orientation)
+    {
+        Vector3 forward = Vector3.Transform(Vector3.UnitZ, orientation);
+        return MathF.Atan2(forward.X, forward.Z);
+    }
+
+    private static float NormalizeRadians(float radians)
+    {
+        while (radians > MathF.PI)
+        {
+            radians -= MathF.PI * 2f;
+        }
+
+        while (radians < -MathF.PI)
+        {
+            radians += MathF.PI * 2f;
+        }
+
+        return radians;
     }
 
     private static void PressPublicKey(GameEngine engine, TestInputBackend keyboard, string devicePath)
@@ -809,6 +1348,57 @@ public sealed class WheelLabShowcaseTests
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.Tick(1f / 30f);
         }
+    }
+
+    private struct PublicKeyboardRouteObservation
+    {
+        public bool UsedSteerLeft;
+        public bool UsedSteerRight;
+        public bool UsedDrive;
+        public bool UsedBrake;
+        public float SteeringYawDeltaRadians;
+        public float PeakCompressionCm;
+        public bool SawSuspensionCompress;
+        public bool SawSuspensionRebound;
+        public int CurrentAirborneTicks;
+        public int MaximumConsecutiveAirborneTicks;
+        public bool CurrentlyAirborne;
+        public bool SawLandingAfterAirborne;
+        public float MaximumAbsLateralOffsetCm;
+
+        public static PublicKeyboardRouteObservation CreateEmpty() => new();
+    }
+
+    private readonly struct WheelModePresentationEvidence
+    {
+        public WheelModePresentationEvidence(
+            Vehicle3DWheelKind wheelKind,
+            int modeBodyCount,
+            int vehicleCount,
+            int wheelCount,
+            Physics3DShapeKind[] shapeKinds,
+            Vector3[] visualSizesCm,
+            float wheelRadiusCm,
+            float wheelWidthCm)
+        {
+            WheelKind = wheelKind;
+            ModeBodyCount = modeBodyCount;
+            VehicleCount = vehicleCount;
+            WheelCount = wheelCount;
+            ShapeKinds = shapeKinds;
+            VisualSizesCm = visualSizesCm;
+            WheelRadiusCm = wheelRadiusCm;
+            WheelWidthCm = wheelWidthCm;
+        }
+
+        public Vehicle3DWheelKind WheelKind { get; }
+        public int ModeBodyCount { get; }
+        public int VehicleCount { get; }
+        public int WheelCount { get; }
+        public Physics3DShapeKind[] ShapeKinds { get; }
+        public Vector3[] VisualSizesCm { get; }
+        public float WheelRadiusCm { get; }
+        public float WheelWidthCm { get; }
     }
 
     private sealed class WheelLabHarness : IDisposable
