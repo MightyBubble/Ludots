@@ -400,7 +400,7 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
 internal sealed class FrontlineDeathAndMatchSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription DeathQuery = new QueryDescription()
-        .WithAll<FrontlineDeathState, AttributeBuffer, PresentationStableId>()
+        .WithAll<FrontlineDeathState, AttributeBuffer>()
         .WithNone<PresentationDestroyPending>();
     private static readonly QueryDescription CoreQuery = new QueryDescription()
         .WithAll<FrontlineCore, FrontlineParticipant, AttributeBuffer>();

@@ -8,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
@@ -123,6 +124,83 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
             Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.HasActiveCamera, Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Dedicated server removes a destroyed command core\n" +
+        "  Given both commanders are fighting on the authoritative Frontline battlefield\n" +
+        "  When the southern command core reaches zero health\n" +
+        "  Then the server publishes the northern victory and removes the southern core without a presentation loop")]
+    public void GivenAuthoritativeBattle_WhenSouthernCoreFalls_ThenDedicatedServerRemovesIt()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+        engine.LoadStartupMap();
+
+        FrontlineRuntime runtime = GetRuntime(engine);
+        var room = new NetworkRoomSnapshotHeader(
+            new SessionEpoch(17),
+            revision: 1,
+            committedTick: 0,
+            countdownRemainingTicks: 0,
+            seatCount: 2,
+            connectedSeatCount: 2,
+            readySeatCount: 2,
+            NetworkRoomPhase.Started);
+        NetworkRoomSeatSnapshot[] seats =
+        {
+            new(0, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(1)),
+            new(1, NetworkRoomSeatConnectionState.Connected, NetworkRoomReadyState.Ready, 1, new PlayerId(2)),
+        };
+        runtime.ApplyNetworkRoomSnapshot(in room, seats);
+        NetworkGameplayCommandGate gameplayGate = engine.GetService(CoreServiceKeys.NetworkGameplayCommandGate)
+            ?? throw new InvalidOperationException("Authoritative Frontline test requires the gameplay command gate.");
+        gameplayGate.StartMatch();
+
+        for (int i = 0; i < 4; i++)
+        {
+            engine.Tick(1f / 30f);
+        }
+
+        Entity southernCore = Entity.Null;
+        var coreQuery = new QueryDescription().WithAll<FrontlineCore, FrontlineParticipant, AttributeBuffer>();
+        foreach (ref Chunk chunk in engine.World.Query(in coreQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            foreach (int index in chunk)
+            {
+                if (participants[index].SideIndex == 1)
+                {
+                    southernCore = chunk.Entity(index);
+                }
+            }
+        }
+        Assert.That(southernCore, Is.Not.EqualTo(Entity.Null));
+        Assert.That(
+            engine.World.Has<PresentationStableId>(southernCore),
+            Is.False,
+            "A dedicated server must not depend on presentation bootstrap to complete gameplay entity teardown.");
+        NetworkEntityTable networkEntities = engine.GetService(CoreServiceKeys.NetworkEntityTable)
+            ?? throw new InvalidOperationException("Authoritative Frontline test requires the network entity table.");
+        Assert.That(networkEntities.TryResolve(southernCore, out _), Is.True);
+
+        int healthId = RequireAttribute(runtime.Config.HealthAttribute);
+        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f);
+
+        for (int i = 0; i < 8 && engine.World.IsAlive(southernCore); i++)
+        {
+            engine.Tick(1f / 30f);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.Snapshot.Outcome, Is.EqualTo(FrontlineMatchOutcome.SideOneVictory));
+            Assert.That(engine.World.IsAlive(southernCore), Is.False);
+            Assert.That(networkEntities.TryResolve(southernCore, out _), Is.False);
         });
     }
 

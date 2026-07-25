@@ -528,3 +528,73 @@ replicated mirrors reuse this Core spatial lifecycle without a new Core enum.
 | Add Layer 1 | Shared spatial-membership invariant at mirror commit and release boundaries |
 | Add Layer 2 | None |
 | Forbidden | `SpatialPartitionExcluded` bypass; forced-visible mirrors; authoritative client simulation; Frontline-specific indexing; silent stale membership |
+
+## Follow-up Review - Headless Authoritative Entity Teardown
+
+- **Task / Issue**: #709 - remove defeated replicated entities without a presentation loop
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the fix removes an invalid presentation-component prerequisite
+from the existing gameplay death query and reuses the existing cleanup and
+network-binding teardown path; it adds no op, enum, schema, queue, or fallback.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Detect zero health | 0 | Existing chunk query in `FrontlineDeathAndMatchSystem` |
+| Cancel orders and mark pending destruction | 1 | Existing `OrderBufferSystem` and Cleanup command buffer |
+| Release the network handle and destroy | 1 | Existing `FrontlineNetworkEntityBindingSystem` cleanup boundary |
+
+### 3. Reuse list
+
+- Handlers: N/A.
+- Queues / Systems: `FrontlineDeathAndMatchSystem`, `OrderBufferSystem`,
+  Cleanup command buffers, and `FrontlineNetworkEntityBindingSystem`.
+- Resolvers / Registries: existing health `AttributeRegistry` entry and
+  `NetworkEntityTable`.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Order cancellation and `PresentationDestroyPending` publication remain at the
+existing Cleanup structural commit; the following registered cleanup system
+releases the authoritative handle before physical destruction.
+
+### 6. Config SSOT
+
+Behavior remains in the existing Frontline entity templates and systems. New
+JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps or graph wiring**. It does not add a
+Core enum or make gameplay teardown depend on presentation state.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Health attributes; death cleanup; order cancellation; network table release |
+| Add Layer 0 op | None |
+| Add Layer 1 | None |
+| Add Layer 2 | None |
+| Forbidden | Presentation-only death prerequisite; retained zero-health entity; server-side presentation fallback |
