@@ -8,7 +8,7 @@
     "ref": "origin/main",
     "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
   },
-  "remote_pr_head_before_repair": "a829bdfe6df33b864908d397c6b1c2ee935fa6a9",
+  "remote_pr_head_before_repair": "49a81360eb48d38e3f0b966e2926ee423328fcf8",
   "verdict": "pass_local_final_gate",
   "remote_checks": {
     "status": "pending_push",
@@ -23,6 +23,7 @@
     "CompositeOrderPlanner not-applicable versus typed rejection outcomes",
     "collection command-panel multi-member aiming typed rejection",
     "runtime entity spawn single and batch preflight before dequeue",
+    "runtime entity spawn explicit MembershipTarget links without requiring authored Team",
     "ArchitectureTests Windows output-drain cleanup stability"
   ],
   "packets": {
@@ -76,6 +77,12 @@
       "failed": 0
     },
     {
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~RuntimeEntitySpawnSystem_BatchTemplateExplicitMembershipWithoutTeam_LinksEverySpawnedEntity\" --nologo --logger \"console;verbosity=minimal\"",
+      "result": "pass",
+      "passed": 1,
+      "failed": 0
+    },
+    {
       "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~OrderBufferSystem_BatchEntityAdmissionCapacityMiss\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
       "passed": 9,
@@ -85,6 +92,12 @@
       "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
       "passed": 1,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\PresentationTests\\PresentationTests.csproj -c Debug --no-build --filter \"<MassNavigation PR acceptance presentationFilter>\" -v minimal",
+      "result": "pass",
+      "passed": 10,
       "failed": 0
     },
     {

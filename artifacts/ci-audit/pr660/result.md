@@ -4,7 +4,7 @@
 - Worktree: `C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415`
 - Branch: `codex/issues-649-651-ordering`
 - Base checked: `origin/main` at `5712a4eef4cdb1011cc0694d52e77de95bfe4aaa`
-- Remote PR head before this repair pass: `a829bdfe6df33b864908d397c6b1c2ee935fa6a9`
+- Remote PR head before this follow-up repair pass: `49a81360eb48d38e3f0b966e2926ee423328fcf8`
 
 ## Gate Summary
 
@@ -24,6 +24,7 @@ This audit covers the #689 blockers for PR #660:
 - move-then-cast planning distinguishes not-applicable from typed rejection
 - collection command-panel multi-member aiming rejects explicitly instead of opening one actor's aiming
 - runtime spawn single and batch requests preflight relationship, owner/team, receipt, presentation, and effect capacity before dequeue
+- follow-up CI repair: explicit `MembershipTarget` spawn requests remain linked even when the spawned template/request does not author a `Team`
 - required ArchitectureTests cleanup no longer flakes on Windows descendant process directory locks
 
 Visual review packets are scoped out for this headless runtime repair. No gameplay visuals, showcase layout, or player-facing asset changed in this pass.
@@ -42,8 +43,10 @@ Visual review packets are scoped out for this headless runtime repair. No gamepl
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 34/34.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 7/7.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~RuntimeEntitySpawnSystem_SingleUnitTypeMissingTeamRepresentative" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~RuntimeEntitySpawnSystem_BatchTemplateExplicitMembershipWithoutTeam_LinksEverySpawnedEntity" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~OrderBufferSystem_BatchEntityAdmissionCapacityMiss" --nologo --logger "console;verbosity=minimal"`: PASS, 9/9.
 - `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
+- `dotnet test src\Tests\PresentationTests\PresentationTests.csproj -c Debug --no-build --filter <MassNavigation PR acceptance presentationFilter> -v minimal`: PASS, 10/10.
 - `git diff --check origin/main...HEAD`: PASS.
 
 ## Notes

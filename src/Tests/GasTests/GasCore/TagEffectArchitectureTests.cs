@@ -1264,6 +1264,88 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplateExplicitMembershipWithoutTeam_LinksEverySpawnedEntity()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_explicit_membership_batch_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ExplicitMembershipBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 9);
+            Entity membershipTarget = spawnRelationships.Teams.Get(9);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_explicit_membership_batch_template",
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = membershipTarget,
+                    HasMembershipTarget = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            var spawned = new Entity[2];
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (!string.Equals(name.Value, "Template:ExplicitMembershipBatch", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                if (spawnedCount < spawned.Length)
+                {
+                    spawned[spawnedCount] = entity;
+                }
+
+                spawnedCount++;
+            });
+
+            That(spawnedCount, Is.EqualTo(2));
+            for (int i = 0; i < spawned.Length; i++)
+            {
+                That(
+                    spawnRelationships.Relationships.HasLink(
+                        spawned[i],
+                        membershipTarget,
+                        spawnRelationships.MemberOfTypeId),
+                    Is.True,
+                    $"Spawned entity at batch row {i} must keep the explicit MembershipTarget even when no Team is authored.");
+            }
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_OnSpawnEffectWithoutQueue_DoesNotLeavePartialSpawnedEntity()
         {
             UnitTypeRegistry.Clear();

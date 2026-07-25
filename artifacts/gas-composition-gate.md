@@ -1379,3 +1379,58 @@ N/A
 ### 8. Next variant test
 
 銆屼笅涓€涓?Mod 鍙樹綋銆嶅皢淇敼: graph 杩炵嚎 / effect 姝ラ銆傛祴璇曡嫢闇€瑕佸睘鎬ф垨 form set id锛岀户缁粠姝ｅ紡 registry 鍙?id锛屼笉纭紪鐮佸叡浜叏灞€妲戒綅銆?
+
+---
+
+## GAS Composition Gate - PR #660 MassNavigation Spawn Membership Follow-up
+
+- **Task / Issue**: PR #660 / #689 follow-up after GitHub `solution-verify` MassNavigation PR acceptance failure at `49a81360`
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Repair existing runtime entity spawn relationship preflight semantics.
+
+Result: PASS
+
+Reason: Explicit `MembershipTarget` spawn requests now remain part of the preflight relationship plan even when the template/request does not author `Team`. This reuses the existing `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `RelationshipRuntime`, and `MemberOf` relationship type. No fallback path, graph op, effect preset, schema, registry, or parallel spawn pipeline was added.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Runtime spawn relationship plan | N/A | Existing `RuntimeEntitySpawnSystem.PreflightSpawnRelationships` |
+| Explicit member-of commit | N/A | Existing `RelationshipRuntime.EnsureLink` via `ApplyRelationshipPlan` |
+| Regression coverage | N/A | Existing `TagEffectArchitectureTests` runtime spawn harness |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`
+- Resolvers / Registries: existing `RelationshipRuntime`, `RelationshipTypeRegistry`, `TeamEntityLookup`
+- Existing presets / graphs: unchanged
+
+### 4. New Layer 0 ops
+
+N/A. No graph operation, effect operation, handler, preset, registry, schema, or materialization path was added.
+
+### 5. Transaction boundary
+
+Spawn preflight still validates relationship service availability and target liveness before dequeue. The follow-up only restores explicit relationship intent into the post-create relationship plan. If capacity/service validation fails, the request remains queued; if creation succeeds, each spawned entity receives the explicit `MemberOf` edge through the existing relationship runtime.
+
+### 6. Config SSOT
+
+Behavior remains in the existing runtime spawn request contract. No JSON schema or configuration field was added.
+
+### 7. Red flag scan
+
+- [x] No profile inherit, placement, or preset enum added
+- [x] No parallel spawn, relationship, or MassNavigation pipeline added
+- [x] No fallback, compatibility bypass, silent drop, or dynamic hot-path growth added
+- [x] No new registry, loader, or configuration SSOT added
+- [x] Regression covers the pre-fix explicit `MembershipTarget` without authored `Team` case
+
+### 8. Next variant test
+
+A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.

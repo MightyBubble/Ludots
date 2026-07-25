@@ -902,15 +902,19 @@ namespace Ludots.Core.Gameplay.Spawning
             Entity ownershipSource = request.HasOwnershipSource != 0
                 ? request.OwnershipSource
                 : Entity.Null;
+            if (request.HasMembershipTarget != 0)
+            {
+                if (teamId > 0)
+                {
+                    PreflightMembershipTargetMatchesTeam(context, in request, teamId);
+                }
+
+                return new SpawnRelationshipPlan(ownershipSource, request.MembershipTarget, Entity.Null);
+            }
+
             if (teamId <= 0)
             {
                 return new SpawnRelationshipPlan(ownershipSource, Entity.Null, Entity.Null);
-            }
-
-            if (request.HasMembershipTarget != 0)
-            {
-                PreflightMembershipTargetMatchesTeam(context, in request, teamId);
-                return new SpawnRelationshipPlan(ownershipSource, request.MembershipTarget, Entity.Null);
             }
 
             if (authorsRelationshipDomainIdentity)
