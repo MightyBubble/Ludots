@@ -324,7 +324,7 @@ Ragdoll 由数据化骨骼配方生成，不在代码中硬编码人形层级。
 | 固定 30Hz 生产顺序 | 已完成 | 真实引擎顺序为准备、Physics3D 推进、观察；重复 `MapResumed` 不重复安装；后台地图卸载不关闭当前 Playground |
 | 查询、接触、力场、平台、角色、攀爬、车辆、Ragdoll、高级约束 | 阶段实现已落地并完成 checkpoint 回归 | Physics3D 相关 Release 回归 `183/183`，独立 Ragdoll 回归 `11/11`；密集接触多轮稳定性和长稳门仍待完成 |
 | 十站点 Playground | Headless 玩家旅程已通过，真实逐站证据未完成 | 三组 Showcase 验收共 `36/36`，十站玩家旅程 `1/1`，12 个配置全部解析；仍需逐站真实 Raylib 操作、截图或录像和十分钟规模观察 |
-| 六个 Core 模块与 Showcase | checkpoint 构建通过 | Physics3D、Character3D、Traversal3D、Vehicle3D、Ragdoll、Physics3DNet 和 Showcase 已建立独立项目边界；网络整合后还需删除 Physics3DNet 中与 Core 重复的 Tick、AOI 和基线真相 |
+| 五个 Core 模块与 Showcase | checkpoint 构建通过 | Physics3D、Character3D、Traversal3D、Vehicle3D、Ragdoll 和 Showcase 已建立独立项目边界；本轮不交付 Physics3DNet，未来联机骨架只消费固定帧边界 |
 | Vehicle3D 三轮型与 Wheel Lab | 已完成 | 圆柱实体轮、真实方轮和 Sphere Cast 扫描轮共用 30Hz 输入事务；150 台实体轮与 150 台方轮分别为 750 个活动刚体、3,000 个约束并通过独立 0GC 门；Wheel Lab `15/15`、Playground 总验收 `7/7` |
 | 150 人混合玩法数据面门 | 时间门通过，全线程 0GC 未通过 | 低干扰 600 帧完整 Tick P95/P99 为 `20.326/26.548ms`；主线程和业务阶段为 `0B`，collision worker 偶发 `536B`，不得宣称 0GC 完成 |
 | 网络 transport、AOI 发送与 150 客户端故障注入 | 独立分支已实现 transport，尚未整合 | issue #709 已有握手、会话、可靠通道、复制、ACK、重连和权威运行时；稀疏每席位基线、通用固定输入、Physics3D schema 与 150 客户端故障门仍在收口 |

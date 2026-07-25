@@ -26,7 +26,6 @@
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics3D\Ludots.Physics3D.csproj" />
-    <ProjectReference Include="..\..\Core\Ludots.Physics3DNet\Ludots.Physics3DNet.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Character3D\Ludots.Character3D.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Traversal3D\Ludots.Traversal3D.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Vehicle3D\Ludots.Vehicle3D.csproj" />

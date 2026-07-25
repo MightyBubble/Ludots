@@ -27,7 +27,6 @@
     <Compile Remove="Ludots.Physics2D\**\*.cs" />
     <Compile Remove="Ludots.Physics.Broadphase\**\*.cs" />
     <Compile Remove="Ludots.Physics3D\**\*.cs" />
-    <Compile Remove="Ludots.Physics3DNet\**\*.cs" />
     <Compile Remove="Ludots.Character3D\**\*.cs" />
     <Compile Remove="Ludots.Traversal3D\**\*.cs" />
     <Compile Remove="Ludots.Vehicle3D\**\*.cs" />
