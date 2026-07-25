@@ -28,6 +28,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class EffectPhaseExecutor
     {
         public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
+        public const string GraphProgramScratchCapacityExceededError = "GAS.EFFECT_PHASE.ERR.GraphProgramScratchCapacityExceeded";
+        public const int DefaultGraphProgramScratchCapacity = 16384;
         private const int PhaseListenerDispatchScratchCapacity =
             EffectPhaseListenerBuffer.CAPACITY * 2 + GlobalPhaseListenerRegistry.MAX_LISTENERS;
 
@@ -49,7 +51,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         // Scratch buffer for collected listener actions
         private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[PhaseListenerDispatchScratchCapacity];
-        private int[] _scratchRegisterCountsByGraphId = new int[64];
+        private readonly int[] _scratchRegisterCountsByGraphId;
 
         public EffectPhaseExecutor(
             GraphProgramRegistry programs,
@@ -59,8 +61,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectTemplateRegistry templates,
             GlobalPhaseListenerRegistry? globalListeners = null,
             GameplayEventBus? eventBus = null,
-            GasBudget? budget = null)
+            GasBudget? budget = null,
+            int graphProgramScratchCapacity = DefaultGraphProgramScratchCapacity)
         {
+            if (graphProgramScratchCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(graphProgramScratchCapacity),
+                    graphProgramScratchCapacity,
+                    "Graph program scratch capacity must be positive.");
+            }
+
             _programs = programs;
             _presetTypes = presetTypes;
             _builtinHandlers = builtinHandlers;
@@ -69,6 +80,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _globalListeners = globalListeners;
             _eventBus = eventBus;
             _budget = budget;
+            _scratchRegisterCountsByGraphId = new int[graphProgramScratchCapacity];
         }
 
         /// <summary>
@@ -637,13 +649,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            int newSize = _scratchRegisterCountsByGraphId.Length;
-            while (newSize <= graphProgramId)
-            {
-                newSize <<= 1;
-            }
-
-            Array.Resize(ref _scratchRegisterCountsByGraphId, newSize);
+            throw new InvalidOperationException(
+                $"{GraphProgramScratchCapacityExceededError}: graphProgramId={graphProgramId}, capacity={_scratchRegisterCountsByGraphId.Length}.");
         }
 
         private static ScratchUsage AnalyzeScratchUsage(ReadOnlySpan<GraphInstruction> program)

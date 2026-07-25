@@ -68,7 +68,8 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue(capacity: 4096);
-                var admissionResults = new OrderAdmissionResultBuffer(3, 3);
+                var orderReq = new OrderRequestQueue(capacity: 4096);
+                var admissionResults = new OrderAdmissionResultBuffer(6, 6);
                 var chainOrders = new OrderQueue(64, admissionResults);
 
                 var processing = new EffectProcessingLoopSystem(
@@ -83,7 +84,7 @@ namespace Ludots.Tests.GAS
                     inputReq,
                     chainOrders,
                     new ResponseChainTelemetryBuffer(),
-                    new OrderRequestQueue(capacity: 4096),
+                    orderReq,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
                 {
@@ -100,9 +101,14 @@ namespace Ludots.Tests.GAS
                     admissionResults.BeginLogicStep();
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     processing.Update(1f);
-                    chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
-                    chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
-                    chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    That(inputReq.TryDequeue(out _), Is.True);
+                    That(orderReq.TryDequeue(out _), Is.True);
+                    var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
+                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
+                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
+                    That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
+                    That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
+                    That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
                     processing.Update(1f);
                     admissionResults.EndEntityIntake();
                     admissionResults.EndLogicStep();
@@ -112,7 +118,7 @@ namespace Ludots.Tests.GAS
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
 
-                int windows = 2000;
+                int windows = 10_000;
                 long alloc0 = GC.GetAllocatedBytesForCurrentThread();
                 int gen0_0 = GC.CollectionCount(0);
                 int gen1_0 = GC.CollectionCount(1);
@@ -122,8 +128,12 @@ namespace Ludots.Tests.GAS
                 long ticksWait = 0;
                 long ticksResolve = 0;
                 long ticksOther = 0;
+                int failedInputDequeues = 0;
+                int failedOrderDequeues = 0;
+                int failedSubmissions = 0;
+                int maxAdmissionCount = 0;
 
-                var sw = System.Diagnostics.Stopwatch.StartNew();
+                long elapsedStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 for (int i = 0; i < windows; i++)
                 {
                     admissionResults.BeginLogicStep();
@@ -140,9 +150,14 @@ namespace Ludots.Tests.GAS
                         default: ticksOther += dt; break;
                     }
 
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    if (!inputReq.TryDequeue(out _)) failedInputDequeues++;
+                    if (!orderReq.TryDequeue(out _)) failedOrderDequeues++;
+                    var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } };
+                    var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
+                    var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source };
+                    if (chainOrders.SubmitAssigned(ref activate) != OrderSubmitResult.Queued) failedSubmissions++;
+                    if (chainOrders.SubmitAssigned(ref pass1) != OrderSubmitResult.Queued) failedSubmissions++;
+                    if (chainOrders.SubmitAssigned(ref pass2) != OrderSubmitResult.Queued) failedSubmissions++;
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     phase0 = processing.DebugProposalWindowPhase;
@@ -155,10 +170,12 @@ namespace Ludots.Tests.GAS
                         case 3: ticksResolve += dt; break;
                         default: ticksOther += dt; break;
                     }
+
+                    maxAdmissionCount = Math.Max(maxAdmissionCount, admissionResults.Count);
                     admissionResults.EndEntityIntake();
                     admissionResults.EndLogicStep();
                 }
-                sw.Stop();
+                long elapsedTicks = System.Diagnostics.Stopwatch.GetTimestamp() - elapsedStart;
 
                 long alloc1 = GC.GetAllocatedBytesForCurrentThread();
                 int gen0_1 = GC.CollectionCount(0);
@@ -170,13 +187,22 @@ namespace Ludots.Tests.GAS
                 double msResolve = ticksResolve * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
                 double msOther = ticksOther * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
                 double msSum = msCollect + msWait + msResolve + msOther;
-                double perWindowUs = (sw.Elapsed.TotalMilliseconds * 1000.0) / windows;
+                double elapsedMs = elapsedTicks * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                double perWindowUs = (elapsedMs * 1000.0) / windows;
 
-                Console.WriteLine($"[MUD][WINDOW][STRESS] Windows={windows} ElapsedMs={sw.Elapsed.TotalMilliseconds:F1} PerWindowUs={perWindowUs:F3}");
+                Console.WriteLine($"[MUD][WINDOW][STRESS] Windows={windows} ElapsedMs={elapsedMs:F1} PerWindowUs={perWindowUs:F3}");
                 Console.WriteLine($"[MUD][WINDOW][STRESS] TimeMs: Collect={msCollect:F2} Wait={msWait:F2} Resolve={msResolve:F2} Other={msOther:F2} Sum={msSum:F2}");
                 Console.WriteLine($"[MUD][WINDOW][STRESS] AllocBytes(CurrentThread)={alloc1 - alloc0}");
                 Console.WriteLine($"[MUD][WINDOW][STRESS] GC Collections Δ: Gen0={gen0_1 - gen0_0} Gen1={gen1_1 - gen1_0} Gen2={gen2_1 - gen2_0}");
 
+                That(alloc1 - alloc0, Is.Zero);
+                That(failedInputDequeues, Is.Zero);
+                That(failedOrderDequeues, Is.Zero);
+                That(failedSubmissions, Is.Zero);
+                That(maxAdmissionCount, Is.LessThanOrEqualTo(admissionResults.GenerationCapacity));
+                That(chainOrders.Count, Is.Zero);
+                That(admissionResults.Count, Is.LessThanOrEqualTo(admissionResults.GenerationCapacity));
+                That(admissionResults.OverflowCount, Is.Zero);
                 That(world.Get<AttributeBuffer>(target).GetCurrent(attrHealth), Is.LessThan(1000f));
                 Pass("Interactive window stress complete");
             }

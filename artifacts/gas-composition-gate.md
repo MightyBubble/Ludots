@@ -2,6 +2,75 @@
 
 Current closeouts and prior issue reviews follow.
 
+## PR #660 / #689 Final Closeout - Player Operation Lifecycle - 2026-07-26
+
+- **Task / Issue**: Finish PR #660 against the #689 player-operation acceptance gate after the stale audit loop: close admission retirement, continuation capacity transaction, input feedback, ability effect atomicity, fixed-capacity runtime behavior, and spawn transaction boundaries without scope expansion or fallback.
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex.
+- **PR head before final repair**: `832481ece355f7b94b5db5504d7d96542eca4677`.
+- **Final pushed PR head**: recorded in PR #660 and issue #689 after push; this tracked file cannot embed its own final commit SHA.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing GAS order/input/effect/spawn lifecycle boundaries.
+
+Result: PASS.
+
+Reason: The repair reuses the existing order intake, admission result, terminal result, continuation, ability execution, effect application, response chain, input mapping, command panel, and runtime spawn systems. It adds no new graph op, effect preset enum, gameplay profile field, registry, loader family, fallback path, compatibility bypass, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Player/response order admission retirement | 1 | `OrderAdmissionResultBuffer`, `OrderBufferSystem`, `EffectProposalProcessingSystem` |
+| Batch/continuation capacity transaction | 1 | `OrderQueue`, `OrderContinuationBuffer`, `OrderContinuationSystem`, `OrderTerminalResultBuffer` |
+| Pending retry terminal outcome | 1 | `OrderSubmitter`, `OrderBufferSystem` |
+| Ability effect atomicity and no fallback | 1 | `AbilityExecSystem`, `AbilityExecLoader` |
+| Fixed-capacity input/effect runtime | 1 | `InputOrderMappingSystem`, `EffectApplicationSystem` |
+| Command-panel activation feedback | 1 | Entity command panel runtime/controller/source |
+| Runtime spawn transaction boundary | 1 | `RuntimeEntitySpawnSystem` |
+
+### 3. Reuse list
+
+- Handlers: no new BuiltinHandler.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderContinuationSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, `AbilityExecSystem`, `EffectProposalProcessingSystem`, `EffectApplicationSystem`, `RuntimeEntitySpawnSystem`, `InputOrderMappingSystem`, entity command panel systems.
+- Resolvers / Registries: existing `OrderTypeRegistry`, `OrderRuleRegistry`, `AbilityDefinitionRegistry`, `EffectTemplateRegistry`, target resolver helpers, relationship/team/ownership services.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Orders that are accepted must either remain retryable without claiming processing, or produce typed admission and terminal outcomes before ownership is released. Batch, continuation, and response-chain paths preflight capacity for their whole operation before partial mutation. Ability execution reserves terminal and presentation capacity before state mutation and treats invalid explicit targets, missing dependencies, and fixed-capacity overflow as failure rather than fallback. Input and effect hot paths use fixed scratch capacity with typed rejection or fail-fast behavior instead of resize, truncation, or silent skip.
+
+### 6. Config SSOT
+
+Runtime capacity remains in `assets/Configs/game.json` and is validated by `GasRuntimeCapacityConfig.Validate`. Player command scratch capacity is configured through the existing input mapping construction path; no hidden fallback pool is introduced.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order, input, ability, effect, graph, panel, or spawn runtime added
+- [x] No fallback or silent service-missing path added
+- [x] No accepted order path without admission/terminal ownership in the repaired player paths
+- [x] No capacity failure path mutates authority before required capacity is reserved in the repaired paths
+- [x] No hot-path dynamic resize in player command routing
+
+### 8. Verification
+
+- `dotnet test C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415\src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --nologo`: PASS, 188/188.
+- `dotnet test C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415\src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~InteractiveWindowStressTests" --nologo`: PASS, 213/213.
+- `dotnet test C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415\src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --nologo`: PASS, 2011/2011, failed 0. Console emitted one localized "skipped" line during run, while the final summary reported skipped 0.
+- `git diff --check origin/main...HEAD`: PASS.
+
+### 9. Next variant test
+
+A new player order, command-panel action, response-chain effect, ability effect, or spawn variant changes data and continues through these same lifecycle contracts. It must not add a fallback branch, alternate runtime, hidden capacity pool, or hot-path allocator.
+
 ## PR #660 / #689 Transaction Closeout - AbilityExec and Input Repair - 2026-07-25
 
 - **Task / Issue**: Close the remaining PR #660 audit blockers against #689: AbilityExec terminal capacity atomicity, same-action aiming actor isolation, continuation retry cursor restoration, command-panel activation feedback, missing service no-fallback behavior, and caller param capacity fail-fast.

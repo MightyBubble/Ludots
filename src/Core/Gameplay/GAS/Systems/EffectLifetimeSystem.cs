@@ -533,14 +533,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         // Collect for Phase Graph execution (OnPeriod)
                         if (World.Has<EffectTemplateRef>(entity))
                         {
-                            PeriodPhaseGraphs.Add(new PhaseGraphEntry
-                            {
-                                EffectEntity = entity,
-                                TemplateId = World.Get<EffectTemplateRef>(entity).TemplateId,
-                                EffectEntityId = entity.Id,
-                                ClockTick = now,
-                                Context = context
-                            });
+                            AddFixed(
+                                PeriodPhaseGraphs,
+                                new PhaseGraphEntry
+                                {
+                                    EffectEntity = entity,
+                                    TemplateId = World.Get<EffectTemplateRef>(entity).TemplateId,
+                                    EffectEntityId = entity.Id,
+                                    ClockTick = now,
+                                    Context = context
+                                },
+                                nameof(PeriodPhaseGraphs));
                         }
 
                         effect.NextTickAtTick = now + effect.PeriodTicks;
@@ -652,9 +655,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     });
                     if (!cancelled)
                     {
-                        ExpirePhaseGraphs.Add(entry);
+                        AddFixed(ExpirePhaseGraphs, entry, nameof(ExpirePhaseGraphs));
                     }
-                    RemovePhaseGraphs.Add(entry);
+                    AddFixed(RemovePhaseGraphs, entry, nameof(RemovePhaseGraphs));
                 }
 
                 // Revoke granted tags from target before destroying
@@ -674,12 +677,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                if (EffectsToDestroy.Count >= EffectsToDestroy.Capacity)
-                {
-                    throw new InvalidOperationException(
-                        $"GAS.EFFECT_LIFETIME.ERR.DestroyCapacityExceeded: staged={EffectsToDestroy.Count + 1}, capacity={EffectsToDestroy.Capacity}.");
-                }
-                EffectsToDestroy.Add(entity);
+                AddFixed(EffectsToDestroy, entity, nameof(EffectsToDestroy));
             }
         }
 
@@ -747,6 +745,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static uint Mix(uint hash, int value)
         {
             return (hash ^ unchecked((uint)value)) * 16777619u;
+        }
+
+        private static void AddFixed<T>(List<T> list, T item, string name)
+        {
+            if (list.Count >= list.Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_LIFETIME.ERR.{name}CapacityExceeded: staged={list.Count + 1}, capacity={list.Capacity}.");
+            }
+
+            list.Add(item);
         }
     }
 }

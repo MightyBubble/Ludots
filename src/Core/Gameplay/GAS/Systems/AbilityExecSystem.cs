@@ -957,8 +957,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     case ExecItemKind.TagClipTarget:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
-                        if (World.IsAlive(inst.Target))
-                            FireTagClip(inst.Target, ref spec, idx, ref inst);
+                        if (!World.IsAlive(inst.Target))
+                        {
+                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
+                            return;
+                        }
+                        FireTagClip(inst.Target, ref spec, idx, ref inst);
                         inst.NextItemIndex++;
                         continue;
 
@@ -998,8 +1002,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     case ExecItemKind.TagSignalTarget:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
-                        if (World.IsAlive(inst.Target))
-                            FireTagSignal(inst.Target, ref spec, idx);
+                        if (!World.IsAlive(inst.Target))
+                        {
+                            MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
+                            return;
+                        }
+                        FireTagSignal(inst.Target, ref spec, idx);
                         inst.NextItemIndex++;
                         continue;
 
@@ -1080,21 +1088,45 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             in AbilityExecInstance inst,
             out Entity target)
         {
-            target = dispatchTarget switch
+            target = Entity.Null;
+            switch (dispatchTarget)
             {
-                ExecEffectDispatchTarget.Source => actor,
-                ExecEffectDispatchTarget.TargetContext when World.IsAlive(inst.TargetContext) => inst.TargetContext,
-                ExecEffectDispatchTarget.Target when World.IsAlive(inst.Target) => inst.Target,
-                ExecEffectDispatchTarget.Default when World.IsAlive(inst.Target) => inst.Target,
-                _ => actor,
-            };
+                case ExecEffectDispatchTarget.Source:
+                    target = actor;
+                    return true;
 
-            return dispatchTarget switch
-            {
-                ExecEffectDispatchTarget.Target => World.IsAlive(inst.Target),
-                ExecEffectDispatchTarget.TargetContext => World.IsAlive(inst.TargetContext),
-                _ => true,
-            };
+                case ExecEffectDispatchTarget.Target:
+                    if (!World.IsAlive(inst.Target))
+                    {
+                        return false;
+                    }
+                    target = inst.Target;
+                    return true;
+
+                case ExecEffectDispatchTarget.TargetContext:
+                    if (!World.IsAlive(inst.TargetContext))
+                    {
+                        return false;
+                    }
+                    target = inst.TargetContext;
+                    return true;
+
+                case ExecEffectDispatchTarget.Default:
+                    if (World.IsAlive(inst.Target))
+                    {
+                        target = inst.Target;
+                        return true;
+                    }
+                    if (inst.Target != default && inst.Target != Entity.Null)
+                    {
+                        return false;
+                    }
+                    target = actor;
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private Entity ResolveEffectDispatchTargetContext(ExecEffectDispatchTarget dispatchTarget, in AbilityExecInstance inst)

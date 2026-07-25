@@ -105,7 +105,8 @@
         {
           "kind": "EffectSignal",
           "tick": 0,
-          "template": "Effect.Interaction.NovaPulse"
+          "template": "Effect.Interaction.NovaPulse",
+          "dispatchTarget": "Source"
         },
         {
           "kind": "End",
@@ -348,7 +349,8 @@
         {
           "kind": "EffectSignal",
           "tick": 0,
-          "template": "Effect.Interaction.Shockwave"
+          "template": "Effect.Interaction.Shockwave",
+          "dispatchTarget": "Source"
         },
         {
           "kind": "End",

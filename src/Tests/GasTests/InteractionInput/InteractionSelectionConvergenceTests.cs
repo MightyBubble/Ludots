@@ -270,12 +270,13 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
                 That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
 
@@ -346,12 +347,13 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
                 That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
 
@@ -411,12 +413,13 @@ namespace Ludots.Tests.GAS
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
-            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
                 That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
 
@@ -476,12 +479,13 @@ namespace Ludots.Tests.GAS
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
-            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
                 That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             mapping.SetOrderSubmitHandler((in Order _) =>

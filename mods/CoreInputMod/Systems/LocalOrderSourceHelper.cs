@@ -422,11 +422,25 @@ namespace CoreInputMod.Systems
                    _context.TryGetCollectionPrimary(owner, collectionKey, out entity);
         }
 
-        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        private bool TryCopyCollectionEntities(
+            string collectionKey,
+            List<Entity> entities,
+            int capacity,
+            out OrderSubmitResult rejection)
         {
             entities.Clear();
-            return TryGetCommandSourceOwner(out Entity owner) &&
-                   _context.TryCopyCollectionEntities(owner, collectionKey, entities);
+            rejection = OrderSubmitResult.RejectedInvalidActor;
+            if (!TryGetCommandSourceOwner(out Entity owner))
+            {
+                return false;
+            }
+
+            return _context.TryCopyCollectionEntities(
+                owner,
+                collectionKey,
+                entities,
+                capacity,
+                out rejection);
         }
 
         private static bool HasEntityValue(Entity entity)

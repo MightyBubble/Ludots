@@ -54,7 +54,8 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue();
-                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                var chainOrders = new OrderQueue(64, admissionResults);
                 var telemetry = new ResponseChainTelemetryBuffer();
                 var orderReq = new OrderRequestQueue();
  
@@ -82,6 +83,7 @@ namespace Ludots.Tests.GAS
                 listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
                 world.Add(target, listener);
  
+                admissionResults.BeginLogicStep();
                 requests.Publish(new EffectRequest
                 {
                     RootId = 0,
@@ -100,11 +102,21 @@ namespace Ludots.Tests.GAS
  
                 var args = default(OrderArgs);
                 args.I0 = tplRoot;
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target });
+                var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args };
+                var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
+                var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
+                That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
+                That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
+                That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
  
                 processing.Update(0f);
+
+                That(admissionResults.TryGet(activate.OrderId, OrderAdmissionStage.EntityIntake, out var activateIntake), Is.True);
+                That(activateIntake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(admissionResults.TryGet(pass1.OrderId, OrderAdmissionStage.EntityIntake, out var pass1Intake), Is.True);
+                That(pass1Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(admissionResults.TryGet(pass2.OrderId, OrderAdmissionStage.EntityIntake, out var pass2Intake), Is.True);
+                That(pass2Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
  
                 bool sawAdded = false;
                 bool sawClosed = false;
@@ -117,10 +129,98 @@ namespace Ludots.Tests.GAS
  
                 That(sawAdded, Is.True);
                 That(sawClosed, Is.True);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
             finally
             {
                 world.Dispose();
+            }
+        }
+
+        [Test]
+        public void ResponseChain_ConsumedOrders_DoNotCarryGlobalIntakeAcross10000LogicSteps()
+        {
+            using var world = World.Create();
+            const int tag = 1001;
+            const int tplRoot = 10;
+
+            var templates = new EffectTemplateRegistry();
+            templates.Register(tplRoot, new EffectTemplateData
+            {
+                TagId = tag,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                ParticipatesInResponse = true,
+                Modifiers = default
+            });
+
+            var requests = new EffectRequestQueue();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            var chainOrders = new OrderQueue(8, admissionResults);
+            var inputRequests = new InputRequestQueue(capacity: 8);
+            var orderRequests = new OrderRequestQueue(capacity: 8);
+            var processing = new EffectProcessingLoopSystem(
+                world,
+                requests,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                16384,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new GasBudget(),
+                templates,
+                inputRequests,
+                chainOrders,
+                new ResponseChainTelemetryBuffer(),
+                orderRequests,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
+            {
+                MaxWorkUnitsPerSlice = int.MaxValue
+            };
+
+            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new PlayerOwner { PlayerId = 1 });
+            var listener = default(ResponseChainListener);
+            listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
+            world.Add(actor, listener);
+
+            int previousPass1Id = 0;
+            int previousPass2Id = 0;
+            for (int frame = 0; frame < 10_000; frame++)
+            {
+                admissionResults.BeginLogicStep();
+                if (previousPass1Id > 0)
+                {
+                    That(admissionResults.TryGet(previousPass1Id, OrderAdmissionStage.GlobalIntake, out _), Is.False);
+                    That(admissionResults.TryGet(previousPass2Id, OrderAdmissionStage.GlobalIntake, out _), Is.False);
+                }
+
+                requests.Publish(new EffectRequest
+                {
+                    Source = actor,
+                    Target = actor,
+                    TemplateId = tplRoot
+                });
+                processing.Update(0f);
+                That(inputRequests.TryDequeue(out _), Is.True);
+                That(orderRequests.TryDequeue(out _), Is.True);
+
+                var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = actor, Target = actor };
+                var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = actor, Target = actor };
+                That(chainOrders.SubmitAssigned(ref pass1), Is.EqualTo(OrderSubmitResult.Queued));
+                That(chainOrders.SubmitAssigned(ref pass2), Is.EqualTo(OrderSubmitResult.Queued));
+                processing.Update(0f);
+
+                That(admissionResults.TryGet(pass1.OrderId, OrderAdmissionStage.EntityIntake, out var pass1Intake), Is.True);
+                That(pass1Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(admissionResults.TryGet(pass2.OrderId, OrderAdmissionStage.EntityIntake, out var pass2Intake), Is.True);
+                That(pass2Intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(chainOrders.Count, Is.Zero);
+
+                previousPass1Id = pass1.OrderId;
+                previousPass2Id = pass2.OrderId;
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
         }
 

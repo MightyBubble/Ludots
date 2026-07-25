@@ -1372,6 +1372,9 @@ namespace Ludots.Tests.GAS.Production
             {
                 details.Add($"mappingMode={mapping.InteractionMode}");
                 details.Add($"mappingAiming={mapping.IsAiming}");
+                details.Add($"activation={mapping.LastActivationResult.State}");
+                details.Add($"activationOrderId={mapping.LastActivationResult.OrderId}");
+                details.Add($"activationRejection={mapping.LastActivationResult.Rejection}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
                     details.Add($"TargetType={actionMapping.TargetType}");

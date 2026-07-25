@@ -34,8 +34,6 @@ namespace MobaDemoMod.Systems
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
-        private const int InitialCollectionScratchCapacity = 16;
-
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
@@ -46,7 +44,7 @@ namespace MobaDemoMod.Systems
         private readonly EntityCollectionStore _entityCollections;
         private readonly PlayerEntityLookup _playerEntities;
         private readonly ControlDomainQuery _controlDomains;
-        private Entity[] _collectionScratch = new Entity[InitialCollectionScratchCapacity];
+        private Entity[] _collectionScratch = new Entity[InputOrderMappingSystem.DefaultCommandIntentScratchCapacity];
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
@@ -151,9 +149,9 @@ namespace MobaDemoMod.Systems
             {
                 return TryGetCollectionPrimary(collectionKey, out entity);
             });
-            _inputOrderMapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
+            _inputOrderMapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
-                return TryCopyCollectionEntities(collectionKey, entities);
+                return TryCopyCollectionEntities(collectionKey, entities, capacity, out rejection);
             });
 
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
@@ -295,12 +293,23 @@ namespace MobaDemoMod.Systems
             return true;
         }
 
-        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        private bool TryCopyCollectionEntities(
+            string collectionKey,
+            List<Entity> entities,
+            int capacity,
+            out OrderSubmitResult rejection)
         {
             entities.Clear();
+            rejection = OrderSubmitResult.RejectedInvalidActor;
             if (!TryResolveLocalCollection(collectionKey, out EntityCollectionHandle handle, out EntityCollectionView view) ||
                 view.Count <= 0)
             {
+                return false;
+            }
+
+            if (view.Count > capacity)
+            {
+                rejection = OrderSubmitResult.RejectedAdmissionCapacity;
                 return false;
             }
 
@@ -311,10 +320,24 @@ namespace MobaDemoMod.Systems
                 Entity entity = _collectionScratch[i];
                 if (_world.IsAlive(entity))
                 {
+                    if (entities.Count >= capacity)
+                    {
+                        entities.Clear();
+                        rejection = OrderSubmitResult.RejectedAdmissionCapacity;
+                        return false;
+                    }
+
                     entities.Add(entity);
                 }
             }
 
+            if (entities.Count <= 0)
+            {
+                rejection = OrderSubmitResult.RejectedInvalidActor;
+                return false;
+            }
+
+            rejection = OrderSubmitResult.Activated;
             return entities.Count > 0;
         }
 
@@ -347,13 +370,8 @@ namespace MobaDemoMod.Systems
                 return;
             }
 
-            int next = _collectionScratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _collectionScratch, next);
+            throw new InvalidOperationException(
+                $"MOBA.INPUT.ERR.CollectionScratchCapacityExceeded: required={required}, capacity={_collectionScratch.Length}.");
         }
 
         private bool TryGetHovered(out Entity target)

@@ -154,6 +154,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveEffectPhaseGraphProgramScratchCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectPhaseGraphProgramScratchCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectPhaseGraphProgramScratchCapacity"));
+        }
+
+        [Test]
         public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
         {
             string repoRoot = FindRepoRoot();
@@ -1018,6 +1028,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 DeferredTriggerActiveEntityCapacity = 64,
                 ProjectileCollisionCandidateCapacity = 64,
                 ProjectileRuntimeEntityCapacity = 64,
+                EffectPhaseGraphProgramScratchCapacity = 64,
                 GraphOutputValueCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,

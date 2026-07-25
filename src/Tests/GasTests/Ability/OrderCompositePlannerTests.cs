@@ -120,6 +120,36 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompositeOrderPlanner_ZeroRangeSelfAbility_BypassesMoveThenCastPlanning()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 0f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+
+            var castOrder = CreateCastOrder(actor, targetXcm: 0f, submitMode: OrderSubmitMode.Immediate);
+            castOrder.Args.Spatial = default;
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
+            Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Assert.That(submittedOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
         public void CompositeOrderPlanner_OutOfRangeCastWithMissingAbilityDefinition_ReturnsTypedRejection()
         {
             using var world = World.Create();
@@ -323,7 +353,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void OrderContinuationSystem_WhenSubmitThrows_RestoresContinuationAndRetriesSameTerminalOutcome()
+        public void OrderContinuationSystem_InvalidFollowUpOrderTypeFailsTypedWithoutRetry()
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
@@ -361,26 +391,217 @@ namespace Ludots.Tests.GAS
             }), Is.True);
             var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
 
-            Assert.Catch<Exception>(() => system.Update(0f));
-            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.True);
+            system.Update(0f);
 
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            Assert.That(buffer.QueuedCount, Is.Zero);
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
+            Assert.That(
+                admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var outcome),
+                Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidOrderType));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(2));
+            Assert.That(orderTypes.TerminalResults[1].OrderId, Is.EqualTo(8));
+            Assert.That(orderTypes.TerminalResults[1].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(orderTypes.TerminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionInvalidOrderType));
+        }
+
+        [Test]
+        public void OrderContinuationSystem_AdmissionCapacityMiss_FailsWholeFollowUpBatchWithTypedTerminal()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
             orderTypes.Register(new OrderTypeConfig
             {
-                OrderTypeId = lateRegisteredOrderTypeId,
-                Label = "Late Cast",
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
                 Priority = 100,
                 AllowQueuedMode = true,
                 QueuedModeMaxSize = 8
             });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                Priority = 60,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
+            var completed = new OrderTerminalOutcome(
+                7,
+                MoveToOrderTypeId,
+                OrderTerminalState.Completed,
+                OrderFailureReason.None,
+                actor);
+            orderTypes.PublishTerminalResult(in completed);
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8)), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 9)), Is.True);
+            var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
             system.Update(0f);
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
-            Assert.That(buffer.QueuedCount, Is.EqualTo(1));
-            Assert.That(buffer.GetQueued(0).Order.OrderId, Is.EqualTo(8));
+            Assert.That(buffer.QueuedCount, Is.Zero);
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
+            Assert.That(admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var first), Is.True);
+            Assert.That(admissionResults.TryGet(9, OrderAdmissionStage.EntityIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(3));
+            Assert.That(orderTypes.TerminalResults[1].OrderId, Is.EqualTo(8));
+            Assert.That(orderTypes.TerminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionAdmissionCapacity));
+            Assert.That(orderTypes.TerminalResults[2].OrderId, Is.EqualTo(9));
+            Assert.That(orderTypes.TerminalResults[2].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionAdmissionCapacity));
+        }
+
+        [Test]
+        public void OrderContinuationSystem_ProjectedQueueFullRejectsWholeFollowUpBatch()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                Priority = 60,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            for (int i = 0; i < 7; i++)
+            {
+                Assert.That(
+                    buffer.Enqueue(CreateFollowUpOrder(actor, 100 + i, MoveToOrderTypeId), priority: 60, expireStep: -1, insertStep: i),
+                    Is.True);
+            }
+
+            var completed = new OrderTerminalOutcome(
+                7,
+                MoveToOrderTypeId,
+                OrderTerminalState.Completed,
+                OrderFailureReason.None,
+                actor);
+            orderTypes.PublishTerminalResult(in completed);
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8)), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 9)), Is.True);
+            var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
+            system.Update(0f);
+
+            Assert.That(buffer.QueuedCount, Is.EqualTo(7));
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
+            Assert.That(admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var first), Is.True);
+            Assert.That(admissionResults.TryGet(9, OrderAdmissionStage.EntityIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(3));
+            Assert.That(orderTypes.TerminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
+            Assert.That(orderTypes.TerminalResults[2].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionQueueFull));
+        }
+
+        [Test]
+        public void OrderContinuationSystem_DestroyedActorFailsOwnedFollowUpsWithTerminalAndAdmission()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, new Order
+            {
+                OrderId = 8,
+                OrderTypeId = CastAbilityOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Queued,
+                Args = new OrderArgs { I0 = 0 }
+            }), Is.True);
+            _ = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
+            world.Destroy(actor);
+
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(8));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionInvalidActor));
             Assert.That(
                 admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var outcome),
                 Is.True);
-            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+        }
+
+        [Test]
+        public void OrderContinuationSystem_DestroyedActorAdmissionCapacityMiss_FailsOwnedFollowUpsWithoutPartialReservation()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8)), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 9)), Is.True);
+            _ = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
+            world.Destroy(actor);
+
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(2));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(8));
+            Assert.That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionAdmissionCapacity));
+            Assert.That(orderTypes.TerminalResults[1].OrderId, Is.EqualTo(9));
+            Assert.That(orderTypes.TerminalResults[1].FailureReason, Is.EqualTo(OrderFailureReason.SubmissionAdmissionCapacity));
+            Assert.That(admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out var first), Is.True);
+            Assert.That(admissionResults.TryGet(9, OrderAdmissionStage.EntityIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         }
 
         private static OrderQueue CreateOrderQueue(int capacity = 64)
@@ -452,6 +673,21 @@ namespace Ludots.Tests.GAS
                 Actor = actor,
                 SubmitMode = OrderSubmitMode.Queued,
                 Args = CreateWorldTargetArgs(targetXcm)
+            };
+        }
+
+        private static Order CreateFollowUpOrder(
+            Entity actor,
+            int orderId,
+            int orderTypeId = CastAbilityOrderTypeId)
+        {
+            return new Order
+            {
+                OrderId = orderId,
+                OrderTypeId = orderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Queued,
+                Args = new OrderArgs { I0 = 0 }
             };
         }
 

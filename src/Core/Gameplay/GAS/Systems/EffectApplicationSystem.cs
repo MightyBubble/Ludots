@@ -33,11 +33,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             .WithAll<GameplayEffect, EffectContext, EffectModifiers>();
 
         // Reusable lists for deferred structural changes
-        private readonly List<Entity> _effectsToDestroy = new(1024);
-        private readonly List<Entity> _effectsToActivate = new(1024);
-        private readonly List<PendingAttach> _pendingAttach = new(1024);
-        private readonly List<PendingCreateContainer> _pendingCreateContainer = new(256);
-        private readonly List<Entity> _createdContainers = new(256);
+        private readonly List<Entity> _effectsToDestroy;
+        private readonly List<Entity> _effectsToActivate;
+        private readonly List<PendingAttach> _pendingAttach;
+        private readonly List<PendingCreateContainer> _pendingCreateContainer;
+        private readonly List<Entity> _createdContainers;
 
         private struct PendingEffectEntry
         {
@@ -64,7 +64,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private readonly List<PendingEffectEntry> _pendingEffects = new(1024);
+        private readonly List<PendingEffectEntry> _pendingEffects;
 
         // ── TargetResolver fan-out (shared types from TargetResolverFanOutHelper) ──
         private readonly FanOutCommandBuffer _fanOutCommands;
@@ -122,6 +122,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
             _ownsFanOutBudget = fanOutBudget == null;
+            int fixedScratchCapacity = Math.Max(1, fanOutCommandCapacity);
+            _effectsToDestroy = new List<Entity>(fixedScratchCapacity);
+            _effectsToActivate = new List<Entity>(fixedScratchCapacity);
+            _pendingAttach = new List<PendingAttach>(fixedScratchCapacity);
+            _pendingCreateContainer = new List<PendingCreateContainer>(fixedScratchCapacity);
+            _createdContainers = new List<Entity>(fixedScratchCapacity);
+            _pendingEffects = new List<PendingEffectEntry>(fixedScratchCapacity);
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _effectRequests = effectRequests;
             _budget = budget;
@@ -240,7 +247,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (World.Has<EffectCancelled>(effectEntity) || effect.CancelRequested)
                         {
                             effect.State = EffectState.Committed;
-                            _effectsToDestroy.Add(effectEntity);
+                            AddFixed(_effectsToDestroy, effectEntity, nameof(_effectsToDestroy));
                             ConsumeWork(ref workUnits);
                             continue;
                         }
@@ -265,12 +272,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     throw CreateActiveEffectContainerCapacityExceeded(context.Target, effectEntity);
                                 }
 
-                                _effectsToActivate.Add(effectEntity);
+                                AddFixed(_effectsToActivate, effectEntity, nameof(_effectsToActivate));
                             }
                             else
                             {
-                                _pendingCreateContainer.Add(new PendingCreateContainer { Target = context.Target });
-                                _pendingAttach.Add(new PendingAttach { Target = context.Target, Effect = effectEntity });
+                                AddFixed(_pendingCreateContainer, new PendingCreateContainer { Target = context.Target }, nameof(_pendingCreateContainer));
+                                AddFixed(_pendingAttach, new PendingAttach { Target = context.Target, Effect = effectEntity }, nameof(_pendingAttach));
                             }
                         }
                         else
@@ -321,7 +328,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (World.IsAlive(target) && !World.Has<ActiveEffectContainer>(target))
                         {
                             World.Add(target, new ActiveEffectContainer());
-                            _createdContainers.Add(target);
+                            AddFixed(_createdContainers, target, nameof(_createdContainers));
                         }
                         ConsumeWork(ref workUnits);
                     }
@@ -353,7 +360,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 throw CreateActiveEffectContainerCapacityExceeded(item.Target, item.Effect);
                             }
 
-                            _effectsToActivate.Add(item.Effect);
+                            AddFixed(_effectsToActivate, item.Effect, nameof(_effectsToActivate));
                         }
                         else
                         {
@@ -677,7 +684,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     order = World.Get<EffectResolveOrder>(effectEntity).Value;
                 }
-                PendingEffects.Add(new PendingEffectEntry { Effect = effectEntity, ResolveOrder = order });
+                AddFixed(PendingEffects, new PendingEffectEntry { Effect = effectEntity, ResolveOrder = order }, nameof(PendingEffects));
             }
         }
 
@@ -817,14 +824,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 else
                 {
-                    _pendingListenerRegistrations.Add(new PendingListenerRegistration
-                    {
-                        Context = context,
-                        TemplateId = templateId,
-                        OwnerEffectId = effectEntity.Id,
-                    });
+                    AddFixed(
+                        _pendingListenerRegistrations,
+                        new PendingListenerRegistration
+                        {
+                            Context = context,
+                            TemplateId = templateId,
+                            OwnerEffectId = effectEntity.Id,
+                        },
+                        nameof(_pendingListenerRegistrations));
                 }
             }
+        }
+
+        private static void AddFixed<T>(List<T> list, T item, string name)
+        {
+            if (list.Count >= list.Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_APPLICATION.ERR.FixedListCapacityExceeded: list={name}, capacity={list.Capacity}.");
+            }
+
+            list.Add(item);
         }
 
         private void PublishBuiltinAttributeDelta(

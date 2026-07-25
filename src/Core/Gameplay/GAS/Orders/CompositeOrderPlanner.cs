@@ -272,15 +272,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             if (!definition.HasTargeting ||
+                definition.Targeting.CastRangeCm <= 0f ||
                 ShouldBypassMoveThenCastPlanning(in definition))
             {
                 return MoveThenCastPlanResult.NotApplicable();
             }
 
             rangeCm = definition.Targeting.CastRangeCm;
-            return rangeCm > 0f
-                ? MoveThenCastPlanResult.Planned()
-                : MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedValidation);
+            return MoveThenCastPlanResult.Planned();
         }
 
         private static bool ShouldBypassMoveThenCastPlanning(in AbilityDefinition definition)

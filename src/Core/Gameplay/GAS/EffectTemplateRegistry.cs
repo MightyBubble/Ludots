@@ -68,6 +68,12 @@ namespace Ludots.Core.Gameplay.GAS
         Ring = 4,   // donut / nova wave
     }
 
+    public enum SpatialQueryOrigin : byte
+    {
+        Default = 0,
+        Source = 1,
+    }
+
     /// <summary>
     /// Identifies which entity from the original EffectContext fills a role
     /// in the payload EffectRequest.
@@ -118,6 +124,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int HalfHeightCm;       // Rectangle half-height
         public int RotationDeg;        // Rectangle rotation
         public int LengthCm;           // Line length
+        public SpatialQueryOrigin Origin;
         public RelationshipFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)

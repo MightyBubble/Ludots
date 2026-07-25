@@ -806,10 +806,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((collectionKey, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(producer);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetHoveredEntityProvider((out Entity entity) =>
@@ -905,12 +906,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 });
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, tagOps, actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((collectionKey, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(producer);
                 list.Add(unitA);
                 list.Add(unitB);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
@@ -988,10 +990,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 matched = routing.Candidates[0];
                 return true;
             });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(authorizedActor);
                 list.Add(foreignActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>
@@ -1074,11 +1077,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((collectionKey, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(unitA);
                 list.Add(unitB);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
@@ -1186,11 +1190,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetCollectionEntityListProvider((collectionKey, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(unitA);
                 list.Add(unitB);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 groundPos) =>
@@ -1405,10 +1410,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             system.CommandActionId = "Command";
             system.SetLocalPlayer(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 collectionProviderCalled = true;
                 list.Add(collectionActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
@@ -1455,9 +1461,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(actor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
@@ -1510,6 +1517,168 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(orders, Is.Empty,
                 "A Command action with command intent routing installed and no active command intent must be consumed, not rerouted through legacy moveTo mapping.");
+            Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedByRule));
+        }
+
+        [TestCase(1, 16, true)]
+        [TestCase(16, 16, true)]
+        [TestCase(17, 16, false)]
+        [TestCase(
+            InputOrderMappingSystem.DefaultCommandIntentScratchCapacity,
+            InputOrderMappingSystem.DefaultCommandIntentScratchCapacity,
+            true)]
+        [TestCase(
+            InputOrderMappingSystem.DefaultCommandIntentScratchCapacity + 1,
+            InputOrderMappingSystem.DefaultCommandIntentScratchCapacity,
+            false)]
+        public void CommandIntentRouting_SelectionCapacityBoundary_SubmitsOrRejectsWholeCommand(
+            int selectionCount,
+            int scratchCapacity,
+            bool expectSubmitted)
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity[] actors = new Entity[selectionCount];
+            for (int i = 0; i < actors.Length; i++)
+            {
+                actors[i] = world.Create();
+            }
+
+            var submitted = new List<Order>(expectSubmitted ? selectionCount : 0);
+            int nextOrderId = 100;
+            var system = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity: scratchCapacity);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.capacity",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.capacity",
+                            CastDispatchProfileId = "dispatch.all_together",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(
+                collectionKeys,
+                initialCollectionCapacity: 4,
+                initialRowCapacity: Math.Max(4, selectionCount));
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, actors, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                int sharedOrderId = nextOrderId++;
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = sharedOrderId;
+                    submitted.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
+
+            Assert.DoesNotThrow(() => system.Update(0f));
+
+            if (expectSubmitted)
+            {
+                Assert.That(submitted.Count, Is.EqualTo(selectionCount));
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+                Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
+            }
+            else
+            {
+                Assert.That(submitted, Is.Empty);
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+                Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            }
         }
 
         [Test]
@@ -1552,10 +1721,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 primary = commandActor;
                 return true;
             });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 collectionProviderCalled = true;
                 list.Add(commandActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
@@ -2345,10 +2515,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(firstActor);
                 list.Add(secondActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>
@@ -2411,10 +2582,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(firstActor);
                 list.Add(secondActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>
@@ -2470,10 +2642,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(firstActor);
                 list.Add(secondActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>
@@ -2733,10 +2906,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(controlledActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = controlledActor; return true; });
-            system.SetCollectionEntityListProvider((_, actors) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> actors, int capacity, out OrderSubmitResult rejection) =>
             {
                 actors.Add(controlledActor);
                 actors.Add(foreignActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>
@@ -2803,10 +2977,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var system = new InputOrderMappingSystem(input, config);
             system.SetLocalPlayer(firstActor, 1);
             system.SetActorProvider((out Entity actor) => { actor = firstActor; return true; });
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
             {
                 list.Add(firstActor);
                 list.Add(secondActor);
+                rejection = OrderSubmitResult.Activated;
                 return true;
             });
             system.SetGroundPositionProvider((out Vector3 position) =>

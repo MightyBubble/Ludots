@@ -214,8 +214,8 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             var second = new Order { OrderTypeId = 2 };
             var third = new Order { OrderTypeId = 2 };
             Assert.That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.Throws<InvalidOperationException>(() => queue.SubmitAssigned(ref second));
-            Assert.Throws<InvalidOperationException>(() => queue.SubmitAssigned(ref third));
+            Assert.That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(queue.SubmitAssigned(ref third), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             var diagnostics = new GasDiagnosticEventBuffer(capacity: 8);
             var report = new GasBudgetReportSystem(new GasBudget(), diagnostics, admissions);
             float dt = 0f;

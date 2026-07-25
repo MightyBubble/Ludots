@@ -242,8 +242,7 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 64; i++)
             {
-                RunLogicStep(system, harness.AdmissionResults);
-                harness.Orders.TryDequeue(out _);
+                RunLogicStep(system, harness.AdmissionResults, harness.Orders);
             }
 
             long allocated = MeasureUpdateAllocations(system, harness.Orders, harness.AdmissionResults);
@@ -259,8 +258,7 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                RunLogicStep(system, admissionResults);
-                orders.TryDequeue(out _);
+                RunLogicStep(system, admissionResults, orders);
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
@@ -268,10 +266,25 @@ namespace Ludots.Tests.GAS
 
         private static void RunLogicStep(
             AxisMoveOrderSystem system,
-            OrderAdmissionResultBuffer admissionResults)
+            OrderAdmissionResultBuffer admissionResults,
+            OrderQueue? orders = null)
         {
             admissionResults.BeginLogicStep();
             system.Update(0f);
+            if (orders != null && orders.TryDequeue(out Order order))
+            {
+                var outcome = new OrderAdmissionOutcome(
+                    order.OrderId,
+                    order.OrderTypeId,
+                    OrderAdmissionStage.EntityIntake,
+                    OrderSubmitResult.Activated);
+                if (!admissionResults.TryWrite(in outcome))
+                {
+                    throw new InvalidOperationException(
+                        $"Axis move test failed to write EntityIntake for orderId={order.OrderId}.");
+                }
+            }
+
             admissionResults.EndEntityIntake();
             admissionResults.EndLogicStep();
         }

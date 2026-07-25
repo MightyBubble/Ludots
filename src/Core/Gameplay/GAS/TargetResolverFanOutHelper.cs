@@ -139,6 +139,9 @@ namespace Ludots.Core.Gameplay.GAS
             if (preferSourceCenter && TryResolveQueryOrigin(world, in ctx, in mergedParams, out center))
             {
             }
+            else if (spatial.Origin == SpatialQueryOrigin.Source && TryResolveSourceQueryCenter(world, in ctx, out center))
+            {
+            }
             else if (!preferSourceCenter && TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
             {
             }
@@ -222,7 +225,11 @@ namespace Ludots.Core.Gameplay.GAS
             // Precompute center for Ring inner-radius check
             if (spatial.Shape == SpatialShape.Ring && spatial.InnerRadiusCm > 0)
             {
-                if (TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
+                if (spatial.Origin == SpatialQueryOrigin.Source && TryResolveSourceQueryCenter(world, in ctx, out center))
+                {
+                    hasCenter = true;
+                }
+                else if (TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
                 {
                     hasCenter = true;
                 }
@@ -546,6 +553,18 @@ namespace Ludots.Core.Gameplay.GAS
             if (EffectTargetPointResolver.TryResolveOrigin(world, in ctx, in mergedParams, out Fix64Vec2 positionCm))
             {
                 point = positionCm.ToWorldCmInt2();
+                return true;
+            }
+
+            point = default;
+            return false;
+        }
+
+        private static bool TryResolveSourceQueryCenter(World world, in EffectContext ctx, out WorldCmInt2 point)
+        {
+            if (world.IsAlive(ctx.Source) && world.Has<WorldPositionCm>(ctx.Source))
+            {
+                point = world.Get<WorldPositionCm>(ctx.Source).Value.ToWorldCmInt2();
                 return true;
             }
 

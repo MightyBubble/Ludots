@@ -656,11 +656,36 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     bool progressed = false;
                     if (_chainOrders != null)
                     {
-                        while (_chainOrders.TryDequeue(out var order))
+                        while (_chainOrders.TryPeek(out var nextOrder))
                         {
                             if (workUnits >= MaxWorkUnitsPerSlice) return false;
-                            progressed = true;
 
+                            if (nextOrder.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect &&
+                                nextOrder.Args.I0 > 0 &&
+                                _creates >= GasConstants.MAX_CREATES_PER_ROOT)
+                            {
+                                ThrowCreateCapacityExceeded(_activeReq.RootId, nextOrder.Args.I0, "WaitInput");
+                            }
+
+                            if (!TryBeginResponseChainOrderConsumption(
+                                    out var order,
+                                    out OrderAdmissionReservation admissionReservation,
+                                    out bool rejectedForAdmissionCapacity))
+                            {
+                                break;
+                            }
+
+                            progressed = true;
+                            if (rejectedForAdmissionCapacity)
+                            {
+                                OrderSpatialPayloadOps.Release(World, in order);
+                                ConsumeWork(ref workUnits);
+                                continue;
+                            }
+
+                            bool admissionCommitted = false;
+                            try
+                            {
                             if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
                             {
                                 if (_telemetry != null && _emitTelemetry)
@@ -678,6 +703,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         Context = order.TargetContext
                                     });
                                 }
+                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
+                                admissionCommitted = true;
                                 _passStreak++;
                                 if (_passStreak >= 2)
                                 {
@@ -707,6 +734,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         Context = order.TargetContext
                                     });
                                 }
+                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
+                                admissionCommitted = true;
                                 _pendingNegates++;
                                 ConsumeWork(ref workUnits);
                                 continue;
@@ -729,12 +758,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         Context = order.TargetContext
                                     });
                                 }
-                                if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
-                                {
-                                    ThrowCreateCapacityExceeded(_activeReq.RootId, order.Args.I0, "WaitInput");
-                                }
                                 if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
                                 {
+                                    CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedValidation);
+                                    admissionCommitted = true;
                                     ConsumeWork(ref workUnits);
                                     continue;
                                 }
@@ -758,7 +785,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 int newIndex = _window.Count;
                                 if (!_window.TryAdd(chained))
                                 {
-                                    ThrowWindowDepthExceeded(_activeReq.RootId, order.Args.I0, "WaitInput");
+                                    CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedQueueFull);
+                                    admissionCommitted = true;
+                                    ConsumeWork(ref workUnits);
+                                    continue;
                                 }
                                 _creates++;
                                 if (_budget != null) _budget.ResponseCreates++;
@@ -782,12 +812,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     EnqueueResponsesForEffect(newIndex, tpl.TagId);
                                 }
 
+                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
+                                admissionCommitted = true;
                                 _phase = WindowPhase.Collect;
                                 ConsumeWork(ref workUnits);
                                 goto ContinueOuter;
                             }
 
+                            CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedInvalidOrderType);
+                            admissionCommitted = true;
                             ConsumeWork(ref workUnits);
+                            }
+                            finally
+                            {
+                                if (!admissionCommitted && admissionReservation.IsValid)
+                                {
+                                    _chainOrders.AdmissionResults.Cancel(in admissionReservation);
+                                }
+                            }
                         }
                     }
 
@@ -985,6 +1027,83 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             workUnits++;
             LastSliceProcessed++;
+        }
+
+        private bool TryBeginResponseChainOrderConsumption(
+            out Order order,
+            out OrderAdmissionReservation reservation,
+            out bool rejectedForAdmissionCapacity)
+        {
+            order = default;
+            reservation = default;
+            rejectedForAdmissionCapacity = false;
+            if (_chainOrders == null || !_chainOrders.TryPeek(out order))
+            {
+                return false;
+            }
+
+            OrderAdmissionResultBuffer admissionResults = _chainOrders.AdmissionResults;
+            if (!admissionResults.LogicStepActive || !admissionResults.EntityIntakeOpen)
+            {
+                return false;
+            }
+
+            if (!admissionResults.CanReserve(OrderAdmissionStage.EntityIntake, 1))
+            {
+                if (!admissionResults.CanRecordCapacityFailures(OrderAdmissionStage.EntityIntake, 1))
+                {
+                    throw new InvalidOperationException(
+                        $"{OrderAdmissionResultBuffer.RejectionCapacityExceededError}: stage={OrderAdmissionStage.EntityIntake}, batchCount=1, rejectionCapacity={admissionResults.RejectionCapacity}.");
+                }
+
+                if (!_chainOrders.TryDequeue(out order))
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.QueuedOrderDisappearedDuringAdmissionCapacityRejection");
+                }
+
+                Span<Order> rejected = stackalloc Order[1];
+                rejected[0] = order;
+                admissionResults.RecordCapacityFailures(rejected, OrderAdmissionStage.EntityIntake);
+                rejectedForAdmissionCapacity = true;
+                return true;
+            }
+
+            reservation = admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                order.OrderId,
+                order.OrderTypeId);
+            bool dequeued = false;
+            try
+            {
+                if (!_chainOrders.TryDequeue(out Order dequeuedOrder))
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.QueuedOrderDisappearedDuringAdmission");
+                }
+
+                order = dequeuedOrder;
+                dequeued = true;
+                return true;
+            }
+            finally
+            {
+                if (!dequeued && reservation.IsValid)
+                {
+                    admissionResults.Cancel(in reservation);
+                }
+            }
+        }
+
+        private void CommitResponseChainOrderAdmission(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result)
+        {
+            var outcome = new OrderAdmissionOutcome(
+                order.OrderId,
+                order.OrderTypeId,
+                OrderAdmissionStage.EntityIntake,
+                result);
+            _chainOrders.AdmissionResults.Commit(in reservation, in outcome);
         }
 
         public void ResetSlice()

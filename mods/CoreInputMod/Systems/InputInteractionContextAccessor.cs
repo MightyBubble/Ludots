@@ -22,13 +22,11 @@ namespace CoreInputMod.Systems
 {
     internal sealed class InputInteractionContextAccessor
     {
-        private const int InitialEntityScratchCapacity = 16;
-
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly InteractionContextStack? _interactionContextStack;
-        private Entity[] _collectionScratch = new Entity[InitialEntityScratchCapacity];
+        private Entity[] _collectionScratch = new Entity[InputOrderMappingSystem.DefaultCommandIntentScratchCapacity];
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
@@ -160,12 +158,24 @@ namespace CoreInputMod.Systems
             return true;
         }
 
-        public bool TryCopyCollectionEntities(Entity owner, string collectionKey, List<Entity> entities)
+        public bool TryCopyCollectionEntities(
+            Entity owner,
+            string collectionKey,
+            List<Entity> entities,
+            int capacity,
+            out OrderSubmitResult rejection)
         {
             entities.Clear();
+            rejection = OrderSubmitResult.RejectedInvalidActor;
             if (!TryResolveCollection(owner, collectionKey, out _, out EntityCollectionView view) ||
                 view.Count <= 0)
             {
+                return false;
+            }
+
+            if (view.Count > capacity)
+            {
+                rejection = OrderSubmitResult.RejectedAdmissionCapacity;
                 return false;
             }
 
@@ -180,10 +190,24 @@ namespace CoreInputMod.Systems
                 Entity entity = _collectionScratch[i];
                 if (_world.IsAlive(entity))
                 {
+                    if (entities.Count >= capacity)
+                    {
+                        entities.Clear();
+                        rejection = OrderSubmitResult.RejectedAdmissionCapacity;
+                        return false;
+                    }
+
                     entities.Add(entity);
                 }
             }
 
+            if (entities.Count <= 0)
+            {
+                rejection = OrderSubmitResult.RejectedInvalidActor;
+                return false;
+            }
+
+            rejection = OrderSubmitResult.Activated;
             return entities.Count > 0;
         }
 
@@ -210,13 +234,8 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            int next = _collectionScratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _collectionScratch, next);
+            throw new InvalidOperationException(
+                $"INPUT.INTERACTION_CONTEXT.ERR.CollectionScratchCapacityExceeded: required={required}, capacity={_collectionScratch.Length}.");
         }
 
         public bool TryGetCommandSourceOwner(out Entity owner)
