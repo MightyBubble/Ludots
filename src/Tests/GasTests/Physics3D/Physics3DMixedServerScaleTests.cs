@@ -772,7 +772,7 @@ public sealed class Physics3DMixedServerScaleTests
                     VehicleBodyLayer,
                     DynamicMaterial,
                     mass: 20f));
-                descriptions[wheel] = CreatePhysicalWheel(kind, carrier, wheelBody, mounts[wheel]);
+                descriptions[wheel] = CreatePhysicalWheel(kind, wheelBody, mounts[wheel]);
             }
         }
 
@@ -1277,13 +1277,11 @@ public sealed class Physics3DMixedServerScaleTests
 
         private static Vehicle3DWheelDescription CreatePhysicalWheel(
             Vehicle3DWheelKind kind,
-            Physics3DBodyId carrier,
             Physics3DBodyId wheel,
             Vector3 localMount)
             => Vehicle3DWheelDescription.Physical(
                 kind,
                 Vehicle3DWheelQueryKind.Raycast,
-                carrier,
                 wheel,
                 localMount,
                 -Vector3.UnitY,
@@ -1313,10 +1311,7 @@ public sealed class Physics3DMixedServerScaleTests
                 new Physics3DSpringSettings(30f, 2f),
                 new Physics3DSpringSettings(12f, 2f),
                 new Physics3DSpringSettings(30f, 2f),
-                new Physics3DSpringSettings(20f, 2f),
-                new Physics3DSpringSettings(30f, 2f),
                 new Physics3DServoSettings(10_000f, 0f, 1_000_000f),
-                new Physics3DServoSettings(20f, 0f, 1_000_000f),
                 new Physics3DMotorSettings(1_000_000f, 0.001f));
 
         private static RagdollRecipeDefinition CreateRagdollRecipe()
