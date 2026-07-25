@@ -425,6 +425,38 @@ internal sealed class Physics3DQueryEngine
         return Overlap(new Sphere(radiusCm), centerCm, Quaternion.Identity, filter, pool, hits);
     }
 
+    public unsafe int QueryBodyCentersInSphere(
+        Vector3 centerCm,
+        float radiusCm,
+        in Physics3DQueryFilter filter,
+        Span<Physics3DOverlapHit> hits)
+    {
+        Physics3DValidation.RequireFinite(centerCm, nameof(centerCm));
+        Physics3DValidation.RequireFinitePositive(radiusCm, nameof(radiusCm));
+        PreparedQueryFilter prepared = PrepareFilter(in filter);
+        var extent = new Vector3(radiusCm);
+        Vector3 minimum = centerCm - extent;
+        Vector3 maximum = centerCm + extent;
+        fixed (Physics3DOverlapHit* hitPointer = hits)
+        {
+            var enumerator = new BodyCenterSphereEnumerator(
+                _simulation,
+                _bodies,
+                prepared,
+                centerCm,
+                radiusCm * radiusCm,
+                hitPointer,
+                hits.Length);
+            _simulation.BroadPhase.GetOverlaps(minimum, maximum, ref enumerator);
+            if (enumerator.Overflowed)
+            {
+                throw new Physics3DCapacityExceededException("body-center sphere hits", hits.Length);
+            }
+
+            return enumerator.Count;
+        }
+    }
+
     public int OverlapCapsule(
         Vector3 centerCm,
         float radiusCm,
@@ -1179,6 +1211,66 @@ internal sealed class Physics3DQueryEngine
             }
 
             _hits[Count++] = new Physics3DOverlapHit(_bodies.GetId(slot), _bodies.GetEntity(slot));
+        }
+    }
+
+    private unsafe struct BodyCenterSphereEnumerator : IBreakableForEach<CollidableReference>
+    {
+        private readonly Simulation _simulation;
+        private readonly Physics3DBodyStore _bodies;
+        private readonly PreparedQueryFilter _filter;
+        private readonly Vector3 _centerCm;
+        private readonly float _radiusSquaredCm;
+        private readonly Physics3DOverlapHit* _hits;
+        private readonly int _capacity;
+
+        public BodyCenterSphereEnumerator(
+            Simulation simulation,
+            Physics3DBodyStore bodies,
+            PreparedQueryFilter filter,
+            Vector3 centerCm,
+            float radiusSquaredCm,
+            Physics3DOverlapHit* hits,
+            int capacity)
+        {
+            _simulation = simulation;
+            _bodies = bodies;
+            _filter = filter;
+            _centerCm = centerCm;
+            _radiusSquaredCm = radiusSquaredCm;
+            _hits = hits;
+            _capacity = capacity;
+            Count = 0;
+            Overflowed = false;
+        }
+
+        public int Count { get; private set; }
+        public bool Overflowed { get; private set; }
+
+        public bool LoopBody(CollidableReference collidable)
+        {
+            if (!_filter.Allow(_bodies, collidable))
+            {
+                return true;
+            }
+
+            Vector3 bodyCenterCm = collidable.Mobility == CollidableMobility.Static
+                ? _simulation.Statics.GetStaticReference(collidable.StaticHandle).Pose.Position
+                : _simulation.Bodies.GetBodyReference(collidable.BodyHandle).Pose.Position;
+            if (Vector3.DistanceSquared(_centerCm, bodyCenterCm) > _radiusSquaredCm)
+            {
+                return true;
+            }
+
+            if (Count >= _capacity)
+            {
+                Overflowed = true;
+                return false;
+            }
+
+            int slot = _bodies.RequireSlot(collidable);
+            _hits[Count++] = new Physics3DOverlapHit(_bodies.GetId(slot), _bodies.GetEntity(slot));
+            return true;
         }
     }
 

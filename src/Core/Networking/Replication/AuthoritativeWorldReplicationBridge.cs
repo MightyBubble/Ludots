@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Knowledge;
 
@@ -100,6 +101,7 @@ namespace Ludots.Core.Networking.Replication
 
         public int GlobalEntityCapacity => _entities.Capacity;
         public int ReplicationEntityCapacityPerSeat => _replicationEntityCapacityPerSeat;
+        public AuthoritativeReplicationBuildMetrics LastBuildMetrics { get; private set; }
         internal NetworkEntityTable EntityTable => _entities;
 
         public ReplicationBridgeResult Project(
@@ -244,20 +246,28 @@ namespace Ludots.Core.Networking.Replication
         {
             if (channel == null || projection == null || packet == null || tick > int.MaxValue)
             {
+                LastBuildMetrics = default;
                 packet?.Reset(default);
                 projection?.Reset();
                 return ReplicationBridgeResult.InvalidInput;
             }
 
+            long projectionStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
+            long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
             if (projected != ReplicationBridgeResult.Success)
             {
+                LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(projectionElapsed, 0);
                 packet.Reset(default);
                 return projected;
             }
 
+            long channelBuildStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
                 channel.BuildFull(sessionEpoch, tick, snapshotId, projection.States, projection.Disclosures, packet));
+            LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(
+                projectionElapsed,
+                Stopwatch.GetTimestamp() - channelBuildStarted);
             if (result != ReplicationBridgeResult.Success)
             {
                 projection.Reset();
@@ -308,18 +318,23 @@ namespace Ludots.Core.Networking.Replication
         {
             if (channel == null || projection == null || packet == null || tick > int.MaxValue)
             {
+                LastBuildMetrics = default;
                 packet?.Reset(default);
                 projection?.Reset();
                 return ReplicationBridgeResult.InvalidInput;
             }
 
+            long projectionStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
+            long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
             if (projected != ReplicationBridgeResult.Success)
             {
+                LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(projectionElapsed, 0);
                 packet.Reset(default);
                 return projected;
             }
 
+            long channelBuildStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
                 channel.BuildDelta(
                     sessionEpoch,
@@ -329,6 +344,9 @@ namespace Ludots.Core.Networking.Replication
                     projection.States,
                     projection.Disclosures,
                     packet));
+            LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(
+                projectionElapsed,
+                Stopwatch.GetTimestamp() - channelBuildStarted);
             if (result != ReplicationBridgeResult.Success)
             {
                 projection.Reset();

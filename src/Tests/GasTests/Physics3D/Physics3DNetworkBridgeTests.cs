@@ -221,6 +221,47 @@ public sealed class Physics3DNetworkBridgeTests
     }
 
     [Test]
+    public void AoiInterest_UsesAuthoritativeBodyCenterAndIncludesTheRadiusBoundary()
+    {
+        using World ecs = World.Create();
+        using var physics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 2));
+        var entities = new NetworkEntityTable(capacity: 4);
+        var knowledge = new KnowledgeProjectionStore(initialCapacity: 8);
+        using var lifecycle = CreateLifecycle(
+            ecs,
+            physics,
+            entities,
+            out Physics3DNetworkReplicatedBindingStore bindings,
+            knowledge,
+            seatCapacity: 2,
+            spawnSpacingCm: 1_000f);
+        SessionSeatBinding viewerSeat = Seat(slot: 0, generation: 1);
+        SessionSeatBinding targetSeat = Seat(slot: 1, generation: 1);
+        Assert.That(lifecycle.TryResolveController(in viewerSeat, out _), Is.True);
+        Assert.That(lifecycle.TryResolveController(in targetSeat, out Entity target), Is.True);
+        using var interest = new Physics3DNetworkAoiInterestPort(
+            physics,
+            entities,
+            lifecycle,
+            bindings,
+            knowledge,
+            replicationEntityCapacityPerSeat: 4,
+            new Physics3DNetworkAoiConfig { RadiusCm = 200f, GlobalEntityCapacity = 4 });
+        Span<NetworkEntityHandle> destination = stackalloc NetworkEntityHandle[4];
+
+        MoveEntity(ecs, physics, target, new Vector3(201f, 0f, 0f));
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, destination, out int outsideCount), Is.True);
+        MoveEntity(ecs, physics, target, new Vector3(200f, 0f, 0f));
+        Assert.That(TryPublishSingleSeat(interest, in viewerSeat, destination, out int boundaryCount), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outsideCount, Is.EqualTo(1));
+            Assert.That(boundaryCount, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
     public void AoiInterest_PerSeatCapacityAndUnknownSeatFailWithoutPartialSuccess_AndUnregisteredBodyIsIgnored()
     {
         using World ecs = World.Create();
@@ -1153,10 +1194,7 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(
             projectors.Register(
                 SchemaId,
-                new Physics3DBodyReplicationProjector(
-                    physics,
-                    SchemaId,
-                    new Physics3DReplicationQuantizationConfig())),
+                new Physics3DBodyReplicationProjector(physics, SchemaId, new Physics3DReplicationQuantizationConfig())),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         var factory = new Physics3DAuthoritativeReplicationSeatRuntimeFactory(
             ecs,
@@ -1663,7 +1701,10 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(
             projectors.Register(
                 SchemaId,
-                new Physics3DBodyReplicationProjector(physics, SchemaId, new Physics3DReplicationQuantizationConfig())),
+                new Physics3DBodyReplicationProjector(
+                    physics,
+                    SchemaId,
+                    new Physics3DReplicationQuantizationConfig())),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         projectors.Freeze();
         return projectors;

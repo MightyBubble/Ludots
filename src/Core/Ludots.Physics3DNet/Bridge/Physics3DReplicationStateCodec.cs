@@ -19,9 +19,18 @@ public static class Physics3DReplicationStateCodec
         Physics3DReplicationQuantizationConfig config,
         out ReplicationStateVector values)
     {
-        values = default;
         ArgumentNullException.ThrowIfNull(config);
         config.Validate();
+        return TryEncodeValidated(in state, bodyKind, config, out values);
+    }
+
+    internal static bool TryEncodeValidated(
+        in Physics3DBodyState state,
+        Physics3DBodyKind bodyKind,
+        Physics3DReplicationQuantizationConfig validatedConfig,
+        out ReplicationStateVector values)
+    {
+        values = default;
         if (bodyKind is not (Physics3DBodyKind.Dynamic or Physics3DBodyKind.Kinematic or Physics3DBodyKind.Static) ||
             !IsFinite(state.PositionCm) ||
             !IsFinite(state.LinearVelocityCmPerSecond) ||
@@ -40,19 +49,19 @@ public static class Physics3DReplicationStateCodec
         Quaternion orientation = Quaternion.Normalize(state.Orientation);
         Span<ulong> words = stackalloc ulong[4];
         int offset = 0;
-        if (!TryWriteSigned(words, ref offset, state.PositionCm.X, config.PositionResolutionCm, PositionBits) ||
-            !TryWriteSigned(words, ref offset, state.PositionCm.Y, config.PositionResolutionCm, PositionBits) ||
-            !TryWriteSigned(words, ref offset, state.PositionCm.Z, config.PositionResolutionCm, PositionBits) ||
-            !TryWriteSigned(words, ref offset, orientation.X, config.QuaternionResolution, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, orientation.Y, config.QuaternionResolution, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, orientation.Z, config.QuaternionResolution, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, orientation.W, config.QuaternionResolution, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.X, config.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.Y, config.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.Z, config.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.X, config.AngularVelocityResolutionRadiansPerSecond, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.Y, config.AngularVelocityResolutionRadiansPerSecond, ScalarBits) ||
-            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.Z, config.AngularVelocityResolutionRadiansPerSecond, ScalarBits))
+        if (!TryWriteSigned(words, ref offset, state.PositionCm.X, validatedConfig.PositionResolutionCm, PositionBits) ||
+            !TryWriteSigned(words, ref offset, state.PositionCm.Y, validatedConfig.PositionResolutionCm, PositionBits) ||
+            !TryWriteSigned(words, ref offset, state.PositionCm.Z, validatedConfig.PositionResolutionCm, PositionBits) ||
+            !TryWriteSigned(words, ref offset, orientation.X, validatedConfig.QuaternionResolution, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, orientation.Y, validatedConfig.QuaternionResolution, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, orientation.Z, validatedConfig.QuaternionResolution, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, orientation.W, validatedConfig.QuaternionResolution, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.X, validatedConfig.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.Y, validatedConfig.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.LinearVelocityCmPerSecond.Z, validatedConfig.LinearVelocityResolutionCmPerSecond, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.X, validatedConfig.AngularVelocityResolutionRadiansPerSecond, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.Y, validatedConfig.AngularVelocityResolutionRadiansPerSecond, ScalarBits) ||
+            !TryWriteSigned(words, ref offset, state.AngularVelocityRadiansPerSecond.Z, validatedConfig.AngularVelocityResolutionRadiansPerSecond, ScalarBits))
         {
             return false;
         }

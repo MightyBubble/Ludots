@@ -340,7 +340,7 @@ public sealed class Physics3DNetworkAoiInterestPort :
         ReadOnlySpan<Physics3DOverlapHit> hits;
         try
         {
-            hits = context.OverlapSphere(_preparedCenters[seatSlot], _radiusCm, filter);
+            hits = context.QueryBodyCentersInSphere(_preparedCenters[seatSlot], _radiusCm, filter);
         }
         catch (Physics3DCapacityExceededException)
         {
