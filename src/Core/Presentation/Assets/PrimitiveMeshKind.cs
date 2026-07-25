@@ -4,6 +4,7 @@ namespace Ludots.Core.Presentation.Assets
     {
         None = 0,
         Cube = 1,
-        Sphere = 2
+        Sphere = 2,
+        Cylinder = 3
     }
 }

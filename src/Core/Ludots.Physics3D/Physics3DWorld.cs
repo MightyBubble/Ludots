@@ -156,6 +156,12 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         return _shapes.RegisterCapsule(radiusCm, cylinderLengthCm);
     }
 
+    public Physics3DShapeId RegisterCylinderShape(float radiusCm, float lengthCm)
+    {
+        RequireStructuralPhase();
+        return _shapes.RegisterCylinder(radiusCm, lengthCm);
+    }
+
     public Physics3DBodyId CreateBody(in Physics3DBodyDescription description)
     {
         RequireStructuralPhase();
@@ -777,6 +783,50 @@ public sealed class Physics3DWorld : IPhysics3DWorld
         _simulation.Solver.GetDescription(handle, out AngularAxisMotor description);
         description.TargetVelocity = targetVelocityRadiansPerSecond;
         _simulation.Solver.ApplyDescription(handle, description);
+    }
+
+    public void UpdateAngularHinge(
+        Physics3DConstraintId constraint,
+        in Physics3DAngularHingeDescription description)
+    {
+        RequireStructuralPhase();
+        Vector3 axisA = NormalizeDirection(
+            description.LocalHingeAxisA,
+            $"{nameof(description)}.{nameof(description.LocalHingeAxisA)}");
+        Vector3 axisB = NormalizeDirection(
+            description.LocalHingeAxisB,
+            $"{nameof(description)}.{nameof(description.LocalHingeAxisB)}");
+        description.Spring.Validate($"{nameof(description)}.{nameof(description.Spring)}");
+        ConstraintHandle handle = RequireConstraintHandle(constraint, Physics3DConstraintType.AngularHinge);
+        var bepuDescription = new AngularHinge
+        {
+            LocalHingeAxisA = axisA,
+            LocalHingeAxisB = axisB,
+            SpringSettings = CreateSpringSettings(description.Spring)
+        };
+        _simulation.Solver.ApplyDescription(handle, bepuDescription);
+    }
+
+    public void UpdateAngularAxisMotor(
+        Physics3DConstraintId constraint,
+        in Physics3DAngularAxisMotorDescription description)
+    {
+        RequireStructuralPhase();
+        Vector3 axis = NormalizeDirection(
+            description.LocalAxisA,
+            $"{nameof(description)}.{nameof(description.LocalAxisA)}");
+        Physics3DValidation.RequireFinite(
+            description.TargetVelocityRadiansPerSecond,
+            $"{nameof(description)}.{nameof(description.TargetVelocityRadiansPerSecond)}");
+        description.Motor.Validate($"{nameof(description)}.{nameof(description.Motor)}");
+        ConstraintHandle handle = RequireConstraintHandle(constraint, Physics3DConstraintType.AngularAxisMotor);
+        var bepuDescription = new AngularAxisMotor
+        {
+            LocalAxisA = axis,
+            TargetVelocity = description.TargetVelocityRadiansPerSecond,
+            Settings = CreateMotorSettings(description.Motor)
+        };
+        _simulation.Solver.ApplyDescription(handle, bepuDescription);
     }
 
     public void UpdateAngularServoTarget(Physics3DConstraintId constraint, Quaternion targetRelativeRotationLocalA)

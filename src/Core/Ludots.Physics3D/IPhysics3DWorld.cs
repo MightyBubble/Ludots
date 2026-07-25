@@ -36,6 +36,7 @@ public interface IPhysics3DWorld : IDisposable
     Physics3DShapeId RegisterBoxShape(Vector3 sizeCm);
     Physics3DShapeId RegisterSphereShape(float radiusCm);
     Physics3DShapeId RegisterCapsuleShape(float radiusCm, float cylinderLengthCm);
+    Physics3DShapeId RegisterCylinderShape(float radiusCm, float lengthCm);
     Physics3DBodyId CreateBody(in Physics3DBodyDescription description);
     void DestroyBody(Physics3DBodyId body);
     bool ContainsBody(Physics3DBodyId body);
@@ -115,6 +116,12 @@ public interface IPhysics3DWorld : IDisposable
         Physics3DBodyId bodyB,
         in Physics3DAngularServoDescription description);
     void UpdateLinearAxisServoTarget(Physics3DConstraintId constraint, float targetOffsetCm);
+    void UpdateAngularHinge(
+        Physics3DConstraintId constraint,
+        in Physics3DAngularHingeDescription description);
+    void UpdateAngularAxisMotor(
+        Physics3DConstraintId constraint,
+        in Physics3DAngularAxisMotorDescription description);
     void UpdateAngularAxisMotorTarget(Physics3DConstraintId constraint, float targetVelocityRadiansPerSecond);
     void UpdateAngularServoTarget(Physics3DConstraintId constraint, Quaternion targetRelativeRotationLocalA);
     void DestroyConstraint(Physics3DConstraintId constraint);

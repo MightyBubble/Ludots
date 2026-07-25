@@ -159,23 +159,20 @@ public sealed class Vehicle3DTests
     [Test]
     public void PhysicalBoxAndScanningWheels_ShareOneVehicleAndExposeGroundEvidence()
     {
-        using Physics3DWorld physics = CreatePhysicsWorld(mobileCapacity: 5, staticCapacity: 1, constraintCapacity: 14);
+        using Physics3DWorld physics = CreatePhysicsWorld(mobileCapacity: 3, staticCapacity: 1, constraintCapacity: 10);
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(160f, 30f, 260f));
-        Physics3DShapeId carrierShape = physics.RegisterSphereShape(3f);
         Physics3DShapeId physicalShape = physics.RegisterSphereShape(22f);
         Physics3DShapeId boxWheelShape = physics.RegisterBoxShape(new Vector3(28f, 44f, 44f));
         AddFloor(physics);
         Physics3DBodyId chassis = CreateDynamicBody(physics, chassisShape, new Vector3(0f, 100f, 0f));
-        Physics3DBodyId physicalCarrier = CreateDynamicBody(physics, carrierShape, new Vector3(-60f, 40f, 0f));
         Physics3DBodyId physicalWheel = CreateDynamicBody(physics, physicalShape, new Vector3(-60f, 40f, 0f));
-        Physics3DBodyId boxCarrier = CreateDynamicBody(physics, carrierShape, new Vector3(0f, 40f, 0f));
         Physics3DBodyId boxWheel = CreateDynamicBody(physics, boxWheelShape, new Vector3(0f, 40f, 0f));
 
         using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 3));
         var descriptions = new Vehicle3DWheelDescription[]
         {
-            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, physicalCarrier, physicalWheel, new Vector3(-60f, 0f, 0f)),
-            CreatePhysicalWheel(Vehicle3DWheelKind.Box, boxCarrier, boxWheel, Vector3.Zero),
+            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, physicalWheel, new Vector3(-60f, 0f, 0f)),
+            CreatePhysicalWheel(Vehicle3DWheelKind.Box, boxWheel, Vector3.Zero),
             CreateScanningWheel(new Vector3(60f, 0f, 0f), Vehicle3DWheelQueryKind.SphereCast)
         };
         var wheelIds = new Vehicle3DWheelId[descriptions.Length];
@@ -186,7 +183,7 @@ public sealed class Vehicle3DTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(physics.ActiveConstraintCount, Is.EqualTo(14), "Each physical wheel must own the full seven-constraint wheel-joint bundle.");
+            Assert.That(physics.ActiveConstraintCount, Is.EqualTo(10), "Each physical wheel must own the direct five-constraint wheel-joint bundle.");
             Assert.That(vehicles.GetWheelState(wheelIds[0]).Kind, Is.EqualTo(Vehicle3DWheelKind.Physical));
             Assert.That(vehicles.GetWheelState(wheelIds[1]).Kind, Is.EqualTo(Vehicle3DWheelKind.Box));
             Assert.That(vehicles.GetWheelState(wheelIds[2]).Kind, Is.EqualTo(Vehicle3DWheelKind.Scanning));
@@ -203,30 +200,33 @@ public sealed class Vehicle3DTests
         Assert.That(physics.ActiveConstraintCount, Is.Zero);
     }
 
-    [Test]
-    public void PhysicalWheel_TravelLimitContainsAForcedCarrier()
+    [TestCase(Vehicle3DWheelKind.Physical)]
+    [TestCase(Vehicle3DWheelKind.Box)]
+    public void RealWheel_TravelLimitContainsAForcedWheel(Vehicle3DWheelKind wheelKind)
     {
         using Physics3DWorld physics = CreatePhysicsWorld(
-            mobileCapacity: 3,
+            mobileCapacity: 2,
             staticCapacity: 1,
-            constraintCapacity: 7,
+            constraintCapacity: 5,
             gravity: Vector3.Zero);
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(120f, 30f, 180f));
-        Physics3DShapeId carrierShape = physics.RegisterSphereShape(3f);
-        Physics3DShapeId wheelShape = physics.RegisterSphereShape(20f);
+        Physics3DShapeId wheelShape = CreateRealWheelShape(physics, wheelKind);
         AddFloor(physics);
         Physics3DBodyId chassis = CreateDynamicBody(physics, chassisShape, new Vector3(0f, 140f, 0f));
-        Physics3DBodyId carrier = CreateDynamicBody(physics, carrierShape, new Vector3(0f, 80f, 0f));
-        Physics3DBodyId wheel = CreateDynamicBody(physics, wheelShape, new Vector3(0f, 80f, 0f));
+        Physics3DBodyId wheel = CreateDynamicBody(
+            physics,
+            wheelShape,
+            new Vector3(0f, 80f, 0f),
+            RealWheelOrientation(wheelKind));
         using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 1));
         Span<Vehicle3DWheelDescription> descriptions = stackalloc Vehicle3DWheelDescription[1]
         {
-            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, carrier, wheel, Vector3.Zero)
+            CreatePhysicalWheel(wheelKind, wheel, Vector3.Zero)
         };
         Span<Vehicle3DWheelId> wheelIds = stackalloc Vehicle3DWheelId[1];
         Vehicle3DVehicleId vehicle = vehicles.RegisterVehicle(chassis, descriptions, wheelIds);
 
-        physics.EnqueueLinearImpulse(carrier, new Vector3(0f, -2_000f, 0f));
+        physics.EnqueueLinearImpulse(wheel, new Vector3(0f, -2_000f, 0f));
         for (int i = 0; i < 90; i++)
         {
             vehicles.SetInput(vehicle, new Vehicle3DInput(0f, 0f, 0f));
@@ -236,30 +236,33 @@ public sealed class Vehicle3DTests
         }
 
         Physics3DBodyState chassisState = physics.GetBodyState(chassis);
-        Physics3DBodyState carrierState = physics.GetBodyState(carrier);
-        float travel = chassisState.PositionCm.Y - carrierState.PositionCm.Y;
-        Assert.That(travel, Is.InRange(28f, 82f), "Suspension carrier must stay within the authored 30-80cm travel range.");
+        Physics3DBodyState wheelState = physics.GetBodyState(wheel);
+        float travel = chassisState.PositionCm.Y - wheelState.PositionCm.Y;
+        Assert.That(travel, Is.InRange(28f, 82f), "The wheel must stay within the authored 30-80cm suspension travel range.");
     }
 
-    [Test]
-    public void SteeringDriveAndBrake_ChangePhysicalWheelMotion()
+    [TestCase(Vehicle3DWheelKind.Physical)]
+    [TestCase(Vehicle3DWheelKind.Box)]
+    public void RealWheel_SteeringForwardReverseAndBrakeChangeMotion(Vehicle3DWheelKind wheelKind)
     {
         using Physics3DWorld physics = CreatePhysicsWorld(
-            mobileCapacity: 3,
+            mobileCapacity: 2,
             staticCapacity: 1,
-            constraintCapacity: 7,
+            constraintCapacity: 5,
             gravity: Vector3.Zero);
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(120f, 30f, 180f));
-        Physics3DShapeId carrierShape = physics.RegisterSphereShape(3f);
-        Physics3DShapeId wheelShape = physics.RegisterSphereShape(20f);
+        Physics3DShapeId wheelShape = CreateRealWheelShape(physics, wheelKind);
         AddFloor(physics);
         Physics3DBodyId chassis = CreateDynamicBody(physics, chassisShape, new Vector3(0f, 100f, 0f));
-        Physics3DBodyId carrier = CreateDynamicBody(physics, carrierShape, new Vector3(0f, 40f, 0f));
-        Physics3DBodyId wheel = CreateDynamicBody(physics, wheelShape, new Vector3(0f, 40f, 0f));
+        Physics3DBodyId wheel = CreateDynamicBody(
+            physics,
+            wheelShape,
+            new Vector3(0f, 40f, 0f),
+            RealWheelOrientation(wheelKind));
         using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 1));
         Span<Vehicle3DWheelDescription> descriptions = stackalloc Vehicle3DWheelDescription[1]
         {
-            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, carrier, wheel, Vector3.Zero)
+            CreatePhysicalWheel(wheelKind, wheel, Vector3.Zero)
         };
         Span<Vehicle3DWheelId> wheelIds = stackalloc Vehicle3DWheelId[1];
         Vehicle3DVehicleId vehicle = vehicles.RegisterVehicle(chassis, descriptions, wheelIds);
@@ -271,10 +274,32 @@ public sealed class Vehicle3DTests
             vehicles.ObserveFixedStep();
         }
 
-        float drivenSpeed = MathF.Abs(vehicles.GetWheelState(wheelIds[0]).WheelAngularSpeedRadiansPerSecond);
-        float steeringDot = MathF.Abs(Quaternion.Dot(
-            physics.GetBodyState(chassis).Orientation,
-            physics.GetBodyState(carrier).Orientation));
+        float signedDrivenSpeed = vehicles.GetWheelState(wheelIds[0]).WheelAngularSpeedRadiansPerSecond;
+        float drivenSpeed = MathF.Abs(signedDrivenSpeed);
+        Physics3DBodyState drivenChassisState = physics.GetBodyState(chassis);
+        Physics3DBodyState drivenWheelState = physics.GetBodyState(wheel);
+        Vector3 wheelAxleWorld = Vector3.Normalize(
+            drivenWheelState.AngularVelocityRadiansPerSecond -
+            drivenChassisState.AngularVelocityRadiansPerSecond);
+        Vector3 wheelAxleInChassis = Vector3.Normalize(Vector3.Transform(
+            wheelAxleWorld,
+            Quaternion.Conjugate(drivenChassisState.Orientation)));
+        Quaternion expectedSteering = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.6f);
+        Vector3 expectedAxle = Vector3.Normalize(Vector3.Cross(
+            Vector3.Transform(Vector3.UnitZ, expectedSteering),
+            -Vector3.UnitY));
+        float steeringAlignment = Vector3.Dot(wheelAxleInChassis, expectedAxle);
+        float baseAxleAlignment = Vector3.Dot(wheelAxleInChassis, Vector3.UnitX);
+        for (int i = 0; i < 80; i++)
+        {
+            vehicles.SetInput(vehicle, new Vehicle3DInput(throttle: -1f, brake: 0f, steering: 1f));
+            vehicles.PrepareFixedStep();
+            physics.Step();
+            vehicles.ObserveFixedStep();
+        }
+
+        float signedReverseSpeed = vehicles.GetWheelState(wheelIds[0]).WheelAngularSpeedRadiansPerSecond;
+        float reverseSpeed = MathF.Abs(signedReverseSpeed);
         for (int i = 0; i < 30; i++)
         {
             vehicles.SetInput(vehicle, new Vehicle3DInput(throttle: 0f, brake: 1f, steering: 0f));
@@ -287,9 +312,208 @@ public sealed class Vehicle3DTests
         Assert.Multiple(() =>
         {
             Assert.That(drivenSpeed, Is.GreaterThan(0.5f));
-            Assert.That(steeringDot, Is.LessThan(0.9999f));
-            Assert.That(brakedSpeed, Is.LessThan(drivenSpeed));
+            Assert.That(signedDrivenSpeed, Is.GreaterThan(0f));
+            Assert.That(reverseSpeed, Is.GreaterThan(0.5f));
+            Assert.That(signedReverseSpeed, Is.LessThan(0f));
+            Assert.That(steeringAlignment, Is.GreaterThan(0.98f));
+            Assert.That(baseAxleAlignment, Is.LessThan(0.95f));
+            Assert.That(brakedSpeed, Is.LessThan(reverseSpeed));
         });
+    }
+
+    [Test]
+    public void PhysicalWheelDescription_AxleMotorForceBoundaryIsExplicit()
+    {
+        const float requiredAxleMotorForce = 260_000f * 44f;
+        using Physics3DWorld physics = CreatePhysicsWorld(
+            mobileCapacity: 1,
+            staticCapacity: 0,
+            constraintCapacity: 5,
+            gravity: Vector3.Zero);
+        Physics3DShapeId shape = physics.RegisterSphereShape(10f);
+        Physics3DBodyId wheel = CreateDynamicBody(physics, shape, new Vector3(0f, -40f, 0f));
+
+        Assert.Multiple(() =>
+        {
+            Assert.DoesNotThrow(() => CreateStressPhysicalWheel(
+                Vehicle3DWheelKind.Physical,
+                wheel,
+                Vector3.Zero,
+                requiredAxleMotorForce));
+            Assert.Throws<ArgumentException>(() => CreateStressPhysicalWheel(
+                Vehicle3DWheelKind.Box,
+                wheel,
+                Vector3.Zero,
+                MathF.BitDecrement(requiredAxleMotorForce)));
+        });
+    }
+
+    [Test]
+    public void TireDrive_AtThirtyHertzTracksBidirectionalSpeedTargetWithoutCoastingDrag()
+    {
+        // Given one scanning vehicle whose authored wheel-speed limit is 100 cm/s in either direction.
+        using Physics3DWorld physics = CreatePhysicsWorld(
+            mobileCapacity: 1,
+            staticCapacity: 1,
+            constraintCapacity: 1);
+        Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(100f, 20f, 140f));
+        AddFloor(physics);
+        Physics3DBodyId chassis = CreateDynamicBody(
+            physics,
+            chassisShape,
+            new Vector3(0f, ScanningVehicleEquilibriumHeightCm, 0f));
+        using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 4));
+        var descriptions = new Vehicle3DWheelDescription[4]
+        {
+            CreateScanningWheel(new Vector3(-30f, 0f, -40f), Vehicle3DWheelQueryKind.Raycast, 5f),
+            CreateScanningWheel(new Vector3(30f, 0f, -40f), Vehicle3DWheelQueryKind.Raycast, 5f),
+            CreateScanningWheel(new Vector3(-30f, 0f, 40f), Vehicle3DWheelQueryKind.Raycast, 5f),
+            CreateScanningWheel(new Vector3(30f, 0f, 40f), Vehicle3DWheelQueryKind.Raycast, 5f)
+        };
+        Span<Vehicle3DWheelId> wheelIds = stackalloc Vehicle3DWheelId[4];
+        Vehicle3DVehicleId vehicle = vehicles.RegisterVehicle(chassis, descriptions, wheelIds);
+
+        Vector3 authoredPosition = physics.GetBodyState(chassis).PositionCm;
+
+        // When forward and reverse throttle are submitted from the same authored state.
+        StepVehicle(physics, vehicles, vehicle, new Vehicle3DInput(1f, 0f, 0f));
+        float forwardSpeed = physics.GetBodyState(chassis).LinearVelocityCmPerSecond.Z;
+        RestoreBodyState(physics, chassis, authoredPosition, Vector3.Zero);
+        StepVehicle(physics, vehicles, vehicle, new Vehicle3DInput(-1f, 0f, 0f));
+        float reverseSpeed = physics.GetBodyState(chassis).LinearVelocityCmPerSecond.Z;
+
+        // And when already above the target, forward throttle pulls back toward the authored limit.
+        RestoreBodyState(physics, chassis, authoredPosition, new Vector3(0f, 0f, 120f));
+        StepVehicle(physics, vehicles, vehicle, new Vehicle3DInput(1f, 0f, 0f));
+        float limitedSpeed = physics.GetBodyState(chassis).LinearVelocityCmPerSecond.Z;
+
+        // And when the player releases throttle without braking, tire drive adds no hidden drag.
+        RestoreBodyState(physics, chassis, authoredPosition, new Vector3(0f, 0f, 80f));
+        StepVehicle(physics, vehicles, vehicle, default);
+        float coastingSpeed = physics.GetBodyState(chassis).LinearVelocityCmPerSecond.Z;
+        Assert.Multiple(() =>
+        {
+            Assert.That(forwardSpeed, Is.GreaterThan(0f));
+            Assert.That(reverseSpeed, Is.LessThan(0f));
+            Assert.That(limitedSpeed, Is.LessThan(120f));
+            Assert.That(coastingSpeed, Is.EqualTo(80f).Within(0.01f));
+        });
+    }
+
+    [TestCase(Vehicle3DWheelQueryKind.Raycast)]
+    [TestCase(Vehicle3DWheelQueryKind.SphereCast)]
+    public void ScanningTireBasis_WithPitchedChassisRemainsTangentToContactSurface(
+        Vehicle3DWheelQueryKind queryKind)
+    {
+        // Given a pitched scanning chassis moving horizontally above a flat surface.
+        using Physics3DWorld physics = CreatePhysicsWorld(
+            mobileCapacity: 1,
+            staticCapacity: 1,
+            constraintCapacity: 1,
+            actuationCapacity: 8);
+        Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(100f, 20f, 140f));
+        AddFloor(physics);
+        Physics3DBodyId chassis = CreateDynamicBody(
+            physics,
+            chassisShape,
+            new Vector3(0f, ScanningVehicleEquilibriumHeightCm, 0f));
+        Physics3DBodyState pitchedState = physics.GetBodyState(chassis);
+        pitchedState.Orientation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 12f);
+        pitchedState.LinearVelocityCmPerSecond = new Vector3(0f, 0f, 100f);
+        physics.SetBodyState(chassis, in pitchedState);
+
+        using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 4));
+        var descriptions = new Vehicle3DWheelDescription[4]
+        {
+            CreateScanningWheel(new Vector3(-30f, 0f, -40f), queryKind),
+            CreateScanningWheel(new Vector3(30f, 0f, -40f), queryKind),
+            CreateScanningWheel(new Vector3(-30f, 0f, 40f), queryKind),
+            CreateScanningWheel(new Vector3(30f, 0f, 40f), queryKind)
+        };
+        Span<Vehicle3DWheelId> wheelIds = stackalloc Vehicle3DWheelId[4];
+        Vehicle3DVehicleId vehicle = vehicles.RegisterVehicle(chassis, descriptions, wheelIds);
+
+        // When the authoritative 30 Hz tire step resolves all four ground contacts.
+        StepVehicle(physics, vehicles, vehicle, default);
+
+        // Then longitudinal and lateral slip contains no component through the contact surface.
+        for (int wheelIndex = 0; wheelIndex < wheelIds.Length; wheelIndex++)
+        {
+            Vehicle3DWheelState wheel = vehicles.GetWheelState(wheelIds[wheelIndex]);
+            Assert.Multiple(() =>
+            {
+                Assert.That(wheel.Grounded, Is.True, $"{queryKind} wheel {wheelIndex} did not reach the floor.");
+                Assert.That(wheel.ContactNormal.LengthSquared(), Is.EqualTo(1f).Within(1e-4f));
+                Assert.That(
+                    MathF.Abs(Vector3.Dot(wheel.SlipVelocityCmPerSecond, wheel.ContactNormal)),
+                    Is.LessThan(1e-3f),
+                    $"{queryKind} wheel {wheelIndex} tire slip escaped the contact plane.");
+            });
+        }
+    }
+
+    [TestCase(Vehicle3DWheelKind.Physical)]
+    [TestCase(Vehicle3DWheelKind.Box)]
+    public void PhysicalWheelTireActuation_AtThirtyHertzKeepsTheWheelAssemblyBounded(
+        Vehicle3DWheelKind kind)
+    {
+        const float maximumLinearSpeedCmPerSecond = 5_000f;
+        const float maximumAngularSpeedRadiansPerSecond = 250f;
+
+        // Given a high-force four-wheel assembly on one authoritative 30 Hz world.
+        using Physics3DWorld physics = CreatePhysicsWorld(
+            mobileCapacity: 5,
+            staticCapacity: 1,
+            constraintCapacity: 20,
+            actuationCapacity: 32);
+        Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(210f, 60f, 320f));
+        Physics3DShapeId wheelShape = kind == Vehicle3DWheelKind.Physical
+            ? physics.RegisterSphereShape(44f)
+            : physics.RegisterBoxShape(new Vector3(34f, 88f, 88f));
+        AddFloor(physics, 100_000f);
+        Physics3DBodyId chassis = CreateDynamicBody(physics, chassisShape, new Vector3(0f, 170f, 0f));
+        var bodies = new Physics3DBodyId[5];
+        bodies[0] = chassis;
+        Span<Vehicle3DWheelDescription> descriptions = stackalloc Vehicle3DWheelDescription[4];
+        for (int wheelIndex = 0; wheelIndex < 4; wheelIndex++)
+        {
+            float side = (wheelIndex & 1) == 0 ? -95f : 95f;
+            float end = wheelIndex < 2 ? -115f : 115f;
+            Vector3 mount = new(side, -20f, end);
+            Vector3 bodyPosition = new(side, 65f, end);
+            Physics3DBodyId wheel = CreateDynamicBody(physics, wheelShape, bodyPosition);
+            bodies[1 + wheelIndex] = wheel;
+            descriptions[wheelIndex] = CreateStressPhysicalWheel(kind, wheel, mount);
+        }
+
+        using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 4));
+        Span<Vehicle3DWheelId> wheelIds = stackalloc Vehicle3DWheelId[4];
+        Vehicle3DVehicleId vehicle = vehicles.RegisterVehicle(chassis, descriptions, wheelIds);
+
+        // When full throttle is held for twelve seconds, Then no wheel-to-chassis impulse amplification escapes its lane.
+        for (int step = 0; step < 360; step++)
+        {
+            vehicles.SetInput(vehicle, new Vehicle3DInput(1f, 0f, 0f));
+            vehicles.PrepareFixedStep();
+            physics.Step();
+            vehicles.ObserveFixedStep();
+            for (int bodyIndex = 0; bodyIndex < bodies.Length; bodyIndex++)
+            {
+                Physics3DBodyState state = physics.GetBodyState(bodies[bodyIndex]);
+                Assert.Multiple(() =>
+                {
+                    Assert.That(IsFinite(state.PositionCm), Is.True, $"{kind} body {bodyIndex} position failed at step {step}.");
+                    Assert.That(IsFinite(state.Orientation), Is.True, $"{kind} body {bodyIndex} orientation failed at step {step}.");
+                    Assert.That(IsFinite(state.LinearVelocityCmPerSecond), Is.True, $"{kind} body {bodyIndex} velocity failed at step {step}.");
+                    Assert.That(IsFinite(state.AngularVelocityRadiansPerSecond), Is.True, $"{kind} body {bodyIndex} angular velocity failed at step {step}.");
+                    Assert.That(state.LinearVelocityCmPerSecond.Length(), Is.LessThan(maximumLinearSpeedCmPerSecond), $"{kind} body {bodyIndex} exceeded the linear speed bound at step {step}.");
+                    Assert.That(state.AngularVelocityRadiansPerSecond.Length(), Is.LessThan(maximumAngularSpeedRadiansPerSecond), $"{kind} body {bodyIndex} exceeded the angular speed bound at step {step}.");
+                    Assert.That(MathF.Abs(state.PositionCm.X), Is.LessThan(10_000f), $"{kind} body {bodyIndex} left the lateral bound at step {step}.");
+                    Assert.That(MathF.Abs(state.PositionCm.Y), Is.LessThan(10_000f), $"{kind} body {bodyIndex} left the vertical bound at step {step}.");
+                    Assert.That(MathF.Abs(state.PositionCm.Z), Is.LessThan(100_000f), $"{kind} body {bodyIndex} left the longitudinal bound at step {step}.");
+                });
+            }
+        }
     }
 
     [Test]
@@ -555,8 +779,8 @@ public sealed class Vehicle3DTests
         Vehicle3DWheelKind wheelKind)
     {
         int wheelCount = vehicleCount * 4;
-        int mobileBodyCount = vehicleCount * 9;
-        int constraintCount = wheelCount * 7;
+        int mobileBodyCount = vehicleCount * 5;
+        int constraintCount = wheelCount * 5;
         using Physics3DWorld physics = CreatePhysicsWorld(
             mobileCapacity: mobileBodyCount,
             staticCapacity: 1,
@@ -564,7 +788,6 @@ public sealed class Vehicle3DTests
             actuationCapacity: wheelCount,
             workerCount: 4);
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(100f, 20f, 140f));
-        Physics3DShapeId carrierShape = physics.RegisterSphereShape(3f);
         Physics3DShapeId wheelShape = wheelKind == Vehicle3DWheelKind.Box
             ? physics.RegisterBoxShape(new Vector3(30f, 40f, 40f))
             : physics.RegisterSphereShape(20f);
@@ -575,7 +798,6 @@ public sealed class Vehicle3DTests
             physics,
             vehicles,
             chassisShape,
-            carrierShape,
             wheelShape,
             wheelKind,
             vehicleIds,
@@ -612,7 +834,7 @@ public sealed class Vehicle3DTests
             Assert.That(vehicles.ActiveWheelCount, Is.EqualTo(wheelCount));
             Assert.That(physics.ActiveConstraintCount, Is.EqualTo(constraintCount));
             Assert.That(stateCount, Is.EqualTo(wheelCount));
-            Assert.That(minimumPreparedCommands, Is.GreaterThan(0));
+            Assert.That(minimumPreparedCommands, Is.Zero, "Physical wheels must use only axle motors and native contact friction.");
             Assert.That(physics.ActiveMobileBodyCount, Is.EqualTo(mobileBodyCount));
             Assert.That(physics.StepIndex, Is.EqualTo(152));
             Assert.That(p95Milliseconds, Is.LessThan(fixedStepBudgetMilliseconds), $"{wheelKind} vehicle P95 exceeded the fixed-step budget.");
@@ -626,20 +848,18 @@ public sealed class Vehicle3DTests
     public void PhysicalRegistrationConstraintFailure_RollsBackEveryCreatedConstraintAndSlot()
     {
         using Physics3DWorld physics = CreatePhysicsWorld(
-            mobileCapacity: 3,
+            mobileCapacity: 2,
             staticCapacity: 0,
-            constraintCapacity: 6,
+            constraintCapacity: 4,
             gravity: Vector3.Zero);
         Physics3DShapeId chassisShape = physics.RegisterBoxShape(new Vector3(100f, 20f, 140f));
-        Physics3DShapeId carrierShape = physics.RegisterSphereShape(3f);
         Physics3DShapeId wheelShape = physics.RegisterSphereShape(20f);
         Physics3DBodyId chassis = CreateDynamicBody(physics, chassisShape, new Vector3(0f, 100f, 0f));
-        Physics3DBodyId carrier = CreateDynamicBody(physics, carrierShape, new Vector3(0f, 40f, 0f));
         Physics3DBodyId wheel = CreateDynamicBody(physics, wheelShape, new Vector3(0f, 40f, 0f));
         using var vehicles = new Vehicle3DWorld(physics, CreateVehicleConfig(1, 1));
         var descriptions = new[]
         {
-            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, carrier, wheel, Vector3.Zero)
+            CreatePhysicalWheel(Vehicle3DWheelKind.Physical, wheel, Vector3.Zero)
         };
         var wheelIds = new Vehicle3DWheelId[1];
 
@@ -749,7 +969,6 @@ public sealed class Vehicle3DTests
         Physics3DWorld physics,
         Vehicle3DWorld vehicles,
         Physics3DShapeId chassisShape,
-        Physics3DShapeId carrierShape,
         Physics3DShapeId wheelShape,
         Vehicle3DWheelKind wheelKind,
         Span<Vehicle3DVehicleId> registeredVehicles,
@@ -773,11 +992,9 @@ public sealed class Vehicle3DTests
             for (int wheelIndex = 0; wheelIndex < mounts.Length; wheelIndex++)
             {
                 Vector3 bodyPosition = chassisPosition + mounts[wheelIndex] + new Vector3(0f, -60f, 0f);
-                Physics3DBodyId carrier = CreateDynamicBody(physics, carrierShape, bodyPosition);
                 Physics3DBodyId wheel = CreateDynamicBody(physics, wheelShape, bodyPosition);
                 descriptions[wheelIndex] = CreatePhysicalWheel(
                     wheelKind,
-                    carrier,
                     wheel,
                     mounts[wheelIndex]);
             }
@@ -802,6 +1019,33 @@ public sealed class Vehicle3DTests
         physics.Step();
         vehicles.ObserveFixedStep();
         return preparedCommands;
+    }
+
+    private static void StepVehicle(
+        Physics3DWorld physics,
+        Vehicle3DWorld vehicles,
+        Vehicle3DVehicleId vehicle,
+        in Vehicle3DInput input)
+    {
+        vehicles.SetInput(vehicle, input);
+        vehicles.PrepareFixedStep();
+        physics.Step();
+        vehicles.ObserveFixedStep();
+    }
+
+    private static void RestoreBodyState(
+        Physics3DWorld physics,
+        Physics3DBodyId body,
+        Vector3 positionCm,
+        Vector3 linearVelocityCmPerSecond)
+    {
+        Physics3DBodyState state = physics.GetBodyState(body);
+        state.PositionCm = positionCm;
+        state.Orientation = Quaternion.Identity;
+        state.LinearVelocityCmPerSecond = linearVelocityCmPerSecond;
+        state.AngularVelocityRadiansPerSecond = Vector3.Zero;
+        state.Awake = true;
+        physics.SetBodyState(body, in state);
     }
 
     private static void AssertEveryBodyStateIsFinite(Physics3DWorld physics, int activeBodyCount)
@@ -837,7 +1081,8 @@ public sealed class Vehicle3DTests
 
     private static Vehicle3DWheelDescription CreateScanningWheel(
         Vector3 localMountCm,
-        Vehicle3DWheelQueryKind queryKind)
+        Vehicle3DWheelQueryKind queryKind,
+        float maximumWheelAngularSpeedRadiansPerSecond = 50f)
     {
         return Vehicle3DWheelDescription.Scanning(
             queryKind,
@@ -857,7 +1102,7 @@ public sealed class Vehicle3DTests
             maximumDriveForce: 10_000f,
             maximumBrakeForce: 20_000f,
             maximumLateralForce: 20_000f,
-            maximumWheelAngularSpeedRadiansPerSecond: 50f,
+            maximumWheelAngularSpeedRadiansPerSecond,
             steeringScale: 1f,
             driveScale: 1f,
             brakeScale: 1f,
@@ -866,14 +1111,12 @@ public sealed class Vehicle3DTests
 
     private static Vehicle3DWheelDescription CreatePhysicalWheel(
         Vehicle3DWheelKind kind,
-        Physics3DBodyId carrier,
         Physics3DBodyId wheel,
         Vector3 localMountCm)
     {
         return Vehicle3DWheelDescription.Physical(
             kind,
             Vehicle3DWheelQueryKind.Raycast,
-            carrier,
             wheel,
             localMountCm,
             -Vector3.UnitY,
@@ -899,24 +1142,63 @@ public sealed class Vehicle3DTests
             CreateJointSettings());
     }
 
+    private static Vehicle3DWheelDescription CreateStressPhysicalWheel(
+        Vehicle3DWheelKind kind,
+        Physics3DBodyId wheel,
+        Vector3 localMountCm,
+        float axleMotorMaximumForce = 11_440_000f)
+    {
+        var alignment = new Physics3DSpringSettings(30f, 2f);
+        var suspension = new Physics3DSpringSettings(12f, 2f);
+        var limit = new Physics3DSpringSettings(30f, 2f);
+        var lineServo = new Physics3DServoSettings(1_500f, 0f, 500_000f);
+        var motor = new Physics3DMotorSettings(axleMotorMaximumForce, 0.001f);
+        var joint = new Vehicle3DWheelJointSettings(
+            alignment,
+            suspension,
+            limit,
+            lineServo,
+            motor);
+        return Vehicle3DWheelDescription.Physical(
+            kind,
+            Vehicle3DWheelQueryKind.Raycast,
+            wheel,
+            localMountCm,
+            -Vector3.UnitY,
+            Vector3.UnitZ,
+            radiusCm: 44f,
+            minimumLengthCm: 55f,
+            restLengthCm: 85f,
+            maximumLengthCm: 115f,
+            maximumSteeringAngleRadians: 0.55f,
+            suspensionStiffness: 10_000f,
+            suspensionDamping: 600f,
+            maximumSuspensionForce: 400_000f,
+            longitudinalGrip: 900f,
+            lateralGrip: 1_200f,
+            maximumDriveForce: 180_000f,
+            maximumBrakeForce: 260_000f,
+            maximumLateralForce: 220_000f,
+            maximumWheelAngularSpeedRadiansPerSecond: 45f,
+            steeringScale: 0f,
+            driveScale: 1f,
+            brakeScale: 1f,
+            GroundQueryLayer,
+            joint);
+    }
+
     private static Vehicle3DWheelJointSettings CreateJointSettings()
     {
         var alignment = new Physics3DSpringSettings(30f, 2f);
         var suspension = new Physics3DSpringSettings(12f, 2f);
         var limit = new Physics3DSpringSettings(30f, 2f);
-        var steering = new Physics3DSpringSettings(20f, 2f);
-        var hub = new Physics3DSpringSettings(30f, 2f);
         var lineServo = new Physics3DServoSettings(10_000f, 0f, 1_000_000f);
-        var steeringServo = new Physics3DServoSettings(20f, 0f, 1_000_000f);
         var motor = new Physics3DMotorSettings(1_000_000f, 0.001f);
         return new Vehicle3DWheelJointSettings(
             alignment,
             suspension,
             limit,
-            steering,
-            hub,
             lineServo,
-            steeringServo,
             motor);
     }
 
@@ -981,29 +1263,47 @@ public sealed class Vehicle3DTests
     private static Physics3DBodyId CreateDynamicBody(
         Physics3DWorld physics,
         Physics3DShapeId shape,
-        Vector3 positionCm)
+        Vector3 positionCm,
+        Quaternion? orientation = null)
     {
         return physics.CreateBody(CreateBody(
             Physics3DBodyKind.Dynamic,
             shape,
             positionCm,
             Vector3.Zero,
-            VehicleBodyLayer));
+            VehicleBodyLayer,
+            orientation));
     }
+
+    private static Physics3DShapeId CreateRealWheelShape(
+        Physics3DWorld physics,
+        Vehicle3DWheelKind wheelKind)
+        => wheelKind switch
+        {
+            Vehicle3DWheelKind.Physical => physics.RegisterCylinderShape(radiusCm: 20f, lengthCm: 16f),
+            Vehicle3DWheelKind.Box => physics.RegisterBoxShape(new Vector3(16f, 20f * MathF.Sqrt(2f), 20f * MathF.Sqrt(2f))),
+            _ => throw new ArgumentOutOfRangeException(nameof(wheelKind), wheelKind, "A real wheel kind is required.")
+        };
+
+    private static Quaternion RealWheelOrientation(Vehicle3DWheelKind wheelKind)
+        => wheelKind == Vehicle3DWheelKind.Physical
+            ? Quaternion.CreateFromAxisAngle(Vector3.UnitZ, -MathF.PI * 0.5f)
+            : Quaternion.Identity;
 
     private static Physics3DBodyDescription CreateBody(
         Physics3DBodyKind kind,
         Physics3DShapeId shape,
         Vector3 positionCm,
         Vector3 linearVelocityCmPerSecond,
-        LayerMask layer)
+        LayerMask layer,
+        Quaternion? orientation = null)
     {
         return new Physics3DBodyDescription(
             Entity.Null,
             kind,
             shape,
             positionCm,
-            Quaternion.Identity,
+            orientation ?? Quaternion.Identity,
             linearVelocityCmPerSecond,
             Vector3.Zero,
             kind == Physics3DBodyKind.Dynamic ? TestDynamicBodyMass : 0f,

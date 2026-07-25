@@ -1169,11 +1169,11 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
                 ClickWhenPresent(engine, surfaceHost, "physics3d-wheel-box");
                 TickUntil(engine, () => runtime.WheelLabMode == Vehicle3DWheelKind.Box, maximumFrames: 128);
                 WaitForObservedPhysicsStep(engine, runtime, simulation, scene);
-                AssertWheelLabModeEvidence(runtime, Vehicle3DWheelKind.Box, "Box Wheels selected");
+                AssertWheelLabModeEvidence(runtime, Vehicle3DWheelKind.Box, "Box Wheels is ready at the shared start");
                 ClickWhenPresent(engine, surfaceHost, "physics3d-wheel-physical");
                 TickUntil(engine, () => runtime.WheelLabMode == Vehicle3DWheelKind.Physical, maximumFrames: 128);
                 WaitForObservedPhysicsStep(engine, runtime, simulation, scene);
-                AssertWheelLabModeEvidence(runtime, Vehicle3DWheelKind.Physical, "Physical wheels selected");
+                AssertWheelLabModeEvidence(runtime, Vehicle3DWheelKind.Physical, "Physical Wheels is ready at the shared start");
                 break;
             }
             case Physics3DShowcaseScene.RagdollLab:
@@ -1307,7 +1307,7 @@ public sealed class CapabilityStandardPhysics3DShowcaseAcceptanceTests
             Assert.That(runtime.WheelLabMode, Is.EqualTo(expectedMode));
             Assert.That(runtime.WheelLabVehicleCount, Is.EqualTo(1));
             Assert.That(runtime.WheelLabWheelCountValue, Is.EqualTo(4));
-            Assert.That(runtime.WheelLabModeBodyCount, Is.EqualTo(8));
+            Assert.That(runtime.WheelLabModeBodyCount, Is.EqualTo(4));
             Assert.That(panel.WheelSummary, Does.StartWith(
                 expectedMode == Vehicle3DWheelKind.Physical ? "Physical Wheels" : "Box Wheels"));
             if (expectedAction != null)

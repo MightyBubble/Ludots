@@ -12,7 +12,7 @@
   "FixedStepHz": 30,
   "MaximumPhysicsStepsPerSourceTick": 1,
   "SolverSubstepCount": 1,
-  "SolverVelocityIterationCount": 8,
+  "SolverVelocityIterationCount": 16,
   "GravityCmPerSecondSquared": { "X": 0.0, "Y": -981.0, "Z": 0.0 },
   "LinearDamping": 0.0,
   "AngularDamping": 0.03,

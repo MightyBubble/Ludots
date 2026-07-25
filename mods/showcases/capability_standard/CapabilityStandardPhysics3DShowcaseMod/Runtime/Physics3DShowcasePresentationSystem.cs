@@ -21,6 +21,7 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
     private readonly PresentationRequestBuffer _requests;
     private readonly int _cubeMeshId;
     private readonly int _sphereMeshId;
+    private readonly int _cylinderMeshId;
     private Physics3DShowcasePanelState _panelState = Physics3DShowcasePanelState.Empty;
     private float _panelRefreshAccumulator;
     private bool _hasPanelState;
@@ -36,9 +37,10 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
             ?? throw new InvalidOperationException("Physics3D showcase requires MeshAssetRegistry.");
         _cubeMeshId = meshes.GetId(WellKnownMeshKeys.Cube);
         _sphereMeshId = meshes.GetId(WellKnownMeshKeys.Sphere);
-        if (_cubeMeshId <= 0 || _sphereMeshId <= 0)
+        _cylinderMeshId = meshes.GetId(WellKnownMeshKeys.Cylinder);
+        if (_cubeMeshId <= 0 || _sphereMeshId <= 0 || _cylinderMeshId <= 0)
         {
-            throw new InvalidOperationException("Physics3D showcase requires registered cube and sphere meshes.");
+            throw new InvalidOperationException("Physics3D showcase requires registered cube, sphere, and cylinder meshes.");
         }
     }
 
@@ -204,6 +206,15 @@ internal sealed class Physics3DShowcasePresentationSystem : ISystem<float>
                     state.Orientation,
                     visualSizeCm.X,
                     capsuleCylinderLengthCm,
+                    color,
+                    stableId);
+                break;
+            case Physics3DShapeKind.Cylinder:
+                AddPrimitive(
+                    _cylinderMeshId,
+                    ToMeters(state.PositionCm),
+                    state.Orientation,
+                    ToMeters(visualSizeCm),
                     color,
                     stableId);
                 break;
