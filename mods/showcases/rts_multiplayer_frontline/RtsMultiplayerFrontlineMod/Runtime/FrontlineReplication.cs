@@ -13,6 +13,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Networking.Replication;
@@ -251,6 +252,7 @@ internal sealed class FrontlineClientTemplateFactory
 
     private readonly Dictionary<string, EntityTemplate> _templates = new(StringComparer.Ordinal);
     private readonly string[] _templateIds = new string[5];
+    private readonly int[] _templateKeyIds = new int[5];
     private readonly string[] _entityContexts = new string[5];
     private readonly World _world;
     private readonly EntityBuilder _builder;
@@ -261,9 +263,11 @@ internal sealed class FrontlineClientTemplateFactory
         IEnumerable<EntityTemplate> templates,
         ReadOnlySpan<FrontlineReplicationSpec> specs,
         int matchStateSchemaId,
+        EntityTemplateKeyRegistry templateKeys,
         PresentationStableIdAllocator stableIds)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
+        ArgumentNullException.ThrowIfNull(templateKeys);
         _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         ArgumentNullException.ThrowIfNull(templates);
         if (specs.Length != 4)
@@ -308,6 +312,13 @@ internal sealed class FrontlineClientTemplateFactory
 
             _templates.Add(template.Id, template);
             _templateIds[kindIndex] = template.Id;
+            int templateKeyId = templateKeys.GetId(template.Id);
+            if (templateKeyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline replicated template '{template.Id}' is missing from the formal template key registry.");
+            }
+            _templateKeyIds[kindIndex] = templateKeyId;
             _entityContexts[kindIndex] = $"RTS Frontline replicated {(FrontlineReplicationKind)kindIndex}";
         }
 
@@ -339,6 +350,7 @@ internal sealed class FrontlineClientTemplateFactory
             .UseTemplate(_templateIds[index])
             .WithEntityContext(_entityContexts[index])
             .Build();
+        world.Add(entity, new EntityTemplateKeyRef { TemplateKeyId = _templateKeyIds[index] });
         if (kind != FrontlineReplicationKind.MatchState)
         {
             if (world.Has<PresentationStableId>(entity))
@@ -1553,6 +1565,7 @@ internal static class FrontlineReplication
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             stableIds);
         OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
             ?? throw new InvalidOperationException("RTS Frontline client replication requires OwnershipResolver.");

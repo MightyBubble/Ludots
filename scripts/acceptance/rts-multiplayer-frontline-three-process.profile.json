@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -30,6 +30,52 @@
       ]
     }
   },
+  "clientPresentation": {
+    "minimumVisibleEntities": 1,
+    "minimumActivePerformers": 1,
+    "minimumAuthoredPrimitives": 1,
+    "minimumSubmittedPrimitiveInstances": 1,
+    "minimumSubmittedPrimitiveBatches": 1,
+    "minimumPrefabVisuals": 1
+  },
+  "requiredPresentationReceipts": [
+    {
+      "role": "core",
+      "frames": [600],
+      "template": "rts.frontline.core.base",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
+      "minimumShortEdgePx": 24,
+      "minimumAreaPx2": 700
+    },
+    {
+      "role": "harvester",
+      "frames": [600],
+      "template": "rts.frontline.harvester.chassis",
+      "minimumSubmitted": 2,
+      "minimumOnscreen": 2,
+      "minimumShortEdgePx": 16,
+      "minimumAreaPx2": 320
+    },
+    {
+      "role": "infantry",
+      "frames": [600],
+      "template": "rts.frontline.infantry.body",
+      "minimumSubmitted": 2,
+      "minimumOnscreen": 2,
+      "minimumShortEdgePx": 14,
+      "minimumAreaPx2": 220
+    },
+    {
+      "role": "crystal",
+      "frames": [600],
+      "template": "rts.frontline.crystal.center",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
+      "minimumShortEdgePx": 18,
+      "minimumAreaPx2": 360
+    }
+  ],
   "clientInstanceIds": [
     1,
     2

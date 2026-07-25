@@ -272,6 +272,7 @@ public sealed class FrontlineHudConfig
     public string CommandQueuedText { get; set; } = string.Empty;
     public string CommandPendingText { get; set; } = string.Empty;
     public string CommandStartedText { get; set; } = string.Empty;
+    public FrontlineHudLayoutConfig Layout { get; set; } = new();
     public Dictionary<string, string> CommandSubmitRejectionText { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, string> CommandAdmissionRejectionText { get; set; } = new(StringComparer.Ordinal);
 
@@ -312,6 +313,8 @@ public sealed class FrontlineHudConfig
         {
             throw new InvalidOperationException("RTS Frontline HUD delayed RTT threshold must be positive.");
         }
+
+        Layout.Validate();
 
         _submitResultText = CompileSubmitResultText(CommandSubmitRejectionText);
         _admissionResultText = CompileAdmissionResultText(CommandAdmissionRejectionText);
@@ -398,6 +401,39 @@ public sealed class FrontlineHudConfig
         }
 
         return compiled;
+    }
+}
+
+public sealed class FrontlineHudLayoutConfig
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int Padding { get; set; }
+    public int InstructionColumnX { get; set; }
+    public int TitleFontSize { get; set; }
+    public int StatusFontSize { get; set; }
+    public int BodyFontSize { get; set; }
+    public int LineHeight { get; set; }
+    public int OutcomeWidth { get; set; }
+    public int OutcomeHeight { get; set; }
+    public int OutcomeGap { get; set; }
+
+    internal void Validate()
+    {
+        if (X < 0 || Y < 0 ||
+            Width < 640 || Height < 140 ||
+            Padding < 8 ||
+            InstructionColumnX < 280 || InstructionColumnX > Width - 280 ||
+            TitleFontSize < 16 || StatusFontSize < 12 || BodyFontSize < 10 ||
+            LineHeight < BodyFontSize + 4 ||
+            OutcomeWidth < 240 || OutcomeHeight < 44 || OutcomeGap < 0 ||
+            checked((Padding * 2) + TitleFontSize + 6 + (LineHeight * 4)) > Height)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline HUD layout must provide two readable 1280x720 status and instruction columns.");
+        }
     }
 }
 

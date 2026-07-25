@@ -9,6 +9,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Diagnostics;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
@@ -59,6 +60,9 @@ namespace Ludots.Client.Raylib.Rendering
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
         private readonly int _maxModelInstancesPerDraw;
+        private PresentationFrameReceiptBuffer? _frameReceipts;
+        private int _receiptSourceStableId;
+        private int _receiptSourceTemplateId;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -117,10 +121,15 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer? skinnedBatch,
             MeshAssetRegistry meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null)
+            IVisualHeightmap? visualHeightmap = null,
+            PresentationFrameReceiptBuffer? frameReceipts = null)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            _frameReceipts = frameReceipts;
+            _receiptSourceStableId = 0;
+            _receiptSourceTemplateId = 0;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -200,6 +209,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (IsHostSurfaceLane(in item))
                 {
                     LastImmediateSkippedCount++;
@@ -246,6 +256,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (IsHostSurfaceLane(in item))
                 {
                     LastImmediateSkippedCount++;
@@ -302,6 +313,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (IsHostSurfaceLane(in item))
                 {
                     continue;
@@ -681,15 +693,23 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 case MeshAssetType.Primitive:
                     SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    RecordSubmittedMesh(in visual);
                     break;
                 case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    if (DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color))
+                    {
+                        RecordSubmittedMesh(in visual);
+                    }
                     break;
                 case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                    if (DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera))
+                    {
+                        RecordSubmittedMesh(in visual);
+                    }
                     break;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMesh(in visual);
+                    RecordSubmittedMesh(in visual);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -703,15 +723,23 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 case MeshAssetType.Primitive:
                     DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    RecordSubmittedMesh(in visual);
                     break;
                 case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    if (DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color))
+                    {
+                        RecordSubmittedMesh(in visual);
+                    }
                     break;
                 case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                    if (DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera))
+                    {
+                        RecordSubmittedMesh(in visual);
+                    }
                     break;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMesh(in visual);
+                    RecordSubmittedMesh(in visual);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -808,6 +836,23 @@ namespace Ludots.Client.Raylib.Rendering
                 float normalLength = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Abs(visual.Scale.Z)) * 0.4f);
                 Rl.DrawLine3D(visual.Position, visual.Position + (up * normalLength), ToRaylibColor(MultiplyColor(overlayColor, 1f, 1f, 1f, 0.8f)));
             }
+        }
+
+        private void SetReceiptSource(in PrimitiveDrawItem item)
+        {
+            _receiptSourceStableId = item.StableId;
+            _receiptSourceTemplateId = item.TemplateId;
+        }
+
+        private void RecordSubmittedMesh(in PrefabFinalizedVisual visual)
+        {
+            _frameReceipts?.RecordSubmitted(
+                _receiptSourceStableId,
+                _receiptSourceTemplateId,
+                visual.Position,
+                visual.Rotation,
+                visual.Scale,
+                visual.LocalBounds);
         }
 
         private void TrackVisualKind(PrefabVisualPartKind kind)
@@ -1107,12 +1152,12 @@ namespace Ludots.Client.Raylib.Rendering
                 from.W + (to.W - from.W) * t);
         }
 
-        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
+        private bool DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
             if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
             {
                 WarnMissingModelSkipped(meshAssetId, stableId: 0, "model draw");
-                return;
+                return false;
             }
 
             var tint = ToRaylibColor(color);
@@ -1120,13 +1165,14 @@ namespace Ludots.Client.Raylib.Rendering
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
+            return true;
         }
 
-        private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
+        private bool DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
             {
-                return;
+                return false;
             }
 
             float height = MathF.Max(scale.Y, 0.05f);
@@ -1141,6 +1187,7 @@ namespace Ludots.Client.Raylib.Rendering
                 meshAssetId,
                 $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
             Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+            return true;
         }
 
         private void DrawProceduralMesh(in PrefabFinalizedVisual visual)

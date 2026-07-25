@@ -255,6 +255,7 @@ namespace Ludots.Tool
             if (!string.IsNullOrWhiteSpace(source.Id)) target.Id = source.Id;
             if (!string.IsNullOrWhiteSpace(source.ParentId)) target.ParentId = source.ParentId;
             if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
 
             if (source.Dependencies != null)
             {

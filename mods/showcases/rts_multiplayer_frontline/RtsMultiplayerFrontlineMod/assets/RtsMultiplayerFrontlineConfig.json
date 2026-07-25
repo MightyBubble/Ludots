@@ -28,26 +28,41 @@
   "sides": [
     {
       "id": "north",
-      "displayName": "Northern commander",
+      "displayName": "North",
       "playerId": 1,
       "teamId": 1,
       "visionScopeKeyId": 1
     },
     {
       "id": "south",
-      "displayName": "Southern commander",
+      "displayName": "South",
       "playerId": 2,
       "teamId": 2,
       "visionScopeKeyId": 2
     }
   ],
   "hud": {
+    "layout": {
+      "x": 14,
+      "y": 14,
+      "width": 920,
+      "height": 154,
+      "padding": 14,
+      "instructionColumnX": 450,
+      "titleFontSize": 22,
+      "statusFontSize": 16,
+      "bodyFontSize": 14,
+      "lineHeight": 22,
+      "outcomeWidth": 430,
+      "outcomeHeight": 54,
+      "outcomeGap": 10
+    },
     "title": "FRONTLINE DUEL",
-    "objective": "Break the opposing command core before yours falls.",
-    "gatherHint": "Select harvesters, then right-click a crystal field to bring home 20 crystals.",
-    "trainHint": "Select your command core and press Q to train infantry for 60 crystals.",
-    "attackHint": "Select infantry, then right-click an enemy unit or core to engage.",
-    "readyHint": "Press F5 to toggle ready.",
+    "objective": "DESTROY THE ENEMY COMMAND CORE",
+    "gatherHint": "1  Harvesters: right-click a crystal field.",
+    "trainHint": "2  Command core: press Q to train infantry.",
+    "attackHint": "3  Infantry: right-click an enemy or core.",
+    "readyHint": "Press F5 when ready.",
     "waitingText": "Waiting for both commanders to ready up.",
     "countdownText": "Battle begins in",
     "readyText": "READY",

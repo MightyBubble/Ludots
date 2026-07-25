@@ -1,14 +1,43 @@
 {
   "Id": "rts_duel_v1",
+  "VisualHeightmapAsset": "assets/terrain/rts_duel_v1_shoreline.vhtm",
+  "TerrainPresentation": {
+    "Source": "BoardTerrain",
+    "BoardName": "default"
+  },
   "Tags": ["rts", "multiplayer", "frontline", "duel"],
+  "Metadata": {
+    "rts.commandSourceUi": {
+      "toolbarVisible": false,
+      "skillBarVisible": false,
+      "cameraFocusDistanceCm": 5200,
+      "cameraFocusTowardDefaultTargetCm": 1800,
+      "commandDeck": {
+        "visible": true,
+        "anchor": "BottomCenter",
+        "offsetX": 0,
+        "offsetY": 14,
+        "widthPx": 520,
+        "heightPx": 260
+      },
+      "orderMonitor": {
+        "visible": false,
+        "anchor": "TopRight",
+        "offsetX": 28,
+        "offsetY": 126,
+        "widthPx": 390,
+        "heightPx": 428
+      }
+    }
+  },
   "DefaultCamera": {
-    "VirtualCameraId": "Rts",
+    "VirtualCameraId": "Rts.Frontline",
     "TargetXCm": 15000,
     "TargetYCm": 15000,
     "Yaw": 180,
-    "Pitch": 56,
-    "DistanceCm": 21000,
-    "FovYDeg": 60
+    "Pitch": 54,
+    "DistanceCm": 5200,
+    "FovYDeg": 46
   },
   "Boards": [
     { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
@@ -68,7 +97,7 @@
         "Name": { "Value": "Northern Harvester A" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 8200, "Y": 14200 } },
+        "WorldPositionCm": { "Value": { "X": 8200, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -78,7 +107,7 @@
         "Name": { "Value": "Northern Harvester B" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 8200, "Y": 15800 } },
+        "WorldPositionCm": { "Value": { "X": 8200, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -88,7 +117,7 @@
         "Name": { "Value": "Northern Infantry A" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 9300, "Y": 14300 } },
+        "WorldPositionCm": { "Value": { "X": 9300, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -98,7 +127,7 @@
         "Name": { "Value": "Northern Infantry B" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 9300, "Y": 15700 } },
+        "WorldPositionCm": { "Value": { "X": 9300, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -138,7 +167,7 @@
         "Name": { "Value": "Southern Harvester A" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 21800, "Y": 14200 } },
+        "WorldPositionCm": { "Value": { "X": 21800, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -148,7 +177,7 @@
         "Name": { "Value": "Southern Harvester B" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 21800, "Y": 15800 } },
+        "WorldPositionCm": { "Value": { "X": 21800, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -158,7 +187,7 @@
         "Name": { "Value": "Southern Infantry A" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 20700, "Y": 14300 } },
+        "WorldPositionCm": { "Value": { "X": 20700, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -168,7 +197,7 @@
         "Name": { "Value": "Southern Infantry B" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 20700, "Y": 15700 } },
+        "WorldPositionCm": { "Value": { "X": 20700, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     }

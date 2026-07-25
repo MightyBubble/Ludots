@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
@@ -20,6 +21,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Diagnostics;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
@@ -389,6 +391,20 @@ namespace Ludots.Adapter.Raylib
                             CoreServiceKeys.VisualHeightmap,
                             out IVisualHeightmap? visualHeightmapForFrame) &&
                             visualHeightmapForFrame is IVisualHeightmapRenderSource;
+                        TerrainPresentationBindingConfig? terrainPresentation =
+                            engine.CurrentMapSession?.MapConfig?.TerrainPresentation;
+                        ResolvedTerrainPresentation? resolvedTerrainPresentation =
+                            engine.CurrentMapSession?.TerrainPresentation;
+                        if (terrainPresentation != null && resolvedTerrainPresentation == null)
+                        {
+                            throw new InvalidOperationException(
+                                "The active map declares terrain presentation, but Core did not resolve its terrain source.");
+                        }
+                        bool renderVisualHeightmapTerrain =
+                            drawVisualHeightmap &&
+                            (resolvedTerrainPresentation?.Source == TerrainPresentationSource.VisualHeightmap ||
+                                terrainPresentation == null) &&
+                            hasVisualHeightmap;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
@@ -474,7 +490,7 @@ namespace Ludots.Adapter.Raylib
                         Restore3DDepthState();
 
                         if (drawDebugDraw &&
-                            !(drawVisualHeightmap && hasVisualHeightmap) &&
+                            !renderVisualHeightmapTerrain &&
                             !hostDebugGuidesSuppressed)
                         {
                             DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
@@ -486,6 +502,14 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         if (drawVisualHeightmap &&
+                            terrainPresentation?.Source == TerrainPresentationSource.VisualHeightmap &&
+                            !hasVisualHeightmap)
+                        {
+                            throw new InvalidOperationException(
+                                "The active map explicitly requires VisualHeightmap terrain presentation, but no renderable visual heightmap is bound.");
+                        }
+
+                        if (renderVisualHeightmapTerrain &&
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                         {
@@ -500,7 +524,10 @@ namespace Ludots.Adapter.Raylib
                         else if (drawTerrain)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
-                            terrainRenderer.Render(engine.VertexMap, activeCamera);
+                            VertexMap? boardTerrain = resolvedTerrainPresentation?.Source == TerrainPresentationSource.BoardTerrain
+                                ? resolvedTerrainPresentation.BoardTerrain
+                                : engine.VertexMap;
+                            terrainRenderer.Render(boardTerrain, activeCamera);
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
                                 terrainRenderer.ChunkBuildMsLastFrame,
@@ -529,6 +556,9 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         bool benchmarkDrew = false;
+                        PresentationFrameReceiptBuffer? frameReceipts =
+                            engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer);
+                        frameReceipts?.BeginFrame();
                         if (benchmarkRenderer != null)
                         {
                             benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
@@ -548,7 +578,15 @@ namespace Ludots.Adapter.Raylib
                             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                            primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
+                            primitiveRenderer.Draw(
+                                draw,
+                                activeCamera,
+                                snapshot,
+                                skinnedBatch,
+                                meshes,
+                                renderDebug.AcceptanceScaleMultiplier,
+                                visualHeightmap,
+                                frameReceipts);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
                                 primitiveRenderer.LastInstancedInstances,
@@ -697,6 +735,7 @@ namespace Ludots.Adapter.Raylib
                             {
                                 AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
                             }
+                            AppendPresentationFrameReceiptDiagnostics(engine, diagnosticPath);
 
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
@@ -816,6 +855,41 @@ namespace Ludots.Adapter.Raylib
             }
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+        }
+
+        private static void AppendPresentationFrameReceiptDiagnostics(GameEngine engine, string? diagnosticPath)
+        {
+            PresentationFrameReceiptBuffer receipts = engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the receipt buffer service.");
+            IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the screen projector service.");
+            if (projector is not IProjectionSnapshotProvider projectionProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Screen projector '{projector.GetType().FullName}' does not provide projection snapshots required by presentation receipt diagnostics.");
+            }
+            if (!projectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+            {
+                throw new InvalidOperationException("Presentation frame receipt diagnostics could not resolve a valid projection snapshot.");
+            }
+
+            PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the performer definition registry.");
+            PresentationTemplateReceiptSummary[] summaries = receipts.BuildTemplateSummaries(in projection);
+            for (int i = 0; i < summaries.Length; i++)
+            {
+                ref readonly PresentationTemplateReceiptSummary summary = ref summaries[i];
+                string template = definitions.GetName(summary.TemplateId);
+                if (string.IsNullOrWhiteSpace(template))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation receipt references performer template id {summary.TemplateId} without a registered name.");
+                }
+
+                AppendRaylibDiagnostic(
+                    diagnosticPath,
+                    $"presentation-receipt template={template} templateId={summary.TemplateId} submitted={summary.SubmittedCount} onscreen={summary.OnscreenCount} minShortEdgePx={summary.MinimumShortEdgePx:F2} minAreaPx2={summary.MinimumAreaPx2:F2}");
+            }
         }
 
         private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)

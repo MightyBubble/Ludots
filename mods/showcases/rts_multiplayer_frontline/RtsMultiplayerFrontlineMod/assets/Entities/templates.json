@@ -50,8 +50,9 @@
       "VisualTransform": {
         "Position": { "X": 0, "Y": 0, "Z": 0 },
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 2.3, "Y": 1.8, "Z": 2.3 }
+        "Scale": { "X": 3.0, "Y": 2.2, "Z": 3.0 }
       },
+      "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 701 },
       "VisionEmitterCm": {
@@ -100,8 +101,9 @@
       "VisualTransform": {
         "Position": { "X": 0, "Y": 0, "Z": 0 },
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 1.35, "Y": 0.9, "Z": 1.8 }
+        "Scale": { "X": 1.8, "Y": 1.4, "Z": 2.4 }
       },
+      "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 702 },
       "VisionEmitterCm": {
@@ -152,8 +154,9 @@
       "VisualTransform": {
         "Position": { "X": 0, "Y": 0, "Z": 0 },
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 0.7, "Y": 1.4, "Z": 0.7 }
+        "Scale": { "X": 1.15, "Y": 1.65, "Z": 1.15 }
       },
+      "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 703 },
       "VisionEmitterCm": {
@@ -202,8 +205,9 @@
       "VisualTransform": {
         "Position": { "X": 0, "Y": 0, "Z": 0 },
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 1.6, "Y": 0.8, "Z": 1.6 }
+        "Scale": { "X": 2.2, "Y": 1.6, "Z": 2.2 }
       },
+      "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 704 },
       "GameplayTagContainer": {},

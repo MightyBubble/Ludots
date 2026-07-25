@@ -195,6 +195,7 @@ namespace Ludots.Core.Map
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
             if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
             if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
             if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
             if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;

@@ -23,7 +23,12 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
 using Ludots.UI;
@@ -54,6 +59,27 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
     [Test]
     [Description(
+        "Feature: The opening battlefield preserves its authored terrain\n" +
+        "  Given Frontline uses a visual heightmap for grounding\n" +
+        "  When the map presentation contract is resolved\n" +
+        "  Then the default board remains the visible terrain surface")]
+    public void GivenFrontlineTerrain_WhenMapResolves_ThenBoardSurfaceAndHeightTruthAreBothDeclared()
+    {
+        using GameEngine engine = CreateStartedEngine();
+
+        var mapConfig = engine.MapManager.LoadMap(MapId)
+            ?? throw new InvalidOperationException("Frontline map config is missing.");
+
+        Assert.That(
+            mapConfig.VisualHeightmapAsset,
+            Is.EqualTo("assets/terrain/rts_duel_v1_shoreline.vhtm"));
+        Assert.That(mapConfig.TerrainPresentation, Is.Not.Null);
+        Assert.That(mapConfig.TerrainPresentation!.Source, Is.EqualTo(TerrainPresentationSource.BoardTerrain));
+        Assert.That(mapConfig.TerrainPresentation.BoardName, Is.EqualTo("default"));
+    }
+
+    [Test]
+    [Description(
         "Feature: Fair match start\n" +
         "  Given two players join the Frontline duel\n" +
         "  When the battlefield finishes loading\n" +
@@ -70,6 +96,68 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
         Assert.That(ReadSnapshot(engine, "Phase"), Is.EqualTo("WaitingForPlayers"));
         Assert.That(engine.TriggerManager.Errors, Is.Empty);
+    }
+
+    [Test]
+    [Description(
+        "Feature: Readable multiplayer battlefield\n" +
+        "  Given a new player enters the Frontline duel\n" +
+        "  When the battlefield finishes loading\n" +
+        "  Then command cores, harvesters, infantry, and crystal fields each appear with a distinct visible battlefield shape")]
+    public void GivenNewPlayer_WhenBattleLoads_ThenEveryCombatEntityHasReadablePresentation()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        Tick(engine, 2);
+
+        PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+            ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
+        PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+            ?? throw new InvalidOperationException("PerformerEntityRuntime service is missing.");
+        PrimitiveDrawBuffer primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+            ?? throw new InvalidOperationException("PrimitiveDrawBuffer service is missing.");
+        IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+            ?? throw new InvalidOperationException("The Frontline battlefield must register its declared visual heightmap.");
+
+        AssertReadablePresentation(
+            engine.World,
+            definitions,
+            performers,
+            "rts.frontline.visual.core",
+            "Command Core");
+        AssertReadablePresentation(
+            engine.World,
+            definitions,
+            performers,
+            "rts.frontline.visual.harvester",
+            "Harvester");
+        AssertReadablePresentation(
+            engine.World,
+            definitions,
+            performers,
+            "rts.frontline.visual.infantry",
+            "Infantry");
+        AssertReadablePresentation(
+            engine.World,
+            definitions,
+            performers,
+            "rts.frontline.visual.crystal",
+            "Crystal Field");
+        AssertCombatEntitiesGrounded(engine.World, heightmap);
+
+        int visiblePrimitiveCount = 0;
+        foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
+        {
+            if (item.Visibility == Ludots.Core.Presentation.Components.VisualVisibility.Visible)
+            {
+                visiblePrimitiveCount++;
+            }
+        }
+
+        Assert.That(
+            visiblePrimitiveCount,
+            Is.GreaterThanOrEqualTo(12),
+            "The opening battlefield must emit visible geometry for its twelve combat entities.");
     }
 
     [Test]
@@ -557,7 +645,12 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         {
             Assert.That(
                 trainingSchema.AllowedSubmitModes,
-                Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
+                Is.EquivalentTo(new[]
+                {
+                    OrderSubmitMode.Immediate,
+                    OrderSubmitMode.Queued,
+                    OrderSubmitMode.PersistentQueued,
+                }));
             Assert.That(
                 networkProfile.MaxPastTargetTicks,
                 Is.GreaterThanOrEqualTo(
@@ -781,14 +874,23 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             ?? throw new InvalidOperationException("ScreenOverlayBuffer service is missing.");
         string hud = string.Join("\n", ReadOverlayText(overlay));
 
-        Assert.That(hud, Does.Contain("Break the opposing command core"));
+        Assert.That(hud, Does.Contain("DESTROY THE ENEMY COMMAND CORE"));
         Assert.That(hud, Does.Contain("Waiting for both commanders"));
-        Assert.That(hud, Does.Contain("Northern commander: NOT READY"));
-        Assert.That(hud, Does.Contain("Press F5 to toggle ready"));
-        Assert.That(hud, Does.Contain("right-click a crystal field"));
-        Assert.That(hud, Does.Contain("press Q to train infantry"));
-        Assert.That(hud, Does.Contain("right-click an enemy"));
+        Assert.That(hud, Does.Contain("North: NOT READY"));
+        Assert.That(hud, Does.Contain("Press F5 when ready"));
+        Assert.That(hud, Does.Contain("1  Harvesters: right-click a crystal field"));
+        Assert.That(hud, Does.Contain("2  Command core: press Q to train infantry"));
+        Assert.That(hud, Does.Contain("3  Infantry: right-click an enemy or core"));
         Assert.That(hud, Does.Not.Match("(?i)packet|latency|ping|network tick|queue depth|snapshot id|ack"));
+
+        FrontlineHudLayoutConfig layout = GetFrontlineRuntime(engine).Config.Hud.Layout;
+        Assert.Multiple(() =>
+        {
+            Assert.That(layout.Height, Is.LessThanOrEqualTo(160), "The first-time HUD must leave the battlefield visible.");
+            Assert.That(layout.InstructionColumnX, Is.GreaterThanOrEqualTo(280));
+            Assert.That(layout.InstructionColumnX, Is.LessThan(layout.Width - 280));
+            Assert.That(layout.InstructionColumnX, Is.GreaterThanOrEqualTo(440), "Lobby side status and instructions need separate readable columns.");
+        });
     }
 
     [Test]
@@ -803,6 +905,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string modRoot = Path.Combine(repoRoot, "mods", "showcases", "rts_multiplayer_frontline", "RtsMultiplayerFrontlineMod");
         using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "RtsMultiplayerFrontlineConfig.json")));
         using JsonDocument map = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Maps", "rts_duel_v1.json")));
+        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json")));
         using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Entities", "templates.json")));
 
         JsonElement sides = config.RootElement.GetProperty("sides");
@@ -818,6 +921,23 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         int southCoreX = FindMapEntityX(entities, "Southern Command Core");
         int centerX = map.RootElement.GetProperty("DefaultCamera").GetProperty("TargetXCm").GetInt32();
         Assert.That(northCoreX + southCoreX, Is.EqualTo(centerX * 2));
+        JsonElement openingCamera = map.RootElement.GetProperty("DefaultCamera");
+        JsonElement frontlineCamera = cameras.RootElement.EnumerateArray()
+            .Single(candidate => candidate.GetProperty("id").GetString() == openingCamera.GetProperty("VirtualCameraId").GetString());
+        Assert.Multiple(() =>
+        {
+            Assert.That(openingCamera.GetProperty("DistanceCm").GetInt32(), Is.EqualTo(5200));
+            Assert.That(openingCamera.GetProperty("FovYDeg").GetInt32(), Is.EqualTo(46));
+            Assert.That(frontlineCamera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"));
+            Assert.That(frontlineCamera.GetProperty("enableGrabDrag").GetBoolean(), Is.True);
+            Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("VisualHeightmap"));
+            JsonElement commandUi = map.RootElement.GetProperty("Metadata").GetProperty("rts.commandSourceUi");
+            Assert.That(commandUi.GetProperty("cameraFocusDistanceCm").GetInt32(), Is.EqualTo(5200));
+            Assert.That(commandUi.GetProperty("cameraFocusTowardDefaultTargetCm").GetInt32(), Is.EqualTo(1800));
+            Assert.That(commandUi.GetProperty("toolbarVisible").GetBoolean(), Is.False);
+            Assert.That(commandUi.GetProperty("skillBarVisible").GetBoolean(), Is.False);
+            Assert.That(commandUi.GetProperty("orderMonitor").GetProperty("visible").GetBoolean(), Is.False);
+        });
 
         string[] sourceFiles = Directory.GetFiles(modRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
@@ -971,12 +1091,27 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         InstallDummyInput(engine);
 
         var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
+        uiRoot.Resize(1280f, 720f);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1280f, 720f));
         engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
         engine.Start();
         return engine;
+    }
+
+    private sealed class StubViewController : IViewController
+    {
+        public StubViewController(float width, float height)
+        {
+            Resolution = new Vector2(width, height);
+        }
+
+        public Vector2 Resolution { get; }
+
+        public float Fov => 60f;
+
+        public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
     }
 
     private static NetworkRuntimeConfig LoadNetworkProfile()
@@ -1017,6 +1152,77 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(ReadAttribute(world, core, RequireAttribute("Crystals")), Is.EqualTo(expectedCrystals));
         Assert.That(CountNamed(world, $"{namePrefix} Harvester"), Is.EqualTo(2));
         Assert.That(CountNamed(world, $"{namePrefix} Infantry"), Is.EqualTo(2));
+    }
+
+    private static void AssertReadablePresentation(
+        World world,
+        PerformerDefinitionRegistry definitions,
+        PerformerEntityRuntime performers,
+        string performerKey,
+        string entityNameFragment)
+    {
+        int definitionId = definitions.GetId(performerKey);
+        Assert.That(
+            definitionId,
+            Is.GreaterThan(0),
+            $"Frontline must declare the role-specific performer '{performerKey}'.");
+
+        int entityCount = 0;
+        var query = new QueryDescription().WithAll<Name, VisualTransform>();
+        foreach (ref Chunk chunk in world.Query(in query))
+        {
+            ReadOnlySpan<Name> names = chunk.GetSpan<Name>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                if (!names[index].Value.Contains(entityNameFragment, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                entityCount++;
+                Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref first, index);
+                Assert.That(
+                    performers.GetActiveByOwnerDefinition(definitionId, entity),
+                    Has.Count.EqualTo(1),
+                    $"'{names[index].Value}' must own exactly one '{performerKey}' root performer.");
+            }
+        }
+
+        Assert.That(entityCount, Is.GreaterThan(0), $"No '{entityNameFragment}' entities were loaded for presentation validation.");
+    }
+
+    private static void AssertCombatEntitiesGrounded(World world, IVisualHeightmap heightmap)
+    {
+        int combatEntityCount = 0;
+        var query = new QueryDescription()
+            .WithAll<WorldPositionCm, VisualTransform, VisualHeightmapSampleState>()
+            .WithAny<FrontlineCore, FrontlineHarvester, FrontlineInfantry, FrontlineCrystalNode>();
+        foreach (ref Chunk chunk in world.Query(in query))
+        {
+            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            ReadOnlySpan<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+            ReadOnlySpan<VisualHeightmapSampleState> samples = chunk.GetSpan<VisualHeightmapSampleState>();
+            foreach (int index in chunk)
+            {
+                Vector2 worldCm = positions[index].Value.ToVector2();
+                Assert.That(
+                    heightmap.TrySampleHeightCm(worldCm.X, worldCm.Y, out float expectedHeightCm),
+                    Is.True,
+                    "Every opening combat entity must lie inside the battlefield visual heightmap.");
+                byte sampled = samples[index].Sampled;
+                float visualY = visuals[index].Position.Y;
+                Assert.Multiple(() =>
+                {
+                    Assert.That(sampled, Is.EqualTo(1), "Terrain grounding must complete before the battle is shown.");
+                    Assert.That(visualY, Is.EqualTo(expectedHeightCm * 0.01f).Within(0.01f));
+                    Assert.That(visualY, Is.GreaterThan(0.1f), "The opening unit must stand above the shoreline surface instead of remaining at Y=0.");
+                });
+                combatEntityCount++;
+            }
+        }
+
+        Assert.That(combatEntityCount, Is.EqualTo(12), "The opening battlefield must ground all twelve combat entities.");
     }
 
     private static void EnqueueCastAbility(GameEngine engine, Entity core, int playerId, int slot)

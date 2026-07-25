@@ -89,9 +89,28 @@ namespace RtsDemoMod.Runtime
             }
 
             CameraConfig? cam = mapConfig.DefaultCamera;
+            RtsCommandSourceUiMapConfig uiConfig = RtsCommandSourceUiMapConfig.Resolve(mapConfig);
             string virtualCameraId = string.IsNullOrWhiteSpace(cam?.VirtualCameraId)
                 ? "Default"
                 : cam.VirtualCameraId;
+            Vector2 cameraTargetCm = worldPosition.Value.ToVector2();
+            if (uiConfig.CameraFocusTowardDefaultTargetCm > 0f)
+            {
+                if (cam?.TargetXCm.HasValue != true || cam.TargetYCm.HasValue != true)
+                {
+                    throw new InvalidOperationException(
+                        $"RTS map '{mapConfig.Id}' requires both default camera target coordinates when command-source focus offset is configured.");
+                }
+
+                Vector2 towardDefaultTarget = new(cam.TargetXCm.Value, cam.TargetYCm.Value);
+                towardDefaultTarget -= cameraTargetCm;
+                if (towardDefaultTarget.LengthSquared() <= float.Epsilon)
+                {
+                    throw new InvalidOperationException(
+                        $"RTS map '{mapConfig.Id}' command source cannot equal the default camera target when a focus offset is configured.");
+                }
+                cameraTargetCm += Vector2.Normalize(towardDefaultTarget) * uiConfig.CameraFocusTowardDefaultTargetCm;
+            }
 
             engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
             {
@@ -104,16 +123,22 @@ namespace RtsDemoMod.Runtime
             engine.GlobalContext[CoreServiceKeys.CameraPoseRequest.Name] = new CameraPoseRequest
             {
                 VirtualCameraId = virtualCameraId,
-                TargetCm = worldPosition.Value.ToVector2(),
+                TargetCm = cameraTargetCm,
                 Yaw = cam?.Yaw,
                 Pitch = cam?.Pitch,
-                DistanceCm = ResolveFocusDistance(cam?.DistanceCm),
+                DistanceCm = ResolveFocusDistance(uiConfig, cam?.DistanceCm),
                 FovYDeg = cam?.FovYDeg
             };
         }
 
-        private static float? ResolveFocusDistance(float? distanceCm)
+        private static float? ResolveFocusDistance(RtsCommandSourceUiMapConfig uiConfig, float? distanceCm)
         {
+            float? configuredDistance = uiConfig.CameraFocusDistanceCm;
+            if (configuredDistance.HasValue)
+            {
+                return configuredDistance.Value;
+            }
+
             if (!distanceCm.HasValue || distanceCm.Value <= 0f)
             {
                 return distanceCm;

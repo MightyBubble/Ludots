@@ -55,6 +55,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Diagnostics;
 using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
@@ -1045,6 +1046,7 @@ namespace Ludots.Core.Engine
                 presentationStableIds,
                 presentationConfig.VisualSnapshotBufferCapacity);
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
+            var presentationFrameReceiptBuffer = new PresentationFrameReceiptBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(presentationConfig.VisualSnapshotBufferCapacity);
             var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
@@ -1625,6 +1627,7 @@ namespace Ludots.Core.Engine
             _roadSplineBuffer = roadSplineBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
+            SetService(CoreServiceKeys.PresentationFrameReceiptBuffer, presentationFrameReceiptBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
             SetService(CoreServiceKeys.PresentationVisualProxyBuffer, visualProxyBuffer);
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
@@ -2419,6 +2422,15 @@ namespace Ludots.Core.Engine
 
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                GameSession.Camera.ResetVirtualCameras();
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Skipped DefaultCamera for map '{mapConfig?.Id ?? "<unknown>"}' because the authoritative server has no local presentation camera.");
+                return;
+            }
+
             if (ShouldSkipDefaultCameraOnLoad(mapConfig))
             {
                 Diagnostics.Log.Info(
@@ -2478,6 +2490,12 @@ namespace Ludots.Core.Engine
             }
 
             EnsureCameraRuntimeConfigured();
+            if (!GameSession.Camera.IsRuntimeConfigured)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' requires local camera runtime services, but CoreServiceKeys.ViewController is not bound.");
+            }
+
             GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
 
             var state = GameSession.Camera.State;
@@ -2682,6 +2700,8 @@ namespace Ludots.Core.Engine
                     }
                 }
             }
+
+            session.TerrainPresentation = ResolvedTerrainPresentation.Resolve(session);
         }
 
         private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)

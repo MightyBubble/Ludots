@@ -1,7 +1,9 @@
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -14,14 +16,18 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
 using Ludots.UI;
@@ -49,6 +55,16 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "RtsMultiplayerFrontlineMod",
     };
 
+    private static readonly string[] FrontlineNetworkedMods = FrontlineMods
+        .Append("RtsMultiplayerFrontlineNetworkedMod")
+        .ToArray();
+
+    private static readonly JsonSerializerOptions TemplateJsonOptions = new()
+    {
+        IncludeFields = true,
+        PropertyNameCaseInsensitive = false,
+    };
+
     [Test]
     public async Task AuthoritativeServer_InstallsCommandRuntimeWithoutUiServices()
     {
@@ -64,6 +80,24 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(engine.TriggerManager.Errors, Is.Empty);
         Assert.That(engine.GetService(CoreServiceKeys.EntityCommandPanelService), Is.Not.Null);
         Assert.That(engine.GetService(CoreServiceKeys.UiTextMeasurer), Is.Null);
+    }
+
+    [Test]
+    public void AuthoritativeServer_LoadsFrontlineMapWithoutLocalCameraServices()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+
+        Assert.DoesNotThrow(() => engine.LoadMap(MapId));
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.TriggerManager.Errors, Is.Empty);
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(MapId));
+            Assert.That(engine.GetService(CoreServiceKeys.ViewController), Is.Null);
+            Assert.That(engine.GameSession.Camera.IsRuntimeConfigured, Is.False);
+        });
     }
 
     [Test]
@@ -175,6 +209,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             RequireStableIds(engine));
         FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
         var applier = new FrontlineCoreReplicationApplier(
@@ -199,6 +234,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(engine.World.Has<FrontlineCore>(mirror), Is.True);
         Assert.That(engine.World.Has<ReplicationSchemaRef>(mirror), Is.True);
         Assert.That(engine.World.Has<ReplicationMirrorIdentity>(mirror), Is.True);
+        Assert.That(
+            engine.World.Get<EntityTemplateKeyRef>(mirror).TemplateKeyId,
+            Is.EqualTo(engine.MapLoader.EntityTemplateKeys.GetId("rts_frontline_core")));
         Assert.That(engine.World.Get<Team>(mirror).Id, Is.EqualTo(config.Sides[1].TeamId));
         Assert.That(engine.World.Get<PlayerOwner>(mirror).PlayerId, Is.EqualTo(config.Sides[1].PlayerId));
         Assert.That(engine.World.Get<FrontlineParticipant>(mirror).SideIndex, Is.EqualTo(1));
@@ -217,7 +255,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         VisualTransform visual = engine.World.Get<VisualTransform>(mirror);
         Assert.That(visual.Position, Is.EqualTo(new Vector3(230f, 0f, 150f)));
         Assert.That(visual.Rotation, Is.EqualTo(Quaternion.Identity));
-        Assert.That(visual.Scale, Is.EqualTo(new Vector3(2.3f, 1.8f, 2.3f)));
+        Assert.That(visual.Scale, Is.EqualTo(RequireTemplateVisualScale(engine, "rts_frontline_core")));
 
         int stableId = engine.World.Get<PresentationStableId>(mirror).Value;
         var updatedValues = new ReplicationStateVector(
@@ -250,6 +288,90 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     }
 
     [Test]
+    [Description(
+        "Feature: Replicated battlefield units remain visible\n" +
+        "  Given a client receives command core, harvester, infantry, and crystal mirrors\n" +
+        "  When the client presents the next battlefield frame\n" +
+        "  Then every mirror keeps its formal template identity, stands on the terrain, and owns its role-specific shape")]
+    public void GivenFourReplicatedRoles_WhenClientPresentsFrame_ThenEachMirrorIsGroundedAndReadable()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineRuntime runtime = GetRuntime(engine);
+        FrontlineConfig config = runtime.Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        var templates = new FrontlineClientTemplateFactory(
+            engine.World,
+            engine.MapLoader.TemplateRegistry.GetAll(),
+            specs,
+            config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
+            RequireStableIds(engine));
+        int healthId = RequireAttribute(config.HealthAttribute);
+        int crystalId = RequireAttribute(config.CrystalAttribute);
+        OwnershipResolver ownership = RequireOwnership(engine);
+        PlayerEntityLookup players = RequirePlayers(engine);
+        FrontlineReplicationApplier[] appliers =
+        {
+            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+        };
+        string[] templateIds =
+        {
+            "rts_frontline_core",
+            "rts_frontline_harvester",
+            "rts_frontline_infantry",
+            "rts_frontline_crystal_node",
+        };
+        string[] performerIds =
+        {
+            "rts.frontline.visual.core",
+            "rts.frontline.visual.harvester",
+            "rts.frontline.visual.infantry",
+            "rts.frontline.visual.crystal",
+        };
+        Entity[] mirrors = new Entity[appliers.Length];
+        for (int i = 0; i < appliers.Length; i++)
+        {
+            FrontlineReplicationSpec spec = specs[i];
+            var values = new ReplicationStateVector(
+                FrontlineReplicationPayload.PackInts(9000 + (i * 1200), 15000),
+                FrontlineReplicationPayload.PackFloats(spec.HasHealth ? 100f : 0f, spec.HasCrystals ? 40f : 0f),
+                spec.HasOwner
+                    ? FrontlineReplicationPayload.PackInts(config.Sides[0].TeamId, config.Sides[0].PlayerId)
+                    : 0L,
+                spec.SupportedValidBits);
+            var identity = new ReplicationMirrorIdentity(new NetworkEntityHandle(20 + i, 1));
+            var state = new ReplicationMirrorState(spec.SchemaId, revision: 1, in values);
+            mirrors[i] = appliers[i].Create(engine.World, in identity, in state);
+        }
+
+        engine.Tick(1f / 60f);
+        engine.Tick(1f / 60f);
+
+        PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+            ?? throw new InvalidOperationException("PerformerDefinitionRegistry is unavailable.");
+        PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+            ?? throw new InvalidOperationException("PerformerEntityRuntime is unavailable.");
+        for (int i = 0; i < mirrors.Length; i++)
+        {
+            Entity mirror = mirrors[i];
+            int definitionId = definitions.GetId(performerIds[i]);
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    engine.World.Get<EntityTemplateKeyRef>(mirror).TemplateKeyId,
+                    Is.EqualTo(engine.MapLoader.EntityTemplateKeys.GetId(templateIds[i])));
+                Assert.That(engine.World.Get<VisualHeightmapSampleState>(mirror).Sampled, Is.EqualTo(1));
+                Assert.That(engine.World.Get<VisualTransform>(mirror).Position.Y, Is.GreaterThan(0.1f));
+                Assert.That(performers.GetActiveByOwnerDefinition(definitionId, mirror), Has.Count.EqualTo(1));
+            });
+        }
+    }
+
+    [Test]
     public void ClientHarvesterApplier_BindsRoleTagExactlyOnceAcrossRepeatedSnapshots()
     {
         using GameEngine engine = CreateStartedEngine();
@@ -263,6 +385,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             RequireStableIds(engine));
         var applier = new FrontlineHarvesterReplicationApplier(
             in spec,
@@ -304,8 +427,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "  Then the client issues a gather command against that entity instead of a ground move")]
     public void GivenOwnedHarvesterAndVisibleCrystalMirrors_WhenRoutingCommand_ThenClientIssuesEntityGather()
     {
-        using GameEngine engine = CreateStartedEngine();
-        ConfigureReplicatedClient(engine);
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
         engine.LoadMap(MapId);
         Assert.That(engine.TriggerManager.Errors, Is.Empty);
 
@@ -317,6 +439,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
@@ -437,8 +560,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     [Test]
     public void ReplicatedClientMapLoaded_RemovesOnlyAuthoredGameplayAndKeepsAllRepresentativesAlive()
     {
-        using GameEngine engine = CreateStartedEngine();
-        ConfigureReplicatedClient(engine);
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
 
         engine.LoadMap(MapId);
 
@@ -654,9 +776,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     [Test]
     public void ReplicatedClientPresentation_UsesMatchMirrorForSnapshotAndVictoryHud()
     {
-        using GameEngine engine = CreateStartedEngine();
         var status = new TestClientRuntimePort();
-        ConfigureReplicatedClient(engine, status);
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
         engine.LoadMap(MapId);
         Assert.That(engine.TriggerManager.Errors, Is.Empty);
         FrontlineRuntime runtime = GetRuntime(engine);
@@ -673,6 +794,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             RequireStableIds(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
@@ -714,14 +836,13 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "  Then the HUD shows the current player-facing stage and never calls a queued command started")]
     public void GivenReplicatedCommand_WhenAdmissionChanges_ThenHudShowsTheAuthoritativeStage()
     {
-        using GameEngine engine = CreateStartedEngine();
         var status = new TestClientRuntimePort
         {
             ConnectionState = ReplicatedClientConnectionState.Connected,
             HasEstablishedSession = true,
             RoundTripTimeMilliseconds = 24,
         };
-        ConfigureReplicatedClient(engine, status);
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
         engine.LoadMap(MapId);
         FrontlineRuntime runtime = GetRuntime(engine);
         FrontlineConfig config = runtime.Config;
@@ -771,13 +892,12 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "  Then the HUD shows the matching player-facing state and the remaining seat time")]
     public void GivenRunningMatch_WhenConnectionChanges_ThenHudShowsObservedPlayerState()
     {
-        using GameEngine engine = CreateStartedEngine();
         var status = new TestClientRuntimePort
         {
             ConnectionState = ReplicatedClientConnectionState.Handshaking,
             HasEstablishedSession = false,
         };
-        ConfigureReplicatedClient(engine, status);
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
         engine.LoadMap(MapId);
         FrontlineRuntime runtime = GetRuntime(engine);
         FrontlineConfig config = runtime.Config;
@@ -814,14 +934,13 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "  Then the player sees that the battlefield is synchronizing and the client does not fail")]
     public void GivenStartedRoomBeforeFirstBattlefieldSnapshot_WhenHudUpdates_ThenPlayerSeesSynchronization()
     {
-        using GameEngine engine = CreateStartedEngine();
         var status = new TestClientRuntimePort
         {
             ConnectionState = ReplicatedClientConnectionState.Connected,
             HasEstablishedSession = true,
             IsAwaitingFullSnapshot = true,
         };
-        ConfigureReplicatedClient(engine, status);
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
         engine.LoadMap(MapId);
         FrontlineRuntime runtime = GetRuntime(engine);
         FrontlineConfig config = runtime.Config;
@@ -861,13 +980,12 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         "  Then the player sees that the battle service is connecting")]
     public void GivenNoRoomOrBattlefieldSnapshot_WhenHudUpdates_ThenPlayerSeesConnectingState()
     {
-        using GameEngine engine = CreateStartedEngine();
         var status = new TestClientRuntimePort
         {
             ConnectionState = ReplicatedClientConnectionState.Handshaking,
             HasEstablishedSession = false,
         };
-        ConfigureReplicatedClient(engine, status);
+        using GameEngine engine = CreateStartedReplicatedClientEngine(status);
         engine.LoadMap(MapId);
         FrontlineRuntime runtime = GetRuntime(engine);
         FrontlineConfig config = runtime.Config;
@@ -885,8 +1003,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     [Test]
     public void ReplicatedClientPresentation_RejectsMissingAndDuplicateMatchMirrors()
     {
-        using GameEngine engine = CreateStartedEngine();
-        ConfigureReplicatedClient(engine);
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
         FrontlineRuntime runtime = GetRuntime(engine);
         FrontlineConfig config = runtime.Config;
         var presentation = new FrontlinePresentationSystem(engine, runtime);
@@ -934,14 +1051,6 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         engine.SetService(CoreServiceKeys.LocalPlayerId, config.Sides[0].PlayerId);
     }
 
-    private static void ConfigureReplicatedClient(
-        GameEngine engine,
-        TestClientRuntimePort? runtimePort = null)
-    {
-        engine.SetService(CoreServiceKeys.NetworkProcessRole, NetworkProcessRole.ReplicatedClient);
-        engine.SetService(CoreServiceKeys.NetworkRuntimePort, runtimePort ?? new TestClientRuntimePort());
-    }
-
     private static void AddMatchMirror(
         GameEngine engine,
         FrontlineRuntime runtime,
@@ -954,6 +1063,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
+            engine.MapLoader.EntityTemplateKeys,
             RequireStableIds(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
@@ -1032,23 +1142,85 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(ReadOverlayStrings(overlay), Does.Contain(expected));
     }
 
-    private static GameEngine CreateStartedEngine()
+    private static GameEngine CreateStartedReplicatedClientEngine(TestClientRuntimePort? runtimePort = null) =>
+        CreateStartedEngine(
+            NetworkProcessRole.ReplicatedClient,
+            runtimePort ?? new TestClientRuntimePort(),
+            installPresentationServices: true);
+
+    private static GameEngine CreateStartedEngine(
+        NetworkProcessRole role = NetworkProcessRole.Standalone,
+        INetworkRuntimePort? runtimePort = null,
+        bool installPresentationServices = true)
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, FrontlineMods),
+            RepoModPaths.ResolveExplicit(
+                repoRoot,
+                role == NetworkProcessRole.Standalone ? FrontlineMods : FrontlineNetworkedMods),
             Path.Combine(repoRoot, "assets"));
-        var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-        engine.SetService(CoreServiceKeys.InputHandler, new PlayerInputHandler(new NullInputBackend(), inputConfig));
-        engine.SetService(CoreServiceKeys.UiCaptured, false);
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        if (installPresentationServices)
+        {
+            var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+            engine.SetService(CoreServiceKeys.InputHandler, new PlayerInputHandler(new NullInputBackend(), inputConfig));
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        if (role != NetworkProcessRole.Standalone)
+        {
+            NetworkRuntimeConfig network = engine.MergedConfig?.Networking
+                ?? throw new InvalidOperationException("Network test engine is missing its network profile.");
+            engine.SetService(
+                CoreServiceKeys.ReplicationSchemaProjectors,
+                new ReplicationSchemaProjectorRegistry(network.ReplicationSchemaCapacity));
+            engine.SetService(
+                CoreServiceKeys.ClientReplicationSchemaAppliers,
+                new ClientReplicationSchemaApplierRegistry(network.ReplicationSchemaCapacity));
+            engine.SetService(
+                CoreServiceKeys.NetworkRuntimeStateObserver,
+                new NetworkRuntimeStateObserver(
+                    network.PlayerCapacity,
+                    network.CommandSequenceHistoryCapacity,
+                    network.MaxActorsPerCommandBatch));
+            engine.ConfigureNetworkRuntime(
+                role,
+                runtimePort ?? throw new ArgumentNullException(nameof(runtimePort)));
+        }
+
         engine.Start();
         return engine;
+    }
+
+    private static Vector3 RequireTemplateVisualScale(GameEngine engine, string templateId)
+    {
+        EntityTemplate template = engine.MapLoader.TemplateRegistry.Get(templateId)
+            ?? throw new InvalidOperationException($"Entity template '{templateId}' is unavailable.");
+        if (!template.Components.TryGetValue(nameof(VisualTransform), out var component))
+        {
+            throw new InvalidOperationException(
+                $"Entity template '{templateId}' has no {nameof(VisualTransform)} component.");
+        }
+
+        return component.Deserialize<VisualTransform>(TemplateJsonOptions).Scale;
+    }
+
+    private sealed class StubViewController : IViewController
+    {
+        public StubViewController(float width, float height)
+        {
+            Resolution = new Vector2(width, height);
+        }
+
+        public Vector2 Resolution { get; }
+        public float Fov => 60f;
+        public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
     }
 
     private static FrontlineRuntime GetRuntime(GameEngine engine)
@@ -1102,6 +1274,17 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         public float ReconnectWindowRemainingSeconds { get; set; } = 30f;
         public int RoundTripTimeMilliseconds { get; set; }
 
+        public void Activate() { }
+        public void PumpTransport() { }
+        public void BeforeAuthoritativeTick(uint executingTick) { }
+        public void AfterAuthoritativeCommit(uint committedTick) { }
+        public void PumpReplicatedClient(float frameDeltaTime) { }
+        public void Dispose() { }
+    }
+
+    private sealed class TestServerRuntimePort : INetworkRuntimePort
+    {
+        public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
         public void Activate() { }
         public void PumpTransport() { }
         public void BeforeAuthoritativeTick(uint executingTick) { }

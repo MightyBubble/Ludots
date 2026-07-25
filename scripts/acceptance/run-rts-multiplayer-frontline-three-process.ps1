@@ -6,7 +6,8 @@ param(
     [string]$ConnectionKey = "",
     [string]$FaultProfile = "",
     [int]$CredentialTimeoutSeconds = 0,
-    [int]$RunSeconds = -1
+    [int]$RunSeconds = -1,
+    [switch]$LoadPresentationEvidenceFunctionsOnly
 )
 
 Set-StrictMode -Version Latest
@@ -403,6 +404,10 @@ function New-ClientScreenshotCapture {
         throw "Screenshot path for '$ProcessName' must include a file name."
     }
 
+    $diagnosticPath = Resolve-ArtifactChildPath -ArtifactDirectory $ArtifactDirectory `
+        -RelativePath (Join-Path $ProcessName "raylib-diagnostic.log") `
+        -Owner "$ProcessName Raylib diagnostic path"
+
     $files = [System.Collections.Generic.List[object]]::new()
     for ($index = 0; $index -lt $frames.Count; $index++) {
         $fileName = "{0}_{1:000}_f{2:0000}{3}" -f $baseName, ($index + 1), $frames[$index], $extension
@@ -416,12 +421,212 @@ function New-ClientScreenshotCapture {
     return [pscustomobject]@{
         ProcessName = $ProcessName
         TargetPath = $targetPath
+        DiagnosticPath = $diagnosticPath
         Frames = $frames
         Files = @($files)
         EnvironmentVariables = [ordered]@{
             LUDOTS_TAKE_SCREENSHOT_PATH = $targetPath
             LUDOTS_TAKE_SCREENSHOT_FRAMES = ($frames -join ",")
+            LUDOTS_RAYLIB_DIAGNOSTIC_PATH = $diagnosticPath
         }
+    }
+}
+
+function Get-RequiredDiagnosticCount {
+    param(
+        [Parameter(Mandatory = $true)][string]$Line,
+        [Parameter(Mandatory = $true)][string]$Field,
+        [Parameter(Mandatory = $true)][string]$ProcessName,
+        [Parameter(Mandatory = $true)][int]$Frame
+    )
+
+    $pattern = "(?:^|\s)$([regex]::Escape($Field))=(?<value>\d+)(?:\s|$)"
+    $match = [regex]::Match($Line, $pattern, [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+    if (-not $match.Success) {
+        throw "Client '$ProcessName' Raylib diagnostic for screenshot frame $Frame lacks integer field '$Field'."
+    }
+
+    return [int]::Parse($match.Groups["value"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Read-ClientPresentationEvidence {
+    param(
+        [Parameter(Mandatory = $true)]$Capture,
+        [Parameter(Mandatory = $true)]$Minimums,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$RequiredReceipts
+    )
+
+    $diagnosticPath = [string]$Capture.DiagnosticPath
+    if (-not (Test-Path -LiteralPath $diagnosticPath -PathType Leaf)) {
+        throw "Client '$($Capture.ProcessName)' did not write its Raylib diagnostic: $diagnosticPath"
+    }
+
+    $lines = @([System.IO.File]::ReadAllLines($diagnosticPath))
+    if ($lines.Count -eq 0) {
+        throw "Client '$($Capture.ProcessName)' wrote an empty Raylib diagnostic: $diagnosticPath"
+    }
+
+    $expectedFrames = @($Capture.Frames | ForEach-Object { [int]$_ })
+    $recordsByFrame = @{}
+    for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
+        $screenshotMatch = [regex]::Match(
+            $lines[$lineIndex],
+            "(?:^|\s)screenshot frame=(?<frame>\d+)(?:\s|$)",
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+        if (-not $screenshotMatch.Success) {
+            continue
+        }
+
+        $frame = [int]::Parse(
+            $screenshotMatch.Groups["frame"].Value,
+            [System.Globalization.CultureInfo]::InvariantCulture)
+        if (-not ($expectedFrames -contains $frame)) {
+            continue
+        }
+        if ($recordsByFrame.ContainsKey($frame)) {
+            throw "Client '$($Capture.ProcessName)' wrote duplicate Raylib diagnostics for screenshot frame $frame."
+        }
+
+        $timingLine = $null
+        $visualCountLine = $null
+        $receiptLines = [System.Collections.Generic.List[string]]::new()
+        for ($detailIndex = $lineIndex + 1; $detailIndex -lt $lines.Count; $detailIndex++) {
+            if ($lines[$detailIndex] -match '(?:^|\s)screenshot frame=') {
+                break
+            }
+            if ($null -eq $timingLine -and $lines[$detailIndex] -match '(?:^|\s)timing frame=') {
+                $timingLine = $lines[$detailIndex]
+                continue
+            }
+            if ($null -eq $visualCountLine -and $lines[$detailIndex] -match '(?:^|\s)prefab-visual-counts lastFrame\(') {
+                $visualCountLine = $lines[$detailIndex]
+                continue
+            }
+            if ($lines[$detailIndex] -match '(?:^|\s)presentation-receipt(?:\s|$)') {
+                $receiptLines.Add($lines[$detailIndex])
+            }
+        }
+        if ($null -eq $timingLine -or $null -eq $visualCountLine) {
+            throw "Client '$($Capture.ProcessName)' screenshot frame $frame lacks its complete Raylib presentation diagnostics."
+        }
+
+        $visibleEntities = Get-RequiredDiagnosticCount -Line $timingLine -Field "visibleEntities" `
+            -ProcessName $Capture.ProcessName -Frame $frame
+        $performerActive = Get-RequiredDiagnosticCount -Line $timingLine -Field "performerActive" `
+            -ProcessName $Capture.ProcessName -Frame $frame
+        $primitiveRaw = Get-RequiredDiagnosticCount -Line $timingLine -Field "primitiveRaw" `
+            -ProcessName $Capture.ProcessName -Frame $frame
+        $primitiveInstances = Get-RequiredDiagnosticCount -Line $timingLine -Field "primInstances" `
+            -ProcessName $Capture.ProcessName -Frame $frame
+        $primitiveBatches = Get-RequiredDiagnosticCount -Line $timingLine -Field "primBatches" `
+            -ProcessName $Capture.ProcessName -Frame $frame
+
+        $visualMatch = [regex]::Match(
+            $visualCountLine,
+            'prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)',
+            [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+        if (-not $visualMatch.Success) {
+            throw "Client '$($Capture.ProcessName)' screenshot frame $frame has malformed prefab visual diagnostics."
+        }
+        $prefabVisuals = 0
+        foreach ($kind in @("mesh", "decal", "vfx", "surface")) {
+            $prefabVisuals += [int]::Parse(
+                $visualMatch.Groups[$kind].Value,
+                [System.Globalization.CultureInfo]::InvariantCulture)
+        }
+
+        $observed = [ordered]@{
+            frame = $frame
+            visibleEntities = $visibleEntities
+            activePerformers = $performerActive
+            authoredPrimitives = $primitiveRaw
+            submittedPrimitiveInstances = $primitiveInstances
+            submittedPrimitiveBatches = $primitiveBatches
+            prefabVisuals = $prefabVisuals
+        }
+        foreach ($requirement in @(
+            [pscustomobject]@{ Name = "visible entities"; Actual = $visibleEntities; Minimum = [int]$Minimums.minimumVisibleEntities }
+            [pscustomobject]@{ Name = "active performers"; Actual = $performerActive; Minimum = [int]$Minimums.minimumActivePerformers }
+            [pscustomobject]@{ Name = "authored primitives"; Actual = $primitiveRaw; Minimum = [int]$Minimums.minimumAuthoredPrimitives }
+            [pscustomobject]@{ Name = "submitted primitive instances"; Actual = $primitiveInstances; Minimum = [int]$Minimums.minimumSubmittedPrimitiveInstances }
+            [pscustomobject]@{ Name = "submitted primitive batches"; Actual = $primitiveBatches; Minimum = [int]$Minimums.minimumSubmittedPrimitiveBatches }
+            [pscustomobject]@{ Name = "prefab visuals"; Actual = $prefabVisuals; Minimum = [int]$Minimums.minimumPrefabVisuals }
+        )) {
+            if ($requirement.Actual -lt $requirement.Minimum) {
+                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has $($requirement.Actual) $($requirement.Name); expected at least $($requirement.Minimum). HUD-only screenshots are not accepted."
+            }
+        }
+
+        $receiptsByTemplate = @{}
+        foreach ($receiptLine in $receiptLines) {
+            $receiptMatch = [regex]::Match(
+                $receiptLine,
+                '^\[[^\]]+\]\s+presentation-receipt template=(?<template>[A-Za-z0-9._:-]+) templateId=(?<templateId>[1-9]\d*) submitted=(?<submitted>[1-9]\d*) onscreen=(?<onscreen>\d+) minShortEdgePx=(?<shortEdge>\d+(?:\.\d+)?) minAreaPx2=(?<area>\d+(?:\.\d+)?)\s*$',
+                [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+            if (-not $receiptMatch.Success) {
+                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has malformed presentation receipt diagnostics."
+            }
+
+            $template = $receiptMatch.Groups["template"].Value
+            if ($receiptsByTemplate.ContainsKey($template)) {
+                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has duplicate presentation receipts for template '$template'."
+            }
+
+            $receiptsByTemplate[$template] = [ordered]@{
+                template = $template
+                templateId = [int]::Parse($receiptMatch.Groups["templateId"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+                submitted = [int]::Parse($receiptMatch.Groups["submitted"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+                onscreen = [int]::Parse($receiptMatch.Groups["onscreen"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+                minimumShortEdgePx = [double]::Parse($receiptMatch.Groups["shortEdge"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+                minimumAreaPx2 = [double]::Parse($receiptMatch.Groups["area"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+            }
+        }
+
+        $requiredForFrame = @($RequiredReceipts | Where-Object { @($_.frames | ForEach-Object { [int]$_ }) -contains $frame })
+        $observedRequiredReceipts = [System.Collections.Generic.List[object]]::new()
+        foreach ($requirement in $requiredForFrame) {
+            $template = [string]$requirement.template
+            if (-not $receiptsByTemplate.ContainsKey($template)) {
+                throw "Client '$($Capture.ProcessName)' screenshot frame $frame has no submitted presentation receipt for role '$($requirement.role)' (template '$template')."
+            }
+
+            $receipt = $receiptsByTemplate[$template]
+            foreach ($threshold in @(
+                [pscustomobject]@{ Name = "submitted instances"; Actual = [int]$receipt.submitted; Minimum = [int]$requirement.minimumSubmitted }
+                [pscustomobject]@{ Name = "onscreen instances"; Actual = [int]$receipt.onscreen; Minimum = [int]$requirement.minimumOnscreen }
+                [pscustomobject]@{ Name = "minimum short edge pixels"; Actual = [double]$receipt.minimumShortEdgePx; Minimum = [double]$requirement.minimumShortEdgePx }
+                [pscustomobject]@{ Name = "minimum projected area pixels"; Actual = [double]$receipt.minimumAreaPx2; Minimum = [double]$requirement.minimumAreaPx2 }
+            )) {
+                if ($threshold.Actual -lt $threshold.Minimum) {
+                    throw "Client '$($Capture.ProcessName)' screenshot frame $frame role '$($requirement.role)' has $($threshold.Actual) $($threshold.Name); expected at least $($threshold.Minimum)."
+                }
+            }
+
+            $observedRequiredReceipts.Add([ordered]@{
+                role = [string]$requirement.role
+                template = $template
+                templateId = [int]$receipt.templateId
+                submitted = [int]$receipt.submitted
+                onscreen = [int]$receipt.onscreen
+                minimumShortEdgePx = [double]$receipt.minimumShortEdgePx
+                minimumAreaPx2 = [double]$receipt.minimumAreaPx2
+            })
+        }
+        $observed["presentationReceipts"] = @($observedRequiredReceipts)
+
+        $recordsByFrame[$frame] = $observed
+    }
+
+    foreach ($expectedFrame in $expectedFrames) {
+        if (-not $recordsByFrame.ContainsKey($expectedFrame)) {
+            throw "Client '$($Capture.ProcessName)' lacks Raylib presentation evidence for screenshot frame $expectedFrame."
+        }
+    }
+
+    return [ordered]@{
+        process = $Capture.ProcessName
+        diagnostic = Get-FileEvidence -Path $diagnosticPath
+        frames = @($expectedFrames | ForEach-Object { $recordsByFrame[$_] })
     }
 }
 
@@ -1304,6 +1509,10 @@ function Assert-UdpPortAvailable {
     }
 }
 
+if ($LoadPresentationEvidenceFunctionsOnly) {
+    return
+}
+
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $profileFullPath = [System.IO.Path]::GetFullPath($ProfilePath)
 if (-not (Test-Path -LiteralPath $profileFullPath)) {
@@ -1311,7 +1520,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 2) {
+if ($profile.schemaVersion -ne 3) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -1330,6 +1539,52 @@ if ([string]::IsNullOrWhiteSpace($script:ConnectionKeyValue)) { throw "Connectio
 if ($credentialTimeoutValue -le 0) { throw "CredentialTimeoutSeconds must be positive." }
 if ($runSecondsValue -le 0) { throw "RunSeconds must be positive." }
 if ($pollMilliseconds -le 0) { throw "monitorIntervalMilliseconds must be positive." }
+foreach ($minimumProperty in @(
+    "minimumVisibleEntities",
+    "minimumActivePerformers",
+    "minimumAuthoredPrimitives",
+    "minimumSubmittedPrimitiveInstances",
+    "minimumSubmittedPrimitiveBatches",
+    "minimumPrefabVisuals"
+)) {
+    if ($null -eq $profile.clientPresentation -or
+        $null -eq $profile.clientPresentation.PSObject.Properties[$minimumProperty] -or
+        [int]$profile.clientPresentation.$minimumProperty -le 0) {
+        throw "clientPresentation.$minimumProperty must be positive."
+    }
+}
+$requiredPresentationReceipts = @($profile.requiredPresentationReceipts)
+if ($requiredPresentationReceipts.Count -eq 0) {
+    throw "requiredPresentationReceipts must declare at least one role-specific presentation requirement."
+}
+$configuredScreenshotFrames = @(
+    @($profile.clientScreenshots.clientOne.frames) + @($profile.clientScreenshots.clientTwo.frames) |
+        ForEach-Object { [int]$_ } |
+        Sort-Object -Unique)
+$requiredReceiptKeys = @{}
+foreach ($requirement in $requiredPresentationReceipts) {
+    $role = [string]$requirement.role
+    $template = [string]$requirement.template
+    $frames = @($requirement.frames | ForEach-Object { [int]$_ })
+    if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template)) {
+        throw "Every requiredPresentationReceipts entry must declare non-empty role and template values."
+    }
+    if ($frames.Count -eq 0 -or @($frames | Where-Object { $_ -le 0 -or -not ($configuredScreenshotFrames -contains $_) }).Count -ne 0) {
+        throw "requiredPresentationReceipts role '$role' must target positive configured screenshot frames."
+    }
+    foreach ($thresholdName in @("minimumSubmitted", "minimumOnscreen", "minimumShortEdgePx", "minimumAreaPx2")) {
+        if ($null -eq $requirement.PSObject.Properties[$thresholdName] -or [double]$requirement.$thresholdName -le 0) {
+            throw "requiredPresentationReceipts role '$role' must declare positive $thresholdName."
+        }
+    }
+    foreach ($frame in $frames) {
+        $key = "$frame`n$template"
+        if ($requiredReceiptKeys.ContainsKey($key)) {
+            throw "requiredPresentationReceipts duplicates template '$template' for screenshot frame $frame."
+        }
+        $requiredReceiptKeys[$key] = $true
+    }
+}
 if ($script:FaultProfileValue -cne "normal" -and $script:FaultProfileValue -cne "unstable") {
     throw "faultProfile must be 'normal' or 'unstable'."
 }
@@ -1381,7 +1636,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 5
+    schemaVersion = 6
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -1415,14 +1670,17 @@ $manifest = [ordered]@{
             [ordered]@{
                 process = $clientAScreenshotCapture.ProcessName
                 targetPath = $clientAScreenshotCapture.TargetPath
+                diagnosticPath = $clientAScreenshotCapture.DiagnosticPath
                 frames = @($clientAScreenshotCapture.Frames)
             }
             [ordered]@{
                 process = $clientBScreenshotCapture.ProcessName
                 targetPath = $clientBScreenshotCapture.TargetPath
+                diagnosticPath = $clientBScreenshotCapture.DiagnosticPath
                 frames = @($clientBScreenshotCapture.Frames)
             }
         )
+        clientPresentation = $profile.clientPresentation
     }
     planFingerprint = $null
     orderedModIds = @()
@@ -1430,6 +1688,7 @@ $manifest = [ordered]@{
     clientCredentials = @()
     gameplayEvidence = @()
     screenshots = @()
+    clientPresentation = @()
     runtimeLogs = @()
     credentialValidation = "LUDCRD01/64-byte/SHA256/non-empty/distinct"
     runtimeErrorEvidence = [ordered]@{
@@ -1698,6 +1957,12 @@ try {
             throw "Client '$processName' screenshots are identical across all configured gameplay stages."
         }
     }
+    $manifest.clientPresentation = @(
+        Read-ClientPresentationEvidence -Capture $clientAScreenshotCapture -Minimums $profile.clientPresentation `
+            -RequiredReceipts $requiredPresentationReceipts
+        Read-ClientPresentationEvidence -Capture $clientBScreenshotCapture -Minimums $profile.clientPresentation `
+            -RequiredReceipts $requiredPresentationReceipts
+    )
     $manifest.status = "verification-complete"
     $verificationReached = $true
 }

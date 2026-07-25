@@ -65,6 +65,7 @@ using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Diagnostics;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
@@ -324,6 +325,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<StableDrawCache> PresentationStableDrawCache = new("PresentationStableDrawCache");
         public static readonly ServiceKey<PresentationTargetGeneration> PresentationTargetGeneration = new("PresentationTargetGeneration");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
+        public static readonly ServiceKey<PresentationFrameReceiptBuffer> PresentationFrameReceiptBuffer = new("PresentationFrameReceiptBuffer");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationVisualSnapshotBuffer = new("PresentationVisualSnapshotBuffer");
         public static readonly ServiceKey<PresentationVisualProxyBuffer> PresentationVisualProxyBuffer = new("PresentationVisualProxyBuffer");
         public static readonly ServiceKey<PresentationVisualRequestBuffer> PresentationVisualRequestBuffer = new("PresentationVisualRequestBuffer");
