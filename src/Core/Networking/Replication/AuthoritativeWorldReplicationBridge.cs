@@ -146,65 +146,243 @@ namespace Ludots.Core.Networking.Replication
 
                 if (!_knowledge.TryGet(_viewer, entity, currentTick, out KnowledgeDisclosureRecord disclosure))
                 {
-                    var unknown = new ReplicationDisclosureInput(handle, KnowledgePresence.Unknown);
-                    if (!output.TryAddDisclosure(in unknown))
-                    {
-                        return Fail(output, ReplicationBridgeResult.CapacityContractViolated);
-                    }
-
-                    continue;
+                    disclosure = default;
                 }
 
-                if (disclosure.Presence == KnowledgePresence.Unknown)
+                ReplicationBridgeResult projected = ProjectResolved(handle, entity, in disclosure, output);
+                if (projected != ReplicationBridgeResult.Success)
                 {
-                    var unknown = new ReplicationDisclosureInput(handle, KnowledgePresence.Unknown);
-                    if (!output.TryAddDisclosure(in unknown))
-                    {
-                        return Fail(output, ReplicationBridgeResult.CapacityContractViolated);
-                    }
-
-                    continue;
-                }
-
-                var disclosureInput = new ReplicationDisclosureInput(handle, disclosure.Presence);
-                if (!output.TryAddDisclosure(in disclosureInput))
-                {
-                    return Fail(output, ReplicationBridgeResult.CapacityContractViolated);
-                }
-
-                if (!disclosureInput.CanReplicateLiveState)
-                {
-                    continue;
-                }
-
-                if (!_world.TryGet(entity, out ReplicationSchemaRef schema) || schema.SchemaId <= 0)
-                {
-                    return Fail(output, ReplicationBridgeResult.SchemaMissing);
-                }
-
-                if (!_projectors.TryGet(schema.SchemaId, out IReplicationSchemaProjector projector))
-                {
-                    return Fail(output, ReplicationBridgeResult.SchemaNotRegistered);
-                }
-
-                if (!projector.TryProject(_world, entity, in disclosure, out ReplicationProjectedState projected))
-                {
-                    return Fail(output, ReplicationBridgeResult.ProjectionFailed);
-                }
-
-                var state = new ReplicatedEntityState(
-                    handle,
-                    schema.SchemaId,
-                    projected.Revision,
-                    projected.Values,
-                    projected.Ownership);
-                if (!output.TryAddState(in state))
-                {
-                    return Fail(output, ReplicationBridgeResult.CapacityContractViolated);
+                    return Fail(output, projected);
                 }
             }
 
             return ReplicationBridgeResult.Success;
+        }
+
+        internal ReplicationBridgeResult ProjectPrepared(
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReadOnlySpan<KnowledgeDisclosureRecord> knowledgeDisclosures,
+            int currentTick,
+            ReplicationProjectionBuffer output)
+        {
+            if (output == null ||
+                currentTick < 0 ||
+                !_world.IsAlive(_viewer) ||
+                interestHandles.Length != knowledgeDisclosures.Length)
+            {
+                output?.Reset();
+                return ReplicationBridgeResult.InvalidInput;
+            }
+
+            output.Reset();
+            if (interestHandles.Length > _replicationEntityCapacityPerSeat ||
+                interestHandles.Length > output.EntityCapacity)
+            {
+                return ReplicationBridgeResult.CapacityContractViolated;
+            }
+
+            int previousSlot = -1;
+            for (int index = 0; index < interestHandles.Length; index++)
+            {
+                NetworkEntityHandle handle = interestHandles[index];
+                int slot = handle.Slot;
+                if (!handle.IsValid ||
+                    (uint)slot >= (uint)_entities.Capacity ||
+                    slot <= previousSlot)
+                {
+                    return Fail(output, ReplicationBridgeResult.InvalidInput);
+                }
+
+                previousSlot = slot;
+                if (!_entities.TryResolve(handle, out Entity entity) || !_world.IsAlive(entity))
+                {
+                    return Fail(output, ReplicationBridgeResult.EntityUnavailable);
+                }
+
+                KnowledgeDisclosureRecord disclosure = knowledgeDisclosures[index];
+                ReplicationBridgeResult projected = ProjectResolved(handle, entity, in disclosure, output);
+                if (projected != ReplicationBridgeResult.Success)
+                {
+                    return Fail(output, projected);
+                }
+            }
+
+            return ReplicationBridgeResult.Success;
+        }
+
+        private ReplicationBridgeResult ProjectResolved(
+            NetworkEntityHandle handle,
+            Entity entity,
+            in KnowledgeDisclosureRecord disclosure,
+            ReplicationProjectionBuffer output)
+        {
+            if (disclosure.Presence == KnowledgePresence.Unknown)
+            {
+                var unknown = new ReplicationDisclosureInput(handle, KnowledgePresence.Unknown);
+                return output.TryAddDisclosure(in unknown)
+                    ? ReplicationBridgeResult.Success
+                    : ReplicationBridgeResult.CapacityContractViolated;
+            }
+
+            var disclosureInput = new ReplicationDisclosureInput(handle, disclosure.Presence);
+            if (!output.TryAddDisclosure(in disclosureInput))
+            {
+                return ReplicationBridgeResult.CapacityContractViolated;
+            }
+
+            if (!disclosureInput.CanReplicateLiveState)
+            {
+                return ReplicationBridgeResult.Success;
+            }
+
+            if (!_world.TryGet(entity, out ReplicationSchemaRef schema) || schema.SchemaId <= 0)
+            {
+                return ReplicationBridgeResult.SchemaMissing;
+            }
+
+            if (!_projectors.TryGet(schema.SchemaId, out IReplicationSchemaProjector projector))
+            {
+                return ReplicationBridgeResult.SchemaNotRegistered;
+            }
+
+            if (!projector.TryProject(_world, entity, in disclosure, out ReplicationProjectedState projected))
+            {
+                return ReplicationBridgeResult.ProjectionFailed;
+            }
+
+            var state = new ReplicatedEntityState(
+                handle,
+                schema.SchemaId,
+                projected.Revision,
+                projected.Values,
+                projected.Ownership);
+            return output.TryAddState(in state)
+                ? ReplicationBridgeResult.Success
+                : ReplicationBridgeResult.CapacityContractViolated;
+        }
+
+        internal ReplicationBridgeResult PrepareFull(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReadOnlySpan<KnowledgeDisclosureRecord> knowledgeDisclosures,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
+            EnsureSharedEntityTable(channel);
+            _entities.EnterSnapshotPublication();
+            try
+            {
+                if (channel == null || projection == null || packet == null || tick > int.MaxValue)
+                {
+                    LastBuildMetrics = default;
+                    packet?.Reset(default);
+                    projection?.Reset();
+                    return ReplicationBridgeResult.InvalidInput;
+                }
+
+                long projectionStarted = Stopwatch.GetTimestamp();
+                ReplicationBridgeResult projected = ProjectPrepared(
+                    interestHandles,
+                    knowledgeDisclosures,
+                    (int)tick,
+                    projection);
+                long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
+                if (projected != ReplicationBridgeResult.Success)
+                {
+                    LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(projectionElapsed, 0);
+                    packet.Reset(default);
+                    return projected;
+                }
+
+                long channelBuildStarted = Stopwatch.GetTimestamp();
+                ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
+                    channel.PrepareFull(
+                        sessionEpoch,
+                        tick,
+                        snapshotId,
+                        projection.States,
+                        projection.Disclosures,
+                        packet));
+                LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(
+                    projectionElapsed,
+                    Stopwatch.GetTimestamp() - channelBuildStarted);
+                if (result != ReplicationBridgeResult.Success)
+                {
+                    projection.Reset();
+                }
+
+                return result;
+            }
+            finally
+            {
+                _entities.ExitSnapshotPublication();
+            }
+        }
+
+        internal ReplicationBridgeResult PrepareDelta(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ulong acknowledgedBaselineId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReadOnlySpan<KnowledgeDisclosureRecord> knowledgeDisclosures,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
+            EnsureSharedEntityTable(channel);
+            _entities.EnterSnapshotPublication();
+            try
+            {
+                if (channel == null || projection == null || packet == null || tick > int.MaxValue)
+                {
+                    LastBuildMetrics = default;
+                    packet?.Reset(default);
+                    projection?.Reset();
+                    return ReplicationBridgeResult.InvalidInput;
+                }
+
+                long projectionStarted = Stopwatch.GetTimestamp();
+                ReplicationBridgeResult projected = ProjectPrepared(
+                    interestHandles,
+                    knowledgeDisclosures,
+                    (int)tick,
+                    projection);
+                long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
+                if (projected != ReplicationBridgeResult.Success)
+                {
+                    LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(projectionElapsed, 0);
+                    packet.Reset(default);
+                    return projected;
+                }
+
+                long channelBuildStarted = Stopwatch.GetTimestamp();
+                ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
+                    channel.PrepareDelta(
+                        sessionEpoch,
+                        tick,
+                        snapshotId,
+                        acknowledgedBaselineId,
+                        projection.States,
+                        projection.Disclosures,
+                        packet));
+                LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(
+                    projectionElapsed,
+                    Stopwatch.GetTimestamp() - channelBuildStarted);
+                if (result != ReplicationBridgeResult.Success)
+                {
+                    projection.Reset();
+                }
+
+                return result;
+            }
+            finally
+            {
+                _entities.ExitSnapshotPublication();
+            }
         }
 
         public ReplicationBridgeResult BuildFull(

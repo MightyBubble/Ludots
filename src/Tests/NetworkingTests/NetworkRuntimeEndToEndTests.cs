@@ -1432,6 +1432,7 @@ public sealed class NetworkRuntimeEndToEndTests
         private readonly SessionSeatBinding[] _preparedSeats;
         private readonly int _entityCapacityPerSeat;
         private NetworkEntityHandle[] _handles;
+        private KnowledgeDisclosureRecord[] _disclosures;
 
         private int _preparedSeatCount;
         private bool _prepared;
@@ -1444,6 +1445,7 @@ public sealed class NetworkRuntimeEndToEndTests
             _preparedSeats = new SessionSeatBinding[seatCapacity];
             _entityCapacityPerSeat = entityCapacityPerSeat;
             _handles = handles;
+            _disclosures = CreateVisibleDisclosures(handles.Length);
         }
 
         public int SeatCapacity => _preparedSeats.Length;
@@ -1457,6 +1459,7 @@ public sealed class NetworkRuntimeEndToEndTests
             }
 
             _handles = handles;
+            _disclosures = CreateVisibleDisclosures(handles.Length);
         }
 
         public int CopyCalls { get; private set; }
@@ -1483,7 +1486,8 @@ public sealed class NetworkRuntimeEndToEndTests
 
         public bool TryGetPreparedInterest(
             in SessionSeatBinding seat,
-            out ReadOnlySpan<NetworkEntityHandle> handles)
+            out ReadOnlySpan<NetworkEntityHandle> handles,
+            out ReadOnlySpan<KnowledgeDisclosureRecord> disclosures)
         {
             if (_prepared)
             {
@@ -1492,13 +1496,26 @@ public sealed class NetworkRuntimeEndToEndTests
                     if (_preparedSeats[i].Equals(seat))
                     {
                         handles = _handles;
+                        disclosures = _disclosures;
                         return true;
                     }
                 }
             }
 
             handles = default;
+            disclosures = default;
             return false;
+        }
+
+        private static KnowledgeDisclosureRecord[] CreateVisibleDisclosures(int count)
+        {
+            var disclosures = new KnowledgeDisclosureRecord[count];
+            for (int i = 0; i < disclosures.Length; i++)
+            {
+                disclosures[i] = VisibleDisclosure();
+            }
+
+            return disclosures;
         }
 
         public void CommitPreparedKnowledge()

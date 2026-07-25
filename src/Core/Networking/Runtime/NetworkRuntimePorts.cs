@@ -114,7 +114,8 @@ namespace Ludots.Core.Networking.Runtime
 
         bool TryGetPreparedInterest(
             in SessionSeatBinding seat,
-            out ReadOnlySpan<NetworkEntityHandle> handles);
+            out ReadOnlySpan<NetworkEntityHandle> handles,
+            out ReadOnlySpan<Knowledge.KnowledgeDisclosureRecord> disclosures);
 
         void CommitPreparedKnowledge();
 

@@ -12,6 +12,8 @@ namespace Ludots.Core.Networking.Runtime
         private readonly byte[] _payloads;
         private int _head;
         private int _count;
+        private int _preparedCount;
+        private bool _preparing;
 
         public FixedServerDatagramSendQueue(int capacity, int maxPayloadBytes)
         {
@@ -24,10 +26,11 @@ namespace Ludots.Core.Networking.Runtime
 
         public int Count => _count;
         public int Capacity => _connections.Length;
+        public int AvailableCapacity => Capacity - _count - _preparedCount;
 
         public bool TryEnqueue(ConnectionId connection, ChannelId channel, ReadOnlySpan<byte> payload)
         {
-            if (_count == Capacity || payload.Length > _maxPayloadBytes)
+            if (_preparing || _count == Capacity || payload.Length > _maxPayloadBytes)
             {
                 return false;
             }
@@ -39,6 +42,63 @@ namespace Ludots.Core.Networking.Runtime
             payload.CopyTo(_payloads.AsSpan(slot * _maxPayloadBytes, payload.Length));
             _count++;
             return true;
+        }
+
+        public bool TryBeginPreparedBatch()
+        {
+            if (_preparing)
+            {
+                return false;
+            }
+
+            _preparing = true;
+            _preparedCount = 0;
+            return true;
+        }
+
+        public bool TryEnqueuePrepared(ConnectionId connection, ChannelId channel, ReadOnlySpan<byte> payload)
+        {
+            if (!_preparing || AvailableCapacity == 0 || payload.Length > _maxPayloadBytes)
+            {
+                return false;
+            }
+
+            int slot = (_head + _count + _preparedCount) % Capacity;
+            _connections[slot] = connection.Value;
+            _channels[slot] = channel.Value;
+            _lengths[slot] = payload.Length;
+            payload.CopyTo(_payloads.AsSpan(slot * _maxPayloadBytes, payload.Length));
+            _preparedCount++;
+            return true;
+        }
+
+        public void CommitPreparedBatch()
+        {
+            if (!_preparing)
+            {
+                throw new InvalidOperationException("The server send queue has no prepared batch to commit.");
+            }
+
+            _count += _preparedCount;
+            _preparedCount = 0;
+            _preparing = false;
+        }
+
+        public void CancelPreparedBatch()
+        {
+            if (!_preparing)
+            {
+                return;
+            }
+
+            for (int index = 0; index < _preparedCount; index++)
+            {
+                int slot = (_head + _count + index) % Capacity;
+                _lengths[slot] = 0;
+            }
+
+            _preparedCount = 0;
+            _preparing = false;
         }
 
         public bool TryPeek(out ConnectionId connection, out ChannelId channel, out ReadOnlySpan<byte> payload)

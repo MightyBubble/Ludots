@@ -481,7 +481,10 @@ public sealed class Physics3DNetworkBodyRegistryTests
 
         try
         {
-            if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles))
+            if (!interest.TryGetPreparedInterest(
+                    in seat,
+                    out ReadOnlySpan<NetworkEntityHandle> handles,
+                    out _))
             {
                 count = 0;
                 return false;

@@ -1515,7 +1515,10 @@ public sealed class Physics3DNetworkBridgeTests
 
         try
         {
-            if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles))
+            if (!interest.TryGetPreparedInterest(
+                    in seat,
+                    out ReadOnlySpan<NetworkEntityHandle> handles,
+                    out _))
             {
                 count = 0;
                 return false;
@@ -1588,7 +1591,10 @@ public sealed class Physics3DNetworkBridgeTests
             for (int index = 0; index < seats.Length; index++)
             {
                 SessionSeatBinding seat = seats[index];
-                if (!interest.TryGetPreparedInterest(in seat, out ReadOnlySpan<NetworkEntityHandle> handles) ||
+                if (!interest.TryGetPreparedInterest(
+                        in seat,
+                        out ReadOnlySpan<NetworkEntityHandle> handles,
+                        out _) ||
                     handles.Length != expectedCounts[index])
                 {
                     failedSeat = seat.Slot;

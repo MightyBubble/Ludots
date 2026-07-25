@@ -46,6 +46,22 @@ namespace Ludots.Core.Knowledge
             return _records.Upsert(key, next, record.ExpiryTick, changed, out _);
         }
 
+        public KnowledgeDisclosureRecord PreviewUpsert(
+            Entity viewer,
+            Entity target,
+            in KnowledgeDisclosureRecord record,
+            out bool requiresPhysicalSlot)
+        {
+            ValidateViewerAndTarget(viewer, target);
+
+            EntityKeyedSoaKey key = EntityKeyedSoaKey.ForPair(viewer, target);
+            var next = KnowledgeProjectionPayload.FromRecord(in record);
+            bool changed = !_records.TryGet(key, int.MinValue, out KnowledgeProjectionPayload current, out _, out _) ||
+                           current != next;
+            uint revision = _records.PreviewUpsertRevision(in key, changed, out requiresPhysicalSlot);
+            return next.ToRecord(revision);
+        }
+
         public bool Remove(Entity viewer, Entity target)
         {
             if (viewer == Entity.Null || target == Entity.Null)

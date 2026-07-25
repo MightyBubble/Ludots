@@ -231,6 +231,28 @@ namespace Ludots.Core.Association
             return _revisions[slot];
         }
 
+        public uint PreviewUpsertRevision(
+            in EntityKeyedSoaKey key,
+            bool payloadChanged,
+            out bool requiresPhysicalSlot)
+        {
+            if (!TryFindSlot(in key, out int slot))
+            {
+                requiresPhysicalSlot = true;
+                return 1;
+            }
+
+            requiresPhysicalSlot = false;
+            uint revision = _revisions[slot];
+            if (!_active[slot] || payloadChanged)
+            {
+                revision++;
+                return revision == 0 ? 1 : revision;
+            }
+
+            return revision == 0 ? 1 : revision;
+        }
+
         public bool Remove(in EntityKeyedSoaKey key)
         {
             if (!TryFindSlot(in key, out int slot) || !_active[slot])

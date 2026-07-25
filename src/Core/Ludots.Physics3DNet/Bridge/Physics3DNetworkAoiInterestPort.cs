@@ -53,6 +53,8 @@ public sealed class Physics3DNetworkAoiInterestPort :
     private readonly PreparedInterestEntry[] _preparedEntries;
     private readonly NetworkEntityHandle[] _preparedHandles;
     private readonly Entity[] _preparedEntities;
+    private readonly KnowledgeDisclosureRecord[] _preparedDisclosures;
+    private readonly bool[] _preparedKnowledgeEnters;
     private readonly int[] _trackedCounts;
     private readonly uint[] _trackedSeatGenerations;
     private readonly int[] _trackedPlayerIds;
@@ -62,6 +64,7 @@ public sealed class Physics3DNetworkAoiInterestPort :
     private readonly long[] _workerAllocatedBytes;
     private int _batchSeatCount;
     private int _preparedEnterCount;
+    private int _preparedPhysicalEnterCount;
     private byte _batchState;
     private bool _disposed;
 
@@ -131,6 +134,8 @@ public sealed class Physics3DNetworkAoiInterestPort :
         _preparedEntries = new PreparedInterestEntry[laneCapacity];
         _preparedHandles = new NetworkEntityHandle[laneCapacity];
         _preparedEntities = new Entity[laneCapacity];
+        _preparedDisclosures = new KnowledgeDisclosureRecord[laneCapacity];
+        _preparedKnowledgeEnters = new bool[laneCapacity];
         _trackedCounts = new int[SeatCapacity];
         _trackedSeatGenerations = new uint[SeatCapacity];
         _trackedPlayerIds = new int[SeatCapacity];
@@ -222,6 +227,7 @@ public sealed class Physics3DNetworkAoiInterestPort :
 
         int exitCount = 0;
         int enterCount = 0;
+        int physicalEnterCount = 0;
         for (int batchIndex = 0; batchIndex < seats.Length; batchIndex++)
         {
             int seatSlot = seats[batchIndex].Slot;
@@ -240,17 +246,39 @@ public sealed class Physics3DNetworkAoiInterestPort :
             return FailPrepare(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded, -1);
         }
 
+        if (_knowledge.PhysicalRecordCount + enterCount > _knowledge.RecordCapacity)
+        {
+            _knowledge.CompactPreservingCapacity();
+            if (_knowledge.PhysicalRecordCount + enterCount > _knowledge.RecordCapacity)
+            {
+                return FailPrepare(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded, -1);
+            }
+        }
+
+        for (int batchIndex = 0; batchIndex < seats.Length; batchIndex++)
+        {
+            PrepareDisclosures(in seats[batchIndex], ref physicalEnterCount);
+        }
+
+        if (_knowledge.PhysicalRecordCount + physicalEnterCount > _knowledge.RecordCapacity)
+        {
+            return FailPrepare(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded, -1);
+        }
+
         _preparedEnterCount = enterCount;
+        _preparedPhysicalEnterCount = physicalEnterCount;
         _batchState = BatchPrepared;
         return true;
     }
 
     public bool TryGetPreparedInterest(
         in SessionSeatBinding seat,
-        out ReadOnlySpan<NetworkEntityHandle> handles)
+        out ReadOnlySpan<NetworkEntityHandle> handles,
+        out ReadOnlySpan<KnowledgeDisclosureRecord> disclosures)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         handles = default;
+        disclosures = default;
         if ((_batchState != BatchPrepared && _batchState != BatchCommitted) ||
             !seat.IsValid ||
             (uint)seat.Slot >= (uint)_preparedActive.Length ||
@@ -265,6 +293,7 @@ public sealed class Physics3DNetworkAoiInterestPort :
 
         int laneStart = checked(seat.Slot * _perSeatCapacity);
         handles = _preparedHandles.AsSpan(laneStart, _preparedCounts[seat.Slot]);
+        disclosures = _preparedDisclosures.AsSpan(laneStart, _preparedCounts[seat.Slot]);
         return true;
     }
 
@@ -285,12 +314,7 @@ public sealed class Physics3DNetworkAoiInterestPort :
             }
         }
 
-        if (_knowledge.PhysicalRecordCount + _preparedEnterCount > _knowledge.RecordCapacity)
-        {
-            _knowledge.CompactPreservingCapacity();
-        }
-
-        if (_knowledge.PhysicalRecordCount + _preparedEnterCount > _knowledge.RecordCapacity)
+        if (_knowledge.PhysicalRecordCount + _preparedPhysicalEnterCount > _knowledge.RecordCapacity)
         {
             throw new InvalidOperationException(
                 "Physics3D AOI knowledge capacity changed after successful batch preparation.");
@@ -569,29 +593,51 @@ public sealed class Physics3DNetworkAoiInterestPort :
     {
         int seatSlot = seat.Slot;
         Entity viewer = _preparedViewers[seatSlot];
-        bool sameViewer = TrackedViewerMatches(in seat, viewer);
         int laneStart = checked(seatSlot * _perSeatCapacity);
-        int oldCount = _trackedCounts[seatSlot];
-        int oldIndex = 0;
-        KnowledgeDisclosureRecord disclosure = LiveDisclosure(viewer);
         for (int newIndex = 0; newIndex < _preparedCounts[seatSlot]; newIndex++)
         {
-            NetworkEntityHandle newHandle = _preparedHandles[laneStart + newIndex];
-            while (sameViewer &&
-                   oldIndex < oldCount &&
-                   Compare(_trackedHandles[laneStart + oldIndex], newHandle) < 0)
+            int preparedIndex = laneStart + newIndex;
+            if (!_preparedKnowledgeEnters[preparedIndex])
             {
-                oldIndex++;
+                continue;
             }
 
-            Entity target = _preparedEntities[laneStart + newIndex];
-            bool retained = sameViewer &&
-                oldIndex < oldCount &&
-                _trackedHandles[laneStart + oldIndex] == newHandle &&
-                _trackedEntities[laneStart + oldIndex] == target;
-            if (!retained && !_knowledge.TryGet(viewer, target, currentTick: 0, out _))
+            KnowledgeDisclosureRecord disclosure = _preparedDisclosures[preparedIndex];
+            uint revision = _knowledge.Upsert(viewer, _preparedEntities[preparedIndex], in disclosure);
+            if (revision != disclosure.Revision)
             {
-                _knowledge.Upsert(viewer, target, in disclosure);
+                throw new InvalidOperationException(
+                    "Physics3D AOI knowledge revision changed after successful batch preparation.");
+            }
+        }
+    }
+
+    private void PrepareDisclosures(in SessionSeatBinding seat, ref int physicalEnterCount)
+    {
+        int seatSlot = seat.Slot;
+        Entity viewer = _preparedViewers[seatSlot];
+        int laneStart = checked(seatSlot * _perSeatCapacity);
+        KnowledgeDisclosureRecord live = LiveDisclosure(viewer);
+        for (int index = 0; index < _preparedCounts[seatSlot]; index++)
+        {
+            int preparedIndex = laneStart + index;
+            Entity target = _preparedEntities[preparedIndex];
+            if (_knowledge.TryGet(viewer, target, currentTick: 0, out KnowledgeDisclosureRecord current))
+            {
+                _preparedDisclosures[preparedIndex] = current;
+                _preparedKnowledgeEnters[preparedIndex] = false;
+                continue;
+            }
+
+            _preparedDisclosures[preparedIndex] = _knowledge.PreviewUpsert(
+                viewer,
+                target,
+                in live,
+                out bool requiresPhysicalSlot);
+            _preparedKnowledgeEnters[preparedIndex] = true;
+            if (requiresPhysicalSlot)
+            {
+                physicalEnterCount++;
             }
         }
     }
@@ -665,11 +711,15 @@ public sealed class Physics3DNetworkAoiInterestPort :
             _preparedLaneChanged[seatSlot] = false;
             _overlapCounts[seatSlot] = 0;
             _preparedFailures[seatSlot] = Physics3DNetworkAoiFailure.None;
+            int laneStart = checked(seatSlot * _perSeatCapacity);
+            _preparedDisclosures.AsSpan(laneStart, _perSeatCapacity).Clear();
+            _preparedKnowledgeEnters.AsSpan(laneStart, _perSeatCapacity).Clear();
             _batchSeats[batchIndex] = default;
         }
 
         _batchSeatCount = 0;
         _preparedEnterCount = 0;
+        _preparedPhysicalEnterCount = 0;
     }
 
     private void ResetFailure()

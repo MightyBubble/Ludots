@@ -308,6 +308,46 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PreparedFull_CancelAllowsSameSnapshotRetryWithoutAdvancingDisclosureSequence()
+        {
+            var entity = new NetworkEntityHandle(slot: 0, generation: 1);
+            var states = new[] { State(entity, revision: 1, value: 10) };
+            var disclosures = new[] { Visible(entity) };
+            var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 2);
+            var channel = new AuthoritativeReplicationChannel(
+                new NetworkEntityTable(capacity: 1),
+                replicationEntityCapacityPerSeat: 1,
+                baselineCapacity: 2,
+                disclosureLog);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+
+            Assert.That(
+                channel.PrepareFull(7, 100, 1, states, disclosures, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(disclosureLog.Count, Is.Zero);
+
+            channel.CancelPrepared();
+            Assert.Multiple(() =>
+            {
+                Assert.That(disclosureLog.Count, Is.Zero);
+                Assert.That(packet.Header.SnapshotId, Is.Zero);
+            });
+
+            Assert.That(
+                channel.PrepareFull(7, 100, 1, states, disclosures, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(channel.CanCommitPrepared(packet), Is.True);
+            channel.CommitPrepared(packet);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(disclosureLog.Count, Is.EqualTo(1));
+                Assert.That(packet.DisclosureChanges[0].Sequence, Is.EqualTo(1));
+                Assert.That(packet.Header.SnapshotId, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public void BuildDeltaAndApply_AreZeroAllocAfterConstructionAndWarmup()
         {
             var entity = new NetworkEntityHandle(slot: 0, generation: 1);

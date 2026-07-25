@@ -37,7 +37,8 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
         public const int FixedStepHz = 30;
         public const int WarmupFrames = 16;
         public const int MeasuredFrames = 128;
-        public const int DefaultQueryWorkerCount = 3;
+        public const int ScaleQueryWorkerCount = 4;
+        public const int DeterminismParallelWorkerCount = 3;
         public const int DeterminismSingleWorkerCount = 1;
         public const int ClusterColumns = 15;
         public const float ClusterSpacingCm = 10_000f;
@@ -74,7 +75,7 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
     public void FullPublish_150SeatsAnd10KRegisteredBodies_Meets30HzBudgetAndZeroAllocation()
         => RunFullPublishScale(
             ordinaryBodyCount: GateConfig.OrdinaryBodyCount10K,
-            queryWorkerCount: GateConfig.DefaultQueryWorkerCount,
+            queryWorkerCount: GateConfig.ScaleQueryWorkerCount,
             measuredFrames: GateConfig.MeasuredFrames,
             assertBudget: true);
 
@@ -84,7 +85,7 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
     public void FullPublish_150SeatsAnd25KRegisteredBodies_Meets30HzBudgetAndZeroAllocation()
         => RunFullPublishScale(
             ordinaryBodyCount: GateConfig.OrdinaryBodyCount25K,
-            queryWorkerCount: GateConfig.DefaultQueryWorkerCount,
+            queryWorkerCount: GateConfig.ScaleQueryWorkerCount,
             measuredFrames: GateConfig.MeasuredFrames,
             assertBudget: true);
 
@@ -203,6 +204,126 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
 
     [Test]
     [NonParallelizable]
+    public void FullPublish_LateSeatProjectionFailure_LeavesKnowledgeAndTransportUnchanged()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        Entity lateSeatViewer = harness.ViewerEntities[GateConfig.AtomicSeatCount - 1];
+        harness.Ecs.Remove<Physics3DNetworkReplicatedBody>(lateSeatViewer);
+        harness.Transport.ClearCounters();
+
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        NetworkRuntimeException? fault = Assert.Throws<NetworkRuntimeException>(
+            () => harness.RunAuthoritativeFrame(tick));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fault, Is.Not.Null);
+            Assert.That(fault!.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+            Assert.That(harness.Server.IsFaulted, Is.True);
+            Assert.That(harness.Server.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+            Assert.That(harness.Knowledge.RecordCount, Is.Zero);
+            AssertZeroTransportSendsOfEveryWireKind(harness.Transport);
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void FullPublish_LateSeatOutboundCapacityFailure_LeavesKnowledgeAndTransportUnchanged()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount,
+            outboundQueueCapacity: 1);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        harness.Transport.ClearCounters();
+
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        NetworkRuntimeException? fault = Assert.Throws<NetworkRuntimeException>(
+            () => harness.RunAuthoritativeFrame(tick));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fault, Is.Not.Null);
+            Assert.That(fault!.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.OutboundQueueCapacityExceeded));
+            Assert.That(harness.Server.IsFaulted, Is.True);
+            Assert.That(harness.Knowledge.RecordCount, Is.Zero);
+            AssertZeroTransportSendsOfEveryWireKind(harness.Transport);
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void Delta_BaselineUnavailable_SendsOnlyResyncThenFullWithoutSkippingSnapshotId()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: 1,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicReplicationCapacityPerSeat,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: 1);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        harness.Transport.ClearCounters();
+
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        harness.AcknowledgePublishedSeats(tick);
+        harness.Server.PumpTransport();
+
+        for (int index = 0; index < GateConfig.BaselineCapacity; index++)
+        {
+            tick = checked((uint)(harness.TickState.CommittedTick + 1));
+            harness.RunAuthoritativeFrame(tick);
+        }
+
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong beforeResync), Is.True);
+        harness.Transport.ClearCounters();
+        tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ResyncRequired), Is.EqualTo(1));
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ReplicationPacket), Is.Zero);
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.SnapshotFragment), Is.Zero);
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong duringResync), Is.True);
+            Assert.That(duringResync, Is.EqualTo(beforeResync));
+        });
+
+        harness.Transport.ClearCounters();
+        tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.SnapshotFragment), Is.GreaterThan(0));
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ResyncRequired), Is.Zero);
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong recovered), Is.True);
+            Assert.That(recovered, Is.EqualTo(beforeResync + 1));
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
     public void FullPublish_1Vs3QueryWorkers_YieldsIdenticalPerSeatWireDigestsAndOrder()
     {
         const int ordinaryBodyCount = 300;
@@ -230,7 +351,7 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
         using (FullPublishHarness harness3 = FullPublishHarness.Create(
                    seatCount: GateConfig.SeatCount,
                    ordinaryBodyCount: ordinaryBodyCount,
-                   queryWorkerCount: GateConfig.DefaultQueryWorkerCount,
+                   queryWorkerCount: GateConfig.DeterminismParallelWorkerCount,
                    replicationEntityCapacityPerSeat: GateConfig.ReplicationEntityCapacityPerSeat,
                    knowledgeCapacity: GateConfig.SeatCount * GateConfig.ReplicationEntityCapacityPerSeat,
                    interestRadiusCm: GateConfig.InterestRadiusCm,
@@ -753,7 +874,8 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             int knowledgeCapacity,
             float interestRadiusCm,
             float spawnSpacingCm,
-            int clusterColumns)
+            int clusterColumns,
+            int? outboundQueueCapacity = null)
         {
             World ecs = World.Create();
             var physics = new Physics3DWorld(CreateWorldConfig(
@@ -867,7 +989,10 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
                     GlobalEntityCapacity = GateConfig.GlobalEntityCapacity,
                 });
 
-            NetworkRuntimeCapacity capacity = CreateCapacity(seatCount, replicationEntityCapacityPerSeat);
+            NetworkRuntimeCapacity capacity = CreateCapacity(
+                seatCount,
+                replicationEntityCapacityPerSeat,
+                outboundQueueCapacity);
             ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("physics3d-full-publish-gate"u8);
             var protocol = new ProtocolVersion(1, 0);
             var transport = new FixedCapacityMultiConnectionTransport(
@@ -1053,7 +1178,10 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             _ = _observer;
         }
 
-        private static NetworkRuntimeCapacity CreateCapacity(int seatCount, int replicationEntityCapacityPerSeat)
+        private static NetworkRuntimeCapacity CreateCapacity(
+            int seatCount,
+            int replicationEntityCapacityPerSeat,
+            int? outboundQueueCapacity = null)
         {
             int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(
                 replicationEntityCapacityPerSeat,
@@ -1065,7 +1193,8 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             int maxCommandPayloadBytes = CommandBatchWireCodec.GetPayloadSize(maxCommandEntries);
             int commandFragmentDataBytes = CommandFragmentWireCodec.GetMaxFragmentDataBytes(GateConfig.MaxDatagramPayloadBytes);
             int maxCommandFragments = checked((maxCommandPayloadBytes + commandFragmentDataBytes - 1) / commandFragmentDataBytes);
-            int outboundQueueCapacity = checked((seatCount * maxSnapshotFragments) + seatCount);
+            int resolvedOutboundQueueCapacity = outboundQueueCapacity ??
+                checked((seatCount * maxSnapshotFragments) + seatCount);
             return new NetworkRuntimeCapacity(
                 simulationTickRateHz: GateConfig.FixedStepHz,
                 statePublishRateHz: GateConfig.FixedStepHz,
@@ -1078,7 +1207,7 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
                 maxCommandFragments: Math.Max(1, maxCommandFragments),
                 maxSnapshotBytes: maxSnapshotBytes,
                 maxSnapshotFragments: Math.Max(1, maxSnapshotFragments),
-                outboundQueueCapacity: outboundQueueCapacity,
+                outboundQueueCapacity: resolvedOutboundQueueCapacity,
                 acknowledgementHistoryCapacity: GateConfig.AcknowledgementHistoryCapacity,
                 controlChannel: new ChannelId(0),
                 commandChannel: new ChannelId(1),

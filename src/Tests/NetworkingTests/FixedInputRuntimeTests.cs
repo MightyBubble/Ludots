@@ -1157,6 +1157,7 @@ public sealed class FixedInputRuntimeTests
     {
         private readonly SessionSeatBinding[] _preparedSeats;
         private readonly NetworkEntityHandle[] _handles;
+        private readonly KnowledgeDisclosureRecord[] _disclosures;
         private readonly int _entityCapacityPerSeat;
 
         private int _preparedSeatCount;
@@ -1170,6 +1171,7 @@ public sealed class FixedInputRuntimeTests
             _preparedSeats = new SessionSeatBinding[seatCapacity];
             _entityCapacityPerSeat = entityCapacityPerSeat;
             _handles = handles;
+            _disclosures = CreateVisibleDisclosures(handles.Length);
         }
 
         public int SeatCapacity => _preparedSeats.Length;
@@ -1190,7 +1192,8 @@ public sealed class FixedInputRuntimeTests
 
         public bool TryGetPreparedInterest(
             in SessionSeatBinding seat,
-            out ReadOnlySpan<NetworkEntityHandle> handles)
+            out ReadOnlySpan<NetworkEntityHandle> handles,
+            out ReadOnlySpan<KnowledgeDisclosureRecord> disclosures)
         {
             if (_prepared)
             {
@@ -1199,13 +1202,26 @@ public sealed class FixedInputRuntimeTests
                     if (_preparedSeats[i].Equals(seat))
                     {
                         handles = _handles;
+                        disclosures = _disclosures;
                         return true;
                     }
                 }
             }
 
             handles = default;
+            disclosures = default;
             return false;
+        }
+
+        private static KnowledgeDisclosureRecord[] CreateVisibleDisclosures(int count)
+        {
+            var disclosures = new KnowledgeDisclosureRecord[count];
+            for (int i = 0; i < disclosures.Length; i++)
+            {
+                disclosures[i] = VisibleDisclosure();
+            }
+
+            return disclosures;
         }
 
         public void CommitPreparedKnowledge()
