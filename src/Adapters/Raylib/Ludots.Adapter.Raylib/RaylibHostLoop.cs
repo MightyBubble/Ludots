@@ -398,10 +398,28 @@ namespace Ludots.Adapter.Raylib
                         bool uiCaptured = false;
                         bool uiWheelCaptured = false;
                         bool uiInputHandled = false;
+                        bool playbackUiHandled = setup.InputPlayback?.AdvanceFrame(
+                            frameIndex,
+                            elementId => drawSkiaUi
+                                ? ClickUiElement(uiRoot, elementId)
+                                : throw new InvalidOperationException(
+                                    $"Raylib input playback cannot click UI element '{elementId}' while Skia UI is disabled."),
+                            message => AppendRaylibDiagnostic(diagnosticPath, message)) ?? false;
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            UiInputFrameResult uiInput;
+                            if (setup.InputPlayback != null)
+                            {
+                                uiInput = new UiInputFrameResult(
+                                    Handled: playbackUiHandled,
+                                    PointerCaptured: false,
+                                    WheelCaptured: false);
+                            }
+                            else
+                            {
+                                uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            }
                             uiCaptured = uiInput.PointerCaptured;
                             uiWheelCaptured = uiInput.WheelCaptured;
                             uiInputHandled = uiInput.Handled;
@@ -736,9 +754,16 @@ namespace Ludots.Adapter.Raylib
                     catch (Exception ex)
                     {
                         Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
+                        if (setup.InputPlayback != null)
+                        {
+                            throw;
+                        }
+
                         break;
                     }
                 }
+
+                setup.InputPlayback?.EnsureComplete(frameIndex);
             }
             finally
             {
@@ -1261,6 +1286,49 @@ namespace Ludots.Adapter.Raylib
 
             ForwardKeyboardInput(uiRoot);
             return new UiInputFrameResult(Handled: uiInputHandled, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
+        }
+
+        private static bool ClickUiElement(UIRoot uiRoot, string elementId)
+        {
+            UiNode node = uiRoot.Scene?.FindByElementId(elementId)
+                ?? throw new InvalidOperationException(
+                    $"Raylib input playback could not find UI element '{elementId}'.");
+            UiRect rect = node.LayoutRect;
+            if (rect.Width <= 0f || rect.Height <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib input playback UI element '{elementId}' has no visible layout bounds.");
+            }
+
+            float x = rect.X + (rect.Width * 0.5f);
+            float y = rect.Y + (rect.Height * 0.5f);
+            uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Move,
+                X = x,
+                Y = y
+            });
+            bool downHandled = uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Down,
+                Button = PointerButton.Left,
+                X = x,
+                Y = y
+            });
+            bool upHandled = uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Up,
+                Button = PointerButton.Left,
+                X = x,
+                Y = y
+            });
+            return downHandled || upHandled;
         }
 
         private static bool ShouldForwardUiPointerMove(float x, float y)
