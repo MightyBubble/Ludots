@@ -78,6 +78,12 @@ namespace Ludots.Core.Input.CommandSources
 
         public void Update(in float dt)
         {
+            bool hasOwner = TryGetCommandSourceOwner(out var owner);
+            if (hasOwner)
+            {
+                PruneDestroyedCommandSources(owner);
+            }
+
             if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
             {
                 return;
@@ -90,7 +96,6 @@ namespace Ludots.Core.Input.CommandSources
                 _suppressConfirmRelease = true;
             }
 
-            bool hasOwner = TryGetCommandSourceOwner(out var owner);
             Entity hovered = hasOwner
                 ? FindNearestEntity(owner, pointer.Pointer, _config.ClickPickRadiusPixels)
                 : Entity.Null;
@@ -382,6 +387,28 @@ namespace Ludots.Core.Input.CommandSources
 
             EnsureCommandSourceScratchCapacity(view.Count);
             return _entityCollections.CopyEntities(handle, 0, _commandSourceScratch.AsSpan(0, view.Count));
+        }
+
+        private void PruneDestroyedCommandSources(Entity owner)
+        {
+            int count = CopyCurrentCommandSource(owner);
+            int aliveCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = _commandSourceScratch[i];
+                if (_world.IsAlive(entity))
+                {
+                    _commandSourceScratch[aliveCount++] = entity;
+                }
+            }
+
+            if (aliveCount != count)
+            {
+                PublishCommandSource(
+                    owner,
+                    _commandSourceScratch.AsSpan(0, aliveCount),
+                    CommandSourceAcquisitionMode.Replace);
+            }
         }
 
         private CommandSourceAcquisitionMode ResolveAcquisitionMode()

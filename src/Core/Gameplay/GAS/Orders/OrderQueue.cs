@@ -6,11 +6,25 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public enum OrderSubmitMode : byte
     {
         Immediate = 0,
-        Queued = 1
+        Queued = 1,
+        PersistentQueued = 2
+    }
+
+    public enum OrderAdmissionSource : byte
+    {
+        Local = 0,
+        Network = 1
     }
 
     public struct Order
     {
+        public Order()
+        {
+            Target = Entity.Null;
+            TargetContext = Entity.Null;
+            CommandSource = Entity.Null;
+        }
+
         public int OrderId;
         public int OrderTypeId;
         public int PlayerId;
@@ -21,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public OrderArgs Args;
         public int SubmitStep;
         public OrderSubmitMode SubmitMode;
+        public OrderAdmissionSource AdmissionSource;
         public int AdmissionBatchId;
         public ushort AdmissionBatchSize;
         public ushort AdmissionBatchIndex;
@@ -59,6 +74,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public bool TryEnqueueAssigned(ref Order order, out OrderAdmissionOutcome outcome)
         {
             ValidateOrderTypeId(order.OrderTypeId);
+            OrderEntityReferenceContract.Validate(in order, nameof(OrderQueue));
             if (_count >= _items.Length)
             {
                 outcome = new OrderAdmissionOutcome(
@@ -69,6 +85,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             EnsureOrderId(ref order);
+            order.AdmissionSource = OrderAdmissionSource.Local;
             order.AdmissionBatchId = 0;
             order.AdmissionBatchSize = 0;
             order.AdmissionBatchIndex = 0;
@@ -98,6 +115,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 ValidateOrderTypeId(orders[i].OrderTypeId);
+                OrderEntityReferenceContract.Validate(in orders[i], nameof(OrderQueue));
             }
 
             if (orders.Length > AvailableCapacity)
@@ -108,6 +126,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
+                orders[i].AdmissionSource = OrderAdmissionSource.Local;
                 orders[i].AdmissionBatchId = 0;
                 orders[i].AdmissionBatchSize = 0;
                 orders[i].AdmissionBatchIndex = 0;
@@ -123,16 +142,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         /// Atomically admits a fan-out batch whose rows represent one logical order. The queue owns
         /// the shared id so producers cannot create ids that collide with other intake paths.
         /// </summary>
-        public bool TryEnqueueSharedBatch(Span<Order> orders)
+        public bool TryEnqueueSharedBatch(
+            Span<Order> orders,
+            OrderAdmissionSource admissionSource = OrderAdmissionSource.Local)
         {
             if (orders.IsEmpty)
             {
                 return true;
             }
 
+            ValidateAdmissionSource(admissionSource);
             for (int i = 0; i < orders.Length; i++)
             {
                 ValidateOrderTypeId(orders[i].OrderTypeId);
+                OrderEntityReferenceContract.Validate(in orders[i], nameof(OrderQueue));
                 if (orders[i].OrderId != 0)
                 {
                     throw new System.InvalidOperationException(
@@ -153,11 +176,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     $"OrderQueue shared batch size {orders.Length} exceeds {ushort.MaxValue}.");
             }
 
-            int sharedOrderId = _nextOrderId++;
-            int admissionBatchId = _nextAdmissionBatchId++;
+            int sharedOrderId = TakeNextOrderId();
+            int admissionBatchId = TakeNextAdmissionBatchId();
             for (int i = 0; i < orders.Length; i++)
             {
                 orders[i].OrderId = sharedOrderId;
+                orders[i].AdmissionSource = admissionSource;
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = (ushort)orders.Length;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -184,6 +208,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 ValidateOrderTypeId(orders[i].OrderTypeId);
+                OrderEntityReferenceContract.Validate(in orders[i], nameof(OrderQueue));
                 if (orders[i].OrderId != 0 || orders[i].CommandSource == Entity.Null)
                 {
                     throw new System.InvalidOperationException(
@@ -219,16 +244,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             previousCluster = Entity.Null;
             int clusterOrderId = 0;
-            int admissionBatchId = _nextAdmissionBatchId++;
+            int admissionBatchId = TakeNextAdmissionBatchId();
             for (int i = 0; i < orders.Length; i++)
             {
                 if (orders[i].CommandSource != previousCluster)
                 {
                     previousCluster = orders[i].CommandSource;
-                    clusterOrderId = _nextOrderId++;
+                    clusterOrderId = TakeNextOrderId();
                 }
 
                 orders[i].OrderId = clusterOrderId;
+                orders[i].AdmissionSource = OrderAdmissionSource.Local;
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = (ushort)orders.Length;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -241,6 +267,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         public bool TryDequeueBatch(Span<Order> destination, out int count)
+        {
+            if (!TryPeekBatch(destination, out int batchSize))
+            {
+                count = 0;
+                return false;
+            }
+
+            _head = (_head + batchSize) % _items.Length;
+            _count -= batchSize;
+            count = batchSize;
+            return true;
+        }
+
+        public bool TryPeekBatch(Span<Order> destination, out int count)
         {
             count = 0;
             if (!TryPeekBatchSize(out int batchSize))
@@ -262,6 +302,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 Order item = _items[sourceIndex];
                 if (batchId > 0 &&
                     (item.AdmissionBatchId != batchId ||
+                     item.AdmissionSource != first.AdmissionSource ||
                      item.AdmissionBatchSize != batchSize ||
                      item.AdmissionBatchIndex != i))
                 {
@@ -272,8 +313,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 destination[i] = item;
             }
 
-            _head = (_head + batchSize) % _items.Length;
-            _count -= batchSize;
             count = batchSize;
             return true;
         }
@@ -301,8 +340,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             if (order.OrderId == 0)
             {
-                order.OrderId = _nextOrderId++;
+                order.OrderId = TakeNextOrderId();
             }
+        }
+
+        private int TakeNextOrderId()
+        {
+            if (_nextOrderId <= 0 || _nextOrderId == int.MaxValue)
+            {
+                throw new System.InvalidOperationException("OrderQueue order id space is exhausted.");
+            }
+
+            return _nextOrderId++;
+        }
+
+        private int TakeNextAdmissionBatchId()
+        {
+            if (_nextAdmissionBatchId <= 0 || _nextAdmissionBatchId == int.MaxValue)
+            {
+                throw new System.InvalidOperationException("OrderQueue admission batch id space is exhausted.");
+            }
+
+            return _nextAdmissionBatchId++;
         }
 
         private static void ValidateOrderTypeId(int orderTypeId)
@@ -311,6 +370,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 throw new System.InvalidOperationException(
                     $"OrderQueue requires a positive order type id below {OrderTypeRegistry.MaxOrderTypes}; got {orderTypeId}.");
+            }
+        }
+
+        private static void ValidateAdmissionSource(OrderAdmissionSource admissionSource)
+        {
+            if (admissionSource is not OrderAdmissionSource.Local and not OrderAdmissionSource.Network)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(admissionSource),
+                    admissionSource,
+                    "Unknown order admission source.");
             }
         }
 

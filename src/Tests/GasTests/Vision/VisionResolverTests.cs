@@ -216,10 +216,26 @@ namespace Ludots.Tests.GAS
             var cellMap = new FogCellMap();
             var resolver = new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap);
             var projector = new FogKnowledgeProjector(knowledge, cellMap);
+            var disclosure = new FogDisclosurePolicy(
+                KnowledgeIdMask256.Empty.WithId(7),
+                KnowledgeIdMask256.Empty,
+                KnowledgeIdMask256.Empty,
+                ttlTicks: 0,
+                trueSightRevealsConcealment: true);
+            var projection = new FogProjectionPolicy(disclosure, memoryTtlTicks: 0);
+            projector.ConfigureProjectionPolicy(in projection);
             var players = new PlayerEntityLookup();
             Entity formalPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
             players.Register(1, formalPlayer);
-            var system = new VisionSystem(world, session, registry, fields, resolver, projector, knowledge, players);
+            var system = new VisionSystem(
+                world,
+                session,
+                registry,
+                fields,
+                resolver,
+                projector,
+                knowledge,
+                new PlayerOwnedEntityObserverResolver(players));
 
             Entity viewer = world.Create(
                 WorldPositionCm.FromCm(0, 0),
@@ -242,6 +258,16 @@ namespace Ludots.Tests.GAS
             Assert.That(knowledge.TryGet(formalPlayer, target, session.CurrentTick, out KnowledgeDisclosureRecord record), Is.True);
             Assert.That(knowledge.TryGet(viewer, target, session.CurrentTick, out _), Is.False);
             Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+            Assert.That(record.AttributeMask.ContainsId(7), Is.True);
+
+            ref WorldPositionCm targetPosition = ref world.Get<WorldPositionCm>(target);
+            targetPosition = WorldPositionCm.FromCm(500, 500);
+            system.Update(1f / 60f);
+
+            Assert.That(knowledge.TryGet(formalPlayer, target, session.CurrentTick, out record), Is.True);
+            Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.HiddenWithSource));
+            Assert.That(record.Position, Is.EqualTo(KnowledgePositionAccess.None));
+            Assert.That(record.AttributeMask.IsEmpty, Is.True);
         }
 
         [Test]
@@ -263,7 +289,7 @@ namespace Ludots.Tests.GAS
                 new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap),
                 new FogKnowledgeProjector(knowledge, cellMap),
                 knowledge,
-                new PlayerEntityLookup());
+                new PlayerOwnedEntityObserverResolver(new PlayerEntityLookup()));
             world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 new PlayerOwner { PlayerId = 1 },

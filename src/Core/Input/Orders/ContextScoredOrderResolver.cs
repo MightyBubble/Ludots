@@ -16,6 +16,13 @@ namespace Ludots.Core.Input.Orders
     {
         public ContextScoredOrderResolution(int slotIndex, Entity target, Vector3 targetWorldCm, bool hasTargetWorldCm)
         {
+            if (target == default)
+            {
+                throw new ArgumentException(
+                    "Context-scored target must use Entity.Null when the resolved ability has no entity target.",
+                    nameof(target));
+            }
+
             SlotIndex = slotIndex;
             Target = target;
             TargetWorldCm = targetWorldCm;
@@ -109,7 +116,7 @@ namespace Ludots.Core.Input.Orders
 
             float bestScore = float.MinValue;
             int bestSlotIndex = -1;
-            Entity bestTarget = default;
+            Entity bestTarget = Entity.Null;
 
             for (int i = 0; i < group.Candidates.Count; i++)
             {
@@ -121,12 +128,12 @@ namespace Ludots.Core.Input.Orders
 
                 if (!candidate.RequiresTarget)
                 {
-                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) &&
-                        IsBetterCandidate(score, default, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
+                    if (TryScoreCandidate(actor, Entity.Null, hoveredEntity, actorWorldCm, candidate, out float score) &&
+                        IsBetterCandidate(score, Entity.Null, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
-                        bestTarget = default;
+                        bestTarget = Entity.Null;
                     }
                     continue;
                 }
@@ -248,7 +255,7 @@ namespace Ludots.Core.Input.Orders
                     totalScore += normalized * candidate.AngleWeight;
                 }
 
-                if (!hoveredEntity.Equals(default) && hoveredEntity.Equals(target))
+                if (hoveredEntity != Entity.Null && hoveredEntity.Equals(target))
                 {
                     totalScore += candidate.HoveredBiasScore;
                 }

@@ -138,6 +138,14 @@
       }
     },
     {
+      "name": "rts_multiplayer_frontline_three_process_uat",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+        "projectPath": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_participant_views",
       "target": {
         "type": "path",

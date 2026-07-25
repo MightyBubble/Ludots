@@ -39,6 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TrySubmit(in Order order)
         {
+            OrderEntityReferenceContract.Validate(in order, nameof(CompositeOrderPlanner));
             if (!TryBuildMoveThenCastPlan(in order, out var primaryMove, out var followUpCast))
             {
                 var passthrough = order;
@@ -141,7 +142,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 OrderTypeId = _moveToOrderTypeId,
                 PlayerId = castOrder.PlayerId,
                 Actor = castOrder.Actor,
-                Target = default,
+                Target = Entity.Null,
                 TargetContext = castOrder.TargetContext,
                 Args = moveArgs,
                 SubmitMode = castOrder.SubmitMode

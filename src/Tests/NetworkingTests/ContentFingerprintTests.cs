@@ -57,4 +57,82 @@ public sealed class ContentFingerprintTests
         Assert.That(digest.IsEmpty, Is.False);
         Assert.That(digest, Is.Not.EqualTo(ContentFingerprint.Empty));
     }
+
+    [Test]
+    public void ContentFingerprint_IsStableAcrossInputOrderAndLogicalPathSeparators()
+    {
+        var protocol = new ProtocolVersion(1, 1);
+        var canonical = new[]
+        {
+            Content("assemblies/Ludots.Core.dll", 1, 2, 3),
+            Content("base-assets/game.json", 4, 5),
+            Content("mods/TestMod/assets/rules.json", 6),
+        };
+        var reordered = new[]
+        {
+            Content("mods\\TestMod\\assets\\rules.json", 6),
+            Content("assemblies\\Ludots.Core.dll", 1, 2, 3),
+            Content("base-assets\\game.json", 4, 5),
+        };
+
+        ContentFingerprint first = ContentFingerprintCanonicalizer.FromContent(protocol, canonical);
+        ContentFingerprint second = ContentFingerprintCanonicalizer.FromContent(protocol, reordered);
+
+        Assert.That(second, Is.EqualTo(first));
+        Assert.That(
+            ContentFingerprintCanonicalizer.FromContent(protocol, canonical),
+            Is.EqualTo(first));
+    }
+
+    [Test]
+    public void ContentFingerprint_ChangesWithContentOrProtocol()
+    {
+        var baseline = new[]
+        {
+            Content("base-assets/game.json", 1, 2, 3),
+        };
+        var changed = new[]
+        {
+            Content("base-assets/game.json", 1, 2, 4),
+        };
+
+        ContentFingerprint fingerprint = ContentFingerprintCanonicalizer.FromContent(
+            new ProtocolVersion(1, 1),
+            baseline);
+
+        Assert.That(
+            ContentFingerprintCanonicalizer.FromContent(new ProtocolVersion(1, 1), changed),
+            Is.Not.EqualTo(fingerprint));
+        Assert.That(
+            ContentFingerprintCanonicalizer.FromContent(new ProtocolVersion(1, 2), baseline),
+            Is.Not.EqualTo(fingerprint));
+    }
+
+    [Test]
+    public void ContentFingerprint_RejectsMissingDuplicateOrNonCanonicalLogicalPaths()
+    {
+        var protocol = new ProtocolVersion(1, 1);
+
+        Assert.Throws<ArgumentException>(() =>
+            ContentFingerprintCanonicalizer.FromContent(protocol, Array.Empty<ContentFingerprintContent>()));
+        Assert.Throws<ArgumentException>(() =>
+            ContentFingerprintCanonicalizer.FromContent(
+                protocol,
+                new[] { Content("base-assets/../game.json", 1) }));
+        Assert.Throws<ArgumentException>(() =>
+            ContentFingerprintCanonicalizer.FromContent(
+                protocol,
+                new[] { Content("C:\\assets\\game.json", 1) }));
+        Assert.Throws<ArgumentException>(() =>
+            ContentFingerprintCanonicalizer.FromContent(
+                protocol,
+                new[]
+                {
+                    Content("base-assets/game.json", 1),
+                    Content("base-assets\\game.json", 2),
+                }));
+    }
+
+    private static ContentFingerprintContent Content(string logicalPath, params byte[] bytes) =>
+        new(logicalPath, bytes);
 }

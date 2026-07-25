@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -44,21 +45,25 @@ namespace Ludots.Tests.GAS.Production
                 assetsRoot);
             engine.Start();
 
+            var localInputNames = GetSystemNames(engine, SystemGroup.LocalInput);
             var inputNames = GetSystemNames(engine, SystemGroup.InputCollection);
             var presentationNames = GetPresentationSystemNames(engine);
 
-            Assert.That(inputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
-            Assert.That(inputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(localInputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
+            Assert.That(localInputNames, Does.Contain("AuthoritativePointerButtonSnapshotSystem"));
+            Assert.That(localInputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(localInputNames, Does.Contain("CommandSourceAcquisitionSystem"));
+            Assert.That(localInputNames, Does.Contain("AxisMoveOrderSystem"));
+            Assert.That(localInputNames, Does.Contain("TabTargetCycleSystem"));
+            Assert.That(localInputNames, Does.Contain("ViewModeSwitchSystem"));
+            Assert.That(localInputNames, Does.Contain("MobaLocalOrderSourceSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
-            Assert.That(inputNames, Does.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
-            Assert.That(inputNames, Does.Contain("TabTargetCycleSystem"));
-            Assert.That(inputNames, Does.Contain("ViewModeSwitchSystem"));
-            Assert.That(inputNames, Does.Contain("MobaLocalOrderSourceSystem"));
-            Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("CommandSourceAcquisitionSystem")));
-            Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("GasInputResponseSystem")));
-            Assert.That(inputNames.IndexOf("AbilityFormRoutingSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
-            Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
+            Assert.That(localInputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(localInputNames.IndexOf("CommandSourceAcquisitionSystem")));
+            Assert.That(localInputNames.IndexOf("CommandSourceAcquisitionSystem"), Is.LessThan(localInputNames.IndexOf("MobaLocalOrderSourceSystem")));
+            Assert.That(localInputNames, Does.Not.Contain("ClockSystem"));
+            Assert.That(localInputNames, Does.Not.Contain("UtilityAiThinkScheduleSystem"));
+            Assert.That(localInputNames, Does.Not.Contain("Physics2DSimulationSystem"));
 
             Assert.That(presentationNames, Does.Not.Contain("LocalPlayerEntityResolverSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
@@ -71,6 +76,44 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(presentationNames, Does.Contain("SkillBarOverlaySystem"));
             Assert.That(presentationNames, Does.Contain("WorldToVisualSyncSystem"));
             Assert.That(presentationNames, Does.Contain("TerrainHeightSyncSystem"));
+        }
+
+        [Test]
+        public void ReplicatedClientLocalInput_ExecutesOnlyTheLocalIntentGroupInOrder()
+        {
+            using var engine = new GameEngine();
+            var executionOrder = new List<int>();
+            var first = new RecordingSystem(executionOrder, 1);
+            var second = new RecordingSystem(executionOrder, 2);
+            var authoritativeOnly = new RecordingSystem(executionOrder, 99);
+            engine.RegisterSystem(first, SystemGroup.LocalInput);
+            engine.RegisterSystem(second, SystemGroup.LocalInput);
+            engine.RegisterSystem(authoritativeOnly, SystemGroup.InputCollection);
+            MethodInfo method = typeof(GameEngine).GetMethod(
+                "UpdateReplicatedClientLocalInput",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Replicated-client local input phase is unavailable.");
+
+            method.Invoke(engine, new object[] { 1f / 60f });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(executionOrder, Is.EqualTo(new[] { 1, 2 }));
+                Assert.That(first.UpdateCount, Is.EqualTo(1));
+                Assert.That(second.UpdateCount, Is.EqualTo(1));
+                Assert.That(authoritativeOnly.UpdateCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void LocalInput_RejectsTimeSlicedSystems()
+        {
+            using var engine = new GameEngine();
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+                engine.RegisterSystem(new TimeSlicedRecordingSystem(), SystemGroup.LocalInput))!;
+
+            Assert.That(exception.Message, Does.Contain("cannot be time-sliced"));
         }
 
         [Test]
@@ -238,6 +281,43 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return names;
+        }
+
+        private sealed class RecordingSystem : ISystem<float>
+        {
+            private readonly List<int> _executionOrder;
+            private readonly int _value;
+
+            public RecordingSystem(List<int> executionOrder, int value)
+            {
+                _executionOrder = executionOrder;
+                _value = value;
+            }
+
+            public int UpdateCount { get; private set; }
+
+            public void Initialize() { }
+            public void BeforeUpdate(in float dt) { }
+
+            public void Update(in float dt)
+            {
+                UpdateCount++;
+                _executionOrder.Add(_value);
+            }
+
+            public void AfterUpdate(in float dt) { }
+            public void Dispose() { }
+        }
+
+        private sealed class TimeSlicedRecordingSystem : ISystem<float>, ITimeSlicedSystem
+        {
+            public void Initialize() { }
+            public void BeforeUpdate(in float dt) { }
+            public void Update(in float dt) { }
+            public void AfterUpdate(in float dt) { }
+            public bool UpdateSlice(float dt, int timeBudgetMs) => true;
+            public void ResetSlice() { }
+            public void Dispose() { }
         }
 
         private static List<string> GetPresentationSystemNames(GameEngine engine)

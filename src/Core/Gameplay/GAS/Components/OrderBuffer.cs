@@ -33,6 +33,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// Must not be used to rewrite authored order payload.
         /// </summary>
         public int RuntimeInt0;
+
+        /// <summary>
+        /// Set after EntityIntake publishes the transition to an active order.
+        /// This is admission metadata and must not share gameplay execution cursors.
+        /// </summary>
+        public byte AdmissionActivationPublished;
     }
     
     /// <summary>
@@ -378,4 +384,3 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
     }
 }
-

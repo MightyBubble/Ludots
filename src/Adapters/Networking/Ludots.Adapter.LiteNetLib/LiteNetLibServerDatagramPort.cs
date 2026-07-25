@@ -1,5 +1,6 @@
 using System;
 using global::LiteNetLib;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Transport;
 
 namespace Ludots.Adapter.LiteNetLib;
@@ -8,6 +9,7 @@ public sealed class LiteNetLibServerDatagramPort :
     IServerDatagramPort,
     IServerConnectionEventPort,
     IServerConnectionControlPort,
+    INetworkFaultInjectionMetricsPort,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;
@@ -15,9 +17,11 @@ public sealed class LiteNetLibServerDatagramPort :
     private readonly NetPeer?[] _peers;
     private readonly int[] _connectionValues;
     private readonly FixedDatagramQueue _inbound;
+    private readonly DeterministicSequencedReorderFilter _reorderFilter;
     private readonly FixedServerConnectionEventQueue _connectionEvents;
     private readonly string _connectionKey;
     private readonly byte _stateChannelId;
+    private readonly NetworkFaultInjectionConfigurationSnapshot _faultInjectionConfiguration;
     private int _nextConnectionValue = 1;
     private bool _disposed;
 
@@ -29,7 +33,8 @@ public sealed class LiteNetLibServerDatagramPort :
         int connectionEventCapacity,
         int maxPayloadBytes,
         int channelCount,
-        int stateChannelId)
+        int stateChannelId,
+        in LiteNetLibFaultInjectionSettings faults)
     {
         if ((uint)listenPort > ushort.MaxValue) throw new ArgumentOutOfRangeException(nameof(listenPort));
         if (string.IsNullOrWhiteSpace(connectionKey)) throw new ArgumentException("Connection key is required.", nameof(connectionKey));
@@ -51,6 +56,14 @@ public sealed class LiteNetLibServerDatagramPort :
             DisconnectTimeout = 5000,
             ChannelsCount = (byte)channelCount,
         };
+        faults.Apply(_manager, datagramCapacity);
+        _faultInjectionConfiguration = faults.CaptureConfiguration();
+        _reorderFilter = new DeterministicSequencedReorderFilter(
+            connectionCapacity,
+            maxPayloadBytes,
+            _stateChannelId,
+            faults.ReorderPermille,
+            faults.Seed);
 
         _listener.ConnectionRequestEvent += request =>
         {
@@ -73,11 +86,25 @@ public sealed class LiteNetLibServerDatagramPort :
     }
 
     public int BoundPort => _manager.LocalPort;
+    public long SimulatedStateReorderCount => _reorderFilter.ReorderedStateDatagramCount;
+
+    public NetworkFaultInjectionObservationSnapshot Capture()
+    {
+        ThrowIfDisposed();
+        return new NetworkFaultInjectionObservationSnapshot(
+            NetworkProcessRole.AuthoritativeServer,
+            in _faultInjectionConfiguration,
+            _manager.SimulatedInboundDelayedPacketCount,
+            _manager.SimulatedInboundDroppedPacketCount,
+            _reorderFilter.ReorderedStateDatagramCount);
+    }
 
     public void Pump()
     {
         ThrowIfDisposed();
+        _reorderFilter.BeginPump();
         _manager.PollEvents();
+        _reorderFilter.FlushAged(_inbound);
     }
 
     public bool TryReceiveConnectionEvent(out ServerConnectionEvent connectionEvent)
@@ -171,6 +198,7 @@ public sealed class LiteNetLibServerDatagramPort :
         }
 
         int connectionValue = _connectionValues[slot];
+        _reorderFilter.DiscardConnection(connectionValue);
         _peers[slot] = null;
         _connectionValues[slot] = 0;
         var connectionEvent = new ServerConnectionEvent(
@@ -199,7 +227,11 @@ public sealed class LiteNetLibServerDatagramPort :
             throw new InvalidOperationException("LiteNetLib received data from a peer that is not in the connection table.");
         }
 
-        _inbound.Enqueue(_connectionValues[slot], channelNumber, reader.GetRemainingBytesSpan());
+        _reorderFilter.Enqueue(
+            _connectionValues[slot],
+            channelNumber,
+            reader.GetRemainingBytesSpan(),
+            _inbound);
     }
 
     private int FindFreePeerSlot()

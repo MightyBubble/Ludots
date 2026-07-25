@@ -54,6 +54,11 @@
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 7000, "Y": 15000 } },
+        "ResourceSinkProfile": {
+          "ResourceAttribute": "Crystals",
+          "DockOffsetXCm": -800,
+          "DockOffsetYCm": 0
+        },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -119,6 +124,11 @@
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
         "WorldPositionCm": { "Value": { "X": 23000, "Y": 15000 } },
+        "ResourceSinkProfile": {
+          "ResourceAttribute": "Crystals",
+          "DockOffsetXCm": 800,
+          "DockOffsetYCm": 0
+        },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Diagnostics.CodeAnalysis;
+using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
@@ -16,9 +17,14 @@ namespace Ludots.Core.Networking.Runtime
         Handshaking = 1,
         Connected = 2,
         Rejected = 3,
+        RecoveryRejected = 4,
     }
 
-    public sealed class ReplicatedClientNetworkRuntime : INetworkRuntimePort, IReplicatedClientRoomControlPort
+    public sealed class ReplicatedClientNetworkRuntime :
+        INetworkRuntimePort,
+        IReplicatedClientRoomControlPort,
+        IReplicatedClientRuntimeStatus,
+        IPresentationInterpolationSource
     {
         private readonly NetworkRuntimeCapacity _capacity;
         private readonly IClientConnectionEventPort _connectionEvents;
@@ -28,13 +34,13 @@ namespace Ludots.Core.Networking.Runtime
         private readonly ContentFingerprint _contentFingerprint;
         private readonly IClientSessionCredentialPort _credentials;
         private readonly IClientReplicationBridgeFactory _replicationFactory;
-        private readonly NetworkCommandAdmissionResultBuffer _admissions;
         private readonly INetworkRuntimeObserver _observer;
         private readonly CommandFragmentEncoder _commandEncoder;
         private readonly SnapshotFragmentReassembler _snapshotReassembler;
         private readonly ReplicationPacketBuffer _replicationPacket;
         private readonly FixedClientDatagramSendQueue _outbound;
         private readonly float _reconnectRetrySeconds;
+        private readonly float _reconnectWindowSeconds;
 
         private readonly byte[] _receiveBuffer;
         private readonly byte[] _payloadBuffer;
@@ -48,14 +54,25 @@ namespace Ludots.Core.Networking.Runtime
         private ReconnectToken _reconnectToken;
         private SessionEpoch _sessionEpoch;
         private ClientWorldReplicationBridge? _replicationBridge;
+        private ClientWorldReplicationBridge? _replicationBridgePendingClear;
+        private ulong _preparedSnapshotId;
+        private uint _preparedSnapshotTick;
+        private ReplicationPacketKind _preparedSnapshotKind;
+        private ulong _nextClientBatchSequence;
+        private ulong _commandStreamRevision;
         private uint _lastCommittedTick;
         private bool _awaitingFullSnapshot;
         private bool _disposed;
         private bool _faulted;
         private NetworkRuntimeFault _lastFault;
         private float _reconnectElapsedSeconds;
+        private float _disconnectedElapsedSeconds;
+        private bool _hasEstablishedSession;
         private bool _hasRoomSnapshot;
         private NetworkRoomSnapshotHeader _roomSnapshot;
+        private bool _hasAppliedSnapshot;
+        private float _secondsSinceSnapshot;
+        private float _snapshotIntervalSeconds;
 
         public ReplicatedClientNetworkRuntime(
             in NetworkRuntimeCapacity capacity,
@@ -63,11 +80,11 @@ namespace Ludots.Core.Networking.Runtime
             IClientDatagramPort datagrams,
             IClientConnectionControlPort connectionControl,
             float reconnectRetrySeconds,
+            float reconnectWindowSeconds,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
             IClientSessionCredentialPort credentials,
             IClientReplicationBridgeFactory replicationFactory,
-            NetworkCommandAdmissionResultBuffer admissions,
             INetworkRuntimeObserver observer)
         {
             if (!protocolVersion.IsWellFormed)
@@ -91,11 +108,16 @@ namespace Ludots.Core.Networking.Runtime
 
             _reconnectRetrySeconds = reconnectRetrySeconds;
             _reconnectElapsedSeconds = reconnectRetrySeconds;
+            if (!float.IsFinite(reconnectWindowSeconds) || reconnectWindowSeconds <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reconnectWindowSeconds));
+            }
+
+            _reconnectWindowSeconds = reconnectWindowSeconds;
             _protocolVersion = protocolVersion;
             _contentFingerprint = contentFingerprint;
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _replicationFactory = replicationFactory ?? throw new ArgumentNullException(nameof(replicationFactory));
-            _admissions = admissions ?? throw new ArgumentNullException(nameof(admissions));
             _observer = observer ?? throw new ArgumentNullException(nameof(observer));
             if (NetworkWireEnvelope.SizeInBytes + RoomControlWireCodec.GetSnapshotPayloadSize(capacity.ConnectionCapacity) >
                 capacity.MaxDatagramPayloadBytes)
@@ -126,12 +148,38 @@ namespace Ludots.Core.Networking.Runtime
         public ReplicatedClientConnectionState State => _state;
         public SessionSeatBinding Seat => _seat;
         public SessionEpoch SessionEpoch => _sessionEpoch;
+        public ReplicatedClientCommandStreamIdentity CommandStreamIdentity =>
+            !_sessionEpoch.IsEmpty && _seat.IsValid
+                ? new ReplicatedClientCommandStreamIdentity(_sessionEpoch, _seat.Slot, _seat.Generation)
+                : default;
         public ReconnectToken ReconnectToken => _reconnectToken;
+        public ulong NextClientBatchSequence => _nextClientBatchSequence;
+        public ulong CommandStreamRevision => _commandStreamRevision;
         public uint LastCommittedTick => _lastCommittedTick;
+        public uint EstimatedCommandTargetTick => EstimateCommandTargetTick(
+            _lastCommittedTick,
+            _secondsSinceSnapshot,
+            RoundTripTimeMilliseconds,
+            _capacity.SimulationTickRateHz,
+            _capacity.MaxFutureTargetTicks);
+        public bool IsAwaitingFullSnapshot => _awaitingFullSnapshot;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
         public bool HasRoomSnapshot => _hasRoomSnapshot;
         public NetworkRoomSnapshotHeader LatestRoomSnapshot => _roomSnapshot;
+        public ReplicatedClientConnectionState ConnectionState => _state;
+        public bool HasEstablishedSession => _hasEstablishedSession;
+        public float ReconnectWindowRemainingSeconds => !_hasEstablishedSession || _state == ReplicatedClientConnectionState.Connected
+            ? _reconnectWindowSeconds
+            : MathF.Max(0f, _reconnectWindowSeconds - _disconnectedElapsedSeconds);
+        public int RoundTripTimeMilliseconds => _connectionControl.RoundTripTimeMilliseconds;
+        public float InterpolationAlpha => !_hasAppliedSnapshot ||
+            _awaitingFullSnapshot ||
+            _snapshotIntervalSeconds <= 0f
+                ? 1f
+                : Math.Clamp(_secondsSinceSnapshot / _snapshotIntervalSeconds, 0f, 1f);
+
+        public void Activate() => EnsureOperational();
 
         public bool TryCopyRoomSeats(Span<NetworkRoomSeatSnapshot> destination, out int seatCount)
         {
@@ -181,6 +229,7 @@ namespace Ludots.Core.Networking.Runtime
         {
             EnsureOperational();
             if (_state != ReplicatedClientConnectionState.Connected ||
+                _awaitingFullSnapshot ||
                 header.SessionEpoch != _sessionEpoch.Value ||
                 header.ClientBatchSequence == 0 ||
                 header.EntryCount != entries.Length ||
@@ -288,6 +337,22 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentOutOfRangeException(nameof(frameDeltaTime));
             }
 
+            CommitReplicationPhase();
+
+            if (_state == ReplicatedClientConnectionState.Connected && _hasAppliedSnapshot)
+            {
+                _secondsSinceSnapshot = MathF.Min(
+                    float.MaxValue,
+                    _secondsSinceSnapshot + frameDeltaTime);
+            }
+
+            if (_hasEstablishedSession && _state != ReplicatedClientConnectionState.Connected)
+            {
+                _disconnectedElapsedSeconds = MathF.Min(
+                    _reconnectWindowSeconds,
+                    _disconnectedElapsedSeconds + frameDeltaTime);
+            }
+
             if (_state != ReplicatedClientConnectionState.Disconnected ||
                 _connectionControl.State != ClientConnectionControlState.Disconnected)
             {
@@ -351,6 +416,14 @@ namespace Ludots.Core.Networking.Runtime
         {
             if (connectionEvent.Kind == TransportConnectionEventKind.Connected)
             {
+                if (_state is ReplicatedClientConnectionState.Rejected or
+                    ReplicatedClientConnectionState.RecoveryRejected)
+                {
+                    ProtocolFault(NetworkRuntimeFaultCode.SessionContractViolation);
+                    _connectionControl.Disconnect();
+                    return;
+                }
+
                 if (_state is ReplicatedClientConnectionState.Handshaking or ReplicatedClientConnectionState.Connected)
                 {
                     ProtocolFault(NetworkRuntimeFaultCode.SessionContractViolation);
@@ -362,12 +435,14 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
-            if (_state != ReplicatedClientConnectionState.Rejected)
+            if (_state is not ReplicatedClientConnectionState.Rejected and
+                not ReplicatedClientConnectionState.RecoveryRejected)
             {
                 _state = ReplicatedClientConnectionState.Disconnected;
             }
             _reconnectElapsedSeconds = 0f;
             _snapshotReassembler.Reset();
+            DiscardPreparedReplication();
             ClearRoomSnapshot();
         }
 
@@ -460,14 +535,7 @@ namespace Ludots.Core.Networking.Runtime
                 if (response.RejectReason is HandshakeRejectReason.StaleOrInvalidReconnectToken or
                     HandshakeRejectReason.SessionEpochMismatch)
                 {
-                    if (!_credentials.TryClear())
-                    {
-                        Fail(NetworkRuntimeFaultCode.CredentialStoreFailed, NetworkWireKind.SessionHandshakeResponse);
-                    }
-
-                    ClearReplicationSession();
-                    _state = ReplicatedClientConnectionState.Disconnected;
-                    _reconnectElapsedSeconds = 0f;
+                    _state = ReplicatedClientConnectionState.RecoveryRejected;
                 }
                 else
                 {
@@ -485,9 +553,12 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.CredentialStoreFailed, NetworkWireKind.SessionHandshakeResponse);
             }
 
+            SendHandshakeConfirmation(in response);
+
             if (_replicationBridge != null && _sessionEpoch != response.SessionEpoch)
             {
-                ClearReplicationSession();
+                ScheduleReplicationBridgeClear();
+                ResetReplicationSessionMetadata();
             }
 
             if (_replicationBridge == null)
@@ -499,9 +570,38 @@ namespace Ludots.Core.Networking.Runtime
             _seat = response.Seat;
             _sessionEpoch = response.SessionEpoch;
             _reconnectToken = response.ReconnectToken;
+            _nextClientBatchSequence = response.NextClientBatchSequence;
+            _commandStreamRevision = checked(_commandStreamRevision + 1);
             _state = ReplicatedClientConnectionState.Connected;
             _awaitingFullSnapshot = true;
+            _hasEstablishedSession = true;
+            _disconnectedElapsedSeconds = 0f;
             _snapshotReassembler.Reset();
+        }
+
+        private void SendHandshakeConfirmation(in SessionHandshakeResponse response)
+        {
+            var confirmation = new SessionHandshakeConfirmation(
+                response.SessionEpoch,
+                response.Seat.Slot,
+                response.Seat.Generation,
+                response.ReconnectToken);
+            NetworkWireCodecStatus encoded = HandshakeWireCodec.TryEncodeConfirmation(
+                in confirmation,
+                _payloadBuffer,
+                out int payloadBytes);
+            if (encoded != NetworkWireCodecStatus.Success)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    NetworkWireKind.SessionHandshakeConfirmation,
+                    encoded);
+            }
+
+            SendFramed(
+                _capacity.ControlChannel,
+                NetworkWireKind.SessionHandshakeConfirmation,
+                _payloadBuffer.AsSpan(0, payloadBytes));
         }
 
         private void ClearRoomSnapshot()
@@ -521,13 +621,15 @@ namespace Ludots.Core.Networking.Runtime
                     response.ContentFingerprint == _contentFingerprint &&
                     response.Seat.IsValid &&
                     !response.ReconnectToken.IsEmpty &&
-                    !response.SessionEpoch.IsEmpty;
+                    !response.SessionEpoch.IsEmpty &&
+                    response.NextClientBatchSequence != 0;
             }
 
             if (response.RejectReason == HandshakeRejectReason.None ||
                 response.Seat.IsValid ||
                 !response.ReconnectToken.IsEmpty ||
-                response.SessionEpoch.IsEmpty)
+                response.SessionEpoch.IsEmpty ||
+                response.NextClientBatchSequence != 0)
             {
                 return false;
             }
@@ -546,9 +648,18 @@ namespace Ludots.Core.Networking.Runtime
 
         private void ClearReplicationSession()
         {
-            if (_replicationBridge != null)
+            ClearReplicationBridge(_replicationBridgePendingClear);
+            _replicationBridgePendingClear = null;
+            ClearReplicationBridge(_replicationBridge);
+            _replicationBridge = null;
+            ResetReplicationSessionMetadata();
+        }
+
+        private void ClearReplicationBridge(ClientWorldReplicationBridge? bridge)
+        {
+            if (bridge != null)
             {
-                ReplicationBridgeResult cleared = _replicationBridge.Clear();
+                ReplicationBridgeResult cleared = bridge.Clear();
                 if (cleared != ReplicationBridgeResult.Success)
                 {
                     Fail(
@@ -557,13 +668,39 @@ namespace Ludots.Core.Networking.Runtime
                         detail: (int)cleared);
                 }
             }
+        }
 
+        private void ScheduleReplicationBridgeClear()
+        {
+            if (_replicationBridge == null)
+            {
+                return;
+            }
+
+            DiscardPreparedReplication();
+            if (_replicationBridgePendingClear != null)
+            {
+                Fail(
+                    NetworkRuntimeFaultCode.SnapshotApplyRejected,
+                    NetworkWireKind.ReplicationPacket,
+                    detail: (int)ReplicationBridgeResult.EcsStateMismatch);
+            }
+
+            _replicationBridgePendingClear = _replicationBridge;
             _replicationBridge = null;
+        }
+
+        private void ResetReplicationSessionMetadata()
+        {
             _seat = default;
             _reconnectToken = default;
             _sessionEpoch = default;
+            _nextClientBatchSequence = 0;
             _lastCommittedTick = 0;
             _awaitingFullSnapshot = false;
+            _hasAppliedSnapshot = false;
+            _secondsSinceSnapshot = 0f;
+            _snapshotIntervalSeconds = 0f;
             _snapshotReassembler.Reset();
             ClearRoomSnapshot();
         }
@@ -614,11 +751,6 @@ namespace Ludots.Core.Networking.Runtime
             {
                 ProtocolFault(NetworkRuntimeFaultCode.CommandBatchRejected, NetworkWireKind.CommandAdmissionResult, decoded);
                 return;
-            }
-
-            if (!_admissions.TryWrite(in outcome))
-            {
-                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, NetworkWireKind.CommandAdmissionResult);
             }
 
             _observer.OnClientAdmission(in outcome);
@@ -681,6 +813,7 @@ namespace Ludots.Core.Networking.Runtime
 
             if (accepted != SnapshotReassemblyStatus.Completed)
             {
+                _snapshotReassembler.Reset();
                 ProtocolFault(NetworkRuntimeFaultCode.SnapshotReassemblyRejected, NetworkWireKind.SnapshotFragment, detail: (int)accepted);
                 return;
             }
@@ -706,6 +839,16 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
+            if (_replicationBridge.HasPreparedBatch)
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.SnapshotApplyRejected,
+                    NetworkWireKind.ReplicationPacket,
+                    detail: (int)ReplicationBridgeResult.InvalidPacket);
+                RequestResync(NetworkResyncReason.SnapshotGap);
+                return;
+            }
+
             NetworkWireCodecStatus decoded = ReplicationPacketWireCodec.TryDecode(payload, _replicationPacket);
             if (decoded != NetworkWireCodecStatus.Success ||
                 _replicationPacket.Header.SessionEpoch != _sessionEpoch.Value ||
@@ -723,23 +866,82 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
-            ReplicationBridgeResult applied = _replicationBridge.Apply(_replicationPacket);
-            if (applied != ReplicationBridgeResult.Success)
+            ReplicationBridgeResult prepared = _replicationBridge.Prepare(_replicationPacket);
+            if (prepared != ReplicationBridgeResult.Success)
             {
-                ProtocolFault(NetworkRuntimeFaultCode.SnapshotApplyRejected, NetworkWireKind.ReplicationPacket, detail: (int)applied);
-                RequestResync(applied == ReplicationBridgeResult.ResyncRequired
+                ProtocolFault(NetworkRuntimeFaultCode.SnapshotApplyRejected, NetworkWireKind.ReplicationPacket, detail: (int)prepared);
+                RequestResync(prepared == ReplicationBridgeResult.ResyncRequired
                     ? NetworkResyncReason.BaselineUnavailable
                     : NetworkResyncReason.SnapshotGap);
                 return;
             }
 
-            _lastCommittedTick = _replicationPacket.Header.Tick;
-            if (_replicationPacket.Header.Kind == ReplicationPacketKind.Full)
+            _preparedSnapshotId = _replicationPacket.Header.SnapshotId;
+            _preparedSnapshotTick = _replicationPacket.Header.Tick;
+            _preparedSnapshotKind = _replicationPacket.Header.Kind;
+        }
+
+        private void CommitReplicationPhase()
+        {
+            if (_replicationBridgePendingClear != null)
+            {
+                ClientWorldReplicationBridge bridge = _replicationBridgePendingClear;
+                _replicationBridgePendingClear = null;
+                ClearReplicationBridge(bridge);
+            }
+
+            if (_replicationBridge == null || !_replicationBridge.HasPreparedBatch)
+            {
+                return;
+            }
+
+            ReplicationBridgeResult committed = _replicationBridge.CommitPrepared();
+            if (committed != ReplicationBridgeResult.Success)
+            {
+                ClearPreparedSnapshotMetadata();
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.SnapshotApplyRejected,
+                    NetworkWireKind.ReplicationPacket,
+                    detail: (int)committed);
+                RequestResync(committed == ReplicationBridgeResult.ResyncRequired
+                    ? NetworkResyncReason.BaselineUnavailable
+                    : NetworkResyncReason.SnapshotGap);
+                return;
+            }
+
+            _lastCommittedTick = _preparedSnapshotTick;
+            if (_hasAppliedSnapshot && _secondsSinceSnapshot > 0f)
+            {
+                _snapshotIntervalSeconds = _secondsSinceSnapshot;
+            }
+            _secondsSinceSnapshot = 0f;
+            _hasAppliedSnapshot = true;
+            if (_preparedSnapshotKind == ReplicationPacketKind.Full)
             {
                 _awaitingFullSnapshot = false;
             }
 
-            SendAcknowledgement(_replicationPacket.Header.SnapshotId, _replicationPacket.Header.Tick);
+            ulong snapshotId = _preparedSnapshotId;
+            uint committedTick = _preparedSnapshotTick;
+            ClearPreparedSnapshotMetadata();
+            SendAcknowledgement(snapshotId, committedTick);
+        }
+
+        private void DiscardPreparedReplication()
+        {
+            if (_replicationBridge != null && _replicationBridge.HasPreparedBatch)
+            {
+                _replicationBridge.DiscardPrepared();
+            }
+
+            ClearPreparedSnapshotMetadata();
+        }
+
+        private void ClearPreparedSnapshotMetadata()
+        {
+            _preparedSnapshotId = 0;
+            _preparedSnapshotTick = 0;
+            _preparedSnapshotKind = default;
         }
 
         private void ProcessServerResync(ReadOnlySpan<byte> payload)
@@ -755,6 +957,7 @@ namespace Ludots.Core.Networking.Runtime
 
             _awaitingFullSnapshot = true;
             _snapshotReassembler.Reset();
+            DiscardPreparedReplication();
             _observer.OnClientResyncRequired(in message);
         }
 
@@ -780,6 +983,7 @@ namespace Ludots.Core.Networking.Runtime
         {
             _awaitingFullSnapshot = true;
             _snapshotReassembler.Reset();
+            DiscardPreparedReplication();
             var request = new NetworkResyncRequired(
                 _sessionEpoch.Value,
                 reason,
@@ -861,6 +1065,41 @@ namespace Ludots.Core.Networking.Runtime
                 NetworkWireKind.RoomSnapshot => _capacity.ControlChannel,
                 _ => default,
             };
+        }
+
+        internal static uint EstimateCommandTargetTick(
+            uint lastCommittedTick,
+            float secondsSinceSnapshot,
+            int roundTripTimeMilliseconds,
+            int simulationTickRateHz,
+            int maxFutureTargetTicks)
+        {
+            if (!float.IsFinite(secondsSinceSnapshot) || secondsSinceSnapshot < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(secondsSinceSnapshot));
+            }
+            if (roundTripTimeMilliseconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(roundTripTimeMilliseconds));
+            }
+            if (simulationTickRateHz <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(simulationTickRateHz));
+            }
+            if (maxFutureTargetTicks < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxFutureTargetTicks));
+            }
+            if (lastCommittedTick == 0)
+            {
+                return 0;
+            }
+
+            double elapsedSeconds = secondsSinceSnapshot + (roundTripTimeMilliseconds / 1000d);
+            ulong desiredLeadTicks = checked((ulong)Math.Floor(elapsedSeconds * simulationTickRateHz) + 1UL);
+            ulong boundedLeadTicks = Math.Min(desiredLeadTicks, checked((ulong)maxFutureTargetTicks));
+            ulong targetTick = (ulong)lastCommittedTick + boundedLeadTicks;
+            return targetTick >= uint.MaxValue ? uint.MaxValue : (uint)targetTick;
         }
 
         private void ProtocolFault(

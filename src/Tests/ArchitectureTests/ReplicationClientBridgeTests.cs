@@ -15,7 +15,12 @@ namespace Ludots.Tests.Architecture
             using World world = World.Create();
             var channel = Channel(capacity: 1);
             var packet = new ReplicationPacketBuffer(1);
-            var bridge = Bridge(world, entityCapacity: 1, sessionEpoch: 7);
+            var bridge = Bridge(
+                world,
+                entityCapacity: 1,
+                sessionEpoch: 7,
+                out KnowledgeProjectionStore knowledge,
+                out Entity viewer);
             var handle = new NetworkEntityHandle(0, 1);
             var states = new[] { State(handle, 1, 10) };
             var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
@@ -26,6 +31,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(world.IsAlive(created), Is.True);
             Assert.That(world.Get<ReplicationMirrorState>(created).Values.Value0, Is.EqualTo(10));
             Assert.That(world.Get<TestAppliedState>(created).Value, Is.EqualTo(10));
+            Assert.That(knowledge.TryGet(viewer, created, 1, out KnowledgeDisclosureRecord createdDisclosure), Is.True);
+            Assert.That(createdDisclosure.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+            Assert.That(createdDisclosure.Position, Is.EqualTo(KnowledgePositionAccess.Live));
 
             states[0] = State(handle, 2, 20);
             Assert.That(channel.BuildDelta(7, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
@@ -40,6 +48,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
             Assert.That(bridge.TryResolve(handle, out _), Is.False);
             Assert.That(world.IsAlive(created), Is.False);
+            Assert.That(knowledge.TryGet(viewer, created, 3, out _), Is.False);
 
             states[0] = State(handle, 3, 30);
             Assert.That(channel.BuildDelta(7, 4, 4, 3, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
@@ -47,6 +56,78 @@ namespace Ludots.Tests.Architecture
             Assert.That(bridge.TryResolve(handle, out Entity recreated), Is.True);
             Assert.That(recreated, Is.Not.EqualTo(created));
             Assert.That(world.Get<ReplicationMirrorState>(recreated).Values.Value0, Is.EqualTo(30));
+            Assert.That(knowledge.TryGet(viewer, recreated, 4, out _), Is.True);
+        }
+
+        [Test]
+        public void Prepare_DoesNotMutateWorldUntilCommitPrepared()
+        {
+            using World world = World.Create();
+            var channel = Channel(capacity: 1);
+            var packet = new ReplicationPacketBuffer(1);
+            var bridge = Bridge(world, entityCapacity: 1, sessionEpoch: 7);
+            var handle = new NetworkEntityHandle(0, 1);
+            var states = new[] { State(handle, 1, 10) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Prepare(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.HasPreparedBatch, Is.True);
+            Assert.That(bridge.LastSnapshotId, Is.Zero);
+            Assert.That(bridge.TryResolve(handle, out _), Is.False);
+
+            Assert.That(bridge.CommitPrepared(), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+            Assert.That(bridge.TryResolve(handle, out Entity created), Is.True);
+            Assert.That(world.Get<TestAppliedState>(created).Value, Is.EqualTo(10));
+
+            states[0] = State(handle, 2, 20);
+            Assert.That(channel.BuildDelta(7, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Prepare(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+            Assert.That(world.Get<TestAppliedState>(created).Value, Is.EqualTo(10));
+
+            Assert.That(bridge.CommitPrepared(), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(2));
+            Assert.That(world.Get<TestAppliedState>(created).Value, Is.EqualTo(20));
+
+            var remembered = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.Known) };
+            Assert.That(channel.BuildDelta(7, 3, 3, 2, states, remembered, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Prepare(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(handle, out Entity beforeConceal), Is.True);
+            Assert.That(beforeConceal, Is.EqualTo(created));
+            Assert.That(world.IsAlive(created), Is.True);
+
+            Assert.That(bridge.CommitPrepared(), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(handle, out _), Is.False);
+            Assert.That(world.IsAlive(created), Is.False);
+        }
+
+        [Test]
+        public void DiscardPrepared_DoesNotAdvanceMirrorBaseline()
+        {
+            using World world = World.Create();
+            var channel = Channel(capacity: 1);
+            var packet = new ReplicationPacketBuffer(1);
+            var bridge = Bridge(world, entityCapacity: 1, sessionEpoch: 7);
+            var handle = new NetworkEntityHandle(0, 1);
+            var states = new[] { State(handle, 1, 10) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+
+            states[0] = State(handle, 2, 20);
+            Assert.That(channel.BuildDelta(7, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Prepare(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            bridge.DiscardPrepared();
+
+            states[0] = State(handle, 3, 30);
+            Assert.That(channel.BuildDelta(7, 3, 3, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(3));
+            Assert.That(bridge.TryResolve(handle, out Entity entity), Is.True);
+            Assert.That(world.Get<TestAppliedState>(entity).Value, Is.EqualTo(30));
         }
 
         [Test]
@@ -138,7 +219,14 @@ namespace Ludots.Tests.Architecture
             using World world = World.Create();
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             appliers.Freeze();
-            var bridge = new ClientWorldReplicationBridge(world, 1, 7, appliers);
+            Entity viewer = world.Create();
+            var bridge = new ClientWorldReplicationBridge(
+                world,
+                1,
+                7,
+                appliers,
+                new KnowledgeProjectionStore(initialCapacity: 1),
+                viewer);
             var handle = new NetworkEntityHandle(0, 1);
             var packet = new ReplicationPacketBuffer(1);
             var channel = Channel(capacity: 1);
@@ -210,11 +298,27 @@ namespace Ludots.Tests.Architecture
             => new(capacity, baselineCapacity: 2, new ReplicationDisclosureChangeLog(capacity * 4));
 
         private static ClientWorldReplicationBridge Bridge(World world, int entityCapacity, ulong sessionEpoch)
+            => Bridge(world, entityCapacity, sessionEpoch, out _, out _);
+
+        private static ClientWorldReplicationBridge Bridge(
+            World world,
+            int entityCapacity,
+            ulong sessionEpoch,
+            out KnowledgeProjectionStore knowledge,
+            out Entity viewer)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, new TestSchemaApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            return new ClientWorldReplicationBridge(world, entityCapacity, sessionEpoch, appliers);
+            knowledge = new KnowledgeProjectionStore(initialCapacity: entityCapacity);
+            viewer = world.Create();
+            return new ClientWorldReplicationBridge(
+                world,
+                entityCapacity,
+                sessionEpoch,
+                appliers,
+                knowledge,
+                viewer);
         }
 
         private static ReplicatedEntityState State(NetworkEntityHandle handle, uint revision, long value)

@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -165,8 +166,10 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderQueue_BatchAdmission_IsAtomicWhenCapacityIsInsufficient()
         {
+            using var world = World.Create();
+            Entity actor = world.Create();
             var queue = new OrderQueue(capacity: 64);
-            var seed = new Order { OrderTypeId = 1 };
+            var seed = new Order { OrderTypeId = 1, Actor = actor };
             for (int i = 0; i < 63; i++)
             {
                 Assert.That(queue.TryEnqueue(in seed), Is.True);
@@ -174,8 +177,8 @@ namespace Ludots.Tests.GAS
 
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { OrderTypeId = 1, Actor = actor },
+                new Order { OrderTypeId = 1, Actor = actor },
             };
 
             Assert.That(queue.TryEnqueueBatch(batch), Is.False);
@@ -187,11 +190,12 @@ namespace Ludots.Tests.GAS
         [Test]
         public void OrderQueue_SharedBatch_AssignsOneQueueOwnedId()
         {
+            using var world = World.Create();
             var queue = new OrderQueue(capacity: 64);
             var batch = new[]
             {
-                new Order { OrderTypeId = 1 },
-                new Order { OrderTypeId = 1 },
+                new Order { OrderTypeId = 1, Actor = world.Create() },
+                new Order { OrderTypeId = 1, Actor = world.Create() },
             };
 
             Assert.That(queue.TryEnqueueSharedBatch(batch), Is.True);
@@ -389,6 +393,64 @@ namespace Ludots.Tests.GAS
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
             That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_ParsesInputTargetTypeOverride()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": {
+                    "clockId": "FixedFrame",
+                    "items": [
+                      { "kind": "End", "tick": 0 }
+                    ]
+                  },
+                  "input": {
+                    "castModeOverride": "SmartCast",
+                    "targetType": "None"
+                  }
+                }
+                """)!.AsObject();
+
+            AbilityDefinition definition = Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(
+                obj,
+                "Ability.Test.Targetless",
+                "GAS/abilities.json");
+
+            That(definition.HasInputBindingOverride, Is.True);
+            That(definition.InputBindingOverride.HasCastModeOverride, Is.True);
+            That(definition.InputBindingOverride.CastModeOverride, Is.EqualTo(InteractionModeType.SmartCast));
+            That(definition.InputBindingOverride.HasTargetType, Is.True);
+            That(definition.InputBindingOverride.TargetType, Is.EqualTo(OrderTargetType.None));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsUnknownInputTargetType()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "exec": {
+                    "clockId": "FixedFrame",
+                    "items": [
+                      { "kind": "End", "tick": 0 }
+                    ]
+                  },
+                  "input": {
+                    "targetType": "NearestConvenientTarget"
+                  }
+                }
+                """)!.AsObject();
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(
+                    obj,
+                    "Ability.Test.InvalidTargetType",
+                    "GAS/abilities.json"))!;
+
+            That(error.Message, Does.Contain("input.targetType"));
         }
 
         [Test]

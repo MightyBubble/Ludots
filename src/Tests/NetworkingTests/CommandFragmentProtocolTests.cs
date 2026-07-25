@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
 using NUnit.Framework;
@@ -341,7 +342,8 @@ public sealed class CommandFragmentProtocolTests
             clientBatchSequence,
             targetTick,
             acknowledgedCommittedTick,
-            (ushort)entryCount);
+            (ushort)entryCount,
+            OrderSubmitMode.Immediate);
         var entries = new NetworkCommandWireEntry[entryCount];
         for (int i = 0; i < entryCount; i++)
         {

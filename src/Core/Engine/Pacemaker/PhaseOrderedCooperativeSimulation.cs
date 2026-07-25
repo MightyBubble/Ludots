@@ -12,6 +12,7 @@ namespace Ludots.Core.Engine.Pacemaker
         private static readonly SystemGroup[] PhaseOrder =
         [
             SystemGroup.SchemaUpdate,
+            SystemGroup.LocalInput,
             SystemGroup.InputCollection,
             SystemGroup.PostMovement,
             SystemGroup.AbilityActivation,

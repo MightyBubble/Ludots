@@ -109,6 +109,54 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void QueueOnModifier_NormalCommandIsImmediateAndShiftCommandIsQueued()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        TargetType = OrderTargetType.Position,
+                        RequireTarget = true,
+                        ModifierBehavior = ModifierSubmitBehavior.QueueOnModifier,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            bool shiftHeld = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetGroundPositionProvider((out Vector3 worldCm) =>
+            {
+                worldCm = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetQueueModifierProvider(() => shiftHeld);
+            system.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+
+            system.Update(0f);
+            shiftHeld = true;
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+                Assert.That(submitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+            });
+        }
+
+        [Test]
         public void DuplicateActionId_IsRejectedDuringConstruction()
         {
             var config = new InputOrderMappingConfig
@@ -239,6 +287,7 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
             CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
                     File.ReadAllText(profilePath),
                     options)
@@ -249,13 +298,15 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 profile.Rules.Any(rule =>
                     rule.Target?.HasEntity == false &&
-                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal) &&
+                    rule.Route.TargetShape == CommandIntentTargetShape.WorldPositionCm),
                 Is.True,
                 "Default command must keep explicit ground movement.");
             Assert.That(
                 profile.Rules.Any(rule =>
                     rule.Target?.HasEntity == true &&
-                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal) &&
+                    rule.Route.TargetShape == CommandIntentTargetShape.WorldPositionCm),
                 Is.True,
                 "Default command must explicitly treat an inspectable entity under the pointer as a valid move destination, so right-clicking neutral showcase props is not silently dropped.");
         }
@@ -696,6 +747,147 @@ namespace Ludots.Tests.GAS
 
             Assert.That(orders, Is.Empty,
                 "A declared auto-target source must fail closed when it misses; SmartCast must not switch to hover.");
+        }
+
+        [Test]
+        public void AutoTargetProvider_ReturningTrueWithUninitializedTarget_Throws()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 500,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
+            system.SetAutoTargetProvider((Entity _, AutoTargetPolicy _, int _, out Entity target) =>
+            {
+                target = default;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Invalid target must not be submitted."));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(error.Message, Does.Contain("Auto-target provider"));
+            Assert.That(error.Message, Does.Contain("default(Entity)"));
+        }
+
+        [Test]
+        public void ActorProvider_ReturningTrueWithUninitializedActor_Throws()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Stop", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(world.Create(), 1);
+            system.SetOrderTypeKeyResolver(key => key == "stop" ? 102 : 0);
+            system.SetActorProvider((out Entity actor) =>
+            {
+                actor = default;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) => Assert.Fail("Invalid actor must not be submitted."));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(error.Message, Does.Contain("Input actor provider"));
+            Assert.That(error.Message, Does.Contain("default(Entity)"));
+        }
+
+        [Test]
+        public void SkillMappingOverride_SmartCastNone_EmitsCanonicalTargetlessOrder()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.AimCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = true,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var submitted = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetActorProvider((out Entity resolved) =>
+            {
+                resolved = actor;
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            system.SetSkillMappingOverrideProvider((Entity resolved, InputOrderMapping mapping, out InputOrderMapping overridden) =>
+            {
+                Assert.That(resolved, Is.EqualTo(actor));
+                overridden = mapping.Clone();
+                overridden.CastModeOverride = InteractionModeType.SmartCast;
+                overridden.TargetType = OrderTargetType.None;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+
+            system.Update(0f);
+
+            Assert.That(system.IsAiming, Is.False);
+            Assert.That(submitted, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted[0].Actor, Is.EqualTo(actor));
+                Assert.That(submitted[0].Target, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].TargetContext, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].CommandSource, Is.EqualTo(Entity.Null));
+                Assert.That(submitted[0].Args.I0, Is.Zero);
+                Assert.That(submitted[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+                Assert.That(submitted[0].Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.None));
+            });
         }
 
         [Test]
@@ -1516,6 +1708,9 @@ namespace Ludots.Tests.GAS
             Assert.That(orders, Has.Count.EqualTo(1));
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
+            Assert.That(orders[0].Target, Is.EqualTo(Entity.Null));
+            Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+            Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(100f, 0f, 200f)));
         }
 
         [Test]
@@ -1547,7 +1742,7 @@ namespace Ludots.Tests.GAS
             var queue = new OrderQueue(capacity: 64);
             for (int i = 0; i < 63; i++)
             {
-                var filler = new Order { OrderTypeId = 2 };
+                var filler = new Order { OrderTypeId = 2, Actor = localPlayer };
                 Assert.That(queue.TryEnqueue(in filler), Is.True);
             }
 
@@ -1712,7 +1907,11 @@ namespace Ludots.Tests.GAS
                         Priority = 10,
                         Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = "ability.catalog.weapon" },
                         Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
                     },
                 },
             }));
@@ -1907,6 +2106,10 @@ namespace Ludots.Tests.GAS
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(1),
                 "An entity target fact must hit the entity rule before the ground move rule.");
+            Assert.That(orders[0].Target, Is.EqualTo(clickedTarget),
+                "The winning entity route must preserve the player's clicked target in the submitted order.");
+            Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None),
+                "An entity-only route must not attach an unrelated ground target that changes the command shape.");
         }
 
         private static void SetGroundCommandTargetFactsProvider(InputOrderMappingSystem system)

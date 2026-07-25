@@ -10,9 +10,9 @@ namespace Ludots.Core.Networking.Protocol
     public static class CommandAdmissionWireCodec
     {
         // sessionEpoch u64 | clientBatchSequence u64 | targetTick i32 | actorCount i32 |
-        // orderId i32 | admissionBatchId i32 |
+        // orderId i32 | admissionBatchId i32 | admissionBatchIndex u16 | reserved u16 |
         // stage u8 | result u8 | isReplay u8 | reserved u8
-        public const int SizeInBytes = 8 + 8 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
+        public const int SizeInBytes = 8 + 8 + 4 + 4 + 4 + 4 + 2 + 2 + 1 + 1 + 1 + 1;
 
         public static NetworkWireCodecStatus TryEncode(
             ulong sessionEpoch,
@@ -46,6 +46,8 @@ namespace Ludots.Core.Networking.Protocol
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.ActorCount) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.OrderId) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, outcome.AdmissionBatchId) ||
+                !NetworkWireBinary.TryWriteUInt16(destination, ref offset, outcome.AdmissionBatchIndex) ||
+                !NetworkWireBinary.TryWriteUInt16(destination, ref offset, 0) ||
                 !NetworkWireBinary.TryWriteByte(destination, ref offset, (byte)outcome.Stage) ||
                 !NetworkWireBinary.TryWriteByte(destination, ref offset, (byte)outcome.Result) ||
                 !NetworkWireBinary.TryWriteByte(destination, ref offset, outcome.IsReplay ? (byte)1 : (byte)0) ||
@@ -77,10 +79,12 @@ namespace Ludots.Core.Networking.Protocol
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int actorCount) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int orderId) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int admissionBatchId) ||
+                !NetworkWireBinary.TryReadUInt16(source, ref offset, out ushort admissionBatchIndex) ||
+                !NetworkWireBinary.TryReadUInt16(source, ref offset, out ushort reserved) ||
                 !NetworkWireBinary.TryReadByte(source, ref offset, out byte stageByte) ||
                 !NetworkWireBinary.TryReadByte(source, ref offset, out byte resultByte) ||
                 !NetworkWireBinary.TryReadByte(source, ref offset, out byte replayByte) ||
-                !NetworkWireBinary.TryReadByte(source, ref offset, out _))
+                !NetworkWireBinary.TryReadByte(source, ref offset, out byte trailingReserved))
             {
                 return NetworkWireCodecStatus.MalformedLength;
             }
@@ -91,7 +95,7 @@ namespace Ludots.Core.Networking.Protocol
                 return end;
             }
 
-            if (replayByte > 1)
+            if (replayByte > 1 || reserved != 0 || trailingReserved != 0)
             {
                 return NetworkWireCodecStatus.InvalidEnum;
             }
@@ -117,15 +121,10 @@ namespace Ludots.Core.Networking.Protocol
                 actorCount,
                 orderId,
                 admissionBatchId,
+                admissionBatchIndex,
+                (OrderAdmissionStage)stageByte,
                 (OrderSubmitResult)resultByte,
                 isReplay: replayByte == 1);
-
-            // Constructor derives Stage from Result; reject wires that disagree.
-            if (outcome.Stage != (OrderAdmissionStage)stageByte)
-            {
-                return NetworkWireCodecStatus.InvalidInput;
-            }
-
             return NetworkWireCodecStatus.Success;
         }
 
@@ -138,6 +137,6 @@ namespace Ludots.Core.Networking.Protocol
         private static bool IsKnownResult(OrderSubmitResult result) => IsKnownResultByte((byte)result);
 
         private static bool IsKnownResultByte(byte value) =>
-            value <= (byte)OrderSubmitResult.NetworkMatchCompleted;
+            value <= (byte)OrderSubmitResult.Cancelled;
     }
 }

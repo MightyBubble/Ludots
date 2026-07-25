@@ -114,10 +114,40 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         Priority = 10,
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = slotSelector },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "castAbility",
+                            Slot = slotSelector,
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
                     },
                 },
             })));
+        }
+
+        [Test]
+        public void Install_MissingRouteTargetShape_ThrowsInsteadOfInferringFromHitFacts()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.Intents.Install(Harness.Config(new CommandIntentProfileDefinition
+                {
+                    Id = "intent.missing.target_shape",
+                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                    Rules = new List<CommandIntentRuleDefinition>
+                    {
+                        new()
+                        {
+                            Priority = 10,
+                            Target = new CommandIntentTargetPredicateDefinition { HasEntity = true },
+                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                        },
+                    },
+                })))!;
+
+            Assert.That(ex.Message, Does.Contain("targetShape"));
         }
 
         [Test]
@@ -142,6 +172,8 @@ namespace Ludots.Tests.GAS
             Assert.That(routedCount, Is.EqualTo(2));
             Assert.That(routes[0].RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)), "garrison-capable actor hits rule 30.");
             Assert.That(routes[1].RouteParamId, Is.EqualTo(TagRegistry.GetId(WeaponAbilityTag)), "weapon-only actor hits rule 20.");
+            Assert.That(routes[0].TargetShape, Is.EqualTo(CommandIntentTargetShape.Entity));
+            Assert.That(routes[1].TargetShape, Is.EqualTo(CommandIntentTargetShape.Entity));
             Assert.That(routes[2].HasRoute, Is.False, "actor without abilities matches no entity-hit rule.");
         }
 
@@ -161,6 +193,7 @@ namespace Ludots.Tests.GAS
             Assert.That(routed, Is.True);
             Assert.That(route.OrderTypeId, Is.EqualTo(harness.MoveToOrderId));
             Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.None));
+            Assert.That(route.TargetShape, Is.EqualTo(CommandIntentTargetShape.WorldPositionCm));
         }
 
         [Test]
@@ -205,13 +238,22 @@ namespace Ludots.Tests.GAS
                     {
                         Priority = 40,
                         Target = new CommandIntentTargetPredicateDefinition { AnyTags = new List<string> { DestructibleTag } },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = "byAbilityTag:ability.catalog.nonexistent" },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "castAbility",
+                            Slot = "byAbilityTag:ability.catalog.nonexistent",
+                            TargetShape = CommandIntentTargetShape.Entity,
+                        },
                     },
                     new()
                     {
                         Priority = 5,
                         Target = new CommandIntentTargetPredicateDefinition { AnyTags = new List<string> { DestructibleTag } },
-                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
                     },
                 },
             }));
@@ -536,7 +578,12 @@ namespace Ludots.Tests.GAS
                                 AllTags = new List<string> { GarrisonableTag },
                                 Stance = new List<string> { "Neutral", "Friendly" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{GarrisonAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition
+                            {
+                                OrderTypeKey = "castAbility",
+                                Slot = $"byAbilityTag:{GarrisonAbilityTag}",
+                                TargetShape = CommandIntentTargetShape.Entity,
+                            },
                         },
                         new()
                         {
@@ -547,13 +594,22 @@ namespace Ludots.Tests.GAS
                                 AnyTags = new List<string> { DestructibleTag },
                                 Stance = new List<string> { "Hostile", "Neutral" },
                             },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{WeaponAbilityTag}" },
+                            Route = new CommandIntentRouteDefinition
+                            {
+                                OrderTypeKey = "castAbility",
+                                Slot = $"byAbilityTag:{WeaponAbilityTag}",
+                                TargetShape = CommandIntentTargetShape.Entity,
+                            },
                         },
                         new()
                         {
                             Priority = 10,
                             Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
-                            Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                            Route = new CommandIntentRouteDefinition
+                            {
+                                OrderTypeKey = "moveTo",
+                                TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                            },
                         },
                     },
                 }));
@@ -565,7 +621,11 @@ namespace Ludots.Tests.GAS
                 {
                     Priority = priority,
                     Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
-                    Route = new CommandIntentRouteDefinition { OrderTypeKey = orderTypeKey },
+                    Route = new CommandIntentRouteDefinition
+                    {
+                        OrderTypeKey = orderTypeKey,
+                        TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                    },
                 };
             }
 

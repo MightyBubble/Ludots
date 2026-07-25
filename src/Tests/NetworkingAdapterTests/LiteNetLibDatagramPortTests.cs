@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using Ludots.Adapter.LiteNetLib;
+using Ludots.Core.Hosting;
+using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Transport;
 using NUnit.Framework;
 
@@ -62,6 +65,108 @@ public sealed class LiteNetLibDatagramPortTests
             Assert.That(bytesReceived, Is.EqualTo(3));
             Assert.That(channelId, Is.EqualTo(new ChannelId(4)));
             Assert.That(receiveBuffer.AsSpan(0, bytesReceived).ToArray(), Is.EqualTo(new byte[] { 9, 8, 7 }));
+        });
+        AssertDisabledMetrics(server.Capture(), NetworkProcessRole.AuthoritativeServer);
+        AssertDisabledMetrics(client.Capture(), NetworkProcessRole.ReplicatedClient);
+    }
+
+    [Test]
+    public void UnstableProfile_ReliableOrderedCommandDatagramsEventuallyArriveBothWays()
+    {
+        LiteNetLibFaultInjectionSettings serverFaults = CreateUnstableFaults(seed: 14);
+        LiteNetLibFaultInjectionSettings clientFaults = CreateUnstableFaults(seed: 14);
+        using var server = new LiteNetLibServerDatagramPort(
+            listenPort: 0,
+            connectionKey: "rts-duel-test",
+            connectionCapacity: 2,
+            datagramCapacity: 64,
+            connectionEventCapacity: 8,
+            maxPayloadBytes: 1200,
+            channelCount: 3,
+            stateChannelId: 2,
+            in serverFaults);
+        using var client = new LiteNetLibClientDatagramPort(
+            "127.0.0.1",
+            server.BoundPort,
+            "rts-duel-test",
+            datagramCapacity: 64,
+            connectionEventCapacity: 8,
+            maxPayloadBytes: 1200,
+            channelCount: 3,
+            stateChannelId: 2,
+            in clientFaults);
+        Assert.That(client.TryConnect(), Is.True);
+
+        ConnectionId connectionId = default;
+        bool serverConnected = false;
+        bool clientConnected = false;
+        PumpUntil(
+            server,
+            client,
+            () =>
+            {
+                while (server.TryReceiveConnectionEvent(out ServerConnectionEvent serverEvent))
+                {
+                    if (serverEvent.Kind == TransportConnectionEventKind.Connected)
+                    {
+                        connectionId = serverEvent.ConnectionId;
+                        serverConnected = true;
+                    }
+                }
+
+                while (client.TryReceiveConnectionEvent(out ClientConnectionEvent clientEvent))
+                {
+                    clientConnected |= clientEvent.Kind == TransportConnectionEventKind.Connected;
+                }
+
+                return serverConnected && clientConnected;
+            },
+            timeoutMs: 10_000);
+
+        var commandChannel = new ChannelId(1);
+        Assert.That(client.TrySend(commandChannel, new byte[] { 1, 2, 3 }), Is.EqualTo(DatagramSendStatus.Sent));
+        byte[] receiveBuffer = new byte[64];
+        int bytesReceived = 0;
+        ChannelId receivedChannel = default;
+        PumpUntil(
+            server,
+            client,
+            () => server.TryReceive(receiveBuffer, out bytesReceived, out _, out receivedChannel),
+            timeoutMs: 10_000);
+        Assert.Multiple(() =>
+        {
+            Assert.That(receivedChannel, Is.EqualTo(commandChannel));
+            Assert.That(receiveBuffer.AsSpan(0, bytesReceived).ToArray(), Is.EqualTo(new byte[] { 1, 2, 3 }));
+        });
+
+        Assert.That(server.TrySend(connectionId, commandChannel, new byte[] { 4, 5, 6 }), Is.EqualTo(DatagramSendStatus.Sent));
+        PumpUntil(
+            server,
+            client,
+            () => client.TryReceive(receiveBuffer, out bytesReceived, out receivedChannel),
+            timeoutMs: 10_000);
+        Assert.Multiple(() =>
+        {
+            Assert.That(receivedChannel, Is.EqualTo(commandChannel));
+            Assert.That(receiveBuffer.AsSpan(0, bytesReceived).ToArray(), Is.EqualTo(new byte[] { 4, 5, 6 }));
+        });
+
+        NetworkFaultInjectionObservationSnapshot serverObservation = server.Capture();
+        NetworkFaultInjectionObservationSnapshot clientObservation = client.Capture();
+        Assert.Multiple(() =>
+        {
+            Assert.That(serverObservation.Configuration.ProfileId, Is.EqualTo("unstable"));
+            Assert.That(clientObservation.Configuration.ProfileId, Is.EqualTo("unstable"));
+            Assert.That(serverObservation.DelayedInboundPacketCount, Is.GreaterThan(0));
+            Assert.That(clientObservation.DelayedInboundPacketCount, Is.GreaterThan(0));
+            Assert.That(serverObservation.DroppedInboundPacketCount, Is.GreaterThan(0));
+            Assert.That(clientObservation.DroppedInboundPacketCount, Is.GreaterThan(0));
+            Assert.That(
+                serverObservation.ReorderedInboundStateDatagramCount,
+                Is.EqualTo(server.SimulatedStateReorderCount));
+            Assert.That(
+                clientObservation.ReorderedInboundStateDatagramCount,
+                Is.EqualTo(client.SimulatedStateReorderCount));
         });
     }
 
@@ -150,6 +255,57 @@ public sealed class LiteNetLibDatagramPortTests
             Is.EqualTo(DatagramSendStatus.Closed));
     }
 
+    [Test]
+    public void ReleaseTransportFaultProfile_DropsPacketsBeforeReliabilityProcessing()
+    {
+        using var server = CreateServer(datagramCapacity: 8);
+        var config = new NetworkRuntimeConfig
+        {
+            NormalConnection = new NetworkFaultProfileConfig
+            {
+                RoundTripLatencyMs = 180,
+                JitterMs = 30,
+                PacketLossPermille = 1000,
+            },
+        };
+        var host = new NetworkHostBootstrapConfig
+        {
+            FaultProfile = NetworkHostBootstrapConfig.NormalFaultProfile,
+            FaultSeed = 709,
+        };
+        LiteNetLibFaultInjectionSettings faults = LiteNetLibFaultInjectionSettings.Create(config, host);
+        using var client = new LiteNetLibClientDatagramPort(
+            "127.0.0.1",
+            server.BoundPort,
+            "rts-duel-test",
+            datagramCapacity: 8,
+            connectionEventCapacity: 8,
+            maxPayloadBytes: 1200,
+            channelCount: 8,
+            stateChannelId: 2,
+            in faults);
+        Assert.That(client.TryConnect(), Is.True);
+
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.ElapsedMilliseconds < 750)
+        {
+            server.Pump();
+            client.Pump();
+            while (server.TryReceiveConnectionEvent(out _)) { }
+            Assert.That(client.TryReceiveConnectionEvent(out _), Is.False);
+            Thread.Sleep(1);
+        }
+
+        Assert.That(client.State, Is.Not.EqualTo(Ludots.Core.Networking.Runtime.ClientConnectionControlState.Connected));
+        NetworkFaultInjectionObservationSnapshot observation = client.Capture();
+        Assert.Multiple(() =>
+        {
+            Assert.That(observation.DelayedInboundPacketCount, Is.Zero);
+            Assert.That(observation.DroppedInboundPacketCount, Is.GreaterThan(0));
+            Assert.That(observation.Configuration.PacketLossPermille, Is.EqualTo(1000));
+        });
+    }
+
     private static LiteNetLibServerDatagramPort CreateServer(int datagramCapacity) =>
         new(
             listenPort: 0,
@@ -159,7 +315,8 @@ public sealed class LiteNetLibDatagramPortTests
             connectionEventCapacity: 8,
             maxPayloadBytes: 1200,
             channelCount: 8,
-            stateChannelId: 2);
+            stateChannelId: 2,
+            faults: LiteNetLibFaultInjectionSettings.Disabled());
 
     private static LiteNetLibClientDatagramPort CreateClient(
         int port,
@@ -174,7 +331,8 @@ public sealed class LiteNetLibDatagramPortTests
             connectionEventCapacity: 8,
             maxPayloadBytes: 1200,
             channelCount: 8,
-            stateChannelId: 2);
+            stateChannelId: 2,
+            faults: LiteNetLibFaultInjectionSettings.Disabled());
         if (!client.TryConnect())
         {
             client.Dispose();
@@ -182,6 +340,44 @@ public sealed class LiteNetLibDatagramPortTests
         }
 
         return client;
+    }
+
+    private static LiteNetLibFaultInjectionSettings CreateUnstableFaults(int seed)
+    {
+        var config = new NetworkRuntimeConfig
+        {
+            StatePublishRateHz = 10,
+            UnstableConnection = new NetworkFaultProfileConfig
+            {
+                RoundTripLatencyMs = 180,
+                JitterMs = 30,
+                PacketLossPermille = 50,
+                ReorderPermille = 20,
+            },
+        };
+        var host = new NetworkHostBootstrapConfig
+        {
+            FaultProfile = NetworkHostBootstrapConfig.UnstableFaultProfile,
+            FaultSeed = seed,
+        };
+        return LiteNetLibFaultInjectionSettings.Create(config, host);
+    }
+
+    private static void AssertDisabledMetrics(
+        NetworkFaultInjectionObservationSnapshot observation,
+        NetworkProcessRole expectedRole)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(observation.Role, Is.EqualTo(expectedRole));
+            Assert.That(
+                observation.Configuration.ProfileId,
+                Is.EqualTo(NetworkHostBootstrapConfig.NormalFaultProfile));
+            Assert.That(observation.Configuration.IsEnabled, Is.False);
+            Assert.That(observation.DelayedInboundPacketCount, Is.Zero);
+            Assert.That(observation.DroppedInboundPacketCount, Is.Zero);
+            Assert.That(observation.ReorderedInboundStateDatagramCount, Is.Zero);
+        });
     }
 
     private static void PumpUntil(

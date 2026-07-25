@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
@@ -13,6 +14,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -141,6 +143,19 @@ namespace MobaDemoMod.Systems
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
+                if (IsReplicatedClient())
+                {
+                    if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                        portValue is not IReplicatedClientCommandPort port)
+                    {
+                        throw new InvalidOperationException(
+                            "Replicated-client MOBA input requires the platform-neutral client command port.");
+                    }
+
+                    _globals[LocalOrderSourceHelper.LastNetworkSubmitResultDebugKey] = port.Submit(in order);
+                    return;
+                }
+
                 _orders.TryEnqueue(order);
             });
 
@@ -228,6 +243,10 @@ namespace MobaDemoMod.Systems
             playerId = candidate;
             return true;
         }
+
+        private bool IsReplicatedClient() =>
+            _globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) &&
+            roleValue is NetworkProcessRole.ReplicatedClient;
 
         private Entity GetControlledActor(int playerId)
         {

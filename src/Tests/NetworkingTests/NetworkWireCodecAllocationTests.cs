@@ -25,8 +25,10 @@ public sealed class NetworkWireCodecAllocationTests
             new ReconnectToken(3, 4),
             Protocol,
             Content,
-            Epoch);
-        var commandHeader = new NetworkCommandBatchHeader(1, 1, 10, 9, 1);
+            Epoch,
+            nextClientBatchSequence: 1);
+        var confirmation = new SessionHandshakeConfirmation(Epoch, 0, 1, new ReconnectToken(3, 4));
+        var commandHeader = new NetworkCommandBatchHeader(1, 1, 10, 9, 1, OrderSubmitMode.Immediate);
         var commandEntries = new NetworkCommandWireEntry[1];
         commandEntries[0] = new NetworkCommandWireEntry(
             new NetworkEntityHandle(1, 1),
@@ -65,6 +67,7 @@ public sealed class NetworkWireCodecAllocationTests
 
         byte[] handshakeRequest = new byte[HandshakeWireCodec.RequestSizeInBytes];
         byte[] handshakeResponse = new byte[HandshakeWireCodec.ResponseSizeInBytes];
+        byte[] handshakeConfirmation = new byte[HandshakeWireCodec.ConfirmationSizeInBytes];
         byte[] commandPayload = new byte[CommandBatchWireCodec.GetPayloadSize(1)];
         byte[] admissionPayload = new byte[CommandAdmissionWireCodec.SizeInBytes];
         byte[] replicationPayload = new byte[ReplicationPacketWireCodec.GetPayloadSize(
@@ -82,6 +85,7 @@ public sealed class NetworkWireCodecAllocationTests
             RunSteadyStateOnce(
                 in request,
                 in response,
+                in confirmation,
                 in commandHeader,
                 commandEntries,
                 in outcome,
@@ -91,6 +95,7 @@ public sealed class NetworkWireCodecAllocationTests
                 decodePacket,
                 handshakeRequest,
                 handshakeResponse,
+                handshakeConfirmation,
                 commandPayload,
                 admissionPayload,
                 replicationPayload,
@@ -107,6 +112,7 @@ public sealed class NetworkWireCodecAllocationTests
             RunSteadyStateOnce(
                 in request,
                 in response,
+                in confirmation,
                 in commandHeader,
                 commandEntries,
                 in outcome,
@@ -116,6 +122,7 @@ public sealed class NetworkWireCodecAllocationTests
                 decodePacket,
                 handshakeRequest,
                 handshakeResponse,
+                handshakeConfirmation,
                 commandPayload,
                 admissionPayload,
                 replicationPayload,
@@ -132,6 +139,7 @@ public sealed class NetworkWireCodecAllocationTests
     private static void RunSteadyStateOnce(
         in SessionHandshakeRequest request,
         in SessionHandshakeResponse response,
+        in SessionHandshakeConfirmation confirmation,
         in NetworkCommandBatchHeader commandHeader,
         NetworkCommandWireEntry[] commandEntries,
         in NetworkCommandAdmissionOutcome outcome,
@@ -141,6 +149,7 @@ public sealed class NetworkWireCodecAllocationTests
         ReplicationPacketBuffer decodePacket,
         byte[] handshakeRequest,
         byte[] handshakeResponse,
+        byte[] handshakeConfirmation,
         byte[] commandPayload,
         byte[] admissionPayload,
         byte[] replicationPayload,
@@ -153,6 +162,8 @@ public sealed class NetworkWireCodecAllocationTests
         AssertSuccess(HandshakeWireCodec.TryDecodeRequest(handshakeRequest, out _));
         AssertSuccess(HandshakeWireCodec.TryEncodeResponse(in response, handshakeResponse, out _));
         AssertSuccess(HandshakeWireCodec.TryDecodeResponse(handshakeResponse, out _));
+        AssertSuccess(HandshakeWireCodec.TryEncodeConfirmation(in confirmation, handshakeConfirmation, out _));
+        AssertSuccess(HandshakeWireCodec.TryDecodeConfirmation(handshakeConfirmation, out _));
         AssertSuccess(CommandBatchWireCodec.TryEncode(in commandHeader, commandEntries, commandPayload, out _));
         AssertSuccess(CommandBatchWireCodec.TryDecode(commandPayload, decodeEntries, out _, out _));
         var authenticatedSeat = new NetworkCommandSeat(

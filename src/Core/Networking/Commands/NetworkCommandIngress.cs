@@ -36,7 +36,10 @@ namespace Ludots.Core.Networking.Commands
         private readonly long _rateCapacity;
         private readonly ulong[] _nextSequences;
         private readonly ulong[] _historySequences;
+        private readonly ulong[] _historySignatures;
         private readonly NetworkCommandAdmissionOutcome[] _historyOutcomes;
+        private readonly NetworkCommandAdmissionOutcome[] _historyEntityOutcomes;
+        private readonly bool[] _historyEntityOutcomeActive;
         private readonly int[] _historyCounts;
         private readonly int[] _historyWriteIndices;
 
@@ -90,6 +93,13 @@ namespace Ludots.Core.Networking.Commands
                     nameof(results));
             }
 
+            if (results.Capacity < config.MaxActorsPerBatch + 1)
+            {
+                throw new ArgumentException(
+                    $"Network result capacity {results.Capacity} cannot replay a maximum actor batch of {config.MaxActorsPerBatch}.",
+                    nameof(results));
+            }
+
             _config = config;
             _seatStates = new byte[config.SeatCapacity];
             _seatGenerations = new uint[config.SeatCapacity];
@@ -101,7 +111,11 @@ namespace Ludots.Core.Networking.Commands
             _nextSequences = new ulong[config.SeatCapacity];
             int historySlots = checked(config.SeatCapacity * config.SequenceHistoryCapacity);
             _historySequences = new ulong[historySlots];
+            _historySignatures = new ulong[historySlots];
             _historyOutcomes = new NetworkCommandAdmissionOutcome[historySlots];
+            _historyEntityOutcomes = new NetworkCommandAdmissionOutcome[
+                checked(historySlots * config.MaxActorsPerBatch)];
+            _historyEntityOutcomeActive = new bool[_historyEntityOutcomes.Length];
             _historyCounts = new int[config.SeatCapacity];
             _historyWriteIndices = new int[config.SeatCapacity];
 
@@ -191,6 +205,24 @@ namespace Ludots.Core.Networking.Commands
             _seatControllers[seat.Slot] = controller;
         }
 
+        public ulong GetNextClientBatchSequence(in NetworkCommandSeat seat)
+        {
+            if (!MatchesSeat(in seat, SeatConnected) && !MatchesSeat(in seat, SeatAwaitingReconnect))
+            {
+                throw new InvalidOperationException(
+                    $"Network command seat {seat.Slot}:{seat.Generation} is not active or awaiting reconnect.");
+            }
+
+            ulong nextSequence = _nextSequences[seat.Slot];
+            if (nextSequence == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Network command seat {seat.Slot}:{seat.Generation} has no active sequence cursor.");
+            }
+
+            return nextSequence;
+        }
+
         public bool TryReleaseSeat(in NetworkCommandSeat seat)
         {
             if (!MatchesSeat(in seat, SeatConnected) && !MatchesSeat(in seat, SeatAwaitingReconnect))
@@ -274,13 +306,50 @@ namespace Ludots.Core.Networking.Commands
                     OrderSubmitResult.NetworkInvalidConnectionSeat);
             }
 
+            if (header.ClientBatchSequence == ulong.MaxValue)
+            {
+                return Publish(
+                    in seat,
+                    header.ClientBatchSequence,
+                    header.TargetTick,
+                    entries.Length,
+                    OrderSubmitResult.NetworkSequenceExhausted);
+            }
+
+            ulong signature = ComputeCommandSignature(in header, entries);
             ulong nextSequence = _nextSequences[seat.Slot];
             if (header.ClientBatchSequence < nextSequence)
             {
-                if (TryFindHistory(seat.Slot, header.ClientBatchSequence, out NetworkCommandAdmissionOutcome original))
+                if (TryFindHistoryIndex(seat.Slot, header.ClientBatchSequence, out int historyIndex))
                 {
+                    if (_historySignatures[historyIndex] != signature)
+                    {
+                        return Publish(
+                            in seat,
+                            header.ClientBatchSequence,
+                            header.TargetTick,
+                            entries.Length,
+                            OrderSubmitResult.NetworkCommandSchemaMismatch);
+                    }
+
+                    int replayCount = 1 + CountEntityHistoryRows(historyIndex);
+                    if (_results.AvailableCapacity < replayCount)
+                    {
+                        return CreateOutcome(
+                            in seat,
+                            header.ClientBatchSequence,
+                            header.TargetTick,
+                            entries.Length,
+                            orderId: 0,
+                            admissionBatchId: 0,
+                            OrderSubmitResult.NetworkAdmissionBackpressured,
+                            isReplay: false);
+                    }
+
+                    NetworkCommandAdmissionOutcome original = _historyOutcomes[historyIndex];
                     NetworkCommandAdmissionOutcome replay = original.AsReplay();
                     WriteResult(in replay);
+                    WriteEntityHistoryReplay(historyIndex);
                     return replay;
                 }
 
@@ -308,7 +377,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    phaseRejection);
+                    phaseRejection,
+                    signature);
             }
 
             long targetDelta = (long)header.TargetTick - serverTick;
@@ -318,7 +388,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkTargetTickExpired);
+                    OrderSubmitResult.NetworkTargetTickExpired,
+                    signature);
             }
 
             if (targetDelta > _config.MaxFutureTargetTicks)
@@ -327,7 +398,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkTargetTickTooFarAhead);
+                    OrderSubmitResult.NetworkTargetTickTooFarAhead,
+                    signature);
             }
 
             if (entries.IsEmpty || header.SessionEpoch == 0 || header.EntryCount != entries.Length)
@@ -336,7 +408,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkCommandSchemaMismatch);
+                    OrderSubmitResult.NetworkCommandSchemaMismatch,
+                    signature);
             }
 
             if (entries.Length > _config.MaxActorsPerBatch)
@@ -345,7 +418,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkActorLimitExceeded);
+                    OrderSubmitResult.NetworkActorLimitExceeded,
+                    signature);
             }
 
             if (!TryFindFreeScheduledSlot(out int scheduledSlot))
@@ -354,18 +428,20 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkScheduleFull);
+                    OrderSubmitResult.NetworkScheduleFull,
+                    signature);
             }
 
             Span<Order> destination = GetScheduledOrders(scheduledSlot, entries.Length);
             if (!TryMaterializeBatch(
                     seat.Slot,
                     serverTick,
+                    header.SubmitMode,
                     entries,
                     destination,
                     out OrderSubmitResult validationResult))
             {
-                return CompleteRejected(in seat, in header, entries.Length, validationResult);
+                return CompleteRejected(in seat, in header, entries.Length, validationResult, signature);
             }
 
             if (!TryConsumeRate(seat.Slot, serverTick))
@@ -374,7 +450,8 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkRateLimited);
+                    OrderSubmitResult.NetworkRateLimited,
+                    signature);
             }
 
             _scheduled[scheduledSlot] = true;
@@ -390,8 +467,35 @@ namespace Ludots.Core.Networking.Commands
                 header.TargetTick,
                 entries.Length,
                 OrderSubmitResult.NetworkScheduled);
-            RecordCompleted(seat.Slot, header.ClientBatchSequence, in accepted);
+            RecordCompleted(seat.Slot, header.ClientBatchSequence, signature, in accepted);
             return accepted;
+        }
+
+        public void RecordEntityAdmission(in NetworkCommandAdmissionOutcome outcome)
+        {
+            if (outcome.Stage != OrderAdmissionStage.EntityIntake ||
+                outcome.IsReplay ||
+                (uint)outcome.SeatSlot >= (uint)_config.SeatCapacity ||
+                outcome.ActorCount <= 0 ||
+                outcome.ActorCount > _config.MaxActorsPerBatch ||
+                outcome.AdmissionBatchIndex >= outcome.ActorCount ||
+                !TryFindHistoryIndex(outcome.SeatSlot, outcome.ClientBatchSequence, out int historyIndex))
+            {
+                throw new InvalidOperationException("Entity admission outcome does not match command sequence history.");
+            }
+
+            NetworkCommandAdmissionOutcome command = _historyOutcomes[historyIndex];
+            if (outcome.SeatGeneration != command.SeatGeneration ||
+                outcome.PlayerId != command.PlayerId ||
+                outcome.ActorCount != command.ActorCount ||
+                outcome.AdmissionBatchId != command.AdmissionBatchId)
+            {
+                throw new InvalidOperationException("Entity admission outcome identity does not match command sequence history.");
+            }
+
+            int row = GetEntityHistoryRow(historyIndex, outcome.AdmissionBatchIndex);
+            _historyEntityOutcomes[row] = outcome;
+            _historyEntityOutcomeActive[row] = true;
         }
 
         public int DrainScheduled(int serverTick)
@@ -427,7 +531,7 @@ namespace Ludots.Core.Networking.Commands
                 }
                 else
                 {
-                    if (!_orders.TryEnqueueSharedBatch(batch))
+                    if (!_orders.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network))
                     {
                         throw new InvalidOperationException(
                             "OrderQueue capacity changed during single-writer network command admission.");
@@ -452,6 +556,7 @@ namespace Ludots.Core.Networking.Commands
         private bool TryMaterializeBatch(
             int seatSlot,
             int serverTick,
+            OrderSubmitMode submitMode,
             ReadOnlySpan<NetworkCommandWireEntry> entries,
             Span<Order> destination,
             out OrderSubmitResult result)
@@ -491,6 +596,7 @@ namespace Ludots.Core.Networking.Commands
                 NetworkCommandTargetPayload targetPayload = entry.Target;
                 if (!_orderTypes.IsRegistered(entry.OrderTypeId) ||
                     !_schemas.TryGet(entry.OrderTypeId, out NetworkCommandSchema schema) ||
+                    !schema.AllowsSubmitMode(submitMode) ||
                     !TryValidateTargetShape(in targetPayload, in schema))
                 {
                     result = OrderSubmitResult.NetworkCommandSchemaMismatch;
@@ -547,7 +653,7 @@ namespace Ludots.Core.Networking.Commands
                     Actor = actor,
                     Target = target,
                     Args = args,
-                    SubmitMode = schema.SubmitMode,
+                    SubmitMode = submitMode,
                 };
             }
 
@@ -629,7 +735,8 @@ namespace Ludots.Core.Networking.Commands
             in NetworkCommandSeat seat,
             in NetworkCommandBatchHeader header,
             int actorCount,
-            OrderSubmitResult result)
+            OrderSubmitResult result,
+            ulong signature)
         {
             NetworkCommandAdmissionOutcome outcome = Publish(
                 in seat,
@@ -637,7 +744,7 @@ namespace Ludots.Core.Networking.Commands
                 header.TargetTick,
                 actorCount,
                 result);
-            RecordCompleted(seat.Slot, header.ClientBatchSequence, in outcome);
+            RecordCompleted(seat.Slot, header.ClientBatchSequence, signature, in outcome);
             return outcome;
         }
 
@@ -716,21 +823,6 @@ namespace Ludots.Core.Networking.Commands
             _scheduledBatchCount--;
         }
 
-        private bool TryFindHistory(
-            int slot,
-            ulong clientBatchSequence,
-            out NetworkCommandAdmissionOutcome outcome)
-        {
-            if (TryFindHistoryIndex(slot, clientBatchSequence, out int index))
-            {
-                outcome = _historyOutcomes[index];
-                return true;
-            }
-
-            outcome = default;
-            return false;
-        }
-
         private bool TryFindHistoryIndex(int slot, ulong clientBatchSequence, out int index)
         {
             int offset = slot * _config.SequenceHistoryCapacity;
@@ -752,12 +844,17 @@ namespace Ludots.Core.Networking.Commands
         private void RecordCompleted(
             int slot,
             ulong clientBatchSequence,
+            ulong signature,
             in NetworkCommandAdmissionOutcome outcome)
         {
             int writeIndex = _historyWriteIndices[slot];
             int index = (slot * _config.SequenceHistoryCapacity) + writeIndex;
             _historySequences[index] = clientBatchSequence;
+            _historySignatures[index] = signature;
             _historyOutcomes[index] = outcome;
+            int entityOffset = index * _config.MaxActorsPerBatch;
+            Array.Clear(_historyEntityOutcomes, entityOffset, _config.MaxActorsPerBatch);
+            Array.Clear(_historyEntityOutcomeActive, entityOffset, _config.MaxActorsPerBatch);
             _historyWriteIndices[slot] = (writeIndex + 1) % _config.SequenceHistoryCapacity;
             if (_historyCounts[slot] < _config.SequenceHistoryCapacity)
             {
@@ -787,7 +884,84 @@ namespace Ludots.Core.Networking.Commands
             _historyWriteIndices[slot] = 0;
             int historyOffset = slot * _config.SequenceHistoryCapacity;
             Array.Clear(_historySequences, historyOffset, _config.SequenceHistoryCapacity);
+            Array.Clear(_historySignatures, historyOffset, _config.SequenceHistoryCapacity);
             Array.Clear(_historyOutcomes, historyOffset, _config.SequenceHistoryCapacity);
+            int entityOffset = historyOffset * _config.MaxActorsPerBatch;
+            int entityCount = _config.SequenceHistoryCapacity * _config.MaxActorsPerBatch;
+            Array.Clear(_historyEntityOutcomes, entityOffset, entityCount);
+            Array.Clear(_historyEntityOutcomeActive, entityOffset, entityCount);
+        }
+
+        private int CountEntityHistoryRows(int historyIndex)
+        {
+            int count = 0;
+            int offset = historyIndex * _config.MaxActorsPerBatch;
+            for (int i = 0; i < _config.MaxActorsPerBatch; i++)
+            {
+                count += _historyEntityOutcomeActive[offset + i] ? 1 : 0;
+            }
+
+            return count;
+        }
+
+        private void WriteEntityHistoryReplay(int historyIndex)
+        {
+            int offset = historyIndex * _config.MaxActorsPerBatch;
+            for (int i = 0; i < _config.MaxActorsPerBatch; i++)
+            {
+                int row = offset + i;
+                if (!_historyEntityOutcomeActive[row])
+                {
+                    continue;
+                }
+
+                NetworkCommandAdmissionOutcome replay = _historyEntityOutcomes[row].AsReplay();
+                WriteResult(in replay);
+            }
+        }
+
+        private int GetEntityHistoryRow(int historyIndex, int admissionBatchIndex) =>
+            checked((historyIndex * _config.MaxActorsPerBatch) + admissionBatchIndex);
+
+        private static ulong ComputeCommandSignature(
+            in NetworkCommandBatchHeader header,
+            ReadOnlySpan<NetworkCommandWireEntry> entries)
+        {
+            ulong hash = 14695981039346656037UL;
+            hash = MixSignature(hash, header.SessionEpoch);
+            hash = MixSignature(hash, header.ClientBatchSequence);
+            hash = MixSignature(hash, unchecked((uint)header.TargetTick));
+            hash = MixSignature(hash, unchecked((uint)header.AcknowledgedCommittedTick));
+            hash = MixSignature(hash, header.EntryCount);
+            hash = MixSignature(hash, (byte)header.SubmitMode);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                ref readonly NetworkCommandWireEntry entry = ref entries[i];
+                hash = MixSignature(hash, unchecked((uint)entry.Actor.Slot));
+                hash = MixSignature(hash, entry.Actor.Generation);
+                hash = MixSignature(hash, unchecked((uint)entry.OrderTypeId));
+                hash = MixSignature(hash, (byte)entry.Target.Kind);
+                hash = MixSignature(hash, unchecked((uint)entry.Target.PositionXCm));
+                hash = MixSignature(hash, unchecked((uint)entry.Target.PositionYCm));
+                hash = MixSignature(hash, unchecked((uint)entry.Target.PositionZCm));
+                hash = MixSignature(hash, unchecked((uint)entry.Target.TargetSlot));
+                hash = MixSignature(hash, entry.Target.TargetGeneration);
+                hash = MixSignature(hash, unchecked((uint)entry.Target.Arg0));
+                hash = MixSignature(hash, unchecked((uint)entry.Target.Arg1));
+            }
+
+            return hash;
+        }
+
+        private static ulong MixSignature(ulong hash, ulong value)
+        {
+            for (int shift = 0; shift < 64; shift += 8)
+            {
+                hash ^= (byte)(value >> shift);
+                hash *= 1099511628211UL;
+            }
+
+            return hash;
         }
 
         private bool TryConsumeRate(int slot, int serverTick)

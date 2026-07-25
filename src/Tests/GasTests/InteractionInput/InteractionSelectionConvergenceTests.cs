@@ -472,6 +472,41 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommandSourceAcquisitionSystem_DestroyedMember_IsPrunedBeforeTheNextInputFrame()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var destroyed = world.Create();
+            var survivor = world.Create();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            CreateCommandSourceRuntime(world, globals);
+            SeedCommandSource(world, globals, local, destroyed, survivor);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+
+            world.Destroy(destroyed);
+            system.Update(0f);
+
+            AssertCommandSource(globals, local, survivor);
+            That(
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    world,
+                    globals,
+                    local,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity primary),
+                Is.True);
+            That(primary, Is.EqualTo(survivor));
+        }
+
+        [Test]
         public void CommandSourceAcquisitionSystem_ClickEmptyGround_ClearsSelection()
         {
             using var world = World.Create();

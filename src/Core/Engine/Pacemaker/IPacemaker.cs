@@ -4,6 +4,11 @@ using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Engine.Pacemaker
 {
+    public interface IPresentationInterpolationSource
+    {
+        float InterpolationAlpha { get; }
+    }
+
     /// <summary>
     /// Controls the "heartbeat" of the simulation logic (GAS, Physics, AI).
     /// Decouples wall-clock time from simulation time.

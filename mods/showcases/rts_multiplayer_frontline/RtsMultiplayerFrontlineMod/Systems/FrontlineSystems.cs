@@ -10,8 +10,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
@@ -64,12 +66,12 @@ internal sealed class FrontlinePreMatchOrderGateSystem : BaseSystem<World, float
         .WithAll<FrontlineParticipant, OrderBuffer>();
 
     private readonly FrontlineRuntime _runtime;
-    private readonly OrderTypeRegistry _orderTypes;
+    private readonly OrderBufferSystem _orders;
 
-    public FrontlinePreMatchOrderGateSystem(World world, FrontlineRuntime runtime, OrderTypeRegistry orderTypes) : base(world)
+    public FrontlinePreMatchOrderGateSystem(World world, FrontlineRuntime runtime, OrderBufferSystem orders) : base(world)
     {
         _runtime = runtime;
-        _orderTypes = orderTypes;
+        _orders = orders;
     }
 
     public override void Update(in float dt)
@@ -89,14 +91,111 @@ internal sealed class FrontlinePreMatchOrderGateSystem : BaseSystem<World, float
                 {
                     if (_runtime.IsNetworked)
                     {
+                        if (_runtime.Snapshot.Phase == FrontlineMatchPhase.InProgress)
+                        {
+                            continue;
+                        }
+
+                        if (_runtime.Snapshot.Phase == FrontlineMatchPhase.Completed)
+                        {
+                            _orders.TryCancelAll(Unsafe.Add(ref first, index));
+                            continue;
+                        }
+
                         throw new InvalidOperationException(
                             "RTS Frontline network command bypassed the typed Core gameplay command gate.");
                     }
 
-                    OrderSubmitter.CancelAll(World, Unsafe.Add(ref first, index), _orderTypes);
+                    _orders.TryCancelAll(Unsafe.Add(ref first, index));
                 }
             }
         }
+    }
+}
+
+internal sealed class FrontlineTagBinder
+{
+    private readonly FrontlineConfig _config;
+    private readonly TagOps _tagOps;
+    private readonly int _harvesterTagId;
+    private readonly int _infantryTagId;
+    private readonly int _crystalNodeTagId;
+
+    public FrontlineTagBinder(FrontlineConfig config, TagOps tagOps)
+    {
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
+        _harvesterTagId = TagRegistry.Register(config.HarvesterTag);
+        _infantryTagId = TagRegistry.Register(config.InfantryTag);
+        _crystalNodeTagId = TagRegistry.Register(config.CrystalNodeTag);
+    }
+
+    public void BindParticipant(
+        World world,
+        Entity entity,
+        ref FrontlineParticipant participant,
+        in Team team,
+        ref GameplayTagContainer tags,
+        ref TagCountContainer counts,
+        ref FrontlineTagBindingState state)
+    {
+        if (state.IsBound != 0)
+        {
+            return;
+        }
+
+        participant.SideIndex = _config.ResolveSideIndex(team.Id);
+        int tagId = world.Has<FrontlineHarvester>(entity)
+            ? _harvesterTagId
+            : world.Has<FrontlineInfantry>(entity)
+                ? _infantryTagId
+                : 0;
+        if (tagId > 0)
+        {
+            _tagOps.AddTag(ref tags, ref counts, tagId);
+        }
+
+        state.IsBound = 1;
+    }
+
+    public void BindCrystalNode(
+        ref GameplayTagContainer tags,
+        ref TagCountContainer counts,
+        ref FrontlineTagBindingState state)
+    {
+        if (state.IsBound != 0)
+        {
+            return;
+        }
+
+        _tagOps.AddTag(ref tags, ref counts, _crystalNodeTagId);
+        state.IsBound = 1;
+    }
+
+    public void BindReplicatedEntity(World world, Entity entity)
+    {
+        if (world.Has<FrontlineCrystalNode>(entity))
+        {
+            BindCrystalNode(
+                ref world.Get<GameplayTagContainer>(entity),
+                ref world.Get<TagCountContainer>(entity),
+                ref world.Get<FrontlineTagBindingState>(entity));
+            return;
+        }
+
+        if (!world.Has<FrontlineParticipant>(entity) || !world.Has<Team>(entity))
+        {
+            throw new InvalidOperationException("RTS Frontline replicated gameplay entity is missing participant identity.");
+        }
+
+        BindParticipant(
+            world,
+            entity,
+            ref world.Get<FrontlineParticipant>(entity),
+            in world.Get<Team>(entity),
+            ref world.Get<GameplayTagContainer>(entity),
+            ref world.Get<TagCountContainer>(entity),
+            ref world.Get<FrontlineTagBindingState>(entity));
     }
 }
 
@@ -108,18 +207,15 @@ internal sealed class FrontlineTagBindingSystem : BaseSystem<World, float>
         .WithAll<FrontlineCrystalNode, GameplayTagContainer, TagCountContainer, FrontlineTagBindingState>();
 
     private readonly FrontlineRuntime _runtime;
-    private readonly TagOps _tagOps;
-    private readonly int _harvesterTagId;
-    private readonly int _infantryTagId;
-    private readonly int _crystalNodeTagId;
+    private readonly FrontlineTagBinder _binder;
 
-    public FrontlineTagBindingSystem(World world, FrontlineRuntime runtime, TagOps tagOps) : base(world)
+    public FrontlineTagBindingSystem(
+        World world,
+        FrontlineRuntime runtime,
+        FrontlineTagBinder binder) : base(world)
     {
         _runtime = runtime;
-        _tagOps = tagOps;
-        _harvesterTagId = TagRegistry.Register(runtime.Config.HarvesterTag);
-        _infantryTagId = TagRegistry.Register(runtime.Config.InfantryTag);
-        _crystalNodeTagId = TagRegistry.Register(runtime.Config.CrystalNodeTag);
+        _binder = binder ?? throw new ArgumentNullException(nameof(binder));
     }
 
     public override void Update(in float dt)
@@ -139,26 +235,15 @@ internal sealed class FrontlineTagBindingSystem : BaseSystem<World, float>
             ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
-                if (states[index].IsBound != 0)
-                {
-                    continue;
-                }
-
                 Entity entity = Unsafe.Add(ref first, index);
-                participants[index].SideIndex = _runtime.Config.ResolveSideIndex(teams[index].Id);
-                int tagId = World.Has<FrontlineHarvester>(entity)
-                    ? _harvesterTagId
-                    : World.Has<FrontlineInfantry>(entity)
-                        ? _infantryTagId
-                        : World.Has<FrontlineCrystalNode>(entity)
-                            ? _crystalNodeTagId
-                            : 0;
-                if (tagId > 0)
-                {
-                    _tagOps.AddTag(ref tags[index], ref counts[index], tagId);
-                }
-
-                states[index].IsBound = 1;
+                _binder.BindParticipant(
+                    World,
+                    entity,
+                    ref participants[index],
+                    in teams[index],
+                    ref tags[index],
+                    ref counts[index],
+                    ref states[index]);
             }
         }
 
@@ -169,19 +254,13 @@ internal sealed class FrontlineTagBindingSystem : BaseSystem<World, float>
             Span<FrontlineTagBindingState> states = chunk.GetSpan<FrontlineTagBindingState>();
             foreach (int index in chunk)
             {
-                if (states[index].IsBound != 0)
-                {
-                    continue;
-                }
-
-                _tagOps.AddTag(ref tags[index], ref counts[index], _crystalNodeTagId);
-                states[index].IsBound = 1;
+                _binder.BindCrystalNode(ref tags[index], ref counts[index], ref states[index]);
             }
         }
     }
 }
 
-internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float>
+internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float>, IOrderAdmissionValidator
 {
     private static readonly QueryDescription Query = new QueryDescription()
         .WithAll<FrontlineCore, FrontlineCoreState, OrderBuffer, AbilityStateBuffer, AttributeBuffer>();
@@ -240,9 +319,8 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
                 float crystals = attributes[index].GetCurrent(_crystalAttributeId);
                 if (crystals < _runtime.Config.TrainCostCrystals)
                 {
-                    coreStates[index].LastTrainResult = FrontlineTrainResult.InsufficientCrystals;
-                    OrderSubmitter.NotifyOrderComplete(World, core, _orderTypes);
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Admitted Frontline training order {order.OrderId} has {crystals} crystals, below its reserved cost {_runtime.Config.TrainCostCrystals}.");
                 }
 
                 attributes[index].SetCurrent(_crystalAttributeId, crystals - _runtime.Config.TrainCostCrystals);
@@ -250,378 +328,73 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
             }
         }
     }
-}
 
-internal sealed class FrontlineHarvestSystem : BaseSystem<World, float>
-{
-    private static readonly QueryDescription HarvesterQuery = new QueryDescription()
-        .WithAll<FrontlineHarvester, FrontlineParticipant, FrontlineHarvestState, OrderBuffer, WorldPositionCm, PlayerOwner>();
-    private static readonly QueryDescription CoreQuery = new QueryDescription()
-        .WithAll<FrontlineCore, FrontlineParticipant, WorldPositionCm, AttributeBuffer>();
-
-    private readonly FrontlineRuntime _runtime;
-    private readonly OrderQueue _queue;
-    private readonly OrderTypeRegistry _orderTypes;
-    private readonly int _gatherOrderTypeId;
-    private readonly int _moveOrderTypeId;
-    private readonly int _crystalAttributeId;
-
-    public FrontlineHarvestSystem(World world, FrontlineRuntime runtime, OrderQueue queue, OrderTypeRegistry orderTypes) : base(world)
-    {
-        _runtime = runtime;
-        _queue = queue;
-        _orderTypes = orderTypes;
-        _gatherOrderTypeId = orderTypes.GetId(runtime.Config.GatherOrderTypeKey);
-        _moveOrderTypeId = orderTypes.GetId(runtime.Config.MoveOrderTypeKey);
-        _crystalAttributeId = AttributeRegistry.Register(runtime.Config.CrystalAttribute);
-    }
-
-    public override void Update(in float dt)
-    {
-        if (!_runtime.CanAdvanceGameplay)
-        {
-            return;
-        }
-
-        foreach (ref Chunk chunk in World.Query(in HarvesterQuery))
-        {
-            Span<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
-            Span<FrontlineHarvestState> states = chunk.GetSpan<FrontlineHarvestState>();
-            Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
-            Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
-            Span<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
-            ref Entity first = ref chunk.Entity(0);
-            foreach (int index in chunk)
-            {
-                Entity entity = Unsafe.Add(ref first, index);
-                ref FrontlineHarvestState state = ref states[index];
-                ref OrderBuffer buffer = ref buffers[index];
-
-                if (buffer.HasActive && buffer.ActiveOrder.Order.OrderTypeId == _gatherOrderTypeId)
-                {
-                    Entity target = buffer.ActiveOrder.Order.Target;
-                    if (!World.IsAlive(target) || !World.Has<FrontlineCrystalNode>(target) || !World.Has<WorldPositionCm>(target))
-                    {
-                        OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypes);
-                        Reset(ref state);
-                        continue;
-                    }
-
-                    WorldCmInt2 targetCm = World.Get<WorldPositionCm>(target).ToWorldCmInt2();
-                    state.TargetXCm = targetCm.X;
-                    state.TargetYCm = targetCm.Y;
-                    state.Phase = FrontlineHarvestPhase.TravellingToNode;
-                    OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypes);
-                    QueueMove(entity, owners[index].PlayerId, targetCm.X, targetCm.Y, ref state);
-                    continue;
-                }
-
-                if (state.Phase == FrontlineHarvestPhase.Idle)
-                {
-                    continue;
-                }
-
-                if (buffer.HasActive)
-                {
-                    if (buffer.ActiveOrder.Order.OrderId == state.ExpectedMoveOrderId)
-                    {
-                        state.ExpectedMoveObserved = 1;
-                        continue;
-                    }
-
-                    Reset(ref state);
-                    continue;
-                }
-
-                if (state.ExpectedMoveOrderId > 0 && state.ExpectedMoveObserved == 0)
-                {
-                    continue;
-                }
-
-                if (state.Phase == FrontlineHarvestPhase.TravellingToNode)
-                {
-                    RequireArrival(in positions[index], state.TargetXCm, state.TargetYCm, "crystal node");
-                    state.ExpectedMoveOrderId = 0;
-                    state.ExpectedMoveObserved = 0;
-                    state.RemainingTicks = _runtime.Config.HarvestLoadTicks;
-                    state.Phase = FrontlineHarvestPhase.Loading;
-                    continue;
-                }
-
-                if (state.Phase == FrontlineHarvestPhase.Loading)
-                {
-                    state.RemainingTicks--;
-                    if (state.RemainingTicks > 0)
-                    {
-                        continue;
-                    }
-
-                    if (!TryFindCore(participants[index].SideIndex, out _, out WorldCmInt2 coreCm, out _))
-                    {
-                        throw new InvalidOperationException("RTS Frontline harvester could not resolve its command core.");
-                    }
-
-                    state.Phase = FrontlineHarvestPhase.ReturningToCore;
-                    QueueMove(entity, owners[index].PlayerId, coreCm.X, coreCm.Y, ref state);
-                    continue;
-                }
-
-                if (state.Phase == FrontlineHarvestPhase.ReturningToCore)
-                {
-                    if (!TryFindCore(participants[index].SideIndex, out Entity core, out WorldCmInt2 coreCm, out AttributeBuffer coreAttributes))
-                    {
-                        throw new InvalidOperationException("RTS Frontline harvester returned without a live command core.");
-                    }
-
-                    RequireArrival(in positions[index], coreCm.X, coreCm.Y, "command core");
-                    coreAttributes.SetCurrent(
-                        _crystalAttributeId,
-                        coreAttributes.GetCurrent(_crystalAttributeId) + _runtime.Config.HarvestCargoCrystals);
-                    World.Set(core, coreAttributes);
-                    Reset(ref state);
-                }
-            }
-        }
-    }
-
-    private void QueueMove(Entity actor, int playerId, int x, int y, ref FrontlineHarvestState state)
-    {
-        var order = new Order
-        {
-            OrderTypeId = _moveOrderTypeId,
-            PlayerId = playerId,
-            Actor = actor,
-            Args = OrderArgs.CreateSingleWorldCm(new Vector3(x, 0f, y)),
-            SubmitMode = OrderSubmitMode.Immediate,
-        };
-        if (!_queue.TryEnqueueAssigned(ref order))
-        {
-            throw new InvalidOperationException("RTS Frontline OrderQueue is full while routing a harvest move.");
-        }
-
-        state.ExpectedMoveOrderId = order.OrderId;
-        state.ExpectedMoveObserved = 0;
-    }
-
-    private bool TryFindCore(int sideIndex, out Entity core, out WorldCmInt2 position, out AttributeBuffer attributes)
-    {
-        core = Entity.Null;
-        position = default;
-        attributes = default;
-        foreach (ref Chunk chunk in World.Query(in CoreQuery))
-        {
-            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
-            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
-            ReadOnlySpan<AttributeBuffer> buffers = chunk.GetSpan<AttributeBuffer>();
-            ref Entity first = ref chunk.Entity(0);
-            foreach (int index in chunk)
-            {
-                if (participants[index].SideIndex != sideIndex)
-                {
-                    continue;
-                }
-
-                core = Unsafe.Add(ref first, index);
-                position = positions[index].ToWorldCmInt2();
-                attributes = buffers[index];
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void RequireArrival(in WorldPositionCm position, int x, int y, string destination)
-    {
-        WorldCmInt2 current = position.ToWorldCmInt2();
-        long dx = current.X - (long)x;
-        long dy = current.Y - (long)y;
-        long radius = _runtime.Config.ArrivalRadiusCm;
-        if ((dx * dx) + (dy * dy) > radius * radius)
-        {
-            throw new InvalidOperationException($"RTS Frontline move completed outside configured arrival radius for {destination}.");
-        }
-    }
-
-    private static void Reset(ref FrontlineHarvestState state) => state = default;
-}
-
-internal sealed class FrontlineCombatSystem : BaseSystem<World, float>
-{
-    private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<FrontlineInfantry, FrontlineParticipant, FrontlineAttackState, OrderBuffer, WorldPositionCm, PlayerOwner>();
-
-    private readonly FrontlineRuntime _runtime;
-    private readonly OrderQueue _queue;
-    private readonly OrderTypeRegistry _orderTypes;
-    private readonly EffectRequestQueue _effects;
-    private readonly int _attackOrderTypeId;
-    private readonly int _moveOrderTypeId;
-    private readonly int _damageEffectId;
-
-    public FrontlineCombatSystem(
+    public OrderSubmitResult Validate(
         World world,
-        FrontlineRuntime runtime,
-        OrderQueue queue,
-        OrderTypeRegistry orderTypes,
-        EffectRequestQueue effects) : base(world)
+        Entity entity,
+        in Order order,
+        in OrderBuffer buffer)
     {
-        _runtime = runtime;
-        _queue = queue;
-        _orderTypes = orderTypes;
-        _effects = effects;
-        _attackOrderTypeId = orderTypes.GetId(runtime.Config.AttackOrderTypeKey);
-        _moveOrderTypeId = orderTypes.GetId(runtime.Config.MoveOrderTypeKey);
-        _damageEffectId = EffectTemplateIdRegistry.GetId(runtime.Config.DamageEffectId);
-        if (_damageEffectId <= 0)
+        if (order.OrderTypeId != _castAbilityOrderTypeId)
         {
-            throw new InvalidOperationException($"RTS Frontline damage effect '{runtime.Config.DamageEffectId}' is not registered.");
-        }
-    }
-
-    public override void Update(in float dt)
-    {
-        if (!_runtime.CanAdvanceGameplay)
-        {
-            return;
+            return OrderSubmitResult.Activated;
         }
 
-        foreach (ref Chunk chunk in World.Query(in Query))
+        if (!world.IsAlive(entity) || !world.Has<AbilityStateBuffer>(entity))
         {
-            Span<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
-            Span<FrontlineAttackState> states = chunk.GetSpan<FrontlineAttackState>();
-            Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
-            Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
-            Span<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
-            ref Entity first = ref chunk.Entity(0);
-            foreach (int index in chunk)
+            return OrderSubmitResult.InvalidEntity;
+        }
+
+        AbilityStateBuffer abilities = world.Get<AbilityStateBuffer>(entity);
+        int slot = order.Args.I0;
+        if (abilities.Get(slot).AbilityId != _trainAbilityId)
+        {
+            return OrderSubmitResult.Activated;
+        }
+
+
+        if (!world.Has<FrontlineCoreState>(entity) || !world.Has<AttributeBuffer>(entity))
+        {
+            throw new InvalidOperationException(
+                $"Frontline training actor {entity.Id} is missing its core state or crystal attribute buffer.");
+        }
+
+        int reservedTrainCount = 0;
+        if (buffer.HasPending && IsTrainOrder(in buffer.PendingOrder.Order, in abilities))
+        {
+            reservedTrainCount++;
+        }
+
+        for (int i = 0; i < buffer.QueuedCount; i++)
+        {
+            Order queued = buffer.GetQueued(i).Order;
+            if (IsTrainOrder(in queued, in abilities))
             {
-                Entity actor = Unsafe.Add(ref first, index);
-                ref FrontlineAttackState state = ref states[index];
-                ref OrderBuffer buffer = ref buffers[index];
-
-                if (buffer.HasActive && buffer.ActiveOrder.Order.OrderTypeId == _attackOrderTypeId)
-                {
-                    Entity target = buffer.ActiveOrder.Order.Target;
-                    if (!IsValidHostileTarget(target, participants[index].SideIndex))
-                    {
-                        OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes);
-                        state = default;
-                        continue;
-                    }
-
-                    state.Target = target;
-                    state.CooldownTicks = 0;
-                    OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes);
-                    RouteOrEngage(actor, owners[index].PlayerId, in positions[index], ref state);
-                    continue;
-                }
-
-                if (state.Phase == FrontlineAttackPhase.Idle)
-                {
-                    continue;
-                }
-
-                if (!IsValidHostileTarget(state.Target, participants[index].SideIndex))
-                {
-                    state = default;
-                    continue;
-                }
-
-                if (buffer.HasActive)
-                {
-                    if (buffer.ActiveOrder.Order.OrderId == state.ExpectedMoveOrderId)
-                    {
-                        state.ExpectedMoveObserved = 1;
-                        continue;
-                    }
-
-                    state = default;
-                    continue;
-                }
-
-                if (state.Phase == FrontlineAttackPhase.Pursuing)
-                {
-                    if (state.ExpectedMoveOrderId > 0 && state.ExpectedMoveObserved == 0)
-                    {
-                        continue;
-                    }
-
-                    RouteOrEngage(actor, owners[index].PlayerId, in positions[index], ref state);
-                    continue;
-                }
-
-                if (!IsWithinAttackRange(in positions[index], state.Target))
-                {
-                    RouteOrEngage(actor, owners[index].PlayerId, in positions[index], ref state);
-                    continue;
-                }
-
-                if (state.CooldownTicks > 0)
-                {
-                    state.CooldownTicks--;
-                    continue;
-                }
-
-                _effects.Publish(new EffectRequest
-                {
-                    Source = actor,
-                    Target = state.Target,
-                    TemplateId = _damageEffectId,
-                });
-                state.CooldownTicks = _runtime.Config.AttackCooldownTicks;
+                reservedTrainCount++;
             }
         }
-    }
 
-    private void RouteOrEngage(Entity actor, int playerId, in WorldPositionCm actorPosition, ref FrontlineAttackState state)
-    {
-        if (IsWithinAttackRange(in actorPosition, state.Target))
+        if (buffer.HasActive && IsTrainOrder(in buffer.ActiveOrder.Order, in abilities))
         {
-            state.Phase = FrontlineAttackPhase.Engaging;
-            state.ExpectedMoveOrderId = 0;
-            state.ExpectedMoveObserved = 0;
-            return;
+            FrontlineCoreState state = world.Get<FrontlineCoreState>(entity);
+            if (state.LastHandledTrainOrderId != buffer.ActiveOrder.Order.OrderId)
+            {
+                reservedTrainCount++;
+            }
         }
 
-        WorldCmInt2 targetCm = World.Get<WorldPositionCm>(state.Target).ToWorldCmInt2();
-        var move = new Order
-        {
-            OrderTypeId = _moveOrderTypeId,
-            PlayerId = playerId,
-            Actor = actor,
-            Target = state.Target,
-            Args = OrderArgs.CreateSingleWorldCm(new Vector3(targetCm.X, 0f, targetCm.Y)),
-            SubmitMode = OrderSubmitMode.Immediate,
-        };
-        if (!_queue.TryEnqueueAssigned(ref move))
-        {
-            throw new InvalidOperationException("RTS Frontline OrderQueue is full while routing an attack pursuit.");
-        }
-
-        state.Phase = FrontlineAttackPhase.Pursuing;
-        state.ExpectedMoveOrderId = move.OrderId;
-        state.ExpectedMoveObserved = 0;
+        float crystals = world.Get<AttributeBuffer>(entity).GetCurrent(_crystalAttributeId);
+        float availableAfterReservations = crystals -
+            (reservedTrainCount * _runtime.Config.TrainCostCrystals);
+        return availableAfterReservations >= _runtime.Config.TrainCostCrystals
+            ? OrderSubmitResult.Activated
+            : OrderSubmitResult.InsufficientResources;
     }
 
-    private bool IsValidHostileTarget(Entity target, int actorSideIndex)
-    {
-        return World.IsAlive(target) &&
-            World.Has<FrontlineParticipant>(target) &&
-            World.Has<WorldPositionCm>(target) &&
-            World.Has<AttributeBuffer>(target) &&
-            World.Get<FrontlineParticipant>(target).SideIndex != actorSideIndex;
-    }
-
-    private bool IsWithinAttackRange(in WorldPositionCm actorPosition, Entity target)
-    {
-        WorldCmInt2 source = actorPosition.ToWorldCmInt2();
-        WorldCmInt2 destination = World.Get<WorldPositionCm>(target).ToWorldCmInt2();
-        long dx = source.X - (long)destination.X;
-        long dy = source.Y - (long)destination.Y;
-        long range = _runtime.Config.AttackRangeCm;
-        return (dx * dx) + (dy * dy) <= range * range;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool IsTrainOrder(in Order order, in AbilityStateBuffer abilities) =>
+        order.OrderTypeId == _castAbilityOrderTypeId &&
+        abilities.Get(order.Args.I0).AbilityId == _trainAbilityId;
 }
 
 internal sealed class FrontlineDeathAndMatchSystem : BaseSystem<World, float>
@@ -633,96 +406,109 @@ internal sealed class FrontlineDeathAndMatchSystem : BaseSystem<World, float>
         .WithAll<FrontlineCore, FrontlineParticipant, AttributeBuffer>();
 
     private readonly FrontlineRuntime _runtime;
+    private readonly OrderBufferSystem _orders;
     private readonly CommandBuffer _commandBuffer = new();
     private readonly int _healthAttributeId;
 
-    public FrontlineDeathAndMatchSystem(World world, FrontlineRuntime runtime) : base(world)
+    public FrontlineDeathAndMatchSystem(
+        World world,
+        FrontlineRuntime runtime,
+        OrderBufferSystem orders) : base(world)
     {
         _runtime = runtime;
+        _orders = orders ?? throw new ArgumentNullException(nameof(orders));
         _healthAttributeId = AttributeRegistry.Register(runtime.Config.HealthAttribute);
     }
 
     public override void Update(in float dt)
     {
-        if (!_runtime.IsActive || _runtime.Snapshot.Outcome != FrontlineMatchOutcome.InProgress)
+        if (!_runtime.IsActive)
         {
             return;
         }
 
-        if (!_runtime.AdvanceFixedTick())
+        if (_runtime.Snapshot.Outcome == FrontlineMatchOutcome.InProgress)
         {
-            return;
-        }
-
-        int tick = _runtime.Snapshot.CommittedTick;
-        Span<float> coreHealth = stackalloc float[2];
-        Span<byte> coreFound = stackalloc byte[2];
-
-        foreach (ref Chunk chunk in World.Query(in CoreQuery))
-        {
-            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
-            ReadOnlySpan<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
-            foreach (int index in chunk)
+            if (!_runtime.AdvanceFixedTick())
             {
-                int side = participants[index].SideIndex;
-                if ((uint)side >= 2u || coreFound[side] != 0)
+                return;
+            }
+
+            int tick = _runtime.Snapshot.CommittedTick;
+            Span<float> coreHealth = stackalloc float[2];
+            Span<byte> coreFound = stackalloc byte[2];
+
+            foreach (ref Chunk chunk in World.Query(in CoreQuery))
+            {
+                ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+                ReadOnlySpan<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
+                foreach (int index in chunk)
                 {
-                    throw new InvalidOperationException("RTS Frontline requires exactly one command core per configured side.");
+                    int side = participants[index].SideIndex;
+                    if ((uint)side >= 2u || coreFound[side] != 0)
+                    {
+                        throw new InvalidOperationException("RTS Frontline requires exactly one command core per configured side.");
+                    }
+
+                    coreFound[side] = 1;
+                    coreHealth[side] = attributes[index].GetCurrent(_healthAttributeId);
                 }
+            }
 
-                coreFound[side] = 1;
-                coreHealth[side] = attributes[index].GetCurrent(_healthAttributeId);
+            if (coreFound[0] == 0 || coreFound[1] == 0)
+            {
+                throw new InvalidOperationException("RTS Frontline match cannot resolve both command cores.");
             }
-        }
 
-        if (coreFound[0] == 0 || coreFound[1] == 0)
-        {
-            throw new InvalidOperationException("RTS Frontline match cannot resolve both command cores.");
-        }
-
-        bool oneDisconnectedPastGrace = _runtime.IsDisconnectedPastGrace(0);
-        bool twoDisconnectedPastGrace = _runtime.IsDisconnectedPastGrace(1);
-        if (oneDisconnectedPastGrace || twoDisconnectedPastGrace)
-        {
-            if (oneDisconnectedPastGrace && twoDisconnectedPastGrace)
-            {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.Draw, -1);
-            }
-            else if (oneDisconnectedPastGrace)
-            {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.SideTwoVictory, 1);
-            }
-            else
-            {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.SideOneVictory, 0);
-            }
-        }
-        else if (_runtime.HasDurationCoreHealthSnapshot || tick >= _runtime.Config.MatchDurationTicks)
-        {
-            _runtime.CaptureDurationCoreHealth(coreHealth[0], coreHealth[1]);
-            if (!_runtime.HasParticipantAwaitingReconnect)
-            {
-                _runtime.CommitDurationOutcome();
-            }
-        }
-        else
-        {
             bool sideOneDestroyed = coreHealth[0] <= 0f;
             bool sideTwoDestroyed = coreHealth[1] <= 0f;
-            if (sideOneDestroyed && sideTwoDestroyed)
+            if (sideOneDestroyed || sideTwoDestroyed)
             {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.Draw, -1);
+                FrontlineMatchOutcome outcome = sideOneDestroyed && sideTwoDestroyed
+                    ? FrontlineMatchOutcome.Draw
+                    : sideOneDestroyed
+                        ? FrontlineMatchOutcome.SideTwoVictory
+                        : FrontlineMatchOutcome.SideOneVictory;
+                int winningSideIndex = sideOneDestroyed && sideTwoDestroyed
+                    ? -1
+                    : sideOneDestroyed ? 1 : 0;
+                _runtime.CommitOutcome(new FrontlineMatchResolutionSnapshot(
+                    tick,
+                    FrontlineMatchResolutionReason.CoreDestroyed,
+                    outcome,
+                    winningSideIndex,
+                    coreHealth[0],
+                    coreHealth[1]));
             }
-            else if (sideOneDestroyed)
+            else if (_runtime.IsDisconnectedPastGrace(0) || _runtime.IsDisconnectedPastGrace(1))
             {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.SideTwoVictory, 1);
+                bool oneDisconnectedPastGrace = _runtime.IsDisconnectedPastGrace(0);
+                bool twoDisconnectedPastGrace = _runtime.IsDisconnectedPastGrace(1);
+                FrontlineMatchOutcome outcome = oneDisconnectedPastGrace && twoDisconnectedPastGrace
+                    ? FrontlineMatchOutcome.Draw
+                    : oneDisconnectedPastGrace
+                        ? FrontlineMatchOutcome.SideTwoVictory
+                        : FrontlineMatchOutcome.SideOneVictory;
+                int winningSideIndex = oneDisconnectedPastGrace && twoDisconnectedPastGrace
+                    ? -1
+                    : oneDisconnectedPastGrace ? 1 : 0;
+                _runtime.CommitOutcome(new FrontlineMatchResolutionSnapshot(
+                    tick,
+                    FrontlineMatchResolutionReason.Disconnect,
+                    outcome,
+                    winningSideIndex,
+                    coreHealth[0],
+                    coreHealth[1]));
             }
-            else if (sideTwoDestroyed)
+            else if (_runtime.HasDurationCoreHealthSnapshot || tick >= _runtime.Config.MatchDurationTicks)
             {
-                _runtime.CommitOutcome(FrontlineMatchOutcome.SideOneVictory, 0);
+                _runtime.CaptureDurationCoreHealth(coreHealth[0], coreHealth[1]);
+                if (!_runtime.HasParticipantAwaitingReconnect)
+                {
+                    _runtime.CommitDurationOutcome();
+                }
             }
         }
-
         foreach (ref Chunk chunk in World.Query(in DeathQuery))
         {
             Span<FrontlineDeathState> deaths = chunk.GetSpan<FrontlineDeathState>();
@@ -735,7 +521,13 @@ internal sealed class FrontlineDeathAndMatchSystem : BaseSystem<World, float>
                     continue;
                 }
 
-                _commandBuffer.Add(Unsafe.Add(ref first, index), new PresentationDestroyPending());
+                Entity entity = Unsafe.Add(ref first, index);
+                if (World.Has<OrderBuffer>(entity) && !_orders.TryCancelAll(entity))
+                {
+                    continue;
+                }
+
+                _commandBuffer.Add(entity, new PresentationDestroyPending());
                 deaths[index].DestroyQueued = 1;
             }
         }
@@ -771,6 +563,12 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
     private string _sideStatusText = string.Empty;
     private FrontlineMatchOutcome _cachedOutcome = (FrontlineMatchOutcome)byte.MaxValue;
     private string _outcomeText = string.Empty;
+    private IReplicatedClientRuntimeStatus? _clientStatus;
+    private IReplicatedClientCommandPort? _clientCommands;
+    private NetworkRuntimeStateObserver? _networkObserver;
+    private string _connectionStatusText = string.Empty;
+    private string _opponentStatusText = string.Empty;
+    private string _commandStatusText = string.Empty;
 
     public FrontlinePresentationSystem(GameEngine engine, FrontlineRuntime runtime)
     {
@@ -797,11 +595,12 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
         FrontlineHudConfig hud = _runtime.Config.Hud;
         FrontlineMatchSnapshot snapshot = default;
+        bool isSynchronizingBattlefield = false;
         if (_isReplicatedClient && !TryResolvePresentationSnapshot(out snapshot))
         {
-            if (!TryResolveRoomLobbySnapshot(out snapshot))
+            if (!TryResolveRoomLobbySnapshot(out snapshot, out isSynchronizingBattlefield))
             {
-                return;
+                snapshot = CreateConnectingSnapshot();
             }
         }
         else if (!_isReplicatedClient)
@@ -809,9 +608,14 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             snapshot = _runtime.Snapshot;
         }
         RefreshLobbyText(in snapshot, hud);
-        _overlay.AddRect(14, 14, 760, 238, PanelFill, PanelBorder, stableId: 71400, dirtySerial: 1);
+        string visibleRoomStatusText = isSynchronizingBattlefield
+            ? hud.SynchronizingBattlefieldText
+            : _roomStatusText;
+        RefreshNetworkStatus(in snapshot, hud);
+        RefreshCommandStatus(hud);
+        _overlay.AddRect(14, 14, 760, 300, PanelFill, PanelBorder, stableId: 71400, dirtySerial: 1);
         _overlay.AddText(28, 26, hud.Title, 22, Title, stableId: 71401, dirtySerial: 1);
-        _overlay.AddText(28, 56, _roomStatusText, 16, Accent, stableId: 71402, dirtySerial: 1);
+        _overlay.AddText(28, 56, visibleRoomStatusText, 16, Accent, stableId: 71402, dirtySerial: 1);
         if (snapshot.Phase is FrontlineMatchPhase.WaitingForPlayers or FrontlineMatchPhase.Countdown)
         {
             _overlay.AddText(28, 82, hud.ReadyHint, 14, Accent, stableId: 71408, dirtySerial: 1);
@@ -824,6 +628,18 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         _overlay.AddText(28, 156, hud.GatherHint, 14, Text, stableId: 71405, dirtySerial: 1);
         _overlay.AddText(28, 180, hud.TrainHint, 14, Text, stableId: 71406, dirtySerial: 1);
         _overlay.AddText(28, 204, hud.AttackHint, 14, Text, stableId: 71407, dirtySerial: 1);
+        if (_connectionStatusText.Length > 0)
+        {
+            _overlay.AddText(28, 228, _connectionStatusText, 14, Accent, stableId: 71412, dirtySerial: 1);
+        }
+        if (_opponentStatusText.Length > 0)
+        {
+            _overlay.AddText(28, 252, _opponentStatusText, 14, Accent, stableId: 71413, dirtySerial: 1);
+        }
+        if (_commandStatusText.Length > 0)
+        {
+            _overlay.AddText(28, 276, _commandStatusText, 14, Text, stableId: 71414, dirtySerial: 1);
+        }
 
         FrontlineMatchOutcome outcome = snapshot.Outcome;
         if (outcome != FrontlineMatchOutcome.InProgress)
@@ -839,8 +655,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 };
             }
 
-            _overlay.AddRect(14, 236, 430, 54, PanelFill, Accent, stableId: 71410, dirtySerial: (int)outcome);
-            _overlay.AddText(28, 250, _outcomeText, 22, Accent, stableId: 71411, dirtySerial: (int)outcome);
+            _overlay.AddRect(14, 324, 430, 54, PanelFill, Accent, stableId: 71410, dirtySerial: (int)outcome);
+            _overlay.AddText(28, 338, _outcomeText, 22, Accent, stableId: 71411, dirtySerial: (int)outcome);
         }
     }
 
@@ -895,33 +711,35 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         return true;
     }
 
-    private bool TryResolveRoomLobbySnapshot(out FrontlineMatchSnapshot snapshot)
+    private bool TryResolveRoomLobbySnapshot(
+        out FrontlineMatchSnapshot snapshot,
+        out bool isSynchronizingBattlefield)
     {
         NetworkRuntimeStateObserver observer = _engine.GetService(CoreServiceKeys.NetworkRuntimeStateObserver)
             ?? throw new InvalidOperationException("RTS Frontline replicated client requires the Core network room observer.");
         if (!observer.HasRoomSnapshot)
         {
             snapshot = default;
+            isSynchronizingBattlefield = false;
             return false;
         }
 
         NetworkRoomSnapshotHeader header = observer.LastRoomSnapshot;
-        if (header.Phase == NetworkRoomPhase.Started)
-        {
-            throw new InvalidOperationException("RTS Frontline match started before its authoritative match-state mirror arrived.");
-        }
-
         Span<NetworkRoomSeatSnapshot> seats = stackalloc NetworkRoomSeatSnapshot[2];
         if (!observer.TryCopyRoomSeats(seats, out int seatCount) || seatCount != seats.Length)
         {
             throw new InvalidOperationException("RTS Frontline client room snapshot does not contain exactly two seats.");
         }
 
+        isSynchronizingBattlefield = header.Phase == NetworkRoomPhase.Started;
         snapshot = new FrontlineMatchSnapshot(
-            CommittedTick: 0,
-            header.Phase == NetworkRoomPhase.Countdown
-                ? FrontlineMatchPhase.Countdown
-                : FrontlineMatchPhase.WaitingForPlayers,
+            checked((int)header.CommittedTick),
+            header.Phase switch
+            {
+                NetworkRoomPhase.Countdown => FrontlineMatchPhase.Countdown,
+                NetworkRoomPhase.Started => FrontlineMatchPhase.InProgress,
+                _ => FrontlineMatchPhase.WaitingForPlayers,
+            },
             checked((int)header.CountdownRemainingTicks),
             FrontlineMatchOutcome.InProgress,
             WinningSideIndex: -1,
@@ -931,6 +749,17 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
             seats[1].ConnectionState == NetworkRoomSeatConnectionState.Connected);
         return true;
     }
+
+    private static FrontlineMatchSnapshot CreateConnectingSnapshot() => new(
+        CommittedTick: 0,
+        FrontlineMatchPhase.WaitingForPlayers,
+        CountdownRemainingTicks: 0,
+        FrontlineMatchOutcome.InProgress,
+        WinningSideIndex: -1,
+        SideOneReady: false,
+        SideTwoReady: false,
+        SideOneConnected: false,
+        SideTwoConnected: false);
 
     private void HandleReadyInput()
     {
@@ -1017,4 +846,126 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
     private static string ResolveLobbyState(bool connected, bool ready, FrontlineHudConfig hud) =>
         !connected ? hud.DisconnectedText : ready ? hud.ReadyText : hud.NotReadyText;
+
+    private void RefreshNetworkStatus(in FrontlineMatchSnapshot snapshot, FrontlineHudConfig hud)
+    {
+        if (!_isReplicatedClient)
+        {
+            _connectionStatusText = string.Empty;
+            _opponentStatusText = string.Empty;
+            return;
+        }
+
+        EnsureClientFeedbackServices();
+        IReplicatedClientRuntimeStatus status = _clientStatus!;
+        if (status.IsFaulted ||
+            status.ConnectionState == ReplicatedClientConnectionState.RecoveryRejected ||
+            status.ConnectionState == ReplicatedClientConnectionState.Rejected ||
+            (status.HasEstablishedSession &&
+             status.ConnectionState != ReplicatedClientConnectionState.Connected &&
+             status.ReconnectWindowRemainingSeconds <= 0f))
+        {
+            _connectionStatusText = hud.ServiceInterruptedText;
+        }
+        else if (status.ConnectionState != ReplicatedClientConnectionState.Connected || status.IsAwaitingFullSnapshot)
+        {
+            _connectionStatusText = status.HasEstablishedSession
+                ? $"{hud.ReconnectingText} {Math.Max(0, (int)MathF.Ceiling(status.ReconnectWindowRemainingSeconds))}s"
+                : hud.ConnectingText;
+        }
+        else
+        {
+            _connectionStatusText = status.RoundTripTimeMilliseconds >= hud.DelayedRoundTripThresholdMilliseconds
+                ? hud.DelayedConnectionText
+                : hud.SmoothConnectionText;
+        }
+
+        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        int localSide = localPlayerId == _runtime.Config.Sides[0].PlayerId
+            ? 0
+            : localPlayerId == _runtime.Config.Sides[1].PlayerId
+                ? 1
+                : -1;
+        if (localSide < 0)
+        {
+            if (!status.HasEstablishedSession)
+            {
+                _opponentStatusText = string.Empty;
+                return;
+            }
+
+            throw new InvalidOperationException("RTS Frontline HUD cannot resolve the local player's configured side.");
+        }
+
+        bool opponentConnected = localSide == 0 ? snapshot.SideTwoConnected : snapshot.SideOneConnected;
+        _opponentStatusText = snapshot.Phase == FrontlineMatchPhase.InProgress && !opponentConnected
+            ? hud.OpponentOfflineText
+            : string.Empty;
+    }
+
+    private void RefreshCommandStatus(FrontlineHudConfig hud)
+    {
+        if (!_isReplicatedClient)
+        {
+            _commandStatusText = string.Empty;
+            return;
+        }
+
+        EnsureClientFeedbackServices();
+        IReplicatedClientCommandPort commands = _clientCommands!;
+        if (commands.SubmissionRevision == 0)
+        {
+            _commandStatusText = string.Empty;
+            return;
+        }
+
+        if (commands.LastSubmitResult != ReplicatedClientCommandSubmitResult.Submitted)
+        {
+            _commandStatusText = hud.ResolveSubmitRejection(commands.LastSubmitResult);
+            return;
+        }
+
+        NetworkRuntimeStateObserver observer = _networkObserver!;
+        if (!observer.TryGetClientAdmission(
+                commands.LastSubmittedBatchSequence,
+                out NetworkCommandAdmissionOutcome admission))
+        {
+            _commandStatusText = hud.CommandSendingText;
+            return;
+        }
+
+        _commandStatusText = admission.Stage switch
+        {
+            OrderAdmissionStage.NetworkIntake when admission.Result == OrderSubmitResult.NetworkScheduled =>
+                hud.CommandSendingText,
+            OrderAdmissionStage.GlobalIntake when admission.Result == OrderSubmitResult.Queued =>
+                hud.CommandAcceptedText,
+            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Activated =>
+                hud.CommandStartedText,
+            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Queued =>
+                hud.CommandQueuedText,
+            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Pending =>
+                hud.CommandPendingText,
+            _ => hud.ResolveAdmissionRejection(admission.Result),
+        };
+    }
+
+    private void EnsureClientFeedbackServices()
+    {
+        if (_clientStatus != null && _clientCommands != null && _networkObserver != null)
+        {
+            return;
+        }
+
+        INetworkRuntimePort runtimePort = _engine.GetService(CoreServiceKeys.NetworkRuntimePort)
+            ?? throw new InvalidOperationException("RTS Frontline client HUD requires the Core network runtime port.");
+        _clientStatus = runtimePort as IReplicatedClientRuntimeStatus
+            ?? throw new InvalidOperationException("RTS Frontline client HUD requires platform-neutral connection status.");
+
+        _ = _clientStatus.ConnectionState;
+        _clientCommands = _engine.GetService(CoreServiceKeys.ReplicatedClientCommandPort)
+            ?? throw new InvalidOperationException("RTS Frontline client HUD requires the Core command feedback port.");
+        _networkObserver = _engine.GetService(CoreServiceKeys.NetworkRuntimeStateObserver)
+            ?? throw new InvalidOperationException("RTS Frontline client HUD requires the Core network state observer.");
+    }
 }

@@ -5,22 +5,31 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Core.Vision;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using RtsMultiplayerFrontlineMod.Runtime;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -136,7 +145,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         "Feature: Gather crystals\n" +
         "  Given the northern player has 40 crystals and selects a harvester\n" +
         "  When the player orders it to gather from the northern crystal field\n" +
-        "  Then crystals stay unchanged while loading and 20 crystals arrive only after the harvester returns to the command core")]
+        "  Then crystals stay unchanged while loading and 20 crystals arrive only after the harvester reaches the command core dock")]
     public void GivenHarvester_WhenPlayerOrdersGather_ThenCrystalsArriveOnlyAfterReturn()
     {
         using GameEngine engine = CreateStartedEngine();
@@ -176,8 +185,12 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 60f,
             600,
             "The 20-crystal cargo should be credited only after the harvester returns.");
-        Assert.That(DistanceCm(world.Get<WorldPositionCm>(harvester), world.Get<WorldPositionCm>(core)),
-            Is.LessThanOrEqualTo(100f));
+        ResourceSinkProfile sink = world.Get<ResourceSinkProfile>(core);
+        WorldCmInt2 corePosition = world.Get<WorldPositionCm>(core).ToWorldCmInt2();
+        WorldPositionCm dockPosition = WorldPositionCm.FromCm(
+            corePosition.X + sink.DockOffsetXCm,
+            corePosition.Y + sink.DockOffsetYCm);
+        Assert.That(DistanceCm(world.Get<WorldPositionCm>(harvester), dockPosition), Is.LessThanOrEqualTo(100f));
     }
 
     [Test]
@@ -195,18 +208,129 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        int startingInfantry = CountNamed(world, "Infantry");
+        int startingInfantry = CountTemplateEntities(engine, "rts_frontline_infantry");
 
-        EnqueueCastAbility(engine, core, playerId: 1, slot: 0);
-        TickUntil(
-            engine,
-            () => !world.Get<OrderBuffer>(core).HasActive,
-            20,
-            "The unaffordable training order should complete as rejected.");
+        OrderSubmitResult rejected = SubmitTraining(engine, core, playerId: 1, slot: 0, out _);
+        Assert.Multiple(() =>
+        {
+            Assert.That(rejected, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(world.Get<OrderBuffer>(core).HasActive, Is.False);
+            Assert.That(world.Get<OrderBuffer>(core).HasQueued, Is.False);
+        });
         Tick(engine, 260);
 
         Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(40f));
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Reserve crystals when training commands arrive\n" +
+        "  Given the command core has 60 crystals\n" +
+        "  When the player queues two infantry squads at once\n" +
+        "  Then the first command starts, the second is rejected for insufficient crystals, and only one squad is produced")]
+    public void GivenSixtyCrystals_WhenTwoTrainingCommandsArrive_ThenOnlyFirstIsAdmitted()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        StartMatch(engine);
+
+        World world = engine.World;
+        Entity core = FindNamed(world, "Northern Command Core");
+        int crystalAttributeId = RequireAttribute("Crystals");
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f);
+        int startingInfantry = CountNamed(world, "Infantry");
+        OrderSubmitResult firstOutcome = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order first);
+        OrderSubmitResult secondOutcome = SubmitTraining(engine, core, playerId: 1, slot: 0, out _);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstOutcome, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(secondOutcome, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(60f));
+            Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
+        });
+
+        TickUntil(
+            engine,
+            () => world.Get<OrderBuffer>(core).HasActive &&
+                world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
+            4,
+            "The first queued training order should start on the next fixed simulation step.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
+            Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.Zero);
+        });
+
+        AdvanceCommittedTicks(engine, 239);
+        TickUntil(engine, () => CountNamed(world, "Infantry") == startingInfantry + 1, 8,
+            "Exactly the admitted squad should finish after eight seconds.");
+        Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Train two squads in sequence\n" +
+        "  Given the command core has 120 crystals\n" +
+        "  When the player queues two infantry squads\n" +
+        "  Then the second command waits persistently and starts only after the first eight-second training finishes")]
+    public void GivenOneHundredTwentyCrystals_WhenTwoTrainingCommandsArrive_ThenSecondStartsAfterFirst()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        StartMatch(engine);
+
+        World world = engine.World;
+        Entity core = FindNamed(world, "Northern Command Core");
+        int crystalAttributeId = RequireAttribute("Crystals");
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f);
+        int startingInfantry = CountNamed(world, "Infantry");
+        OrderSubmitResult firstResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order first);
+        OrderSubmitResult secondResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order second);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstResult, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(secondResult, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(120f));
+            Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(2));
+        });
+
+        TickUntil(
+            engine,
+            () => world.Get<OrderBuffer>(core).HasActive &&
+                world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
+            4,
+            "The first queued training order should start on the next fixed simulation step.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(60f));
+            Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
+        });
+
+        AdvanceCommittedTicks(engine, 239);
+        Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
+            "The first squad must not finish before eight seconds.");
+
+        TickUntil(
+            engine,
+            () => world.Get<OrderBuffer>(core).HasActive &&
+                world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == second.OrderId,
+            8,
+            "The second squad should start as soon as the first training finishes.");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
+            Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(second.OrderId));
+        });
+
+        AdvanceCommittedTicks(engine, 239);
+        Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
+        TickUntil(engine, () => CountNamed(world, "Infantry") == startingInfantry + 2, 8,
+            "The second squad should finish after its own eight-second training time.");
     }
 
     [Test]
@@ -239,14 +363,62 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
         TickUntil(
             engine,
-            () => CountNamed(world, "Infantry") == startingInfantry + 1,
+            () => CountTemplateEntities(engine, "rts_frontline_infantry") >= startingInfantry + 1,
             8,
             "One infantry squad should arrive when training completes.");
 
-        Entity created = FindNamed(world, "Frontline Infantry");
+        Entity created = FindRuntimeTemplateEntity(engine, "rts_frontline_infantry");
+        Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry + 1));
         Assert.That(world.Get<PlayerOwner>(created).PlayerId, Is.EqualTo(1));
         Assert.That(world.Get<Team>(created).Id, Is.EqualTo(1));
         Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Train infantry from either starting side\n" +
+        "  Given the southern command core has 60 crystals\n" +
+        "  When the southern player trains infantry and waits eight seconds\n" +
+        "  Then exactly one new squad arrives for player two on the southern side")]
+    public void GivenSouthernCore_WhenTrainingFinishes_ThenInfantryKeepsSouthernIdentity()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        StartMatch(engine);
+
+        World world = engine.World;
+        Entity core = FindNamed(world, "Southern Command Core");
+        int crystalAttributeId = RequireAttribute("Crystals");
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f);
+        FrontlineConfig config = GetFrontlineConfig(engine);
+        int startingInfantry = CountTemplateEntities(engine, "rts_frontline_infantry");
+
+        EnqueueCastAbility(engine, core, playerId: 2, slot: 0);
+        TickUntil(
+            engine,
+            () => ReadAttribute(world, core, crystalAttributeId) == 0f,
+            20,
+            "An admitted southern training order should charge exactly 60 crystals.");
+        AdvanceCommittedTicks(engine, 239);
+        Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
+            "The southern squad must not arrive before the configured training time.");
+
+        AdvanceCommittedTicks(engine, 8);
+        Assert.That(
+            CountTemplateEntities(engine, "rts_frontline_infantry"),
+            Is.EqualTo(startingInfantry + 1),
+            "Exactly one southern gameplay squad should arrive when training completes.");
+
+        AdvanceCommittedTicks(engine, 1);
+        Entity created = FindRuntimeTemplateEntity(engine, "rts_frontline_infantry");
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry + 1));
+            Assert.That(world.Get<PlayerOwner>(created).PlayerId, Is.EqualTo(2));
+            Assert.That(world.Get<Team>(created).Id, Is.EqualTo(2));
+            Assert.That(world.Get<VisionEmitterCm>(created).ScopeKeyId, Is.EqualTo(config.Sides[1].VisionScopeKeyId));
+            Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
+        });
     }
 
     [Test]
@@ -290,6 +462,99 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
     [Test]
     [Description(
+        "Feature: Change orders during battle\n" +
+        "  Given a selected infantry squad is moving across the battlefield\n" +
+        "  When the player orders it to attack an enemy squad\n" +
+        "  Then the attack replaces movement immediately instead of waiting in a queue and expiring")]
+    public void GivenMovingInfantry_WhenNetworkPlayerOrdersAttack_ThenAttackInterruptsMovementImmediately()
+    {
+        NetworkRuntimeConfig networkProfile = LoadNetworkProfile();
+        NetworkCommandSchemaConfig moveSchema = networkProfile.CommandSchemas.Single(
+            schema => schema.OrderTypeKey == "moveTo");
+        NetworkCommandSchemaConfig attackSchema = networkProfile.CommandSchemas.Single(
+            schema => schema.OrderTypeKey == "attackTarget");
+        Assert.Multiple(() =>
+        {
+            Assert.That(moveSchema.AllowedSubmitModes,
+                Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
+            Assert.That(attackSchema.AllowedSubmitModes,
+                Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
+        });
+
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        StartMatch(engine);
+
+        World world = engine.World;
+        Entity attacker = FindNamed(world, "Northern Infantry A");
+        Entity target = FindNamed(world, "Southern Infantry A");
+        OrderQueue queue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("OrderQueue service is missing.");
+        OrderBufferSystem orders = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("OrderBufferSystem service is missing.");
+
+        WorldCmInt2 start = world.Get<WorldPositionCm>(attacker).ToWorldCmInt2();
+        var move = new Order
+        {
+            OrderTypeId = RequireOrderType(engine, moveSchema.OrderTypeKey),
+            PlayerId = 1,
+            Actor = attacker,
+            Target = Entity.Null,
+            Args = OrderArgs.CreateSingleWorldCm(new Vector3(start.X + 5000, 0f, start.Y)),
+            SubmitMode = OrderSubmitMode.Immediate,
+        };
+        queue.EnsureOrderId(ref move);
+        Assert.That(orders.SubmitOrder(attacker, in move), Is.EqualTo(OrderSubmitResult.Activated));
+
+        var attack = new Order
+        {
+            OrderTypeId = RequireOrderType(engine, attackSchema.OrderTypeKey),
+            PlayerId = 1,
+            Actor = attacker,
+            Target = target,
+            SubmitMode = OrderSubmitMode.Immediate,
+        };
+        queue.EnsureOrderId(ref attack);
+        OrderSubmitResult attackResult = orders.SubmitOrder(attacker, in attack);
+        OrderBuffer buffer = world.Get<OrderBuffer>(attacker);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(attackResult, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(attack.OrderId));
+            Assert.That(buffer.HasQueued, Is.False);
+            Assert.That(buffer.HasPending, Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Train infantry through multiplayer controls\n" +
+        "  Given the player has selected their command core\n" +
+        "  When the player trains normally or holds the queue modifier while training\n" +
+        "  Then the multiplayer session accepts both commands using the same controls as local play")]
+    public void GivenSelectedCore_WhenPlayerTrainsNormallyOrQueuesTraining_ThenNetworkProfileAcceptsBothModes()
+    {
+        NetworkRuntimeConfig networkProfile = LoadNetworkProfile();
+        NetworkCommandSchemaConfig trainingSchema = networkProfile.CommandSchemas.Single(
+            schema => schema.OrderTypeKey == "castAbility");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                trainingSchema.AllowedSubmitModes,
+                Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
+            Assert.That(
+                networkProfile.MaxPastTargetTicks,
+                Is.GreaterThanOrEqualTo(
+                    networkProfile.SnapshotAcknowledgementTimeoutTicks + networkProfile.MaxFutureTargetTicks),
+                "The unstable profile must accept commands throughout one explicit snapshot recovery window.");
+        });
+    }
+
+    [Test]
+    [Description(
         "Feature: Destroy the command core\n" +
         "  Given northern infantry can reach the southern command core\n" +
         "  When the northern player orders that infantry to attack the core\n" +
@@ -315,8 +580,26 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             6000,
             "The infantry attack should destroy the opposing core and finish the match.");
 
-        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"));
-        Assert.That(ReadSnapshot(engine, "WinningSideIndex"), Is.EqualTo(0));
+        TickUntil(
+            engine,
+            () => !world.IsAlive(targetCore),
+            8,
+            "The defeated command core should leave the authoritative world through normal cleanup.");
+
+        FrontlineMatchSnapshot match = GetFrontlineRuntime(engine).Snapshot;
+        FrontlineMatchResolutionSnapshot resolution = GetFrontlineRuntime(engine).Resolution;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(match.Outcome, Is.EqualTo(FrontlineMatchOutcome.SideOneVictory));
+            Assert.That(match.WinningSideIndex, Is.EqualTo(0));
+            Assert.That(resolution.CommittedTick, Is.EqualTo(match.CommittedTick));
+            Assert.That(resolution.Reason, Is.EqualTo(FrontlineMatchResolutionReason.CoreDestroyed));
+            Assert.That(resolution.Outcome, Is.EqualTo(match.Outcome));
+            Assert.That(resolution.WinningSideIndex, Is.EqualTo(match.WinningSideIndex));
+            Assert.That(resolution.SideOneCoreHealth, Is.GreaterThan(0f));
+            Assert.That(resolution.SideTwoCoreHealth, Is.LessThanOrEqualTo(0f));
+        });
     }
 
     [Test]
@@ -356,11 +639,18 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         StartMatch(engine);
 
         SetHealth(engine.World, FindNamed(engine.World, "Southern Command Core"), 800f);
-        TickUntilCommittedTick(engine, 8999);
+        AdvanceFrontlineClockWithoutWorld(engine, 8999);
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
 
         TickUntilCommittedTick(engine, 9000);
-        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"));
+        FrontlineMatchResolutionSnapshot resolution = GetFrontlineRuntime(engine).Resolution;
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"));
+            Assert.That(resolution.Reason, Is.EqualTo(FrontlineMatchResolutionReason.Duration));
+            Assert.That(resolution.SideOneCoreHealth, Is.EqualTo(1000f));
+            Assert.That(resolution.SideTwoCoreHealth, Is.EqualTo(800f));
+        });
     }
 
     [Test]
@@ -376,13 +666,21 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         StartMatch(engine);
 
         SetHealth(engine.World, FindNamed(engine.World, "Northern Command Core"), 500f);
-        TickUntilCommittedTick(engine, 8100);
+        AdvanceFrontlineClockWithoutWorld(engine, 8100);
         SetParticipantConnected(engine, sideIndex: 1, connected: false);
+        AdvanceFrontlineClockWithoutWorld(engine, 8999);
         TickUntilCommittedTick(engine, 9000);
 
-        Assert.That(ReadSnapshot(engine, "CommittedTick"), Is.EqualTo(9000));
-        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"),
-            "Disconnect expiry must outrank the simultaneous higher-health time-limit result.");
+        FrontlineMatchResolutionSnapshot resolution = GetFrontlineRuntime(engine).Resolution;
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadSnapshot(engine, "CommittedTick"), Is.EqualTo(9000));
+            Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"),
+                "Disconnect expiry must outrank the simultaneous higher-health time-limit result.");
+            Assert.That(resolution.Reason, Is.EqualTo(FrontlineMatchResolutionReason.Disconnect));
+            Assert.That(resolution.SideOneCoreHealth, Is.EqualTo(500f));
+            Assert.That(resolution.SideTwoCoreHealth, Is.EqualTo(1000f));
+        });
     }
 
     [Test]
@@ -401,9 +699,10 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Entity southernCore = FindNamed(engine.World, "Southern Command Core");
         SetHealth(engine.World, northernCore, 900f);
         SetHealth(engine.World, southernCore, 800f);
-        TickUntilCommittedTick(engine, 8990);
+        AdvanceFrontlineClockWithoutWorld(engine, 8990);
         SetParticipantConnected(engine, sideIndex: 1, connected: false);
 
+        AdvanceFrontlineClockWithoutWorld(engine, 8999);
         TickUntilCommittedTick(engine, 9000);
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
 
@@ -412,8 +711,45 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         SetParticipantConnected(engine, sideIndex: 1, connected: true);
         TickUntilCommittedTick(engine, 9001);
 
-        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"),
-            "Health changes after five minutes must not replace the recorded time-limit result.");
+        FrontlineMatchResolutionSnapshot resolution = GetFrontlineRuntime(engine).Resolution;
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideOneVictory"),
+                "Health changes after five minutes must not replace the recorded time-limit result.");
+            Assert.That(resolution.Reason, Is.EqualTo(FrontlineMatchResolutionReason.Duration));
+            Assert.That(resolution.SideOneCoreHealth, Is.EqualTo(900f));
+            Assert.That(resolution.SideTwoCoreHealth, Is.EqualTo(800f));
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Core destruction outranks a deferred time-limit result\n" +
+        "  Given the five-minute core-health result is waiting for a disconnected player\n" +
+        "  When either command core is destroyed during the reconnect grace period\n" +
+        "  Then the core destruction ends the match immediately instead of using recorded health")]
+    public void GivenDeferredTimeLimit_WhenCommandCoreFalls_ThenDestructionEndsMatchImmediately()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        StartMatch(engine);
+
+        Entity northernCore = FindNamed(engine.World, "Northern Command Core");
+        Entity southernCore = FindNamed(engine.World, "Southern Command Core");
+        SetHealth(engine.World, northernCore, 900f);
+        SetHealth(engine.World, southernCore, 800f);
+        AdvanceFrontlineClockWithoutWorld(engine, 8990);
+        SetParticipantConnected(engine, sideIndex: 1, connected: false);
+
+        AdvanceFrontlineClockWithoutWorld(engine, 8999);
+        TickUntilCommittedTick(engine, 9000);
+        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
+
+        SetHealth(engine.World, northernCore, 0f);
+        TickUntilCommittedTick(engine, 9001);
+
+        Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideTwoVictory"),
+            "Command-core destruction must outrank the deferred five-minute health snapshot.");
     }
 
     [Test]
@@ -454,15 +790,17 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string modRoot = Path.Combine(repoRoot, "mods", "showcases", "rts_multiplayer_frontline", "RtsMultiplayerFrontlineMod");
         using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "RtsMultiplayerFrontlineConfig.json")));
         using JsonDocument map = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Maps", "rts_duel_v1.json")));
+        using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Entities", "templates.json")));
 
         JsonElement sides = config.RootElement.GetProperty("sides");
         Assert.That(sides.GetArrayLength(), Is.EqualTo(2));
-        Assert.That(sides[0].GetProperty("initialHarvesterCount").GetInt32(),
-            Is.EqualTo(sides[1].GetProperty("initialHarvesterCount").GetInt32()));
-        Assert.That(sides[0].GetProperty("initialInfantryCount").GetInt32(),
-            Is.EqualTo(sides[1].GetProperty("initialInfantryCount").GetInt32()));
 
         JsonElement entities = map.RootElement.GetProperty("Entities");
+        Assert.That(CountMapEntities(entities, "rts_frontline_harvester", sideIndex: 0), Is.EqualTo(2));
+        Assert.That(CountMapEntities(entities, "rts_frontline_harvester", sideIndex: 1), Is.EqualTo(2));
+        Assert.That(CountMapEntities(entities, "rts_frontline_infantry", sideIndex: 0), Is.EqualTo(2));
+        Assert.That(CountMapEntities(entities, "rts_frontline_infantry", sideIndex: 1), Is.EqualTo(2));
+        Assert.That(ReadTemplateBaseAttribute(templates.RootElement, "rts_frontline_core", "Crystals"), Is.EqualTo(40));
         int northCoreX = FindMapEntityX(entities, "Northern Command Core");
         int southCoreX = FindMapEntityX(entities, "Southern Command Core");
         int centerX = map.RootElement.GetProperty("DefaultCamera").GetProperty("TargetXCm").GetInt32();
@@ -484,6 +822,132 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(Regex.Matches(source, @"\b(7000|8200|9300|11200|18800|20700|21800|23000)\b"), Is.Empty);
     }
 
+    [Test]
+    [Description(
+        "Feature: Opening forces have one authoring source\n" +
+        "  Given starting crystals and unit instances are authored by the map and its templates\n" +
+        "  When an obsolete duplicate opening field is added to match config\n" +
+        "  Then config loading fails instead of silently ignoring the conflicting value")]
+    public void GivenLegacyOpeningFields_WhenConfigLoads_ThenConflictingDuplicatesAreRejected()
+    {
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "rts_multiplayer_frontline",
+            "RtsMultiplayerFrontlineMod",
+            "assets",
+            "RtsMultiplayerFrontlineConfig.json");
+
+        AssertLegacyOpeningFieldRejected(path, root => root["startingCrystals"] = 99);
+        AssertLegacyOpeningFieldRejected(path, root =>
+            root["sides"]!.AsArray()[0]!.AsObject()["initialHarvesterCount"] = 3);
+        AssertLegacyOpeningFieldRejected(path, root =>
+            root["sides"]!.AsArray()[1]!.AsObject()["initialInfantryCount"] = 4);
+    }
+
+    [Test]
+    [Description(
+        "Feature: Fair opening is validated from the loaded battlefield\n" +
+        "  Given the authored map gives one commander different starting crystals\n" +
+        "  When the opening contract is checked\n" +
+        "  Then the match fails before play instead of accepting an unfair start")]
+    public void GivenMismatchedMapCrystals_WhenOpeningIsValidated_ThenMatchFailsExplicitly()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        FrontlineConfig config = GetFrontlineConfig(engine);
+        Entity southernCore = FindNamed(engine.World, "Southern Command Core");
+        int crystalsId = RequireAttribute(config.CrystalAttribute);
+        ref AttributeBuffer attributes = ref engine.World.Get<AttributeBuffer>(southernCore);
+        attributes.SetCurrent(crystalsId, attributes.GetCurrent(crystalsId) + 1f);
+
+        Assert.That(
+            () => FrontlineOpeningAuthoring.Validate(engine, config),
+            Throws.InvalidOperationException.With.Message.Contains("must be mirrored"));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Fair opening is validated from the loaded battlefield\n" +
+        "  Given one side has fewer map-authored harvesters than the other\n" +
+        "  When the opening contract is checked\n" +
+        "  Then the match fails before play instead of trusting a stale config count")]
+    public void GivenMismatchedMapUnitCounts_WhenOpeningIsValidated_ThenMatchFailsExplicitly()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+        FrontlineConfig config = GetFrontlineConfig(engine);
+        Entity southernHarvester = FindNamed(engine.World, "Southern Harvester A");
+        engine.World.Remove<FrontlineHarvester>(southernHarvester);
+
+        Assert.That(
+            () => FrontlineOpeningAuthoring.Validate(engine, config),
+            Throws.InvalidOperationException.With.Message.Contains("must be mirrored"));
+    }
+
+    private static void AssertLegacyOpeningFieldRejected(string path, Action<JsonObject> mutate)
+    {
+        JsonObject root = JsonNode.Parse(File.ReadAllText(path))?.AsObject()
+            ?? throw new InvalidOperationException("RTS Frontline config JSON is empty.");
+        mutate(root);
+
+        Assert.That(
+            () => FrontlineConfig.Load(root),
+            Throws.TypeOf<JsonException>(),
+            "Obsolete opening fields must never be accepted and ignored.");
+    }
+
+    private static FrontlineConfig GetFrontlineConfig(GameEngine engine)
+    {
+        return GetFrontlineRuntime(engine).Config;
+    }
+
+    private static FrontlineRuntime GetFrontlineRuntime(GameEngine engine) =>
+        engine.GlobalContext.TryGetValue(RuntimeKey, out object? value) && value is FrontlineRuntime runtime
+            ? runtime
+            : throw new InvalidOperationException("RTS Frontline runtime is unavailable.");
+
+    private static int CountMapEntities(JsonElement entities, string templateId, int sideIndex)
+    {
+        int count = 0;
+        foreach (JsonElement entity in entities.EnumerateArray())
+        {
+            if (entity.GetProperty("Template").GetString() != templateId ||
+                !entity.TryGetProperty("Overrides", out JsonElement overrides) ||
+                !overrides.TryGetProperty("FrontlineParticipant", out JsonElement participant) ||
+                participant.GetProperty("SideIndex").GetInt32() != sideIndex)
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
+    private static int ReadTemplateBaseAttribute(
+        JsonElement templates,
+        string templateId,
+        string attribute)
+    {
+        foreach (JsonElement template in templates.EnumerateArray())
+        {
+            if (template.GetProperty("id").GetString() == templateId)
+            {
+                return template
+                    .GetProperty("components")
+                    .GetProperty("AttributeBuffer")
+                    .GetProperty("base")
+                    .GetProperty(attribute)
+                    .GetInt32();
+            }
+        }
+
+        throw new InvalidOperationException($"Template '{templateId}' was not found.");
+    }
+
     private static GameEngine CreateStartedEngine()
     {
         string repoRoot = FindRepoRoot();
@@ -500,6 +964,27 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
         engine.Start();
         return engine;
+    }
+
+    private static NetworkRuntimeConfig LoadNetworkProfile()
+    {
+        string path = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "rts_multiplayer_frontline",
+            "RtsMultiplayerFrontlineNetworkedMod",
+            "assets",
+            "game.json");
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        options.Converters.Add(new JsonStringEnumConverter());
+        NetworkRuntimeConfig profile = document.RootElement
+            .GetProperty("networking")
+            .Deserialize<NetworkRuntimeConfig>(options)
+            ?? throw new InvalidOperationException("RTS Frontline network profile is empty.");
+        profile.Validate();
+        return profile;
     }
 
     private static void LoadMap(GameEngine engine)
@@ -530,6 +1015,30 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             core,
             core,
             new OrderArgs { I0 = slot });
+    }
+
+    private static OrderSubmitResult SubmitTraining(
+        GameEngine engine,
+        Entity core,
+        int playerId,
+        int slot,
+        out Order order)
+    {
+        OrderQueue queue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("OrderQueue service is missing.");
+        order = new Order
+        {
+            OrderTypeId = RequireOrderType(engine, "castAbility"),
+            PlayerId = playerId,
+            Actor = core,
+            Target = core,
+            Args = new OrderArgs { I0 = slot },
+            SubmitMode = OrderSubmitMode.PersistentQueued,
+        };
+        queue.EnsureOrderId(ref order);
+        OrderBufferSystem orders = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("OrderBufferSystem service is missing.");
+        return orders.SubmitOrder(core, in order);
     }
 
     private static void EnqueueMove(GameEngine engine, Entity actor, int playerId, int x, int y)
@@ -597,6 +1106,43 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         return found != Entity.Null
             ? found
             : throw new InvalidOperationException($"Entity '{name}' was not found.");
+    }
+
+    private static int CountTemplateEntities(GameEngine engine, string templateId)
+    {
+        int templateKeyId = engine.MapLoader.EntityTemplateKeys.GetId(templateId);
+        Assert.That(templateKeyId, Is.GreaterThan(0), $"Template key '{templateId}' must be registered.");
+        int count = 0;
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+        engine.World.Query(in query, (ref EntityTemplateKeyRef keyRef) =>
+        {
+            if (keyRef.TemplateKeyId == templateKeyId)
+            {
+                count++;
+            }
+        });
+        return count;
+    }
+
+    private static Entity FindRuntimeTemplateEntity(GameEngine engine, string templateId)
+    {
+        int templateKeyId = engine.MapLoader.EntityTemplateKeys.GetId(templateId);
+        Assert.That(templateKeyId, Is.GreaterThan(0), $"Template key '{templateId}' must be registered.");
+        Entity found = Entity.Null;
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef, Name>();
+        engine.World.Query(in query, (Entity entity, ref EntityTemplateKeyRef keyRef, ref Name name) =>
+        {
+            if (found == Entity.Null &&
+                keyRef.TemplateKeyId == templateKeyId &&
+                string.Equals(name.Value, "Frontline Infantry", StringComparison.Ordinal))
+            {
+                found = entity;
+            }
+        });
+
+        return found != Entity.Null
+            ? found
+            : throw new InvalidOperationException($"Runtime-created template entity '{templateId}' was not found.");
     }
 
     private static int CountNamed(World world, string fragment)
@@ -739,6 +1285,18 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => (int)ReadSnapshot(engine, "CommittedTick") >= targetTick,
             frameBudget,
             $"The deterministic simulation should commit tick {targetTick}.");
+    }
+
+    private static void AdvanceFrontlineClockWithoutWorld(GameEngine engine, int targetTick)
+    {
+        FrontlineRuntime runtime = GetFrontlineRuntime(engine);
+        while (runtime.Snapshot.CommittedTick < targetTick)
+        {
+            Assert.That(
+                runtime.AdvanceFixedTick(),
+                Is.True,
+                $"The active match should advance to committed tick {targetTick}.");
+        }
     }
 
     private static void TickUntilCountdown(GameEngine engine, int remainingTicks)

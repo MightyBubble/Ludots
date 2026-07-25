@@ -5,7 +5,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 
@@ -25,7 +24,7 @@ namespace Ludots.Core.Vision
         private readonly VisionResolver _resolver;
         private readonly FogKnowledgeProjector _projector;
         private readonly KnowledgeProjectionStore _knowledge;
-        private readonly PlayerEntityLookup _players;
+        private readonly IEntityObserverResolver _observers;
         private FogLayerId[] _layerIds = new FogLayerId[8];
         private FogField[] _fieldScratch = new FogField[8];
         private FogOccupant[] _occupants = new FogOccupant[32];
@@ -39,7 +38,7 @@ namespace Ludots.Core.Vision
             VisionResolver resolver,
             FogKnowledgeProjector projector,
             KnowledgeProjectionStore knowledge,
-            PlayerEntityLookup players)
+            IEntityObserverResolver observers)
             : base(world)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -48,7 +47,7 @@ namespace Ludots.Core.Vision
             _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
             _projector = projector ?? throw new ArgumentNullException(nameof(projector));
             _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
-            _players = players ?? throw new ArgumentNullException(nameof(players));
+            _observers = observers ?? throw new ArgumentNullException(nameof(observers));
         }
 
         public override void Update(in float dt)
@@ -66,7 +65,6 @@ namespace Ludots.Core.Vision
             int occupantCount = CopyOccupants(occupantCellSizeCm);
             int emitterCount = CopyEmitters();
             var rules = FogRulesPolicy.Default;
-            var projection = FogProjectionPolicy.Default;
 
             for (int i = 0; i < emitterCount; i++)
             {
@@ -97,7 +95,6 @@ namespace Ludots.Core.Vision
                             frame.Emitter.Position,
                             field,
                             occupants,
-                            in projection,
                             currentTick,
                             detectionStrength);
                     }
@@ -141,7 +138,12 @@ namespace Ludots.Core.Vision
 
                     EnsureEmitterCapacity(count + 1);
                     Entity entity = Unsafe.Add(ref firstEntity, index);
-                    Entity viewer = ResolveViewer(entity);
+                    Entity viewer = _observers.ResolveObserver(World, entity);
+                    if (viewer == Entity.Null || !World.IsAlive(viewer))
+                    {
+                        throw new InvalidOperationException("Vision emitter requires a live knowledge observer.");
+                    }
+
                     _emitters[count++] = new EmitterFrame(
                         entity,
                         viewer,
@@ -161,24 +163,6 @@ namespace Ludots.Core.Vision
             }
 
             return count;
-        }
-
-        private Entity ResolveViewer(Entity emitter)
-        {
-            if (!World.TryGet(emitter, out PlayerOwner owner))
-            {
-                return emitter;
-            }
-
-            if (owner.PlayerId <= 0 ||
-                !_players.TryGet(owner.PlayerId, out Entity player) ||
-                !World.IsAlive(player))
-            {
-                throw new InvalidOperationException(
-                    $"Vision emitter declares PlayerOwner {owner.PlayerId} without a live formal player representative.");
-            }
-
-            return player;
         }
 
         private int CopyOccupants(int cellSizeCm)

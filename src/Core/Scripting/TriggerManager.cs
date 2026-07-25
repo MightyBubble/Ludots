@@ -308,18 +308,26 @@ namespace Ludots.Core.Scripting
             var tasks = new Task[handlers.Count];
             for (int i = 0; i < handlers.Count; i++)
             {
-                try
-                {
-                    tasks[i] = handlers[i](context);
-                }
-                catch (Exception ex)
-                {
-                    RecordError(eventKey, GetEventHandlerName(handlers[i]), ex);
-                    Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
-                    tasks[i] = Task.CompletedTask;
-                }
+                tasks[i] = FireEventHandlerAsync(handlers[i], eventKey, context);
             }
             return Task.WhenAll(tasks);
+        }
+
+        private async Task FireEventHandlerAsync(
+            Func<ScriptContext, Task> handler,
+            EventKey eventKey,
+            ScriptContext context)
+        {
+            try
+            {
+                await handler(context);
+            }
+            catch (Exception ex)
+            {
+                RecordError(eventKey, GetEventHandlerName(handler), ex);
+                Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex}");
+                throw;
+            }
         }
 
         // ────────────────────────────────────────────────────────────

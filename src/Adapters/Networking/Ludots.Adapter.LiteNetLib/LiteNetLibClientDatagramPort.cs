@@ -9,13 +9,16 @@ public sealed class LiteNetLibClientDatagramPort :
     IClientDatagramPort,
     IClientConnectionEventPort,
     IClientConnectionControlPort,
+    INetworkFaultInjectionMetricsPort,
     IDisposable
 {
     private readonly EventBasedNetListener _listener;
     private readonly NetManager _manager;
     private readonly FixedDatagramQueue _inbound;
+    private readonly DeterministicSequencedReorderFilter _reorderFilter;
     private readonly FixedClientConnectionEventQueue _connectionEvents;
     private readonly byte _stateChannelId;
+    private readonly NetworkFaultInjectionConfigurationSnapshot _faultInjectionConfiguration;
     private readonly string _host;
     private readonly int _port;
     private readonly string _connectionKey;
@@ -30,7 +33,8 @@ public sealed class LiteNetLibClientDatagramPort :
         int connectionEventCapacity,
         int maxPayloadBytes,
         int channelCount,
-        int stateChannelId)
+        int stateChannelId,
+        in LiteNetLibFaultInjectionSettings faults)
     {
         if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("Host is required.", nameof(host));
         if ((uint)port > ushort.MaxValue || port == 0) throw new ArgumentOutOfRangeException(nameof(port));
@@ -52,6 +56,15 @@ public sealed class LiteNetLibClientDatagramPort :
             DisconnectTimeout = 5000,
             ChannelsCount = (byte)channelCount,
         };
+        faults.Apply(_manager, datagramCapacity);
+        _faultInjectionConfiguration = faults.CaptureConfiguration();
+        _reorderFilter = new DeterministicSequencedReorderFilter(
+            connectionCapacity: 1,
+            maxPayloadBytes: maxPayloadBytes,
+            stateChannel: _stateChannelId,
+            reorderPermille: faults.ReorderPermille,
+            seed: faults.Seed,
+            holdTimeoutMilliseconds: faults.ReorderHoldTimeoutMilliseconds);
 
         _listener.PeerConnectedEvent += OnPeerConnected;
         _listener.PeerDisconnectedEvent += OnPeerDisconnected;
@@ -78,6 +91,28 @@ public sealed class LiteNetLibClientDatagramPort :
         }
     }
 
+    public long SimulatedStateReorderCount => _reorderFilter.ReorderedStateDatagramCount;
+
+    public NetworkFaultInjectionObservationSnapshot Capture()
+    {
+        ThrowIfDisposed();
+        return new NetworkFaultInjectionObservationSnapshot(
+            NetworkProcessRole.ReplicatedClient,
+            in _faultInjectionConfiguration,
+            _manager.SimulatedInboundDelayedPacketCount,
+            _manager.SimulatedInboundDroppedPacketCount,
+            _reorderFilter.ReorderedStateDatagramCount);
+    }
+
+    public int RoundTripTimeMilliseconds
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _serverPeer?.RoundTripTime ?? 0;
+        }
+    }
+
     public bool TryConnect()
     {
         ThrowIfDisposed();
@@ -99,7 +134,9 @@ public sealed class LiteNetLibClientDatagramPort :
     public void Pump()
     {
         ThrowIfDisposed();
+        _reorderFilter.BeginPump(Environment.TickCount64);
         _manager.PollEvents();
+        _reorderFilter.FlushExpired(_inbound);
     }
 
     public bool TryReceiveConnectionEvent(out ClientConnectionEvent connectionEvent)
@@ -144,6 +181,7 @@ public sealed class LiteNetLibClientDatagramPort :
 
     private void OnPeerDisconnected(NetPeer peer, DisconnectInfo info)
     {
+        _reorderFilter.DiscardConnection(1);
         _serverPeer = null;
         var connectionEvent = new ClientConnectionEvent(
             TransportConnectionEventKind.Disconnected,
@@ -164,7 +202,11 @@ public sealed class LiteNetLibClientDatagramPort :
                 $"Unexpected delivery method {deliveryMethod} on channel {channelNumber}; expected {expected}.");
         }
 
-        _inbound.Enqueue(connectionValue: 0, channelNumber, reader.GetRemainingBytesSpan());
+        _reorderFilter.Enqueue(
+            connection: 1,
+            channelNumber,
+            reader.GetRemainingBytesSpan(),
+            _inbound);
     }
 
     private DeliveryMethod ResolveDeliveryMethod(byte channelNumber)

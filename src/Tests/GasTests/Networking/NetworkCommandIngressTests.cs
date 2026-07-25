@@ -267,6 +267,40 @@ public sealed class NetworkCommandIngressTests
     }
 
     [Test]
+    public void Schedule_RejectsSubmitModeOutsideSchemaWhitelist()
+    {
+        using World world = World.Create();
+        using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
+        Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity actor = world.Create();
+        harness.Ownership.EnsureOwnership(player, actor);
+        Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        harness.Ingress.BindSeat(in seat, player, serverTick: 10);
+        NetworkCommandWireEntry entry = WorldCommand(actorHandle, x: 100);
+        var header = new NetworkCommandBatchHeader(
+            sessionEpoch: 7,
+            clientBatchSequence: 1,
+            targetTick: 10,
+            acknowledgedCommittedTick: 9,
+            entryCount: 1,
+            OrderSubmitMode.Queued);
+
+        NetworkCommandAdmissionOutcome result = harness.Ingress.Schedule(
+            in seat,
+            in header,
+            serverTick: 10,
+            new[] { entry });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.EqualTo(OrderSubmitResult.NetworkCommandSchemaMismatch));
+            Assert.That(harness.Ingress.ScheduledBatchCount, Is.Zero);
+            Assert.That(harness.Orders.Count, Is.Zero);
+        });
+    }
+
+    [Test]
     public void DrainScheduled_WhenGlobalQueueIsFull_RejectsWholeBatchAtGlobalIntake()
     {
         using World world = World.Create();
@@ -295,6 +329,160 @@ public sealed class NetworkCommandIngressTests
             Assert.That(rejected.Result, Is.EqualTo(OrderSubmitResult.QueueFull));
             Assert.That(rejected.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
             Assert.That(harness.Ingress.ScheduledBatchCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void Schedule_ReusedSequenceWithDifferentPayloadIsRejected()
+    {
+        using World world = World.Create();
+        using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
+        Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity actor = world.Create();
+        harness.Ownership.EnsureOwnership(player, actor);
+        Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        harness.Ingress.BindSeat(in seat, player, serverTick: 10);
+        NetworkCommandBatchHeader header = Batch(1, 10, 1);
+        NetworkCommandWireEntry originalEntry = WorldCommand(actorHandle, x: 10);
+        NetworkCommandWireEntry alteredEntry = WorldCommand(actorHandle, x: 11);
+
+        NetworkCommandAdmissionOutcome accepted = harness.Ingress.Schedule(
+            in seat,
+            in header,
+            serverTick: 10,
+            new[] { originalEntry });
+        NetworkCommandAdmissionOutcome mismatch = harness.Ingress.Schedule(
+            in seat,
+            in header,
+            serverTick: 10,
+            new[] { alteredEntry });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(accepted.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            Assert.That(mismatch.Result, Is.EqualTo(OrderSubmitResult.NetworkCommandSchemaMismatch));
+            Assert.That(mismatch.IsReplay, Is.False);
+            Assert.That(harness.Ingress.ScheduledBatchCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Schedule_ReplayRestoresLatestEntityOutcomeForEveryActor()
+    {
+        using World world = World.Create();
+        using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
+        Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity firstActor = world.Create();
+        Entity secondActor = world.Create();
+        harness.Ownership.EnsureOwnership(player, firstActor);
+        harness.Ownership.EnsureOwnership(player, secondActor);
+        Assert.That(harness.Entities.TryAllocate(firstActor, out NetworkEntityHandle firstHandle), Is.True);
+        Assert.That(harness.Entities.TryAllocate(secondActor, out NetworkEntityHandle secondHandle), Is.True);
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        harness.Ingress.BindSeat(in seat, player, serverTick: 10);
+        NetworkCommandBatchHeader header = Batch(1, 10, 2);
+        var entries = new[]
+        {
+            WorldCommand(firstHandle, x: 10),
+            WorldCommand(secondHandle, x: 20),
+        };
+
+        Assert.That(
+            harness.Ingress.Schedule(in seat, in header, serverTick: 10, entries).Result,
+            Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+        Assert.That(harness.Ingress.DrainScheduled(10), Is.EqualTo(1));
+        Assert.That(harness.Results.TryRead(out _), Is.True);
+        Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome global), Is.True);
+        Span<Order> admitted = stackalloc Order[2];
+        Assert.That(harness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
+        Assert.That(admittedCount, Is.EqualTo(2));
+
+        var firstQueued = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 1,
+            targetTick: 10,
+            actorCount: 2,
+            admitted[0].OrderId,
+            admitted[0].AdmissionBatchId,
+            admissionBatchIndex: 0,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Queued,
+            isReplay: false);
+        var firstActivated = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 1,
+            targetTick: 10,
+            actorCount: 2,
+            admitted[0].OrderId,
+            admitted[0].AdmissionBatchId,
+            admissionBatchIndex: 0,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated,
+            isReplay: false);
+        var secondRejected = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 1,
+            targetTick: 10,
+            actorCount: 2,
+            admitted[1].OrderId,
+            admitted[1].AdmissionBatchId,
+            admissionBatchIndex: 1,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.InsufficientResources,
+            isReplay: false);
+        harness.Ingress.RecordEntityAdmission(in firstQueued);
+        harness.Ingress.RecordEntityAdmission(in firstActivated);
+        harness.Ingress.RecordEntityAdmission(in secondRejected);
+
+        NetworkCommandAdmissionOutcome replay = harness.Ingress.Schedule(
+            in seat,
+            in header,
+            serverTick: 10,
+            entries);
+        Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome replayGlobal), Is.True);
+        Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome replayFirst), Is.True);
+        Assert.That(harness.Results.TryRead(out NetworkCommandAdmissionOutcome replaySecond), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(global.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(replay.IsReplay, Is.True);
+            Assert.That(replayGlobal.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(replayFirst.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(replayFirst.AdmissionBatchIndex, Is.Zero);
+            Assert.That(replaySecond.Result, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(replaySecond.AdmissionBatchIndex, Is.EqualTo(1));
+            Assert.That(replayGlobal.IsReplay, Is.True);
+            Assert.That(replayFirst.IsReplay, Is.True);
+            Assert.That(replaySecond.IsReplay, Is.True);
+        });
+    }
+
+    [Test]
+    public void Schedule_RejectsExhaustedSequenceWithoutOverflowingServerState()
+    {
+        using World world = World.Create();
+        using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
+        Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity actor = world.Create();
+        harness.Ownership.EnsureOwnership(player, actor);
+        Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        harness.Ingress.BindSeat(in seat, player, serverTick: 10);
+        NetworkCommandWireEntry entry = WorldCommand(actorHandle, x: 1);
+        NetworkCommandBatchHeader exhausted = Batch(ulong.MaxValue, targetTick: 10, entryCount: 1);
+
+        NetworkCommandAdmissionOutcome result = harness.Ingress.Schedule(
+            in seat,
+            in exhausted,
+            serverTick: 10,
+            new[] { entry });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Result, Is.EqualTo(OrderSubmitResult.NetworkSequenceExhausted));
+            Assert.That(harness.Ingress.ScheduledBatchCount, Is.Zero);
+            Assert.That(harness.Orders.Count, Is.Zero);
         });
     }
 
@@ -338,7 +526,13 @@ public sealed class NetworkCommandIngressTests
     }
 
     private static NetworkCommandBatchHeader Batch(ulong sequence, int targetTick, ushort entryCount)
-        => new(sessionEpoch: 7, sequence, targetTick, acknowledgedCommittedTick: targetTick - 1, entryCount);
+        => new(
+            sessionEpoch: 7,
+            sequence,
+            targetTick,
+            acknowledgedCommittedTick: targetTick - 1,
+            entryCount,
+            OrderSubmitMode.Immediate);
 
     private static void Cycle(
         Harness harness,
@@ -417,7 +611,7 @@ public sealed class NetworkCommandIngressTests
                 NetworkCommandTargetKind.WorldPositionCm,
                 allowArg0: false,
                 allowArg1: false,
-                OrderSubmitMode.Immediate,
+                NetworkCommandSubmitModeMask.Immediate,
                 KnowledgePositionAccess.None));
             if (includeEntityTargetSchema)
             {
@@ -426,7 +620,7 @@ public sealed class NetworkCommandIngressTests
                     NetworkCommandTargetKind.NetworkEntity,
                     allowArg0: false,
                     allowArg1: false,
-                    OrderSubmitMode.Immediate,
+                    NetworkCommandSubmitModeMask.Immediate,
                     KnowledgePositionAccess.Live));
             }
 

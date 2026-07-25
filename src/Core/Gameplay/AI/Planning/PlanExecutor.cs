@@ -34,8 +34,8 @@ namespace Ludots.Core.Gameplay.AI.Planning
                 OrderTypeId = spec.OrderTypeId,
                 PlayerId = spec.PlayerId,
                 Actor = actor,
-                Target = default,
-                TargetContext = default,
+                Target = Entity.Null,
+                TargetContext = Entity.Null,
                 Args = default,
                 SubmitStep = submitStep,
                 SubmitMode = spec.SubmitMode
@@ -71,5 +71,4 @@ namespace Ludots.Core.Gameplay.AI.Planning
         }
     }
 }
-
 

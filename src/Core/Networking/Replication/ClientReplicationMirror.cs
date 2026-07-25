@@ -6,9 +6,13 @@ namespace Ludots.Core.Networking.Replication
     {
         private readonly ulong _sessionEpoch;
         private readonly bool[] _active;
+        private readonly bool[] _plannedActive;
         private readonly bool[] _seen;
         private readonly ReplicatedEntityState[] _states;
+        private readonly ReplicatedEntityState[] _plannedStates;
         private ulong _lastSnapshotId;
+        private ulong _preparedSnapshotId;
+        private bool _hasPreparedSnapshot;
 
         public ClientReplicationMirror(int entityCapacity, ulong sessionEpoch)
         {
@@ -24,16 +28,27 @@ namespace Ludots.Core.Networking.Replication
 
             _sessionEpoch = sessionEpoch;
             _active = new bool[entityCapacity];
+            _plannedActive = new bool[entityCapacity];
             _seen = new bool[entityCapacity];
             _states = new ReplicatedEntityState[entityCapacity];
+            _plannedStates = new ReplicatedEntityState[entityCapacity];
         }
 
         public int EntityCapacity => _active.Length;
         public ulong LastSnapshotId => _lastSnapshotId;
+        public bool HasPreparedSnapshot => _hasPreparedSnapshot;
 
         public ReplicationApplyResult Apply(ReplicationPacketBuffer packet)
         {
-            if (packet == null)
+            ReplicationApplyResult prepared = Prepare(packet);
+            return prepared == ReplicationApplyResult.Success
+                ? CommitPrepared()
+                : prepared;
+        }
+
+        public ReplicationApplyResult Prepare(ReplicationPacketBuffer packet)
+        {
+            if (packet == null || _hasPreparedSnapshot)
             {
                 return ReplicationApplyResult.InvalidPacket;
             }
@@ -130,16 +145,19 @@ namespace Ludots.Core.Networking.Replication
                 }
             }
 
+            Array.Copy(_active, _plannedActive, _active.Length);
+            Array.Copy(_states, _plannedStates, _states.Length);
+
             if (header.Kind == ReplicationPacketKind.Full)
             {
-                Array.Clear(_active);
+                Array.Clear(_plannedActive);
             }
 
             else
             {
                 for (int i = 0; i < removals.Length; i++)
                 {
-                    _active[removals[i].Slot] = false;
+                    _plannedActive[removals[i].Slot] = false;
                 }
 
                 for (int i = 0; i < disclosureChanges.Length; i++)
@@ -147,7 +165,7 @@ namespace Ludots.Core.Networking.Replication
                     ReplicationDisclosureChange change = disclosureChanges[i];
                     if (change.Kind == ReplicationDisclosureChangeKind.Conceal)
                     {
-                        _active[change.Entity.Slot] = false;
+                        _plannedActive[change.Entity.Slot] = false;
                     }
                 }
             }
@@ -156,12 +174,33 @@ namespace Ludots.Core.Networking.Replication
             {
                 ReplicatedEntityState state = upserts[i];
                 int slot = state.Entity.Slot;
-                _states[slot] = state;
-                _active[slot] = true;
+                _plannedStates[slot] = state;
+                _plannedActive[slot] = true;
             }
 
-            _lastSnapshotId = header.SnapshotId;
+            _preparedSnapshotId = header.SnapshotId;
+            _hasPreparedSnapshot = true;
             return ReplicationApplyResult.Success;
+        }
+
+        public ReplicationApplyResult CommitPrepared()
+        {
+            if (!_hasPreparedSnapshot)
+            {
+                return ReplicationApplyResult.InvalidPacket;
+            }
+
+            Array.Copy(_plannedActive, _active, _active.Length);
+            Array.Copy(_plannedStates, _states, _states.Length);
+            _lastSnapshotId = _preparedSnapshotId;
+            DiscardPrepared();
+            return ReplicationApplyResult.Success;
+        }
+
+        public void DiscardPrepared()
+        {
+            _preparedSnapshotId = 0;
+            _hasPreparedSnapshot = false;
         }
 
         public bool TryGet(NetworkEntityHandle entity, out ReplicatedEntityState state)

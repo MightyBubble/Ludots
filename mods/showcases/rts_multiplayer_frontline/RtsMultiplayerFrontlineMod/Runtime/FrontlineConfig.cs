@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Networking.Runtime;
 
 namespace RtsMultiplayerFrontlineMod.Runtime;
 
@@ -10,24 +12,14 @@ public sealed class FrontlineConfig
     public string MapId { get; set; } = string.Empty;
     public int SimulationTickRateHz { get; set; }
     public string ReadyActionId { get; set; } = string.Empty;
-    public string GatherOrderTypeKey { get; set; } = string.Empty;
-    public string MoveOrderTypeKey { get; set; } = string.Empty;
-    public string AttackOrderTypeKey { get; set; } = string.Empty;
     public string CastAbilityOrderTypeKey { get; set; } = string.Empty;
     public string TrainAbilityId { get; set; } = string.Empty;
-    public string DamageEffectId { get; set; } = string.Empty;
     public string CrystalAttribute { get; set; } = string.Empty;
     public string HealthAttribute { get; set; } = string.Empty;
     public string HarvesterTag { get; set; } = string.Empty;
     public string InfantryTag { get; set; } = string.Empty;
     public string CrystalNodeTag { get; set; } = string.Empty;
-    public int StartingCrystals { get; set; }
-    public int HarvestCargoCrystals { get; set; }
-    public int HarvestLoadTicks { get; set; }
     public int TrainCostCrystals { get; set; }
-    public int ArrivalRadiusCm { get; set; }
-    public int AttackRangeCm { get; set; }
-    public int AttackCooldownTicks { get; set; }
     public int ReadyCountdownTicks { get; set; }
     public int MatchDurationTicks { get; set; }
     public int DisconnectGraceTicks { get; set; }
@@ -41,12 +33,10 @@ public sealed class FrontlineConfig
         JsonElement root = document.RootElement;
         RequireProperties(
             root,
-            "schemaVersion", "mapId", "simulationTickRateHz", "readyActionId", "gatherOrderTypeKey",
-            "moveOrderTypeKey", "attackOrderTypeKey", "castAbilityOrderTypeKey",
-            "trainAbilityId", "damageEffectId", "crystalAttribute", "healthAttribute",
-            "harvesterTag", "infantryTag", "crystalNodeTag", "startingCrystals",
-            "harvestCargoCrystals", "harvestLoadTicks", "trainCostCrystals",
-            "arrivalRadiusCm", "attackRangeCm", "attackCooldownTicks",
+            "schemaVersion", "mapId", "simulationTickRateHz", "readyActionId",
+            "castAbilityOrderTypeKey", "trainAbilityId", "crystalAttribute", "healthAttribute",
+            "harvesterTag", "infantryTag", "crystalNodeTag",
+            "trainCostCrystals",
             "readyCountdownTicks", "matchDurationTicks", "disconnectGraceTicks",
             "replication", "sides", "hud");
 
@@ -82,29 +72,19 @@ public sealed class FrontlineConfig
 
         RequireText(MapId, nameof(MapId));
         RequireText(ReadyActionId, nameof(ReadyActionId));
-        RequireText(GatherOrderTypeKey, nameof(GatherOrderTypeKey));
-        RequireText(MoveOrderTypeKey, nameof(MoveOrderTypeKey));
-        RequireText(AttackOrderTypeKey, nameof(AttackOrderTypeKey));
         RequireText(CastAbilityOrderTypeKey, nameof(CastAbilityOrderTypeKey));
         RequireText(TrainAbilityId, nameof(TrainAbilityId));
-        RequireText(DamageEffectId, nameof(DamageEffectId));
         RequireText(CrystalAttribute, nameof(CrystalAttribute));
         RequireText(HealthAttribute, nameof(HealthAttribute));
         RequireText(HarvesterTag, nameof(HarvesterTag));
         RequireText(InfantryTag, nameof(InfantryTag));
         RequireText(CrystalNodeTag, nameof(CrystalNodeTag));
         RequirePositive(SimulationTickRateHz, nameof(SimulationTickRateHz));
-        RequirePositive(StartingCrystals, nameof(StartingCrystals));
-        RequirePositive(HarvestCargoCrystals, nameof(HarvestCargoCrystals));
-        RequirePositive(HarvestLoadTicks, nameof(HarvestLoadTicks));
         RequirePositive(TrainCostCrystals, nameof(TrainCostCrystals));
-        RequirePositive(ArrivalRadiusCm, nameof(ArrivalRadiusCm));
-        RequirePositive(AttackRangeCm, nameof(AttackRangeCm));
-        RequirePositive(AttackCooldownTicks, nameof(AttackCooldownTicks));
         RequirePositive(ReadyCountdownTicks, nameof(ReadyCountdownTicks));
         RequirePositive(MatchDurationTicks, nameof(MatchDurationTicks));
         RequirePositive(DisconnectGraceTicks, nameof(DisconnectGraceTicks));
-        Replication.Validate();
+        Replication.Validate(HealthAttribute, CrystalAttribute);
         if (Sides.Length != 2)
         {
             throw new InvalidOperationException("RTS Frontline config requires exactly two sides.");
@@ -118,11 +98,6 @@ public sealed class FrontlineConfig
         if (Sides[0].PlayerId == Sides[1].PlayerId || Sides[0].TeamId == Sides[1].TeamId)
         {
             throw new InvalidOperationException("RTS Frontline sides require distinct player and team ids.");
-        }
-
-        if (!Sides[0].HasEqualStartingForce(Sides[1]))
-        {
-            throw new InvalidOperationException("RTS Frontline sides must declare the same initial unit counts.");
         }
 
         Hud.Validate();
@@ -166,8 +141,9 @@ public sealed class FrontlineReplicationConfig
     public string OwnedUnitsCollectionKey { get; set; } = string.Empty;
     public string PublicResourcesCollectionKey { get; set; } = string.Empty;
     public string PublicMatchStateCollectionKey { get; set; } = string.Empty;
+    public string[] VisibleEnemyAttributes { get; set; } = Array.Empty<string>();
 
-    internal void Validate()
+    internal void Validate(string healthAttribute, string crystalAttribute)
     {
         if (string.IsNullOrWhiteSpace(OwnedUnitsCollectionKey) ||
             string.IsNullOrWhiteSpace(PublicResourcesCollectionKey) ||
@@ -182,6 +158,46 @@ public sealed class FrontlineReplicationConfig
         {
             throw new InvalidOperationException(
                 "RTS Frontline replication Knowledge collection keys must be distinct.");
+        }
+
+        if (VisibleEnemyAttributes == null || VisibleEnemyAttributes.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline replication requires explicit visibleEnemyAttributes.");
+        }
+
+        bool includesHealth = false;
+        for (int i = 0; i < VisibleEnemyAttributes.Length; i++)
+        {
+            string attribute = VisibleEnemyAttributes[i];
+            if (string.IsNullOrWhiteSpace(attribute) ||
+                !string.Equals(attribute, attribute.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline replication visibleEnemyAttributes[{i}] must be a canonical non-empty attribute name.");
+            }
+
+            if (string.Equals(attribute, crystalAttribute, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "RTS Frontline must not disclose private crystal resources through enemy vision.");
+            }
+
+            includesHealth |= string.Equals(attribute, healthAttribute, StringComparison.Ordinal);
+            for (int prior = 0; prior < i; prior++)
+            {
+                if (string.Equals(VisibleEnemyAttributes[prior], attribute, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"RTS Frontline replication visibleEnemyAttributes duplicates '{attribute}'.");
+                }
+            }
+        }
+
+        if (!includesHealth)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline visible enemy disclosure must include the configured health attribute.");
         }
 
         int[] ids = { CoreSchemaId, HarvesterSchemaId, InfantrySchemaId, CrystalNodeSchemaId, MatchStateSchemaId };
@@ -209,8 +225,6 @@ public sealed class FrontlineSideConfig
     public string Id { get; set; } = string.Empty;
     public int PlayerId { get; set; }
     public int TeamId { get; set; }
-    public int InitialHarvesterCount { get; set; }
-    public int InitialInfantryCount { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public int VisionScopeKeyId { get; set; }
 
@@ -222,22 +236,14 @@ public sealed class FrontlineSideConfig
             throw new InvalidOperationException(
                 $"RTS Frontline sides[{index}] requires id, displayName, playerId, teamId and visionScopeKeyId.");
         }
-
-        if (InitialHarvesterCount <= 0 || InitialInfantryCount <= 0)
-        {
-            throw new InvalidOperationException($"RTS Frontline side '{Id}' requires positive initial unit counts.");
-        }
-    }
-
-    internal bool HasEqualStartingForce(FrontlineSideConfig other)
-    {
-        return InitialHarvesterCount == other.InitialHarvesterCount &&
-            InitialInfantryCount == other.InitialInfantryCount;
     }
 }
 
 public sealed class FrontlineHudConfig
 {
+    private string[] _submitResultText = Array.Empty<string>();
+    private string[] _admissionResultText = Array.Empty<string>();
+
     public string Title { get; set; } = string.Empty;
     public string Objective { get; set; } = string.Empty;
     public string GatherHint { get; set; } = string.Empty;
@@ -250,9 +256,24 @@ public sealed class FrontlineHudConfig
     public string NotReadyText { get; set; } = string.Empty;
     public string DisconnectedText { get; set; } = string.Empty;
     public string BattleStartedText { get; set; } = string.Empty;
+    public string SynchronizingBattlefieldText { get; set; } = string.Empty;
     public string SideOneVictoryText { get; set; } = string.Empty;
     public string SideTwoVictoryText { get; set; } = string.Empty;
     public string DrawText { get; set; } = string.Empty;
+    public string ConnectingText { get; set; } = string.Empty;
+    public string ReconnectingText { get; set; } = string.Empty;
+    public string OpponentOfflineText { get; set; } = string.Empty;
+    public string ServiceInterruptedText { get; set; } = string.Empty;
+    public string SmoothConnectionText { get; set; } = string.Empty;
+    public string DelayedConnectionText { get; set; } = string.Empty;
+    public int DelayedRoundTripThresholdMilliseconds { get; set; }
+    public string CommandSendingText { get; set; } = string.Empty;
+    public string CommandAcceptedText { get; set; } = string.Empty;
+    public string CommandQueuedText { get; set; } = string.Empty;
+    public string CommandPendingText { get; set; } = string.Empty;
+    public string CommandStartedText { get; set; } = string.Empty;
+    public Dictionary<string, string> CommandSubmitRejectionText { get; set; } = new(StringComparer.Ordinal);
+    public Dictionary<string, string> CommandAdmissionRejectionText { get; set; } = new(StringComparer.Ordinal);
 
     internal void Validate()
     {
@@ -268,12 +289,115 @@ public sealed class FrontlineHudConfig
             string.IsNullOrWhiteSpace(NotReadyText) ||
             string.IsNullOrWhiteSpace(DisconnectedText) ||
             string.IsNullOrWhiteSpace(BattleStartedText) ||
+            string.IsNullOrWhiteSpace(SynchronizingBattlefieldText) ||
             string.IsNullOrWhiteSpace(SideOneVictoryText) ||
             string.IsNullOrWhiteSpace(SideTwoVictoryText) ||
-            string.IsNullOrWhiteSpace(DrawText))
+            string.IsNullOrWhiteSpace(DrawText) ||
+            string.IsNullOrWhiteSpace(ConnectingText) ||
+            string.IsNullOrWhiteSpace(ReconnectingText) ||
+            string.IsNullOrWhiteSpace(OpponentOfflineText) ||
+            string.IsNullOrWhiteSpace(ServiceInterruptedText) ||
+            string.IsNullOrWhiteSpace(SmoothConnectionText) ||
+            string.IsNullOrWhiteSpace(DelayedConnectionText) ||
+            string.IsNullOrWhiteSpace(CommandSendingText) ||
+            string.IsNullOrWhiteSpace(CommandAcceptedText) ||
+            string.IsNullOrWhiteSpace(CommandQueuedText) ||
+            string.IsNullOrWhiteSpace(CommandPendingText) ||
+            string.IsNullOrWhiteSpace(CommandStartedText))
         {
             throw new InvalidOperationException("RTS Frontline HUD copy must be fully configured.");
         }
+
+        if (DelayedRoundTripThresholdMilliseconds <= 0)
+        {
+            throw new InvalidOperationException("RTS Frontline HUD delayed RTT threshold must be positive.");
+        }
+
+        _submitResultText = CompileSubmitResultText(CommandSubmitRejectionText);
+        _admissionResultText = CompileAdmissionResultText(CommandAdmissionRejectionText);
+    }
+
+    internal string ResolveSubmitRejection(ReplicatedClientCommandSubmitResult result)
+    {
+        int index = (int)result;
+        if ((uint)index >= (uint)_submitResultText.Length || string.IsNullOrEmpty(_submitResultText[index]))
+        {
+            throw new InvalidOperationException($"RTS Frontline HUD has no local command result text for {result}.");
+        }
+
+        return _submitResultText[index];
+    }
+
+    internal string ResolveAdmissionRejection(OrderSubmitResult result)
+    {
+        int index = (int)result;
+        if ((uint)index >= (uint)_admissionResultText.Length || string.IsNullOrEmpty(_admissionResultText[index]))
+        {
+            throw new InvalidOperationException($"RTS Frontline HUD has no server command result text for {result}.");
+        }
+
+        return _admissionResultText[index];
+    }
+
+    private static string[] CompileSubmitResultText(Dictionary<string, string> configured)
+    {
+        ReplicatedClientCommandSubmitResult[] values = Enum.GetValues<ReplicatedClientCommandSubmitResult>();
+        var compiled = new string[values.Length];
+        int expected = 0;
+        for (int i = 0; i < values.Length; i++)
+        {
+            ReplicatedClientCommandSubmitResult value = values[i];
+            if (value is ReplicatedClientCommandSubmitResult.None or ReplicatedClientCommandSubmitResult.Submitted)
+            {
+                continue;
+            }
+
+            expected++;
+            string key = value.ToString();
+            if (!configured.TryGetValue(key, out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"RTS Frontline HUD requires commandSubmitRejectionText.{key}.");
+            }
+            compiled[(int)value] = text;
+        }
+
+        if (configured.Count != expected)
+        {
+            throw new InvalidOperationException("RTS Frontline HUD commandSubmitRejectionText contains unknown or success keys.");
+        }
+
+        return compiled;
+    }
+
+    private static string[] CompileAdmissionResultText(Dictionary<string, string> configured)
+    {
+        OrderSubmitResult[] values = Enum.GetValues<OrderSubmitResult>();
+        var compiled = new string[values.Length];
+        int expected = 0;
+        for (int i = 0; i < values.Length; i++)
+        {
+            OrderSubmitResult value = values[i];
+            if (value is OrderSubmitResult.Activated or OrderSubmitResult.Queued or
+                OrderSubmitResult.Pending or OrderSubmitResult.NetworkScheduled)
+            {
+                continue;
+            }
+
+            expected++;
+            string key = value.ToString();
+            if (!configured.TryGetValue(key, out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"RTS Frontline HUD requires commandAdmissionRejectionText.{key}.");
+            }
+            compiled[(int)value] = text;
+        }
+
+        if (configured.Count != expected)
+        {
+            throw new InvalidOperationException("RTS Frontline HUD commandAdmissionRejectionText contains unknown or success keys.");
+        }
+
+        return compiled;
     }
 }
 

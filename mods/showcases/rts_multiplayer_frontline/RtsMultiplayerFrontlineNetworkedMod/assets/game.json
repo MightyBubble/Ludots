@@ -3,7 +3,7 @@
     "profileId": "rts_duel_v1",
     "referenceTransport": "LiteNetLib/2.1.4",
     "protocolMajor": 1,
-    "protocolMinor": 0,
+    "protocolMinor": 2,
     "playerCapacity": 2,
     "simulationTickRateHz": 30,
     "statePublishRateHz": 10,
@@ -13,14 +13,16 @@
     "commandBurstBatchCapacity": 64,
     "maxActorsPerCommandBatch": 128,
     "commandSequenceHistoryCapacity": 128,
-    "maxPastTargetTicks": 6,
+    "maxPastTargetTicks": 21,
     "maxFutureTargetTicks": 6,
-    "networkAdmissionResultCapacity": 128,
+    "networkAdmissionResultCapacity": 256,
     "entityAdmissionResultCapacity": 4096,
+    "commandCorrelationCapacity": 8192,
     "reconnectWindowSeconds": 30,
     "readyCountdownTicks": 90,
     "clientReconnectRetryMilliseconds": 500,
     "baselineCapacity": 32,
+    "snapshotAcknowledgementTimeoutTicks": 15,
     "replicationPacketEntityCapacity": 256,
     "replicationSchemaCapacity": 705,
     "disclosureChangeLogCapacity": 512,
@@ -41,7 +43,7 @@
         "targetKind": "WorldPositionCm",
         "allowArg0": false,
         "allowArg1": false,
-        "submitMode": "Queued",
+        "allowedSubmitModes": ["Immediate", "Queued"],
         "requiredTargetPositionAccess": "None"
       },
       {
@@ -49,7 +51,7 @@
         "targetKind": "NetworkEntity",
         "allowArg0": false,
         "allowArg1": false,
-        "submitMode": "Queued",
+        "allowedSubmitModes": ["Immediate", "Queued"],
         "requiredTargetPositionAccess": "Live"
       },
       {
@@ -57,7 +59,7 @@
         "targetKind": "NetworkEntity",
         "allowArg0": false,
         "allowArg1": false,
-        "submitMode": "Immediate",
+        "allowedSubmitModes": ["Immediate", "Queued"],
         "requiredTargetPositionAccess": "Live"
       },
       {
@@ -65,7 +67,7 @@
         "targetKind": "None",
         "allowArg0": true,
         "allowArg1": false,
-        "submitMode": "Immediate",
+        "allowedSubmitModes": ["Immediate", "Queued"],
         "requiredTargetPositionAccess": "None"
       },
       {
@@ -73,7 +75,7 @@
         "targetKind": "None",
         "allowArg0": false,
         "allowArg1": false,
-        "submitMode": "Immediate",
+        "allowedSubmitModes": ["Immediate"],
         "requiredTargetPositionAccess": "None"
       }
     ],

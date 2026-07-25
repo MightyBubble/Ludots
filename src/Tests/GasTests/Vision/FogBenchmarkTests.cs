@@ -169,7 +169,7 @@ namespace Ludots.Tests.GAS
                 resolver,
                 projector,
                 knowledge,
-                new PlayerEntityLookup());
+                new PlayerOwnedEntityObserverResolver(new PlayerEntityLookup()));
 
             CreateEmitters(world, emitterCount, layerMask);
             CreateOccupants(world, occupantCount, layerMask);

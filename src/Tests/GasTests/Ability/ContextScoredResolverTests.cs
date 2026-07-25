@@ -138,6 +138,87 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ContextScoredMode_TargetlessCandidate_EmitsCanonicalTargetlessOrder()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1050;
+            const int targetlessAbilityId = 1051;
+            Entity actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(targetlessAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 0,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: targetlessAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 0,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 0,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: false),
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(),
+                new StubGraphApi(world),
+                AllowAllCandidates);
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.ContextScored,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Attack",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                    },
+                },
+            });
+            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
+            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            mapping.SetContextScoredProvider(resolver.TryResolve);
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+
+            input.InjectButtonPress("Attack");
+            input.Update();
+            mapping.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(orders[0].Args.I0, Is.EqualTo(1));
+                Assert.That(orders[0].Target, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].TargetContext, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].CommandSource, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(Ludots.Core.Gameplay.GAS.Orders.OrderSpatialKind.None));
+            });
+        }
+
+        [Test]
         public void ContextScoredResolver_UsesFormOverrideForRootAbilityLookup()
         {
             using var world = World.Create();

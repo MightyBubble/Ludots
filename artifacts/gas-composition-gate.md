@@ -96,3 +96,213 @@ profile data**. It does not require a Core enum.
 | Add Layer 1 | Networking command-batch admission; snapshot apply transaction |
 | Add Layer 2 | RTS duel composition using existing gameplay capabilities |
 | Forbidden | Networking-specific order queue; spawn/morph profile DSL; browser/socket types in Core; silent capacity truncation |
+
+## Follow-up Review - Reusable Resource And Attack Loops
+
+- **Task / Issue**: #709 - remove Showcase-private harvest and combat runtimes
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the reusable loops consume authored ECS profile data and submit
+existing orders/effects; no handler, preset switch, graph op, lifecycle op, or
+parallel queue is introduced.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Route a carrier to a source and sink | 0 | Core resource-transport system over `OrderQueue` |
+| Credit an authored resource attribute | 0 | Existing `AttributeBuffer` mutation |
+| Pursue a target and request an effect | 0 | Core direct-attack system over `OrderQueue` and `EffectRequestQueue` |
+| Define Frontline crystals and infantry damage | 2 | Showcase entity profiles, order ids, tags, and existing effect templates |
+
+### 3. Reuse list
+
+- Handlers: existing effect-template processing and attribute modifiers.
+- Queues / Systems: `OrderQueue`, `OrderBuffer`, `OrderSubmitter`,
+  `EffectRequestQueue`, and the existing movement/order systems.
+- Resolvers / Registries: `AttributeRegistry`, `EffectTemplateIdRegistry`,
+  `ComponentRegistry`, `OrderTypeRegistry`, and `TeamManager` relationship policy.
+- Existing presets / graphs: Frontline's existing instant-damage effect and move
+  orders; no new graph or preset is required.
+
+### 4. New Layer 0 ops
+
+| Op name | Single responsibility | Why existing ops cannot compose it |
+|---|---|---|
+| Resource transport tick | Advance source/load/sink state while delegating movement to the existing order path | Existing orders move actors but do not own cargo timing or sink credit |
+| Direct attack tick | Advance pursue/cooldown state and publish an existing effect template | Existing attack intent and effect application do not connect target pursuit to repeated effect requests |
+
+### 5. Transaction boundary
+
+No new rollback transaction is introduced. Movement remains an order; damage
+remains an effect request; spawn/death remain on their existing lifecycle paths.
+Queue capacity failures are explicit and never fall back to direct mutation.
+
+### 6. Config SSOT
+
+Behavior data lives in Core-authored ECS profile components in
+`Entities/templates.json`; damage remains in the existing effect template.
+
+New JSON schema: **NO** - component authoring uses the existing entity-template
+pipeline and strict `ComponentRegistry` setters.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps and authored profile values**. It
+does not require a Core enum or a private gameplay runtime.
+
+## Follow-up Review - Atomic Match Resolution Evidence
+
+- **Task / Issue**: #709 - preserve the authoritative result across core destruction
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the change records an immutable result at the existing match
+commit boundary before the existing lifecycle cleanup removes defeated
+entities; it does not add a lifecycle op, profile field, preset, or queue.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Read both command-core health values | 0 | Existing chunk query in `FrontlineDeathAndMatchSystem` |
+| Commit outcome and evidence atomically | 1 | Existing `FrontlineRuntime` match transaction boundary |
+| Remove defeated replicated entities | 0/1 | Existing `PresentationDestroyPending` and network binding cleanup |
+| Prove the player-visible result | 2/3 | Existing match-state replication and three-process acceptance Mod |
+
+### 3. Reuse list
+
+- Handlers: N/A; no GAS handler changes.
+- Queues / Systems: `FrontlineDeathAndMatchSystem`, existing cleanup command
+  buffer, and `FrontlineNetworkEntityBindingSystem`.
+- Resolvers / Registries: existing health attribute registry and Frontline
+  participant side mapping.
+- Existing presets / graphs: N/A; death remains driven by the existing damage
+  effect and attack loop.
+
+### 4. New Layer 0 ops
+
+N/A. The resolution snapshot is an immutable value captured by the existing
+match transaction, not an entity structural operation.
+
+### 5. Transaction boundary
+
+Outcome, winning side, resolution reason, committed tick, and both final core
+health values are validated and committed together before cleanup can remove a
+defeated core.
+
+### 6. Config SSOT
+
+Behavior remains in the existing Frontline config, effects, and entity
+templates. New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps** and match configuration. It does
+not require a Core enum or a parallel lifecycle path.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Frontline match commit; health attributes; cleanup command buffer; replicated match state; acceptance evidence |
+| Add Layer 0 op | None |
+| Add Layer 1 | Immutable resolution value committed with the existing outcome transaction |
+| Add Layer 2 | None |
+| Forbidden | Delayed destruction; retained dead core; post-destruction ECS lookup; silent terminal-state fallback |
+
+## Follow-up Review - Queued Training Player Acceptance
+
+- **Task / Issue**: #709 - prove immediate and queued training in the real three-process player flow
+- **Date**: 2026-07-25
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the acceptance flow submits the existing training ability twice
+and observes the existing order queue transition from queued to active; it adds
+no handler, preset, profile field, schema, registry, or gameplay pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Submit normal and queued training | 2 | Existing `TrainInfantry` command intent and replicated command port |
+| Admit, queue, and activate orders | 1 | Existing order admission transaction and `OrderQueue` |
+| Materialize trained infantry | 0/2 | Existing configured GAS ability/effect chain |
+| Record player-visible proof | 3 | Existing three-process acceptance Mod and evidence writer |
+
+### 3. Reuse list
+
+- Handlers: existing training ability handlers; no changes.
+- Queues / Systems: existing `OrderQueue`, order admission pipeline, and training continuation.
+- Resolvers / Registries: existing command intent, ability, entity template, and network schema registries.
+- Existing presets / graphs: existing Frontline training ability and effects.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Each training submission keeps the existing atomic admission and resource charge
+boundary. The acceptance code only observes the second order being queued and
+later activated after the first completes.
+
+### 6. Config SSOT
+
+Behavior remains in the existing Frontline ability, entity template, command
+intent, and networking configuration assets. New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next Mod variant changes **effect steps or graph wiring**. It does not add a
+Core enum or a private training runtime.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | Training ability/effects; order admission; `OrderQueue`; replicated command results; acceptance evidence |
+| Add Layer 0 op | None |
+| Add Layer 1 | None |
+| Add Layer 2 | None |
+| Forbidden | New training preset mode; private Showcase queue; duplicate resource ledger; silent command fallback |

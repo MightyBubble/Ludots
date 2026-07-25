@@ -9,19 +9,22 @@ namespace Ludots.Core.Networking.Runtime
 {
     public enum ReplicatedClientCommandSubmitResult : byte
     {
-        Submitted = 0,
-        EmptyBatch = 1,
-        NotConnected = 2,
-        SnapshotUnavailable = 3,
-        BatchCapacityExceeded = 4,
-        SchemaNotExposed = 5,
-        ActorNotReplicated = 6,
-        TargetNotReplicated = 7,
-        TargetShapeMismatch = 8,
-        TargetPositionInvalid = 9,
-        ArgumentNotAllowed = 10,
-        SequenceExhausted = 11,
-        TransportRejected = 12,
+        None = 0,
+        Submitted = 1,
+        EmptyBatch = 2,
+        NotConnected = 3,
+        SnapshotUnavailable = 4,
+        BatchCapacityExceeded = 5,
+        SchemaNotExposed = 6,
+        ActorNotReplicated = 7,
+        TargetNotReplicated = 8,
+        TargetShapeMismatch = 9,
+        TargetPositionInvalid = 10,
+        ArgumentNotAllowed = 11,
+        SequenceExhausted = 12,
+        TransportRejected = 13,
+        MixedSubmitModes = 14,
+        SubmitModeNotAllowed = 15,
     }
 
     /// <summary>
@@ -30,6 +33,12 @@ namespace Ludots.Core.Networking.Runtime
     /// </summary>
     public interface IReplicatedClientCommandPort
     {
+        ulong SubmissionRevision { get; }
+
+        ulong LastSubmittedBatchSequence { get; }
+
+        ReplicatedClientCommandSubmitResult LastSubmitResult { get; }
+
         ReplicatedClientCommandSubmitResult Submit(in Order order);
 
         ReplicatedClientCommandSubmitResult Submit(ReadOnlySpan<Order> orders);
@@ -41,8 +50,15 @@ namespace Ludots.Core.Networking.Runtime
         private readonly ReplicatedClientNetworkRuntime _runtime;
         private readonly NetworkCommandSchemaRegistry _schemas;
         private readonly NetworkCommandWireEntry[] _entries;
-        private ulong _boundSessionEpoch;
-        private ulong _nextBatchSequence = 1;
+        private ReplicatedClientCommandStreamIdentity _boundIdentity;
+        private ulong _boundCommandStreamRevision;
+        private ulong _nextBatchSequence = ReplicatedClientCommandStreamIdentity.FirstBatchSequence;
+
+        public ulong SubmissionRevision { get; private set; }
+
+        public ulong LastSubmittedBatchSequence { get; private set; }
+
+        public ReplicatedClientCommandSubmitResult LastSubmitResult { get; private set; }
 
         public ReplicatedClientCommandPort(
             World world,
@@ -77,67 +93,101 @@ namespace Ludots.Core.Networking.Runtime
         {
             if (orders.IsEmpty)
             {
-                return ReplicatedClientCommandSubmitResult.EmptyBatch;
+                return Complete(ReplicatedClientCommandSubmitResult.EmptyBatch);
             }
 
             if (_runtime.State != ReplicatedClientConnectionState.Connected ||
                 _runtime.SessionEpoch.IsEmpty)
             {
-                return ReplicatedClientCommandSubmitResult.NotConnected;
+                return Complete(ReplicatedClientCommandSubmitResult.NotConnected);
             }
 
-            if (_runtime.LastCommittedTick == 0)
+            if (_runtime.LastCommittedTick == 0 || _runtime.IsAwaitingFullSnapshot)
             {
-                return ReplicatedClientCommandSubmitResult.SnapshotUnavailable;
+                return Complete(ReplicatedClientCommandSubmitResult.SnapshotUnavailable);
             }
 
             if (orders.Length > _entries.Length || orders.Length > ushort.MaxValue)
             {
-                return ReplicatedClientCommandSubmitResult.BatchCapacityExceeded;
+                return Complete(ReplicatedClientCommandSubmitResult.BatchCapacityExceeded);
             }
 
-            ulong sessionEpoch = _runtime.SessionEpoch.Value;
-            if (_boundSessionEpoch != sessionEpoch)
+            OrderSubmitMode submitMode = orders[0].SubmitMode;
+            if ((uint)submitMode > (uint)OrderSubmitMode.PersistentQueued)
             {
-                _boundSessionEpoch = sessionEpoch;
-                _nextBatchSequence = 1;
+                return Complete(ReplicatedClientCommandSubmitResult.SubmitModeNotAllowed);
             }
 
-            if (_nextBatchSequence == 0)
+            ReplicatedClientCommandStreamIdentity identity = _runtime.CommandStreamIdentity;
+            if (!identity.IsValid)
             {
-                return ReplicatedClientCommandSubmitResult.SequenceExhausted;
+                return Complete(ReplicatedClientCommandSubmitResult.NotConnected);
+            }
+
+            ulong commandStreamRevision = _runtime.CommandStreamRevision;
+            ulong authoritativeNextSequence = _runtime.NextClientBatchSequence;
+            if (commandStreamRevision == 0 || authoritativeNextSequence == 0)
+            {
+                return Complete(ReplicatedClientCommandSubmitResult.NotConnected);
+            }
+
+            if (_boundIdentity != identity || _boundCommandStreamRevision != commandStreamRevision)
+            {
+                _boundIdentity = identity;
+                _boundCommandStreamRevision = commandStreamRevision;
+                _nextBatchSequence = authoritativeNextSequence;
+            }
+
+            if (_nextBatchSequence is 0 or ulong.MaxValue)
+            {
+                return Complete(ReplicatedClientCommandSubmitResult.SequenceExhausted);
             }
 
             for (int i = 0; i < orders.Length; i++)
             {
+                if (orders[i].SubmitMode != submitMode)
+                {
+                    return Complete(ReplicatedClientCommandSubmitResult.MixedSubmitModes);
+                }
                 ReplicatedClientCommandSubmitResult materialized = TryMaterialize(
                     in orders[i],
                     out _entries[i]);
                 if (materialized != ReplicatedClientCommandSubmitResult.Submitted)
                 {
-                    return materialized;
+                    return Complete(materialized);
                 }
             }
 
             uint acknowledgedTick = _runtime.LastCommittedTick;
-            int targetTick = acknowledgedTick >= int.MaxValue
+            uint estimatedTargetTick = _runtime.EstimatedCommandTargetTick;
+            int targetTick = estimatedTargetTick >= int.MaxValue
                 ? int.MaxValue
-                : checked((int)acknowledgedTick + 1);
+                : checked((int)estimatedTargetTick);
             var header = new NetworkCommandBatchHeader(
-                sessionEpoch,
+                identity.SessionEpoch.Value,
                 _nextBatchSequence,
                 targetTick,
                 checked((int)Math.Min(acknowledgedTick, int.MaxValue)),
-                checked((ushort)orders.Length));
+                checked((ushort)orders.Length),
+                submitMode);
             if (!_runtime.TrySubmitCommand(in header, _entries.AsSpan(0, orders.Length)))
             {
-                return ReplicatedClientCommandSubmitResult.TransportRejected;
+                return Complete(ReplicatedClientCommandSubmitResult.TransportRejected);
             }
 
-            _nextBatchSequence = _nextBatchSequence == ulong.MaxValue
-                ? 0
-                : _nextBatchSequence + 1;
-            return ReplicatedClientCommandSubmitResult.Submitted;
+            ulong submittedSequence = _nextBatchSequence;
+            _nextBatchSequence++;
+            return Complete(ReplicatedClientCommandSubmitResult.Submitted, submittedSequence);
+        }
+
+        private ReplicatedClientCommandSubmitResult Complete(
+            ReplicatedClientCommandSubmitResult result,
+            ulong submittedBatchSequence = 0)
+        {
+            SubmissionRevision = checked(SubmissionRevision + 1);
+            LastSubmitResult = result;
+            LastSubmittedBatchSequence = submittedBatchSequence;
+            return result;
         }
 
         private ReplicatedClientCommandSubmitResult TryMaterialize(
@@ -148,6 +198,11 @@ namespace Ludots.Core.Networking.Runtime
             if (!_schemas.TryGet(order.OrderTypeId, out NetworkCommandSchema schema))
             {
                 return ReplicatedClientCommandSubmitResult.SchemaNotExposed;
+            }
+
+            if (!schema.AllowsSubmitMode(order.SubmitMode))
+            {
+                return ReplicatedClientCommandSubmitResult.SubmitModeNotAllowed;
             }
 
             if (!TryGetReplicatedHandle(order.Actor, out NetworkEntityHandle actor))

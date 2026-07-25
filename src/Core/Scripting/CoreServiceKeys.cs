@@ -55,6 +55,7 @@ using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Persistence;
 using Ludots.Core.Presentation;
@@ -275,8 +276,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<OrderQueue> ChainOrderQueue = new("ChainOrderQueue");
         public static readonly ServiceKey<ResponseChainUiState> ResponseChainUiState = new("ResponseChainUiState");
         public static readonly ServiceKey<NetworkRuntimeConfig> NetworkRuntimeConfig = new("NetworkRuntimeConfig");
+        public static readonly ServiceKey<ContentFingerprint> NetworkContentFingerprint = new("NetworkContentFingerprint");
         public static readonly ServiceKey<NetworkProcessRole> NetworkProcessRole = new("NetworkProcessRole");
         public static readonly ServiceKey<INetworkRuntimePort> NetworkRuntimePort = new("NetworkRuntimePort");
+        public static readonly ServiceKey<INetworkFaultInjectionMetricsPort> NetworkFaultInjectionMetrics =
+            new("NetworkFaultInjectionMetrics");
         public static readonly ServiceKey<IReplicatedClientCommandPort> ReplicatedClientCommandPort = new("ReplicatedClientCommandPort");
         public static readonly ServiceKey<IReplicatedClientRoomControlPort> ReplicatedClientRoomControlPort = new("ReplicatedClientRoomControlPort");
         public static readonly ServiceKey<NetworkCommandIngress> NetworkCommandIngress = new("NetworkCommandIngress");

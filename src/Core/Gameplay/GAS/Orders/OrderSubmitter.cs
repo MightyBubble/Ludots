@@ -36,7 +36,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         NetworkTargetNotKnown = 25,
         NetworkCommandSchemaMismatch = 26,
         NetworkMatchNotStarted = 27,
-        NetworkMatchCompleted = 28
+        NetworkMatchCompleted = 28,
+        InsufficientResources = 29,
+        Expired = 30,
+        Cancelled = 31,
+        NetworkSequenceExhausted = 32
     }
 
     public static class OrderSubmitter
@@ -50,19 +54,53 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int currentStep,
             int stepRateHz)
         {
+            return Preview(
+                world,
+                entity,
+                in order,
+                registry,
+                orderRuleRegistry,
+                currentStep,
+                stepRateHz,
+                out _);
+        }
+
+        public static OrderSubmitResult Preview(
+            World world,
+            Entity entity,
+            in Order order,
+            OrderTypeRegistry registry,
+            OrderRuleRegistry? orderRuleRegistry,
+            int currentStep,
+            int stepRateHz,
+            out OrderBuffer preview)
+        {
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
             }
 
+            OrderEntityReferenceContract.Validate(in order, "OrderSubmitter.Preview");
+
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
+                preview = default;
                 return OrderSubmitResult.InvalidEntity;
             }
 
-            OrderBuffer preview = world.Get<OrderBuffer>(entity);
+            preview = world.Get<OrderBuffer>(entity);
             OrderTypeConfig config = registry.Get(order.OrderTypeId);
-            if (order.SubmitMode == OrderSubmitMode.Queued)
+            OrderSubmitResult admission = orderRuleRegistry?.ValidateAdmission(
+                world,
+                entity,
+                in order,
+                in preview) ?? OrderSubmitResult.Activated;
+            if (admission != OrderSubmitResult.Activated)
+            {
+                return admission;
+            }
+
+            if (IsQueuedMode(order.SubmitMode))
             {
                 return HandleQueuedMode(ref preview, in order, in config, currentStep, stepRateHz);
             }
@@ -79,6 +117,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (activeOrderTypeId == 0 || CanInterrupt(activeOrderTypeId, in order, in config, orderRuleRegistry))
             {
+                if (config.ClearQueueOnActivate)
+                {
+                    preview.ClearQueued();
+                }
+
+                preview.SetActiveDirect(in order, config.Priority);
                 return OrderSubmitResult.Activated;
             }
 
@@ -92,12 +136,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderTypeRegistry registry,
             OrderRuleRegistry? orderRuleRegistry,
             int currentStep,
-            int stepRateHz)
+            int stepRateHz,
+            OrderAdmissionResultBuffer? admissionResults = null)
         {
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
             }
+
+            OrderEntityReferenceContract.Validate(in order, "OrderSubmitter.Submit");
 
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
@@ -106,10 +153,59 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             var config = registry.Get(order.OrderTypeId);
             ref var buffer = ref world.Get<OrderBuffer>(entity);
+            OrderSubmitResult admission = orderRuleRegistry?.ValidateAdmission(
+                world,
+                entity,
+                in order,
+                in buffer) ?? OrderSubmitResult.Activated;
+            if (admission != OrderSubmitResult.Activated)
+            {
+                return admission;
+            }
 
-            return order.SubmitMode == OrderSubmitMode.Queued
+            OrderBuffer before = default;
+            int expectedCancellations = 0;
+            if (OrderAdmissionTracking.HasWaitingNetworkFeedback(in buffer))
+            {
+                before = buffer;
+                Preview(
+                    world,
+                    entity,
+                    in order,
+                    registry,
+                    orderRuleRegistry,
+                    currentStep,
+                    stepRateHz,
+                    out OrderBuffer projected);
+                expectedCancellations = OrderAdmissionTracking.CountRemovedWaiting(in before, in projected);
+                if (expectedCancellations > 0 &&
+                    (admissionResults == null || admissionResults.AvailableCapacity < expectedCancellations))
+                {
+                    throw new InvalidOperationException(
+                        $"Submitting order {order.OrderId} would cancel {expectedCancellations} network-admitted waiting orders without matching result capacity.");
+                }
+            }
+
+            OrderSubmitResult result = IsQueuedMode(order.SubmitMode)
                 ? HandleQueuedMode(ref buffer, in order, in config, currentStep, stepRateHz)
                 : HandleImmediateMode(world, entity, ref buffer, in order, in config, registry, orderRuleRegistry, currentStep, stepRateHz);
+            if (expectedCancellations > 0)
+            {
+                int actualCancellations = OrderAdmissionTracking.CountRemovedWaiting(in before, in buffer);
+                if (actualCancellations != expectedCancellations)
+                {
+                    throw new InvalidOperationException(
+                        $"Order {order.OrderId} cancellation count changed after preflight: expected {expectedCancellations}, got {actualCancellations}.");
+                }
+
+                OrderAdmissionTracking.PublishRemovedWaiting(
+                    admissionResults!,
+                    in before,
+                    in buffer,
+                    OrderSubmitResult.Cancelled);
+            }
+
+            return result;
         }
 
         private static OrderSubmitResult HandleQueuedMode(
@@ -129,7 +225,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.QueueFull;
             }
 
-            int expireStep = CalculateExpireStep(config, currentStep, stepRateHz);
+            int expireStep = order.SubmitMode == OrderSubmitMode.PersistentQueued
+                ? -1
+                : CalculateExpireStep(config, currentStep, stepRateHz);
             return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                 ? OrderSubmitResult.Queued
                 : OrderSubmitResult.QueueFull;
@@ -277,7 +375,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 }
             }
 
-            if (config.EntityBlackboardKey >= 0 && order.Target != default && world.Has<BlackboardEntityBuffer>(entity))
+            if (config.EntityBlackboardKey >= 0 && order.Target != Entity.Null && world.Has<BlackboardEntityBuffer>(entity))
             {
                 ref var entities = ref world.Get<BlackboardEntityBuffer>(entity);
                 entities.Set(config.EntityBlackboardKey, order.Target);
@@ -346,6 +444,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return currentStep + bufferTicks;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsQueuedMode(OrderSubmitMode mode) =>
+            mode is OrderSubmitMode.Queued or OrderSubmitMode.PersistentQueued;
+
         public static void NotifyOrderComplete(World world, Entity entity, OrderTypeRegistry registry)
         {
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
@@ -359,12 +461,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             DeactivateCurrentOrder(world, entity, ref buffer, registry);
             WriteCompletedOrderSignal(world, entity, completedOrderId, completedOrderTypeId);
 
-            if (buffer.PromoteNext())
-            {
-                var nextOrder = buffer.ActiveOrder.Order;
-                var nextConfig = registry.Get(nextOrder.OrderTypeId);
-                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
-            }
         }
 
         public static bool TryPromoteNextQueuedToActive(World world, Entity entity, OrderTypeRegistry registry)
@@ -423,15 +519,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 world.Set(entity, default(CompletedOrderSignal));
             }
 
-            if (buffer.PromoteNext())
-            {
-                Order nextOrder = buffer.ActiveOrder.Order;
-                OrderTypeConfig nextConfig = registry.Get(nextOrder.OrderTypeId);
-                ActivateOrder(world, entity, ref buffer, in nextOrder, in nextConfig);
-            }
         }
 
-        public static void CancelAll(World world, Entity entity, OrderTypeRegistry registry)
+        public static void CancelAll(
+            World world,
+            Entity entity,
+            OrderTypeRegistry registry,
+            OrderAdmissionResultBuffer? admissionResults = null)
         {
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
@@ -439,8 +533,62 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
+            int correlatedWaiting = 0;
+            if (buffer.HasPending && OrderAdmissionTracking.RequiresNetworkFeedback(in buffer.PendingOrder.Order))
+            {
+                correlatedWaiting++;
+            }
+
+            for (int i = 0; i < buffer.QueuedCount; i++)
+            {
+                Order queued = buffer.GetQueued(i).Order;
+                if (OrderAdmissionTracking.RequiresNetworkFeedback(in queued))
+                {
+                    correlatedWaiting++;
+                }
+            }
+
+            if (correlatedWaiting > 0)
+            {
+                if (admissionResults == null || admissionResults.AvailableCapacity < correlatedWaiting)
+                {
+                    throw new InvalidOperationException(
+                        $"Cancelling {correlatedWaiting} admitted waiting orders requires matching result capacity.");
+                }
+
+                if (buffer.HasPending && OrderAdmissionTracking.RequiresNetworkFeedback(in buffer.PendingOrder.Order))
+                {
+                    Order pending = buffer.PendingOrder.Order;
+                    PublishCancellation(admissionResults, in pending);
+                }
+
+                for (int i = 0; i < buffer.QueuedCount; i++)
+                {
+                    Order queued = buffer.GetQueued(i).Order;
+                    if (OrderAdmissionTracking.RequiresNetworkFeedback(in queued))
+                    {
+                        PublishCancellation(admissionResults, in queued);
+                    }
+                }
+            }
+
             DeactivateCurrentOrder(world, entity, ref buffer, registry);
             buffer.Clear();
+        }
+
+        private static void PublishCancellation(
+            OrderAdmissionResultBuffer admissionResults,
+            in Order order)
+        {
+            var outcome = new OrderAdmissionOutcome(
+                in order,
+                OrderAdmissionStage.EntityIntake,
+                OrderSubmitResult.Cancelled);
+            if (!admissionResults.TryWrite(in outcome))
+            {
+                throw new InvalidOperationException(
+                    $"Order cancellation result capacity {admissionResults.Capacity} is exhausted.");
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

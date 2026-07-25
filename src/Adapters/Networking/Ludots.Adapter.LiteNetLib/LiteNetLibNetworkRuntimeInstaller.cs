@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Hosting;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
@@ -27,20 +28,32 @@ public static class LiteNetLibNetworkRuntimeInstaller
         config.Validate();
         host.Validate();
 
-        if (!ContentFingerprint.TryParseHex(bootstrap.PlanFingerprint, out ContentFingerprint contentFingerprint) ||
-            contentFingerprint.IsEmpty)
-        {
-            throw new InvalidOperationException(
-                "Networked launch requires a non-empty 64-character launcher plan fingerprint.");
-        }
-
         NetworkProcessRole role = host.ResolveRole();
+        var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
+        ResolvedModLoadPlan modPlan = Require(engine, CoreServiceKeys.ModLoadPlan);
+        ContentFingerprint contentFingerprint = LiteNetLibContentFingerprintComposer.Compose(
+            engine,
+            modPlan,
+            bootstrap.AssetsRoot,
+            protocol);
         var projectors = new ReplicationSchemaProjectorRegistry(config.ReplicationSchemaCapacity);
         var appliers = new ClientReplicationSchemaApplierRegistry(config.ReplicationSchemaCapacity);
-        var observer = new NetworkRuntimeStateObserver(config.PlayerCapacity);
+        var observer = new NetworkRuntimeStateObserver(
+            config.PlayerCapacity,
+            config.CommandSequenceHistoryCapacity,
+            config.MaxActorsPerCommandBatch);
+        if (engine.TryGetService(
+                CoreServiceKeys.NetworkFaultInjectionMetrics,
+                out INetworkFaultInjectionMetricsPort _))
+        {
+            throw new InvalidOperationException(
+                "Network fault injection metrics were already installed for this engine.");
+        }
+
         engine.SetService(CoreServiceKeys.ReplicationSchemaProjectors, projectors);
         engine.SetService(CoreServiceKeys.ClientReplicationSchemaAppliers, appliers);
         engine.SetService(CoreServiceKeys.NetworkRuntimeStateObserver, observer);
+        engine.SetService(CoreServiceKeys.NetworkContentFingerprint, contentFingerprint);
 
         string baseDirectory = Path.GetFullPath(runtimeBaseDirectory);
         var deferred = new DeferredNetworkRuntimePort(
@@ -49,9 +62,10 @@ public static class LiteNetLibNetworkRuntimeInstaller
                 ? ComposeServer(engine, config, host, contentFingerprint, projectors, observer)
                 : ComposeClient(engine, config, host, contentFingerprint, appliers, observer, baseDirectory));
         engine.ConfigureNetworkRuntime(role, deferred);
+        engine.SetService(CoreServiceKeys.NetworkFaultInjectionMetrics, (INetworkFaultInjectionMetricsPort)deferred);
     }
 
-    private static INetworkRuntimePort ComposeServer(
+    private static DeferredNetworkRuntimeComposition ComposeServer(
         GameEngine engine,
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
@@ -70,13 +84,13 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkCommandIngress commands = Require(engine, CoreServiceKeys.NetworkCommandIngress);
         NetworkGameplayCommandGate gameplayCommandGate = Require(engine, CoreServiceKeys.NetworkGameplayCommandGate);
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
+        OrderAdmissionResultBuffer entityAdmissions = Require(engine, CoreServiceKeys.EntityOrderAdmissionResults);
         var mapSession = engine.CurrentMapSession ??
             throw new InvalidOperationException("Authoritative networking requires the startup map before accepting connections.");
         var controllers = new AuthoritativeSeatControllerRegistry(
             engine.World,
             mapSession.PlayerEntityLookup,
             config.PlayerCapacity);
-        engine.SetService(CoreServiceKeys.AuthoritativeSeatControllers, controllers);
         var capacity = NetworkRuntimeCapacity.FromConfig(config);
         var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
         var sessionEpoch = IssueSessionEpoch();
@@ -96,24 +110,49 @@ public static class LiteNetLibNetworkRuntimeInstaller
             config);
         LiteNetLibServerDatagramPort transport = LiteNetLibTransportFactory.CreateServer(
             config,
+            host,
             host.Port,
             host.ConnectionKey);
-        return new AuthoritativeServerNetworkRuntime(
-            in capacity,
-            transport,
-            transport,
-            transport,
-            sessions,
-            commands,
-            gameplayCommandGate,
-            admissions,
-            controllers,
-            entities,
-            seatFactory.CreateAll(),
-            observer);
+        try
+        {
+            var runtime = new AuthoritativeServerNetworkRuntime(
+                in capacity,
+                transport,
+                transport,
+                transport,
+                sessions,
+                commands,
+                gameplayCommandGate,
+                admissions,
+                entityAdmissions,
+                controllers,
+                entities,
+                seatFactory.CreateAll(),
+                observer);
+            return new DeferredNetworkRuntimeComposition(
+                runtime,
+                transport,
+                () =>
+                {
+                    if (engine.TryGetService(
+                            CoreServiceKeys.AuthoritativeSeatControllers,
+                            out AuthoritativeSeatControllerRegistry _))
+                    {
+                        throw new InvalidOperationException(
+                            "Authoritative seat controllers were already published before network activation.");
+                    }
+
+                    engine.SetService(CoreServiceKeys.AuthoritativeSeatControllers, controllers);
+                });
+        }
+        catch
+        {
+            transport.Dispose();
+            throw;
+        }
     }
 
-    private static INetworkRuntimePort ComposeClient(
+    private static DeferredNetworkRuntimeComposition ComposeClient(
         GameEngine engine,
         NetworkRuntimeConfig config,
         NetworkHostBootstrapConfig host,
@@ -128,7 +167,6 @@ public static class LiteNetLibNetworkRuntimeInstaller
         }
 
         appliers.Freeze();
-        NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
         var capacity = NetworkRuntimeCapacity.FromConfig(config);
         var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
         string credentialPath = Path.IsPathRooted(host.CredentialPath)
@@ -136,31 +174,63 @@ public static class LiteNetLibNetworkRuntimeInstaller
             : Path.GetFullPath(Path.Combine(runtimeBaseDirectory, host.CredentialPath));
         LiteNetLibClientDatagramPort transport = LiteNetLibTransportFactory.CreateClient(
             config,
+            host,
             host.Host,
             host.Port,
             host.ConnectionKey);
-        NetworkCommandSchemaRegistry commandSchemas = Require(engine, CoreServiceKeys.NetworkCommandSchemaRegistry);
-        var runtime = new ReplicatedClientNetworkRuntime(
-            in capacity,
-            transport,
-            transport,
-            transport,
-            config.ClientReconnectRetryMilliseconds / 1000f,
-            protocol,
-            contentFingerprint,
-            new AtomicFileClientSessionCredentialPort(credentialPath),
-            new ClientReplicationBridgeFactory(engine.World, config.NetworkEntityCapacity, appliers),
-            admissions,
-            new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
-        engine.SetService(
-            CoreServiceKeys.ReplicatedClientCommandPort,
-            new ReplicatedClientCommandPort(
+        try
+        {
+            NetworkCommandSchemaRegistry commandSchemas = Require(engine, CoreServiceKeys.NetworkCommandSchemaRegistry);
+            KnowledgeProjectionStore knowledge = Require(engine, CoreServiceKeys.KnowledgeProjectionStore);
+            var runtime = new ReplicatedClientNetworkRuntime(
+                in capacity,
+                transport,
+                transport,
+                transport,
+                config.ClientReconnectRetryMilliseconds / 1000f,
+                config.ReconnectWindowSeconds,
+                protocol,
+                contentFingerprint,
+                new AtomicFileClientSessionCredentialPort(credentialPath),
+                new ClientReplicationBridgeFactory(
+                    engine.World,
+                    config.NetworkEntityCapacity,
+                    appliers,
+                    knowledge,
+                    () => engine.GetService(CoreServiceKeys.LocalPlayerEntity)),
+                new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
+            var commandPort = new ReplicatedClientCommandPort(
                 engine.World,
                 runtime,
                 commandSchemas,
-                config.MaxActorsPerCommandBatch));
-        engine.SetService(CoreServiceKeys.ReplicatedClientRoomControlPort, (IReplicatedClientRoomControlPort)runtime);
-        return runtime;
+                config.MaxActorsPerCommandBatch);
+            return new DeferredNetworkRuntimeComposition(
+                runtime,
+                transport,
+                () =>
+                {
+                    if (engine.TryGetService(
+                            CoreServiceKeys.ReplicatedClientCommandPort,
+                            out IReplicatedClientCommandPort _) ||
+                        engine.TryGetService(
+                            CoreServiceKeys.ReplicatedClientRoomControlPort,
+                            out IReplicatedClientRoomControlPort _))
+                    {
+                        throw new InvalidOperationException(
+                            "Replicated-client role services were already published before network activation.");
+                    }
+
+                    engine.SetService(CoreServiceKeys.ReplicatedClientCommandPort, commandPort);
+                    engine.SetService(
+                        CoreServiceKeys.ReplicatedClientRoomControlPort,
+                        (IReplicatedClientRoomControlPort)runtime);
+                });
+        }
+        catch
+        {
+            transport.Dispose();
+            throw;
+        }
     }
 
     private static T Require<T>(GameEngine engine, ServiceKey<T> key)

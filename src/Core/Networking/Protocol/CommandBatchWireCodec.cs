@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Replication;
 
 namespace Ludots.Core.Networking.Protocol
@@ -35,6 +36,11 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.Overflow;
             }
 
+            if ((uint)header.SubmitMode > (uint)OrderSubmitMode.PersistentQueued)
+            {
+                return NetworkWireCodecStatus.InvalidEnum;
+            }
+
             int required = GetPayloadSize(entries.Length);
             if (destination.Length < required)
             {
@@ -56,7 +62,8 @@ namespace Ludots.Core.Networking.Protocol
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, header.TargetTick) ||
                 !NetworkWireBinary.TryWriteInt32(destination, ref offset, header.AcknowledgedCommittedTick) ||
                 !NetworkWireBinary.TryWriteUInt16(destination, ref offset, header.EntryCount) ||
-                !NetworkWireBinary.TryWriteUInt16(destination, ref offset, 0))
+                !NetworkWireBinary.TryWriteByte(destination, ref offset, (byte)header.SubmitMode) ||
+                !NetworkWireBinary.TryWriteByte(destination, ref offset, 0))
             {
                 return NetworkWireCodecStatus.BufferTooSmall;
             }
@@ -93,9 +100,19 @@ namespace Ludots.Core.Networking.Protocol
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int targetTick) ||
                 !NetworkWireBinary.TryReadInt32(source, ref offset, out int acknowledgedCommittedTick) ||
                 !NetworkWireBinary.TryReadUInt16(source, ref offset, out ushort declaredCount) ||
-                !NetworkWireBinary.TryReadUInt16(source, ref offset, out _))
+                !NetworkWireBinary.TryReadByte(source, ref offset, out byte submitModeValue) ||
+                !NetworkWireBinary.TryReadByte(source, ref offset, out byte reserved))
             {
                 return NetworkWireCodecStatus.MalformedLength;
+            }
+
+            if ((uint)submitModeValue > (uint)OrderSubmitMode.PersistentQueued)
+            {
+                return NetworkWireCodecStatus.InvalidEnum;
+            }
+            if (reserved != 0)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
             }
 
             long required = NetworkCommandBatchHeader.SizeInBytes +
@@ -137,7 +154,8 @@ namespace Ludots.Core.Networking.Protocol
                 clientSequence,
                 targetTick,
                 acknowledgedCommittedTick,
-                declaredCount);
+                declaredCount,
+                (OrderSubmitMode)submitModeValue);
             entryCount = declaredCount;
             return NetworkWireCodecStatus.Success;
         }

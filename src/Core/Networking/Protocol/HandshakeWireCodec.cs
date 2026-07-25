@@ -4,7 +4,7 @@ using Ludots.Core.Networking.Session;
 namespace Ludots.Core.Networking.Protocol
 {
     /// <summary>
-    /// Little-endian codecs for session handshake request/response payloads.
+    /// Little-endian codecs for session handshake request, response, and confirmation payloads.
     /// </summary>
     public static class HandshakeWireCodec
     {
@@ -12,7 +12,9 @@ namespace Ludots.Core.Networking.Protocol
             2 + 2 + ContentFingerprint.ByteLength + 8 + 8 + 8;
 
         public const int ResponseSizeInBytes =
-            1 + 1 + 2 + 4 + 4 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8;
+            1 + 1 + 2 + 4 + 4 + 4 + 8 + 8 + 2 + 2 + ContentFingerprint.ByteLength + 8 + 8;
+
+        public const int ConfirmationSizeInBytes = 8 + 4 + 4 + 8 + 8;
 
         public static NetworkWireCodecStatus TryEncodeRequest(
             in SessionHandshakeRequest request,
@@ -118,12 +120,13 @@ namespace Ludots.Core.Networking.Protocol
                 if (response.RejectReason != HandshakeRejectReason.None ||
                     !response.Seat.IsValid ||
                     response.ReconnectToken.IsEmpty ||
-                    response.SessionEpoch.IsEmpty)
+                    response.SessionEpoch.IsEmpty ||
+                    response.NextClientBatchSequence == 0)
                 {
                     return NetworkWireCodecStatus.InvalidInput;
                 }
             }
-            else if (response.RejectReason == HandshakeRejectReason.None)
+            else if (!IsKnownRejectReason((byte)response.RejectReason))
             {
                 return NetworkWireCodecStatus.InvalidEnum;
             }
@@ -152,7 +155,8 @@ namespace Ludots.Core.Networking.Protocol
             response.ContentFingerprint.CopyTo(fingerprint);
             offset += ContentFingerprint.ByteLength;
 
-            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.SessionEpoch.Value))
+            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.SessionEpoch.Value) ||
+                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, response.NextClientBatchSequence))
             {
                 return NetworkWireCodecStatus.BufferTooSmall;
             }
@@ -198,7 +202,8 @@ namespace Ludots.Core.Networking.Protocol
 
             Span<byte> fingerprintBytes = stackalloc byte[ContentFingerprint.ByteLength];
             if (!NetworkWireBinary.TryReadBytes(source, ref offset, fingerprintBytes) ||
-                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch))
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch) ||
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong nextClientBatchSequence))
             {
                 return NetworkWireCodecStatus.MalformedLength;
             }
@@ -227,8 +232,13 @@ namespace Ludots.Core.Networking.Protocol
                     return NetworkWireCodecStatus.InvalidEnum;
                 }
 
+                if (seatSlot < 0 || seatGeneration == 0 || playerIdValue <= 0)
+                {
+                    return NetworkWireCodecStatus.InvalidInput;
+                }
+
                 var seat = new SessionSeatBinding(seatSlot, seatGeneration, new PlayerId(playerIdValue));
-                if (!seat.IsValid || token.IsEmpty || sessionEpoch.IsEmpty)
+                if (!seat.IsValid || token.IsEmpty || sessionEpoch.IsEmpty || nextClientBatchSequence == 0)
                 {
                     return NetworkWireCodecStatus.InvalidInput;
                 }
@@ -238,7 +248,8 @@ namespace Ludots.Core.Networking.Protocol
                     token,
                     version,
                     fingerprint,
-                    sessionEpoch);
+                    sessionEpoch,
+                    nextClientBatchSequence);
                 return NetworkWireCodecStatus.Success;
             }
 
@@ -250,7 +261,8 @@ namespace Ludots.Core.Networking.Protocol
             if (seatSlot != -1 ||
                 seatGeneration != 0 ||
                 playerIdValue != 0 ||
-                !token.IsEmpty)
+                !token.IsEmpty ||
+                nextClientBatchSequence != 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
             }
@@ -263,8 +275,74 @@ namespace Ludots.Core.Networking.Protocol
             return NetworkWireCodecStatus.Success;
         }
 
+        public static NetworkWireCodecStatus TryEncodeConfirmation(
+            in SessionHandshakeConfirmation confirmation,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            bytesWritten = 0;
+            if (!confirmation.IsWellFormed)
+            {
+                return NetworkWireCodecStatus.InvalidInput;
+            }
+
+            if (destination.Length < ConfirmationSizeInBytes)
+            {
+                return NetworkWireCodecStatus.BufferTooSmall;
+            }
+
+            int offset = 0;
+            if (!NetworkWireBinary.TryWriteUInt64(destination, ref offset, confirmation.SessionEpoch.Value) ||
+                !NetworkWireBinary.TryWriteInt32(destination, ref offset, confirmation.SeatSlot) ||
+                !NetworkWireBinary.TryWriteUInt32(destination, ref offset, confirmation.SeatGeneration) ||
+                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, confirmation.ReconnectToken.Low) ||
+                !NetworkWireBinary.TryWriteUInt64(destination, ref offset, confirmation.ReconnectToken.High))
+            {
+                return NetworkWireCodecStatus.BufferTooSmall;
+            }
+
+            bytesWritten = offset;
+            return NetworkWireCodecStatus.Success;
+        }
+
+        public static NetworkWireCodecStatus TryDecodeConfirmation(
+            ReadOnlySpan<byte> source,
+            out SessionHandshakeConfirmation confirmation)
+        {
+            confirmation = default;
+            if (source.Length < ConfirmationSizeInBytes)
+            {
+                return NetworkWireCodecStatus.MalformedLength;
+            }
+
+            int offset = 0;
+            if (!NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong epoch) ||
+                !NetworkWireBinary.TryReadInt32(source, ref offset, out int seatSlot) ||
+                !NetworkWireBinary.TryReadUInt32(source, ref offset, out uint seatGeneration) ||
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenLow) ||
+                !NetworkWireBinary.TryReadUInt64(source, ref offset, out ulong tokenHigh))
+            {
+                return NetworkWireCodecStatus.MalformedLength;
+            }
+
+            NetworkWireCodecStatus end = NetworkWireBinary.EnsureExactEnd(source, offset);
+            if (end != NetworkWireCodecStatus.Success)
+            {
+                return end;
+            }
+
+            confirmation = new SessionHandshakeConfirmation(
+                new SessionEpoch(epoch),
+                seatSlot,
+                seatGeneration,
+                new ReconnectToken(tokenLow, tokenHigh));
+            return confirmation.IsWellFormed
+                ? NetworkWireCodecStatus.Success
+                : NetworkWireCodecStatus.InvalidInput;
+        }
+
         private static bool IsKnownRejectReason(byte value) =>
             value is >= (byte)HandshakeRejectReason.ProtocolMismatch
-                and <= (byte)HandshakeRejectReason.SessionEpochMismatch;
+                and <= (byte)HandshakeRejectReason.MatchAlreadyStarted;
     }
 }

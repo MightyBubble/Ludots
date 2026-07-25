@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using System.Numerics;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -12,6 +14,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Map;
@@ -20,8 +23,10 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
+using RtsMultiplayerFrontlineMod.Systems;
 
 namespace RtsMultiplayerFrontlineMod.Runtime;
 
@@ -249,14 +254,17 @@ internal sealed class FrontlineClientTemplateFactory
     private readonly string[] _entityContexts = new string[5];
     private readonly World _world;
     private readonly EntityBuilder _builder;
+    private readonly PresentationStableIdAllocator _stableIds;
 
     public FrontlineClientTemplateFactory(
         World world,
         IEnumerable<EntityTemplate> templates,
         ReadOnlySpan<FrontlineReplicationSpec> specs,
-        int matchStateSchemaId)
+        int matchStateSchemaId,
+        PresentationStableIdAllocator stableIds)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
+        _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         ArgumentNullException.ThrowIfNull(templates);
         if (specs.Length != 4)
         {
@@ -327,10 +335,21 @@ internal sealed class FrontlineClientTemplateFactory
             throw new ArgumentOutOfRangeException(nameof(kind));
         }
 
-        return _builder
+        Entity entity = _builder
             .UseTemplate(_templateIds[index])
             .WithEntityContext(_entityContexts[index])
             .Build();
+        if (kind != FrontlineReplicationKind.MatchState)
+        {
+            if (world.Has<PresentationStableId>(entity))
+            {
+                throw new InvalidOperationException("RTS Frontline replicated templates must not author shared presentation stable ids.");
+            }
+
+            world.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
+        }
+
+        return entity;
     }
 
     private static int FindSpec(ReadOnlySpan<FrontlineReplicationSpec> specs, int schemaId)
@@ -369,6 +388,9 @@ internal sealed class FrontlineClientTemplateFactory
     private static void ValidateTemplate(EntityTemplate template, in FrontlineReplicationSpec spec)
     {
         RequireComponent(template, "WorldPositionCm");
+        RequireComponent(template, "VisualTransform");
+        RequireComponent(template, "CullState");
+        RequireComponent(template, "CommandSourceSelectableState");
         RequireComponent(template, ReplicationSchemaComponent);
         if (spec.HasHealth || spec.HasCrystals)
         {
@@ -416,28 +438,40 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
     private readonly FrontlineSideConfig[] _sides;
     private readonly int _healthAttributeId;
     private readonly int _crystalAttributeId;
+    private readonly FrontlineTagBinder _tagBinder;
+    private readonly OwnershipResolver _ownership;
+    private readonly PlayerEntityLookup _players;
 
     protected FrontlineReplicationApplier(
         in FrontlineReplicationSpec spec,
         FrontlineClientTemplateFactory templates,
         FrontlineSideConfig[] sides,
         int healthAttributeId,
-        int crystalAttributeId)
+        int crystalAttributeId,
+        FrontlineTagBinder tagBinder,
+        OwnershipResolver ownership,
+        PlayerEntityLookup players)
     {
         _spec = spec;
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _sides = sides ?? throw new ArgumentNullException(nameof(sides));
         _healthAttributeId = healthAttributeId;
         _crystalAttributeId = crystalAttributeId;
+        _tagBinder = tagBinder ?? throw new ArgumentNullException(nameof(tagBinder));
+        _ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
+        _players = players ?? throw new ArgumentNullException(nameof(players));
     }
 
     public bool CanCreate(World world, in ReplicatedEntityState state) =>
-        world != null && ValidatePayload(state.Values, state.SchemaId);
+        world != null &&
+        ValidatePayload(state.Values, state.SchemaId) &&
+        CanResolveOwner(world, state.Values);
 
     public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) =>
         world != null &&
         world.IsAlive(entity) &&
         ValidatePayload(state.Values, state.SchemaId) &&
+        CanResolveOwner(world, state.Values) &&
         MatchesFormalEntity(world, entity);
 
     public bool CanConceal(World world, Entity entity) =>
@@ -452,7 +486,8 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         {
             throw new ArgumentNullException(nameof(world));
         }
-        if (!ValidatePayload(state.Values, state.SchemaId))
+        if (!ValidatePayload(state.Values, state.SchemaId) ||
+            !CanResolveOwner(world, state.Values))
         {
             throw new InvalidOperationException(
                 $"RTS Frontline schema {_spec.SchemaId} rejected replicated create payload.");
@@ -475,7 +510,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
             }
 
             world.Add(entity, in identity, in state);
-            ApplyPayload(world, entity, state.Values);
+            ApplyPayload(world, entity, state.Values, isCreate: true);
             return entity;
         }
         catch
@@ -495,7 +530,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
             throw new InvalidOperationException(
                 $"RTS Frontline schema {_spec.SchemaId} rejected replicated update payload.");
         }
-        ApplyPayload(world, entity, state.Values);
+        ApplyPayload(world, entity, state.Values, isCreate: false);
     }
 
     public void Conceal(World world, Entity entity)
@@ -505,7 +540,8 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
             throw new InvalidOperationException(
                 $"RTS Frontline schema {_spec.SchemaId} cannot conceal an entity outside its formal template contract.");
         }
-        ApplyPayload(world, entity, default);
+        ApplyPayload(world, entity, default, isCreate: false);
+        SetDisclosureVisibility(world, entity, isVisible: false);
     }
 
     private bool ValidatePayload(in ReplicationStateVector values, int schemaId)
@@ -535,21 +571,41 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         bool teamValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.TeamValid);
         bool playerValid = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PlayerValid);
         if (teamValid != playerValid ||
+            _spec.HasOwner != teamValid ||
             (!teamValid && values.Value2 != 0))
         {
             return false;
         }
 
-        return !teamValid || TryResolveSide(
+        return !_spec.HasOwner || TryResolveSide(
             FrontlineReplicationPayload.UnpackLowInt(values.Value2),
             FrontlineReplicationPayload.UnpackHighInt(values.Value2),
             out _);
+    }
+
+    private bool CanResolveOwner(World world, ReplicationStateVector values)
+    {
+        if (!_spec.HasOwner)
+        {
+            return true;
+        }
+
+        int playerId = FrontlineReplicationPayload.UnpackHighInt(values.Value2);
+        return _players.TryGet(playerId, out Entity representative) &&
+            representative != Entity.Null &&
+            world.IsAlive(representative) &&
+            world.TryGet(representative, out PlayerIdentity identity) &&
+            identity.PlayerId == playerId;
     }
 
     private bool MatchesFormalEntity(World world, Entity entity)
     {
         if (!FrontlineReplicationProjector.MatchesSchemaEntity(world, entity, in _spec) ||
             !world.Has<WorldPositionCm>(entity) ||
+            !world.Has<PreviousWorldPositionCm>(entity) ||
+            !world.Has<VisualTransform>(entity) ||
+            !world.Has<CullState>(entity) ||
+            !world.Has<CommandSourceSelectableState>(entity) ||
             ((_spec.HasHealth || _spec.HasCrystals) && !world.Has<AttributeBuffer>(entity)) ||
             (_spec.HasOwner &&
              (!world.Has<Team>(entity) ||
@@ -571,15 +627,31 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         _ => false,
     };
 
-    private void ApplyPayload(World world, Entity entity, in ReplicationStateVector values)
+    private void ApplyPayload(
+        World world,
+        Entity entity,
+        in ReplicationStateVector values,
+        bool isCreate)
     {
+        SetDisclosureVisibility(world, entity, isVisible: true);
         long valid = values.Value3;
         WorldPositionCm position = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PositionValid)
             ? WorldPositionCm.FromCm(
                 FrontlineReplicationPayload.UnpackLowInt(values.Value0),
                 FrontlineReplicationPayload.UnpackHighInt(values.Value0))
             : WorldPositionCm.FromCm(0, 0);
+        WorldPositionCm previous = world.Get<WorldPositionCm>(entity);
         world.Set(entity, in position);
+        var previousPosition = new PreviousWorldPositionCm
+        {
+            Value = isCreate ? position.Value : previous.Value,
+        };
+        world.Set(entity, in previousPosition);
+        ref VisualTransform visual = ref world.Get<VisualTransform>(entity);
+        visual.Position = new Vector3(
+            position.Value.X.ToFloat() * 0.01f,
+            visual.Position.Y,
+            position.Value.Y.ToFloat() * 0.01f);
 
         if (_spec.HasHealth || _spec.HasCrystals)
         {
@@ -602,6 +674,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
         if (!_spec.HasOwner)
         {
+            _tagBinder.BindReplicatedEntity(world, entity);
             return;
         }
 
@@ -620,6 +693,27 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
         ref VisionEmitterCm emitter = ref world.Get<VisionEmitterCm>(entity);
         emitter.ScopeKeyId = sideIndex >= 0 ? _sides[sideIndex].VisionScopeKeyId : 0;
+        if (hasOwner)
+        {
+            if (!OwnershipEdgeBuilder.TryLinkSpawnedEntity(world, _ownership, _players, entity))
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline replicated entity could not bind PlayerOwner {playerId} to a live formal player representative.");
+            }
+        }
+        else
+        {
+            _ownership.ClearOwnership(entity);
+        }
+        _tagBinder.BindReplicatedEntity(world, entity);
+    }
+
+    private static void SetDisclosureVisibility(World world, Entity entity, bool isVisible)
+    {
+        ref CullState cull = ref world.Get<CullState>(entity);
+        cull.IsVisible = isVisible;
+        ref CommandSourceSelectableState selectable = ref world.Get<CommandSourceSelectableState>(entity);
+        selectable.IsEnabled = isVisible ? (byte)1 : (byte)0;
     }
 
     private bool TryResolveSide(int teamId, int playerId, out int sideIndex)
@@ -639,26 +733,26 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
 internal sealed class FrontlineCoreReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineCoreReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
-        : base(in spec, templates, sides, healthId, crystalId) { }
+    public FrontlineCoreReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineHarvesterReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineHarvesterReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
-        : base(in spec, templates, sides, healthId, crystalId) { }
+    public FrontlineHarvesterReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineInfantryReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineInfantryReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
-        : base(in spec, templates, sides, healthId, crystalId) { }
+    public FrontlineInfantryReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineCrystalNodeReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineCrystalNodeReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId)
-        : base(in spec, templates, sides, healthId, crystalId) { }
+    public FrontlineCrystalNodeReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal static class FrontlineMatchStatePayload
@@ -1430,6 +1524,8 @@ internal static class FrontlineReplication
             new FrontlineVisionScopeAuthoringSystem(engine.World, config.Sides),
             SystemGroup.SchemaUpdate);
 
+        ConfigureFogProjectionPolicy(engine, config);
+
         NetworkProcessRole role = engine.GetService(CoreServiceKeys.NetworkProcessRole);
         if (role == NetworkProcessRole.Standalone)
         {
@@ -1450,16 +1546,25 @@ internal static class FrontlineReplication
         }
 
         FrontlineReplicationSpec[] specs = CreateSpecs(config.Replication);
+        PresentationStableIdAllocator stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
+            ?? throw new InvalidOperationException("RTS Frontline client replication requires presentation stable id allocation.");
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
-            config.Replication.MatchStateSchemaId);
+            config.Replication.MatchStateSchemaId,
+            stableIds);
+        OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
+            ?? throw new InvalidOperationException("RTS Frontline client replication requires OwnershipResolver.");
+        PlayerEntityLookup players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+            ?? throw new InvalidOperationException("RTS Frontline client replication requires PlayerEntityLookup.");
         RegisterHandlers(
             projectors,
             appliers,
             templates,
             runtime,
+            ownership,
+            players,
             config.Sides,
             config.Replication.MatchStateSchemaId,
             specs,
@@ -1474,6 +1579,42 @@ internal static class FrontlineReplication
                 new FrontlineNetworkEntityBindingSystem(engine.World, entities),
                 SystemGroup.Cleanup);
         }
+    }
+
+    internal static FogProjectionPolicy CreateFogProjectionPolicy(FrontlineConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        KnowledgeIdMask256 attributes = KnowledgeIdMask256.Empty;
+        for (int i = 0; i < config.Replication.VisibleEnemyAttributes.Length; i++)
+        {
+            string attribute = config.Replication.VisibleEnemyAttributes[i];
+            int attributeId = AttributeRegistry.GetId(attribute);
+            if (attributeId == AttributeRegistry.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline visible enemy attribute '{attribute}' is not registered.");
+            }
+
+            attributes = attributes.WithId(attributeId);
+        }
+
+        return new FogProjectionPolicy(
+            new FogDisclosurePolicy(
+                attributes,
+                KnowledgeIdMask256.Empty,
+                KnowledgeIdMask256.Empty,
+                ttlTicks: 0,
+                trueSightRevealsConcealment: true),
+            memoryTtlTicks: 0);
+    }
+
+    private static void ConfigureFogProjectionPolicy(GameEngine engine, FrontlineConfig config)
+    {
+        FogKnowledgeProjector projector = engine.GetService(CoreServiceKeys.FogKnowledgeProjector)
+            ?? throw new InvalidOperationException(
+                "RTS Frontline requires the Core fog Knowledge projector before GameStart registration.");
+        FogProjectionPolicy policy = CreateFogProjectionPolicy(config);
+        projector.ConfigureProjectionPolicy(in policy);
     }
 
     internal static FrontlineReplicationSpec[] CreateSpecs(FrontlineReplicationConfig config)
@@ -1492,6 +1633,8 @@ internal static class FrontlineReplication
         ClientReplicationSchemaApplierRegistry appliers,
         FrontlineClientTemplateFactory templates,
         FrontlineRuntime runtime,
+        OwnershipResolver ownership,
+        PlayerEntityLookup players,
         FrontlineSideConfig[] sides,
         int matchStateSchemaId,
         ReadOnlySpan<FrontlineReplicationSpec> specs,
@@ -1509,10 +1652,11 @@ internal static class FrontlineReplication
         RegisterOrThrow(projectors, specs[3].SchemaId, new FrontlineCrystalNodeReplicationProjector(in specs[3], healthId, crystalId));
         RegisterOrThrow(projectors, matchStateSchemaId, new FrontlineMatchStateReplicationProjector(runtime, matchStateSchemaId));
 
-        RegisterOrThrow(appliers, specs[0].SchemaId, new FrontlineCoreReplicationApplier(in specs[0], templates, sides, healthId, crystalId));
-        RegisterOrThrow(appliers, specs[1].SchemaId, new FrontlineHarvesterReplicationApplier(in specs[1], templates, sides, healthId, crystalId));
-        RegisterOrThrow(appliers, specs[2].SchemaId, new FrontlineInfantryReplicationApplier(in specs[2], templates, sides, healthId, crystalId));
-        RegisterOrThrow(appliers, specs[3].SchemaId, new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, sides, healthId, crystalId));
+        FrontlineTagBinder tagBinder = runtime.TagBinder;
+        RegisterOrThrow(appliers, specs[0].SchemaId, new FrontlineCoreReplicationApplier(in specs[0], templates, sides, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[1].SchemaId, new FrontlineHarvesterReplicationApplier(in specs[1], templates, sides, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[2].SchemaId, new FrontlineInfantryReplicationApplier(in specs[2], templates, sides, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[3].SchemaId, new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, sides, healthId, crystalId, tagBinder, ownership, players));
         RegisterOrThrow(
             appliers,
             matchStateSchemaId,

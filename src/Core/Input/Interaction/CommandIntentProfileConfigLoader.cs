@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -16,12 +17,19 @@ namespace Ludots.Core.Input.Interaction
     {
         private readonly ConfigPipeline _pipeline;
 
-        private static readonly JsonSerializerOptions JsonOptions = new()
+        private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+        private static JsonSerializerOptions CreateJsonOptions()
         {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            };
+            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
+            return options;
+        }
 
         public CommandIntentProfileConfigLoader(ConfigPipeline pipeline)
         {
@@ -97,6 +105,11 @@ namespace Ludots.Core.Input.Interaction
                     CommandIntentRouteDefinition route = rule.Route
                         ?? throw new InvalidOperationException($"{rulePath}.route must be an object.");
                     RequireTrimmedNonEmpty(route.OrderTypeKey, $"{rulePath}.route.orderTypeKey");
+                    if (!route.TargetShape.HasValue || !Enum.IsDefined(route.TargetShape.Value))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.targetShape must explicitly declare a supported command target shape.");
+                    }
 
                     ValidatePredicateStrings(rule.Actor?.AllTags, $"{rulePath}.actor.allTags");
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");

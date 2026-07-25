@@ -2,6 +2,7 @@ using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Protocol;
+using Ludots.Core.Networking.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Networking;
@@ -13,6 +14,7 @@ public sealed class NetworkRuntimeConfigTests
     public void RtsDuelAcceptanceProfile_IsExplicitAndValid()
     {
         NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        NetworkRuntimeCapacity capacity = NetworkRuntimeCapacity.FromConfig(config);
 
         Assert.DoesNotThrow(config.Validate);
         Assert.Multiple(() =>
@@ -29,12 +31,15 @@ public sealed class NetworkRuntimeConfigTests
             Assert.That(config.ReconnectWindowSeconds, Is.EqualTo(30));
             Assert.That(config.ReadyCountdownTicks, Is.EqualTo(90));
             Assert.That(config.ClientReconnectRetryMilliseconds, Is.EqualTo(500));
+            Assert.That(config.SnapshotAcknowledgementTimeoutTicks, Is.EqualTo(15));
             Assert.That(config.ControlChannelId, Is.EqualTo(0));
             Assert.That(config.CommandChannelId, Is.EqualTo(1));
             Assert.That(config.StateChannelId, Is.EqualTo(2));
             Assert.That(config.MaxServerOutboundBytesPerSecondPerClient, Is.EqualTo(256 * 1024));
             Assert.That(config.TickP95BudgetMicroseconds, Is.EqualTo(26_700));
             Assert.That(config.TickP99BudgetMicroseconds, Is.EqualTo(31_000));
+            Assert.That(capacity.SimulationTickRateHz, Is.EqualTo(config.SimulationTickRateHz));
+            Assert.That(capacity.MaxFutureTargetTicks, Is.EqualTo(config.MaxFutureTargetTicks));
         });
     }
 
@@ -61,7 +66,7 @@ public sealed class NetworkRuntimeConfigTests
         {
             OrderTypeKey = "moveTo",
             TargetKind = NetworkCommandTargetKind.WorldPositionCm,
-            SubmitMode = OrderSubmitMode.Queued,
+            AllowedSubmitModes = { OrderSubmitMode.Queued },
         });
         Assert.That(
             duplicate.Validate,
@@ -77,6 +82,17 @@ public sealed class NetworkRuntimeConfigTests
         Assert.That(
             config.Validate,
             Throws.InvalidOperationException.With.Message.Contains("cannot carry the 64-byte room snapshot"));
+    }
+
+    [Test]
+    public void MissingSnapshotAcknowledgementTimeout_IsRejectedAtStartup()
+    {
+        NetworkRuntimeConfig config = CreateRtsDuelConfig();
+        config.SnapshotAcknowledgementTimeoutTicks = 0;
+
+        Assert.That(
+            config.Validate,
+            Throws.InvalidOperationException.With.Message.Contains(nameof(NetworkRuntimeConfig.SnapshotAcknowledgementTimeoutTicks)));
     }
 
     private static NetworkRuntimeConfig CreateRtsDuelConfig() => new()
@@ -98,10 +114,12 @@ public sealed class NetworkRuntimeConfigTests
         MaxFutureTargetTicks = 6,
         NetworkAdmissionResultCapacity = 512,
         EntityAdmissionResultCapacity = 1024,
+        CommandCorrelationCapacity = 4096,
         ReconnectWindowSeconds = 30,
         ReadyCountdownTicks = 90,
         ClientReconnectRetryMilliseconds = 500,
         BaselineCapacity = 32,
+        SnapshotAcknowledgementTimeoutTicks = 15,
         ReplicationPacketEntityCapacity = 256,
         ReplicationSchemaCapacity = 8,
         DisclosureChangeLogCapacity = 4096,
@@ -122,20 +140,20 @@ public sealed class NetworkRuntimeConfigTests
             {
                 OrderTypeKey = "moveTo",
                 TargetKind = NetworkCommandTargetKind.WorldPositionCm,
-                SubmitMode = OrderSubmitMode.Queued,
+                AllowedSubmitModes = { OrderSubmitMode.Immediate, OrderSubmitMode.Queued },
             },
             new NetworkCommandSchemaConfig
             {
                 OrderTypeKey = "attackTarget",
                 TargetKind = NetworkCommandTargetKind.NetworkEntity,
-                SubmitMode = OrderSubmitMode.Queued,
+                AllowedSubmitModes = { OrderSubmitMode.Immediate, OrderSubmitMode.Queued },
                 RequiredTargetPositionAccess = KnowledgePositionAccess.LastKnown,
             },
             new NetworkCommandSchemaConfig
             {
                 OrderTypeKey = "stop",
                 TargetKind = NetworkCommandTargetKind.None,
-                SubmitMode = OrderSubmitMode.Immediate,
+                AllowedSubmitModes = { OrderSubmitMode.Immediate },
             },
         },
         NormalConnection = new NetworkFaultProfileConfig(),

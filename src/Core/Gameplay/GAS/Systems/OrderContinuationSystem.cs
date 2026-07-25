@@ -93,6 +93,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
 
                         int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                        if (buffer.HasPending &&
+                            OrderAdmissionTracking.RequiresNetworkFeedback(in buffer.PendingOrder.Order))
+                        {
+                            throw new InvalidOperationException(
+                                $"Order continuation {order.OrderId} cannot replace a network-admitted pending order without an admission result sink.");
+                        }
+
                         buffer.SetPending(in order, config.Priority, expireStep, currentStep);
                     }
                 }

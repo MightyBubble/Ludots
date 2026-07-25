@@ -69,14 +69,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public override void Update(in float dt)
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
+            MaintainExistingOrders(currentStep);
             ProcessIncomingOrders(currentStep);
+        }
 
-            var job = new OrderBufferUpdateJob
-            {
-                CurrentStep = currentStep
-            };
-            World.InlineQuery<OrderBufferUpdateJob, OrderBuffer>(in _orderBufferQuery, ref job);
-
+        private void MaintainExistingOrders(int currentStep)
+        {
             foreach (ref var chunk in World.Query(in _orderBufferQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -84,24 +82,76 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 foreach (var index in chunk)
                 {
                     ref OrderBuffer buffer = ref buffers[index];
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (buffer.HasActive &&
+                        buffer.ActiveOrder.AdmissionActivationPublished == 0 &&
+                        buffer.ActiveOrder.Order.AdmissionBatchId > 0 &&
+                        !HasAdmissionCapacity(in buffer.ActiveOrder.Order, 1))
+                    {
+                        AdmissionBackpressureCount++;
+                        continue;
+                    }
+
+                    PublishUnreportedActivation(entity, ref buffer);
+
+                    for (int queuedIndex = buffer.QueuedCount - 1; queuedIndex >= 0; queuedIndex--)
+                    {
+                        QueuedOrder queued = buffer.GetQueued(queuedIndex);
+                        if (queued.ExpireStep < 0 || queued.ExpireStep > currentStep)
+                        {
+                            continue;
+                        }
+
+                        if (!HasAdmissionCapacity(in queued.Order, 1))
+                        {
+                            AdmissionBackpressureCount++;
+                            continue;
+                        }
+
+                        PublishAdmission(in queued.Order, OrderSubmitResult.Expired);
+                        buffer.RemoveAt(queuedIndex);
+                    }
+
+                    if (buffer.HasPending &&
+                        buffer.PendingOrder.ExpireStep >= 0 &&
+                        buffer.PendingOrder.ExpireStep <= currentStep)
+                    {
+                        Order pending = buffer.PendingOrder.Order;
+                        if (HasAdmissionCapacity(in pending, 1))
+                        {
+                            PublishAdmission(in pending, OrderSubmitResult.Expired);
+                            buffer.ClearPending();
+                        }
+                        else
+                        {
+                            AdmissionBackpressureCount++;
+                        }
+                    }
+
                     if (!buffer.HasActive && buffer.HasQueued)
                     {
-                        Entity entity = Unsafe.Add(ref entityFirst, index);
-                        OrderSubmitter.TryPromoteNextQueuedToActive(World, entity, ref buffer, _orderTypeRegistry);
+                        Order next = buffer.GetQueued(0).Order;
+                        if (!HasAdmissionCapacity(in next, 1))
+                        {
+                            AdmissionBackpressureCount++;
+                            continue;
+                        }
+
+                        if (OrderSubmitter.TryPromoteNextQueuedToActive(
+                                World,
+                                entity,
+                                ref buffer,
+                                _orderTypeRegistry))
+                        {
+                            PublishUnreportedActivation(entity, ref buffer);
+                        }
+                    }
+
+                    if (!buffer.HasActive && !buffer.HasQueued && buffer.HasPending)
+                    {
+                        TrySubmitPending(entity, ref buffer, currentStep);
                     }
                 }
-            }
-        }
-
-        private struct OrderBufferUpdateJob : IForEach<OrderBuffer>
-        {
-            public int CurrentStep;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref OrderBuffer buffer)
-            {
-                buffer.RemoveExpired(CurrentStep);
-                buffer.ExpirePending(CurrentStep);
             }
         }
 
@@ -109,10 +159,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_incomingOrders == null) return;
 
-            while (_incomingOrders.TryPeekBatchSize(out int nextBatchSize))
+            while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int nextBatchSize))
             {
-                if (_admissionResults != null &&
-                    _admissionResults.AvailableCapacity < nextBatchSize)
+                bool isAtomicBatch = nextBatchSize != 1 || _incomingBatchScratch[0].AdmissionBatchId != 0;
+                bool requiresAdmissionFeedback = RequiresAdmissionFeedback(in _incomingBatchScratch[0]);
+                bool preflightSucceeded = !isAtomicBatch || PreflightIncomingBatch(nextBatchSize, currentStep);
+                int requiredResults = _admissionResults == null || !requiresAdmissionFeedback ? 0 : nextBatchSize;
+                if (_admissionResults != null && requiresAdmissionFeedback && preflightSucceeded)
+                {
+                    for (int i = 0; i < nextBatchSize; i++)
+                    {
+                        requiredResults += CountCorrelatedDisplacements(
+                            in _incomingBatchScratch[i],
+                            currentStep);
+                    }
+                }
+
+                if (_admissionResults != null && _admissionResults.AvailableCapacity < requiredResults)
                 {
                     AdmissionBackpressureCount++;
                     break;
@@ -127,11 +190,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
                 {
                     OrderSubmitResult result = ProcessIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    MarkActiveAdmissionPublished(
+                        _incomingBatchScratch[0].Actor,
+                        _incomingBatchScratch[0].OrderId,
+                        result);
                     PublishAdmission(in _incomingBatchScratch[0], result);
                     continue;
                 }
 
-                if (!PreflightIncomingBatch(batchCount, currentStep))
+                if (!preflightSucceeded)
                 {
                     for (int i = 0; i < batchCount; i++)
                     {
@@ -157,13 +224,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _orderTypeRegistry,
                         _orderRuleRegistry,
                         currentStep,
-                        _stepRateHz);
+                        _stepRateHz,
+                        _admissionResults);
                     if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                     {
                         throw new InvalidOperationException(
                             $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
                     }
 
+                    MarkActiveAdmissionPublished(order.Actor, order.OrderId, result);
                     PublishAdmission(in order, result);
                     IncomingRevision++;
                 }
@@ -227,12 +296,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderTypeRegistry,
                 _orderRuleRegistry,
                 currentStep,
-                _stepRateHz);
+                _stepRateHz,
+                _admissionResults);
 
             if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
             {
                 int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(order.Actor);
+                if (buffer.HasPending)
+                {
+                    Order displaced = buffer.PendingOrder.Order;
+                    PublishAdmission(in displaced, OrderSubmitResult.Cancelled);
+                }
+
                 buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
                 return OrderSubmitResult.Pending;
             }
@@ -242,7 +318,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void PublishAdmission(in Order order, OrderSubmitResult result)
         {
-            if (_admissionResults == null)
+            if (_admissionResults == null || !RequiresAdmissionFeedback(in order))
             {
                 return;
             }
@@ -256,6 +332,138 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 throw new InvalidOperationException(
                     $"Order admission result capacity {_admissionResults.Capacity} is exhausted.");
             }
+        }
+
+        private bool HasAdmissionCapacity(in Order order, int required)
+        {
+            if (!RequiresAdmissionFeedback(in order))
+            {
+                return true;
+            }
+
+            if (_admissionResults == null)
+            {
+                return false;
+            }
+
+            return _admissionResults.AvailableCapacity >= required;
+        }
+
+        private int CountCorrelatedDisplacements(in Order order, int currentStep)
+        {
+            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            {
+                return 0;
+            }
+
+            if (!_orderTypeRegistry.IsRegistered(order.OrderTypeId))
+            {
+                return 0;
+            }
+
+            Order candidate = order;
+            candidate.SubmitStep = currentStep;
+            if (ValidateIncomingOrder(in candidate, out OrderTypeConfig config) != OrderSubmitResult.Activated)
+            {
+                return 0;
+            }
+
+            OrderBuffer before = World.Get<OrderBuffer>(order.Actor);
+            OrderSubmitResult previewResult = OrderSubmitter.Preview(
+                World,
+                order.Actor,
+                in candidate,
+                _orderTypeRegistry,
+                _orderRuleRegistry,
+                currentStep,
+                _stepRateHz,
+                out OrderBuffer after);
+            if (previewResult == OrderSubmitResult.Blocked &&
+                config.PendingBufferWindowMs > 0)
+            {
+                return before.HasPending ? 1 : 0;
+            }
+
+            return previewResult is OrderSubmitResult.Activated or OrderSubmitResult.Queued
+                ? CountRemovedCorrelated(in before, in after)
+                : 0;
+        }
+
+        private static int CountRemovedCorrelated(in OrderBuffer before, in OrderBuffer after)
+            => OrderAdmissionTracking.CountRemovedWaiting(in before, in after);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool RequiresAdmissionFeedback(in Order order) =>
+            OrderAdmissionTracking.RequiresNetworkFeedback(in order);
+
+        public bool TryCancelAll(Entity entity)
+        {
+            if (!World.IsAlive(entity) || !World.Has<OrderBuffer>(entity))
+            {
+                return false;
+            }
+
+            ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
+            int correlatedWaiting = 0;
+            if (buffer.HasPending && RequiresAdmissionFeedback(in buffer.PendingOrder.Order))
+            {
+                correlatedWaiting++;
+            }
+
+            for (int i = 0; i < buffer.QueuedCount; i++)
+            {
+                Order queued = buffer.GetQueued(i).Order;
+                if (RequiresAdmissionFeedback(in queued))
+                {
+                    correlatedWaiting++;
+                }
+            }
+
+            if (correlatedWaiting > 0 &&
+                (_admissionResults == null || _admissionResults.AvailableCapacity < correlatedWaiting))
+            {
+                AdmissionBackpressureCount++;
+                return false;
+            }
+
+            OrderSubmitter.CancelAll(World, entity, _orderTypeRegistry, _admissionResults);
+            return true;
+        }
+
+        private void PublishUnreportedActivation(Entity entity, ref OrderBuffer buffer)
+        {
+            if (!buffer.HasActive ||
+                buffer.ActiveOrder.AdmissionActivationPublished != 0 ||
+                !RequiresAdmissionFeedback(in buffer.ActiveOrder.Order))
+            {
+                return;
+            }
+
+            Order order = buffer.ActiveOrder.Order;
+            PublishAdmission(in order, OrderSubmitResult.Activated);
+            buffer.ActiveOrder.AdmissionActivationPublished = 1;
+        }
+
+        private void MarkActiveAdmissionPublished(
+            Entity entity,
+            int orderId,
+            OrderSubmitResult result)
+        {
+            if (result != OrderSubmitResult.Activated ||
+                !World.IsAlive(entity) ||
+                !World.Has<OrderBuffer>(entity))
+            {
+                return;
+            }
+
+            ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
+            if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderId != orderId)
+            {
+                throw new InvalidOperationException(
+                    $"Activated order {orderId} is not the actor's active order.");
+            }
+
+            buffer.ActiveOrder.AdmissionActivationPublished = 1;
         }
 
         private OrderSubmitResult ValidateIncomingOrder(in Order order, out OrderTypeConfig config)
@@ -311,33 +519,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderTypeRegistry,
                 _orderRuleRegistry,
                 currentStep,
-                _stepRateHz);
+                _stepRateHz,
+                _admissionResults);
         }
 
         public void NotifyOrderComplete(Entity entity)
         {
             OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
-            TrySubmitPending(entity);
         }
 
-        private void TrySubmitPending(Entity entity)
+        private void TrySubmitPending(Entity entity, ref OrderBuffer buffer, int currentStep)
         {
-            if (!World.IsAlive(entity) || !World.Has<OrderBuffer>(entity))
+            if (!buffer.HasPending || buffer.HasActive || buffer.HasQueued)
             {
                 return;
             }
 
-            ref var buffer = ref World.Get<OrderBuffer>(entity);
-            if (!buffer.HasPending || buffer.HasActive)
-            {
-                return;
-            }
-
-            var pendingOrder = buffer.PendingOrder.Order;
-            buffer.ClearPending();
-
-            int currentStep = _clock.Now(ClockDomainId.Step);
-            OrderSubmitter.Submit(
+            Order pendingOrder = buffer.PendingOrder.Order;
+            OrderSubmitResult preview = OrderSubmitter.Preview(
                 World,
                 entity,
                 in pendingOrder,
@@ -345,6 +544,34 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderRuleRegistry,
                 currentStep,
                 _stepRateHz);
+            if (preview == OrderSubmitResult.Blocked)
+            {
+                return;
+            }
+
+            if (!HasAdmissionCapacity(in pendingOrder, 1))
+            {
+                AdmissionBackpressureCount++;
+                return;
+            }
+
+            buffer.ClearPending();
+            OrderSubmitResult result = OrderSubmitter.Submit(
+                World,
+                entity,
+                in pendingOrder,
+                _orderTypeRegistry,
+                _orderRuleRegistry,
+                currentStep,
+                _stepRateHz);
+            if (result != preview)
+            {
+                throw new InvalidOperationException(
+                    $"Pending order {pendingOrder.OrderId} changed after successful preflight: expected {preview}, returned {result}.");
+            }
+
+            MarkActiveAdmissionPublished(entity, pendingOrder.OrderId, result);
+            PublishAdmission(in pendingOrder, result);
         }
 
         public bool TryGetActiveOrder(Entity entity, out Order order)

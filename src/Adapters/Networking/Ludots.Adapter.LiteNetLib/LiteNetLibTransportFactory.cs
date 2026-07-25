@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Hosting;
 using Ludots.Core.Networking.Configuration;
 
 namespace Ludots.Adapter.LiteNetLib;
@@ -9,10 +10,14 @@ public static class LiteNetLibTransportFactory
 
     public static LiteNetLibServerDatagramPort CreateServer(
         NetworkRuntimeConfig config,
+        NetworkHostBootstrapConfig host,
         int listenPort,
         string connectionKey)
     {
         ValidateTransport(config);
+        ArgumentNullException.ThrowIfNull(host);
+        host.Validate();
+        LiteNetLibFaultInjectionSettings faults = LiteNetLibFaultInjectionSettings.Create(config, host);
         return new LiteNetLibServerDatagramPort(
             listenPort,
             connectionKey,
@@ -21,16 +26,21 @@ public static class LiteNetLibTransportFactory
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
             config.TransportChannelCount,
-            config.StateChannelId);
+            config.StateChannelId,
+            in faults);
     }
 
     public static LiteNetLibClientDatagramPort CreateClient(
         NetworkRuntimeConfig config,
+        NetworkHostBootstrapConfig hostConfig,
         string host,
         int port,
         string connectionKey)
     {
         ValidateTransport(config);
+        ArgumentNullException.ThrowIfNull(hostConfig);
+        hostConfig.Validate();
+        LiteNetLibFaultInjectionSettings faults = LiteNetLibFaultInjectionSettings.Create(config, hostConfig);
         return new LiteNetLibClientDatagramPort(
             host,
             port,
@@ -39,7 +49,8 @@ public static class LiteNetLibTransportFactory
             config.ConnectionEventCapacity,
             config.MaxDatagramPayloadBytes,
             config.TransportChannelCount,
-            config.StateChannelId);
+            config.StateChannelId,
+            in faults);
     }
 
     private static void ValidateTransport(NetworkRuntimeConfig config)

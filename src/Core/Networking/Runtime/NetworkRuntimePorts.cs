@@ -169,9 +169,26 @@ namespace Ludots.Core.Networking.Runtime
     {
         ClientConnectionControlState State { get; }
 
+        int RoundTripTimeMilliseconds { get; }
+
         bool TryConnect();
 
         void Disconnect();
+    }
+
+    public interface IReplicatedClientRuntimeStatus
+    {
+        ReplicatedClientConnectionState ConnectionState { get; }
+
+        bool HasEstablishedSession { get; }
+
+        bool IsAwaitingFullSnapshot { get; }
+
+        bool IsFaulted { get; }
+
+        float ReconnectWindowRemainingSeconds { get; }
+
+        int RoundTripTimeMilliseconds { get; }
     }
 
     public interface IReplicatedClientRoomControlPort

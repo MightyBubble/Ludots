@@ -122,6 +122,7 @@ namespace Ludots.Core.Networking.Session
         StaleOrInvalidReconnectToken = 4,
         MalformedRequest = 5,
         SessionEpochMismatch = 6,
+        MatchAlreadyStarted = 7,
     }
 
     /// <summary>
@@ -161,7 +162,8 @@ namespace Ludots.Core.Networking.Session
             ReconnectToken reconnectToken,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
-            SessionEpoch sessionEpoch)
+            SessionEpoch sessionEpoch,
+            ulong nextClientBatchSequence)
         {
             Accepted = accepted;
             RejectReason = rejectReason;
@@ -170,6 +172,7 @@ namespace Ludots.Core.Networking.Session
             ProtocolVersion = protocolVersion;
             ContentFingerprint = contentFingerprint;
             SessionEpoch = sessionEpoch;
+            NextClientBatchSequence = nextClientBatchSequence;
         }
 
         public bool Accepted { get; }
@@ -188,12 +191,15 @@ namespace Ludots.Core.Networking.Session
 
         public SessionEpoch SessionEpoch { get; }
 
+        public ulong NextClientBatchSequence { get; }
+
         public static SessionHandshakeResponse Accept(
             in SessionSeatBinding seat,
             ReconnectToken reconnectToken,
             ProtocolVersion protocolVersion,
             ContentFingerprint contentFingerprint,
-            SessionEpoch sessionEpoch)
+            SessionEpoch sessionEpoch,
+            ulong nextClientBatchSequence)
         {
             if (!seat.IsValid)
             {
@@ -210,6 +216,13 @@ namespace Ludots.Core.Networking.Session
                 throw new ArgumentException("Accepted handshake must include a non-empty session epoch.", nameof(sessionEpoch));
             }
 
+            if (nextClientBatchSequence == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(nextClientBatchSequence),
+                    "Accepted handshake must include the authoritative next client command sequence.");
+            }
+
             return new SessionHandshakeResponse(
                 accepted: true,
                 HandshakeRejectReason.None,
@@ -217,7 +230,8 @@ namespace Ludots.Core.Networking.Session
                 reconnectToken,
                 protocolVersion,
                 contentFingerprint,
-                sessionEpoch);
+                sessionEpoch,
+                nextClientBatchSequence);
         }
 
         public static SessionHandshakeResponse Reject(
@@ -239,8 +253,42 @@ namespace Ludots.Core.Networking.Session
                 ReconnectToken.Empty,
                 protocolVersion,
                 contentFingerprint,
-                sessionEpoch);
+                sessionEpoch,
+                nextClientBatchSequence: 0);
         }
+    }
+
+    /// <summary>
+    /// Commits a prepared handshake only after the client has durably stored the candidate token.
+    /// Player identity remains server-derived and is intentionally absent.
+    /// </summary>
+    public readonly struct SessionHandshakeConfirmation
+    {
+        public SessionHandshakeConfirmation(
+            SessionEpoch sessionEpoch,
+            int seatSlot,
+            uint seatGeneration,
+            ReconnectToken reconnectToken)
+        {
+            SessionEpoch = sessionEpoch;
+            SeatSlot = seatSlot;
+            SeatGeneration = seatGeneration;
+            ReconnectToken = reconnectToken;
+        }
+
+        public SessionEpoch SessionEpoch { get; }
+
+        public int SeatSlot { get; }
+
+        public uint SeatGeneration { get; }
+
+        public ReconnectToken ReconnectToken { get; }
+
+        public bool IsWellFormed =>
+            !SessionEpoch.IsEmpty &&
+            SeatSlot >= 0 &&
+            SeatGeneration != 0 &&
+            !ReconnectToken.IsEmpty;
     }
 
     public readonly struct SessionSeatBinding : IEquatable<SessionSeatBinding>

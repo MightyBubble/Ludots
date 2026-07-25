@@ -101,13 +101,21 @@ public sealed class NetworkWireCodecTests
             new ReconnectToken(9, 11),
             Protocol,
             Content,
-            Epoch);
+            Epoch,
+            nextClientBatchSequence: 17);
         Span<byte> buffer = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in accept, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(HandshakeWireCodec.TryDecodeResponse(buffer, out SessionHandshakeResponse decodedAccept), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decodedAccept.Accepted, Is.True);
         Assert.That(decodedAccept.PlayerId, Is.EqualTo(new PlayerId(7)));
         Assert.That(decodedAccept.Seat, Is.EqualTo(acceptedSeat));
+        Assert.That(decodedAccept.NextClientBatchSequence, Is.EqualTo(17));
+
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(12, sizeof(int)), 0);
+        Assert.That(
+            HandshakeWireCodec.TryDecodeResponse(buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(HandshakeWireCodec.TryEncodeResponse(in accept, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
 
         SessionHandshakeResponse reject = SessionHandshakeResponse.Reject(
             HandshakeRejectReason.ContentMismatch,
@@ -121,6 +129,106 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
+    public void HandshakeResponse_MatchAlreadyStarted_RoundTrips_AndRejectsUnknownReason()
+    {
+        SessionHandshakeResponse response = SessionHandshakeResponse.Reject(
+            HandshakeRejectReason.MatchAlreadyStarted,
+            Protocol,
+            Content,
+            Epoch);
+        Span<byte> buffer = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
+
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in response, buffer, out int written),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(written, Is.EqualTo(HandshakeWireCodec.ResponseSizeInBytes));
+        Assert.That(
+            HandshakeWireCodec.TryDecodeResponse(buffer, out SessionHandshakeResponse decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.Multiple(() =>
+        {
+            Assert.That(decoded.Accepted, Is.False);
+            Assert.That(decoded.RejectReason, Is.EqualTo(HandshakeRejectReason.MatchAlreadyStarted));
+        });
+
+        SessionHandshakeResponse invalidResponse = SessionHandshakeResponse.Reject(
+            (HandshakeRejectReason)((byte)HandshakeRejectReason.MatchAlreadyStarted + 1),
+            Protocol,
+            Content,
+            Epoch);
+        Assert.That(
+            HandshakeWireCodec.TryEncodeResponse(in invalidResponse, buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
+
+        buffer[1] = checked((byte)((byte)HandshakeRejectReason.MatchAlreadyStarted + 1));
+        Assert.That(
+            HandshakeWireCodec.TryDecodeResponse(buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
+    }
+
+    [Test]
+    public void HandshakeConfirmation_RoundTrips_AndRejectsMalformedPayloads()
+    {
+        var confirmation = new SessionHandshakeConfirmation(
+            Epoch,
+            seatSlot: 1,
+            seatGeneration: 3,
+            reconnectToken: new ReconnectToken(0x0102030405060708UL, 0x1112131415161718UL));
+        Span<byte> buffer = stackalloc byte[HandshakeWireCodec.ConfirmationSizeInBytes];
+
+        Assert.That(
+            typeof(SessionHandshakeConfirmation)
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Any(property => property.Name.Contains("Player", StringComparison.OrdinalIgnoreCase)),
+            Is.False,
+            "Handshake confirmation must not carry a client-authored player identity.");
+
+        Assert.That(
+            HandshakeWireCodec.TryEncodeConfirmation(in confirmation, buffer, out int written),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(written, Is.EqualTo(HandshakeWireCodec.ConfirmationSizeInBytes));
+        Assert.That(BinaryPrimitives.ReadUInt64LittleEndian(buffer), Is.EqualTo(42UL));
+        Assert.That(BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(8, 4)), Is.EqualTo(1));
+        Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(12, 4)), Is.EqualTo(3u));
+        Assert.That(
+            HandshakeWireCodec.TryDecodeConfirmation(buffer, out SessionHandshakeConfirmation decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.Multiple(() =>
+        {
+            Assert.That(decoded.SessionEpoch, Is.EqualTo(Epoch));
+            Assert.That(decoded.SeatSlot, Is.EqualTo(1));
+            Assert.That(decoded.SeatGeneration, Is.EqualTo(3));
+            Assert.That(decoded.ReconnectToken, Is.EqualTo(confirmation.ReconnectToken));
+        });
+
+        Assert.That(
+            HandshakeWireCodec.TryDecodeConfirmation(buffer[..^1], out _),
+            Is.EqualTo(NetworkWireCodecStatus.MalformedLength));
+        Span<byte> oversized = stackalloc byte[HandshakeWireCodec.ConfirmationSizeInBytes + 1];
+        buffer.CopyTo(oversized);
+        Assert.That(
+            HandshakeWireCodec.TryDecodeConfirmation(oversized, out _),
+            Is.EqualTo(NetworkWireCodecStatus.TrailingBytes));
+
+        BinaryPrimitives.WriteUInt64LittleEndian(buffer, 0);
+        Assert.That(
+            HandshakeWireCodec.TryDecodeConfirmation(buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            HandshakeWireCodec.TryEncodeConfirmation(
+                new SessionHandshakeConfirmation(Epoch, -1, 3, confirmation.ReconnectToken),
+                buffer,
+                out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+        Assert.That(
+            HandshakeWireCodec.TryEncodeConfirmation(
+                new SessionHandshakeConfirmation(Epoch, 1, 3, ReconnectToken.Empty),
+                buffer,
+                out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
+    }
+
+    [Test]
     public void CommandBatch_RoundTrip_UsesNetworkEntityHandles_AndOmitsPlayerId()
     {
         AssertCommandWireContractHasNoPlayerId();
@@ -130,7 +238,8 @@ public sealed class NetworkWireCodecTests
             clientBatchSequence: 3,
             targetTick: 100,
             acknowledgedCommittedTick: 98,
-            entryCount: 2);
+            entryCount: 2,
+            OrderSubmitMode.Queued);
         Span<NetworkCommandWireEntry> entries = stackalloc NetworkCommandWireEntry[2];
         entries[0] = new NetworkCommandWireEntry(
             new NetworkEntityHandle(1, 2),
@@ -154,6 +263,7 @@ public sealed class NetworkWireCodecTests
         Assert.That(count, Is.EqualTo(2));
         Assert.That(decodedHeader.ClientBatchSequence, Is.EqualTo(3UL));
         Assert.That(decodedHeader.AcknowledgedCommittedTick, Is.EqualTo(98));
+        Assert.That(decodedHeader.SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
         Assert.That(decodedEntries[0].Actor, Is.EqualTo(new NetworkEntityHandle(1, 2)));
         Assert.That(decodedEntries[1].Target.TargetSlot, Is.EqualTo(5));
         Assert.That(decodedEntries[1].Target.TargetGeneration, Is.EqualTo(6u));
@@ -185,6 +295,38 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
+    public void EntityAdmissionOutcome_RoundTrip_PreservesBatchRowAndStage()
+    {
+        var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 4,
+            targetTick: 50,
+            actorCount: 2,
+            orderId: 13,
+            admissionBatchId: 3,
+            admissionBatchIndex: 1,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated,
+            isReplay: false);
+
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(
+            CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.Multiple(() =>
+        {
+            Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo(1));
+            Assert.That(decoded.OrderId, Is.EqualTo(13));
+        });
+    }
+
+    [Test]
     public void CommandAdmissionOutcome_RejectsDifferentSessionEpoch()
     {
         var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
@@ -206,31 +348,51 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
-    public void CommandAdmissionOutcome_AcceptsLatestNetworkResultAndRejectsUnknownResult()
+    public void CommandAdmissionOutcome_RoundTripsGameplayTerminalResultsAndRejectsUnknownResult()
     {
         var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
-        var outcome = new NetworkCommandAdmissionOutcome(
-            in seat,
-            clientBatchSequence: 4,
-            targetTick: 50,
-            actorCount: 2,
-            orderId: 12,
-            admissionBatchId: 3,
-            OrderSubmitResult.NetworkMatchCompleted,
-            isReplay: false);
-
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        OrderSubmitResult[] terminalResults =
+        {
+            OrderSubmitResult.InsufficientResources,
+            OrderSubmitResult.Expired,
+            OrderSubmitResult.Cancelled,
+        };
+        foreach (OrderSubmitResult result in terminalResults)
+        {
+            var outcome = new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence: 4,
+                targetTick: 50,
+                actorCount: 2,
+                orderId: 12,
+                admissionBatchId: 3,
+                admissionBatchIndex: 1,
+                OrderAdmissionStage.EntityIntake,
+                result,
+                isReplay: false);
+            Assert.That(
+                CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            Assert.That(
+                CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            Assert.Multiple(() =>
+            {
+                Assert.That(decoded.Result, Is.EqualTo(result));
+                Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+                Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo(1));
+            });
+        }
+
+        buffer[CommandAdmissionWireCodec.SizeInBytes - 1] = 1;
         Assert.That(
-            CommandAdmissionWireCodec.TryEncode(7, in outcome, buffer, out _),
-            Is.EqualTo(NetworkWireCodecStatus.Success));
-        Assert.That(
-            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
-            Is.EqualTo(NetworkWireCodecStatus.Success));
-        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
-        Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.NetworkIntake));
+            CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
+            Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
+        buffer[CommandAdmissionWireCodec.SizeInBytes - 1] = 0;
 
         buffer[CommandAdmissionWireCodec.SizeInBytes - 3] =
-            checked((byte)((byte)OrderSubmitResult.NetworkMatchCompleted + 1));
+            checked((byte)((byte)OrderSubmitResult.Cancelled + 1));
         Assert.That(
             CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
@@ -307,13 +469,13 @@ public sealed class NetworkWireCodecTests
 
         var resync = new NetworkResyncRequired(
             sessionEpoch: 7,
-            NetworkResyncReason.BaselineUnavailable,
+            NetworkResyncReason.SnapshotAcknowledgementTimeout,
             latestCommittedTick: 130,
             latestSnapshotId: 11);
         Span<byte> resyncBuffer = stackalloc byte[NetworkResyncRequired.SizeInBytes];
         Assert.That(SnapshotControlWireCodec.TryEncodeResyncRequired(in resync, resyncBuffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(SnapshotControlWireCodec.TryDecodeResyncRequired(resyncBuffer, out NetworkResyncRequired decodedResync), Is.EqualTo(NetworkWireCodecStatus.Success));
-        Assert.That(decodedResync.Reason, Is.EqualTo(NetworkResyncReason.BaselineUnavailable));
+        Assert.That(decodedResync.Reason, Is.EqualTo(NetworkResyncReason.SnapshotAcknowledgementTimeout));
         Assert.That(decodedResync.LatestSnapshotId, Is.EqualTo(11UL));
     }
 
@@ -364,7 +526,7 @@ public sealed class NetworkWireCodecTests
             CommandBatchWireCodec.TryDecode(command, stackalloc NetworkCommandWireEntry[1], out _, out _),
             Is.EqualTo(NetworkWireCodecStatus.MalformedLength));
 
-        var header = new NetworkCommandBatchHeader(1, 1, 1, 1, 1);
+        var header = new NetworkCommandBatchHeader(1, 1, 1, 1, 1, OrderSubmitMode.Immediate);
         Span<NetworkCommandWireEntry> invalidHandleEntries = stackalloc NetworkCommandWireEntry[1];
         invalidHandleEntries[0] = new NetworkCommandWireEntry(default, 1, NetworkCommandTargetPayload.None);
         Span<byte> commandBuffer = stackalloc byte[CommandBatchWireCodec.GetPayloadSize(1)];
@@ -384,7 +546,7 @@ public sealed class NetworkWireCodecTests
         // Valid encode then truncate mid-entry → MalformedLength.
         Assert.That(
             CommandBatchWireCodec.TryEncode(
-                new NetworkCommandBatchHeader(1, 1, 1, 1, 1),
+                new NetworkCommandBatchHeader(1, 1, 1, 1, 1, OrderSubmitMode.Immediate),
                 new[]
                 {
                     new NetworkCommandWireEntry(

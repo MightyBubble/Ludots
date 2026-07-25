@@ -137,6 +137,16 @@
       "buildMode": "auto"
     },
     {
+      "id": "rts_multiplayer_frontline_three_process_uat_raylib",
+      "name": "RTS Frontline Three Process UAT",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked",
+        "$rts_multiplayer_frontline_three_process_uat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_participant_views_raylib",
       "name": "Capability Standard Participant Views Raylib",
       "selectors": [

@@ -17,6 +17,7 @@ namespace Ludots.Core.Networking.Session
             Empty = 0,
             Connected = 1,
             AwaitingReconnect = 2,
+            HandshakePending = 3,
         }
 
         private readonly SessionEpoch _sessionEpoch;
@@ -33,6 +34,10 @@ namespace Ludots.Core.Networking.Session
         private readonly ulong[] _tokenHigh;
         private readonly uint[] _disconnectTicks;
         private readonly bool[] _roomReady;
+        private readonly bool[] _pendingReconnect;
+        private readonly ulong[] _pendingTokenLow;
+        private readonly ulong[] _pendingTokenHigh;
+        private readonly uint[] _pendingTicks;
 
         private NetworkRoomPhase _roomPhase;
         private ulong _roomRevision;
@@ -88,6 +93,10 @@ namespace Ludots.Core.Networking.Session
             _tokenHigh = new ulong[seatCapacity];
             _disconnectTicks = new uint[seatCapacity];
             _roomReady = new bool[seatCapacity];
+            _pendingReconnect = new bool[seatCapacity];
+            _pendingTokenLow = new ulong[seatCapacity];
+            _pendingTokenHigh = new ulong[seatCapacity];
+            _pendingTicks = new uint[seatCapacity];
             _roomPhase = NetworkRoomPhase.WaitingForPlayers;
             _roomRevision = 1;
 
@@ -145,6 +154,18 @@ namespace Ludots.Core.Networking.Session
                 return false;
             }
 
+            if (FindPendingSeatByConnection(connectionId.Value, out int pendingSeat))
+            {
+                if (!PendingTokenMatches(pendingSeat, request.ReconnectToken))
+                {
+                    response = Reject(HandshakeRejectReason.StaleOrInvalidReconnectToken);
+                    return false;
+                }
+
+                response = BuildPendingResponse(pendingSeat);
+                return true;
+            }
+
             if (request.ReconnectToken.IsEmpty)
             {
                 if (!request.SessionEpoch.IsEmpty && request.SessionEpoch != _sessionEpoch)
@@ -153,7 +174,7 @@ namespace Ludots.Core.Networking.Session
                     return false;
                 }
 
-                return TryInitialJoin(connectionId, out response);
+                return TryInitialJoin(connectionId, currentTick, out response);
             }
 
             if (request.SessionEpoch != _sessionEpoch)
@@ -167,6 +188,12 @@ namespace Ludots.Core.Networking.Session
 
         public bool TryDisconnect(ConnectionId connectionId, uint currentTick)
         {
+            if (FindPendingSeatByConnection(connectionId.Value, out int pendingSeat))
+            {
+                _connectionValues[pendingSeat] = 0;
+                return true;
+            }
+
             if (!FindConnectedSeat(connectionId.Value, out int seat))
             {
                 return false;
@@ -178,6 +205,40 @@ namespace Ludots.Core.Networking.Session
             _roomReady[seat] = false;
             RefreshRoomPhase();
             MarkRoomChanged();
+            return true;
+        }
+
+        public bool TryConfirmHandshake(
+            ConnectionId connectionId,
+            in SessionHandshakeConfirmation confirmation,
+            out SessionSeatBinding binding,
+            out bool reconnect)
+        {
+            binding = default;
+            reconnect = false;
+            int seat = confirmation.SeatSlot;
+            if (!confirmation.IsWellFormed ||
+                confirmation.SessionEpoch != _sessionEpoch ||
+                (uint)seat >= (uint)_states.Length ||
+                _states[seat] != SeatState.HandshakePending ||
+                _connectionValues[seat] != connectionId.Value ||
+                _seatGenerations[seat] != confirmation.SeatGeneration ||
+                _pendingTokenLow[seat] != confirmation.ReconnectToken.Low ||
+                _pendingTokenHigh[seat] != confirmation.ReconnectToken.High)
+            {
+                return false;
+            }
+
+            reconnect = _pendingReconnect[seat];
+            _states[seat] = SeatState.Connected;
+            _tokenLow[seat] = _pendingTokenLow[seat];
+            _tokenHigh[seat] = _pendingTokenHigh[seat];
+            _disconnectTicks[seat] = 0;
+            _roomReady[seat] = false;
+            ClearPendingHandshake(seat);
+            RefreshRoomPhase();
+            MarkRoomChanged();
+            binding = GetSeatBinding(seat);
             return true;
         }
 
@@ -262,12 +323,16 @@ namespace Ludots.Core.Networking.Session
                     SeatState.Empty => NetworkRoomSeatConnectionState.Empty,
                     SeatState.Connected => NetworkRoomSeatConnectionState.Connected,
                     SeatState.AwaitingReconnect => NetworkRoomSeatConnectionState.AwaitingReconnect,
+                    SeatState.HandshakePending => _pendingReconnect[i]
+                        ? NetworkRoomSeatConnectionState.AwaitingReconnect
+                        : NetworkRoomSeatConnectionState.Empty,
                     _ => throw new InvalidOperationException("Authoritative room contains an unknown seat state."),
                 };
                 NetworkRoomReadyState readyState = _roomReady[i]
                     ? NetworkRoomReadyState.Ready
                     : NetworkRoomReadyState.Unready;
-                bool occupied = _states[i] != SeatState.Empty;
+                bool occupied = _states[i] != SeatState.Empty &&
+                    (_states[i] != SeatState.HandshakePending || _pendingReconnect[i]);
                 seats[i] = new NetworkRoomSeatSnapshot(
                     i,
                     connectionState,
@@ -323,6 +388,7 @@ namespace Ludots.Core.Networking.Session
             Span<SessionSeatBinding> expiredSeats,
             out int expiredCount)
         {
+            ExpirePendingHandshakes(currentTick);
             expiredCount = 0;
             for (int i = 0; i < _states.Length; i++)
             {
@@ -352,31 +418,39 @@ namespace Ludots.Core.Networking.Session
             return true;
         }
 
-        private bool TryInitialJoin(ConnectionId connectionId, out SessionHandshakeResponse response)
+        private bool TryInitialJoin(
+            ConnectionId connectionId,
+            uint currentTick,
+            out SessionHandshakeResponse response)
         {
-            if (!TryFindEmptySeat(out int seat))
+            if (_roomPhase == NetworkRoomPhase.Started)
+            {
+                response = Reject(HandshakeRejectReason.MatchAlreadyStarted);
+                return false;
+            }
+
+            if (!TryFindEmptySeat(out int seat) && !TryFindAbandonedInitialHandshake(out seat))
             {
                 response = Reject(HandshakeRejectReason.SessionFull);
                 return false;
             }
 
+            if (_states[seat] == SeatState.HandshakePending)
+            {
+                ClearSeat(seat);
+            }
+
             ReconnectToken token = IssueToken();
             _seatGenerations[seat] = NextGeneration(_seatGenerations[seat]);
-            _states[seat] = SeatState.Connected;
+            _states[seat] = SeatState.HandshakePending;
             _connectionValues[seat] = connectionId.Value;
-            _tokenLow[seat] = token.Low;
-            _tokenHigh[seat] = token.High;
+            _pendingReconnect[seat] = false;
+            _pendingTokenLow[seat] = token.Low;
+            _pendingTokenHigh[seat] = token.High;
+            _pendingTicks[seat] = currentTick;
             _disconnectTicks[seat] = 0;
             _roomReady[seat] = false;
-            RefreshRoomPhase();
-            MarkRoomChanged();
-
-            response = SessionHandshakeResponse.Accept(
-                GetSeatBinding(seat),
-                token,
-                _requiredProtocolVersion,
-                _requiredContentFingerprint,
-                _sessionEpoch);
+            response = BuildPendingResponse(seat);
             return true;
         }
 
@@ -386,6 +460,20 @@ namespace Ludots.Core.Networking.Session
             uint currentTick,
             out SessionHandshakeResponse response)
         {
+            if (FindPendingSeatByToken(token, out int pendingSeat))
+            {
+                if (IsPendingExpired(pendingSeat, currentTick))
+                {
+                    ExpirePendingHandshake(pendingSeat);
+                }
+                else
+                {
+                    _connectionValues[pendingSeat] = connectionId.Value;
+                    response = BuildPendingResponse(pendingSeat);
+                    return true;
+                }
+            }
+
             if (!FindSeatByToken(token, out int seat) ||
                 _states[seat] != SeatState.AwaitingReconnect ||
                 IsReconnectExpired(seat, currentTick))
@@ -395,23 +483,25 @@ namespace Ludots.Core.Networking.Session
             }
 
             ReconnectToken rotated = IssueToken();
-            _states[seat] = SeatState.Connected;
+            _states[seat] = SeatState.HandshakePending;
             _connectionValues[seat] = connectionId.Value;
-            _tokenLow[seat] = rotated.Low;
-            _tokenHigh[seat] = rotated.High;
-            _disconnectTicks[seat] = 0;
+            _pendingReconnect[seat] = true;
+            _pendingTokenLow[seat] = rotated.Low;
+            _pendingTokenHigh[seat] = rotated.High;
+            _pendingTicks[seat] = currentTick;
             _roomReady[seat] = false;
-            RefreshRoomPhase();
-            MarkRoomChanged();
-
-            response = SessionHandshakeResponse.Accept(
-                GetSeatBinding(seat),
-                rotated,
-                _requiredProtocolVersion,
-                _requiredContentFingerprint,
-                _sessionEpoch);
+            response = BuildPendingResponse(seat);
             return true;
         }
+
+        private SessionHandshakeResponse BuildPendingResponse(int seat) =>
+            SessionHandshakeResponse.Accept(
+                GetSeatBinding(seat),
+                new ReconnectToken(_pendingTokenLow[seat], _pendingTokenHigh[seat]),
+                _requiredProtocolVersion,
+                _requiredContentFingerprint,
+                _sessionEpoch,
+                nextClientBatchSequence: 1);
 
         private SessionHandshakeResponse Reject(HandshakeRejectReason reason) =>
             SessionHandshakeResponse.Reject(
@@ -425,6 +515,23 @@ namespace Ludots.Core.Networking.Session
             for (int i = 0; i < _states.Length; i++)
             {
                 if (_states[i] == SeatState.Empty)
+                {
+                    seat = i;
+                    return true;
+                }
+            }
+
+            seat = -1;
+            return false;
+        }
+
+        private bool TryFindAbandonedInitialHandshake(out int seat)
+        {
+            for (int i = 0; i < _states.Length; i++)
+            {
+                if (_states[i] == SeatState.HandshakePending &&
+                    !_pendingReconnect[i] &&
+                    _connectionValues[i] == 0)
                 {
                     seat = i;
                     return true;
@@ -449,6 +556,42 @@ namespace Ludots.Core.Networking.Session
             seat = -1;
             return false;
         }
+
+        private bool FindPendingSeatByConnection(int connectionValue, out int seat)
+        {
+            for (int i = 0; i < _states.Length; i++)
+            {
+                if (_states[i] == SeatState.HandshakePending &&
+                    _connectionValues[i] == connectionValue)
+                {
+                    seat = i;
+                    return true;
+                }
+            }
+
+            seat = -1;
+            return false;
+        }
+
+        private bool FindPendingSeatByToken(ReconnectToken token, out int seat)
+        {
+            for (int i = 0; i < _states.Length; i++)
+            {
+                if (_states[i] == SeatState.HandshakePending && PendingTokenMatches(i, token))
+                {
+                    seat = i;
+                    return true;
+                }
+            }
+
+            seat = -1;
+            return false;
+        }
+
+        private bool PendingTokenMatches(int seat, ReconnectToken token) =>
+            (_pendingTokenLow[seat] == token.Low && _pendingTokenHigh[seat] == token.High) ||
+            (_pendingReconnect[seat] && _tokenLow[seat] == token.Low && _tokenHigh[seat] == token.High) ||
+            (!_pendingReconnect[seat] && token.IsEmpty);
 
         private bool FindSeatByToken(ReconnectToken token, out int seat)
         {
@@ -476,6 +619,44 @@ namespace Ludots.Core.Networking.Session
             return elapsed > _reconnectWindowTicks;
         }
 
+        private bool IsPendingExpired(int seat, uint currentTick)
+        {
+            uint originTick = _pendingReconnect[seat] ? _disconnectTicks[seat] : _pendingTicks[seat];
+            return unchecked(currentTick - originTick) > _reconnectWindowTicks;
+        }
+
+        private void ExpirePendingHandshakes(uint currentTick)
+        {
+            for (int i = 0; i < _states.Length; i++)
+            {
+                if (_states[i] == SeatState.HandshakePending && IsPendingExpired(i, currentTick))
+                {
+                    ExpirePendingHandshake(i);
+                }
+            }
+        }
+
+        private void ExpirePendingHandshake(int seat)
+        {
+            if (_pendingReconnect[seat])
+            {
+                _states[seat] = SeatState.AwaitingReconnect;
+                _connectionValues[seat] = 0;
+                ClearPendingHandshake(seat);
+                return;
+            }
+
+            ClearSeat(seat);
+        }
+
+        private void ClearPendingHandshake(int seat)
+        {
+            _pendingReconnect[seat] = false;
+            _pendingTokenLow[seat] = 0;
+            _pendingTokenHigh[seat] = 0;
+            _pendingTicks[seat] = 0;
+        }
+
         private void ClearSeat(int seat)
         {
             _states[seat] = SeatState.Empty;
@@ -484,6 +665,7 @@ namespace Ludots.Core.Networking.Session
             _tokenHigh[seat] = 0;
             _disconnectTicks[seat] = 0;
             _roomReady[seat] = false;
+            ClearPendingHandshake(seat);
             RefreshRoomPhase();
             MarkRoomChanged();
         }
@@ -557,7 +739,7 @@ namespace Ludots.Core.Networking.Session
                     continue;
                 }
 
-                if (FindSeatByToken(token, out _))
+                if (FindSeatByToken(token, out _) || FindPendingSeatByToken(token, out _))
                 {
                     continue;
                 }

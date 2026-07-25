@@ -637,6 +637,11 @@ namespace CoreInputMod.Systems
                     overrideMapping.CastModeOverride = inputOverride.CastModeOverride;
                 }
 
+                if (inputOverride.HasTargetType)
+                {
+                    overrideMapping.TargetType = inputOverride.TargetType;
+                }
+
                 if (inputOverride.HasAutoTargetPolicy)
                 {
                     overrideMapping.AutoTargetPolicy = inputOverride.AutoTargetPolicy;

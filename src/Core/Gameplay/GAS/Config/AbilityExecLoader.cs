@@ -804,6 +804,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 hasAny = true;
             }
 
+            if (inputObj["targetType"] is JsonValue targetTypeNode)
+            {
+                string rawTargetType = targetTypeNode.GetValue<string>();
+                if (!Enum.TryParse(rawTargetType, ignoreCase: true, out OrderTargetType targetType))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.targetType uses unsupported value '{rawTargetType}'.");
+                }
+
+                result.TargetType = targetType;
+                result.HasTargetType = true;
+                hasAny = true;
+            }
+
             if (inputObj["autoTargetPolicy"] is JsonValue autoTargetPolicyNode)
             {
                 string rawAutoTargetPolicy = autoTargetPolicyNode.GetValue<string>();

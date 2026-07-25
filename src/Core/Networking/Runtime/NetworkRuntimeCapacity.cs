@@ -18,10 +18,14 @@ namespace Ludots.Core.Networking.Runtime
             int maxSnapshotFragments,
             int outboundQueueCapacity,
             int acknowledgementHistoryCapacity,
+            int snapshotAcknowledgementTimeoutTicks,
+            int commandCorrelationCapacity,
             ChannelId controlChannel,
             ChannelId commandChannel,
             ChannelId stateChannel,
-            int statePublishIntervalTicks = 1)
+            int statePublishIntervalTicks = 1,
+            int simulationTickRateHz = 30,
+            int maxFutureTargetTicks = 0)
         {
             if (maxDatagramPayloadBytes <= NetworkWireEnvelope.SizeInBytes)
             {
@@ -32,7 +36,11 @@ namespace Ludots.Core.Networking.Runtime
                 maxCommandPayloadBytes < CommandBatchWireCodec.GetPayloadSize(maxCommandEntries) ||
                 maxCommandFragments <= 0 || maxSnapshotBytes <= 0 || maxSnapshotFragments <= 0 ||
                 outboundQueueCapacity <= 0 || acknowledgementHistoryCapacity <= 0 ||
-                statePublishIntervalTicks <= 0)
+                snapshotAcknowledgementTimeoutTicks <= 0 ||
+                commandCorrelationCapacity <= 0 ||
+                statePublishIntervalTicks <= 0 ||
+                simulationTickRateHz <= 0 ||
+                maxFutureTargetTicks < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(connectionCapacity), "All runtime capacities must cover their declared payloads.");
             }
@@ -60,10 +68,14 @@ namespace Ludots.Core.Networking.Runtime
             MaxSnapshotFragments = maxSnapshotFragments;
             OutboundQueueCapacity = outboundQueueCapacity;
             AcknowledgementHistoryCapacity = acknowledgementHistoryCapacity;
+            SnapshotAcknowledgementTimeoutTicks = snapshotAcknowledgementTimeoutTicks;
+            CommandCorrelationCapacity = commandCorrelationCapacity;
             ControlChannel = controlChannel;
             CommandChannel = commandChannel;
             StateChannel = stateChannel;
             StatePublishIntervalTicks = statePublishIntervalTicks;
+            SimulationTickRateHz = simulationTickRateHz;
+            MaxFutureTargetTicks = maxFutureTargetTicks;
         }
 
         public int MaxDatagramPayloadBytes { get; }
@@ -76,10 +88,14 @@ namespace Ludots.Core.Networking.Runtime
         public int MaxSnapshotFragments { get; }
         public int OutboundQueueCapacity { get; }
         public int AcknowledgementHistoryCapacity { get; }
+        public int SnapshotAcknowledgementTimeoutTicks { get; }
+        public int CommandCorrelationCapacity { get; }
         public ChannelId ControlChannel { get; }
         public ChannelId CommandChannel { get; }
         public ChannelId StateChannel { get; }
         public int StatePublishIntervalTicks { get; }
+        public int SimulationTickRateHz { get; }
+        public int MaxFutureTargetTicks { get; }
 
         public static NetworkRuntimeCapacity FromConfig(NetworkRuntimeConfig config)
         {
@@ -108,10 +124,14 @@ namespace Ludots.Core.Networking.Runtime
                 maxSnapshotFragments,
                 config.DatagramQueueCapacity,
                 config.BaselineCapacity,
+                config.SnapshotAcknowledgementTimeoutTicks,
+                config.CommandCorrelationCapacity,
                 new ChannelId(checked((byte)config.ControlChannelId)),
                 new ChannelId(checked((byte)config.CommandChannelId)),
                 new ChannelId(checked((byte)config.StateChannelId)),
-                config.SimulationTickRateHz / config.StatePublishRateHz);
+                config.SimulationTickRateHz / config.StatePublishRateHz,
+                config.SimulationTickRateHz,
+                config.MaxFutureTargetTicks);
         }
 
         private static int DivideRoundUp(int value, int divisor) =>

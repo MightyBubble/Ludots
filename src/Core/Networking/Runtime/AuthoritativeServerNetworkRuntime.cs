@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Networking.Replication;
@@ -22,6 +23,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkGameplayCommandGate _gameplayCommandGate;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
+        private readonly OrderAdmissionResultBuffer _entityResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInputPort _replicationInput;
         private readonly AuthoritativeReplicationSeatRuntime[] _replicationSeats;
@@ -39,6 +41,8 @@ namespace Ludots.Core.Networking.Runtime
         private readonly bool[] _seatNeedsFull;
         private readonly ulong[] _seatAcknowledgedSnapshots;
         private readonly ulong[] _seatLastSentSnapshots;
+        private readonly uint[] _seatSnapshotSentTicks;
+        private readonly ulong[] _seatIgnoredAcknowledgementsThrough;
         private readonly ulong[] _seatLastDisclosureSequences;
         private readonly ulong[] _ackHistorySnapshotIds;
         private readonly ulong[] _ackHistoryDisclosureSequences;
@@ -50,6 +54,18 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkRoomSeatSnapshot[] _roomSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
+        private readonly bool[] _batchCorrelationActive;
+        private readonly bool[] _batchCorrelationDeliver;
+        private readonly int[] _batchCorrelationIds;
+        private readonly int[] _batchCorrelationSeatSlots;
+        private readonly uint[] _batchCorrelationSeatGenerations;
+        private readonly int[] _batchCorrelationPlayerIds;
+        private readonly ulong[] _batchCorrelationSequences;
+        private readonly int[] _batchCorrelationTargetTicks;
+        private readonly int[] _batchCorrelationActorCounts;
+        private readonly ushort[] _batchCorrelationTerminalCounts;
+        private readonly byte[] _batchCorrelationRowStates;
+        private int _batchCorrelationSearchStart;
 
         private readonly byte[] _receiveBuffer;
         private readonly byte[] _payloadBuffer;
@@ -73,6 +89,7 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandIngress commands,
             NetworkGameplayCommandGate gameplayCommandGate,
             NetworkCommandAdmissionResultBuffer commandResults,
+            OrderAdmissionResultBuffer entityResults,
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInputPort replicationInput,
             AuthoritativeReplicationSeatRuntime[] replicationSeats,
@@ -86,6 +103,7 @@ namespace Ludots.Core.Networking.Runtime
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _gameplayCommandGate = gameplayCommandGate ?? throw new ArgumentNullException(nameof(gameplayCommandGate));
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
+            _entityResults = entityResults ?? throw new ArgumentNullException(nameof(entityResults));
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInput = replicationInput ?? throw new ArgumentNullException(nameof(replicationInput));
             _replicationSeats = replicationSeats ?? throw new ArgumentNullException(nameof(replicationSeats));
@@ -134,6 +152,8 @@ namespace Ludots.Core.Networking.Runtime
             _seatNeedsFull = new bool[seats];
             _seatAcknowledgedSnapshots = new ulong[seats];
             _seatLastSentSnapshots = new ulong[seats];
+            _seatSnapshotSentTicks = new uint[seats];
+            _seatIgnoredAcknowledgementsThrough = new ulong[seats];
             _seatLastDisclosureSequences = new ulong[seats];
             _ackHistorySnapshotIds = new ulong[checked(seats * capacity.AcknowledgementHistoryCapacity)];
             _ackHistoryDisclosureSequences = new ulong[_ackHistorySnapshotIds.Length];
@@ -150,9 +170,22 @@ namespace Ludots.Core.Networking.Runtime
             _activeHandles = new NetworkEntityHandle[capacity.EntityCapacity];
             _expiredSeats = new SessionSeatBinding[seats];
             _roomSeats = new NetworkRoomSeatSnapshot[seats];
-            int pendingAdmissionCapacity = checked(commandResults.Capacity * sessions.SeatCapacity);
+            int pendingAdmissionCapacity = checked(
+                (commandResults.Capacity + _entityResults.Capacity) * sessions.SeatCapacity);
             _pendingAdmissions = new NetworkCommandAdmissionOutcome[pendingAdmissionCapacity];
             _pendingAdmissionActive = new bool[pendingAdmissionCapacity];
+            int correlationCapacity = capacity.CommandCorrelationCapacity;
+            _batchCorrelationActive = new bool[correlationCapacity];
+            _batchCorrelationDeliver = new bool[correlationCapacity];
+            _batchCorrelationIds = new int[correlationCapacity];
+            _batchCorrelationSeatSlots = new int[correlationCapacity];
+            _batchCorrelationSeatGenerations = new uint[correlationCapacity];
+            _batchCorrelationPlayerIds = new int[correlationCapacity];
+            _batchCorrelationSequences = new ulong[correlationCapacity];
+            _batchCorrelationTargetTicks = new int[correlationCapacity];
+            _batchCorrelationActorCounts = new int[correlationCapacity];
+            _batchCorrelationTerminalCounts = new ushort[correlationCapacity];
+            _batchCorrelationRowStates = new byte[checked(correlationCapacity * capacity.MaxCommandEntries)];
             _receiveBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.ResponseSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
@@ -162,6 +195,8 @@ namespace Ludots.Core.Networking.Runtime
         public NetworkProcessRole Role => NetworkProcessRole.AuthoritativeServer;
         public bool IsFaulted => _faulted;
         public NetworkRuntimeFault LastFault => _lastFault;
+
+        public void Activate() => EnsureOperational();
 
         public void PumpTransport()
         {
@@ -174,6 +209,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             FlushAdmissionResults();
+            FlushEntityAdmissionResults();
             while (_datagrams.TryReceive(
                 _receiveBuffer,
                 out int bytesReceived,
@@ -182,6 +218,7 @@ namespace Ludots.Core.Networking.Runtime
             {
                 ProcessDatagram(connection, channel, _receiveBuffer.AsSpan(0, bytesReceived));
                 FlushAdmissionResults();
+                FlushEntityAdmissionResults();
             }
 
             FlushPendingAdmissions();
@@ -202,6 +239,7 @@ namespace Ludots.Core.Networking.Runtime
             PublishRoomSnapshotIfChanged();
             _commands.DrainScheduled(checked((int)executingTick));
             FlushAdmissionResults();
+            FlushEntityAdmissionResults();
             FlushPendingAdmissions();
         }
 
@@ -220,18 +258,19 @@ namespace Ludots.Core.Networking.Runtime
                 _gameplayCommandGate.StartMatch();
             }
             PublishRoomSnapshotIfChanged();
-            if (committedTick % (uint)_capacity.StatePublishIntervalTicks != 0)
-            {
-                return;
-            }
-
+            FlushEntityAdmissionResults();
+            FlushPendingAdmissions();
+            bool scheduledPublish = committedTick % (uint)_capacity.StatePublishIntervalTicks == 0;
             bool anyConnected = false;
+            bool acknowledgementRecoveryRequired = false;
             for (int i = 0; i < _seatStates.Length; i++)
             {
-                anyConnected |= _seatStates[i] == SeatConnected;
+                bool connected = _seatStates[i] == SeatConnected;
+                anyConnected |= connected;
+                acknowledgementRecoveryRequired |= connected && HasSnapshotAcknowledgementTimedOut(i, committedTick);
             }
 
-            if (!anyConnected)
+            if (!anyConnected || (!scheduledPublish && !acknowledgementRecoveryRequired))
             {
                 return;
             }
@@ -250,7 +289,11 @@ namespace Ludots.Core.Networking.Runtime
                     continue;
                 }
 
-                BuildAndSendReplication(seat, committedTick, active);
+                bool recovering = TryBeginSnapshotAcknowledgementRecovery(seat, committedTick);
+                if (scheduledPublish || recovering)
+                {
+                    BuildAndSendReplication(seat, committedTick, active);
+                }
             }
 
             FlushOutbound();
@@ -323,6 +366,10 @@ namespace Ludots.Core.Networking.Runtime
             int seat = FindSeatByConnection(connectionEvent.ConnectionId.Value);
             if (seat < 0)
             {
+                if (_sessions.TryDisconnect(connectionEvent.ConnectionId, _currentTick))
+                {
+                    PublishRoomSnapshotIfChanged();
+                }
                 return;
             }
 
@@ -372,6 +419,9 @@ namespace Ludots.Core.Networking.Runtime
                 case NetworkWireKind.SessionHandshakeRequest:
                     ProcessHandshake(connection, payload);
                     return;
+                case NetworkWireKind.SessionHandshakeConfirmation:
+                    ProcessHandshakeConfirmation(connection, payload);
+                    return;
                 case NetworkWireKind.CommandFragment:
                     ProcessCommandFragment(connection, payload);
                     return;
@@ -417,15 +467,17 @@ namespace Ludots.Core.Networking.Runtime
             if (response.Accepted)
             {
                 SessionSeatBinding acceptedSeat = response.Seat;
-                BindAcceptedSeat(connection, in acceptedSeat);
+                ulong nextClientBatchSequence = ResolvePreparedHandshakeCursor(in acceptedSeat);
+                response = SessionHandshakeResponse.Accept(
+                    in acceptedSeat,
+                    response.ReconnectToken,
+                    response.ProtocolVersion,
+                    response.ContentFingerprint,
+                    response.SessionEpoch,
+                    nextClientBatchSequence);
             }
 
             SendHandshakeResponse(connection, in response);
-            if (response.Accepted)
-            {
-                PublishRoomSnapshotIfChanged();
-            }
-
             if (!response.Accepted)
             {
                 int transportSlot = FindTransportConnection(connection.Value);
@@ -436,6 +488,57 @@ namespace Ludots.Core.Networking.Runtime
 
                 _disconnectAfterFlush[transportSlot] = true;
             }
+        }
+
+        private void ProcessHandshakeConfirmation(ConnectionId connection, ReadOnlySpan<byte> payload)
+        {
+            NetworkWireCodecStatus decoded = HandshakeWireCodec.TryDecodeConfirmation(
+                payload,
+                out SessionHandshakeConfirmation confirmation);
+            if (decoded != NetworkWireCodecStatus.Success ||
+                !_sessions.TryConfirmHandshake(
+                    connection,
+                    in confirmation,
+                    out SessionSeatBinding binding,
+                    out bool reconnect))
+            {
+                ProtocolFault(
+                    NetworkRuntimeFaultCode.SessionContractViolation,
+                    connection.Value,
+                    NetworkWireKind.SessionHandshakeConfirmation,
+                    decoded);
+                return;
+            }
+
+            _ = BindAcceptedSeat(connection, in binding, reconnect);
+            PublishRoomSnapshotIfChanged();
+        }
+
+        private ulong ResolvePreparedHandshakeCursor(in SessionSeatBinding binding)
+        {
+            int seat = binding.Slot;
+            if ((uint)seat >= (uint)_seatStates.Length ||
+                _replicationSeats[seat].SeatSlot != seat ||
+                _replicationSeats[seat].PlayerId != binding.PlayerId)
+            {
+                Fail(NetworkRuntimeFaultCode.SeatControllerUnavailable, detail: seat);
+            }
+
+            if (_seatStates[seat] == SeatEmpty)
+            {
+                return ReplicatedClientCommandStreamIdentity.FirstBatchSequence;
+            }
+
+            if (_seatStates[seat] == SeatAwaitingReconnect &&
+                _seatGenerations[seat] == binding.Generation &&
+                _seatPlayerIds[seat] == binding.PlayerId.Value)
+            {
+                NetworkCommandSeat commandSeat = ToCommandSeat(in binding);
+                return _commands.GetNextClientBatchSequence(in commandSeat);
+            }
+
+            Fail(NetworkRuntimeFaultCode.SessionContractViolation, detail: seat);
+            return 0;
         }
 
         private void FlushRejectedConnections()
@@ -463,7 +566,10 @@ namespace Ludots.Core.Networking.Runtime
             }
         }
 
-        private void BindAcceptedSeat(ConnectionId connection, in SessionSeatBinding binding)
+        private ulong BindAcceptedSeat(
+            ConnectionId connection,
+            in SessionSeatBinding binding,
+            bool expectedReconnect)
         {
             int seat = binding.Slot;
             Arch.Core.Entity controller = default;
@@ -478,6 +584,10 @@ namespace Ludots.Core.Networking.Runtime
             bool reconnect = _seatStates[seat] == SeatAwaitingReconnect &&
                 _seatGenerations[seat] == binding.Generation &&
                 _seatPlayerIds[seat] == binding.PlayerId.Value;
+            if (reconnect != expectedReconnect)
+            {
+                Fail(NetworkRuntimeFaultCode.SessionContractViolation, connection.Value, detail: seat);
+            }
             NetworkCommandSeat commandSeat = ToCommandSeat(in binding);
             if (reconnect)
             {
@@ -500,6 +610,9 @@ namespace Ludots.Core.Networking.Runtime
             _seatDisconnectTicks[seat] = 0;
             _seatNeedsFull[seat] = true;
             _seatAcknowledgedSnapshots[seat] = 0;
+            IgnoreAcknowledgementsThrough(seat, _seatLastSentSnapshots[seat]);
+            _seatLastSentSnapshots[seat] = 0;
+            _seatSnapshotSentTicks[seat] = 0;
             if (_seatLastDisclosureSequences[seat] != 0)
             {
                 _replicationSeats[seat].DisclosureLog.TryAcknowledgeThrough(
@@ -510,6 +623,7 @@ namespace Ludots.Core.Networking.Runtime
             ClearAcknowledgementHistory(seat);
             _commandReassemblers[seat].Reset();
             _observer.OnServerSeatConnected(in binding, reconnect);
+            return _commands.GetNextClientBatchSequence(in commandSeat);
         }
 
         private void ProcessCommandFragment(ConnectionId connection, ReadOnlySpan<byte> payload)
@@ -530,6 +644,7 @@ namespace Ludots.Core.Networking.Runtime
 
             if (accepted != CommandReassemblyStatus.Completed)
             {
+                assembler.Reset();
                 ProtocolFault(NetworkRuntimeFaultCode.CommandReassemblyRejected, connection.Value, NetworkWireKind.CommandFragment, detail: (int)accepted);
                 return;
             }
@@ -635,9 +750,19 @@ namespace Ludots.Core.Networking.Runtime
             if (decoded != NetworkWireCodecStatus.Success ||
                 ack.SessionEpoch != _sessions.SessionEpoch.Value ||
                 ack.SnapshotId == 0 ||
-                ack.SnapshotId > _seatLastSentSnapshots[seat] ||
-                ack.SnapshotId < _seatAcknowledgedSnapshots[seat] ||
-                ack.CommittedTick > _lastCommittedTick ||
+                ack.CommittedTick > _lastCommittedTick)
+            {
+                ProtocolFault(NetworkRuntimeFaultCode.InvalidAcknowledgement, connection.Value, NetworkWireKind.SnapshotAcknowledgement, decoded);
+                return;
+            }
+
+            if (ack.SnapshotId <= _seatIgnoredAcknowledgementsThrough[seat] ||
+                ack.SnapshotId < _seatAcknowledgedSnapshots[seat])
+            {
+                return;
+            }
+
+            if (ack.SnapshotId > _seatLastSentSnapshots[seat] ||
                 !TryFindAcknowledgementHistory(seat, ack.SnapshotId, out ulong disclosureSequence))
             {
                 ProtocolFault(NetworkRuntimeFaultCode.InvalidAcknowledgement, connection.Value, NetworkWireKind.SnapshotAcknowledgement, decoded);
@@ -645,6 +770,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _seatAcknowledgedSnapshots[seat] = ack.SnapshotId;
+            _seatSnapshotSentTicks[seat] = 0;
             if (disclosureSequence != 0)
             {
                 _replicationSeats[seat].DisclosureLog.TryAcknowledgeThrough(disclosureSequence);
@@ -663,17 +789,47 @@ namespace Ludots.Core.Networking.Runtime
 
             _seatNeedsFull[seat] = true;
             _seatAcknowledgedSnapshots[seat] = 0;
+            IgnoreAcknowledgementsThrough(seat, _seatLastSentSnapshots[seat]);
+            _seatLastSentSnapshots[seat] = 0;
+            _seatSnapshotSentTicks[seat] = 0;
             ClearAcknowledgementHistory(seat);
+        }
+
+        private bool HasSnapshotAcknowledgementTimedOut(int seat, uint committedTick)
+        {
+            ulong lastSent = _seatLastSentSnapshots[seat];
+            return lastSent != 0 &&
+                lastSent != _seatAcknowledgedSnapshots[seat] &&
+                committedTick >= _seatSnapshotSentTicks[seat] &&
+                committedTick - _seatSnapshotSentTicks[seat] >=
+                    (uint)_capacity.SnapshotAcknowledgementTimeoutTicks;
+        }
+
+        private bool TryBeginSnapshotAcknowledgementRecovery(int seat, uint committedTick)
+        {
+            if (!HasSnapshotAcknowledgementTimedOut(seat, committedTick))
+            {
+                return false;
+            }
+
+            ulong timedOutSnapshotId = _seatLastSentSnapshots[seat];
+            SendResyncRequired(seat, NetworkResyncReason.SnapshotAcknowledgementTimeout);
+            IgnoreAcknowledgementsThrough(seat, timedOutSnapshotId);
+            _seatNeedsFull[seat] = true;
+            _seatAcknowledgedSnapshots[seat] = 0;
+            _seatLastSentSnapshots[seat] = 0;
+            _seatSnapshotSentTicks[seat] = 0;
+            ClearAcknowledgementHistory(seat);
+            return true;
         }
 
         private void BuildAndSendReplication(int seat, uint committedTick, ReadOnlySpan<NetworkEntityHandle> activeHandles)
         {
-            if (!_seatNeedsFull[seat] &&
-                _seatAcknowledgedSnapshots[seat] == 0 &&
-                _seatLastSentSnapshots[seat] != 0)
+            if (_seatLastSentSnapshots[seat] != 0 &&
+                _seatLastSentSnapshots[seat] != _seatAcknowledgedSnapshots[seat])
             {
-                // Full snapshots use reliable ordered fragments. Wait for their acknowledgement
-                // instead of enqueueing another full snapshot every authoritative tick.
+                // Every delta is based on the last acknowledged snapshot. Keep exactly one
+                // snapshot in flight so a later delta can never reuse an obsolete baseline.
                 return;
             }
 
@@ -753,6 +909,7 @@ namespace Ludots.Core.Networking.Runtime
 
             _seatLastDisclosureSequences[seat] = disclosureSequence;
             _seatLastSentSnapshots[seat] = snapshotId;
+            _seatSnapshotSentTicks[seat] = committedTick;
             _seatNeedsFull[seat] = false;
             RecordAcknowledgementHistory(seat, snapshotId, disclosureSequence);
         }
@@ -875,24 +1032,216 @@ namespace Ludots.Core.Networking.Runtime
         {
             while (_commandResults.TryRead(out NetworkCommandAdmissionOutcome outcome))
             {
-                int free = -1;
-                for (int i = 0; i < _pendingAdmissionActive.Length; i++)
-                {
-                    if (!_pendingAdmissionActive[i])
-                    {
-                        free = i;
-                        break;
-                    }
-                }
-
-                if (free < 0)
-                {
-                    Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: _commandResults.Count);
-                }
-
-                _pendingAdmissions[free] = outcome;
-                _pendingAdmissionActive[free] = true;
+                RecordBatchCorrelation(in outcome);
+                EnqueuePendingAdmission(in outcome);
             }
+        }
+
+        private void FlushEntityAdmissionResults()
+        {
+            while (_entityResults.TryRead(out OrderAdmissionOutcome entityOutcome))
+            {
+                if (entityOutcome.AdmissionSource == OrderAdmissionSource.Local)
+                {
+                    continue;
+                }
+
+                if (entityOutcome.AdmissionSource != OrderAdmissionSource.Network ||
+                    entityOutcome.AdmissionBatchId <= 0)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: entityOutcome.AdmissionBatchId);
+                }
+
+                int correlation = FindBatchCorrelation(entityOutcome.AdmissionBatchId);
+                if (correlation < 0)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: entityOutcome.AdmissionBatchId);
+                }
+
+                int actorCount = _batchCorrelationActorCounts[correlation];
+                if (entityOutcome.PlayerId != _batchCorrelationPlayerIds[correlation] ||
+                    entityOutcome.AdmissionBatchSize != actorCount ||
+                    entityOutcome.AdmissionBatchIndex >= actorCount ||
+                    entityOutcome.Stage != OrderAdmissionStage.EntityIntake ||
+                    !IsEntityAdmissionResult(entityOutcome.Result))
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: entityOutcome.AdmissionBatchId);
+                }
+
+                int rowStateIndex = checked(
+                    correlation * _capacity.MaxCommandEntries + entityOutcome.AdmissionBatchIndex);
+                byte previousState = _batchCorrelationRowStates[rowStateIndex];
+                bool waitsForActivation = entityOutcome.Result is OrderSubmitResult.Queued or OrderSubmitResult.Pending;
+                if ((waitsForActivation && previousState != 0) ||
+                    (!waitsForActivation && previousState == 2))
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: entityOutcome.AdmissionBatchId);
+                }
+
+                if (waitsForActivation)
+                {
+                    _batchCorrelationRowStates[rowStateIndex] = 1;
+                }
+                else
+                {
+                    _batchCorrelationRowStates[rowStateIndex] = 2;
+                    _batchCorrelationTerminalCounts[correlation]++;
+                }
+
+                var seat = new NetworkCommandSeat(
+                    _batchCorrelationSeatSlots[correlation],
+                    _batchCorrelationSeatGenerations[correlation],
+                    _batchCorrelationPlayerIds[correlation]);
+                var outcome = new NetworkCommandAdmissionOutcome(
+                    in seat,
+                    _batchCorrelationSequences[correlation],
+                    _batchCorrelationTargetTicks[correlation],
+                    actorCount,
+                    entityOutcome.OrderId,
+                    entityOutcome.AdmissionBatchId,
+                    entityOutcome.AdmissionBatchIndex,
+                    OrderAdmissionStage.EntityIntake,
+                    entityOutcome.Result,
+                    isReplay: false);
+                if (_batchCorrelationDeliver[correlation])
+                {
+                    _commands.RecordEntityAdmission(in outcome);
+                    EnqueuePendingAdmission(in outcome);
+                }
+
+                if (_batchCorrelationTerminalCounts[correlation] == actorCount)
+                {
+                    ClearBatchCorrelation(correlation);
+                }
+            }
+        }
+
+        private static bool IsEntityAdmissionResult(OrderSubmitResult result) =>
+            result is >= OrderSubmitResult.Activated and <= OrderSubmitResult.InvalidOrderType
+                or OrderSubmitResult.InsufficientResources
+                or OrderSubmitResult.Expired
+                or OrderSubmitResult.Cancelled;
+
+        private void RecordBatchCorrelation(in NetworkCommandAdmissionOutcome outcome)
+        {
+            if (outcome.IsReplay ||
+                outcome.Stage != OrderAdmissionStage.GlobalIntake ||
+                outcome.Result != OrderSubmitResult.Queued ||
+                outcome.AdmissionBatchId <= 0)
+            {
+                return;
+            }
+
+            if (outcome.ActorCount <= 0 || outcome.ActorCount > _capacity.MaxCommandEntries)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: outcome.AdmissionBatchId);
+            }
+
+            int existing = FindBatchCorrelation(outcome.AdmissionBatchId);
+            if (existing >= 0)
+            {
+                if (_batchCorrelationSeatSlots[existing] != outcome.SeatSlot ||
+                    _batchCorrelationSeatGenerations[existing] != outcome.SeatGeneration ||
+                    _batchCorrelationSequences[existing] != outcome.ClientBatchSequence ||
+                    _batchCorrelationActorCounts[existing] != outcome.ActorCount)
+                {
+                    Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: outcome.AdmissionBatchId);
+                }
+
+                return;
+            }
+
+            int free = FindFreeBatchCorrelation();
+            if (free < 0)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: outcome.AdmissionBatchId);
+            }
+
+            _batchCorrelationActive[free] = true;
+            _batchCorrelationDeliver[free] = true;
+            _batchCorrelationIds[free] = outcome.AdmissionBatchId;
+            _batchCorrelationSeatSlots[free] = outcome.SeatSlot;
+            _batchCorrelationSeatGenerations[free] = outcome.SeatGeneration;
+            _batchCorrelationPlayerIds[free] = outcome.PlayerId;
+            _batchCorrelationSequences[free] = outcome.ClientBatchSequence;
+            _batchCorrelationTargetTicks[free] = outcome.TargetTick;
+            _batchCorrelationActorCounts[free] = outcome.ActorCount;
+            _batchCorrelationTerminalCounts[free] = 0;
+            Array.Clear(
+                _batchCorrelationRowStates,
+                free * _capacity.MaxCommandEntries,
+                _capacity.MaxCommandEntries);
+        }
+
+        private int FindBatchCorrelation(int admissionBatchId)
+        {
+            for (int i = 0; i < _batchCorrelationActive.Length; i++)
+            {
+                if (_batchCorrelationActive[i] && _batchCorrelationIds[i] == admissionBatchId)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private int FindFreeBatchCorrelation()
+        {
+            for (int offset = 0; offset < _batchCorrelationActive.Length; offset++)
+            {
+                int index = (_batchCorrelationSearchStart + offset) % _batchCorrelationActive.Length;
+                if (_batchCorrelationActive[index])
+                {
+                    continue;
+                }
+
+                _batchCorrelationSearchStart = (index + 1) % _batchCorrelationActive.Length;
+                return index;
+            }
+
+            return -1;
+        }
+
+        private void ClearBatchCorrelation(int index)
+        {
+            _batchCorrelationActive[index] = false;
+            _batchCorrelationDeliver[index] = false;
+            _batchCorrelationIds[index] = 0;
+            _batchCorrelationTerminalCounts[index] = 0;
+            Array.Clear(
+                _batchCorrelationRowStates,
+                index * _capacity.MaxCommandEntries,
+                _capacity.MaxCommandEntries);
+        }
+
+        private void EnqueuePendingAdmission(in NetworkCommandAdmissionOutcome outcome)
+        {
+            int free = -1;
+            for (int i = 0; i < _pendingAdmissionActive.Length; i++)
+            {
+                if (!_pendingAdmissionActive[i])
+                {
+                    free = i;
+                    break;
+                }
+            }
+
+            if (free < 0)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: outcome.AdmissionBatchId);
+            }
+
+            _pendingAdmissions[free] = outcome;
+            _pendingAdmissionActive[free] = true;
         }
 
         private void FlushPendingAdmissions()
@@ -983,15 +1332,43 @@ namespace Ludots.Core.Networking.Runtime
                         _seatLastDisclosureSequences[seat]);
                 }
 
+                AbandonAdmissionDelivery(in binding);
+
                 _seatStates[seat] = SeatEmpty;
                 _seatConnections[seat] = 0;
                 _seatDisconnectTicks[seat] = 0;
                 _seatNeedsFull[seat] = false;
                 _seatAcknowledgedSnapshots[seat] = 0;
+                IgnoreAcknowledgementsThrough(seat, _seatLastSentSnapshots[seat]);
+                _seatLastSentSnapshots[seat] = 0;
+                _seatSnapshotSentTicks[seat] = 0;
                 _seatLastDisclosureSequences[seat] = 0;
                 ClearAcknowledgementHistory(seat);
                 _commandReassemblers[seat].Reset();
                 _observer.OnServerSeatReleased(in binding);
+            }
+        }
+
+        private void AbandonAdmissionDelivery(in SessionSeatBinding binding)
+        {
+            for (int i = 0; i < _pendingAdmissionActive.Length; i++)
+            {
+                if (_pendingAdmissionActive[i] &&
+                    _pendingAdmissions[i].SeatSlot == binding.Slot &&
+                    _pendingAdmissions[i].SeatGeneration == binding.Generation)
+                {
+                    _pendingAdmissionActive[i] = false;
+                }
+            }
+
+            for (int i = 0; i < _batchCorrelationActive.Length; i++)
+            {
+                if (_batchCorrelationActive[i] &&
+                    _batchCorrelationSeatSlots[i] == binding.Slot &&
+                    _batchCorrelationSeatGenerations[i] == binding.Generation)
+                {
+                    _batchCorrelationDeliver[i] = false;
+                }
             }
         }
 
@@ -1084,12 +1461,20 @@ namespace Ludots.Core.Networking.Runtime
             _ackHistoryWriteIndices[seat] = 0;
         }
 
+        private void IgnoreAcknowledgementsThrough(int seat, ulong snapshotId)
+        {
+            _seatIgnoredAcknowledgementsThrough[seat] = Math.Max(
+                _seatIgnoredAcknowledgementsThrough[seat],
+                snapshotId);
+        }
+
         private ChannelId GetExpectedClientChannel(NetworkWireKind kind)
         {
             return kind switch
             {
                 NetworkWireKind.CommandFragment => _capacity.CommandChannel,
                 NetworkWireKind.SessionHandshakeRequest or
+                NetworkWireKind.SessionHandshakeConfirmation or
                 NetworkWireKind.SnapshotAcknowledgement or
                 NetworkWireKind.ResyncRequired or
                 NetworkWireKind.RoomReadyIntent => _capacity.ControlChannel,

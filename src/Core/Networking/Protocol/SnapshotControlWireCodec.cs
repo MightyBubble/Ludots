@@ -136,6 +136,6 @@ namespace Ludots.Core.Networking.Protocol
 
         private static bool IsKnownResyncReasonByte(byte value) =>
             value is >= (byte)NetworkResyncReason.BaselineUnavailable
-                and <= (byte)NetworkResyncReason.ExplicitServerRequest;
+                and <= (byte)NetworkResyncReason.SnapshotAcknowledgementTimeout;
     }
 }

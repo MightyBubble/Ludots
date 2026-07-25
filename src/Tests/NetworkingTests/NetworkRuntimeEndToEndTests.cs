@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
@@ -19,8 +20,51 @@ public sealed class NetworkRuntimeEndToEndTests
 {
     private const int TestOrderTypeId = 1;
 
+    [TestCase(200u, 0f, 180, 30, 6, 206u)]
+    [TestCase(200u, 0.1f, 180, 30, 6, 206u)]
+    [TestCase(200u, 0.5f, 0, 30, 20, 216u)]
+    [TestCase(200u, 0f, 0, 30, 0, 200u)]
+    [TestCase(0u, 0.5f, 180, 30, 6, 0u)]
+    public void ClientCommandTargetEstimate_AccountsForTimingAndHonorsFutureWindow(
+        uint committedTick,
+        float snapshotAgeSeconds,
+        int roundTripMilliseconds,
+        int simulationTickRateHz,
+        int maxFutureTargetTicks,
+        uint expected)
+    {
+        Assert.That(
+            ReplicatedClientNetworkRuntime.EstimateCommandTargetTick(
+                committedTick,
+                snapshotAgeSeconds,
+                roundTripMilliseconds,
+                simulationTickRateHz,
+                maxFutureTargetTicks),
+            Is.EqualTo(expected));
+    }
+
     [Test]
-    public void TwoRuntimePorts_HandshakeFragmentCommandsReplicateReconnectAndReleaseSeat()
+    public void ClientCommandTargetEstimate_RejectsInvalidTimingInputs()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                () => ReplicatedClientNetworkRuntime.EstimateCommandTargetTick(1, -0.1f, 0, 30, 6),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => ReplicatedClientNetworkRuntime.EstimateCommandTargetTick(1, 0f, -1, 30, 6),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => ReplicatedClientNetworkRuntime.EstimateCommandTargetTick(1, 0f, 0, 0, 6),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => ReplicatedClientNetworkRuntime.EstimateCommandTargetTick(1, 0f, 0, 30, -1),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+        });
+    }
+
+    [Test]
+    public void TwoRuntimePorts_HandshakeCommandsRecoverDroppedDeltaContinueReplicatingReconnectAndReleaseSeat()
     {
         using World serverWorld = World.Create();
         using World clientWorld = World.Create();
@@ -75,6 +119,7 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Ingress,
             commandHarness.GameplayGate,
             commandHarness.Results,
+            commandHarness.EntityResults,
             new FixedControllerResolver(player),
             input,
             new[] { serverSeat },
@@ -82,21 +127,23 @@ public sealed class NetworkRuntimeEndToEndTests
 
         var credentials = new MemoryCredentials();
         var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
-        var clientAdmissions = new NetworkCommandAdmissionResultBuffer(capacity: 16);
+        NetworkCommandAdmissionResultBuffer clientAdmissions = observer.ClientAdmissions;
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             transport,
             transport,
             transport,
             reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             credentials,
             clientFactory,
-            clientAdmissions,
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        server.PumpTransport();
         client.PumpTransport();
         server.PumpTransport();
         client.PumpTransport();
@@ -104,6 +151,9 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.Multiple(() =>
         {
             Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(client.HasEstablishedSession, Is.True);
+            Assert.That(client.IsAwaitingFullSnapshot, Is.True);
+            Assert.That(client.RoundTripTimeMilliseconds, Is.EqualTo(24));
             Assert.That(client.Seat.PlayerId.Value, Is.EqualTo(1));
             Assert.That(client.HasRoomSnapshot, Is.True);
             Assert.That(client.LatestRoomSnapshot.Phase, Is.EqualTo(NetworkRoomPhase.WaitingForReady));
@@ -130,83 +180,289 @@ public sealed class NetworkRuntimeEndToEndTests
         server.AfterAuthoritativeCommit(10);
         Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(1));
         client.PumpTransport();
+        Assert.That(clientFactory.Bridge, Is.Not.Null);
+        Assert.That(clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out _), Is.False,
+            "Transport pumping may decode replication but must not mutate the client ECS world.");
+        client.PumpReplicatedClient(0f);
         server.PumpTransport();
 
-        Assert.That(clientFactory.Bridge, Is.Not.Null);
         Assert.That(clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out Entity mirroredFirst), Is.True);
+        Assert.That(clientFactory.Bridge.TryResolve(commandHarness.SecondHandle, out Entity mirroredSecond), Is.True);
         Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
+        Assert.That(client.IsAwaitingFullSnapshot, Is.False);
+        Assert.That(client.InterpolationAlpha, Is.EqualTo(1f));
+        client.PumpReplicatedClient(0.1f);
+        Assert.That(client.InterpolationAlpha, Is.EqualTo(1f),
+            "The first snapshot has no prior arrival interval and must render at its authoritative position.");
 
-        var firstTarget = NetworkCommandTargetPayload.FromWorldPositionCm(100, 0, 0);
-        var secondTarget = NetworkCommandTargetPayload.FromWorldPositionCm(200, 0, 0);
-        var entries = new[]
+        var commandSchemas = new NetworkCommandSchemaRegistry();
+        commandSchemas.Register(new NetworkCommandSchema(
+            TestOrderTypeId,
+            NetworkCommandTargetKind.WorldPositionCm,
+            allowArg0: false,
+            allowArg1: false,
+            NetworkCommandSubmitModeMask.Queued | NetworkCommandSubmitModeMask.Immediate,
+            KnowledgePositionAccess.None));
+        commandSchemas.Freeze();
+        var commandPort = new ReplicatedClientCommandPort(
+            clientWorld,
+            client,
+            commandSchemas,
+            maxActorsPerBatch: 2);
+        var clientOrders = new[]
         {
-            new NetworkCommandWireEntry(commandHarness.FirstHandle, TestOrderTypeId, in firstTarget),
-            new NetworkCommandWireEntry(commandHarness.SecondHandle, TestOrderTypeId, in secondTarget),
+            new Order
+            {
+                Actor = mirroredFirst,
+                Target = Entity.Null,
+                OrderTypeId = TestOrderTypeId,
+                Args = OrderArgs.CreateSingleWorldCm(new System.Numerics.Vector3(100, 0, 0)),
+                SubmitMode = OrderSubmitMode.Queued,
+            },
+            new Order
+            {
+                Actor = mirroredSecond,
+                Target = Entity.Null,
+                OrderTypeId = TestOrderTypeId,
+                Args = OrderArgs.CreateSingleWorldCm(new System.Numerics.Vector3(200, 0, 0)),
+                SubmitMode = OrderSubmitMode.Queued,
+            },
         };
-        var header = new NetworkCommandBatchHeader(
-            client.SessionEpoch.Value,
-            clientBatchSequence: 1,
-            targetTick: 10,
-            acknowledgedCommittedTick: 10,
-            entryCount: 2);
-        Assert.That(client.TrySubmitCommand(in header, entries), Is.True);
+        clientOrders[0].SubmitMode = OrderSubmitMode.Immediate;
+        Assert.That(
+            commandPort.Submit(clientOrders),
+            Is.EqualTo(ReplicatedClientCommandSubmitResult.MixedSubmitModes));
+        clientOrders[1].SubmitMode = OrderSubmitMode.Immediate;
+        clientOrders[0].SubmitMode = OrderSubmitMode.PersistentQueued;
+        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.SubmitModeNotAllowed));
+        clientOrders[0].SubmitMode = OrderSubmitMode.Queued;
+        clientOrders[1].SubmitMode = OrderSubmitMode.Queued;
+        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(commandPort.SubmissionRevision, Is.EqualTo(3));
+            Assert.That(commandPort.LastSubmittedBatchSequence, Is.EqualTo(1));
+            Assert.That(commandPort.LastSubmitResult, Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        });
         Assert.That(transport.ClientCommandFragmentCount, Is.GreaterThan(1));
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
         Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
 
-        server.BeforeAuthoritativeTick(10);
+        server.BeforeAuthoritativeTick(11);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
         Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
         Span<Order> admitted = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
         Assert.That(admittedCount, Is.EqualTo(2));
+        Assert.That(admitted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+        Assert.That(admitted[1].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+
+        var firstQueued = new OrderAdmissionOutcome(
+            in admitted[0],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Queued);
+        var secondActivated = new OrderAdmissionOutcome(
+            in admitted[1],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated);
+        Assert.That(commandHarness.EntityResults.TryWrite(in firstQueued), Is.True);
+        Assert.That(commandHarness.EntityResults.TryWrite(in secondActivated), Is.True);
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityQueued), Is.True);
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome secondEntityActivated), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstEntityQueued.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(firstEntityQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(firstEntityQueued.AdmissionBatchIndex, Is.Zero);
+            Assert.That(secondEntityActivated.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(secondEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(secondEntityActivated.AdmissionBatchIndex, Is.EqualTo(1));
+        });
+
+        var firstActivated = new OrderAdmissionOutcome(
+            in admitted[0],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated);
+        Assert.That(commandHarness.EntityResults.TryWrite(in firstActivated), Is.True);
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityActivated), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(firstEntityActivated.AdmissionBatchIndex, Is.Zero);
+            Assert.That(firstEntityActivated.ClientBatchSequence, Is.EqualTo(1));
+        });
+
+        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingScheduled), Is.True);
+        Assert.That(pendingScheduled.ClientBatchSequence, Is.EqualTo(2));
+        server.BeforeAuthoritativeTick(12);
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingQueued), Is.True);
+        Assert.That(pendingQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Span<Order> abandonedOrders = stackalloc Order[2];
+        Assert.That(commandHarness.Orders.TryDequeueBatch(abandonedOrders, out int abandonedCount), Is.True);
+        Assert.That(abandonedCount, Is.EqualTo(2));
 
         commandHarness.GameplayGate.CompleteMatch();
-        var completedHeader = new NetworkCommandBatchHeader(
-            client.SessionEpoch.Value,
-            clientBatchSequence: 2,
-            targetTick: 10,
-            acknowledgedCommittedTick: 10,
-            entryCount: 2);
-        Assert.That(client.TrySubmitCommand(in completedHeader, entries), Is.True);
+        Assert.That(commandPort.Submit(clientOrders), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(commandPort.SubmissionRevision, Is.EqualTo(5));
+            Assert.That(commandPort.LastSubmittedBatchSequence, Is.EqualTo(3));
+        });
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome completed), Is.True);
         Assert.That(completed.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
 
         serverWorld.Set(first, new TestReplicatedData(2, 99));
-        server.BeforeAuthoritativeTick(11);
+        ulong droppedSnapshotId = clientFactory.Bridge!.LastSnapshotId + 1;
+        transport.DropNextServerDatagram(capacity.StateChannel, NetworkWireKind.ReplicationPacket);
         server.AfterAuthoritativeCommit(11);
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.DroppedServerDatagrams, Is.EqualTo(1));
+            Assert.That(transport.ServerReplicationPacketSendCount, Is.EqualTo(1));
+        });
+        int fragmentsWithUnacknowledgedDelta = transport.ServerSnapshotFragmentCount;
+        server.AfterAuthoritativeCommit(11);
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.ServerSnapshotFragmentCount, Is.EqualTo(fragmentsWithUnacknowledgedDelta));
+            Assert.That(
+                transport.ServerReplicationPacketSendCount,
+                Is.EqualTo(1),
+                "The server must not build a second delta from the same unacknowledged baseline.");
+        });
         client.PumpTransport();
         server.PumpTransport();
-        Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(99));
+        Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(10));
+
+        server.AfterAuthoritativeCommit(12);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.ClientResyncs, Is.EqualTo(1));
+            Assert.That(observer.LastClientResync.Reason, Is.EqualTo(NetworkResyncReason.SnapshotAcknowledgementTimeout));
+            Assert.That(observer.LastClientResync.LatestSnapshotId, Is.EqualTo(droppedSnapshotId));
+            Assert.That(transport.ServerSnapshotFragmentCount, Is.GreaterThan(fragmentsWithUnacknowledgedDelta));
+            Assert.That(transport.LastServerSnapshotFragmentChannel, Is.EqualTo(capacity.ControlChannel));
+            Assert.That(client.IsAwaitingFullSnapshot, Is.False);
+            Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(99));
+        });
+        server.PumpTransport();
+
+        var lateAcknowledgement = new NetworkSnapshotAcknowledgement(
+            client.SessionEpoch.Value,
+            droppedSnapshotId,
+            committedTick: 11);
+        Span<byte> lateAcknowledgementPayload = stackalloc byte[NetworkSnapshotAcknowledgement.SizeInBytes];
+        Assert.That(
+            SnapshotControlWireCodec.TryEncodeAcknowledgement(
+                in lateAcknowledgement,
+                lateAcknowledgementPayload,
+                out int lateAcknowledgementBytes),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        transport.EnqueueClientFrame(
+            capacity.ControlChannel,
+            NetworkWireKind.SnapshotAcknowledgement,
+            lateAcknowledgementPayload[..lateAcknowledgementBytes]);
+        server.PumpTransport();
+        Assert.That(observer.Faults, Is.Zero, "A late acknowledgement for the discarded delta is stale, not a session fault.");
+
+        serverWorld.Set(first, new TestReplicatedData(3, 100));
+        server.AfterAuthoritativeCommit(12);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        server.PumpTransport();
+        Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(100));
+        Assert.That(client.InterpolationAlpha, Is.Zero,
+            "A subsequent authoritative snapshot starts interpolation from the previous replicated position.");
+        client.PumpReplicatedClient(0.05f);
+        Assert.That(client.InterpolationAlpha, Is.EqualTo(0.5f).Within(0.001f));
 
         transport.Disconnect();
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Disconnected));
         Assert.That(observer.SeatDisconnections, Is.EqualTo(1));
+        Assert.That(client.ReconnectWindowRemainingSeconds, Is.EqualTo(30f));
+        serverWorld.Set(first, new TestReplicatedData(4, 123));
 
         client.PumpReplicatedClient(0.25f);
         Assert.That(transport.ConnectAttempts, Is.EqualTo(1));
+        Assert.That(client.ReconnectWindowRemainingSeconds, Is.EqualTo(29.75f).Within(0.001f));
         client.PumpReplicatedClient(0.25f);
         Assert.That(transport.ConnectAttempts, Is.EqualTo(2));
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Handshaking));
+        Assert.That(client.ReconnectWindowRemainingSeconds, Is.EqualTo(29.5f).Within(0.001f));
+        client.PumpReplicatedClient(0.5f);
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Handshaking));
+        Assert.That(client.ReconnectWindowRemainingSeconds, Is.EqualTo(29f).Within(0.001f));
+        server.PumpTransport();
         client.PumpTransport();
         server.PumpTransport();
         client.PumpTransport();
         Assert.Multiple(() =>
         {
             Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(client.IsAwaitingFullSnapshot, Is.True);
             Assert.That(observer.SeatReconnections, Is.EqualTo(1));
             Assert.That(client.Seat.Generation, Is.EqualTo(1));
+            Assert.That(client.NextClientBatchSequence, Is.EqualTo(4));
+        });
+
+        Assert.That(
+            commandPort.Submit(clientOrders),
+            Is.EqualTo(ReplicatedClientCommandSubmitResult.SnapshotUnavailable),
+            "A reconnected client must restore a full snapshot before gameplay commands resume.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(commandPort.SubmissionRevision, Is.EqualTo(6));
+            Assert.That(commandPort.LastSubmittedBatchSequence, Is.Zero);
+            Assert.That(commandPort.LastSubmitResult, Is.EqualTo(ReplicatedClientCommandSubmitResult.SnapshotUnavailable));
         });
 
         server.BeforeAuthoritativeTick(12);
         server.AfterAuthoritativeCommit(12);
         client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.IsAwaitingFullSnapshot, Is.False);
+            Assert.That(clientWorld.Get<TestAppliedState>(mirroredFirst).Value, Is.EqualTo(123));
+        });
+
+        var restartedProcessCommandPort = new ReplicatedClientCommandPort(
+            clientWorld,
+            client,
+            commandSchemas,
+            maxActorsPerBatch: 2);
+        Assert.That(
+            restartedProcessCommandPort.Submit(clientOrders),
+            Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.That(restartedProcessCommandPort.LastSubmittedBatchSequence, Is.EqualTo(4),
+            "A recreated client command port must resume from the server handshake cursor, not local memory.");
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome resumedOutcome), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(resumedOutcome.ClientBatchSequence, Is.EqualTo(4));
+            Assert.That(resumedOutcome.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
+        });
+
         server.PumpTransport();
         transport.Disconnect();
         server.PumpTransport();
@@ -215,12 +471,267 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(observer.SeatReleases, Is.Zero);
         server.BeforeAuthoritativeTick(16);
 
+        var abandonedFirst = new OrderAdmissionOutcome(
+            in abandonedOrders[0],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Cancelled);
+        var abandonedSecond = new OrderAdmissionOutcome(
+            in abandonedOrders[1],
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Cancelled);
+        Assert.That(commandHarness.EntityResults.TryWrite(in abandonedFirst), Is.True);
+        Assert.That(commandHarness.EntityResults.TryWrite(in abandonedSecond), Is.True);
+        server.PumpTransport();
+
         Assert.Multiple(() =>
         {
             Assert.That(observer.SeatReleases, Is.EqualTo(1));
             Assert.That(observer.Faults, Is.Zero);
             Assert.That(server.IsFaulted, Is.False);
             Assert.That(client.IsFaulted, Is.False);
+        });
+    }
+
+    [Test]
+    public void ServerRuntime_LostReconnectResponse_AllowsRetryWithOldCredential()
+    {
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("lost_reconnect_response"u8);
+        var transport = new InMemoryTransport(new ConnectionId(21));
+        var observer = new RecordingObserver();
+        using HandshakeServerHarness harness = CreateHandshakeServerHarness(
+            transport,
+            observer,
+            protocol,
+            fingerprint);
+        using World clientWorld = World.Create();
+        var credentials = new MemoryCredentials();
+        var client = new ReplicatedClientNetworkRuntime(
+            harness.Capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            credentials,
+            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            observer);
+
+        CompleteRuntimeHandshake(client, harness.Server);
+        Assert.That(credentials.TryLoad(out ClientSessionCredentials initial), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        client.PumpTransport();
+        transport.DropNextServerDatagram(harness.Capacity.ControlChannel, NetworkWireKind.SessionHandshakeResponse);
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        harness.Server.PumpTransport();
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.DroppedServerDatagrams, Is.EqualTo(1));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(1));
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Handshaking));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials preserved), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(preserved, Is.EqualTo(initial));
+        });
+
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        client.PumpTransport();
+        CompleteRuntimeHandshake(client, harness.Server);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(client.Seat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(observer.InitialSeatConnections, Is.EqualTo(1));
+            Assert.That(observer.SeatReconnections, Is.EqualTo(1));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(2));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials rotated), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(rotated.SessionEpoch, Is.EqualTo(initial.SessionEpoch));
+            Assert.That(rotated.ReconnectToken, Is.Not.EqualTo(initial.ReconnectToken));
+            Assert.That(observer.Faults, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void ClientRuntime_LostCandidateConfirmation_RestartRecoversWithPersistedCandidate()
+    {
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("lost_candidate_confirmation"u8);
+        var transport = new InMemoryTransport(new ConnectionId(23));
+        var observer = new RecordingObserver();
+        using HandshakeServerHarness harness = CreateHandshakeServerHarness(
+            transport,
+            observer,
+            protocol,
+            fingerprint);
+        using World firstClientWorld = World.Create();
+        var credentials = new MemoryCredentials();
+        var firstClient = new ReplicatedClientNetworkRuntime(
+            harness.Capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            credentials,
+            new ClientBridgeFactory(firstClientWorld, entityCapacity: 2),
+            observer);
+
+        CompleteRuntimeHandshake(firstClient, harness.Server);
+        Assert.That(credentials.TryLoad(out ClientSessionCredentials initial), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        firstClient.PumpTransport();
+
+        transport.DropNextClientDatagram(
+            harness.Capacity.ControlChannel,
+            NetworkWireKind.SessionHandshakeConfirmation);
+        Assert.That(firstClient.TryConnectNow(), Is.True);
+        firstClient.PumpTransport();
+        harness.Server.PumpTransport();
+        firstClient.PumpTransport();
+        harness.Server.PumpTransport();
+
+        Assert.That(credentials.TryLoad(out ClientSessionCredentials candidate), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+        Assert.Multiple(() =>
+        {
+            Assert.That(candidate.SessionEpoch, Is.EqualTo(initial.SessionEpoch));
+            Assert.That(candidate.ReconnectToken, Is.Not.EqualTo(initial.ReconnectToken));
+            Assert.That(firstClient.ReconnectToken, Is.EqualTo(candidate.ReconnectToken));
+            Assert.That(firstClient.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(2));
+            Assert.That(transport.DroppedClientDatagrams, Is.EqualTo(1));
+            Assert.That(observer.InitialSeatConnections, Is.EqualTo(1));
+            Assert.That(observer.SeatReconnections, Is.Zero);
+        });
+
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        firstClient.PumpTransport();
+        firstClient.Dispose();
+
+        using World recoveredClientWorld = World.Create();
+        using var recoveredClient = new ReplicatedClientNetworkRuntime(
+            harness.Capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            credentials,
+            new ClientBridgeFactory(recoveredClientWorld, entityCapacity: 2),
+            observer);
+        CompleteRuntimeHandshake(recoveredClient, harness.Server);
+
+        Assert.That(credentials.TryLoad(out ClientSessionCredentials committed), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+        Assert.Multiple(() =>
+        {
+            Assert.That(recoveredClient.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(recoveredClient.Seat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(committed.SessionEpoch, Is.EqualTo(candidate.SessionEpoch));
+            Assert.That(committed.ReconnectToken, Is.EqualTo(candidate.ReconnectToken));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(3));
+            Assert.That(transport.DroppedClientDatagrams, Is.EqualTo(1));
+            Assert.That(observer.InitialSeatConnections, Is.EqualTo(1));
+            Assert.That(observer.SeatReconnections, Is.EqualTo(1));
+            Assert.That(observer.Faults, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void ClientRuntime_CredentialStoreFailure_SendsNoConfirmation_AndOldCredentialCanRecover()
+    {
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("credential_store_failure"u8);
+        var transport = new InMemoryTransport(new ConnectionId(22));
+        var observer = new RecordingObserver();
+        using HandshakeServerHarness harness = CreateHandshakeServerHarness(
+            transport,
+            observer,
+            protocol,
+            fingerprint);
+        using World firstClientWorld = World.Create();
+        var credentials = new MemoryCredentials();
+        var firstClient = new ReplicatedClientNetworkRuntime(
+            harness.Capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            credentials,
+            new ClientBridgeFactory(firstClientWorld, entityCapacity: 2),
+            observer);
+
+        CompleteRuntimeHandshake(firstClient, harness.Server);
+        Assert.That(credentials.TryLoad(out ClientSessionCredentials initial), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+        Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(1));
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        firstClient.PumpTransport();
+
+        credentials.FailStore = true;
+        Assert.That(firstClient.TryConnectNow(), Is.True);
+        firstClient.PumpTransport();
+        harness.Server.PumpTransport();
+        Assert.That(
+            () => firstClient.PumpTransport(),
+            Throws.TypeOf<NetworkRuntimeException>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstClient.IsFaulted, Is.True);
+            Assert.That(observer.LastFault.Code, Is.EqualTo(NetworkRuntimeFaultCode.CredentialStoreFailed));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(1));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials preserved), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(preserved, Is.EqualTo(initial));
+            Assert.That(observer.SeatReconnections, Is.Zero);
+        });
+
+        transport.Disconnect();
+        harness.Server.PumpTransport();
+        Assert.That(
+            ((IClientConnectionEventPort)transport).TryReceiveConnectionEvent(out ClientConnectionEvent abandonedDisconnect),
+            Is.True);
+        Assert.That(abandonedDisconnect.Kind, Is.EqualTo(TransportConnectionEventKind.Disconnected));
+        credentials.FailStore = false;
+
+        using World recoveredClientWorld = World.Create();
+        var recoveredClient = new ReplicatedClientNetworkRuntime(
+            harness.Capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            credentials,
+            new ClientBridgeFactory(recoveredClientWorld, entityCapacity: 2),
+            observer);
+        CompleteRuntimeHandshake(recoveredClient, harness.Server);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(recoveredClient.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+            Assert.That(recoveredClient.Seat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(transport.ClientHandshakeConfirmationCount, Is.EqualTo(2));
+            Assert.That(observer.InitialSeatConnections, Is.EqualTo(1));
+            Assert.That(observer.SeatReconnections, Is.EqualTo(1));
+            Assert.That(observer.Faults, Is.EqualTo(1));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials rotated), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(rotated.SessionEpoch, Is.EqualTo(initial.SessionEpoch));
+            Assert.That(rotated.ReconnectToken, Is.Not.EqualTo(initial.ReconnectToken));
         });
     }
 
@@ -239,11 +750,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             transport,
             reconnectRetrySeconds: 1f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
             observer);
 
         transport.ConnectClientOnly();
@@ -254,7 +765,8 @@ public sealed class NetworkRuntimeEndToEndTests
             new ReconnectToken(1, 2),
             protocol,
             fingerprint,
-            new SessionEpoch(7));
+            new SessionEpoch(7),
+            nextClientBatchSequence: 1);
         Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in response, payload, out int payloadBytes), Is.EqualTo(NetworkWireCodecStatus.Success));
         transport.EnqueueServerFrame(new ChannelId(2), NetworkWireKind.SessionHandshakeResponse, payload[..payloadBytes]);
@@ -268,8 +780,11 @@ public sealed class NetworkRuntimeEndToEndTests
         });
     }
 
-    [Test]
-    public void ClientRuntime_ClearsStaleReconnectCredentialAndSchedulesFreshJoin()
+    [TestCase(HandshakeRejectReason.StaleOrInvalidReconnectToken, 5UL)]
+    [TestCase(HandshakeRejectReason.SessionEpochMismatch, 6UL)]
+    public void ClientRuntime_RecoveryCredentialRejection_IsTerminalAndDoesNotScheduleFreshJoin(
+        HandshakeRejectReason rejectReason,
+        ulong responseEpoch)
     {
         var capacity = Capacity();
         var transport = new InMemoryTransport(new ConnectionId(4));
@@ -285,20 +800,20 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             transport,
             reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             credentials,
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
         client.PumpTransport();
         SessionHandshakeResponse rejected = SessionHandshakeResponse.Reject(
-            HandshakeRejectReason.SessionEpochMismatch,
+            rejectReason,
             protocol,
             fingerprint,
-            new SessionEpoch(6));
+            new SessionEpoch(responseEpoch));
         Span<byte> payload = stackalloc byte[HandshakeWireCodec.ResponseSizeInBytes];
         Assert.That(HandshakeWireCodec.TryEncodeResponse(in rejected, payload, out int payloadBytes), Is.EqualTo(NetworkWireCodecStatus.Success));
         transport.EnqueueServerFrame(new ChannelId(0), NetworkWireKind.SessionHandshakeResponse, payload[..payloadBytes]);
@@ -306,18 +821,25 @@ public sealed class NetworkRuntimeEndToEndTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Disconnected));
-            Assert.That(credentials.TryLoad(out _), Is.EqualTo(ClientCredentialLoadStatus.Empty));
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.RecoveryRejected));
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials preserved), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(preserved.SessionEpoch, Is.EqualTo(new SessionEpoch(5)));
+            Assert.That(preserved.ReconnectToken, Is.EqualTo(new ReconnectToken(8, 9)));
             Assert.That(transport.State, Is.EqualTo(ClientConnectionControlState.Disconnected));
             Assert.That(observer.Faults, Is.Zero);
         });
 
         client.PumpReplicatedClient(0.5f);
-        Assert.That(transport.ConnectAttempts, Is.EqualTo(2));
+        Assert.Multiple(() =>
+        {
+            Assert.That(transport.ConnectAttempts, Is.EqualTo(1));
+            Assert.That(client.TryConnectNow(), Is.False);
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.RecoveryRejected));
+        });
     }
 
     [Test]
-    public void ClientRuntime_ServerEpochRestart_ClearsOldMirrorAndCompletesFreshJoin()
+    public void ClientRuntime_ServerEpochRestart_PreservesPriorSeatAndStopsInsteadOfChangingSides()
     {
         var capacity = Capacity();
         var transport = new InMemoryTransport(new ConnectionId(5));
@@ -333,11 +855,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             transport,
             reconnectRetrySeconds: 0.5f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             credentials,
             factory,
-            new NetworkCommandAdmissionResultBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -349,7 +871,8 @@ public sealed class NetworkRuntimeEndToEndTests
                 new ReconnectToken(10, 11),
                 protocol,
                 fingerprint,
-                new SessionEpoch(5)));
+                new SessionEpoch(5),
+                nextClientBatchSequence: 1));
         client.PumpTransport();
 
         ClientWorldReplicationBridge oldBridge = factory.Bridge!;
@@ -373,30 +896,104 @@ public sealed class NetworkRuntimeEndToEndTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Disconnected));
-            Assert.That(world.Has<ReplicationMirrorIdentity>(authored), Is.False);
-            Assert.That(world.Has<ReplicationMirrorState>(authored), Is.False);
-            Assert.That(credentials.TryLoad(out _), Is.EqualTo(ClientCredentialLoadStatus.Empty));
+            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.RecoveryRejected));
+            Assert.That(client.Seat, Is.EqualTo(new SessionSeatBinding(0, 1, new PlayerId(1))));
+            Assert.That(client.SessionEpoch, Is.EqualTo(new SessionEpoch(5)));
+            Assert.That(world.Has<ReplicationMirrorIdentity>(authored), Is.True);
+            Assert.That(world.Has<ReplicationMirrorState>(authored), Is.True);
+            Assert.That(credentials.TryLoad(out ClientSessionCredentials preserved), Is.EqualTo(ClientCredentialLoadStatus.Loaded));
+            Assert.That(preserved.SessionEpoch, Is.EqualTo(new SessionEpoch(5)));
+            Assert.That(preserved.ReconnectToken, Is.EqualTo(new ReconnectToken(10, 11)));
         });
 
         client.PumpReplicatedClient(0.5f);
-        client.PumpTransport();
-        EnqueueHandshakeResponse(
-            transport,
-            SessionHandshakeResponse.Accept(
-                new SessionSeatBinding(0, 1, new PlayerId(1)),
-                new ReconnectToken(20, 21),
-                protocol,
-                fingerprint,
-                new SessionEpoch(6)));
-        client.PumpTransport();
-
         Assert.Multiple(() =>
         {
-            Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
-            Assert.That(client.SessionEpoch, Is.EqualTo(new SessionEpoch(6)));
-            Assert.That(factory.Bridge, Is.Not.SameAs(oldBridge));
+            Assert.That(transport.ConnectAttempts, Is.EqualTo(2));
+            Assert.That(client.TryConnectNow(), Is.False);
+            Assert.That(factory.Bridge, Is.SameAs(oldBridge));
             Assert.That(observer.Faults, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void ClientCommandStream_SameIdentityReconnectContinuesCursor_NewSeatGenerationStartsAtOne()
+    {
+        var capacity = Capacity();
+        var transport = new InMemoryTransport(new ConnectionId(7));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 2, 4, 6 });
+        using World world = World.Create();
+        var factory = new ClientBridgeFactory(world, entityCapacity: 2);
+        using var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            reconnectWindowSeconds: 30f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            factory,
+            observer);
+
+        ConnectAndAccept(client, transport, protocol, fingerprint, seatGeneration: 1, tokenLow: 10, nextClientBatchSequence: 1);
+        var actorHandle = new NetworkEntityHandle(0, 1);
+        EnqueueFullReplication(transport, sessionEpoch: 9, tick: 1, snapshotId: 1, actorHandle, revision: 1);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.That(factory.Bridge!.TryResolve(actorHandle, out Entity actor), Is.True);
+
+        var schemas = new NetworkCommandSchemaRegistry();
+        schemas.Register(new NetworkCommandSchema(
+            TestOrderTypeId,
+            NetworkCommandTargetKind.WorldPositionCm,
+            allowArg0: false,
+            allowArg1: false,
+            NetworkCommandSubmitModeMask.Immediate | NetworkCommandSubmitModeMask.Queued,
+            KnowledgePositionAccess.None));
+        schemas.Freeze();
+        var commands = new ReplicatedClientCommandPort(world, client, schemas, maxActorsPerBatch: 1);
+        var order = new Order
+        {
+            Actor = actor,
+            Target = Entity.Null,
+            OrderTypeId = TestOrderTypeId,
+            Args = OrderArgs.CreateSingleWorldCm(new System.Numerics.Vector3(25, 0, 50)),
+            SubmitMode = OrderSubmitMode.Immediate,
+        };
+
+        Assert.That(commands.Submit(in order), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.That(transport.LastClientCommandBatchSequence, Is.EqualTo(1));
+        Assert.That(commands.Submit(in order), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.That(transport.LastClientCommandBatchSequence, Is.EqualTo(2));
+
+        transport.Disconnect();
+        client.PumpTransport();
+        ConnectAndAccept(client, transport, protocol, fingerprint, seatGeneration: 1, tokenLow: 20, nextClientBatchSequence: 3);
+        EnqueueFullReplication(transport, sessionEpoch: 9, tick: 2, snapshotId: 2, actorHandle, revision: 2);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.That(commands.Submit(in order), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.That(
+            transport.LastClientCommandBatchSequence,
+            Is.EqualTo(3),
+            "A reconnect to the same epoch, seat slot, and generation must continue its command cursor.");
+
+        transport.Disconnect();
+        client.PumpTransport();
+        ConnectAndAccept(client, transport, protocol, fingerprint, seatGeneration: 2, tokenLow: 30, nextClientBatchSequence: 1);
+        EnqueueFullReplication(transport, sessionEpoch: 9, tick: 3, snapshotId: 3, actorHandle, revision: 3);
+        client.PumpTransport();
+        client.PumpReplicatedClient(0f);
+        Assert.That(commands.Submit(in order), Is.EqualTo(ReplicatedClientCommandSubmitResult.Submitted));
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.CommandStreamIdentity.SeatGeneration, Is.EqualTo(2));
+            Assert.That(commands.LastSubmittedBatchSequence, Is.EqualTo(1));
+            Assert.That(transport.LastClientCommandBatchSequence, Is.EqualTo(1));
         });
     }
 
@@ -415,11 +1012,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             transport,
             reconnectRetrySeconds: 1f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -484,11 +1081,11 @@ public sealed class NetworkRuntimeEndToEndTests
             transport,
             transport,
             reconnectRetrySeconds: 1f,
+            reconnectWindowSeconds: 30f,
             protocol,
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
             observer);
         var roomSeats = new[]
         {
@@ -532,7 +1129,8 @@ public sealed class NetworkRuntimeEndToEndTests
                 new ReconnectToken(1, 2),
                 protocol,
                 fingerprint,
-                new SessionEpoch(7)));
+                new SessionEpoch(7),
+                nextClientBatchSequence: 1));
         client.PumpTransport();
         roomPayload[RoomControlWireCodec.SnapshotHeaderSizeInBytes - 1] = 1;
         transport.EnqueueServerFrame(new ChannelId(0), NetworkWireKind.RoomSnapshot, roomPayload);
@@ -562,6 +1160,154 @@ public sealed class NetworkRuntimeEndToEndTests
             payload[..payloadBytes]);
     }
 
+    private static void ConnectAndAccept(
+        ReplicatedClientNetworkRuntime client,
+        InMemoryTransport transport,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint,
+        uint seatGeneration,
+        ulong tokenLow,
+        ulong nextClientBatchSequence)
+    {
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        EnqueueHandshakeResponse(
+            transport,
+            SessionHandshakeResponse.Accept(
+                new SessionSeatBinding(0, seatGeneration, new PlayerId(1)),
+                new ReconnectToken(tokenLow, checked(tokenLow + 1)),
+                protocol,
+                fingerprint,
+                new SessionEpoch(9),
+                nextClientBatchSequence));
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+    }
+
+    private static void EnqueueFullReplication(
+        InMemoryTransport transport,
+        ulong sessionEpoch,
+        uint tick,
+        ulong snapshotId,
+        NetworkEntityHandle actor,
+        uint revision)
+    {
+        byte[] payload = new byte[
+            ReplicationPacketWireCodec.HeaderSizeInBytes + ReplicationPacketWireCodec.UpsertSizeInBytes];
+        int offset = 0;
+        payload[offset++] = (byte)ReplicationPacketKind.Full;
+        offset += 3;
+        BinaryPrimitives.WriteUInt64LittleEndian(payload.AsSpan(offset, 8), sessionEpoch);
+        offset += 8;
+        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(offset, 4), tick);
+        offset += 4;
+        BinaryPrimitives.WriteUInt64LittleEndian(payload.AsSpan(offset, 8), snapshotId);
+        offset += 8;
+        BinaryPrimitives.WriteUInt64LittleEndian(payload.AsSpan(offset, 8), 0);
+        offset += 8;
+        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(offset, 2), 1);
+        offset += 2;
+        offset += 6;
+
+        BinaryPrimitives.WriteInt32LittleEndian(payload.AsSpan(offset, 4), actor.Slot);
+        offset += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(offset, 4), actor.Generation);
+        offset += 4;
+        BinaryPrimitives.WriteInt32LittleEndian(payload.AsSpan(offset, 4), 1);
+        offset += 4;
+        BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(offset, 4), revision);
+        offset += 4;
+        BinaryPrimitives.WriteInt64LittleEndian(payload.AsSpan(offset, 8), revision);
+        offset += 8;
+        offset += 24;
+
+        Assert.That(offset, Is.EqualTo(payload.Length));
+        transport.EnqueueServerFrame(
+            new ChannelId(2),
+            NetworkWireKind.ReplicationPacket,
+            payload);
+    }
+
+    private static void CompleteRuntimeHandshake(
+        ReplicatedClientNetworkRuntime client,
+        AuthoritativeServerNetworkRuntime server)
+    {
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        server.PumpTransport();
+        client.PumpTransport();
+        server.PumpTransport();
+        client.PumpTransport();
+    }
+
+    private static HandshakeServerHarness CreateHandshakeServerHarness(
+        InMemoryTransport transport,
+        RecordingObserver observer,
+        ProtocolVersion protocol,
+        ContentFingerprint fingerprint)
+    {
+        World serverWorld = World.Create();
+        try
+        {
+            Entity player = serverWorld.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity first = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+            Entity second = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 20));
+            CommandHarness commandHarness = CreateCommandHarness(serverWorld, player, first, second);
+            commandHarness.Knowledge.Upsert(player, first, VisibleDisclosure());
+            commandHarness.Knowledge.Upsert(player, second, VisibleDisclosure());
+
+            var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
+            Assert.That(
+                projectors.Register(1, new TestProjector()),
+                Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+            projectors.Freeze();
+            var bridge = new AuthoritativeWorldReplicationBridge(
+                serverWorld,
+                commandHarness.Entities,
+                commandHarness.Knowledge,
+                player,
+                projectors,
+                entityCapacity: 2);
+            var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 32);
+            var replicationSeat = new AuthoritativeReplicationSeatRuntime(
+                seatSlot: 0,
+                playerId: new PlayerId(1),
+                bridge,
+                new AuthoritativeReplicationChannel(entityCapacity: 2, baselineCapacity: 4, disclosureLog),
+                disclosureLog,
+                new ReplicationProjectionBuffer(entityCapacity: 2),
+                new ReplicationPacketBuffer(entityCapacity: 2));
+            NetworkRuntimeCapacity capacity = Capacity();
+            var sessions = new AuthoritativeSessionRegistry(
+                seatCapacity: 1,
+                new SessionEpoch(77),
+                protocol,
+                fingerprint,
+                reconnectWindowTicks: 30,
+                readyCountdownTicks: 90);
+            var server = new AuthoritativeServerNetworkRuntime(
+                in capacity,
+                transport,
+                transport,
+                transport,
+                sessions,
+                commandHarness.Ingress,
+                commandHarness.GameplayGate,
+                commandHarness.Results,
+                commandHarness.EntityResults,
+                new FixedControllerResolver(player),
+                new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle),
+                new[] { replicationSeat },
+                observer);
+            return new HandshakeServerHarness(serverWorld, in capacity, server);
+        }
+        catch
+        {
+            serverWorld.Dispose();
+            throw;
+        }
+    }
+
     private static NetworkRuntimeCapacity Capacity() => new(
         maxDatagramPayloadBytes: 128,
         connectionCapacity: 2,
@@ -573,9 +1319,13 @@ public sealed class NetworkRuntimeEndToEndTests
         maxSnapshotFragments: 4,
         outboundQueueCapacity: 32,
         acknowledgementHistoryCapacity: 4,
+        snapshotAcknowledgementTimeoutTicks: 1,
+        commandCorrelationCapacity: 16,
         controlChannel: new ChannelId(0),
         commandChannel: new ChannelId(1),
-        stateChannel: new ChannelId(2));
+        stateChannel: new ChannelId(2),
+        simulationTickRateHz: 1,
+        maxFutureTargetTicks: 2);
 
     private static CommandHarness CreateCommandHarness(World world, Entity player, Entity first, Entity second)
     {
@@ -606,10 +1356,11 @@ public sealed class NetworkRuntimeEndToEndTests
             NetworkCommandTargetKind.WorldPositionCm,
             allowArg0: false,
             allowArg1: false,
-            OrderSubmitMode.Immediate,
+            NetworkCommandSubmitModeMask.Immediate | NetworkCommandSubmitModeMask.Queued,
             KnowledgePositionAccess.None));
         schemas.Freeze();
         var orders = new OrderQueue(capacity: 8);
+        var entityResults = new OrderAdmissionResultBuffer(capacity: 8);
         var results = new NetworkCommandAdmissionResultBuffer(capacity: 8);
         var config = new NetworkCommandIngressConfig(
             seatCapacity: 1,
@@ -634,7 +1385,16 @@ public sealed class NetworkRuntimeEndToEndTests
             gameplayGate,
             orders,
             results);
-        return new CommandHarness(entities, knowledge, orders, results, ingress, gameplayGate, firstHandle, secondHandle);
+        return new CommandHarness(
+            entities,
+            knowledge,
+            orders,
+            results,
+            entityResults,
+            ingress,
+            gameplayGate,
+            firstHandle,
+            secondHandle);
     }
 
     private static KnowledgeDisclosureRecord VisibleDisclosure() => new(
@@ -654,10 +1414,32 @@ public sealed class NetworkRuntimeEndToEndTests
         KnowledgeProjectionStore Knowledge,
         OrderQueue Orders,
         NetworkCommandAdmissionResultBuffer Results,
+        OrderAdmissionResultBuffer EntityResults,
         NetworkCommandIngress Ingress,
         NetworkGameplayCommandGate GameplayGate,
         NetworkEntityHandle FirstHandle,
         NetworkEntityHandle SecondHandle);
+
+    private sealed class HandshakeServerHarness : IDisposable
+    {
+        private readonly World _serverWorld;
+
+        public HandshakeServerHarness(
+            World serverWorld,
+            in NetworkRuntimeCapacity capacity,
+            AuthoritativeServerNetworkRuntime server)
+        {
+            _serverWorld = serverWorld;
+            Capacity = capacity;
+            Server = server;
+        }
+
+        public NetworkRuntimeCapacity Capacity { get; }
+
+        public AuthoritativeServerNetworkRuntime Server { get; }
+
+        public void Dispose() => _serverWorld.Dispose();
+    }
 
     private readonly struct TestReplicatedData
     {
@@ -714,11 +1496,15 @@ public sealed class NetworkRuntimeEndToEndTests
     {
         private readonly World _world;
         private readonly int _entityCapacity;
+        private readonly KnowledgeProjectionStore _knowledge;
+        private readonly Entity _viewer;
 
         public ClientBridgeFactory(World world, int entityCapacity)
         {
             _world = world;
             _entityCapacity = entityCapacity;
+            _knowledge = new KnowledgeProjectionStore(initialCapacity: entityCapacity);
+            _viewer = world.Create();
         }
 
         public ClientWorldReplicationBridge? Bridge { get; private set; }
@@ -728,7 +1514,13 @@ public sealed class NetworkRuntimeEndToEndTests
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, new TestApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
             appliers.Freeze();
-            Bridge = new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, appliers);
+            Bridge = new ClientWorldReplicationBridge(
+                _world,
+                _entityCapacity,
+                sessionEpoch,
+                appliers,
+                _knowledge,
+                _viewer);
             return Bridge;
         }
     }
@@ -768,6 +1560,8 @@ public sealed class NetworkRuntimeEndToEndTests
         private bool _hasValue;
         private ClientSessionCredentials _value;
 
+        public bool FailStore { get; set; }
+
         public void Seed(in ClientSessionCredentials credentials)
         {
             _value = credentials;
@@ -782,6 +1576,11 @@ public sealed class NetworkRuntimeEndToEndTests
 
         public bool TryStore(in ClientSessionCredentials credentials)
         {
+            if (FailStore)
+            {
+                return false;
+            }
+
             _value = credentials;
             _hasValue = true;
             return true;
@@ -797,6 +1596,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
     private sealed class RecordingObserver : INetworkRuntimeObserver
     {
+        public NetworkCommandAdmissionResultBuffer ClientAdmissions { get; } = new(capacity: 64);
         public int Faults { get; private set; }
         public int InitialSeatConnections { get; private set; }
         public int SeatReconnections { get; private set; }
@@ -807,7 +1607,9 @@ public sealed class NetworkRuntimeEndToEndTests
         public HandshakeRejectReason LastHandshakeRejectReason { get; private set; }
         public int ClientRoomSnapshots { get; private set; }
         public int ServerRoomSnapshots { get; private set; }
+        public int ClientResyncs { get; private set; }
         public NetworkRoomSnapshotHeader LastRoomSnapshot { get; private set; }
+        public NetworkResyncRequired LastClientResync { get; private set; }
 
         public void OnFault(in NetworkRuntimeFault fault)
         {
@@ -834,8 +1636,15 @@ public sealed class NetworkRuntimeEndToEndTests
             ClientHandshakes++;
             LastHandshakeRejectReason = response.RejectReason;
         }
-        public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) { }
-        public void OnClientResyncRequired(in NetworkResyncRequired message) { }
+        public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome)
+        {
+            Assert.That(ClientAdmissions.TryWrite(in outcome), Is.True);
+        }
+        public void OnClientResyncRequired(in NetworkResyncRequired message)
+        {
+            ClientResyncs++;
+            LastClientResync = message;
+        }
         public void OnClientRoomSnapshot(
             in NetworkRoomSnapshotHeader snapshot,
             ReadOnlySpan<NetworkRoomSeatSnapshot> seats)
@@ -858,13 +1667,26 @@ public sealed class NetworkRuntimeEndToEndTests
         private readonly Queue<ClientConnectionEvent> _clientEvents = new();
         private readonly Queue<Frame> _serverInbound = new();
         private readonly Queue<Frame> _clientInbound = new();
+        private bool _dropNextServerDatagram;
+        private ChannelId _dropServerChannel;
+        private NetworkWireKind _dropServerKind;
+        private bool _dropNextClientDatagram;
+        private ChannelId _dropClientChannel;
+        private NetworkWireKind _dropClientKind;
 
         public InMemoryTransport(ConnectionId connection) => _connection = connection;
 
         public int ServerSnapshotFragmentCount { get; private set; }
+        public int ServerReplicationPacketSendCount { get; private set; }
+        public int DroppedServerDatagrams { get; private set; }
+        public int DroppedClientDatagrams { get; private set; }
+        public ChannelId LastServerSnapshotFragmentChannel { get; private set; }
         public int ClientCommandFragmentCount { get; private set; }
+        public int ClientHandshakeConfirmationCount { get; private set; }
+        public ulong LastClientCommandBatchSequence { get; private set; }
         public int ConnectAttempts { get; private set; }
         public ClientConnectionControlState State { get; private set; }
+        public int RoundTripTimeMilliseconds => State == ClientConnectionControlState.Connected ? 24 : 0;
 
         public void Connect()
         {
@@ -916,6 +1738,29 @@ public sealed class NetworkRuntimeEndToEndTests
             _clientInbound.Enqueue(new Frame(channel, framed));
         }
 
+        public void EnqueueClientFrame(ChannelId channel, NetworkWireKind kind, ReadOnlySpan<byte> payload)
+        {
+            byte[] framed = new byte[NetworkWireEnvelopeCodec.GetFramedLength(payload.Length)];
+            Assert.That(NetworkWireEnvelopeCodec.TryEncode(kind, payload, framed, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+            _serverInbound.Enqueue(new Frame(channel, framed));
+        }
+
+        public void DropNextServerDatagram(ChannelId channel, NetworkWireKind kind)
+        {
+            Assert.That(_dropNextServerDatagram, Is.False);
+            _dropNextServerDatagram = true;
+            _dropServerChannel = channel;
+            _dropServerKind = kind;
+        }
+
+        public void DropNextClientDatagram(ChannelId channel, NetworkWireKind kind)
+        {
+            Assert.That(_dropNextClientDatagram, Is.False);
+            _dropNextClientDatagram = true;
+            _dropClientChannel = channel;
+            _dropClientKind = kind;
+        }
+
         public void Pump() { }
 
         public bool TryReceiveConnectionEvent(out ServerConnectionEvent connectionEvent) =>
@@ -959,10 +1804,24 @@ public sealed class NetworkRuntimeEndToEndTests
         public DatagramSendStatus TrySend(ConnectionId connectionId, ChannelId channelId, ReadOnlySpan<byte> payload)
         {
             byte[] copy = payload.ToArray();
+            bool decoded = TryGetKind(copy, out NetworkWireKind kind);
+            if (decoded && kind == NetworkWireKind.ReplicationPacket)
+            {
+                ServerReplicationPacketSendCount++;
+            }
+
+            if (_dropNextServerDatagram && channelId == _dropServerChannel && decoded && kind == _dropServerKind)
+            {
+                _dropNextServerDatagram = false;
+                DroppedServerDatagrams++;
+                return DatagramSendStatus.Sent;
+            }
+
             _clientInbound.Enqueue(new Frame(channelId, copy));
-            if (TryGetKind(copy, out NetworkWireKind kind) && kind == NetworkWireKind.SnapshotFragment)
+            if (decoded && kind == NetworkWireKind.SnapshotFragment)
             {
                 ServerSnapshotFragmentCount++;
+                LastServerSnapshotFragmentChannel = channelId;
             }
 
             return DatagramSendStatus.Sent;
@@ -971,11 +1830,40 @@ public sealed class NetworkRuntimeEndToEndTests
         public DatagramSendStatus TrySend(ChannelId channelId, ReadOnlySpan<byte> payload)
         {
             byte[] copy = payload.ToArray();
-            _serverInbound.Enqueue(new Frame(channelId, copy));
-            if (TryGetKind(copy, out NetworkWireKind kind) && kind == NetworkWireKind.CommandFragment)
+            bool decoded = TryGetKind(copy, out NetworkWireKind kind);
+            if (decoded && kind == NetworkWireKind.SessionHandshakeConfirmation)
+            {
+                ClientHandshakeConfirmationCount++;
+            }
+            else if (decoded && kind == NetworkWireKind.CommandFragment)
             {
                 ClientCommandFragmentCount++;
+                Assert.That(
+                    NetworkWireEnvelopeCodec.TryDecode(
+                        copy,
+                        out _,
+                        out ReadOnlySpan<byte> fragmentPayload),
+                    Is.EqualTo(NetworkWireCodecStatus.Success));
+                Assert.That(
+                    CommandFragmentWireCodec.TryDecode(
+                        fragmentPayload,
+                        out NetworkCommandFragmentHeader header,
+                        out _),
+                    Is.EqualTo(NetworkWireCodecStatus.Success));
+                LastClientCommandBatchSequence = header.ClientBatchSequence;
             }
+
+            if (_dropNextClientDatagram &&
+                channelId == _dropClientChannel &&
+                decoded &&
+                kind == _dropClientKind)
+            {
+                _dropNextClientDatagram = false;
+                DroppedClientDatagrams++;
+                return DatagramSendStatus.Sent;
+            }
+
+            _serverInbound.Enqueue(new Frame(channelId, copy));
 
             return DatagramSendStatus.Sent;
         }

@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Networking.Protocol
 {
@@ -18,6 +19,7 @@ namespace Ludots.Core.Networking.Protocol
         CommandFragment = 9,
         RoomReadyIntent = 10,
         RoomSnapshot = 11,
+        SessionHandshakeConfirmation = 12,
     }
 
     /// <summary>
@@ -53,6 +55,7 @@ namespace Ludots.Core.Networking.Protocol
         BaselineExpired = 2,
         SnapshotGap = 3,
         ExplicitServerRequest = 4,
+        SnapshotAcknowledgementTimeout = 5,
     }
 
     /// <summary>
@@ -326,13 +329,15 @@ namespace Ludots.Core.Networking.Protocol
             ulong clientBatchSequence,
             int targetTick,
             int acknowledgedCommittedTick,
-            ushort entryCount)
+            ushort entryCount,
+            OrderSubmitMode submitMode)
         {
             SessionEpoch = sessionEpoch;
             ClientBatchSequence = clientBatchSequence;
             TargetTick = targetTick;
             AcknowledgedCommittedTick = acknowledgedCommittedTick;
             EntryCount = entryCount;
+            SubmitMode = submitMode;
         }
 
         public ulong SessionEpoch { get; }
@@ -340,5 +345,6 @@ namespace Ludots.Core.Networking.Protocol
         public int TargetTick { get; }
         public int AcknowledgedCommittedTick { get; }
         public ushort EntryCount { get; }
+        public OrderSubmitMode SubmitMode { get; }
     }
 }

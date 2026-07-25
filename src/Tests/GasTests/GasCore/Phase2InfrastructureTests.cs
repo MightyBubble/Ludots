@@ -230,13 +230,15 @@ namespace GasTests
         }
 
         [Test]
-        public async Task RegisterEventHandler_SynchronousFailure_IsRecorded()
+        public void RegisterEventHandler_SynchronousFailure_IsRecordedAndPropagated()
         {
             var tm = new TriggerManager();
             tm.RegisterEventHandler(GameEvents.GameStart, _ =>
                 throw new InvalidOperationException("startup failed"));
 
-            await tm.FireEventAsync(GameEvents.GameStart, new ScriptContext());
+            Assert.That(
+                async () => await tm.FireEventAsync(GameEvents.GameStart, new ScriptContext()),
+                Throws.InvalidOperationException.With.Message.EqualTo("startup failed"));
 
             Assert.That(tm.Errors, Has.Count.EqualTo(1));
             Assert.That(tm.Errors[0].EventKey, Is.EqualTo(GameEvents.GameStart));

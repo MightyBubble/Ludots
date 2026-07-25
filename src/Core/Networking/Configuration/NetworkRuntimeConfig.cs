@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
 
 namespace Ludots.Core.Networking.Configuration
@@ -25,10 +27,12 @@ namespace Ludots.Core.Networking.Configuration
         public int MaxFutureTargetTicks { get; set; }
         public int NetworkAdmissionResultCapacity { get; set; }
         public int EntityAdmissionResultCapacity { get; set; }
+        public int CommandCorrelationCapacity { get; set; }
         public int ReconnectWindowSeconds { get; set; }
         public int ReadyCountdownTicks { get; set; }
         public int ClientReconnectRetryMilliseconds { get; set; }
         public int BaselineCapacity { get; set; }
+        public int SnapshotAcknowledgementTimeoutTicks { get; set; }
         public int ReplicationPacketEntityCapacity { get; set; }
         public int ReplicationSchemaCapacity { get; set; }
         public int DisclosureChangeLogCapacity { get; set; }
@@ -89,11 +93,35 @@ namespace Ludots.Core.Networking.Configuration
                     $"Networking admission result capacity {NetworkAdmissionResultCapacity} is below scheduled batch capacity {scheduledCommandBatchCapacity}.");
             }
 
+            if (NetworkAdmissionResultCapacity < MaxActorsPerCommandBatch + 1)
+            {
+                throw new InvalidOperationException(
+                    $"Networking admission result capacity {NetworkAdmissionResultCapacity} cannot replay a maximum command batch of {MaxActorsPerCommandBatch} actors.");
+            }
+
             RequirePositive(EntityAdmissionResultCapacity, nameof(EntityAdmissionResultCapacity));
+            if (EntityAdmissionResultCapacity < MaxActorsPerCommandBatch)
+            {
+                throw new InvalidOperationException(
+                    $"Entity admission result capacity {EntityAdmissionResultCapacity} is below maximum command actor count {MaxActorsPerCommandBatch}.");
+            }
+
+            RequirePositive(CommandCorrelationCapacity, nameof(CommandCorrelationCapacity));
+            int minimumCorrelationCapacity = checked(
+                OrderQueueCapacity +
+                (NetworkEntityCapacity * (OrderBuffer.MAX_QUEUED_ORDERS + 2)));
+            if (CommandCorrelationCapacity < minimumCorrelationCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"Networking command correlation capacity {CommandCorrelationCapacity} is below the " +
+                    $"declared waiting-order bound {minimumCorrelationCapacity}.");
+            }
+
             RequirePositive(ReconnectWindowSeconds, nameof(ReconnectWindowSeconds));
             RequirePositive(ReadyCountdownTicks, nameof(ReadyCountdownTicks));
             RequirePositive(ClientReconnectRetryMilliseconds, nameof(ClientReconnectRetryMilliseconds));
             RequirePositive(BaselineCapacity, nameof(BaselineCapacity));
+            RequirePositive(SnapshotAcknowledgementTimeoutTicks, nameof(SnapshotAcknowledgementTimeoutTicks));
             RequirePositive(ReplicationPacketEntityCapacity, nameof(ReplicationPacketEntityCapacity));
             if (ReplicationPacketEntityCapacity < NetworkEntityCapacity)
             {
@@ -177,10 +205,30 @@ namespace Ludots.Core.Networking.Configuration
                         $"Networking CommandSchemas[{i}].TargetKind is invalid: {schema.TargetKind}.");
                 }
 
-                if ((uint)schema.SubmitMode > (uint)OrderSubmitMode.Queued)
+                if (schema.AllowedSubmitModes == null || schema.AllowedSubmitModes.Count == 0)
                 {
                     throw new InvalidOperationException(
-                        $"Networking CommandSchemas[{i}].SubmitMode is invalid: {schema.SubmitMode}.");
+                        $"Networking CommandSchemas[{i}].AllowedSubmitModes must explicitly allow at least one mode.");
+                }
+
+                NetworkCommandSubmitModeMask allowedModes = NetworkCommandSubmitModeMask.None;
+                for (int modeIndex = 0; modeIndex < schema.AllowedSubmitModes.Count; modeIndex++)
+                {
+                    OrderSubmitMode submitMode = schema.AllowedSubmitModes[modeIndex];
+                    if ((uint)submitMode > (uint)OrderSubmitMode.PersistentQueued)
+                    {
+                        throw new InvalidOperationException(
+                            $"Networking CommandSchemas[{i}].AllowedSubmitModes[{modeIndex}] is invalid: {submitMode}.");
+                    }
+
+                    NetworkCommandSubmitModeMask mask =
+                        (NetworkCommandSubmitModeMask)(1 << (int)submitMode);
+                    if ((allowedModes & mask) != 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Networking command schema '{schema.OrderTypeKey}' duplicates submit mode '{submitMode}'.");
+                    }
+                    allowedModes |= mask;
                 }
 
                 if ((uint)schema.RequiredTargetPositionAccess > (uint)KnowledgePositionAccess.Live)
@@ -230,8 +278,18 @@ namespace Ludots.Core.Networking.Configuration
         public NetworkCommandTargetKind TargetKind { get; set; }
         public bool AllowArg0 { get; set; }
         public bool AllowArg1 { get; set; }
-        public OrderSubmitMode SubmitMode { get; set; }
+        public List<OrderSubmitMode> AllowedSubmitModes { get; set; } = new();
         public KnowledgePositionAccess RequiredTargetPositionAccess { get; set; }
+
+        public NetworkCommandSubmitModeMask GetAllowedSubmitModeMask()
+        {
+            NetworkCommandSubmitModeMask result = NetworkCommandSubmitModeMask.None;
+            for (int i = 0; i < AllowedSubmitModes.Count; i++)
+            {
+                result |= (NetworkCommandSubmitModeMask)(1 << (int)AllowedSubmitModes[i]);
+            }
+            return result;
+        }
     }
 
     public sealed class NetworkFaultProfileConfig

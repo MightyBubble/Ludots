@@ -1,5 +1,6 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
@@ -92,29 +93,68 @@ namespace Ludots.Core.Networking.Runtime
 
     public sealed class NetworkRuntimeStateObserver : INetworkRuntimeObserver
     {
+        private const int AdmissionProgressStageCapacity = 6;
+
         private readonly NetworkSeatConnectionState[] _seatStates;
         private readonly uint[] _seatGenerations;
         private readonly int[] _seatPlayerIds;
         private readonly NetworkRoomSeatSnapshot[] _roomSeats;
+        private readonly ulong[] _clientAdmissionSequences;
+        private readonly NetworkCommandAdmissionOutcome[] _clientAdmissionSummaries;
+        private readonly NetworkCommandAdmissionOutcome[] _clientActorAdmissions;
+        private readonly NetworkCommandAdmissionOutcome[] _clientAdmissionProgress;
+        private readonly bool[] _clientAdmissionActive;
+        private readonly bool[] _clientActorAdmissionActive;
+        private readonly byte[] _clientAdmissionProgressCounts;
+        private readonly int _maxActorsPerCommandBatch;
+        private ReplicatedClientCommandStreamIdentity _clientAdmissionIdentity;
+        private int _clientAdmissionWriteIndex;
 
-        public NetworkRuntimeStateObserver(int seatCapacity)
+        public NetworkRuntimeStateObserver(
+            int seatCapacity,
+            int clientAdmissionHistoryCapacity,
+            int maxActorsPerCommandBatch)
         {
             if (seatCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(seatCapacity));
             }
 
+            if (clientAdmissionHistoryCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clientAdmissionHistoryCapacity));
+            }
+
+            if (maxActorsPerCommandBatch <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxActorsPerCommandBatch));
+            }
+
             _seatStates = new NetworkSeatConnectionState[seatCapacity];
             _seatGenerations = new uint[seatCapacity];
             _seatPlayerIds = new int[seatCapacity];
             _roomSeats = new NetworkRoomSeatSnapshot[seatCapacity];
+            _clientAdmissionSequences = new ulong[clientAdmissionHistoryCapacity];
+            _clientAdmissionSummaries = new NetworkCommandAdmissionOutcome[clientAdmissionHistoryCapacity];
+            _clientAdmissionActive = new bool[clientAdmissionHistoryCapacity];
+            _maxActorsPerCommandBatch = maxActorsPerCommandBatch;
+            int actorAdmissionCapacity = checked(clientAdmissionHistoryCapacity * maxActorsPerCommandBatch);
+            _clientActorAdmissions = new NetworkCommandAdmissionOutcome[actorAdmissionCapacity];
+            _clientActorAdmissionActive = new bool[actorAdmissionCapacity];
+            _clientAdmissionProgress = new NetworkCommandAdmissionOutcome[
+                checked(clientAdmissionHistoryCapacity * AdmissionProgressStageCapacity)];
+            _clientAdmissionProgressCounts = new byte[clientAdmissionHistoryCapacity];
         }
 
         public int SeatCapacity => _seatStates.Length;
+        public int ClientAdmissionProgressCapacityPerBatch => AdmissionProgressStageCapacity;
         public int FaultCount { get; private set; }
         public NetworkRuntimeFault LastFault { get; private set; }
         public SessionHandshakeResponse LastClientHandshake { get; private set; }
         public NetworkCommandAdmissionOutcome LastClientAdmission { get; private set; }
+        public ulong ClientAdmissionRevision { get; private set; }
+        public ulong ClientAdmissionHistoryEvictionCount { get; private set; }
+        public ulong ClientAdmissionHistoryMissCount { get; private set; }
         public NetworkResyncRequired LastClientResync { get; private set; }
         public bool HasRoomSnapshot { get; private set; }
         public NetworkRoomSnapshotHeader LastRoomSnapshot { get; private set; }
@@ -174,9 +214,292 @@ namespace Ludots.Core.Networking.Runtime
             ReadOnlySpan<NetworkRoomSeatSnapshot> seats) =>
             StoreRoomSnapshot(in snapshot, seats);
 
-        public void OnClientHandshake(in SessionHandshakeResponse response) => LastClientHandshake = response;
+        public void OnClientHandshake(in SessionHandshakeResponse response)
+        {
+            bool identityChanged;
+            if (response.Accepted)
+            {
+                var identity = new ReplicatedClientCommandStreamIdentity(
+                    response.SessionEpoch,
+                    response.Seat.Slot,
+                    response.Seat.Generation);
+                identityChanged = _clientAdmissionIdentity != identity;
+                _clientAdmissionIdentity = identity;
+            }
+            else
+            {
+                identityChanged = _clientAdmissionIdentity.IsValid &&
+                    _clientAdmissionIdentity.SessionEpoch != response.SessionEpoch;
+                if (identityChanged)
+                {
+                    _clientAdmissionIdentity = default;
+                }
+            }
 
-        public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) => LastClientAdmission = outcome;
+            if (identityChanged)
+            {
+                ResetClientAdmissionSession();
+            }
+
+            LastClientHandshake = response;
+        }
+
+        public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome)
+        {
+            if (outcome.ClientBatchSequence == 0 ||
+                outcome.ActorCount <= 0 ||
+                outcome.ActorCount > _maxActorsPerCommandBatch ||
+                (outcome.Stage == OrderAdmissionStage.EntityIntake &&
+                    outcome.AdmissionBatchIndex >= outcome.ActorCount))
+            {
+                throw new InvalidOperationException("Client admission outcome exceeds the observer's configured command shape.");
+            }
+
+            int batchIndex = FindClientAdmissionBatch(outcome.ClientBatchSequence);
+            if (batchIndex < 0)
+            {
+                if (ClientAdmissionRevision != 0 &&
+                    outcome.ClientBatchSequence < LastClientAdmission.ClientBatchSequence)
+                {
+                    ClientAdmissionHistoryMissCount = checked(ClientAdmissionHistoryMissCount + 1);
+                    return;
+                }
+
+                batchIndex = AllocateClientAdmissionBatch(outcome.ClientBatchSequence);
+            }
+
+            bool changed = false;
+            if (outcome.Stage == OrderAdmissionStage.EntityIntake)
+            {
+                int actorIndex = GetClientActorAdmissionIndex(batchIndex, outcome.AdmissionBatchIndex);
+                if (!_clientActorAdmissionActive[actorIndex] ||
+                    ShouldAdvance(in _clientActorAdmissions[actorIndex], in outcome))
+                {
+                    _clientActorAdmissions[actorIndex] = outcome;
+                    _clientActorAdmissionActive[actorIndex] = true;
+                    changed = true;
+                }
+            }
+
+            bool summaryChanged = !_clientAdmissionActive[batchIndex] ||
+                ShouldAdvance(in _clientAdmissionSummaries[batchIndex], in outcome);
+            if (summaryChanged)
+            {
+                _clientAdmissionSummaries[batchIndex] = outcome;
+                _clientAdmissionActive[batchIndex] = true;
+                changed = true;
+                AppendClientAdmissionProgress(batchIndex, in outcome);
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            ClientAdmissionRevision = checked(ClientAdmissionRevision + 1);
+            if (LastClientAdmission.ClientBatchSequence == 0 ||
+                outcome.ClientBatchSequence >= LastClientAdmission.ClientBatchSequence)
+            {
+                LastClientAdmission = _clientAdmissionSummaries[batchIndex];
+            }
+        }
+
+        public bool TryGetClientAdmission(
+            ulong clientBatchSequence,
+            out NetworkCommandAdmissionOutcome outcome)
+        {
+            int batchIndex = FindClientAdmissionBatch(clientBatchSequence);
+            if (batchIndex < 0 || !_clientAdmissionActive[batchIndex])
+            {
+                outcome = default;
+                return false;
+            }
+
+            outcome = _clientAdmissionSummaries[batchIndex];
+            return true;
+        }
+
+        public bool TryGetClientActorAdmission(
+            ulong clientBatchSequence,
+            ushort admissionBatchIndex,
+            out NetworkCommandAdmissionOutcome outcome)
+        {
+            if (admissionBatchIndex >= _maxActorsPerCommandBatch)
+            {
+                throw new ArgumentOutOfRangeException(nameof(admissionBatchIndex));
+            }
+
+            int batchIndex = FindClientAdmissionBatch(clientBatchSequence);
+            if (batchIndex < 0)
+            {
+                outcome = default;
+                return false;
+            }
+
+            int actorIndex = GetClientActorAdmissionIndex(batchIndex, admissionBatchIndex);
+            if (!_clientActorAdmissionActive[actorIndex])
+            {
+                outcome = default;
+                return false;
+            }
+
+            outcome = _clientActorAdmissions[actorIndex];
+            return true;
+        }
+
+        public bool TryCopyClientAdmissionProgress(
+            ulong clientBatchSequence,
+            Span<NetworkCommandAdmissionOutcome> destination,
+            out int progressCount)
+        {
+            int batchIndex = FindClientAdmissionBatch(clientBatchSequence);
+            if (batchIndex < 0)
+            {
+                progressCount = 0;
+                return false;
+            }
+
+            progressCount = _clientAdmissionProgressCounts[batchIndex];
+            if (destination.Length < progressCount)
+            {
+                return false;
+            }
+
+            int progressOffset = batchIndex * AdmissionProgressStageCapacity;
+            _clientAdmissionProgress.AsSpan(progressOffset, progressCount).CopyTo(destination);
+            return true;
+        }
+
+        private static int AdmissionProgressRank(in NetworkCommandAdmissionOutcome outcome)
+        {
+            if (IsAdmissionRejection(outcome.Result))
+            {
+                return 5;
+            }
+
+            if (outcome.Stage == OrderAdmissionStage.NetworkIntake)
+            {
+                return 0;
+            }
+
+            if (outcome.Stage == OrderAdmissionStage.GlobalIntake)
+            {
+                return 1;
+            }
+
+            return outcome.Result switch
+            {
+                OrderSubmitResult.Queued => 2,
+                OrderSubmitResult.Pending => 3,
+                _ => 4,
+            };
+        }
+
+        private static bool IsAdmissionRejection(OrderSubmitResult result) =>
+            result is not OrderSubmitResult.NetworkScheduled and
+                not OrderSubmitResult.Queued and
+                not OrderSubmitResult.Pending and
+                not OrderSubmitResult.Activated;
+
+        private static bool SameAdmission(
+            in NetworkCommandAdmissionOutcome left,
+            in NetworkCommandAdmissionOutcome right) =>
+            left.ClientBatchSequence == right.ClientBatchSequence &&
+            left.AdmissionBatchId == right.AdmissionBatchId &&
+            left.AdmissionBatchIndex == right.AdmissionBatchIndex &&
+            left.Stage == right.Stage &&
+            left.Result == right.Result;
+
+        private static bool ShouldAdvance(
+            in NetworkCommandAdmissionOutcome current,
+            in NetworkCommandAdmissionOutcome incoming)
+        {
+            int incomingRank = AdmissionProgressRank(in incoming);
+            int currentRank = AdmissionProgressRank(in current);
+            return incomingRank > currentRank ||
+                (incomingRank == currentRank && !SameAdmission(in incoming, in current));
+        }
+
+        private int FindClientAdmissionBatch(ulong clientBatchSequence)
+        {
+            for (int i = 0; i < _clientAdmissionSequences.Length; i++)
+            {
+                if (_clientAdmissionActive[i] && _clientAdmissionSequences[i] == clientBatchSequence)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private int AllocateClientAdmissionBatch(ulong clientBatchSequence)
+        {
+            int batchIndex = _clientAdmissionWriteIndex;
+            if (_clientAdmissionActive[batchIndex])
+            {
+                ClientAdmissionHistoryEvictionCount = checked(ClientAdmissionHistoryEvictionCount + 1);
+            }
+
+            _clientAdmissionSequences[batchIndex] = clientBatchSequence;
+            _clientAdmissionSummaries[batchIndex] = default;
+            _clientAdmissionActive[batchIndex] = false;
+            int actorOffset = batchIndex * _maxActorsPerCommandBatch;
+            Array.Clear(_clientActorAdmissions, actorOffset, _maxActorsPerCommandBatch);
+            Array.Clear(_clientActorAdmissionActive, actorOffset, _maxActorsPerCommandBatch);
+            int progressOffset = batchIndex * AdmissionProgressStageCapacity;
+            Array.Clear(_clientAdmissionProgress, progressOffset, AdmissionProgressStageCapacity);
+            _clientAdmissionProgressCounts[batchIndex] = 0;
+            _clientAdmissionWriteIndex = (batchIndex + 1) % _clientAdmissionSequences.Length;
+            return batchIndex;
+        }
+
+        private void AppendClientAdmissionProgress(
+            int batchIndex,
+            in NetworkCommandAdmissionOutcome outcome)
+        {
+            int progressRank = AdmissionProgressRank(in outcome);
+            int progressCount = _clientAdmissionProgressCounts[batchIndex];
+            if (progressCount > 0)
+            {
+                int lastIndex = checked(
+                    (batchIndex * AdmissionProgressStageCapacity) + progressCount - 1);
+                if (AdmissionProgressRank(in _clientAdmissionProgress[lastIndex]) >= progressRank)
+                {
+                    return;
+                }
+            }
+
+            if (progressCount >= AdmissionProgressStageCapacity)
+            {
+                throw new InvalidOperationException(
+                    "Client admission progress exceeded the fixed semantic stage capacity.");
+            }
+
+            int progressIndex = checked(
+                (batchIndex * AdmissionProgressStageCapacity) + progressCount);
+            _clientAdmissionProgress[progressIndex] = outcome;
+            _clientAdmissionProgressCounts[batchIndex] = checked((byte)(progressCount + 1));
+        }
+
+        private void ResetClientAdmissionSession()
+        {
+            Array.Clear(_clientAdmissionSequences, 0, _clientAdmissionSequences.Length);
+            Array.Clear(_clientAdmissionSummaries, 0, _clientAdmissionSummaries.Length);
+            Array.Clear(_clientActorAdmissions, 0, _clientActorAdmissions.Length);
+            Array.Clear(_clientAdmissionProgress, 0, _clientAdmissionProgress.Length);
+            Array.Clear(_clientAdmissionActive, 0, _clientAdmissionActive.Length);
+            Array.Clear(_clientActorAdmissionActive, 0, _clientActorAdmissionActive.Length);
+            Array.Clear(_clientAdmissionProgressCounts, 0, _clientAdmissionProgressCounts.Length);
+            _clientAdmissionWriteIndex = 0;
+            LastClientAdmission = default;
+            ClientAdmissionRevision = 0;
+            ClientAdmissionHistoryEvictionCount = 0;
+            ClientAdmissionHistoryMissCount = 0;
+        }
+
+        private int GetClientActorAdmissionIndex(int batchIndex, int admissionBatchIndex) =>
+            checked((batchIndex * _maxActorsPerCommandBatch) + admissionBatchIndex);
 
         public void OnClientResyncRequired(in NetworkResyncRequired message) => LastClientResync = message;
 
@@ -322,11 +645,15 @@ namespace Ludots.Core.Networking.Runtime
         private readonly World _world;
         private readonly int _entityCapacity;
         private readonly ClientReplicationSchemaApplierRegistry _appliers;
+        private readonly KnowledgeProjectionStore _knowledge;
+        private readonly Func<Entity> _viewerResolver;
 
         public ClientReplicationBridgeFactory(
             World world,
             int entityCapacity,
-            ClientReplicationSchemaApplierRegistry appliers)
+            ClientReplicationSchemaApplierRegistry appliers,
+            KnowledgeProjectionStore knowledge,
+            Func<Entity> viewerResolver)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             if (entityCapacity <= 0)
@@ -335,6 +662,8 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             _appliers = appliers ?? throw new ArgumentNullException(nameof(appliers));
+            _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
+            _viewerResolver = viewerResolver ?? throw new ArgumentNullException(nameof(viewerResolver));
             if (!appliers.IsFrozen)
             {
                 throw new InvalidOperationException("Client replication applier registry must be frozen before bridge composition.");
@@ -350,7 +679,19 @@ namespace Ludots.Core.Networking.Runtime
                 throw new ArgumentOutOfRangeException(nameof(sessionEpoch));
             }
 
-            return new ClientWorldReplicationBridge(_world, _entityCapacity, sessionEpoch, _appliers);
+            Entity viewer = _viewerResolver();
+            if (viewer == Entity.Null || !_world.IsAlive(viewer))
+            {
+                throw new InvalidOperationException("Client replication bridge requires a live local player representative after handshake.");
+            }
+
+            return new ClientWorldReplicationBridge(
+                _world,
+                _entityCapacity,
+                sessionEpoch,
+                _appliers,
+                _knowledge,
+                viewer);
         }
     }
 }

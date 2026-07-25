@@ -162,6 +162,88 @@ public sealed class AuthoritativeSessionRegistryTests
     }
 
     [Test]
+    public void PreparedReconnect_LostResponse_ReplaysSameCandidateUntilExplicitConfirmation()
+    {
+        AuthoritativeSessionRegistry registry = CreateRawRegistry(seatCapacity: 1, reconnectWindowTicks: 50);
+        var initialConnection = new ConnectionId(1);
+        Assert.That(
+            registry.TryHandshake(initialConnection, JoinRequest(), 1, out SessionHandshakeResponse join),
+            Is.True);
+        Assert.That(Confirm(registry, initialConnection, in join, out bool initialReconnect), Is.True);
+        Assert.That(initialReconnect, Is.False);
+        Assert.That(registry.TryDisconnect(initialConnection, currentTick: 2), Is.True);
+
+        var lostResponseConnection = new ConnectionId(2);
+        Assert.That(
+            registry.TryHandshake(
+                lostResponseConnection,
+                ReconnectRequest(join.ReconnectToken, join.SessionEpoch),
+                3,
+                out SessionHandshakeResponse prepared),
+            Is.True);
+        Assert.That(registry.TryGetPlayerId(lostResponseConnection, out _), Is.False);
+        Assert.That(registry.TryDisconnect(lostResponseConnection, currentTick: 4), Is.True);
+
+        var oldCredentialRetry = new ConnectionId(3);
+        Assert.That(
+            registry.TryHandshake(
+                oldCredentialRetry,
+                ReconnectRequest(join.ReconnectToken, join.SessionEpoch),
+                5,
+                out SessionHandshakeResponse replayFromOld),
+            Is.True);
+        Assert.That(replayFromOld.ReconnectToken, Is.EqualTo(prepared.ReconnectToken));
+        Assert.That(registry.TryDisconnect(oldCredentialRetry, currentTick: 6), Is.True);
+
+        var candidateCredentialRetry = new ConnectionId(4);
+        Assert.That(
+            registry.TryHandshake(
+                candidateCredentialRetry,
+                ReconnectRequest(prepared.ReconnectToken, prepared.SessionEpoch),
+                7,
+                out SessionHandshakeResponse replayFromCandidate),
+            Is.True);
+        Assert.That(replayFromCandidate.ReconnectToken, Is.EqualTo(prepared.ReconnectToken));
+        Assert.That(Confirm(registry, candidateCredentialRetry, in replayFromCandidate, out bool reconnect), Is.True);
+        Assert.That(reconnect, Is.True);
+
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(5),
+                ReconnectRequest(join.ReconnectToken, join.SessionEpoch),
+                8,
+                out SessionHandshakeResponse stale),
+            Is.False);
+        Assert.That(stale.RejectReason, Is.EqualTo(HandshakeRejectReason.StaleOrInvalidReconnectToken));
+    }
+
+    [Test]
+    public void UnconfirmedInitialJoin_Disconnect_AllowsFreshJoinWithoutLeakingSeat()
+    {
+        AuthoritativeSessionRegistry registry = CreateRawRegistry(seatCapacity: 1, reconnectWindowTicks: 50);
+        var lostResponseConnection = new ConnectionId(1);
+        Assert.That(
+            registry.TryHandshake(lostResponseConnection, JoinRequest(), 1, out SessionHandshakeResponse lost),
+            Is.True);
+        Assert.That(registry.TryGetPlayerId(lostResponseConnection, out _), Is.False);
+        Assert.That(registry.TryDisconnect(lostResponseConnection, currentTick: 2), Is.True);
+
+        var retryConnection = new ConnectionId(2);
+        Assert.That(
+            registry.TryHandshake(retryConnection, JoinRequest(), 3, out SessionHandshakeResponse retry),
+            Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(retry.Seat.Slot, Is.EqualTo(lost.Seat.Slot));
+            Assert.That(retry.Seat.Generation, Is.GreaterThan(lost.Seat.Generation));
+            Assert.That(retry.ReconnectToken, Is.Not.EqualTo(lost.ReconnectToken));
+        });
+        Assert.That(Confirm(registry, retryConnection, in retry, out bool reconnect), Is.True);
+        Assert.That(reconnect, Is.False);
+        Assert.That(registry.TryGetPlayerId(retryConnection, out _), Is.True);
+    }
+
+    [Test]
     public void ExpiredReconnect_RejectsAndFreesSeat()
     {
         var registry = CreateRegistry(seatCapacity: 1, reconnectWindowTicks: 5);
@@ -417,6 +499,39 @@ public sealed class AuthoritativeSessionRegistryTests
     }
 
     [Test]
+    public void StartedRoom_RejectsFirstTimeJoinIntoExpiredSeat()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 30);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.AdvanceRoomCountdown(100), Is.True);
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+
+        Assert.That(registry.TryDisconnect(secondConnection, currentTick: 101), Is.True);
+        var expired = new SessionSeatBinding[2];
+        Assert.That(registry.TryExpireAwaitingSeats(currentTick: 132, expired, out int expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(3),
+                JoinRequest(),
+                currentTick: 133,
+                out SessionHandshakeResponse rejected),
+            Is.False);
+        Assert.Multiple(() =>
+        {
+            Assert.That(rejected.Accepted, Is.False);
+            Assert.That(rejected.RejectReason, Is.EqualTo(HandshakeRejectReason.MatchAlreadyStarted));
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+        });
+    }
+
+    [Test]
     public void Countdown_CompletesAfterExactlyNinetyCommittedTicks()
     {
         var registry = CreateRegistry(seatCapacity: 2);
@@ -476,10 +591,15 @@ public sealed class AuthoritativeSessionRegistryTests
                 reconnected,
                 ReconnectRequest(secondJoin.ReconnectToken, secondJoin.SessionEpoch),
                 currentTick: 102,
-                out _),
+                out SessionHandshakeResponse reconnectResponse),
             Is.True);
         ulong revisionAfterReconnect = registry.RoomRevision;
-        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+        Assert.Multiple(() =>
+        {
+            Assert.That(reconnectResponse.Accepted, Is.True);
+            Assert.That(reconnectResponse.Seat, Is.EqualTo(secondJoin.Seat));
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+        });
         Assert.That(
             registry.ApplyRoomReadyIntent(reconnected, NetworkRoomReadyState.Ready, committedTick: 102),
             Is.EqualTo(RoomReadyIntentApplyResult.MatchAlreadyStarted));
@@ -554,14 +674,86 @@ public sealed class AuthoritativeSessionRegistryTests
         Assert.That(allocated, Is.EqualTo(0), $"Expected 0 B allocation, observed {allocated} B.");
     }
 
-    private static AuthoritativeSessionRegistry CreateRegistry(
+    private static ConfirmedSessionRegistry CreateRegistry(
+        int seatCapacity,
+        uint reconnectWindowTicks = 30,
+        SessionEpoch? sessionEpoch = null) =>
+        new(CreateRawRegistry(seatCapacity, reconnectWindowTicks, sessionEpoch));
+
+    private static AuthoritativeSessionRegistry CreateRawRegistry(
         int seatCapacity,
         uint reconnectWindowTicks = 30,
         SessionEpoch? sessionEpoch = null) =>
         new(seatCapacity, sessionEpoch ?? Epoch, Protocol, Content, reconnectWindowTicks, readyCountdownTicks: 90);
 
+    private static bool Confirm(
+        AuthoritativeSessionRegistry registry,
+        ConnectionId connection,
+        in SessionHandshakeResponse response,
+        out bool reconnect)
+    {
+        var confirmation = new SessionHandshakeConfirmation(
+            response.SessionEpoch,
+            response.Seat.Slot,
+            response.Seat.Generation,
+            response.ReconnectToken);
+        return registry.TryConfirmHandshake(connection, in confirmation, out _, out reconnect);
+    }
+
     private static SessionHandshakeRequest JoinRequest() => new(Protocol, Content);
 
     private static SessionHandshakeRequest ReconnectRequest(ReconnectToken token, SessionEpoch epoch) =>
         new(Protocol, Content, token, epoch);
+
+    private sealed class ConfirmedSessionRegistry
+    {
+        private readonly AuthoritativeSessionRegistry _inner;
+
+        public ConfirmedSessionRegistry(AuthoritativeSessionRegistry inner) => _inner = inner;
+
+        public ulong RoomRevision => _inner.RoomRevision;
+        public NetworkRoomPhase RoomPhase => _inner.RoomPhase;
+        public uint RoomCountdownRemainingTicks => _inner.RoomCountdownRemainingTicks;
+
+        public bool TryHandshake(
+            ConnectionId connection,
+            in SessionHandshakeRequest request,
+            uint currentTick,
+            out SessionHandshakeResponse response)
+        {
+            if (!_inner.TryHandshake(connection, in request, currentTick, out response))
+            {
+                return false;
+            }
+
+            return Confirm(_inner, connection, in response, out _);
+        }
+
+        public bool TryDisconnect(ConnectionId connection, uint currentTick) =>
+            _inner.TryDisconnect(connection, currentTick);
+
+        public bool TryGetPlayerId(ConnectionId connection, out PlayerId playerId) =>
+            _inner.TryGetPlayerId(connection, out playerId);
+
+        public RoomReadyIntentApplyResult ApplyRoomReadyIntent(
+            ConnectionId connection,
+            NetworkRoomReadyState readyState,
+            uint committedTick) =>
+            _inner.ApplyRoomReadyIntent(connection, readyState, committedTick);
+
+        public bool AdvanceRoomCountdown(uint committedTick) =>
+            _inner.AdvanceRoomCountdown(committedTick);
+
+        public bool TryCopyRoomSnapshot(
+            Span<NetworkRoomSeatSnapshot> seats,
+            out NetworkRoomSnapshotHeader header,
+            out int seatCount) =>
+            _inner.TryCopyRoomSnapshot(seats, out header, out seatCount);
+
+        public bool TryExpireAwaitingSeats(
+            uint currentTick,
+            Span<SessionSeatBinding> expiredSeats,
+            out int expiredCount) =>
+            _inner.TryExpireAwaitingSeats(currentTick, expiredSeats, out expiredCount);
+    }
 }
