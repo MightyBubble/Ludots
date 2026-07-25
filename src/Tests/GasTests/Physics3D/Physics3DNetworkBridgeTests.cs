@@ -10,7 +10,9 @@ using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Simulation;
 using Ludots.Core.Physics3D;
+using Ludots.Core.Physics3DNet;
 using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Client;
 using Ludots.Core.Physics3DNet.Input;
 using NUnit.Framework;
 
@@ -351,7 +353,8 @@ public sealed class Physics3DNetworkBridgeTests
             clientPhysics,
             SchemaId,
             new Physics3DReplicationQuantizationConfig(),
-            CreateBodyConfig());
+            CreateBodyConfig(),
+            CreateClientConvergence(clientEcs, clientPhysics, entities.Capacity, entities.Capacity));
         Assert.That(appliers.Register(SchemaId, applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
         var clientFactory = new ClientReplicationBridgeFactory(
@@ -388,7 +391,8 @@ public sealed class Physics3DNetworkBridgeTests
                     remotePhysics,
                     SchemaId,
                     new Physics3DReplicationQuantizationConfig(),
-                    CreateBodyConfig())),
+                    CreateBodyConfig(),
+                    CreateClientConvergence(remoteEcs, remotePhysics, entities.Capacity, entities.Capacity))),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         remoteAppliers.Freeze();
         SessionSeatBinding remoteSeat = Seat(slot: 1, generation: 1);
@@ -491,7 +495,8 @@ public sealed class Physics3DNetworkBridgeTests
                     clientPhysics,
                     SchemaId,
                     quantization,
-                    CreateBodyConfig())),
+                    CreateBodyConfig(),
+                    CreateClientConvergence(clientEcs, clientPhysics, globalEntityCapacity: 1, activeMirrorCapacity: 1))),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
         ClientWorldReplicationBridge client = new ClientReplicationBridgeFactory(
@@ -1488,6 +1493,19 @@ public sealed class Physics3DNetworkBridgeTests
         ContinuousDetection = Physics3DContinuousDetectionMode.Passive,
     };
 
+    private static Physics3DReplicatedClientConvergence CreateClientConvergence(
+        World world,
+        IPhysics3DWorld physics,
+        int globalEntityCapacity,
+        int activeMirrorCapacity) => new(
+            world,
+            physics,
+            new Physics3DNetConfig(),
+            globalEntityCapacity,
+            activeMirrorCapacity,
+            new TestClientInputSource(),
+            new TestLocalPredictionDriver(physics));
+
     private static ReplicationSchemaProjectorRegistry CreateProjectors(IPhysics3DWorld physics)
     {
         var projectors = new ReplicationSchemaProjectorRegistry(schemaCapacity: SchemaId);
@@ -1590,4 +1608,44 @@ public sealed class Physics3DNetworkBridgeTests
         ContinuousSweepConvergenceThreshold = 0.001f,
         MaterialCombineMode = Physics3DMaterialCombineMode.GeometricMean,
     };
+
+    private sealed class TestClientInputSource : IPhysics3DClientInputSource
+    {
+        public bool TrySampleMovement(uint targetTick, out Vector2 movement)
+        {
+            movement = Vector2.Zero;
+            return targetTick > 0;
+        }
+    }
+
+    private sealed class TestLocalPredictionDriver : IPhysics3DLocalPredictionDriver
+    {
+        private readonly IPhysics3DWorld _physics;
+
+        public TestLocalPredictionDriver(IPhysics3DWorld physics)
+        {
+            _physics = physics;
+        }
+
+        public bool Supports(Physics3DNetLocalDrivenKind kind) =>
+            kind is Physics3DNetLocalDrivenKind.Character or Physics3DNetLocalDrivenKind.Vehicle;
+
+        public bool TryStep(
+            Entity entity,
+            Physics3DBodyId body,
+            Physics3DNetLocalDrivenKind kind,
+            uint targetTick,
+            in Physics3DFixedInputFrame input,
+            out Physics3DBodyState predictedState)
+        {
+            if (entity == Entity.Null || targetTick == 0 || !Supports(kind) || !_physics.ContainsBody(body))
+            {
+                predictedState = default;
+                return false;
+            }
+
+            predictedState = _physics.GetBodyState(body);
+            return true;
+        }
+    }
 }

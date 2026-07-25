@@ -81,6 +81,21 @@ namespace Ludots.Core.Networking.Replication
             in ReplicationApplyContext context);
     }
 
+    /// <summary>
+    /// Optional fixed-capacity batch boundary for schema appliers whose invariants span more
+    /// than one replicated entity. Validation must not mutate committed runtime state.
+    /// </summary>
+    public interface IClientReplicationBatchValidationParticipant
+    {
+        void OnBatchValidationBeginning(in ReplicationApplyContext context);
+
+        bool CanCommitBatchValidation();
+
+        void OnBatchCommitBeginning();
+
+        void OnBatchEnded(bool committed);
+    }
+
     public sealed class ClientReplicationSchemaApplierRegistry
     {
         private readonly FrozenReplicationSchemaRegistry<IClientReplicationSchemaApplier> _registry;
@@ -108,6 +123,57 @@ namespace Ludots.Core.Networking.Replication
         public bool TryGet(int schemaId, out IClientReplicationSchemaApplier applier)
         {
             return _registry.TryGet(schemaId, out applier);
+        }
+
+        public void NotifyBatchValidationBeginning(in ReplicationApplyContext context)
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant)
+                {
+                    participant.OnBatchValidationBeginning(in context);
+                }
+            }
+        }
+
+        public bool CanCommitBatchValidation()
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant &&
+                    !participant.CanCommitBatchValidation())
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void NotifyBatchCommitBeginning()
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant)
+                {
+                    participant.OnBatchCommitBeginning();
+                }
+            }
+        }
+
+        public void NotifyBatchEnded(bool committed)
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant)
+                {
+                    participant.OnBatchEnded(committed);
+                }
+            }
         }
     }
 }

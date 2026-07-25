@@ -801,7 +801,7 @@ public sealed class Physics3DNetVerticalSliceTests
     public void WarmedNetworkingHotPaths_HaveZeroManagedAllocationsOnCallingThread()
     {
         Physics3DNetConfig local = CreateLocalConfig(
-            localPredictionHistoryTicks: 16,
+            localPredictionHistoryTicks: 64,
             remoteInterpolationHistoryTicks: 8,
             replayEventCapacity: 256);
         var ticks = new AuthoritativeSimulationTickState();
@@ -837,8 +837,8 @@ public sealed class Physics3DNetVerticalSliceTests
 
         var states = new ReplicatedEntityState[4];
         var disclosures = new ReplicationDisclosureInput[4];
-        var poses = new Physics3DNetPredictedPose[16];
-        var replayInputs = new byte[16 * Physics3DFixedInputFrameCodec.PayloadBytes];
+        var poses = new Physics3DNetPredictedPose[64];
+        var replayInputs = new byte[64 * Physics3DFixedInputFrameCodec.PayloadBytes];
         ulong snapshotId = 0;
         int snapshotInterval = local.SnapshotIntervalTicks;
 
