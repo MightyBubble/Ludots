@@ -9,10 +9,47 @@
     "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
   },
   "remote_pr_head_before_repair": "49a81360eb48d38e3f0b966e2926ee423328fcf8",
+  "verified_runtime_repair_head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
+  "remote_alignment": {
+    "branch_ref": "refs/heads/codex/issues-649-651-ordering",
+    "pull_ref": "refs/pull/660/head",
+    "head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
+    "verified": true
+  },
   "verdict": "pass_local_final_gate",
   "remote_checks": {
-    "status": "pending_push",
-    "source_of_truth": "gh pr checks 660 after final push"
+    "status": "pass",
+    "head": "bd7ac14068db8fc66db13e4000d4aaed61cde031",
+    "source_of_truth": "gh pr checks 660 --repo MightyBubble/Ludots",
+    "checks": [
+      {
+        "name": "validate",
+        "workflow": "docs-governance",
+        "result": "pass"
+      },
+      {
+        "name": "verify",
+        "workflow": "solution-verify",
+        "result": "pass"
+      },
+      {
+        "name": "verify",
+        "workflow": "camera-baseline",
+        "result": "pass"
+      },
+      {
+        "name": "Record ${{ matrix.adapter }} evidence",
+        "workflow": "MassNavigation 10K final evidence",
+        "result": "skipped_by_workflow"
+      }
+    ]
+  },
+  "merge_state": {
+    "mergeable": true,
+    "mergeable_state": "blocked",
+    "merge_state_status": "BLOCKED",
+    "status_check_rollup": "success",
+    "observed_blocker": "repository merge policy / OwnerOnlyWrites ruleset, not a code or CI failure"
   },
   "scope": [
     "batch EntityIntake admission-capacity transactions",

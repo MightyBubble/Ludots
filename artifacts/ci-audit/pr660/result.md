@@ -5,12 +5,15 @@
 - Branch: `codex/issues-649-651-ordering`
 - Base checked: `origin/main` at `5712a4eef4cdb1011cc0694d52e77de95bfe4aaa`
 - Remote PR head before this follow-up repair pass: `49a81360eb48d38e3f0b966e2926ee423328fcf8`
+- Verified runtime repair head after this pass: `bd7ac14068db8fc66db13e4000d4aaed61cde031`
+- Remote alignment verified after push: `refs/heads/codex/issues-649-651-ordering` == `refs/pull/660/head` == `bd7ac14068db8fc66db13e4000d4aaed61cde031`
+- GitHub checks verified at `bd7ac14068db8fc66db13e4000d4aaed61cde031`: PASS for docs-governance, solution-verify, and camera-baseline; MassNavigation evidence recording was skipped by workflow definition.
 
 ## Gate Summary
 
 Local final audit: PASS.
 
-This file records the current repair scope and local gate evidence. The exact pushed head is recorded in the PR body and #689 after push; this artifact is committed with the final repair changes and must not be read as evidence for older heads such as `086d3f4`, `b822b83`, or `a829bdfe`.
+This file records the current repair scope, local gate evidence, and remote check result for the verified runtime repair head above. The PR body, issue #689, and `gh pr view 660` remain the SSOT for the latest PR head after evidence-only metadata refreshes. This artifact must not be read as evidence for older heads such as `086d3f4`, `b822b83`, `a829bdfe`, or `49a81360`.
 
 ## Scope
 
@@ -48,6 +51,11 @@ Visual review packets are scoped out for this headless runtime repair. No gamepl
 - `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1.
 - `dotnet test src\Tests\PresentationTests\PresentationTests.csproj -c Debug --no-build --filter <MassNavigation PR acceptance presentationFilter> -v minimal`: PASS, 10/10.
 - `git diff --check origin/main...HEAD`: PASS.
+- `gh pr checks 660 --repo MightyBubble/Ludots` at `bd7ac14068db8fc66db13e4000d4aaed61cde031`: PASS for `validate`, `verify` / solution-verify, and `verify` / camera-baseline; evidence-recording job skipped by workflow definition.
+
+## Merge State Note
+
+GitHub reports `mergeable=true` / `mergeable=MERGEABLE` and `mergeable_state=blocked` / `mergeStateStatus=BLOCKED`. The status check rollup is `SUCCESS`; the observed blocker is repository merge policy (`OwnerOnlyWrites` ruleset), not a code or CI failure.
 
 ## Notes
 

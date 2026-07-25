@@ -7,6 +7,8 @@ Current closeouts and prior issue reviews follow.
 - **Task / Issue**: Close #689 gate blockers for PR #660 current head, covering order admission capacity, pending retry terminal outcomes, AbilityExec structural mutation rules, move-then-cast rejection semantics, collection command-panel aiming, runtime spawn transaction boundaries, and runtime capacity validation.
 - **Date**: 2026-07-25
 - **Agent / Author**: Codex.
+- **Verified runtime repair head**: `bd7ac14068db8fc66db13e4000d4aaed61cde031`.
+- **Remote checks at verified head**: PASS for docs-governance, solution-verify, and camera-baseline; MassNavigation evidence recording skipped by workflow definition.
 
 ### 1. Core judgment
 
@@ -68,6 +70,7 @@ New JSON schema: NO.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 34/34.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 7/7.
 - `git diff --check origin/main...HEAD`: PASS.
+- `gh pr checks 660 --repo MightyBubble/Ludots` at `bd7ac14068db8fc66db13e4000d4aaed61cde031`: PASS for `validate`, `verify` / solution-verify, and `verify` / camera-baseline; evidence-recording job skipped by workflow definition.
 
 ### 9. Next variant test
 
@@ -1387,6 +1390,7 @@ N/A
 - **Task / Issue**: PR #660 / #689 follow-up after GitHub `solution-verify` MassNavigation PR acceptance failure at `49a81360`
 - **Date**: 2026-07-25
 - **Agent / Author**: Codex
+- **Verified runtime repair head after follow-up**: `bd7ac14068db8fc66db13e4000d4aaed61cde031`
 
 ### 1. Core judgment
 
