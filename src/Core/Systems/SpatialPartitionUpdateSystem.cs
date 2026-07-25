@@ -18,14 +18,21 @@ namespace Ludots.Core.Systems
         private WorldSizeSpec _spec;
         private readonly QueryDescription _trackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm, SpatialCellRef>()
-            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending>();
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
-            .WithNone<SpatialCellRef, SpatialPartitionExcluded, PresentationDestroyPending>();
+            .WithNone<SpatialCellRef, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _excludedTrackedQuery = new QueryDescription()
             .WithAll<SpatialPartitionExcluded, SpatialCellRef>();
         private readonly QueryDescription _destroyPendingTrackedQuery = new QueryDescription()
             .WithAll<PresentationDestroyPending, SpatialCellRef>();
+        private readonly QueryDescription _suspendedTrackedQuery = new QueryDescription()
+            .WithAll<SuspendedTag, SpatialCellRef>();
+        private readonly QueryDescription _activeMembershipQuery = new QueryDescription()
+            .WithAll<SpatialCellRef>();
+        private readonly QueryDescription _rebuildEligibleQuery = new QueryDescription()
+            .WithAll<WorldPositionCm>()
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
 
         private readonly CommandBuffer _commandBuffer = new();
 
@@ -37,18 +44,35 @@ namespace Ludots.Core.Systems
 
         /// <summary>
         /// Hot-swap the spatial partition and world spec when the spatial config changes (e.g. on map load).
+        /// ECS remains the SSOT: validate eligible entities, clear old memberships, then rebuild into the new partition.
         /// Called by GameEngine.ApplyMapSpatialConfig to prevent stale references.
         /// </summary>
         internal void SetPartition(ISpatialPartitionWorld partition, WorldSizeSpec spec)
         {
-            _partition = partition ?? throw new ArgumentNullException(nameof(partition));
+            ArgumentNullException.ThrowIfNull(partition);
+
+            ValidateMembershipStates();
+            ValidateEligiblePositions(in spec);
+
+            ISpatialPartitionWorld oldPartition = _partition;
+            ClearActiveMemberships(oldPartition);
+            oldPartition.Clear();
+
+            _partition = partition;
             _spec = spec;
+            if (!ReferenceEquals(oldPartition, partition))
+            {
+                partition.Clear();
+            }
+
+            RebuildEligibleMemberships();
         }
 
         public override void Update(in float dt)
         {
             RemoveSpatialRefs(in _excludedTrackedQuery);
             RemoveSpatialRefs(in _destroyPendingTrackedQuery);
+            ResetSuspendedMemberships();
             AddMissingSpatialRefs();
 
             var moveJob = new MoveJob { Partition = _partition, Spec = _spec };
@@ -61,7 +85,8 @@ namespace Ludots.Core.Systems
             if (!World.TryGet(entity, out WorldPositionCm position) ||
                 World.Has<PresentationStaticTransform>(entity) ||
                 World.Has<SpatialPartitionExcluded>(entity) ||
-                World.Has<PresentationDestroyPending>(entity))
+                World.Has<PresentationDestroyPending>(entity) ||
+                World.Has<SuspendedTag>(entity))
             {
                 Remove(entity);
                 return;
@@ -70,12 +95,44 @@ namespace Ludots.Core.Systems
             if (World.Has<SpatialCellRef>(entity))
             {
                 ref SpatialCellRef cellRef = ref World.Get<SpatialCellRef>(entity);
-                SynchronizeTracked(_partition, in _spec, entity, in position, ref cellRef);
+                SynchronizeTracked(_partition, in _spec, entity, in position, ref cellRef, reactivateDeactivated: true);
                 return;
             }
 
             SpatialCellRef created = CreateMembership(_partition, in _spec, entity, in position);
             World.Add(entity, in created);
+        }
+
+        public void Deactivate(Entity entity)
+        {
+            RequireLiveEntity(entity);
+            if (!World.Has<SpatialCellRef>(entity))
+            {
+                SpatialCellRef deactivated = new SpatialCellRef
+                {
+                    CellX = 0,
+                    CellY = 0,
+                    State = SpatialMembershipState.Deactivated,
+                };
+                World.Add(entity, in deactivated);
+                return;
+            }
+
+            ref SpatialCellRef cellRef = ref World.Get<SpatialCellRef>(entity);
+            switch (cellRef.State)
+            {
+                case SpatialMembershipState.Active:
+                    RemoveTracked(_partition, entity, in cellRef);
+                    break;
+                case SpatialMembershipState.Uninitialized:
+                case SpatialMembershipState.Deactivated:
+                    break;
+                default:
+                    ThrowInvalidMembershipState(entity, cellRef.State);
+                    break;
+            }
+
+            cellRef.State = SpatialMembershipState.Deactivated;
         }
 
         public void Remove(Entity entity)
@@ -88,6 +145,114 @@ namespace Ludots.Core.Systems
 
             RemoveTracked(_partition, entity, in cellRef);
             World.Remove<SpatialCellRef>(entity);
+        }
+
+        private void ValidateMembershipStates()
+        {
+            foreach (ref var chunk in World.Query(in _activeMembershipQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var refs = chunk.GetSpan<SpatialCellRef>();
+
+                foreach (var index in chunk)
+                {
+                    SpatialMembershipState state = refs[index].State;
+                    if (state != SpatialMembershipState.Uninitialized &&
+                        state != SpatialMembershipState.Active &&
+                        state != SpatialMembershipState.Deactivated)
+                    {
+                        var entity = Unsafe.Add(ref entityFirst, index);
+                        ThrowInvalidMembershipState(entity, state);
+                    }
+                }
+            }
+        }
+
+        private void ValidateEligiblePositions(in WorldSizeSpec spec)
+        {
+            foreach (ref var chunk in World.Query(in _rebuildEligibleQuery))
+            {
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                bool hasCellRefs = chunk.Has<SpatialCellRef>();
+                var cellRefs = hasCellRefs ? chunk.GetSpan<SpatialCellRef>() : default;
+                ref var entityFirst = ref chunk.Entity(0);
+
+                foreach (var index in chunk)
+                {
+                    if (hasCellRefs && cellRefs[index].State == SpatialMembershipState.Deactivated)
+                    {
+                        continue;
+                    }
+
+                    var entity = Unsafe.Add(ref entityFirst, index);
+                    WorldCmInt2 worldCm = positions[index].Value.ToWorldCmInt2();
+                    if (!spec.Contains(worldCm))
+                    {
+                        ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
+                    }
+                }
+            }
+        }
+
+        private void ClearActiveMemberships(ISpatialPartitionWorld partition)
+        {
+            foreach (ref var chunk in World.Query(in _activeMembershipQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var refs = chunk.GetSpan<SpatialCellRef>();
+
+                foreach (var index in chunk)
+                {
+                    ref SpatialCellRef cellRef = ref refs[index];
+                    if (cellRef.State != SpatialMembershipState.Active)
+                    {
+                        continue;
+                    }
+
+                    var entity = Unsafe.Add(ref entityFirst, index);
+                    RemoveTracked(partition, entity, in cellRef);
+                    cellRef.State = SpatialMembershipState.Uninitialized;
+                }
+            }
+        }
+
+        private void RebuildEligibleMemberships()
+        {
+            foreach (ref var chunk in World.Query(in _rebuildEligibleQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                bool hasCellRefs = chunk.Has<SpatialCellRef>();
+                var cellRefs = hasCellRefs ? chunk.GetSpan<SpatialCellRef>() : default;
+
+                foreach (var index in chunk)
+                {
+                    var entity = Unsafe.Add(ref entityFirst, index);
+                    if (hasCellRefs)
+                    {
+                        ref SpatialCellRef cellRef = ref cellRefs[index];
+                        if (cellRef.State == SpatialMembershipState.Deactivated)
+                        {
+                            continue;
+                        }
+
+                        ActivateMembership(_partition, in _spec, entity, in positions[index], ref cellRef);
+                        continue;
+                    }
+
+                    SpatialCellRef created = CreateMembership(
+                        _partition,
+                        in _spec,
+                        entity,
+                        in positions[index]);
+                    _commandBuffer.Add(entity, created);
+                }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
         }
 
         private void RemoveSpatialRefs(in QueryDescription queryDescription)
@@ -110,6 +275,39 @@ namespace Ludots.Core.Systems
             if (_commandBuffer.Size > 0)
             {
                 _commandBuffer.Playback(World);
+            }
+        }
+
+        private void ResetSuspendedMemberships()
+        {
+            foreach (ref var chunk in World.Query(in _suspendedTrackedQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var refs = chunk.GetSpan<SpatialCellRef>();
+
+                foreach (var index in chunk)
+                {
+                    ref SpatialCellRef cellRef = ref refs[index];
+                    switch (cellRef.State)
+                    {
+                        case SpatialMembershipState.Active:
+                        {
+                            var entity = Unsafe.Add(ref entityFirst, index);
+                            RemoveTracked(_partition, entity, in cellRef);
+                            cellRef.State = SpatialMembershipState.Uninitialized;
+                            break;
+                        }
+                        case SpatialMembershipState.Uninitialized:
+                        case SpatialMembershipState.Deactivated:
+                            break;
+                        default:
+                        {
+                            var entity = Unsafe.Add(ref entityFirst, index);
+                            ThrowInvalidMembershipState(entity, cellRef.State);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -145,7 +343,18 @@ namespace Ludots.Core.Systems
 
             public void Update(Entity entity, ref WorldPositionCm pos, ref SpatialCellRef cellRef)
             {
-                SynchronizeTracked(Partition, in Spec, entity, in pos, ref cellRef);
+                switch (cellRef.State)
+                {
+                    case SpatialMembershipState.Uninitialized:
+                    case SpatialMembershipState.Active:
+                        SynchronizeTracked(Partition, in Spec, entity, in pos, ref cellRef, reactivateDeactivated: false);
+                        return;
+                    case SpatialMembershipState.Deactivated:
+                        return;
+                    default:
+                        ThrowInvalidMembershipState(entity, cellRef.State);
+                        return;
+                }
             }
         }
 
@@ -159,10 +368,15 @@ namespace Ludots.Core.Systems
             if (!spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
             (int cellX, int cellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
             partition.Add(entity, cellX, cellY);
-            return new SpatialCellRef { CellX = cellX, CellY = cellY, Initialized = 1 };
+            return new SpatialCellRef
+            {
+                CellX = cellX,
+                CellY = cellY,
+                State = SpatialMembershipState.Active,
+            };
         }
 
-        private static void SynchronizeTracked(
+        private static void ActivateMembership(
             ISpatialPartitionWorld partition,
             in WorldSizeSpec spec,
             Entity entity,
@@ -171,14 +385,48 @@ namespace Ludots.Core.Systems
         {
             WorldCmInt2 worldCm = position.Value.ToWorldCmInt2();
             if (!spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
+            (int cellX, int cellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
+            partition.Add(entity, cellX, cellY);
+            cellRef.CellX = cellX;
+            cellRef.CellY = cellY;
+            cellRef.State = SpatialMembershipState.Active;
+        }
 
-            if (cellRef.Initialized == 0)
+        private static void SynchronizeTracked(
+            ISpatialPartitionWorld partition,
+            in WorldSizeSpec spec,
+            Entity entity,
+            in WorldPositionCm position,
+            ref SpatialCellRef cellRef,
+            bool reactivateDeactivated)
+        {
+            if (cellRef.State == SpatialMembershipState.Deactivated)
+            {
+                if (!reactivateDeactivated)
+                {
+                    return;
+                }
+
+                ActivateMembership(partition, in spec, entity, in position, ref cellRef);
+                return;
+            }
+
+            if (cellRef.State != SpatialMembershipState.Uninitialized &&
+                cellRef.State != SpatialMembershipState.Active)
+            {
+                ThrowInvalidMembershipState(entity, cellRef.State);
+            }
+
+            WorldCmInt2 worldCm = position.Value.ToWorldCmInt2();
+            if (!spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, spec);
+
+            if (cellRef.State == SpatialMembershipState.Uninitialized)
             {
                 (int initialCellX, int initialCellY) = WorldToCell(worldCm, spec.GridCellSizeCm);
                 partition.Add(entity, initialCellX, initialCellY);
                 cellRef.CellX = initialCellX;
                 cellRef.CellY = initialCellY;
-                cellRef.Initialized = 1;
+                cellRef.State = SpatialMembershipState.Active;
                 return;
             }
 
@@ -201,9 +449,17 @@ namespace Ludots.Core.Systems
             Entity entity,
             in SpatialCellRef cellRef)
         {
-            if (cellRef.Initialized != 0)
+            switch (cellRef.State)
             {
-                partition.Remove(entity, cellRef.CellX, cellRef.CellY);
+                case SpatialMembershipState.Active:
+                    partition.Remove(entity, cellRef.CellX, cellRef.CellY);
+                    return;
+                case SpatialMembershipState.Uninitialized:
+                case SpatialMembershipState.Deactivated:
+                    return;
+                default:
+                    ThrowInvalidMembershipState(entity, cellRef.State);
+                    return;
             }
         }
 
@@ -229,6 +485,12 @@ namespace Ludots.Core.Systems
         {
             throw new InvalidOperationException(
                 $"SPATIAL.ERR.WorldPositionOutOfBounds entity={entity.Id}:{entity.WorldId} pos=({worldCm.X},{worldCm.Y}) bounds={spec.Bounds} cell={spec.GridCellSizeCm}");
+        }
+
+        private static void ThrowInvalidMembershipState(Entity entity, SpatialMembershipState state)
+        {
+            throw new InvalidOperationException(
+                $"SPATIAL.ERR.InvalidMembershipState entity={entity.Id}:{entity.WorldId} state={(byte)state}");
         }
 
         private void RequireLiveEntity(Entity entity)

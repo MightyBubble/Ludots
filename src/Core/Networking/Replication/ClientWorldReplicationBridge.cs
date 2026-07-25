@@ -566,7 +566,7 @@ namespace Ludots.Core.Networking.Replication
                 }
 
                 _world.Remove<ReplicationMirrorIdentity, ReplicationMirrorState>(entity);
-                _spatialMembership.Synchronize(entity);
+                _spatialMembership.Deactivate(entity);
             }
 
             _knowledge.Remove(_viewer, entity);
