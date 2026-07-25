@@ -4,15 +4,15 @@
 - Worktree: `C:\001_AI\_codex_audit\Ludots-pr660-086d3f4-exact-20260724-1415`
 - Branch: `codex/issues-649-651-ordering`
 - Base checked: `origin/main` at `5712a4eef4cdb1011cc0694d52e77de95bfe4aaa`
-- PR head before this repair: `ffb352fdb58318279518f9d9b366ce6c304d2b6a`
+- PR head before this repair: `a83d1619813847327021e50ebbbe65f3b5ce5d4b`
 - Verified runtime repair commit: `2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8`
 - Exact pushed PR head and remote checks are recorded after push in PR #660 and issue #689. This artifact intentionally does not claim a post-push remote result before the push exists.
 
 ## Gate Summary
 
-Local repair audit: PASS for commit `2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8`.
+Local repair audit: PASS for runtime commit `2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8` plus the architecture guard closeout contained in this evidence commit.
 
-This evidence supersedes the older `bd7ac14068db8fc66db13e4000d4aaed61cde031` and `ffb352fdb58318279518f9d9b366ce6c304d2b6a` closeout text. Those commits are historical context only; they are not the current completion claim for PR #660.
+This evidence supersedes the older `bd7ac14068db8fc66db13e4000d4aaed61cde031`, `ffb352fdb58318279518f9d9b366ce6c304d2b6a`, and `a83d1619813847327021e50ebbbe65f3b5ce5d4b` closeout text. Those commits are historical context only; they are not the current completion claim for PR #660.
 
 ## Scope
 
@@ -24,15 +24,18 @@ This pass closes the current audit blockers:
 - OrderContinuation retries no longer advance the processed cursor before successful submit.
 - Same-action aiming by a different actor is rejected and does not overwrite the existing aiming session.
 - Entity command panel activation results are recorded and surfaced instead of being discarded by click handlers.
+- GAS hot-path architecture guard now inspects compiled IL for `World.Add/Remove<AbilityExecInstance>` instead of replaying source text with a string/regex scan.
 
 ## Evidence
 
 - `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --nologo --logger "console;verbosity=minimal"`: PASS, 188/188.
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests" --nologo --logger "console;verbosity=minimal"`: PASS, 200/200.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderAbilityAuditTests" --nologo --logger "console;verbosity=minimal"`: PASS, 95/95.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests" --nologo --logger "console;verbosity=minimal"`: PASS, 56/56.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests" --nologo --logger "console;verbosity=minimal"`: PASS, 49/49.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~GasExecutionBudgetTests" --nologo --logger "console;verbosity=minimal"`: PASS, 73/73.
 - `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~InputOrderAbilityAuditTests" --nologo --logger "console;verbosity=minimal"`: PASS, 105/105 after the final AbilityExec start-failure tightening.
+- `dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly" --nologo --logger "console;verbosity=minimal"`: PASS, 1/1 after replacing the source-text guard with compiled IL inspection.
 - `git diff --check`: PASS.
 
 ## Notes

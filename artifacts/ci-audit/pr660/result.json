@@ -8,8 +8,9 @@
     "ref": "origin/main",
     "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
   },
-  "remote_pr_head_before_repair": "ffb352fdb58318279518f9d9b366ce6c304d2b6a",
+  "remote_pr_head_before_repair": "a83d1619813847327021e50ebbbe65f3b5ce5d4b",
   "verified_runtime_repair_commit": "2819ea59e33cd87fdc21bdcf56f48f5fc010e9d8",
+  "verified_architecture_guard_repair": "compiled_il_guard_in_this_evidence_commit",
   "verdict": "pass_local_gate_pending_push_checks",
   "remote_checks": {
     "status": "pending_post_push",
@@ -21,13 +22,20 @@
     "AbilityExec caller params fixed-capacity fail-fast",
     "OrderContinuation cursor restoration on submit exception",
     "Input same-action different-actor aiming rejection",
-    "Entity command panel activation result recording and feedback"
+    "Entity command panel activation result recording and feedback",
+    "GAS hot-path architecture guard compiled IL inspection for World.Add/Remove<AbilityExecInstance>"
   ],
   "evidence": [
     {
       "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
       "passed": 188,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests\" --nologo --logger \"console;verbosity=minimal\"",
+      "result": "pass",
+      "passed": 200,
       "failed": 0
     },
     {
@@ -58,6 +66,12 @@
       "command": "dotnet test src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~AbilityExecInteractionContextTests|FullyQualifiedName~InputOrderAbilityAuditTests\" --nologo --logger \"console;verbosity=minimal\"",
       "result": "pass",
       "passed": 105,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly\" --nologo --logger \"console;verbosity=minimal\"",
+      "result": "pass",
+      "passed": 1,
       "failed": 0
     },
     {

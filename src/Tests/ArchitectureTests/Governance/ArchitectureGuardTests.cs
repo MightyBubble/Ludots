@@ -2,9 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -14,6 +19,9 @@ namespace Ludots.Tests.Architecture.Governance
     [Category("arch-guard")]
     public class ArchitectureGuardTests
     {
+        private static readonly OpCode[] SingleByteOpCodes = BuildSingleByteOpCodeMap();
+        private static readonly OpCode[] TwoByteOpCodes = BuildTwoByteOpCodeMap();
+
         [Test]
         public void SystemGroup_MustMatchDesignDocument()
         {
@@ -939,20 +947,20 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly()
         {
-            var repoRoot = FindRepoRoot();
-            string file = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Systems", "AbilityExecSystem.cs");
-            Assert.That(File.Exists(file), Is.True, $"Missing GAS hot-path source file {file}");
-            var forbiddenCall = new Regex(
-                @"\b(?:base\.)?World\.(?:Add|Remove)\s*(?:<|\()",
-                RegexOptions.Compiled | RegexOptions.CultureInvariant);
             var hits = new List<string>();
-            string[] lines = File.ReadAllLines(file);
-            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            foreach (var method in typeof(AbilityExecSystem).GetMethods(
+                         BindingFlags.Instance |
+                         BindingFlags.Static |
+                         BindingFlags.Public |
+                         BindingFlags.NonPublic |
+                         BindingFlags.DeclaredOnly))
             {
-                string line = lines[lineIndex];
-                if (forbiddenCall.IsMatch(line))
+                foreach (var calledMethod in EnumerateCalledMethods(method))
                 {
-                    hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {line.Trim()}");
+                    if (IsForbiddenAbilityExecStructuralCall(calledMethod))
+                    {
+                        hits.Add($"{method.DeclaringType?.FullName}.{method.Name} -> {calledMethod.DeclaringType?.FullName}.{calledMethod.Name}");
+                    }
                 }
             }
 
@@ -1986,6 +1994,144 @@ namespace Ludots.Tests.Architecture.Governance
                         hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {token}: {line.Trim()}");
                         break;
                     }
+                }
+            }
+        }
+
+        private static IEnumerable<MethodBase> EnumerateCalledMethods(MethodInfo method)
+        {
+            var body = method.GetMethodBody();
+            byte[]? il = body?.GetILAsByteArray();
+            if (il == null || il.Length == 0)
+            {
+                yield break;
+            }
+
+            Module module = method.Module;
+            Type[] typeContext = method.DeclaringType?.IsGenericType == true
+                ? method.DeclaringType.GetGenericArguments()
+                : Type.EmptyTypes;
+            Type[] methodContext = method.IsGenericMethod
+                ? method.GetGenericArguments()
+                : Type.EmptyTypes;
+
+            int offset = 0;
+            while (offset < il.Length)
+            {
+                OpCode opCode = ReadOpCode(il, ref offset);
+                if (opCode.OperandType == OperandType.InlineMethod)
+                {
+                    int token = BitConverter.ToInt32(il, offset);
+                    offset += 4;
+                    MethodBase? called = ResolveMethod(module, token, typeContext, methodContext);
+                    if (called != null)
+                    {
+                        yield return called;
+                    }
+
+                    continue;
+                }
+
+                offset += GetOperandByteCount(opCode.OperandType, il, offset);
+            }
+        }
+
+        private static MethodBase? ResolveMethod(Module module, int token, Type[] typeContext, Type[] methodContext)
+        {
+            try
+            {
+                return module.ResolveMethod(token, typeContext, methodContext);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+            catch (BadImageFormatException)
+            {
+                return null;
+            }
+        }
+
+        private static bool IsForbiddenAbilityExecStructuralCall(MethodBase method)
+        {
+            if (method is not MethodInfo methodInfo ||
+                methodInfo.DeclaringType != typeof(World) ||
+                (methodInfo.Name != nameof(World.Add) && methodInfo.Name != nameof(World.Remove)) ||
+                !methodInfo.IsGenericMethod)
+            {
+                return false;
+            }
+
+            return methodInfo.GetGenericArguments().Any(static type => type == typeof(AbilityExecInstance));
+        }
+
+        private static OpCode ReadOpCode(byte[] il, ref int offset)
+        {
+            byte first = il[offset++];
+            if (first != 0xFE)
+            {
+                return SingleByteOpCodes[first];
+            }
+
+            return TwoByteOpCodes[il[offset++]];
+        }
+
+        private static int GetOperandByteCount(OperandType operandType, byte[] il, int offset)
+        {
+            return operandType switch
+            {
+                OperandType.InlineNone => 0,
+                OperandType.ShortInlineBrTarget => 1,
+                OperandType.ShortInlineI => 1,
+                OperandType.ShortInlineVar => 1,
+                OperandType.InlineVar => 2,
+                OperandType.InlineBrTarget => 4,
+                OperandType.InlineField => 4,
+                OperandType.InlineI => 4,
+                OperandType.InlineMethod => 4,
+                OperandType.InlineSig => 4,
+                OperandType.InlineString => 4,
+                OperandType.InlineTok => 4,
+                OperandType.InlineType => 4,
+                OperandType.ShortInlineR => 4,
+                OperandType.InlineI8 => 8,
+                OperandType.InlineR => 8,
+                OperandType.InlineSwitch => 4 + BitConverter.ToInt32(il, offset) * 4,
+                _ => throw new ArgumentOutOfRangeException(nameof(operandType), operandType, null)
+            };
+        }
+
+        private static OpCode[] BuildSingleByteOpCodeMap()
+        {
+            var opCodes = new OpCode[0x100];
+            PopulateOpCodeMaps(opCodes, null);
+            return opCodes;
+        }
+
+        private static OpCode[] BuildTwoByteOpCodeMap()
+        {
+            var opCodes = new OpCode[0x100];
+            PopulateOpCodeMaps(null, opCodes);
+            return opCodes;
+        }
+
+        private static void PopulateOpCodeMaps(OpCode[]? singleByteOpCodes, OpCode[]? twoByteOpCodes)
+        {
+            foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (field.GetValue(null) is not OpCode opCode)
+                {
+                    continue;
+                }
+
+                ushort value = unchecked((ushort)opCode.Value);
+                if (value < 0x100 && singleByteOpCodes != null)
+                {
+                    singleByteOpCodes[value] = opCode;
+                }
+                else if ((value & 0xFF00) == 0xFE00 && twoByteOpCodes != null)
+                {
+                    twoByteOpCodes[value & 0xFF] = opCode;
                 }
             }
         }
