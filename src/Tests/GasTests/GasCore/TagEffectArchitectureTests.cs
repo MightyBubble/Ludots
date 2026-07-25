@@ -19,6 +19,9 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -653,6 +656,184 @@ namespace Ludots.Tests.GAS
             That(queue.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
             That(queue.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
             That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void EffectApplicationSystem_CreateUnit_PropagatesDistinctRootIdentityToScatterPlacement()
+        {
+            using var world = World.Create();
+            var source = world.Create(WorldPositionCm.FromCm(1200, 3400));
+            var spawnRequests = new RuntimeEntitySpawnQueue(capacity: 2);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2302, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.CreateUnit,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                UnitCreation = new UnitCreationDescriptor
+                {
+                    UnitTypeId = 7,
+                    Count = 1,
+                    OffsetRadius = 220,
+                },
+            });
+
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.CreateUnit,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.CreateUnit);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var phaseExecutor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            using var application = new EffectApplicationSystem(
+                world,
+                templates: templates,
+                spawnRequests: spawnRequests,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            Entity firstEffect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 11,
+                source,
+                source,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Instant);
+            world.Add(firstEffect, new EffectTemplateRef { TemplateId = 2302 });
+            Entity secondEffect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 12,
+                source,
+                source,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Instant);
+            world.Add(secondEffect, new EffectTemplateRef { TemplateId = 2302 });
+
+            application.Update(0f);
+
+            That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
+            That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
+            That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void EffectPhaseExecutor_MainBuiltin_ReceivesOriginalEffectIdentityAndContext()
+        {
+            using var world = World.Create();
+            Entity receivedEffect = Entity.Null;
+            int receivedRootId = 0;
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2303, new EffectTemplateData { PresetType = EffectPresetType.None });
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity effectEntity, ref EffectContext context, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    receivedEffect = effectEntity;
+                    receivedRootId = context.RootId;
+                });
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            Entity effect = world.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            var context = new EffectContext { RootId = 73, Source = source, Target = target };
+            var behavior = new EffectPhaseGraphBindings();
+
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                effect,
+                in context,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: 2303);
+
+            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedRootId, Is.EqualTo(73));
+        }
+
+        [Test]
+        public void EffectPhaseExecutor_GraphBuiltin_ReceivesOriginalEffectIdentityAndContext()
+        {
+            using var world = World.Create();
+            Entity receivedEffect = Entity.Null;
+            int receivedRootId = 0;
+            var programs = new GraphProgramRegistry();
+            programs.Register(91, new[]
+            {
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
+                },
+            });
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2304, new EffectTemplateData { PresetType = EffectPresetType.None });
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(91);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity effectEntity, ref EffectContext context, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    receivedEffect = effectEntity;
+                    receivedRootId = context.RootId;
+                });
+            var executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var runtime = new BuiltinHandlerExecutionContext();
+            Entity effect = world.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            var context = new EffectContext { RootId = 89, Source = source, Target = target };
+            var behavior = new EffectPhaseGraphBindings();
+
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                effect,
+                in context,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: 2304,
+                runtime);
+
+            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedRootId, Is.EqualTo(89));
         }
 
         [Test]

@@ -72,8 +72,15 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                 effectTagId: 1, effectTemplateId: 1);
 
@@ -113,10 +120,17 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // fail-fast: missing template must throw, not silently skip
             Assert.Throws<InvalidOperationException>(() =>
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                     effectTagId: 1, effectTemplateId: 999));
 
@@ -369,8 +383,15 @@ namespace Ludots.Tests.GAS
             var target = world.Create(new AttributeBuffer());
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
                 effectTagId: 1, effectTemplateId: 1);
 

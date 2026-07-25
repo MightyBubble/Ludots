@@ -856,9 +856,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             if (_phaseExecutor != null && _graphApi != null)
                             {
                                 SetMergedConfigContext(in tpl, in e);
+                                var listenerContext = new EffectContext
+                                {
+                                    RootId = e.RootId,
+                                    Source = e.Source,
+                                    Target = e.Target,
+                                    TargetContext = e.TargetContext,
+                                };
                                 _phaseExecutor.DispatchPhaseListeners(
                                     World, _graphApi,
-                                    e.Source, e.Target, e.TargetContext,
+                                    Entity.Null,
+                                    in listenerContext,
                                     default,
                                     EffectPhaseId.OnApply,
                                     tpl.TagId,
@@ -1202,6 +1210,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
@@ -1209,7 +1218,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             bool accepted = _phaseExecutor.ExecutePhaseWithValidationResult(
                 World, _graphApi,
-                proposal.Source, proposal.Target, proposal.TargetContext,
+                Entity.Null,
+                in context,
                 targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
@@ -1237,6 +1247,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
@@ -1244,7 +1255,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
-                proposal.Source, proposal.Target, proposal.TargetContext,
+                Entity.Null,
+                in context,
                 targetPos,
                 EffectPhaseId.OnCalculate,
                 in tpl.PhaseGraphBindings,

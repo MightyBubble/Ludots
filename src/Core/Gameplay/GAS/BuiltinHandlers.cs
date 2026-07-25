@@ -289,6 +289,7 @@ namespace Ludots.Core.Gameplay.GAS
                     in unit,
                     context.Source,
                     effectEntity,
+                    context.RootId,
                     unit.UnitTypeId,
                     i,
                     out Fix64Vec2 offsetCm,
@@ -843,6 +844,7 @@ namespace Ludots.Core.Gameplay.GAS
         private static Fix64Vec2 ComputeScatterOffsetCm(
             Entity source,
             Entity effectEntity,
+            int rootId,
             int unitTypeId,
             int index,
             int radiusCm)
@@ -860,6 +862,7 @@ namespace Ludots.Core.Gameplay.GAS
                 seed ^= (uint)effectEntity.Id * 2654435761u;
                 seed ^= (uint)effectEntity.WorldId * 2246822519u;
                 seed ^= (uint)effectEntity.Version * 3266489917u;
+                seed ^= (uint)rootId * 1597334677u;
                 seed ^= (uint)(index + 1) * 668265263u;
                 seed ^= (uint)unitTypeId * 374761393u;
 
@@ -881,6 +884,7 @@ namespace Ludots.Core.Gameplay.GAS
             in UnitCreationDescriptor unit,
             Entity source,
             Entity effectEntity,
+            int rootId,
             int unitTypeId,
             int index,
             out Fix64Vec2 offsetCm,
@@ -893,7 +897,7 @@ namespace Ludots.Core.Gameplay.GAS
                     ComputeCirclePlacement(in unit, index, out offsetCm, out facingAngleRad, out hasFacing);
                     return;
                 default:
-                    offsetCm = ComputeScatterOffsetCm(source, effectEntity, unitTypeId, index, unit.OffsetRadius);
+                    offsetCm = ComputeScatterOffsetCm(source, effectEntity, rootId, unitTypeId, index, unit.OffsetRadius);
                     facingAngleRad = 0f;
                     hasFacing = false;
                     return;

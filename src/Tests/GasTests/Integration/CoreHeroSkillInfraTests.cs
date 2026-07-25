@@ -153,13 +153,19 @@ namespace Ludots.Tests.GAS
                 KnowledgeAreaReveal = revealRuntime,
                 CurrentStep = 3
             };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = viewer,
+                Target = Entity.Null,
+                TargetContext = Entity.Null
+            };
 
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                viewer,
                 Entity.Null,
-                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnApply,
                 default,
@@ -175,9 +181,8 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                viewer,
                 Entity.Null,
-                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnRemove,
                 default,
@@ -337,13 +342,19 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var runtime = new BuiltinHandlerExecutionContext { Relationships = relationships };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = captor,
+                Target = captive,
+                TargetContext = Entity.Null
+            };
 
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                captor,
-                captive,
                 Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnApply,
                 default,

@@ -656,7 +656,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
-                context.Source, context.Target, context.TargetContext,
+                effectEntity,
+                in context,
                 targetPos,
                 phase,
                 in tpl.PhaseGraphBindings,

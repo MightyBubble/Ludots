@@ -179,13 +179,19 @@ namespace Ludots.Tests.GasTests
                 templateKeys,
                 new PresentationStableIdAllocator());
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = source,
+                Target = source,
+                TargetContext = source
+            };
 
             executor.ExecutePhase(
                 world,
                 graphApi,
-                source,
-                source,
-                source,
+                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnApply,
                 default,
@@ -281,13 +287,19 @@ namespace Ludots.Tests.GasTests
                 templateKeys,
                 new PresentationStableIdAllocator());
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = source,
+                Target = source,
+                TargetContext = source
+            };
 
             executor.ExecutePhase(
                 world,
                 graphApi,
-                source,
-                source,
-                source,
+                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnApply,
                 default,

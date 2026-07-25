@@ -79,9 +79,16 @@ namespace Ludots.Tests.GAS
             runtime.ResetPerEffect();
 
             var behavior = new EffectPhaseGraphBindings();
-            executor.ExecutePhase(world, api, source, center, default, default,
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = source,
+                Target = center,
+                TargetContext = default,
+            };
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-            executor.ExecutePhase(world, api, source, center, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
@@ -149,7 +156,14 @@ namespace Ludots.Tests.GAS
             runtime.ResetPerEffect();
 
             var behavior = new EffectPhaseGraphBindings();
-            executor.ExecutePhase(world, api, source, center, default, default,
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = source,
+                Target = center,
+                TargetContext = default,
+            };
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnPeriod, in behavior, EffectPresetType.PeriodicSearch, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
@@ -221,9 +235,16 @@ namespace Ludots.Tests.GAS
                 runtime.ResetPerEffect();
 
                 var behavior = new EffectPhaseGraphBindings();
-                executor.ExecutePhase(world, api, source, center, default, default,
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = source,
+                    Target = center,
+                    TargetContext = default,
+                };
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-                executor.ExecutePhase(world, api, source, center, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Has.Count.EqualTo(1));
@@ -297,9 +318,16 @@ namespace Ludots.Tests.GAS
                 runtime.ResetPerEffect();
 
                 var behavior = new EffectPhaseGraphBindings();
-                executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = sourceWithoutTeam,
+                    Target = center,
+                    TargetContext = default,
+                };
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
-                executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Is.Empty);

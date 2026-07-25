@@ -320,15 +320,16 @@ New variant primary deliverable (A/B/C/D): **A**
 Conclusion: **PASS**
 
 One-line reason: the existing `CreateUnit` atomic handler keeps the same
-placement mode and authored radius, but its deterministic scatter seed must
-identify each effect instance so repeated single-unit executions do not produce
-the same world position.
+placement mode and authored radius, while the shared phase executor now
+preserves the request root and effect entity identities already carried by the
+formal effect pipeline.
 
 ### 2. Layer assignment
 
 | Step / capability | Layer (0/1/2/3) | Implementation carrier |
 |---|---:|---|
 | Resolve the authored spawn origin | 0 | Existing `EffectTargetPointResolver` |
+| Preserve effect identity through phase execution | 0 | Existing `EffectPhaseExecutor` and `EffectContext` |
 | Derive a deterministic per-effect scatter offset | 0 | Existing `CreateUnit` built-in handler |
 | Queue and materialize the unit | 0/1 | Existing `RuntimeEntitySpawnQueue` and lifecycle path |
 | Prove units remain independently selectable | 3 | Existing three-process player-input acceptance Mod |
@@ -336,17 +337,18 @@ the same world position.
 ### 3. Reuse list
 
 - Handlers: existing `BuiltinHandlerId.CreateUnit` handler.
-- Queues / Systems: existing `RuntimeEntitySpawnQueue` and spawn
-  materialization systems.
-- Resolvers / Registries: existing `EffectTargetPointResolver`; the live effect
-  entity identity already supplied to every built-in handler invocation.
+- Queues / Systems: existing `EffectRequestQueue`, `EffectPhaseExecutor`,
+  `RuntimeEntitySpawnQueue`, and spawn materialization systems.
+- Resolvers / Registries: existing `EffectTargetPointResolver`; the request
+  `RootId` and live effect entity identity already owned by the effect pipeline.
 - Existing presets / graphs: existing Frontline training ability and
   `Effect.Rts.Frontline.CreateInfantry` template.
 
 ### 4. New Layer 0 ops
 
-N/A. The change corrects the deterministic input set of the existing atomic
-placement operation.
+N/A. The change repairs context propagation through the existing phase executor
+and corrects the deterministic input set of the existing atomic placement
+operation.
 
 ### 5. Transaction boundary
 
@@ -375,7 +377,7 @@ does not require a Core enum.
 
 | Type | Items |
 |---|---|
-| Reuse | `CreateUnit`; effect entity identity; `EffectTargetPointResolver`; runtime spawn queue and materializer |
+| Reuse | `CreateUnit`; `EffectContext.RootId`; effect entity identity; `EffectPhaseExecutor`; `EffectTargetPointResolver`; runtime spawn queue and materializer |
 | Add Layer 0 op | None |
 | Add Layer 1 | None |
 | Add Layer 2 | None |

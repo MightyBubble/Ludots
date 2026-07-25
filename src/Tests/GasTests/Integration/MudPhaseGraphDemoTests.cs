@@ -140,10 +140,17 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null);
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default
+                };
 
                 // ═══════ Phase 1: OnPropose ═══════
                 sb.AppendLine("[MUD][PHASE] ① OnPropose: 法师提案【冲击】效果。");
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnPropose, in behavior, EffectPresetType.None);
 
                 ref var bbInt = ref world.Get<BlackboardIntBuffer>(target);
@@ -156,7 +163,7 @@ namespace Ludots.Tests.GAS
 
                 // Set config context for graph to read
                 api.SetConfigContext(in configParams);
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                 api.ClearConfigContext();
 
@@ -176,7 +183,7 @@ namespace Ludots.Tests.GAS
                 // ═══════ Simulate second application (e.g. periodic tick reusing same behavior) ═══════
                 sb.AppendLine("[MUD][PHASE] ③ OnApply (第2次): 再次施加，累计伤害叠加。");
                 api.SetConfigContext(in configParams);
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                 api.ClearConfigContext();
 
@@ -192,7 +199,7 @@ namespace Ludots.Tests.GAS
 
                 // ═══════ Phase 3: OnExpire ═══════
                 sb.AppendLine("[MUD][PHASE] ④ OnExpire: 效果到期，计算50%伤害反弹值。");
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnExpire, in behavior, EffectPresetType.None);
 
                 bbFloat = ref world.Get<BlackboardFloatBuffer>(target);
@@ -273,9 +280,16 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null);
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default
+                };
 
                 api.SetConfigContext(in configParams);
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                 api.ClearConfigContext();
 
@@ -355,16 +369,30 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(targetB).SetCurrent(AttrHealth, 100f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null);
+                var contextA = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = targetA,
+                    TargetContext = default
+                };
+                var contextB = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = targetB,
+                    TargetContext = default
+                };
 
                 // Fire → targetA
                 api.SetConfigContext(in fireConfig);
-                executor.ExecutePhase(world, api, caster, targetA, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in contextA, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                 api.ClearConfigContext();
 
                 // Ice → targetB
                 api.SetConfigContext(in iceConfig);
-                executor.ExecutePhase(world, api, caster, targetB, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in contextB, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                 api.ClearConfigContext();
 

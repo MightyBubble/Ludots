@@ -77,7 +77,14 @@ namespace Ludots.Tests.GAS
                 {
                     foreach (var t in targets)
                     {
-                        executor.ExecutePhase(world, api, caster, t, default, default,
+                        var context = new EffectContext
+                        {
+                            RootId = 0,
+                            Source = caster,
+                            Target = t,
+                            TargetContext = default,
+                        };
+                        executor.ExecutePhase(world, api, Entity.Null, in context, default,
                             EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                     }
                 }
@@ -103,7 +110,14 @@ namespace Ludots.Tests.GAS
                         var phase = (EffectPhaseId)p;
                         for (int e = 0; e < entityCount; e++)
                         {
-                            executor.ExecutePhase(world, api, caster, targets[e], default, default,
+                            var context = new EffectContext
+                            {
+                                RootId = 0,
+                                Source = caster,
+                                Target = targets[e],
+                                TargetContext = default,
+                            };
+                            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                                 phase, in behavior, EffectPresetType.None);
                         }
                     }

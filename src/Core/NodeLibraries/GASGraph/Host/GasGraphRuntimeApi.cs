@@ -53,6 +53,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private BuiltinHandlerRegistry? _builtinHandlers;
         private EffectTemplateRegistry? _effectTemplates;
         private BuiltinHandlerExecutionContext? _builtinRuntime;
+        private Entity _currentEffectEntity;
         private int _currentEffectTemplateId;
         private EffectContext _currentEffectContext;
         private bool _hasEffectContext;
@@ -202,6 +203,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry builtinHandlers,
             EffectTemplateRegistry effectTemplates,
             BuiltinHandlerExecutionContext? builtinRuntime,
+            Entity effectEntity,
             int effectTemplateId,
             in EffectContext effectContext,
             in EffectConfigParams mergedParams)
@@ -209,6 +211,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = builtinHandlers ?? throw new ArgumentNullException(nameof(builtinHandlers));
             _effectTemplates = effectTemplates ?? throw new ArgumentNullException(nameof(effectTemplates));
             _builtinRuntime = builtinRuntime;
+            _currentEffectEntity = effectEntity;
             _currentEffectTemplateId = effectTemplateId;
             _currentEffectContext = effectContext;
             _hasEffectContext = true;
@@ -225,6 +228,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = null;
             _effectTemplates = null;
             _builtinRuntime = null;
+            _currentEffectEntity = Entity.Null;
             _currentEffectTemplateId = 0;
             _currentEffectContext = default;
             _hasEffectContext = false;
@@ -323,7 +327,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 registry.Invoke(
                     (BuiltinHandlerId)builtinHandlerId,
                     _world,
-                    default,
+                    _currentEffectEntity,
                     ref context,
                     in mergedParams,
                     in tplData,

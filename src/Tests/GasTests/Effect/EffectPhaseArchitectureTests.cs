@@ -251,8 +251,15 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
                 });
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default,
+                };
 
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 // Result: Pre writes 10, Main reads 10+20=30, Post reads 30+30=60
@@ -320,8 +327,15 @@ namespace Ludots.Tests.GAS
 
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default,
+                };
 
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 // Pre writes 5, Main skipped, Post reads 5+100=105
@@ -352,9 +366,16 @@ namespace Ludots.Tests.GAS
                 var caster = world.Create();
                 var target = world.Create();
                 var behavior = new EffectPhaseGraphBindings(); // empty
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default,
+                };
 
                 // Should not throw
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 Pass("No graphs = no-op, no throw");
@@ -378,13 +399,21 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 404);
+            var source = world.Create();
+            var target = world.Create();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = source,
+                Target = target,
+                TargetContext = default,
+            };
 
             var ex = Throws<InvalidOperationException>(() => executor.ExecutePhase(
                 world,
                 api,
-                world.Create(),
-                world.Create(),
-                default,
+                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
@@ -413,13 +442,19 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, graphId);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = target,
+            };
 
             bool accepted = executor.ExecutePhaseWithValidationResult(
                 world,
                 api,
-                caster,
-                target,
-                target,
+                Entity.Null,
+                in context,
                 default,
                 EffectPhaseId.OnPropose,
                 in behavior,

@@ -466,13 +466,19 @@ namespace Ludots.Tests.GAS
                         eventTagId: 2000 + i + 1,
                         priority: 0), Is.True);
                 }
+                var context = new EffectContext
+                {
+                    RootId = 0,
+                    Source = caster,
+                    Target = target,
+                    TargetContext = default,
+                };
 
                 executor.DispatchPhaseListeners(
                     world,
                     api: null!,
-                    caster: caster,
-                    target: target,
-                    targetContext: default,
+                    effectEntity: Entity.Null,
+                    context: in context,
                     targetPos: default,
                     phase: EffectPhaseId.OnApply,
                     effectTagId: 1,

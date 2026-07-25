@@ -533,9 +533,16 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
 
             // The listener graph ran — we verify indirectly by checking the event bus is empty
@@ -571,8 +578,15 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
 
             eventBus.Update();
@@ -668,7 +682,14 @@ namespace Ludots.Tests.GAS
             {
                 for (int i = 0; i < 500; i++)
                 {
-                    executor.ExecutePhase(world, api, caster, targets[i], default, default,
+                    var context = new EffectContext
+                    {
+                        RootId = 0,
+                        Source = caster,
+                        Target = targets[i],
+                        TargetContext = default,
+                    };
+                    executor.ExecutePhase(world, api, Entity.Null, in context, default,
                         (EffectPhaseId)phase, in behavior, EffectPresetType.None,
                         effectTagId: 1, effectTemplateId: 1);
                 }
@@ -727,12 +748,33 @@ namespace Ludots.Tests.GAS
             var behavior = new EffectPhaseGraphBindings();
             int fireballHitTag = 10;
             int fireballHitTemplate = 42;
+            var victim1Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim1,
+                TargetContext = default,
+            };
+            var victim2Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim2,
+                TargetContext = default,
+            };
+            var victim3Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim3,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, victim1, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in victim1Context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim2, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in victim2Context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim3, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in victim3Context, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
 
             // Verify: 3 bonus graph events (tag 777) + 3 listener events (tag 888) = 6 total events

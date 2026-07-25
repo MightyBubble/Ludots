@@ -99,8 +99,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -133,8 +140,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -265,11 +279,18 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // Execute each phase independently
             for (int i = 0; i < allPhases.Length; i++)
             {
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, Entity.Null, in context, default,
                     allPhases[i], in behavior, EffectPresetType.None);
             }
 
@@ -357,8 +378,15 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create(new BlackboardFloatBuffer());
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, Entity.Null, in context, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);

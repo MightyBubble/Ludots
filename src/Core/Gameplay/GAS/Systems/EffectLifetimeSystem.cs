@@ -427,7 +427,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 _phaseExecutor.ExecutePhase(
                     World, _graphApi,
-                    entry.Context.Source, entry.Context.Target, entry.Context.TargetContext,
+                    entry.EffectEntity,
+                    in entry.Context,
                     default,
                     phase,
                     in tpl.PhaseGraphBindings,
