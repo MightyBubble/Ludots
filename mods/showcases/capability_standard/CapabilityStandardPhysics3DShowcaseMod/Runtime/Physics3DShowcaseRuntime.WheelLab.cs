@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Layers;
 using Ludots.Core.Physics3D;
@@ -83,6 +84,7 @@ internal sealed partial class Physics3DShowcaseRuntime
     private bool _wheelLabNextModeRequested;
     private bool _wheelLabResetRequested;
     private bool _wheelLabHasObservedStep;
+    private bool _wheelLabCameraActive;
 
     internal Vehicle3DWheelKind WheelLabMode => _wheelLabMode;
     internal int WheelLabGroundedWheelCount => _wheelLabGroundedWheelCount;
@@ -195,6 +197,7 @@ internal sealed partial class Physics3DShowcaseRuntime
         _wheelLabSpeedKph = 0f;
         _wheelLabAverageCompressionCm = 0f;
         _wheelLabMaximumSlipCmPerSecond = 0f;
+        ActivateWheelLabCamera();
     }
 
     private void CreateWheelLabChassis(Physics3DWheelLabShowcaseConfig config)
@@ -1075,6 +1078,7 @@ internal sealed partial class Physics3DShowcaseRuntime
 
     private void ReleaseWheelLabScene()
     {
+        ReleaseWheelLabCamera();
         if (_wheelLabVehicles is not null)
         {
             ReleaseRegisteredWheelLabVehicle();
@@ -1111,6 +1115,47 @@ internal sealed partial class Physics3DShowcaseRuntime
         Array.Clear(_wheelLabWheelIds, 0, _wheelLabWheelIds.Length);
         Array.Clear(_wheelLabWheelStates, 0, _wheelLabWheelStates.Length);
         _wheelLabTrialResults = Array.Empty<Physics3DWheelLabTrialResult>();
+    }
+
+    internal void SynchronizeWheelLabCameraAfterMapFocus()
+    {
+        if (_scene == Physics3DShowcaseScene.WheelLab)
+        {
+            ActivateWheelLabCamera();
+        }
+    }
+
+    private void ActivateWheelLabCamera()
+    {
+        if (!_wheelLabChassis.IsValid)
+        {
+            throw new InvalidOperationException("Wheel Lab camera cannot activate before the chassis exists.");
+        }
+
+        _wheelLabCameraActive = ActivateStationFollowCamera(
+            ActiveConfig.WheelLab.CameraId,
+            CaptureWheelLabCameraTarget,
+            "Wheel Lab");
+    }
+
+    private CameraTargetTransformSnapshot CaptureWheelLabCameraTarget()
+    {
+        Physics3DBodyState chassis = RequirePhysics3DChassisState();
+        return new CameraTargetTransformSnapshot(
+            new Vector2(chassis.PositionCm.X, chassis.PositionCm.Z),
+            hasHeightCm: true,
+            heightCm: chassis.PositionCm.Y + ActiveConfig.WheelLab.CameraTargetHeightOffsetCm);
+    }
+
+    private void ReleaseWheelLabCamera()
+    {
+        if (!_wheelLabCameraActive)
+        {
+            return;
+        }
+
+        RestoreDefaultCamera("Wheel Lab");
+        _wheelLabCameraActive = false;
     }
 
     private void ReleaseRegisteredWheelLabVehicle()
