@@ -2087,9 +2087,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             acquisition.ClickPickRadiusPixels);
         if (hit != entity)
         {
+            WorldCmInt2 targetWorld = GetWorldPosition(entity);
+            WorldCmInt2 hitWorld = hit != Entity.Null && _world.IsAlive(hit)
+                ? GetWorldPosition(hit)
+                : default;
+            Vector3 targetVisual = visual.Position;
+            Vector3 hitVisual = hit != Entity.Null && _world.TryGet(hit, out VisualTransform resolvedVisual)
+                ? resolvedVisual.Position
+                : default;
+            ScreenRect hitBounds = default;
+            if (hit != Entity.Null)
+            {
+                SpatialBoundsUtility.TryProjectScreenBounds(_world, hit, _projector!, out hitBounds);
+            }
             throw new InvalidOperationException(
-                $"Acceptance player click resolved entity {hit.Id}:{hit.WorldId}, " +
-                $"expected {entity.Id}:{entity.WorldId}.");
+                $"[DEBUG-709-click] Acceptance player click resolved entity {hit.Id}:{hit.WorldId}, " +
+                $"expected {entity.Id}:{entity.WorldId}; targetWorld=({targetWorld.X},{targetWorld.Y}), " +
+                $"hitWorld=({hitWorld.X},{hitWorld.Y}), targetVisual={targetVisual}, hitVisual={hitVisual}, " +
+                $"targetBounds={bounds}, hitBounds={hitBounds}.");
         }
         return screen;
     }
