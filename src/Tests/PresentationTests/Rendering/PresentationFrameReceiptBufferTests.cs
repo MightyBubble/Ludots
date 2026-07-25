@@ -112,5 +112,56 @@ namespace Ludots.Tests.Presentation
             receipts.BeginFrame();
             Assert.That(receipts.Count, Is.Zero);
         }
+
+        [Test]
+        public void RecordSubmitted_IgnoresUnidentifiedPrimitivesButRejectsPartialIdentity()
+        {
+            var receipts = new PresentationFrameReceiptBuffer(capacity: 1);
+
+            receipts.RecordSubmitted(
+                stableId: 0,
+                templateId: 0,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                localBounds: UnitBounds);
+
+            Assert.That(receipts.Count, Is.Zero);
+            Assert.That(
+                () => receipts.RecordSubmitted(
+                    stableId: 1,
+                    templateId: 0,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    localBounds: UnitBounds),
+                Throws.InvalidOperationException);
+            Assert.That(
+                () => receipts.RecordSubmitted(
+                    stableId: 0,
+                    templateId: 1,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    localBounds: UnitBounds),
+                Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void RecordSubmitted_RejectsMissingBoundsInsteadOfInventingVisibilityEvidence()
+        {
+            var receipts = new PresentationFrameReceiptBuffer(capacity: 1);
+
+            Assert.That(
+                () => receipts.RecordSubmitted(
+                    stableId: 1,
+                    templateId: 1,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    localBounds: default),
+                Throws.InvalidOperationException);
+            Assert.That(receipts.Count, Is.Zero);
+        }
     }
 }

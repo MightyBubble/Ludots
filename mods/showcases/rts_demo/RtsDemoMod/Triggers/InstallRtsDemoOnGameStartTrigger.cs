@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Runtime;
@@ -40,22 +41,36 @@ namespace RtsDemoMod.Triggers
             TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
             TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
+            bool hasLocalPresentation =
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) != NetworkProcessRole.AuthoritativeServer;
+            if (hasLocalPresentation &&
+                engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) &&
+                oq is OrderQueue orders)
             {
                 engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.LocalInput);
                 _ctx.Log("[RtsDemoMod] RTS local order source system registered");
             }
 
-            engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
-            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, new RtsQuickSelectToolbarProvider(engine));
+            if (hasLocalPresentation)
+            {
+                engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
+                engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, new RtsQuickSelectToolbarProvider(engine));
+            }
+
             // Run after effect/spawn processing so relation-driven garrison/build/morph state
             // becomes visible in the same simulation frame.
             engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
-            engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
-            _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
-
-            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
+            if (hasLocalPresentation)
+            {
+                engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
+                engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
+                ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
+                _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
+            }
+            else
+            {
+                _ctx.Log("[RtsDemoMod] RTS relation runtime registered without local input or presentation for authoritative server");
+            }
 
             return Task.CompletedTask;
         }

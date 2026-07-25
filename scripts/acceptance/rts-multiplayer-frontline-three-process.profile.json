@@ -59,7 +59,7 @@
     },
     {
       "role": "infantry",
-      "frames": [600],
+      "frames": [600, 6100, 7000],
       "template": "rts.frontline.infantry.body",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,

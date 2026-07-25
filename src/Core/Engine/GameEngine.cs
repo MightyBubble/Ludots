@@ -237,6 +237,7 @@ namespace Ludots.Core.Engine
         private Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups = new Dictionary<SystemGroup, List<ISystem<float>>>();
         private List<ISystem<float>> _presentationSystems = new List<ISystem<float>>();
         private ISystem<float> _inputRuntimeSystem;
+        private CameraRuntimeSystem _cameraRuntimeSystem;
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _primitiveDrawBuffer;
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _visualSnapshotBuffer;
         private Ludots.Core.Presentation.Rendering.PresentationVisualProxyBuffer _visualProxyBuffer;
@@ -1678,7 +1679,7 @@ namespace Ludots.Core.Engine
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
-            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
+            _cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
@@ -1834,7 +1835,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
-            RegisterSystem(cameraRuntimeSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
@@ -3293,7 +3294,9 @@ namespace Ludots.Core.Engine
                 throw new InvalidOperationException("StartupMapId is required.");
             }
 
-            MapLaunchContext? launchContext = MergedConfig!.StartupLocalPlayerId > 0
+            MapLaunchContext? launchContext =
+                GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.Standalone &&
+                MergedConfig!.StartupLocalPlayerId > 0
                 ? MapLaunchContext.Create(MergedConfig.StartupLocalPlayerId)
                 : null;
             LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
@@ -3619,6 +3622,7 @@ namespace Ludots.Core.Engine
             _systemGroups?.Clear();
             _presentationSystems?.Clear();
             _inputRuntimeSystem = null;
+            _cameraRuntimeSystem = null;
             _primitiveDrawBuffer = null;
             _visualSnapshotBuffer = null;
             _visualProxyBuffer = null;
@@ -3747,6 +3751,8 @@ namespace Ludots.Core.Engine
             {
                 systems[i].Update(dt);
             }
+
+            _cameraRuntimeSystem?.Update(dt);
         }
 
         private IPresentationInterpolationSource? ResolveExternalPresentationInterpolationSource()

@@ -150,8 +150,8 @@ namespace RtsDemoMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity local) ||
+                !engine.World.IsAlive(local))
             {
                 return false;
             }
@@ -162,16 +162,10 @@ namespace RtsDemoMod.Runtime
 
         private static Entity ResolveCommandSourceOwner(GameEngine engine)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (engine.World.IsAlive(owner))
-            {
-                return owner;
-            }
-
-            owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
-            return owner;
+            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) &&
+                   engine.World.IsAlive(owner)
+                ? owner
+                : Entity.Null;
         }
     }
 }

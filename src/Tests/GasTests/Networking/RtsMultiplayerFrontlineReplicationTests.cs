@@ -5,7 +5,9 @@ using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
@@ -83,20 +85,67 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     }
 
     [Test]
-    public void AuthoritativeServer_LoadsFrontlineMapWithoutLocalCameraServices()
+    [Description(
+        "Feature: Dedicated multiplayer host stays presentation-free\n" +
+        "  Given the authoritative server has loaded the Frontline battlefield without a local viewport\n" +
+        "  When the first authoritative simulation frame advances\n" +
+        "  Then the server keeps running without activating or sampling a player camera")]
+    public void AuthoritativeServer_TicksFrontlineMapWithoutLocalCameraServices()
     {
         using GameEngine engine = CreateStartedEngine(
             NetworkProcessRole.AuthoritativeServer,
             new TestServerRuntimePort(),
             installPresentationServices: false);
 
-        Assert.DoesNotThrow(() => engine.LoadMap(MapId));
+        Assert.DoesNotThrow(engine.LoadStartupMap);
+        Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+        Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
+        Assert.DoesNotThrow(() =>
+        {
+            for (int frame = 0; frame < 120; frame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+        });
         Assert.Multiple(() =>
         {
             Assert.That(engine.TriggerManager.Errors, Is.Empty);
             Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(MapId));
             Assert.That(engine.GetService(CoreServiceKeys.ViewController), Is.Null);
+            Assert.That(engine.GetService(CoreServiceKeys.LocalPlayerId), Is.Zero);
+            Assert.That(engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity _), Is.False);
             Assert.That(engine.GameSession.Camera.IsRuntimeConfigured, Is.False);
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.HasActiveCamera, Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Each replicated commander owns a local battlefield camera\n" +
+        "  Given a replicated client has loaded the Frontline battlefield and its viewport\n" +
+        "  When local input requests the Frontline command camera\n" +
+        "  Then the client applies that camera before presenting the next frame")]
+    public void ReplicatedClient_ConsumesLocalCameraRequestBeforePresentation()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadStartupMap();
+        Assert.That(engine.GetService(CoreServiceKeys.LocalPlayerId), Is.Zero);
+        Assert.That(engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity _), Is.False);
+        engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+        {
+            Id = "Rts.Frontline",
+            BlendDurationSeconds = 0f,
+            ReplaceActiveStack = true,
+            ResetRuntimeState = true,
+        });
+
+        Assert.DoesNotThrow(() => engine.Tick(1f / 60f));
+        Assert.Multiple(() =>
+        {
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo("Rts.Frontline"));
         });
     }
 
@@ -1142,11 +1191,15 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(ReadOverlayStrings(overlay), Does.Contain(expected));
     }
 
-    private static GameEngine CreateStartedReplicatedClientEngine(TestClientRuntimePort? runtimePort = null) =>
-        CreateStartedEngine(
+    private static GameEngine CreateStartedReplicatedClientEngine(TestClientRuntimePort? runtimePort = null)
+    {
+        GameEngine engine = CreateStartedEngine(
             NetworkProcessRole.ReplicatedClient,
             runtimePort ?? new TestClientRuntimePort(),
             installPresentationServices: true);
+        engine.SetService(CoreServiceKeys.ReplicatedClientCommandPort, new TestClientCommandPort());
+        return engine;
+    }
 
     private static GameEngine CreateStartedEngine(
         NetworkProcessRole role = NetworkProcessRole.Standalone,
@@ -1263,7 +1316,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         public string GetCharBuffer() => string.Empty;
     }
 
-    private sealed class TestClientRuntimePort : INetworkRuntimePort, IReplicatedClientRuntimeStatus
+    private sealed class TestClientRuntimePort :
+        INetworkRuntimePort,
+        IReplicatedClientRuntimeStatus,
+        IPresentationInterpolationSource
     {
         public NetworkProcessRole Role => NetworkProcessRole.ReplicatedClient;
         public ReplicatedClientConnectionState ConnectionState { get; set; } = ReplicatedClientConnectionState.Disconnected;
@@ -1273,6 +1329,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         public uint LastCommittedTick { get; set; }
         public float ReconnectWindowRemainingSeconds { get; set; } = 30f;
         public int RoundTripTimeMilliseconds { get; set; }
+        public float InterpolationAlpha => 0f;
 
         public void Activate() { }
         public void PumpTransport() { }

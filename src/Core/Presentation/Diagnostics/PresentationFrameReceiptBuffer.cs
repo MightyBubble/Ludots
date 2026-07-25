@@ -53,6 +53,10 @@ namespace Ludots.Core.Presentation.Diagnostics
             in Vector3 scale,
             in ProceduralMeshBounds localBounds)
         {
+            if (stableId == 0 && templateId == 0)
+            {
+                return;
+            }
             if (stableId <= 0)
             {
                 throw new InvalidOperationException("Presentation submission receipts require a positive stable id.");
@@ -66,17 +70,21 @@ namespace Ludots.Core.Presentation.Diagnostics
                 throw new InvalidOperationException(
                     $"Presentation submission receipt buffer capacity {_items.Length} was exceeded.");
             }
+            if (localBounds.Extents.X <= 0f ||
+                localBounds.Extents.Y <= 0f ||
+                localBounds.Extents.Z <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "Presentation submission receipts require explicit positive local bounds.");
+            }
 
-            ProceduralMeshBounds resolvedBounds = localBounds.Extents == Vector3.Zero
-                ? new ProceduralMeshBounds(Vector3.Zero, Vector3.One * 0.5f)
-                : localBounds;
             _items[_count++] = new PresentationFrameReceiptItem(
                 stableId,
                 templateId,
                 position,
                 rotation,
                 scale,
-                resolvedBounds);
+                localBounds);
         }
 
         public ReadOnlySpan<PresentationFrameReceiptItem> GetSpan() =>

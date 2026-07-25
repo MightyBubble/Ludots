@@ -300,8 +300,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
 
         int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
-        Entity localPlayer = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-        if (localPlayerId <= 0 || localPlayer == Entity.Null || !_world.IsAlive(localPlayer))
+        if (localPlayerId <= 0 ||
+            !_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            !_world.IsAlive(localPlayer))
         {
             return;
         }
@@ -1584,8 +1585,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private Entity RequireLocalPlayerEntity()
     {
-        Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-        if (owner == Entity.Null || !_world.IsAlive(owner))
+        if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) ||
+            !_world.IsAlive(owner))
         {
             throw new InvalidOperationException("Acceptance client lost its local player entity binding.");
         }
@@ -2247,8 +2248,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
 
-        Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-        if (owner == Entity.Null || !_world.IsAlive(owner))
+        if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) ||
+            !_world.IsAlive(owner))
         {
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
