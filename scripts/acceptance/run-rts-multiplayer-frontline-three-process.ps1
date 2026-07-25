@@ -922,8 +922,8 @@ function Assert-GameplayEvidence {
     $expectedOutcome = if ($winningSide -eq 0) { "SideOneVictory" } elseif ($winningSide -eq 1) { "SideTwoVictory" } else { throw "Unsupported expected winning side $winningSide." }
     foreach ($item in $all) {
         $evidence = $item.Value
-        if ([int]$evidence.schemaVersion -ne 4 -or [string]$evidence.status -cne "passed") {
-            throw "Evidence '$($item.Name)' did not pass schema version 4."
+        if ([int]$evidence.schemaVersion -ne 5 -or [string]$evidence.status -cne "passed") {
+            throw "Evidence '$($item.Name)' did not pass schema version 5."
         }
         if ([int]$evidence.faultCount -ne 0) { throw "Evidence '$($item.Name)' reported $($evidence.faultCount) network faults." }
         if ([string]$evidence.planFingerprint -cne $PlanFingerprint) {
@@ -976,6 +976,15 @@ function Assert-GameplayEvidence {
         [int]$serverFirstTrainedInfantrySpawnTicks[1] -le 0) {
         throw "Server evidence does not contain two positive first-trained-infantry authoritative spawn ticks."
     }
+    if ($null -eq $server.gameplay.PSObject.Properties["secondTrainedInfantrySpawnCommittedTickBySide"]) {
+        throw "Server evidence lacks second-trained-infantry authoritative spawn ticks."
+    }
+    $serverSecondTrainedInfantrySpawnTicks = @($server.gameplay.secondTrainedInfantrySpawnCommittedTickBySide)
+    if ($serverSecondTrainedInfantrySpawnTicks.Count -ne 2 -or
+        [int]$serverSecondTrainedInfantrySpawnTicks[0] -le 0 -or
+        [int]$serverSecondTrainedInfantrySpawnTicks[1] -le 0) {
+        throw "Server evidence does not contain two positive second-trained-infantry authoritative spawn ticks."
+    }
     $losingSide = if ($winningSide -eq 0) { 1 } else { 0 }
     $serverCoreHealth = @($server.gameplay.observedCoreHealthBySide)
     if ($serverCoreHealth.Count -ne 2 -or $null -eq $serverCoreHealth[0] -or $null -eq $serverCoreHealth[1]) {
@@ -1024,6 +1033,19 @@ function Assert-GameplayEvidence {
         $serverSpawnTick = [int]$serverFirstTrainedInfantrySpawnTicks[[int]$client.seatSlot]
         if ($firstTrainedInfantryObservedTick -lt $serverSpawnTick) {
             throw "Client evidence '$($item.Name)' observed the first trained infantry before its authoritative spawn tick."
+        }
+        if ($null -eq $client.gameplay.PSObject.Properties["secondTrainedInfantryObservedCommittedTick"] -or
+            $null -eq $client.gameplay.PSObject.Properties["secondTrainedInfantryObservedCount"]) {
+            throw "Client evidence '$($item.Name)' lacks second-trained-infantry replicated observation evidence."
+        }
+        $secondTrainedInfantryObservedTick = [int]$client.gameplay.secondTrainedInfantryObservedCommittedTick
+        if ($secondTrainedInfantryObservedTick -le 0 -or
+            [int]$client.gameplay.secondTrainedInfantryObservedCount -ne [int]$ExpectedPlan.expected.trainedInfantryCount) {
+            throw "Client evidence '$($item.Name)' did not observe exactly the completed infantry training at a positive authoritative tick."
+        }
+        $serverSecondSpawnTick = [int]$serverSecondTrainedInfantrySpawnTicks[[int]$client.seatSlot]
+        if ($secondTrainedInfantryObservedTick -lt $serverSecondSpawnTick) {
+            throw "Client evidence '$($item.Name)' observed the second trained infantry before its authoritative spawn tick."
         }
         if ([double]$client.gameplay.attackTargetHealthBefore -le [double]$client.gameplay.attackTargetHealthAfter -or
             [double]$client.gameplay.attackTargetHealthAfter -lt 0) {
@@ -1153,6 +1175,23 @@ function Assert-GameplayEvidence {
         if (@($trainingCommands | Where-Object { [int]$_.actorCount -ne 1 }).Count -ne 0) {
             throw "Client evidence '$($item.Name)' training commands must each come from exactly one selected command core."
         }
+        $immediateTrainingCommands = @($trainingCommands | Where-Object { [string]$_.action -ceq "TrainInfantry" })
+        if ($immediateTrainingCommands.Count -ne 1) {
+            throw "Client evidence '$($item.Name)' must contain exactly one immediate infantry training command."
+        }
+        $immediateTrainingActivations = @($immediateTrainingCommands[0].admissionHistory | Where-Object {
+            [string]$_.stage -ceq "EntityIntake" -and [string]$_.result -ceq "Activated"
+        })
+        if ($immediateTrainingActivations.Count -ne 1 -or
+            $null -eq $immediateTrainingActivations[0].PSObject.Properties["authoritativeCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' immediate training lacks one authoritative EntityIntake:Activated transition."
+        }
+        $immediateActivatedAuthoritativeTick = [int]$immediateTrainingActivations[0].authoritativeCommittedTick
+        if ($immediateActivatedAuthoritativeTick -le 0 -or
+            $immediateActivatedAuthoritativeTick -gt $serverSpawnTick -or
+            $serverSpawnTick -gt $firstTrainedInfantryObservedTick) {
+            throw "Client evidence '$($item.Name)' immediate training activation, spawn, and observation are not causally ordered."
+        }
         $queuedTrainingCommands = @($trainingCommands | Where-Object { [string]$_.action -ceq "QueueTrainInfantry" })
         if ($queuedTrainingCommands.Count -ne 1) {
             throw "Client evidence '$($item.Name)' must contain exactly one queued infantry training command."
@@ -1168,8 +1207,9 @@ function Assert-GameplayEvidence {
         }
         $queueActivatedAuthoritativeTick = [int]$queuedTrainingActivations[0].authoritativeCommittedTick
         if ($queueActivatedAuthoritativeTick -lt $serverSpawnTick -or
-            $queueActivatedAuthoritativeTick -gt $firstTrainedInfantryObservedTick) {
-            throw "Client evidence '$($item.Name)' queued training activation is outside the authoritative spawn-to-client-observation interval."
+            $queueActivatedAuthoritativeTick -gt $serverSecondSpawnTick -or
+            $serverSecondSpawnTick -gt $secondTrainedInfantryObservedTick) {
+            throw "Client evidence '$($item.Name)' queued training activation, second spawn, and observation are not causally ordered."
         }
 
         $meetingCommands = @($commands | Where-Object { [string]$_.action -ceq "MoveToMeeting" })
@@ -1341,7 +1381,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 4
+    schemaVersion = 5
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")

@@ -483,6 +483,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         int observedInfantryCount = CountOwned<ClientInfantryMarker>(_localPlayerId);
         int firstTrainedInfantryCount = checked(_plan.Expected.InitialInfantryCount + 1);
+        int secondTrainedInfantryCount = _plan.Expected.TrainedInfantryCount;
         if (_evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick < 0 &&
             observedInfantryCount >= firstTrainedInfantryCount)
         {
@@ -490,16 +491,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             {
                 throw new InvalidOperationException(
                     $"Client first observed trained infantry count {observedInfantryCount}; " +
-                    $"expected exactly {firstTrainedInfantryCount} before queued training activation.");
+                    $"expected exactly {firstTrainedInfantryCount} before the second training completed.");
             }
-            int committedTick = checked((int)_clientStatus!.LastCommittedTick);
-            if (committedTick <= 0)
+            _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick =
+                RequireClientAuthoritativeSnapshotTick("first trained infantry");
+            _evidence.Gameplay.FirstTrainedInfantryObservedCount = observedInfantryCount;
+        }
+        if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick < 0 &&
+            observedInfantryCount >= secondTrainedInfantryCount)
+        {
+            if (observedInfantryCount != secondTrainedInfantryCount)
             {
                 throw new InvalidOperationException(
-                    "Client observed the first trained infantry without a positive authoritative snapshot tick.");
+                    $"Client first observed completed training count {observedInfantryCount}; " +
+                    $"expected exactly {secondTrainedInfantryCount}.");
             }
-            _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick = committedTick;
-            _evidence.Gameplay.FirstTrainedInfantryObservedCount = observedInfantryCount;
+            _evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick =
+                RequireClientAuthoritativeSnapshotTick("second trained infantry");
+            _evidence.Gameplay.SecondTrainedInfantryObservedCount = observedInfantryCount;
         }
         if (_substep == 0)
         {
@@ -561,7 +570,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (_substep == 6)
         {
-            if (_evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0)
+            if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick <= 0)
             {
                 return;
             }
@@ -907,34 +916,33 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         for (int side = 0; side < 2; side++)
         {
-            if (_evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] >= 0)
+            int firstTrainedInfantryCount = checked(_plan.Expected.InitialInfantryCount + 1);
+            if (_evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] < 0 &&
+                infantryCount[side] >= firstTrainedInfantryCount)
             {
-                continue;
+                if (infantryCount[side] != firstTrainedInfantryCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Server first observed side {side} trained infantry count {infantryCount[side]}; " +
+                        $"expected exactly {firstTrainedInfantryCount}.");
+                }
+                _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] =
+                    RequireServerAuthoritativeExecutingTick(side, "first trained infantry");
             }
 
-            int firstTrainedInfantryCount = checked(_plan.Expected.InitialInfantryCount + 1);
-            if (infantryCount[side] < firstTrainedInfantryCount)
+            int secondTrainedInfantryCount = _plan.Expected.TrainedInfantryCount;
+            if (_evidence.Gameplay.SecondTrainedInfantrySpawnCommittedTickBySide[side] < 0 &&
+                infantryCount[side] >= secondTrainedInfantryCount)
             {
-                continue;
+                if (infantryCount[side] != secondTrainedInfantryCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Server first observed side {side} completed training count {infantryCount[side]}; " +
+                        $"expected exactly {secondTrainedInfantryCount}.");
+                }
+                _evidence.Gameplay.SecondTrainedInfantrySpawnCommittedTickBySide[side] =
+                    RequireServerAuthoritativeExecutingTick(side, "second trained infantry");
             }
-            if (infantryCount[side] != firstTrainedInfantryCount)
-            {
-                throw new InvalidOperationException(
-                    $"Server first observed side {side} trained infantry count {infantryCount[side]}; " +
-                    $"expected exactly {firstTrainedInfantryCount}.");
-            }
-            if (!_engine.GameSession.SimulationTicks.IsExecuting)
-            {
-                throw new InvalidOperationException(
-                    $"Server observed side {side} first trained infantry outside an authoritative simulation tick.");
-            }
-            int authoritativeTick = _engine.GameSession.SimulationTicks.ExecutingTick;
-            if (authoritativeTick <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Server observed side {side} first trained infantry without a positive authoritative simulation tick.");
-            }
-            _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[side] = authoritativeTick;
         }
 
         _evidence.Gameplay.ObservedInfantryCountBySide[0] = infantryCount[0];
@@ -954,10 +962,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
         CaptureSeats(requireBothConnected: true);
 
         if (_evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[0] <= 0 ||
-            _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[1] <= 0)
+            _evidence.Gameplay.FirstTrainedInfantrySpawnCommittedTickBySide[1] <= 0 ||
+            _evidence.Gameplay.SecondTrainedInfantrySpawnCommittedTickBySide[0] <= 0 ||
+            _evidence.Gameplay.SecondTrainedInfantrySpawnCommittedTickBySide[1] <= 0)
         {
             throw new InvalidOperationException(
-                "Authoritative completion lacks the first trained infantry spawn committed tick for both sides.");
+                "Authoritative completion lacks the first or second trained infantry spawn committed tick for both sides.");
         }
 
         if (match.WinningSideIndex != _plan.Expected.WinningSideIndex ||
@@ -1170,18 +1180,45 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     "Queued infantry training did not expose EntityIntake:Queued before EntityIntake:Activated.");
             }
             AcceptanceAdmissionTransitionEvidence activated = command.AdmissionHistory[activatedIndex];
-            if (_evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick <= 0 ||
+            if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick <= 0 ||
                 activated.AuthoritativeCommittedTick <= 0 ||
-                activated.AuthoritativeCommittedTick > _evidence.Gameplay.FirstTrainedInfantryObservedCommittedTick)
+                activated.AuthoritativeCommittedTick > _evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick)
             {
                 throw new InvalidOperationException(
-                    "Queued infantry training lacks a causal authoritative activation tick before the first trained infantry observation.");
+                    "Queued infantry training lacks a causal authoritative activation tick before the second trained infantry observation.");
             }
         }
         else if (queuedIndex >= 0)
         {
             throw new InvalidOperationException("The first infantry training command unexpectedly entered the entity queue.");
         }
+    }
+
+    private int RequireClientAuthoritativeSnapshotTick(string observation)
+    {
+        int committedTick = checked((int)_clientStatus!.LastCommittedTick);
+        if (committedTick <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Client observed the {observation} without a positive authoritative snapshot tick.");
+        }
+        return committedTick;
+    }
+
+    private int RequireServerAuthoritativeExecutingTick(int side, string observation)
+    {
+        if (!_engine.GameSession.SimulationTicks.IsExecuting)
+        {
+            throw new InvalidOperationException(
+                $"Server observed side {side} {observation} outside an authoritative simulation tick.");
+        }
+        int authoritativeTick = _engine.GameSession.SimulationTicks.ExecutingTick;
+        if (authoritativeTick <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Server observed side {side} {observation} without a positive authoritative simulation tick.");
+        }
+        return authoritativeTick;
     }
 
     private void BeginGroundCommand(string actionName, WorldCmInt2 target)

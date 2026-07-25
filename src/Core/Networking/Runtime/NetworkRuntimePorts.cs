@@ -186,6 +186,7 @@ namespace Ludots.Core.Networking.Runtime
 
         bool IsFaulted { get; }
 
+        /// <summary>The latest authoritative snapshot tick successfully applied to the client world.</summary>
         uint LastCommittedTick { get; }
 
         float ReconnectWindowRemainingSeconds { get; }

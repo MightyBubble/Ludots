@@ -11,7 +11,7 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
 internal sealed class AcceptanceEvidence
 {
-    public int SchemaVersion { get; set; } = 4;
+    public int SchemaVersion { get; set; } = 5;
     public string Status { get; set; } = "running";
     public string Role { get; set; } = string.Empty;
     public string? Failure { get; set; }
@@ -143,8 +143,11 @@ internal sealed class AcceptanceGameplayEvidence
     public int InitialInfantryCount { get; set; } = -1;
     public int TrainedInfantryCount { get; set; } = -1;
     public int[] FirstTrainedInfantrySpawnCommittedTickBySide { get; set; } = [-1, -1];
+    public int[] SecondTrainedInfantrySpawnCommittedTickBySide { get; set; } = [-1, -1];
     public int FirstTrainedInfantryObservedCommittedTick { get; set; } = -1;
     public int FirstTrainedInfantryObservedCount { get; set; } = -1;
+    public int SecondTrainedInfantryObservedCommittedTick { get; set; } = -1;
+    public int SecondTrainedInfantryObservedCount { get; set; } = -1;
     public string HarvesterHandle { get; set; } = string.Empty;
     public AcceptancePositionEvidence? HarvesterStartPosition { get; set; }
     public AcceptancePositionEvidence? HarvesterEndPosition { get; set; }
