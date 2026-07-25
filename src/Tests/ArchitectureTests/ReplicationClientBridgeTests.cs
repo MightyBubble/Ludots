@@ -3,6 +3,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Tests.Architecture
@@ -197,6 +198,52 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void BindExisting_ConcealUsesDeactivate_OwnedReleaseUsesRemove()
+        {
+            using World world = World.Create();
+            Entity authored = world.Create(new AuthoredMapEntity(marker: 77), new TestAppliedState(value: 0));
+            var handle = new NetworkEntityHandle(0, 1);
+            var membership = new RecordingSpatialPartitionMembership();
+            var bridge = Bridge(world, entityCapacity: 2, sessionEpoch: 7, membership, out _, out _);
+            Assert.That(bridge.BindExisting(handle, authored), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(membership.SynchronizeCount, Is.EqualTo(1));
+
+            var channel = Channel(capacity: 2);
+            var packet = new ReplicationPacketBuffer(2);
+            var states = new[] { State(handle, 1, 55) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+
+            Assert.That(
+                channel.BuildDelta(7, 2, 2, 1, states,
+                    new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.Known) }, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            membership.Reset();
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(membership.DeactivateCount, Is.EqualTo(1));
+            Assert.That(membership.RemoveCount, Is.EqualTo(0));
+            Assert.That(world.IsAlive(authored), Is.True);
+
+            var owned = new NetworkEntityHandle(1, 1);
+            states = new[] { State(owned, 1, 9) };
+            visible = new[] { new ReplicationDisclosureInput(owned, KnowledgePresence.LiveVisible) };
+            Assert.That(channel.BuildDelta(7, 3, 3, 2, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(owned, out Entity created), Is.True);
+
+            Assert.That(
+                channel.BuildDelta(7, 4, 4, 3, Array.Empty<ReplicatedEntityState>(),
+                    new[] { new ReplicationDisclosureInput(owned, KnowledgePresence.Known) }, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            membership.Reset();
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(membership.RemoveCount, Is.EqualTo(1));
+            Assert.That(membership.DeactivateCount, Is.EqualTo(0));
+            Assert.That(world.IsAlive(created), Is.False);
+        }
+
+        [Test]
         public void Apply_MapsBaselineMismatchToResyncRequired()
         {
             using World world = World.Create();
@@ -308,6 +355,15 @@ namespace Ludots.Tests.Architecture
             ulong sessionEpoch,
             out KnowledgeProjectionStore knowledge,
             out Entity viewer)
+            => Bridge(world, entityCapacity, sessionEpoch, new TestSpatialPartitionMembership(), out knowledge, out viewer);
+
+        private static ClientWorldReplicationBridge Bridge(
+            World world,
+            int entityCapacity,
+            ulong sessionEpoch,
+            ISpatialPartitionMembership membership,
+            out KnowledgeProjectionStore knowledge,
+            out Entity viewer)
         {
             var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
             Assert.That(appliers.Register(1, new TestSchemaApplier()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
@@ -319,7 +375,7 @@ namespace Ludots.Tests.Architecture
                 entityCapacity,
                 sessionEpoch,
                 appliers,
-                new TestSpatialPartitionMembership(),
+                membership,
                 knowledge,
                 viewer);
         }
@@ -341,9 +397,31 @@ namespace Ludots.Tests.Architecture
             public readonly long Value;
         }
 
+        private sealed class RecordingSpatialPartitionMembership : ISpatialPartitionMembership
+        {
+            public int SynchronizeCount { get; private set; }
+            public int DeactivateCount { get; private set; }
+            public int RemoveCount { get; private set; }
+
+            public void Synchronize(Entity entity) => SynchronizeCount++;
+
+            public void Deactivate(Entity entity) => DeactivateCount++;
+
+            public void Remove(Entity entity) => RemoveCount++;
+
+            public void Reset()
+            {
+                SynchronizeCount = 0;
+                DeactivateCount = 0;
+                RemoveCount = 0;
+            }
+        }
+
         private sealed class TestSpatialPartitionMembership : ISpatialPartitionMembership
         {
             public void Synchronize(Entity entity) { }
+
+            public void Deactivate(Entity entity) { }
 
             public void Remove(Entity entity) { }
         }

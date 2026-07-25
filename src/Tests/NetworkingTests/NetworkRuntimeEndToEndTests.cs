@@ -1703,6 +1703,8 @@ public sealed class NetworkRuntimeEndToEndTests
     {
         public void Synchronize(Entity entity) { }
 
+        public void Deactivate(Entity entity) { }
+
         public void Remove(Entity entity) { }
     }
 
