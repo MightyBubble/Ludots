@@ -1095,7 +1095,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildOrderWithOrderTypeSuffix(InputOrderMapping mapping, Entity actor, string orderTypeSuffix, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
             int orderTypeId = RequireOrderTypeId(mapping, orderTypeSuffix);
             var args = new OrderArgs();
@@ -1217,7 +1217,7 @@ namespace Ludots.Core.Input.Orders
 
         private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = RequireOrderTypeId(mapping);
@@ -1249,7 +1249,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, Entity actor, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer() || actor == default)
             {
                 return false;
@@ -1353,7 +1353,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = RequireOrderTypeId(mapping);
@@ -1394,7 +1394,7 @@ namespace Ludots.Core.Input.Orders
             OrderTargetType? TargetTypeOverride,
             out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer() || actor == default)
             {
                 return false;
