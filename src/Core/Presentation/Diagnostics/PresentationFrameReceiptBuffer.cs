@@ -51,6 +51,8 @@ namespace Ludots.Core.Presentation.Diagnostics
     {
         private readonly PresentationFrameReceiptItem[] _items;
         private int _count;
+        private ProjectionSnapshot _frameProjection;
+        private bool _hasFrameProjection;
 
         public PresentationFrameReceiptBuffer(int capacity)
         {
@@ -69,6 +71,14 @@ namespace Ludots.Core.Presentation.Diagnostics
         public void BeginFrame()
         {
             _count = 0;
+            _hasFrameProjection = false;
+        }
+
+        public void BeginFrame(in ProjectionSnapshot projection)
+        {
+            _count = 0;
+            _frameProjection = projection;
+            _hasFrameProjection = projection.Resolution.X > 0f && projection.Resolution.Y > 0f;
         }
 
         public void RecordSubmitted(
@@ -149,6 +159,12 @@ namespace Ludots.Core.Presentation.Diagnostics
                 }
             }
             return false;
+        }
+
+        public bool HasOnscreenInstance(int ownerStableId, int templateId)
+        {
+            return _hasFrameProjection &&
+                HasOnscreenInstance(ownerStableId, templateId, in _frameProjection);
         }
 
         public PresentationTemplateReceiptSummary[] BuildTemplateSummaries(in ProjectionSnapshot projection)

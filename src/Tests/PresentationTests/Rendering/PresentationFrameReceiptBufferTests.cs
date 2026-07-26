@@ -121,6 +121,8 @@ namespace Ludots.Tests.Presentation
         public void HasOnscreenInstance_FiltersByOwnerAndTemplate()
         {
             var receipts = new PresentationFrameReceiptBuffer(capacity: 3);
+            var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
+            receipts.BeginFrame(in projection);
             receipts.RecordSubmitted(
                 ownerStableId: 11,
                 visualStableId: 1011,
@@ -148,15 +150,17 @@ namespace Ludots.Tests.Presentation
                 rotation: Quaternion.Identity,
                 scale: new Vector3(0.2f),
                 localBounds: UnitBounds);
-            var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
-
             Assert.Multiple(() =>
             {
                 Assert.That(receipts.HasOnscreenInstance(11, 7, in projection), Is.True);
+                Assert.That(receipts.HasOnscreenInstance(11, 7), Is.True);
                 Assert.That(receipts.HasOnscreenInstance(11, 8, in projection), Is.True);
                 Assert.That(receipts.HasOnscreenInstance(12, 7, in projection), Is.False);
                 Assert.That(receipts.HasOnscreenInstance(11, 9, in projection), Is.False);
             });
+
+            receipts.BeginFrame();
+            Assert.That(receipts.HasOnscreenInstance(11, 7), Is.False);
         }
 
         [Test]

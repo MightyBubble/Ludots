@@ -80,7 +80,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private IReplicatedClientRuntimeStatus? _clientStatus;
     private EntityCollectionStore? _collections;
     private IScreenProjector? _projector;
-    private IProjectionSnapshotProvider? _projectionSnapshots;
     private PresentationFrameReceiptBuffer? _presentationReceipts;
     private InputOrderMappingSystem? _inputOrderMapping;
     private int _infantryBodyTemplateId;
@@ -241,9 +240,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
             ?? throw new InvalidOperationException("Acceptance client requires the entity collection store.");
         IScreenProjector projector = _engine.GetService(CoreServiceKeys.ScreenProjector)
             ?? throw new InvalidOperationException("Acceptance client requires the platform-neutral screen projector.");
-        IProjectionSnapshotProvider projectionSnapshots = projector as IProjectionSnapshotProvider
-            ?? throw new InvalidOperationException(
-                "Acceptance client requires platform-neutral projection snapshots for framebuffer readiness.");
         PresentationFrameReceiptBuffer presentationReceipts =
             _engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
             ?? throw new InvalidOperationException(
@@ -268,7 +264,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _clientStatus = clientStatus;
         _collections = collections;
         _projector = projector;
-        _projectionSnapshots = projectionSnapshots;
         _presentationReceipts = presentationReceipts;
         _inputOrderMapping = inputOrderMapping;
         _infantryBodyTemplateId = infantryBodyTemplateId;
@@ -1962,8 +1957,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreMovedActorsOnscreenInPresentationReceipts()
     {
         AcceptancePositionEvidence[] starts = _evidence.Gameplay.MoveStartPositions;
-        if (starts.Length == 0 ||
-            !_projectionSnapshots!.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+        if (starts.Length == 0)
         {
             return false;
         }
@@ -1977,8 +1971,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             if (!_presentationReceipts!.HasOnscreenInstance(
                     stableId,
-                    _infantryBodyTemplateId,
-                    in projection))
+                    _infantryBodyTemplateId))
             {
                 return false;
             }

@@ -590,7 +590,20 @@ namespace Ludots.Adapter.Raylib
                         bool benchmarkDrew = false;
                         PresentationFrameReceiptBuffer? frameReceipts =
                             engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer);
-                        frameReceipts?.BeginFrame();
+                        if (frameReceipts != null)
+                        {
+                            IScreenProjector frameProjector =
+                                engine.GetService(CoreServiceKeys.ScreenProjector)
+                                ?? throw new InvalidOperationException(
+                                    "Presentation frame receipts require the platform-neutral screen projector.");
+                            if (frameProjector is not IProjectionSnapshotProvider frameProjectionProvider ||
+                                !frameProjectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot frameProjection))
+                            {
+                                throw new InvalidOperationException(
+                                    "Presentation frame receipts require a valid projection snapshot.");
+                            }
+                            frameReceipts.BeginFrame(in frameProjection);
+                        }
                         if (benchmarkRenderer != null)
                         {
                             benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
