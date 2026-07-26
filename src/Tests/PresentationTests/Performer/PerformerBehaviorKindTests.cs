@@ -1130,6 +1130,17 @@ namespace Ludots.Tests.Presentation
                 instances.PropagateParentDrivenTransforms(root);
             }
 
+            long allocated = MeasureParentDrivenTransformPropagationAllocations(world, instances, root);
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureParentDrivenTransformPropagationAllocations(
+            World world,
+            PerformerEntityRuntime instances,
+            Entity root)
+        {
             _ = GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
@@ -1137,9 +1148,8 @@ namespace Ludots.Tests.Presentation
                 world.Get<PerformerWorldPosition>(root).Value = new Vector3(i, 0f, i);
                 instances.PropagateParentDrivenTransforms(root);
             }
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         [Test]
