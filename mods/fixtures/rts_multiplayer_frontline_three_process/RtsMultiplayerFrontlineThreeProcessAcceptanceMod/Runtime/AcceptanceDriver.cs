@@ -1344,12 +1344,45 @@ internal sealed class AcceptanceDriver : ISystem<float>
             bool hasCull = alive && _world.TryGet(entity, out cull);
             bool hasPayload = alive && _world.TryGet(entity, out payload);
             WorldCmInt2 position = alive ? GetWorldPosition(entity) : default;
+            Vector3 visualPosition = alive && _world.TryGet(entity, out VisualTransform visual)
+                ? visual.Position
+                : default;
             builder.Append(" selected[").Append(i).Append("]={handle=").Append(FormatHandle(entity))
                 .Append(" alive=").Append(alive)
                 .Append(" stable=").Append(hasStableId ? stableId.Value : 0)
                 .Append(" pos=(").Append(position.X).Append(',').Append(position.Y).Append(')')
+                .Append(" visual=(").Append(visualPosition.X).Append(',').Append(visualPosition.Y).Append(',').Append(visualPosition.Z).Append(')')
                 .Append(" cull=").Append(hasCull ? cull.IsVisible : null)
-                .Append(" payload=").Append(hasPayload ? payload.Count : 0).Append('}');
+                .Append(" payload=").Append(hasPayload ? payload.Count : 0);
+            if (hasPayload &&
+                payload.SingleRootPerformer != Entity.Null &&
+                _world.IsAlive(payload.SingleRootPerformer))
+            {
+                Entity root = payload.SingleRootPerformer;
+                PerformerState rootState = _world.Get<PerformerState>(root);
+                Vector3 rootPosition = _world.Get<PerformerWorldPosition>(root).Value;
+                builder.Append(" root={entity=").Append(root.Id)
+                    .Append(" ownerStable=").Append(rootState.OwnerStableId)
+                    .Append(" pos=(").Append(rootPosition.X).Append(',').Append(rootPosition.Y).Append(',').Append(rootPosition.Z).Append(")}");
+                if (_world.TryGet(root, out PerformerChildren children))
+                {
+                    for (int childIndex = 0; childIndex < children.Count; childIndex++)
+                    {
+                        Entity child = children.Get(childIndex);
+                        if (!_world.IsAlive(child) ||
+                            !_world.TryGet(child, out PerformerState childState) ||
+                            childState.DefId != _infantryBodyTemplateId)
+                        {
+                            continue;
+                        }
+                        Vector3 bodyPosition = _world.Get<PerformerWorldPosition>(child).Value;
+                        builder.Append(" body={entity=").Append(child.Id)
+                            .Append(" ownerStable=").Append(childState.OwnerStableId)
+                            .Append(" pos=(").Append(bodyPosition.X).Append(',').Append(bodyPosition.Y).Append(',').Append(bodyPosition.Z).Append(")}");
+                    }
+                }
+            }
+            builder.Append('}');
         }
 
         ReadOnlySpan<PresentationFrameReceiptItem> receipts = _presentationReceipts!.GetSpan();
@@ -1358,7 +1391,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         for (int i = 0; i < starts.Length; i++)
         {
             int submitted = 0;
-            WorldCmInt2 receiptPosition = default;
+            Vector3 receiptWorldPosition = default;
+            Vector3 receiptDrawPosition = default;
             for (int receiptIndex = 0; receiptIndex < receipts.Length; receiptIndex++)
             {
                 ref readonly PresentationFrameReceiptItem receipt = ref receipts[receiptIndex];
@@ -1369,9 +1403,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 }
 
                 submitted++;
-                receiptPosition = new WorldCmInt2(
-                    checked((int)MathF.Round(receipt.WorldPosition.X * 100f)),
-                    checked((int)MathF.Round(receipt.WorldPosition.Z * 100f)));
+                receiptWorldPosition = receipt.WorldPosition;
+                receiptDrawPosition = receipt.Position;
             }
             builder.Append(" start[").Append(i).Append("]={stable=")
                 .Append(starts[i].PresentationStableId)
@@ -1379,7 +1412,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 .Append(" bodyOnscreen=").Append(_presentationReceipts.HasOnscreenInstance(
                     starts[i].PresentationStableId,
                     _infantryBodyTemplateId))
-                .Append(" receiptPos=(").Append(receiptPosition.X).Append(',').Append(receiptPosition.Y).Append(")}");
+                .Append(" receiptWorld=(").Append(receiptWorldPosition.X).Append(',').Append(receiptWorldPosition.Y).Append(',').Append(receiptWorldPosition.Z).Append(')')
+                .Append(" receiptDraw=(").Append(receiptDrawPosition.X).Append(',').Append(receiptDrawPosition.Y).Append(',').Append(receiptDrawPosition.Z).Append(")}");
         }
         return builder.ToString();
     }
