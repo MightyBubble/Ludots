@@ -570,7 +570,8 @@ namespace Ludots.Tests.GAS
                 stream,
                 new GameSession(),
                 gasEvents,
-                new PresentationOwnerChangeBuffer(8));
+                new PresentationOwnerChangeBuffer(8),
+                enabled: true);
             Entity actor = world.Create();
             Entity target = world.Create();
             gasEvents.Publish(new GasPresentationEvent { Kind = GasPresentationEventKind.CastStarted, Actor = actor, Target = target, AbilitySlot = 1, AbilityId = 11 });

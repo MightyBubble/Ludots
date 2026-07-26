@@ -17,14 +17,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
-            var tagJob = new ClearTagJob { CommandBuffer = _commandBuffer };
-            World.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
+            Clear(World, _commandBuffer);
+        }
 
-            var attributeJob = new ClearAttributeJob { CommandBuffer = _commandBuffer };
-            World.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
-            if (_commandBuffer.Size > 0)
+        internal static void Clear(World world, CommandBuffer commandBuffer)
+        {
+            var tagJob = new ClearTagJob { CommandBuffer = commandBuffer };
+            world.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
+
+            var attributeJob = new ClearAttributeJob { CommandBuffer = commandBuffer };
+            world.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
+            if (commandBuffer.Size > 0)
             {
-                _commandBuffer.Playback(World);
+                commandBuffer.Playback(world);
             }
         }
 
