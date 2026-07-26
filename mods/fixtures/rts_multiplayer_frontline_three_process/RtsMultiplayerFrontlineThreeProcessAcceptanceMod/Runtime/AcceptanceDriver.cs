@@ -349,8 +349,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return;
         }
 
-        Vector2 ownedCorePosition = _world.Get<WorldPositionCm>(core).Value.ToVector2();
-        if (Vector2.DistanceSquared(_engine.GameSession.Camera.State.TargetCm, ownedCorePosition) > 0.01f)
+        if (!TryResolveOwnHarvester(localPlayerId, out Entity openingHarvester) ||
+            !TryResolveNearestCrystal(openingHarvester, out Entity openingCrystal) ||
+            !TryProjectEntityClick(openingCrystal, out _))
         {
             return;
         }
@@ -366,7 +367,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _evidence.Gameplay.InitialInfantryCount = _plan.Expected.InitialInfantryCount;
         _evidence.Gameplay.InitialVisibleEnemyInfantryCount = visibleEnemyInfantry;
         _evidence.Gameplay.InitialVisibleEnemyCoreCount = visibleEnemyCores;
-        CompleteStep("Full snapshot, local player binding, and owned-core camera focus are ready.");
+        CompleteStep("Full snapshot, local player binding, and a clickable opening crystal field are ready.");
         Transition(ClientStage.Ready, AcceptanceProgressStage.Ready);
     }
 
@@ -2344,17 +2345,28 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException("Acceptance entity has no visual transform for a player click.");
         }
 
+        if (!TryProjectEntityClick(entity, out Vector2 screen))
+        {
+            throw new InvalidOperationException(
+                "Acceptance entity has no projectable player-click bounds.");
+        }
+
+        return screen;
+    }
+
+    private bool TryProjectEntityClick(Entity entity, out Vector2 screen)
+    {
+        screen = default;
         if (!SpatialBoundsUtility.TryProjectScreenBounds(
                 _world,
                 entity,
                 _projector!,
                 out ScreenRect bounds))
         {
-            throw new InvalidOperationException(
-                "Acceptance entity has no projectable player-click bounds.");
+            return false;
         }
 
-        Vector2 screen = new(
+        screen = new Vector2(
             (bounds.MinX + bounds.MaxX) * 0.5f,
             (bounds.MinY + bounds.MaxY) * 0.5f);
         RequireFiniteScreenPoint(screen, "entity click");
@@ -2369,13 +2381,17 @@ internal sealed class AcceptanceDriver : ISystem<float>
             owner,
             screen,
             acquisition.ClickPickRadiusPixels);
+        if (hit == Entity.Null)
+        {
+            return false;
+        }
         if (hit != entity)
         {
             throw new InvalidOperationException(
                 $"Acceptance player click resolved entity {hit.Id}:{hit.WorldId}, " +
                 $"expected {entity.Id}:{entity.WorldId}.");
         }
-        return screen;
+        return true;
     }
 
     private float ReadAttribute(Entity entity, int attributeId)

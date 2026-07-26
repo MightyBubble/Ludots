@@ -187,9 +187,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     [TestCase(1)]
     [Description(
         "Feature: Each network commander opens on their own army\n" +
-        "  Given a replicated client has received its command core, harvester, and infantry\n" +
+        "  Given a replicated client has received its command core, harvester, infantry, and nearest crystal field\n" +
         "  When the first Frontline presentation frame runs for that command seat\n" +
-        "  Then the camera focuses the owned core and all three owned roles are visible at 1280x720")]
+        "  Then the authored tactical focus is preserved and all owned roles plus the crystal field are visible at 1280x720")]
     public void GivenReplicatedClientSeat_WhenOpeningFrameRuns_ThenOwnedArmyIsFocusedAndVisible(int sideIndex)
     {
         using GameEngine engine = CreateStartedReplicatedClientEngine();
@@ -222,36 +222,61 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
             new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
             new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
         };
         string[] templateIds =
         {
             "rts_frontline_core",
             "rts_frontline_harvester",
             "rts_frontline_infantry",
+            "rts_frontline_crystal_node",
         };
+        WorldCmInt2 authoredCorePosition = ReadAuthoredOwnedPosition(
+            engine.CurrentMapSession.MapConfig,
+            templateIds[(int)FrontlineReplicationKind.Core],
+            side.PlayerId);
         Entity[] mirrors = new Entity[appliers.Length];
         for (int roleIndex = 0; roleIndex < appliers.Length; roleIndex++)
         {
             FrontlineReplicationSpec spec = specs[roleIndex];
-            WorldCmInt2 position = ReadAuthoredOwnedPosition(
-                engine.CurrentMapSession.MapConfig,
-                templateIds[roleIndex],
-                side.PlayerId);
+            WorldCmInt2 position = spec.SchemaId == config.Replication.CrystalNodeSchemaId
+                ? ReadAuthoredNearestPosition(engine.CurrentMapSession.MapConfig, templateIds[roleIndex], authoredCorePosition)
+                : ReadAuthoredOwnedPosition(engine.CurrentMapSession.MapConfig, templateIds[roleIndex], side.PlayerId);
             var values = new ReplicationStateVector(
                 FrontlineReplicationPayload.PackInts(position.X, position.Y),
                 FrontlineReplicationPayload.PackFloats(
                     spec.HasHealth ? 100f : 0f,
                     spec.HasCrystals ? 40f : 0f),
-                FrontlineReplicationPayload.PackInts(side.TeamId, side.PlayerId),
+                spec.HasOwner
+                    ? FrontlineReplicationPayload.PackInts(side.TeamId, side.PlayerId)
+                    : 0L,
                 spec.SupportedValidBits);
             var identity = new ReplicationMirrorIdentity(
                 new NetworkEntityHandle(40 + (sideIndex * appliers.Length) + roleIndex, 1));
             var state = new ReplicationMirrorState(spec.SchemaId, revision: 1, in values);
             mirrors[roleIndex] = appliers[roleIndex].Create(engine.World, in identity, in state);
         }
+        Entity crystalMirror = mirrors[(int)FrontlineReplicationKind.CrystalNode];
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is unavailable.");
+        knowledge.Upsert(localPlayer, crystalMirror, new KnowledgeDisclosureRecord(
+            KnowledgePresence.LiveVisible,
+            KnowledgePositionAccess.Live,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            KnowledgeIdMask256.Empty,
+            crystalMirror,
+            observedTick: 0,
+            expiryTick: 0,
+            confidencePermille: 1000,
+            revision: 1));
 
         using var commandPanel = new RtsCommandSourceCommandPanelSystem(engine);
         commandPanel.Update(1f / 60f);
+        CameraPoseRequest commandSourceFocus = engine.GetService(CoreServiceKeys.CameraPoseRequest)
+            ?? throw new InvalidOperationException("RTS command-source focus did not publish a camera pose.");
+        Vector2 authoredFocusTarget = commandSourceFocus.TargetCm
+            ?? throw new InvalidOperationException("RTS command-source focus did not publish a target.");
 
         var presentation = new FrontlinePresentationSystem(engine, runtime);
         presentation.Update(1f / 60f);
@@ -261,7 +286,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         WorldCmInt2 corePosition = engine.World.Get<WorldPositionCm>(mirrors[0]).ToWorldCmInt2();
         Assert.Multiple(() =>
         {
-            Assert.That(request.TargetCm, Is.EqualTo(new Vector2(corePosition.X, corePosition.Y)));
+            Assert.That(request.TargetCm, Is.EqualTo(authoredFocusTarget));
+            Assert.That(request.TargetCm, Is.Not.EqualTo(new Vector2(corePosition.X, corePosition.Y)));
             Assert.That(request.DistanceCm, Is.EqualTo(5200f).Within(0.01f));
             Assert.That(request.FovYDeg, Is.EqualTo(46f).Within(0.01f));
         });
@@ -271,6 +297,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         engine.GameSession.Camera.Update(0f);
         var viewport = new StubViewController(1280f, 720f);
         var projector = new CoreScreenProjector(engine.GameSession.Camera, viewport);
+        engine.SetService(CoreServiceKeys.ScreenProjector, projector);
         for (int roleIndex = 0; roleIndex < mirrors.Length; roleIndex++)
         {
             Assert.That(
@@ -286,6 +313,12 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(bounds.MaxY, Is.GreaterThanOrEqualTo(0f));
             Assert.That(bounds.MinY, Is.LessThanOrEqualTo(viewport.Resolution.Y));
         }
+        Assert.That(
+            ResolveMirrorAtProjectedCenter(
+                engine,
+                localPlayer,
+                crystalMirror),
+            Is.EqualTo(crystalMirror));
     }
 
     [Test]
@@ -1810,18 +1843,63 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 continue;
             }
 
-            JsonNode value = positionNode?[nameof(WorldPositionCm.Value)]
-                ?? throw new InvalidOperationException(
-                    $"Authored {templateId} for player {playerId} has no WorldPositionCm.Value.");
-            return new WorldCmInt2(
-                value[nameof(IntVector2.X)]?.GetValue<int>()
-                    ?? throw new InvalidOperationException($"Authored {templateId} for player {playerId} has no X coordinate."),
-                value[nameof(IntVector2.Y)]?.GetValue<int>()
-                    ?? throw new InvalidOperationException($"Authored {templateId} for player {playerId} has no Y coordinate."));
+            return ReadAuthoredSpawnPosition(spawn, $"{templateId} for player {playerId}");
         }
 
         throw new InvalidOperationException(
             $"Map '{map.Id}' has no authored {templateId} for player {playerId}.");
+    }
+
+    private static WorldCmInt2 ReadAuthoredNearestPosition(
+        MapConfig map,
+        string templateId,
+        WorldCmInt2 origin)
+    {
+        WorldCmInt2 nearest = default;
+        long nearestDistanceSquared = long.MaxValue;
+        bool found = false;
+        for (int i = 0; i < map.Entities.Count; i++)
+        {
+            EntitySpawnData spawn = map.Entities[i];
+            if (!string.Equals(spawn.Template, templateId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            WorldCmInt2 position = ReadAuthoredSpawnPosition(spawn, templateId);
+            long dx = (long)position.X - origin.X;
+            long dy = (long)position.Y - origin.Y;
+            long distanceSquared = (dx * dx) + (dy * dy);
+            if (distanceSquared >= nearestDistanceSquared)
+            {
+                continue;
+            }
+
+            nearest = position;
+            nearestDistanceSquared = distanceSquared;
+            found = true;
+        }
+
+        return found
+            ? nearest
+            : throw new InvalidOperationException($"Map '{map.Id}' has no authored {templateId}.");
+    }
+
+    private static WorldCmInt2 ReadAuthoredSpawnPosition(EntitySpawnData spawn, string description)
+    {
+        if (spawn.Overrides == null ||
+            !spawn.Overrides.TryGetValue(nameof(WorldPositionCm), out JsonNode? positionNode))
+        {
+            throw new InvalidOperationException($"Authored {description} has no WorldPositionCm.");
+        }
+
+        JsonNode value = positionNode?[nameof(WorldPositionCm.Value)]
+            ?? throw new InvalidOperationException($"Authored {description} has no WorldPositionCm.Value.");
+        return new WorldCmInt2(
+            value[nameof(IntVector2.X)]?.GetValue<int>()
+                ?? throw new InvalidOperationException($"Authored {description} has no X coordinate."),
+            value[nameof(IntVector2.Y)]?.GetValue<int>()
+                ?? throw new InvalidOperationException($"Authored {description} has no Y coordinate."));
     }
 
     private static void InstallClientFeedbackServices(
