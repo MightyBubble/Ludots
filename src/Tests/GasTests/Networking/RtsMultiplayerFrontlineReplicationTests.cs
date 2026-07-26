@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
@@ -31,6 +32,7 @@ using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
@@ -253,6 +255,79 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
             Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False);
             Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.HasActiveCamera, Is.False);
+        });
+    }
+
+    [Test]
+    [Description(
+        "Feature: Dedicated multiplayer host closes presentation transients every logic step\n" +
+        "  Given the authoritative server has no local presentation consumer and its presentation stream is full\n" +
+        "  When gameplay publishes ability, world, tag, and attribute presentation facts\n" +
+        "  Then the next authoritative logic step completes and clears every presentation-only transient")]
+    public void GivenAuthoritativeServerWithoutPresentationConsumer_WhenLogicStepCompletes_ThenPresentationTransientsAreCleared()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+        engine.LoadStartupMap();
+
+        PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
+            ?? throw new InvalidOperationException("PresentationEventStream service is missing.");
+        PresentationOwnerChangeBuffer ownerChanges = engine.GetService(CoreServiceKeys.PresentationOwnerChangeBuffer)
+            ?? throw new InvalidOperationException("PresentationOwnerChangeBuffer service is missing.");
+        GasPresentationEventBuffer gasEvents = engine.GetService(CoreServiceKeys.GasPresentationEventBuffer)
+            ?? throw new InvalidOperationException("GasPresentationEventBuffer service is missing.");
+        GlobalPresentationEventBuffer globalEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer)
+            ?? throw new InvalidOperationException("GlobalPresentationEventBuffer service is missing.");
+
+        for (int i = 0; i < stream.Capacity; i++)
+        {
+            Assert.That(stream.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = i,
+            }), Is.True);
+        }
+
+        var tagCache = new GameplayTagEffectiveCache();
+        tagCache.Set(7, true);
+        var tagChanges = new GameplayTagEffectiveChangedBits();
+        tagChanges.Mark(7);
+        var attributes = new AttributeBuffer();
+        attributes.SetBase(0, 25f);
+        var attributeChanges = new GameplayAttributeChangedBits();
+        attributeChanges.Mark(0);
+        Entity owner = engine.World.Create(tagCache, tagChanges, attributes, attributeChanges);
+
+        gasEvents.Publish(new GasPresentationEvent
+        {
+            Kind = GasPresentationEventKind.CastStarted,
+            Actor = owner,
+            AbilityId = 11,
+        });
+        globalEvents.AddWeather(3, 0.75f);
+        Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(
+            owner,
+            PresentationOwnerChangeKind.Tag,
+            7,
+            stateValue: 1)), Is.True);
+
+        Assert.DoesNotThrow(() =>
+        {
+            for (int frame = 0; frame < 4; frame++)
+            {
+                engine.Tick(1f / 30f);
+            }
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(stream.Count, Is.Zero);
+            Assert.That(ownerChanges.Count, Is.Zero);
+            Assert.That(gasEvents.Count, Is.Zero);
+            Assert.That(globalEvents.Count, Is.Zero);
+            Assert.That(engine.World.Has<GameplayTagEffectiveChangedBits>(owner), Is.False);
+            Assert.That(engine.World.Has<GameplayAttributeChangedBits>(owner), Is.False);
         });
     }
 

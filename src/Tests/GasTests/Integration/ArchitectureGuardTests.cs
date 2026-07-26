@@ -37,7 +37,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void GasPresentationEvents_AreClearedOnlyByClearPresentationFlagsProjection()
+        public void GasPresentationEvents_AreClearedAtRoleSpecificPresentationBoundaries()
         {
             var repoRoot = FindRepoRoot();
             string engineSource = File.ReadAllText(Path.Combine(
@@ -53,6 +53,13 @@ namespace Ludots.Tests.Architecture.Governance
                 "Presentation",
                 "Systems",
                 "GameplayPresentationProjectionSystem.cs"));
+            string authoritativeCleanupSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Systems",
+                "AuthoritativeServerPresentationCleanupSystem.cs"));
 
             Assert.That(
                 engineSource,
@@ -61,7 +68,11 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That(
                 projectionSource,
                 Does.Contain("_gasEvents.Clear();"),
-                "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+                "Presentation consumers clear GAS events after projection.");
+            Assert.That(
+                authoritativeCleanupSource,
+                Does.Contain("_gasEvents.Clear();"),
+                "The authoritative server clears GAS presentation events at the logic-step boundary without projecting them.");
         }
 
         [Test]

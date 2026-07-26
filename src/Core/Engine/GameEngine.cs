@@ -248,6 +248,8 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
+        private GameplayPresentationProjectionSystem _gameplayPresentationProjectionSystem;
+        private AuthoritativeServerPresentationCleanupSystem _authoritativeServerPresentationCleanupSystem;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
@@ -1068,13 +1070,22 @@ namespace Ludots.Core.Engine
             var globalPresentationEvents = new GlobalPresentationEventBuffer();
             var presentationEventStream = new PresentationEventStream(presentationConfig.PresentationEventStreamCapacity);
             var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.PresentationOwnerChangeCapacity);
-            var gameplayPresentationProjectionSystem = new GameplayPresentationProjectionSystem(
+            _gameplayPresentationProjectionSystem = new GameplayPresentationProjectionSystem(
                 World,
                 EventBus,
                 presentationEventStream,
                 GameSession,
                 gasPresentationEvents,
-                presentationOwnerChanges);
+                presentationOwnerChanges,
+                enabled: true);
+            _authoritativeServerPresentationCleanupSystem = new AuthoritativeServerPresentationCleanupSystem(
+                World,
+                gasPresentationEvents,
+                globalPresentationEvents,
+                presentationEventStream,
+                presentationOwnerChanges,
+                clearPresentationFlagsSystem,
+                enabled: false);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
@@ -1897,13 +1908,13 @@ namespace Ludots.Core.Engine
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
-            // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
-            // and owner-change index consumed by performer owner bindings.
-            // Changed-bit components must remain readable until presentation systems consume them,
-            // so the actual clear runs at the tail of the presentation pipeline.
-            RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
+            // Phase 7.1: Hosts with a presentation consumer project gameplay facts for performer owner bindings.
+            // Replicated clients clear changed bits at the presentation tail. Authoritative servers skip projection
+            // and close all presentation-only transients at this logic-step boundary.
+            RegisterSystem(_gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(_authoritativeServerPresentationCleanupSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
@@ -3431,6 +3442,9 @@ namespace Ludots.Core.Engine
 
             SetService(CoreServiceKeys.NetworkProcessRole, role);
             SetService(CoreServiceKeys.NetworkRuntimePort, runtime);
+            bool authoritativeServer = role == NetworkProcessRole.AuthoritativeServer;
+            _gameplayPresentationProjectionSystem.SetEnabled(!authoritativeServer);
+            _authoritativeServerPresentationCleanupSystem.SetEnabled(authoritativeServer);
         }
 
         private void TryActivateNetworkRuntime()
