@@ -771,7 +771,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     {
         if (_substep == 0)
         {
-            if (!TryResolveVisibleEnemyInfantry(out _attackTarget))
+            if (!TryResolveClickableEnemyInfantry(out _attackTarget, out Vector2 attackScreen))
             {
                 return;
             }
@@ -779,7 +779,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _evidence.Gameplay.AttackTargetHandle = FormatHandle(_attackTarget);
             _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(_attackTarget);
             _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(_attackTarget, _healthAttributeId);
-            BeginEntityCommand("AttackEnemyInfantry", _attackTarget);
+            BeginEntityCommand("AttackEnemyInfantry", _attackTarget, attackScreen);
             _substep = 1;
             return;
         }
@@ -1365,9 +1365,14 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void BeginEntityCommand(string actionName, Entity target)
     {
+        BeginEntityCommand(actionName, target, ProjectEntity(target));
+    }
+
+    private void BeginEntityCommand(string actionName, Entity target, Vector2 screen)
+    {
         BeginPointerGesture(
             _bindings!.CommandActionId,
-            ProjectEntity(target),
+            screen,
             GetWorldPosition(target),
             additive: false,
             expectsCommand: true,
@@ -2084,12 +2089,16 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         double ux = dx / length;
         double uy = dy / length;
+        if ((_plan.Battle.MeetingOffsetCm * 2d) >= length)
+        {
+            throw new InvalidOperationException(
+                $"Meeting offset {_plan.Battle.MeetingOffsetCm}cm must remain between the local resource field and battlefield midpoint.");
+        }
         int midpointX = checked((int)Math.Round((first.X + (long)second.X) * 0.5d));
         int midpointY = checked((int)Math.Round((first.Y + (long)second.Y) * 0.5d));
-        int sideSign = _localSideIndex == 0 ? -1 : 1;
         _meetingPoint = new WorldCmInt2(
-            checked((int)Math.Round(midpointX + (sideSign * ux * _plan.Battle.MeetingOffsetCm))),
-            checked((int)Math.Round(midpointY + (sideSign * uy * _plan.Battle.MeetingOffsetCm))));
+            checked((int)Math.Round(midpointX - (ux * _plan.Battle.MeetingOffsetCm))),
+            checked((int)Math.Round(midpointY - (uy * _plan.Battle.MeetingOffsetCm))));
         _siegePoint = new WorldCmInt2(
             checked((int)Math.Round(far.X + (ux * _plan.Battle.SiegeBeyondFarResourceCm))),
             checked((int)Math.Round(far.Y + (uy * _plan.Battle.SiegeBeyondFarResourceCm))));
@@ -2428,6 +2437,37 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     bestSlot = identities[index].Handle.Slot;
                     infantry = Unsafe.Add(ref first, index);
                 }
+            }
+        }
+        return infantry != Entity.Null;
+    }
+
+    private bool TryResolveClickableEnemyInfantry(out Entity infantry, out Vector2 screen)
+    {
+        infantry = Entity.Null;
+        screen = default;
+        int bestSlot = int.MaxValue;
+        foreach (ref Chunk chunk in _world.Query(in ClientInfantryQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            ReadOnlySpan<ReplicationMirrorIdentity> identities = chunk.GetSpan<ReplicationMirrorIdentity>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                if (participants[index].SideIndex == _localSideIndex || identities[index].Handle.Slot >= bestSlot)
+                {
+                    continue;
+                }
+
+                Entity candidate = Unsafe.Add(ref first, index);
+                if (!TryProjectEntityClick(candidate, out Vector2 candidateScreen))
+                {
+                    continue;
+                }
+
+                bestSlot = identities[index].Handle.Slot;
+                infantry = candidate;
+                screen = candidateScreen;
             }
         }
         return infantry != Entity.Null;
