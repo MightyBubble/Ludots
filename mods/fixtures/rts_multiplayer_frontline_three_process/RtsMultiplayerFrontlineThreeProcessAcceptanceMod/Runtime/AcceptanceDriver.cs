@@ -84,6 +84,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private EntityCollectionStore? _collections;
     private IScreenProjector? _projector;
     private PresentationFrameReceiptBuffer? _presentationReceipts;
+    private PerformerEntityRuntime? _performerRuntime;
     private InputOrderMappingSystem? _inputOrderMapping;
     private int _infantryBodyTemplateId;
     private GestureState _gesture;
@@ -254,6 +255,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
             ?? throw new InvalidOperationException(
                 "Acceptance client requires performer definitions for framebuffer readiness.");
+        PerformerEntityRuntime performerRuntime =
+            _engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+            ?? throw new InvalidOperationException(
+                "Acceptance client requires the performer entity runtime for framebuffer readiness.");
         int infantryBodyTemplateId = performerDefinitions.GetId("rts.frontline.infantry.body");
         if (infantryBodyTemplateId <= 0)
         {
@@ -271,6 +276,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _collections = collections;
         _projector = projector;
         _presentationReceipts = presentationReceipts;
+        _performerRuntime = performerRuntime;
         _inputOrderMapping = inputOrderMapping;
         _infantryBodyTemplateId = infantryBodyTemplateId;
 
@@ -2972,12 +2978,17 @@ internal sealed class AcceptanceDriver : ISystem<float>
             checkpoint.CommittedTick = match.CommittedTick;
             checkpoint.MatchPhase = match.Phase.ToString();
             checkpoint.Outcome = match.Outcome.ToString();
+            checkpoint.AdvancingPresentation = null;
             return;
         }
 
         checkpoint.Stage = _clientStage.ToString();
         checkpoint.Substep = _substep;
         checkpoint.SelectedActors = CaptureSelectedActorCheckpoint();
+        checkpoint.AdvancingPresentation =
+            _clientStage == ClientStage.Advancing && _substep == 5
+                ? CaptureAdvancingPresentationCheckpoint()
+                : null;
         checkpoint.VisibleEnemyCoreCount = _localSideIndex >= 0
             ? CountVisibleEnemyCores(_localSideIndex)
             : -1;
@@ -3030,6 +3041,199 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         return selected;
     }
+
+    private AcceptanceAdvancingPresentationCheckpoint CaptureAdvancingPresentationCheckpoint()
+    {
+        if (_projector is not IProjectionRevisionProvider projectionRevisionProvider)
+        {
+            throw new InvalidOperationException(
+                "Advancing presentation evidence requires a projector with projection revisions.");
+        }
+        PresentationFrameReceiptBuffer receipts = _presentationReceipts
+            ?? throw new InvalidOperationException(
+                "Advancing presentation evidence requires presentation frame receipts.");
+        PerformerEntityRuntime performers = _performerRuntime
+            ?? throw new InvalidOperationException(
+                "Advancing presentation evidence requires the performer entity runtime.");
+        CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)
+            ?? throw new InvalidOperationException(
+                "Advancing presentation evidence requires camera-culling diagnostics.");
+
+        AcceptancePositionEvidence[] starts = _evidence.Gameplay.MoveStartPositions;
+        var actors = new AcceptanceAdvancingActorCheckpoint[starts.Length];
+        long minimumSquared = (long)_plan.Battle.MinimumObservedMoveCm * _plan.Battle.MinimumObservedMoveCm;
+        long arrivalToleranceSquared =
+            (long)_plan.Battle.ArrivalToleranceCm * _plan.Battle.ArrivalToleranceCm;
+        for (int i = 0; i < starts.Length; i++)
+        {
+            AcceptancePositionEvidence start = starts[i];
+            var actor = new AcceptanceAdvancingActorCheckpoint
+            {
+                Handle = start.Handle,
+                CapturedPresentationStableId = start.PresentationStableId,
+            };
+            actors[i] = actor;
+            if (!TryResolveHandle(start.Handle, out Entity entity) || !_world.IsAlive(entity))
+            {
+                actor.MatchingBodyReceipts = CaptureInfantryBodyReceipts(start.PresentationStableId);
+                actor.HasOnscreenPresentationReceipt = start.PresentationStableId > 0 &&
+                    receipts.HasOnscreenInstance(start.PresentationStableId, _infantryBodyTemplateId);
+                continue;
+            }
+
+            actor.IsAlive = true;
+            if (_world.TryGet(entity, out PresentationStableId currentStableId))
+            {
+                actor.CurrentPresentationStableId = currentStableId.Value;
+            }
+            if (_world.TryGet(entity, out WorldPositionCm worldPosition))
+            {
+                WorldCmInt2 current = worldPosition.ToWorldCmInt2();
+                actor.WorldXCm = current.X;
+                actor.WorldYCm = current.Y;
+                long startDx = current.X - (long)start.XCm;
+                long startDy = current.Y - (long)start.YCm;
+                actor.HasMoved = ((startDx * startDx) + (startDy * startDy)) >= minimumSquared;
+                actor.IsNearMeetingPoint = DistanceSquared(current, _meetingPoint) <= arrivalToleranceSquared;
+            }
+            if (_world.TryGet(entity, out VisualTransform visual))
+            {
+                actor.VisualPosition = CaptureVector3(visual.Position);
+            }
+            if (_world.TryGet(entity, out CullState ownerCull))
+            {
+                actor.HasOwnerCullState = true;
+                actor.OwnerCullVisible = ownerCull.IsVisible;
+            }
+            if (_world.TryGet(entity, out PresentationOwnerHasPerformerPayload payload))
+            {
+                actor.HasPerformerPayload = true;
+                actor.PerformerPayloadCount = payload.Count;
+                actor.PerformerRootCount = payload.RootCount;
+                if (payload.SingleRootPerformer != Entity.Null)
+                {
+                    actor.RootPerformer = CapturePerformer(payload.SingleRootPerformer);
+                }
+            }
+            actor.HasVisiblePerformerPayload =
+                actor.OwnerCullVisible && actor.HasPerformerPayload && actor.PerformerPayloadCount > 0;
+
+            IReadOnlyList<Entity> bodyPerformers =
+                performers.GetActiveByOwnerDefinition(_infantryBodyTemplateId, entity);
+            var bodyEvidence = new AcceptancePerformerCheckpoint[bodyPerformers.Count];
+            for (int bodyIndex = 0; bodyIndex < bodyPerformers.Count; bodyIndex++)
+            {
+                bodyEvidence[bodyIndex] = CapturePerformer(bodyPerformers[bodyIndex]);
+            }
+            actor.BodyPerformers = bodyEvidence;
+            actor.MatchingBodyReceipts = CaptureInfantryBodyReceipts(start.PresentationStableId);
+            actor.HasOnscreenPresentationReceipt = start.PresentationStableId > 0 &&
+                receipts.HasOnscreenInstance(start.PresentationStableId, _infantryBodyTemplateId);
+        }
+
+        Vector2 cameraTarget = _engine.GameSession.Camera.State.TargetCm;
+        Vector2 cullingCameraTarget = culling.CameraTargetCm;
+        return new AcceptanceAdvancingPresentationCheckpoint
+        {
+            HaveAllSelectedActorsMoved = HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm),
+            AreSelectedActorsNear = AreSelectedActorsNear(
+                _meetingPoint,
+                _plan.Battle.ArrivalToleranceCm),
+            AreSelectedActorsVisibleWithPerformerPayload = AreSelectedActorsVisibleWithPerformerPayload(),
+            AreMovedActorsOnscreenInPresentationReceipts = AreMovedActorsOnscreenInPresentationReceipts(),
+            PresentationFrameId = GetPresentationFrameId(),
+            ReceiptFrameRevision = receipts.FrameRevision,
+            ReceiptProjectionRevision = receipts.ProjectionRevision,
+            CurrentProjectionRevision = projectionRevisionProvider.ProjectionRevision,
+            ReceiptCount = receipts.Count,
+            CameraTargetCm = CaptureVector2(cameraTarget),
+            CullingCameraTargetCm = CaptureVector2(cullingCameraTarget),
+            CullingVisibilityRevision = culling.VisibilityRevision,
+            CullingVisibleEntityCount = culling.VisibleEntityCount,
+            CullingCulledEntityCount = culling.CulledEntityCount,
+            Actors = actors,
+            InfantryBodyReceipts = CaptureInfantryBodyReceipts(ownerStableId: 0),
+        };
+    }
+
+    private AcceptancePerformerCheckpoint CapturePerformer(Entity performer)
+    {
+        var checkpoint = new AcceptancePerformerCheckpoint
+        {
+            EntityId = performer.Id,
+            IsAlive = _world.IsAlive(performer),
+        };
+        if (!checkpoint.IsAlive)
+        {
+            return checkpoint;
+        }
+        if (_world.TryGet(performer, out PerformerState state))
+        {
+            checkpoint.DefinitionId = state.DefId;
+            checkpoint.StableId = state.StableId;
+            checkpoint.OwnerStableId = state.OwnerStableId;
+        }
+        if (_world.TryGet(performer, out PerformerWorldPosition position))
+        {
+            checkpoint.HasPosition = true;
+            checkpoint.Position = CaptureVector3(position.Value);
+        }
+        if (_world.TryGet(performer, out PerformerCullState cull))
+        {
+            checkpoint.HasCullState = true;
+            checkpoint.OwnerCullVisible = cull.OwnerCullVisible;
+        }
+        return checkpoint;
+    }
+
+    private AcceptancePresentationReceiptCheckpoint[] CaptureInfantryBodyReceipts(int ownerStableId)
+    {
+        ReadOnlySpan<PresentationFrameReceiptItem> receipts = _presentationReceipts!.GetSpan();
+        int count = 0;
+        for (int i = 0; i < receipts.Length; i++)
+        {
+            ref readonly PresentationFrameReceiptItem receipt = ref receipts[i];
+            if (receipt.TemplateId == _infantryBodyTemplateId &&
+                (ownerStableId <= 0 || receipt.OwnerStableId == ownerStableId))
+            {
+                count++;
+            }
+        }
+
+        var captured = new AcceptancePresentationReceiptCheckpoint[count];
+        int capturedIndex = 0;
+        for (int i = 0; i < receipts.Length; i++)
+        {
+            ref readonly PresentationFrameReceiptItem receipt = ref receipts[i];
+            if (receipt.TemplateId != _infantryBodyTemplateId ||
+                (ownerStableId > 0 && receipt.OwnerStableId != ownerStableId))
+            {
+                continue;
+            }
+            captured[capturedIndex++] = new AcceptancePresentationReceiptCheckpoint
+            {
+                OwnerStableId = receipt.OwnerStableId,
+                VisualStableId = receipt.VisualStableId,
+                TemplateId = receipt.TemplateId,
+                WorldPosition = CaptureVector3(receipt.WorldPosition),
+                Position = CaptureVector3(receipt.Position),
+            };
+        }
+        return captured;
+    }
+
+    private static AcceptanceVector2Checkpoint CaptureVector2(Vector2 value) => new()
+    {
+        X = value.X,
+        Y = value.Y,
+    };
+
+    private static AcceptanceVector3Checkpoint CaptureVector3(Vector3 value) => new()
+    {
+        X = value.X,
+        Y = value.Y,
+        Z = value.Z,
+    };
 
     private static bool IsAdmissionRejection(NetworkCommandAdmissionCode code) =>
         !NetworkCommandAdmissionCodeSemantics.IsAcceptedProgress(code);

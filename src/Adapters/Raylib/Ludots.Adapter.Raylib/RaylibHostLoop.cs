@@ -602,7 +602,9 @@ namespace Ludots.Adapter.Raylib
                                 throw new InvalidOperationException(
                                     "Presentation frame receipts require a valid projection snapshot.");
                             }
-                            frameReceipts.BeginFrame(in frameProjection);
+                            frameReceipts.BeginFrame(
+                                in frameProjection,
+                                frameProjectionProvider.ProjectionRevision);
                         }
                         if (benchmarkRenderer != null)
                         {

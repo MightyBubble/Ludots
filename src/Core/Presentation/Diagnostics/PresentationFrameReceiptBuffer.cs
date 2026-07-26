@@ -68,18 +68,36 @@ namespace Ludots.Core.Presentation.Diagnostics
 
         public int Capacity => _items.Length;
 
+        public int FrameRevision { get; private set; }
+
+        public int ProjectionRevision { get; private set; } = -1;
+
+        public bool HasFrameProjection => _hasFrameProjection;
+
         public void BeginFrame()
         {
             _count = 0;
             _hasFrameProjection = false;
+            ProjectionRevision = -1;
+            AdvanceFrameRevision();
         }
 
-        public void BeginFrame(in ProjectionSnapshot projection)
+        public void BeginFrame(in ProjectionSnapshot projection, int projectionRevision)
         {
+            if (projectionRevision <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(projectionRevision));
+            }
+
             _count = 0;
             _frameProjection = projection;
             _hasFrameProjection = projection.Resolution.X > 0f && projection.Resolution.Y > 0f;
+            ProjectionRevision = projectionRevision;
+            AdvanceFrameRevision();
         }
+
+        private void AdvanceFrameRevision() =>
+            FrameRevision = FrameRevision == int.MaxValue ? 1 : FrameRevision + 1;
 
         public void RecordSubmitted(
             int ownerStableId,

@@ -122,7 +122,7 @@ namespace Ludots.Tests.Presentation
         {
             var receipts = new PresentationFrameReceiptBuffer(capacity: 3);
             var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
-            receipts.BeginFrame(in projection);
+            receipts.BeginFrame(in projection, projectionRevision: 17);
             receipts.RecordSubmitted(
                 ownerStableId: 11,
                 visualStableId: 1011,
@@ -157,10 +157,19 @@ namespace Ludots.Tests.Presentation
                 Assert.That(receipts.HasOnscreenInstance(11, 8, in projection), Is.True);
                 Assert.That(receipts.HasOnscreenInstance(12, 7, in projection), Is.False);
                 Assert.That(receipts.HasOnscreenInstance(11, 9, in projection), Is.False);
+                Assert.That(receipts.FrameRevision, Is.EqualTo(1));
+                Assert.That(receipts.ProjectionRevision, Is.EqualTo(17));
+                Assert.That(receipts.HasFrameProjection, Is.True);
             });
 
             receipts.BeginFrame();
-            Assert.That(receipts.HasOnscreenInstance(11, 7), Is.False);
+            Assert.Multiple(() =>
+            {
+                Assert.That(receipts.HasOnscreenInstance(11, 7), Is.False);
+                Assert.That(receipts.FrameRevision, Is.EqualTo(2));
+                Assert.That(receipts.ProjectionRevision, Is.EqualTo(-1));
+                Assert.That(receipts.HasFrameProjection, Is.False);
+            });
         }
 
         [Test]

@@ -12,7 +12,7 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
 internal sealed class AcceptanceEvidence
 {
-    public int SchemaVersion { get; set; } = 7;
+    public int SchemaVersion { get; set; } = 8;
     public string Status { get; set; } = "running";
     public string Role { get; set; } = string.Empty;
     public string? Failure { get; set; }
@@ -213,6 +213,7 @@ internal sealed class AcceptanceRuntimeCheckpoint
     public int CommittedTick { get; set; }
     public string MatchPhase { get; set; } = string.Empty;
     public string Outcome { get; set; } = string.Empty;
+    public AcceptanceAdvancingPresentationCheckpoint? AdvancingPresentation { get; set; }
 }
 
 internal sealed class AcceptanceSelectedActorCheckpoint
@@ -228,6 +229,86 @@ internal sealed class AcceptanceWorldPointCheckpoint
 {
     public int XCm { get; set; }
     public int YCm { get; set; }
+}
+
+internal sealed class AcceptanceAdvancingPresentationCheckpoint
+{
+    public bool HaveAllSelectedActorsMoved { get; set; }
+    public bool AreSelectedActorsNear { get; set; }
+    public bool AreSelectedActorsVisibleWithPerformerPayload { get; set; }
+    public bool AreMovedActorsOnscreenInPresentationReceipts { get; set; }
+    public int PresentationFrameId { get; set; } = -1;
+    public int ReceiptFrameRevision { get; set; } = -1;
+    public int ReceiptProjectionRevision { get; set; } = -1;
+    public int CurrentProjectionRevision { get; set; } = -1;
+    public int ReceiptCount { get; set; }
+    public AcceptanceVector2Checkpoint CameraTargetCm { get; set; } = new();
+    public AcceptanceVector2Checkpoint CullingCameraTargetCm { get; set; } = new();
+    public int CullingVisibilityRevision { get; set; }
+    public int CullingVisibleEntityCount { get; set; }
+    public int CullingCulledEntityCount { get; set; }
+    public AcceptanceAdvancingActorCheckpoint[] Actors { get; set; } = Array.Empty<AcceptanceAdvancingActorCheckpoint>();
+    public AcceptancePresentationReceiptCheckpoint[] InfantryBodyReceipts { get; set; } =
+        Array.Empty<AcceptancePresentationReceiptCheckpoint>();
+}
+
+internal sealed class AcceptanceAdvancingActorCheckpoint
+{
+    public string Handle { get; set; } = string.Empty;
+    public int CapturedPresentationStableId { get; set; }
+    public int CurrentPresentationStableId { get; set; }
+    public bool IsAlive { get; set; }
+    public bool HasMoved { get; set; }
+    public bool IsNearMeetingPoint { get; set; }
+    public bool HasVisiblePerformerPayload { get; set; }
+    public bool HasOnscreenPresentationReceipt { get; set; }
+    public int? WorldXCm { get; set; }
+    public int? WorldYCm { get; set; }
+    public AcceptanceVector3Checkpoint? VisualPosition { get; set; }
+    public bool HasOwnerCullState { get; set; }
+    public bool OwnerCullVisible { get; set; }
+    public bool HasPerformerPayload { get; set; }
+    public int PerformerPayloadCount { get; set; }
+    public int PerformerRootCount { get; set; }
+    public AcceptancePerformerCheckpoint? RootPerformer { get; set; }
+    public AcceptancePerformerCheckpoint[] BodyPerformers { get; set; } = Array.Empty<AcceptancePerformerCheckpoint>();
+    public AcceptancePresentationReceiptCheckpoint[] MatchingBodyReceipts { get; set; } =
+        Array.Empty<AcceptancePresentationReceiptCheckpoint>();
+}
+
+internal sealed class AcceptancePerformerCheckpoint
+{
+    public int EntityId { get; set; }
+    public int DefinitionId { get; set; }
+    public int StableId { get; set; }
+    public int OwnerStableId { get; set; }
+    public bool IsAlive { get; set; }
+    public bool HasPosition { get; set; }
+    public AcceptanceVector3Checkpoint? Position { get; set; }
+    public bool HasCullState { get; set; }
+    public bool OwnerCullVisible { get; set; }
+}
+
+internal sealed class AcceptancePresentationReceiptCheckpoint
+{
+    public int OwnerStableId { get; set; }
+    public int VisualStableId { get; set; }
+    public int TemplateId { get; set; }
+    public AcceptanceVector3Checkpoint WorldPosition { get; set; } = new();
+    public AcceptanceVector3Checkpoint Position { get; set; } = new();
+}
+
+internal sealed class AcceptanceVector2Checkpoint
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+}
+
+internal sealed class AcceptanceVector3Checkpoint
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Z { get; set; }
 }
 
 internal static class AcceptanceEvidenceWriter
