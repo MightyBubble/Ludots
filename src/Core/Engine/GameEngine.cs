@@ -1488,6 +1488,7 @@ namespace Ludots.Core.Engine
 
             // Register systems in Phase order according to GAS design document
             // Phase 0: SchemaUpdate
+            SetService(CoreServiceKeys.ComponentAuthoringContext, componentAuthoringContext);
             SetService(CoreServiceKeys.ExtensionAttributeRegistry, extensionAttributeRegistry);
             SetService(CoreServiceKeys.AttributeSchemaUpdateQueue, attributeSchemaUpdateQueue);
             SetService(CoreServiceKeys.GasBudget, gasBudget);

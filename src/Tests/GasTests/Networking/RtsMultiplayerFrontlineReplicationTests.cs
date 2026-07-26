@@ -119,7 +119,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                RequireAuthoringContext(engine)),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
 
@@ -165,7 +166,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                RequireAuthoringContext(engine)),
             Throws.InvalidOperationException.With.Message.Contains(requiredComponent));
     }
 
@@ -188,8 +190,29 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                RequireAuthoringContext(engine)),
             Throws.InvalidOperationException.With.Message.Contains("Box3D"));
+    }
+
+    [Test]
+    public void ClientTemplateFactory_RejectsEmptyComponentAuthoringContext()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                engine.MapLoader.TemplateRegistry.GetAll(),
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireStableIds(engine),
+                ComponentAuthoringContext.Empty),
+            Throws.InvalidOperationException.With.Message.Contains("ComponentAuthoringContext"));
     }
 
     [TestCase("WorldPositionCm")]
@@ -211,7 +234,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
-                RequireStableIds(engine)),
+                RequireStableIds(engine),
+                RequireAuthoringContext(engine)),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
 
@@ -281,7 +305,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         OwnershipResolver ownership = RequireOwnership(engine);
@@ -653,7 +678,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
         var applier = new FrontlineCoreReplicationApplier(
             in coreSpec,
@@ -909,7 +935,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         OwnershipResolver ownership = RequireOwnership(engine);
@@ -989,7 +1016,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         var applier = new FrontlineHarvesterReplicationApplier(
             in spec,
             templates,
@@ -1043,7 +1071,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
         var harvesterApplier = new FrontlineHarvesterReplicationApplier(
@@ -1594,7 +1623,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
             config.ReadyCountdownTicks,
@@ -2045,7 +2075,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            RequireStableIds(engine));
+            RequireStableIds(engine),
+            RequireAuthoringContext(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
             config.ReadyCountdownTicks,
@@ -2078,6 +2109,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     private static PresentationStableIdAllocator RequireStableIds(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
         ?? throw new InvalidOperationException("PresentationStableIdAllocator is unavailable.");
+
+    private static ComponentAuthoringContext RequireAuthoringContext(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.ComponentAuthoringContext)
+        ?? throw new InvalidOperationException("ComponentAuthoringContext is unavailable.");
 
     private static FrontlineNetworkEntityBindingSystem CreateBindingSystem(
         GameEngine engine,

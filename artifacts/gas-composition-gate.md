@@ -2261,3 +2261,60 @@ Behavior remains in the existing runtime spawn request contract. No JSON schema 
 ### 8. Next variant test
 
 A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.
+
+---
+
+## GAS Composition Gate - Issue #709 Replicated Client Mirror Authoring
+
+- **Task / Issue**: #709 - restore formal entity authoring for replicated Frontline client mirrors
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary delivery (A/B/C/D): A. Repair wiring to the existing Core entity materialization operation.
+
+Result: PASS
+
+Reason: Replicated mirrors continue through the existing `EntityBuilder` and `EntityRuntimeStatePlan`. The fix supplies the same Core-owned `ComponentAuthoringContext` already used by map loading and runtime spawning. It adds no gameplay variant, graph operation, preset switch, profile field, loader, registry, or parallel materialization path.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Core authoring dependency publication | N/A | Existing typed engine service registry |
+| Replicated mirror materialization | 0 | Existing `EntityBuilder` + `EntityRuntimeStatePlan` |
+| Frontline mirror creation | 2 | Existing replication schema appliers and formal entity templates |
+
+### 3. Reuse list
+
+- Handlers: N/A
+- Queues / Systems: existing map loading, replication applier, entity runtime-state installation, and performer lifecycle systems
+- Resolvers / Registries: existing `ComponentAuthoringContext`, `AbilityDefinitionRegistry`, `AbilityFormSetRegistry`, and `EntityTemplateKeyRegistry`
+- Existing presets / graphs: existing Frontline ability/effect graphs and performer rules remain unchanged
+
+### 4. New Layer 0 ops
+
+N/A. No lifecycle atomic operation, graph operation, effect handler, preset, registry, schema, or materialization path was added.
+
+### 5. Transaction boundary
+
+N/A. Mirror creation keeps the existing applier transaction: failed template construction destroys the partial entity and rethrows. The fix only restores the dependencies required before that create can commit.
+
+### 6. Config SSOT
+
+Behavior remains in the existing Frontline entity templates, abilities, effects, and performer definitions.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit or placement enum added
+- [x] No parallel spawn or mirror materialization pipeline added
+- [x] No placement validation moved into lifecycle operations
+- [x] No empty/default authoring fallback or silent failure added
+- [x] No dynamic hot-path storage or ECS structural change pattern added
+
+### 8. Next variant test
+
+A new Mod entity variant changes its formal template, effect steps, or graph wiring and continues through the same Core authoring context and `EntityBuilder`. It does not add a Core gameplay enum or alternate materialization path.

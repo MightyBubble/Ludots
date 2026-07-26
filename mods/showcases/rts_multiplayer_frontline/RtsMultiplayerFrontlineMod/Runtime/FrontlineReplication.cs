@@ -266,12 +266,19 @@ internal sealed class FrontlineClientTemplateFactory
         ReadOnlySpan<FrontlineReplicationSpec> specs,
         int matchStateSchemaId,
         EntityTemplateKeyRegistry templateKeys,
-        PresentationStableIdAllocator stableIds)
+        PresentationStableIdAllocator stableIds,
+        ComponentAuthoringContext authoringContext)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
         ArgumentNullException.ThrowIfNull(templateKeys);
         _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
+        ArgumentNullException.ThrowIfNull(authoringContext);
         ArgumentNullException.ThrowIfNull(templates);
+        if (ReferenceEquals(authoringContext, ComponentAuthoringContext.Empty))
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline client template factory requires the Core ComponentAuthoringContext; Empty is not allowed.");
+        }
         if (specs.Length != 4)
         {
             throw new InvalidOperationException("RTS Frontline requires exactly four replication schema specifications.");
@@ -332,7 +339,7 @@ internal sealed class FrontlineClientTemplateFactory
                     $"RTS Frontline replication kind {(FrontlineReplicationKind)i} has no formal entity template.");
             }
         }
-        _builder = new EntityBuilder(_world, _templates);
+        _builder = new EntityBuilder(_world, _templates, authoringContext);
     }
 
     public Entity Create(World world, FrontlineReplicationKind kind)
@@ -1714,13 +1721,16 @@ internal static class FrontlineReplication
         FrontlineReplicationSpec[] specs = CreateSpecs(config.Replication);
         PresentationStableIdAllocator stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
             ?? throw new InvalidOperationException("RTS Frontline client replication requires presentation stable id allocation.");
+        ComponentAuthoringContext authoringContext = engine.GetService(CoreServiceKeys.ComponentAuthoringContext)
+            ?? throw new InvalidOperationException("RTS Frontline client replication requires the Core component authoring context.");
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
-            stableIds);
+            stableIds,
+            authoringContext);
         OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
             ?? throw new InvalidOperationException("RTS Frontline client replication requires OwnershipResolver.");
         PlayerEntityLookup players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
