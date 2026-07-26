@@ -124,6 +124,33 @@ namespace Ludots.Core.Presentation.Diagnostics
         public ReadOnlySpan<PresentationFrameReceiptItem> GetSpan() =>
             new(_items, 0, _count);
 
+        public bool HasOnscreenInstance(
+            int ownerStableId,
+            int templateId,
+            in ProjectionSnapshot projection)
+        {
+            if (ownerStableId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ownerStableId));
+            }
+            if (templateId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(templateId));
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
+                ref readonly PresentationFrameReceiptItem item = ref _items[i];
+                if (item.OwnerStableId == ownerStableId &&
+                    item.TemplateId == templateId &&
+                    TryProjectClippedBounds(in item, in projection, out _))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public PresentationTemplateReceiptSummary[] BuildTemplateSummaries(in ProjectionSnapshot projection)
         {
             var instances = new Dictionary<long, InstanceProjection>(_count);

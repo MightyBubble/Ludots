@@ -22,6 +22,8 @@ using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Diagnostics;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -78,7 +80,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private IReplicatedClientRuntimeStatus? _clientStatus;
     private EntityCollectionStore? _collections;
     private IScreenProjector? _projector;
+    private IProjectionSnapshotProvider? _projectionSnapshots;
+    private PresentationFrameReceiptBuffer? _presentationReceipts;
     private InputOrderMappingSystem? _inputOrderMapping;
+    private int _infantryBodyTemplateId;
     private GestureState _gesture;
     private ClientStage _clientStage = ClientStage.Connecting;
     private int _substep;
@@ -236,6 +241,23 @@ internal sealed class AcceptanceDriver : ISystem<float>
             ?? throw new InvalidOperationException("Acceptance client requires the entity collection store.");
         IScreenProjector projector = _engine.GetService(CoreServiceKeys.ScreenProjector)
             ?? throw new InvalidOperationException("Acceptance client requires the platform-neutral screen projector.");
+        IProjectionSnapshotProvider projectionSnapshots = projector as IProjectionSnapshotProvider
+            ?? throw new InvalidOperationException(
+                "Acceptance client requires platform-neutral projection snapshots for framebuffer readiness.");
+        PresentationFrameReceiptBuffer presentationReceipts =
+            _engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
+            ?? throw new InvalidOperationException(
+                "Acceptance client requires presentation frame receipts for framebuffer readiness.");
+        PerformerDefinitionRegistry performerDefinitions =
+            _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+            ?? throw new InvalidOperationException(
+                "Acceptance client requires performer definitions for framebuffer readiness.");
+        int infantryBodyTemplateId = performerDefinitions.GetId("rts.frontline.infantry.body");
+        if (infantryBodyTemplateId <= 0)
+        {
+            throw new InvalidOperationException(
+                "Acceptance client cannot resolve the frontline infantry body performer definition.");
+        }
         InputOrderMappingSystem inputOrderMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)
             ?? throw new InvalidOperationException("Acceptance client requires the active input-order mapping system.");
 
@@ -246,7 +268,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _clientStatus = clientStatus;
         _collections = collections;
         _projector = projector;
+        _projectionSnapshots = projectionSnapshots;
+        _presentationReceipts = presentationReceipts;
         _inputOrderMapping = inputOrderMapping;
+        _infantryBodyTemplateId = infantryBodyTemplateId;
 
         RequireInputAction(bindings.ConfirmActionId);
         RequireInputAction(bindings.CommandActionId);
@@ -695,7 +720,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm) ||
             !AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm) ||
-            !AreSelectedActorsVisibleWithPerformerPayload())
+            !AreSelectedActorsVisibleWithPerformerPayload() ||
+            !AreMovedActorsOnscreenInPresentationReceipts())
         {
             return;
         }
@@ -1926,6 +1952,33 @@ internal sealed class AcceptanceDriver : ISystem<float>
         for (int i = 0; i < count; i++)
         {
             if (!HasVisiblePerformerPayload(_entityScratch[i]))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private bool AreMovedActorsOnscreenInPresentationReceipts()
+    {
+        AcceptancePositionEvidence[] starts = _evidence.Gameplay.MoveStartPositions;
+        if (starts.Length == 0 ||
+            !_projectionSnapshots!.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+        {
+            return false;
+        }
+        for (int i = 0; i < starts.Length; i++)
+        {
+            int stableId = starts[i].PresentationStableId;
+            if (stableId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Acceptance movement evidence contains a non-positive presentation stable id.");
+            }
+            if (!_presentationReceipts!.HasOnscreenInstance(
+                    stableId,
+                    _infantryBodyTemplateId,
+                    in projection))
             {
                 return false;
             }

@@ -118,6 +118,48 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void HasOnscreenInstance_FiltersByOwnerAndTemplate()
+        {
+            var receipts = new PresentationFrameReceiptBuffer(capacity: 3);
+            receipts.RecordSubmitted(
+                ownerStableId: 11,
+                visualStableId: 1011,
+                templateId: 7,
+                worldPosition: Vector3.Zero,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: new Vector3(0.2f),
+                localBounds: UnitBounds);
+            receipts.RecordSubmitted(
+                ownerStableId: 11,
+                visualStableId: 1012,
+                templateId: 8,
+                worldPosition: Vector3.Zero,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: new Vector3(0.2f),
+                localBounds: UnitBounds);
+            receipts.RecordSubmitted(
+                ownerStableId: 12,
+                visualStableId: 1013,
+                templateId: 7,
+                worldPosition: new Vector3(2f, 0f, 0f),
+                position: new Vector3(2f, 0f, 0f),
+                rotation: Quaternion.Identity,
+                scale: new Vector3(0.2f),
+                localBounds: UnitBounds);
+            var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(receipts.HasOnscreenInstance(11, 7, in projection), Is.True);
+                Assert.That(receipts.HasOnscreenInstance(11, 8, in projection), Is.True);
+                Assert.That(receipts.HasOnscreenInstance(12, 7, in projection), Is.False);
+                Assert.That(receipts.HasOnscreenInstance(11, 9, in projection), Is.False);
+            });
+        }
+
+        [Test]
         public void BuildOnscreenInstanceReceipts_MergesPartsAndKeepsTheEntityWorldPosition()
         {
             var receipts = new PresentationFrameReceiptBuffer(capacity: 3);
