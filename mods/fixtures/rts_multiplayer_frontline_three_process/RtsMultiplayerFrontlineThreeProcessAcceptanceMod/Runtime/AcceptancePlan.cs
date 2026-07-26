@@ -10,6 +10,7 @@ internal sealed class AcceptancePlan
     internal const string RelativePath = "RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json";
 
     public int SchemaVersion { get; set; }
+    public int EvidenceSchemaVersion { get; set; }
     public string EvidenceFileName { get; set; } = string.Empty;
     public int EvidenceCheckpointSeconds { get; set; }
     public int OverallTimeoutSeconds { get; set; }
@@ -55,10 +56,11 @@ internal sealed class AcceptancePlan
 
     private void Validate()
     {
-        if (SchemaVersion != 2)
+        if (SchemaVersion != 3)
         {
-            throw new InvalidOperationException($"Acceptance plan requires schemaVersion 2; got {SchemaVersion}.");
+            throw new InvalidOperationException($"Acceptance plan requires schemaVersion 3; got {SchemaVersion}.");
         }
+        RequirePositive(EvidenceSchemaVersion, nameof(EvidenceSchemaVersion));
         if (string.IsNullOrWhiteSpace(EvidenceFileName) ||
             Path.IsPathRooted(EvidenceFileName) ||
             !string.Equals(Path.GetFileName(EvidenceFileName), EvidenceFileName, StringComparison.Ordinal))

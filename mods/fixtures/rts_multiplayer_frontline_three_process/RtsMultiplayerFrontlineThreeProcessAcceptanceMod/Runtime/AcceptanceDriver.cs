@@ -155,6 +155,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         (string? planFingerprint, string contentFingerprint) = AcceptanceContentIdentity.Resolve(engine);
         _evidence = new AcceptanceEvidence
         {
+            SchemaVersion = plan.EvidenceSchemaVersion,
             Role = _role == NetworkProcessRole.AuthoritativeServer ? "authoritativeServer" : "replicatedClient",
             PlanFingerprint = planFingerprint,
             ContentFingerprint = contentFingerprint,

@@ -1,5 +1,6 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
+  "evidenceSchemaVersion": 8,
   "evidenceFileName": "gameplay-evidence.json",
   "evidenceCheckpointSeconds": 1,
   "overallTimeoutSeconds": 220,

@@ -12,7 +12,7 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
 internal sealed class AcceptanceEvidence
 {
-    public int SchemaVersion { get; set; } = 8;
+    public int SchemaVersion { get; set; }
     public string Status { get; set; } = "running";
     public string Role { get; set; } = string.Empty;
     public string? Failure { get; set; }

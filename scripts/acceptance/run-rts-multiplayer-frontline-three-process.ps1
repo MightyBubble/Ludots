@@ -1515,10 +1515,14 @@ function Assert-GameplayEvidence {
 
     $winningSide = [int]$ExpectedPlan.expected.winningSideIndex
     $expectedOutcome = if ($winningSide -eq 0) { "SideOneVictory" } elseif ($winningSide -eq 1) { "SideTwoVictory" } else { throw "Unsupported expected winning side $winningSide." }
+    $expectedEvidenceSchemaVersion = [int]$ExpectedPlan.evidenceSchemaVersion
+    if ($expectedEvidenceSchemaVersion -le 0) {
+        throw "Acceptance plan requires a positive evidenceSchemaVersion."
+    }
     foreach ($item in $all) {
         $evidence = $item.Value
-        if ([int]$evidence.schemaVersion -ne 7 -or [string]$evidence.status -cne "passed") {
-            throw "Evidence '$($item.Name)' did not pass schema version 6."
+        if ([int]$evidence.schemaVersion -ne $expectedEvidenceSchemaVersion -or [string]$evidence.status -cne "passed") {
+            throw "Evidence '$($item.Name)' did not pass schema version $expectedEvidenceSchemaVersion."
         }
         if ([int]$evidence.faultCount -ne 0) { throw "Evidence '$($item.Name)' reported $($evidence.faultCount) network faults." }
         if ([string]$evidence.planFingerprint -cne $PlanFingerprint) {
