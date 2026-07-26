@@ -1284,9 +1284,104 @@ internal sealed class AcceptanceDriver : ISystem<float>
         };
         if (ElapsedSeconds(_stageStartedTimestamp) > timeout)
         {
+            string presentationDiagnostic = _clientStage == ClientStage.Advancing && _substep == 5
+                ? BuildAdvancingPresentationTimeoutDiagnostic()
+                : string.Empty;
             throw new TimeoutException(
-                $"Client player {_localPlayerId} timed out after {timeout} seconds in stage {_clientStage}, substep {_substep}.");
+                $"Client player {_localPlayerId} timed out after {timeout} seconds in stage {_clientStage}, substep {_substep}." +
+                presentationDiagnostic);
         }
+    }
+
+    private string BuildAdvancingPresentationTimeoutDiagnostic()
+    {
+        var diagnostic = new System.Text.StringBuilder(" [DEBUG-ISSUE709-PRESENTATION]");
+        AcceptancePositionEvidence[] starts = _evidence.Gameplay.MoveStartPositions;
+        ReadOnlySpan<PresentationFrameReceiptItem> receipts = _presentationReceipts!.GetSpan();
+        for (int i = 0; i < starts.Length; i++)
+        {
+            ref readonly AcceptancePositionEvidence start = ref starts[i];
+            diagnostic.Append(" actor=").Append(start.Handle)
+                .Append(" capturedStable=").Append(start.PresentationStableId);
+            if (!TryResolveHandle(start.Handle, out Entity entity))
+            {
+                diagnostic.Append(" resolved=false;");
+                continue;
+            }
+
+            ref readonly PresentationStableId currentStable = ref _world.Get<PresentationStableId>(entity);
+            ref readonly WorldPositionCm worldPosition = ref _world.Get<WorldPositionCm>(entity);
+            ref readonly VisualTransform visual = ref _world.Get<VisualTransform>(entity);
+            ref readonly CullState ownerCull = ref _world.Get<CullState>(entity);
+            diagnostic.Append(" currentStable=").Append(currentStable.Value)
+                .Append(" worldCm=").Append(worldPosition.Value.X.ToInt()).Append(',').Append(worldPosition.Value.Y.ToInt())
+                .Append(" visual=").Append(visual.Position.X).Append(',').Append(visual.Position.Y).Append(',').Append(visual.Position.Z)
+                .Append(" ownerCull=").Append(ownerCull.IsVisible);
+
+            if (_world.TryGet(entity, out PresentationOwnerHasPerformerPayload payload))
+            {
+                diagnostic.Append(" payloadCount=").Append(payload.Count)
+                    .Append(" roots=").Append(payload.RootCount)
+                    .Append(" root=").Append(payload.SingleRootPerformer.Id);
+                Entity root = payload.SingleRootPerformer;
+                if (root != Entity.Null && _world.IsAlive(root))
+                {
+                    ref readonly PerformerState rootState = ref _world.Get<PerformerState>(root);
+                    ref readonly PerformerWorldPosition rootPosition = ref _world.Get<PerformerWorldPosition>(root);
+                    ref readonly PerformerCullState rootCull = ref _world.Get<PerformerCullState>(root);
+                    diagnostic.Append(" rootOwnerStable=").Append(rootState.OwnerStableId)
+                        .Append(" rootPos=").Append(rootPosition.Value.X).Append(',').Append(rootPosition.Value.Y).Append(',').Append(rootPosition.Value.Z)
+                        .Append(" rootCull=").Append(rootCull.OwnerCullVisible);
+                    if (_world.TryGet(root, out PerformerChildren children))
+                    {
+                        for (int childIndex = 0; childIndex < children.Count; childIndex++)
+                        {
+                            Entity child = children.Get(childIndex);
+                            if (!_world.IsAlive(child) ||
+                                !_world.TryGet(child, out PerformerState childState) ||
+                                childState.DefId != _infantryBodyTemplateId)
+                            {
+                                continue;
+                            }
+                            ref readonly PerformerWorldPosition childPosition = ref _world.Get<PerformerWorldPosition>(child);
+                            ref readonly PerformerCullState childCull = ref _world.Get<PerformerCullState>(child);
+                            diagnostic.Append(" bodyPos=").Append(childPosition.Value.X).Append(',').Append(childPosition.Value.Y).Append(',').Append(childPosition.Value.Z)
+                                .Append(" bodyCull=").Append(childCull.OwnerCullVisible);
+                        }
+                    }
+                }
+            }
+
+            int matchingReceiptCount = 0;
+            for (int receiptIndex = 0; receiptIndex < receipts.Length; receiptIndex++)
+            {
+                ref readonly PresentationFrameReceiptItem receipt = ref receipts[receiptIndex];
+                if (receipt.OwnerStableId != start.PresentationStableId ||
+                    receipt.TemplateId != _infantryBodyTemplateId)
+                {
+                    continue;
+                }
+                matchingReceiptCount++;
+                diagnostic.Append(" receiptPos=").Append(receipt.Position.X).Append(',').Append(receipt.Position.Y).Append(',').Append(receipt.Position.Z)
+                    .Append(" receiptWorld=").Append(receipt.WorldPosition.X).Append(',').Append(receipt.WorldPosition.Y).Append(',').Append(receipt.WorldPosition.Z);
+            }
+            diagnostic.Append(" matchingReceipts=").Append(matchingReceiptCount)
+                .Append(" onscreen=").Append(_presentationReceipts.HasOnscreenInstance(start.PresentationStableId, _infantryBodyTemplateId))
+                .Append(';');
+        }
+
+        diagnostic.Append(" allBodyReceipts=");
+        for (int i = 0; i < receipts.Length; i++)
+        {
+            ref readonly PresentationFrameReceiptItem receipt = ref receipts[i];
+            if (receipt.TemplateId == _infantryBodyTemplateId)
+            {
+                diagnostic.Append(receipt.OwnerStableId).Append('@')
+                    .Append(receipt.Position.X).Append(',').Append(receipt.Position.Y).Append(',').Append(receipt.Position.Z)
+                    .Append('|');
+            }
+        }
+        return diagnostic.ToString();
     }
 
     private void Transition(ClientStage next, AcceptanceProgressStage progressStage)
