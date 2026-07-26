@@ -787,37 +787,65 @@ internal sealed class AcceptanceDriver : ISystem<float>
             {
                 return;
             }
+
+            int expectedSurvivors = _plan.Expected.TrainedInfantryCount -
+                _plan.Expected.WinnerCasualtiesBeforeSiege;
+            int liveCount = CollectOwnedInfantry(_localPlayerId, _selectionTargets);
+            if (liveCount > expectedSurvivors)
+            {
+                return;
+            }
+            if (liveCount < expectedSurvivors)
+            {
+                throw new InvalidOperationException(
+                    $"Winning side retained {liveCount} infantry before siege selection; expected exactly {expectedSurvivors} after replicated casualties.");
+            }
+            if (!PrepareOwnedInfantrySelection(expectedSurvivors))
+            {
+                return;
+            }
+
             _evidence.Gameplay.EnemyInfantryEnteredVision = true;
-            RequestCameraFocus(_siegePoint);
             _substep = 1;
             return;
         }
         if (_substep == 1)
         {
-            if (!TryBeginFocusedGroundCommand("MoveToSiege", _siegePoint))
+            if (!AdvancePreparedSelection())
             {
                 return;
             }
+            _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
+            RequestCameraFocus(_siegePoint);
             _substep = 2;
             return;
         }
         if (_substep == 2)
         {
-            if (!AdvanceGesture())
+            if (!TryBeginFocusedGroundCommand("MoveToSiege", _siegePoint))
             {
                 return;
             }
             _substep = 3;
+            return;
         }
         if (_substep == 3)
         {
-            if (!TryCompletePendingCommand())
+            if (!AdvanceGesture())
             {
                 return;
             }
             _substep = 4;
         }
         if (_substep == 4)
+        {
+            if (!TryCompletePendingCommand())
+            {
+                return;
+            }
+            _substep = 5;
+        }
+        if (_substep == 5)
         {
             if (!AreSelectedActorsNear(_siegePoint, _plan.Battle.ArrivalToleranceCm))
             {
@@ -832,9 +860,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
             SortClientEntitiesByHandle(_selectionTargets, liveCount);
             RequireSelectedSet(_selectionTargets.AsSpan(0, liveCount));
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
-            _substep = 5;
+            _substep = 6;
         }
-        if (_substep == 5)
+        if (_substep == 6)
         {
             if (!TryResolveVisibleEnemyCore(out _attackTarget))
             {
@@ -846,24 +874,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(_attackTarget, _healthAttributeId);
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
             BeginEntityCommand("AttackEnemyCore", _attackTarget);
-            _substep = 6;
+            _substep = 7;
             return;
         }
-        if (_substep == 6)
+        if (_substep == 7)
         {
             if (!AdvanceGesture())
             {
                 return;
             }
-            _substep = 7;
+            _substep = 8;
         }
-        if (_substep == 7)
+        if (_substep == 8)
         {
             if (!TryCompletePendingCommand())
             {
                 return;
             }
-            _substep = 8;
+            _substep = 9;
         }
 
         if (!_world.IsAlive(_attackTarget))

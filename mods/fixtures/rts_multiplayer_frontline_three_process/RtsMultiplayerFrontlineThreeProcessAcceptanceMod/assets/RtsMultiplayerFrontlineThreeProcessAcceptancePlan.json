@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "evidenceFileName": "gameplay-evidence.json",
   "evidenceCheckpointSeconds": 1,
   "overallTimeoutSeconds": 220,
@@ -20,6 +20,7 @@
     "trainedInfantryCount": 4,
     "winningSideIndex": 0,
     "winnerMinimumAttackers": 2,
+    "winnerCasualtiesBeforeSiege": 1,
     "loserAttackers": 1
   },
   "battle": {

@@ -1834,10 +1834,14 @@ function Assert-GameplayEvidence {
             $siegeCommands = @($commands | Where-Object { [string]$_.action -ceq "MoveToSiege" })
             $coreAttackCommands = @($commands | Where-Object { [string]$_.action -ceq "AttackEnemyCore" })
             $minimumWinnerActors = [int]$ExpectedPlan.expected.winnerMinimumAttackers
+            $expectedWinnerCasualties = [int]$ExpectedPlan.expected.winnerCasualtiesBeforeSiege
             if ([int]$meetingCommand.actorCount -lt $minimumWinnerActors -or
                 $siegeCommands.Count -ne 1 -or [int]$siegeCommands[0].actorCount -lt $minimumWinnerActors -or
                 $coreAttackCommands.Count -ne 1 -or [int]$coreAttackCommands[0].actorCount -lt $minimumWinnerActors) {
                 throw "Winning client evidence '$($item.Name)' does not prove multi-unit advance, siege move, and core attack."
+            }
+            if ([int]$meetingCommand.actorCount - [int]$siegeCommands[0].actorCount -ne $expectedWinnerCasualties) {
+                throw "Winning client evidence '$($item.Name)' does not prove the configured casualties were replicated before the surviving infantry siege command."
             }
             $coreAttackActorSet = @($coreAttackCommands[0].actorHandles | Sort-Object) -join "|"
             foreach ($siegeHandle in @($siegeCommands[0].actorHandles)) {

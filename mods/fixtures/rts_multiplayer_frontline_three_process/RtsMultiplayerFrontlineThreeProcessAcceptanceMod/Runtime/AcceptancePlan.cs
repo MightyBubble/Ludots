@@ -55,9 +55,9 @@ internal sealed class AcceptancePlan
 
     private void Validate()
     {
-        if (SchemaVersion != 1)
+        if (SchemaVersion != 2)
         {
-            throw new InvalidOperationException($"Acceptance plan requires schemaVersion 1; got {SchemaVersion}.");
+            throw new InvalidOperationException($"Acceptance plan requires schemaVersion 2; got {SchemaVersion}.");
         }
         if (string.IsNullOrWhiteSpace(EvidenceFileName) ||
             Path.IsPathRooted(EvidenceFileName) ||
@@ -111,6 +111,7 @@ internal sealed class AcceptancePlan
         public int TrainedInfantryCount { get; set; }
         public int WinningSideIndex { get; set; }
         public int WinnerMinimumAttackers { get; set; }
+        public int WinnerCasualtiesBeforeSiege { get; set; }
         public int LoserAttackers { get; set; }
 
         internal void Validate()
@@ -122,6 +123,8 @@ internal sealed class AcceptancePlan
             if (InitialHarvesterCount <= 0 ||
                 InitialInfantryCount <= 0 || TrainedInfantryCount <= InitialInfantryCount ||
                 WinnerMinimumAttackers <= 0 || WinnerMinimumAttackers > TrainedInfantryCount ||
+                WinnerCasualtiesBeforeSiege <= 0 || WinnerCasualtiesBeforeSiege >= TrainedInfantryCount ||
+                TrainedInfantryCount - WinnerCasualtiesBeforeSiege < WinnerMinimumAttackers ||
                 LoserAttackers <= 0 || LoserAttackers > TrainedInfantryCount)
             {
                 throw new InvalidOperationException("Acceptance infantry expectations are invalid.");
