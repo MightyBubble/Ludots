@@ -52,8 +52,6 @@
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
         "Scale": { "X": 3.0, "Y": 2.2, "Z": 3.0 }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 60, "halfSizeZCm": 60 },
       "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 701 },
@@ -105,8 +103,6 @@
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
         "Scale": { "X": 1.8, "Y": 1.4, "Z": 2.4 }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 50, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 50, "halfSizeZCm": 50 },
       "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 702 },
@@ -160,8 +156,6 @@
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
         "Scale": { "X": 1.15, "Y": 1.65, "Z": 1.15 }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 48, "halfSizeYCm": 52, "halfSizeZCm": 48 },
       "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 703 },
@@ -213,8 +207,6 @@
         "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
         "Scale": { "X": 2.2, "Y": 1.6, "Z": 2.2 }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 60, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 70, "halfSizeZCm": 60 },
       "VisualHeightmapSampleState": {},
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 704 },
