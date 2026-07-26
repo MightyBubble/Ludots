@@ -764,9 +764,11 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         }
 
         int ownedCoreCount = 0;
+        WorldCmInt2 target = default;
         foreach (ref Chunk chunk in _world.Query(in OpeningCameraTargetQuery))
         {
             ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
             foreach (int index in chunk)
             {
                 if (owners[index].PlayerId != localPlayerId)
@@ -774,6 +776,7 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                     continue;
                 }
 
+                target = positions[index].ToWorldCmInt2();
                 ownedCoreCount++;
             }
         }
@@ -790,13 +793,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
         CameraPoseRequest request = _engine.GetService(CoreServiceKeys.CameraPoseRequest)
             ?? throw new InvalidOperationException(
                 "RTS Frontline opening camera requires the RTS command-source focus request to run first.");
-        if (!request.TargetCm.HasValue ||
-            !float.IsFinite(request.TargetCm.Value.X) ||
-            !float.IsFinite(request.TargetCm.Value.Y))
-        {
-            throw new InvalidOperationException(
-                "RTS Frontline opening camera requires a finite RTS command-source focus target.");
-        }
+        request.TargetCm = new Vector2(target.X, target.Y);
+        _engine.SetService(CoreServiceKeys.CameraPoseRequest, request);
         _openingCameraFocused = true;
     }
 
