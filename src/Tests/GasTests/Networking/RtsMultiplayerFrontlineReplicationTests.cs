@@ -276,6 +276,34 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         });
     }
 
+    [Test]
+    [Description(
+        "Feature: Authoritative command receipts follow the executed order\n" +
+        "  Given a network command enters the formal authoritative order queue\n" +
+        "  When the addressed entity accepts that order\n" +
+        "  Then the network runtime reads the same admission result buffer used by the order pipeline")]
+    public void AuthoritativeServer_NetworkReceiptsUseFormalOrderAdmissionResults()
+    {
+        using GameEngine engine = CreateStartedEngine(
+            NetworkProcessRole.AuthoritativeServer,
+            new TestServerRuntimePort(),
+            installPresentationServices: false);
+
+        OrderAdmissionResultBuffer formalResults = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer)
+            ?? throw new InvalidOperationException("Formal order admission results are unavailable.");
+        OrderAdmissionResultBuffer networkResults = engine.GetService(CoreServiceKeys.EntityOrderAdmissionResults)
+            ?? throw new InvalidOperationException("Network entity admission results are unavailable.");
+        NetworkRuntimeConfig network = engine.GetService(CoreServiceKeys.NetworkRuntimeConfig)
+            ?? throw new InvalidOperationException("Network runtime config is unavailable.");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(networkResults, Is.SameAs(formalResults));
+            Assert.That(formalResults.Capacity, Is.GreaterThanOrEqualTo(network.EntityAdmissionResultCapacity));
+            Assert.That(formalResults.RejectionCapacity, Is.GreaterThanOrEqualTo(network.EntityAdmissionResultCapacity));
+        });
+    }
+
     [TestCase(0)]
     [TestCase(1)]
     [Description(

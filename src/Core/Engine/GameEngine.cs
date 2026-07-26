@@ -1016,9 +1016,6 @@ namespace Ludots.Core.Engine
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
             NetworkRuntimeConfig? networkConfig = config.Networking;
             networkConfig?.Validate();
-            OrderAdmissionResultBuffer? entityOrderAdmissionResults = networkConfig == null
-                ? null
-                : new OrderAdmissionResultBuffer(networkConfig.EntityAdmissionResultCapacity);
             NetworkCommandAdmissionResultBuffer? networkCommandAdmissionResults = networkConfig == null
                 ? null
                 : new NetworkCommandAdmissionResultBuffer(networkConfig.NetworkAdmissionResultCapacity);
@@ -1033,6 +1030,14 @@ namespace Ludots.Core.Engine
             var orderAdmissionResults = new OrderAdmissionResultBuffer(
                 gasRuntimeCapacity.OrderAdmissionResultCapacity,
                 gasRuntimeCapacity.OrderAdmissionRejectionCapacity);
+            if (networkConfig != null &&
+                (orderAdmissionResults.Capacity < networkConfig.EntityAdmissionResultCapacity ||
+                 orderAdmissionResults.RejectionCapacity < networkConfig.EntityAdmissionResultCapacity))
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity order admission result and rejection capacities must both be at least " +
+                    $"networking.entityAdmissionResultCapacity ({networkConfig.EntityAdmissionResultCapacity}).");
+            }
             var orderQueue = new OrderQueue(
                 gasRuntimeCapacity.OrderQueueCapacity,
                 orderAdmissionResults);
@@ -1575,7 +1580,7 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.NetworkGameplayCommandGate, networkGameplayCommandGate);
                 SetService(CoreServiceKeys.NetworkCommandSchemaRegistry, networkCommandSchemas!);
                 SetService(CoreServiceKeys.NetworkCommandAdmissionResults, networkCommandAdmissionResults!);
-                SetService(CoreServiceKeys.EntityOrderAdmissionResults, entityOrderAdmissionResults!);
+                SetService(CoreServiceKeys.EntityOrderAdmissionResults, orderAdmissionResults);
                 SetService(CoreServiceKeys.NetworkEntityTable, networkEntityTable!);
             }
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
