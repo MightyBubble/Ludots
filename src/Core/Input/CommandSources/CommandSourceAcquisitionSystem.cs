@@ -179,7 +179,10 @@ namespace Ludots.Core.Input.CommandSources
                 return;
             }
 
-            Entity acquired = ResolveClickAcquisition(owner, hovered);
+            Entity gestureHovered = drag.CurrentScreen == pointer.Pointer
+                ? hovered
+                : FindNearestEntity(owner, drag.CurrentScreen, _config.ClickPickRadiusPixels);
+            Entity acquired = ResolveClickAcquisition(owner, gestureHovered);
             ApplyClickAcquisition(owner, acquired, acquisitionMode);
             if (pointer.HasGroundPoint)
             {
