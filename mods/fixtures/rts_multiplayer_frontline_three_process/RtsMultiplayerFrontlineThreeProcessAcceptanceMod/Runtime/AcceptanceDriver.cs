@@ -24,6 +24,7 @@ using Ludots.Core.Networking.Session;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using RtsMultiplayerFrontlineMod.Runtime;
 
@@ -322,7 +323,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         int sideIndex = _frontline.ResolveSideIndexForPlayer(localPlayerId);
         if (!TryResolveOwnCore(localPlayerId, out Entity core) ||
-            CountOwned<ClientHarvesterMarker>(localPlayerId) != 2 ||
+            CountOwned<ClientHarvesterMarker>(localPlayerId) != _plan.Expected.InitialHarvesterCount ||
             CountOwned<ClientInfantryMarker>(localPlayerId) != _plan.Expected.InitialInfantryCount ||
             CountClientCrystals() != 2 ||
             !TryGetClientMatchState(out _))
@@ -349,8 +350,25 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return;
         }
 
+        FrontlineOpeningViewSnapshot openingView = _frontlineRuntime.OpeningView;
+        if (!openingView.HasFocusTarget || !openingView.IsReady)
+        {
+            return;
+        }
+        CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)
+            ?? throw new InvalidOperationException(
+                "Acceptance client requires camera-culling diagnostics for opening-view readiness.");
+        if (!CameraTargetMatches(_engine.GameSession.Camera.State.TargetCm, openingView.FocusTargetCm) ||
+            !CameraTargetMatches(culling.CameraTargetCm, openingView.FocusTargetCm) ||
+            culling.VisibilityRevision < openingView.ReadyVisibilityRevision ||
+            culling.VisibleEntityCount <= 0)
+        {
+            return;
+        }
+
         if (!TryResolveOwnHarvester(localPlayerId, out Entity openingHarvester) ||
             !TryResolveNearestCrystal(openingHarvester, out Entity openingCrystal) ||
+            !AreOpeningEntitiesVisible(localPlayerId, core, openingCrystal) ||
             !TryProjectEntityClick(openingCrystal, out _))
         {
             return;
@@ -2052,6 +2070,61 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         return crystal != Entity.Null;
     }
+
+    private bool AreOpeningEntitiesVisible(int playerId, Entity core, Entity openingCrystal)
+    {
+        if (!HasVisiblePerformerPayload(core) || !HasVisiblePerformerPayload(openingCrystal))
+        {
+            return false;
+        }
+
+        int visibleHarvesterCount = 0;
+        foreach (ref Chunk chunk in _world.Query(in ClientHarvesterQuery))
+        {
+            ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                if (owners[index].PlayerId == playerId &&
+                    HasVisiblePerformerPayload(Unsafe.Add(ref first, index)))
+                {
+                    visibleHarvesterCount++;
+                }
+            }
+        }
+        if (visibleHarvesterCount != _plan.Expected.InitialHarvesterCount)
+        {
+            return false;
+        }
+
+        int visibleInfantryCount = 0;
+        foreach (ref Chunk chunk in _world.Query(in ClientInfantryQuery))
+        {
+            ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                if (owners[index].PlayerId == playerId &&
+                    HasVisiblePerformerPayload(Unsafe.Add(ref first, index)))
+                {
+                    visibleInfantryCount++;
+                }
+            }
+        }
+        return visibleInfantryCount == _plan.Expected.InitialInfantryCount;
+    }
+
+    private bool HasVisiblePerformerPayload(Entity entity)
+    {
+        return _world.IsAlive(entity) &&
+            _world.TryGet(entity, out CullState cull) &&
+            cull.IsVisible &&
+            _world.TryGet(entity, out PresentationOwnerHasPerformerPayload payload) &&
+            payload.Count > 0;
+    }
+
+    private static bool CameraTargetMatches(Vector2 actual, Vector2 expected) =>
+        Vector2.DistanceSquared(actual, expected) <= 1f;
 
     private bool TryResolveVisibleEnemyInfantry(out Entity infantry)
     {

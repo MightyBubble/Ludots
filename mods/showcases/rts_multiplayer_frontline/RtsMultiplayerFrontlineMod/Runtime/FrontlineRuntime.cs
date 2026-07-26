@@ -41,6 +41,13 @@ public readonly record struct FrontlineMatchResolutionSnapshot(
     float SideOneCoreHealth,
     float SideTwoCoreHealth);
 
+public readonly record struct FrontlineOpeningViewSnapshot(
+    bool HasFocusTarget,
+    Vector2 FocusTargetCm,
+    int CapturedVisibilityRevision,
+    bool IsReady,
+    int ReadyVisibilityRevision);
+
 public sealed class FrontlineRuntime : IGameplayActionLoopGate
 {
     private readonly IModContext _context;
@@ -63,6 +70,11 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
     private bool _durationCoreHealthCaptured;
     private float _durationSideOneCoreHealth;
     private float _durationSideTwoCoreHealth;
+    private bool _hasOpeningFocusTarget;
+    private Vector2 _openingFocusTargetCm;
+    private int _openingFocusCapturedVisibilityRevision = -1;
+    private bool _openingViewReady;
+    private int _openingViewReadyVisibilityRevision = -1;
     private object? _validatedOpeningSession;
     private FrontlineTagBinder? _tagBinder;
 
@@ -90,6 +102,12 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
         _connected[1]);
     public FrontlineMatchResolutionSnapshot Resolution => _resolution
         ?? throw new InvalidOperationException("RTS Frontline has not committed a match resolution.");
+    public FrontlineOpeningViewSnapshot OpeningView => new(
+        _hasOpeningFocusTarget,
+        _openingFocusTargetCm,
+        _openingFocusCapturedVisibilityRevision,
+        _openingViewReady,
+        _openingViewReadyVisibilityRevision);
 
     public Task HandleGameStartAsync(ScriptContext context)
     {
@@ -253,6 +271,40 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
     internal bool HasParticipantAwaitingReconnect => !_connected[0] || !_connected[1];
 
     internal bool HasDurationCoreHealthSnapshot => _durationCoreHealthCaptured;
+
+    internal void CaptureOpeningFocusTarget(Vector2 targetCm, int visibilityRevision)
+    {
+        if (!float.IsFinite(targetCm.X) || !float.IsFinite(targetCm.Y) || visibilityRevision < 0)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline opening view requires a finite focus target and initialized culling revision.");
+        }
+        if (_hasOpeningFocusTarget)
+        {
+            if (_openingFocusTargetCm != targetCm)
+            {
+                throw new InvalidOperationException(
+                    "RTS Frontline opening camera focus target changed before the opening view became ready.");
+            }
+            return;
+        }
+
+        _hasOpeningFocusTarget = true;
+        _openingFocusTargetCm = targetCm;
+        _openingFocusCapturedVisibilityRevision = visibilityRevision;
+    }
+
+    internal void MarkOpeningViewReady(int visibilityRevision)
+    {
+        if (!_hasOpeningFocusTarget || visibilityRevision <= _openingFocusCapturedVisibilityRevision)
+        {
+            throw new InvalidOperationException(
+                "RTS Frontline opening view cannot become ready before culling advances at the focused target.");
+        }
+
+        _openingViewReady = true;
+        _openingViewReadyVisibilityRevision = visibilityRevision;
+    }
 
     internal void CaptureDurationCoreHealth(float sideOneHealth, float sideTwoHealth)
     {
@@ -544,6 +596,11 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
         _durationCoreHealthCaptured = false;
         _durationSideOneCoreHealth = 0f;
         _durationSideTwoCoreHealth = 0f;
+        _hasOpeningFocusTarget = false;
+        _openingFocusTargetCm = default;
+        _openingFocusCapturedVisibilityRevision = -1;
+        _openingViewReady = false;
+        _openingViewReadyVisibilityRevision = -1;
         for (int i = 0; i < _connected.Length; i++)
         {
             _connected[i] = _networkRole == NetworkProcessRole.Standalone;

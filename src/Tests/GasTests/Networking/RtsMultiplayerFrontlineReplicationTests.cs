@@ -347,11 +347,14 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Vector2 authoredFocusTarget = commandSourceFocus.TargetCm
             ?? throw new InvalidOperationException("RTS command-source focus did not publish a target.");
 
+        var culling = new CameraCullingDebugState { VisibilityRevision = 7 };
+        engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling);
         var presentation = new FrontlinePresentationSystem(engine, runtime);
         presentation.Update(1f / 60f);
 
         CameraPoseRequest request = engine.GetService(CoreServiceKeys.CameraPoseRequest)
             ?? throw new InvalidOperationException("Frontline opening frame did not request a camera focus.");
+        FrontlineOpeningViewSnapshot capturedOpeningView = runtime.OpeningView;
         WorldCmInt2 corePosition = engine.World.Get<WorldPositionCm>(mirrors[0]).ToWorldCmInt2();
         Assert.Multiple(() =>
         {
@@ -359,11 +362,54 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(request.TargetCm, Is.Not.EqualTo(new Vector2(corePosition.X, corePosition.Y)));
             Assert.That(request.DistanceCm, Is.EqualTo(5200f).Within(0.01f));
             Assert.That(request.FovYDeg, Is.EqualTo(46f).Within(0.01f));
+            Assert.That(capturedOpeningView.HasFocusTarget, Is.True);
+            Assert.That(capturedOpeningView.FocusTargetCm, Is.EqualTo(authoredFocusTarget));
+            Assert.That(capturedOpeningView.IsReady, Is.False);
         });
+
+        CameraConfig defaultCamera = engine.CurrentMapSession.MapConfig.DefaultCamera
+            ?? throw new InvalidOperationException("Frontline map has no default camera.");
+        if (defaultCamera.TargetXCm is not float defaultTargetXCm ||
+            defaultCamera.TargetYCm is not float defaultTargetYCm)
+        {
+            throw new InvalidOperationException("Frontline map has no complete default camera target.");
+        }
+        Vector2 defaultTargetCm = new(defaultTargetXCm, defaultTargetYCm);
+        engine.GameSession.Camera.State.TargetCm = defaultTargetCm;
+        culling.CameraTargetCm = defaultTargetCm;
+        culling.VisibleEntityCount = 1;
+        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision + 1;
+        engine.World.Get<CullState>(mirrors[0]).IsVisible = true;
+        if (engine.World.Has<PresentationOwnerHasPerformerPayload>(mirrors[0]))
+        {
+            engine.World.Get<PresentationOwnerHasPerformerPayload>(mirrors[0]).Count = 1;
+        }
+        else
+        {
+            engine.World.Add(mirrors[0], new PresentationOwnerHasPerformerPayload { Count = 1 });
+        }
+
+        presentation.Update(1f / 60f);
+        Assert.That(runtime.OpeningView.IsReady, Is.False,
+            "The default map-center camera must not satisfy opening-view readiness.");
 
         engine.GameSession.Camera.ApplyPose(request);
         engine.GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
         engine.GameSession.Camera.Update(0f);
+        culling.CameraTargetCm = authoredFocusTarget;
+        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision;
+        presentation.Update(1f / 60f);
+        Assert.That(runtime.OpeningView.IsReady, Is.False,
+            "Applying the camera target must not become ready before a new culling revision.");
+
+        culling.VisibilityRevision = capturedOpeningView.CapturedVisibilityRevision + 1;
+        presentation.Update(1f / 60f);
+        Assert.Multiple(() =>
+        {
+            Assert.That(runtime.OpeningView.IsReady, Is.True);
+            Assert.That(runtime.OpeningView.ReadyVisibilityRevision, Is.EqualTo(culling.VisibilityRevision));
+        });
+
         var viewport = new StubViewController(1280f, 720f);
         var projector = new CoreScreenProjector(engine.GameSession.Camera, viewport);
         engine.SetService(CoreServiceKeys.ScreenProjector, projector);
